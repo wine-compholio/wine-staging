@@ -1,0 +1,128 @@
+From c4b5a58889e427b710e64566c2c90c4da8806cee Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 4 Feb 2017 16:31:59 +0100
+Subject: kernel32: Add stub for SetThreadIdealProcessorEx.
+
+---
+ .../api-ms-win-core-processthreads-l1-1-1.spec     |  2 +-
+ .../api-ms-win-core-processthreads-l1-1-2.spec     |  2 +-
+ dlls/kernel32/kernel32.spec                        |  2 +-
+ dlls/kernel32/thread.c                             | 40 ++++++++++++++++++----
+ dlls/kernelbase/kernelbase.spec                    |  2 +-
+ 5 files changed, 37 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec b/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec
+index 9d321af7240..04329650096 100644
+--- a/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec
++++ b/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec
+@@ -47,7 +47,7 @@
+ @ stub SetProcessMitigationPolicy
+ @ stdcall SetProcessShutdownParameters(long long) kernel32.SetProcessShutdownParameters
+ @ stdcall SetThreadContext(long ptr) kernel32.SetThreadContext
+-@ stub SetThreadIdealProcessorEx
++@ stdcall SetThreadIdealProcessorEx(long ptr ptr) kernel32.SetThreadIdealProcessorEx
+ @ stdcall SetThreadPriority(long long) kernel32.SetThreadPriority
+ @ stdcall SetThreadPriorityBoost(long long) kernel32.SetThreadPriorityBoost
+ @ stdcall SetThreadStackGuarantee(ptr) kernel32.SetThreadStackGuarantee
+diff --git a/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec b/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec
+index 0e30f18e52d..7a729a50040 100644
+--- a/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec
++++ b/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec
+@@ -53,7 +53,7 @@
+ @ stdcall SetProcessPriorityBoost(long long) kernel32.SetProcessPriorityBoost
+ @ stdcall SetProcessShutdownParameters(long long) kernel32.SetProcessShutdownParameters
+ @ stdcall SetThreadContext(long ptr) kernel32.SetThreadContext
+-@ stub SetThreadIdealProcessorEx
++@ stdcall SetThreadIdealProcessorEx(long ptr ptr) kernel32.SetThreadIdealProcessorEx
+ @ stub SetThreadInformation
+ @ stdcall SetThreadPriority(long long) kernel32.SetThreadPriority
+ @ stdcall SetThreadPriorityBoost(long long) kernel32.SetThreadPriorityBoost
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 8348621136f..75d9e229cc2 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -1476,7 +1476,7 @@
+ @ stdcall SetThreadExecutionState(long)
+ @ stdcall SetThreadGroupAffinity(long ptr ptr)
+ @ stdcall SetThreadIdealProcessor(long long)
+-# @ stub SetThreadIdealProcessorEx
++@ stdcall SetThreadIdealProcessorEx(long ptr ptr)
+ @ stdcall SetThreadLocale(long)
+ @ stdcall SetThreadPreferredUILanguages(long ptr ptr)
+ @ stdcall SetThreadPriority(long long)
+diff --git a/dlls/kernel32/thread.c b/dlls/kernel32/thread.c
+index fd4f299acb7..bd699831bdb 100644
+--- a/dlls/kernel32/thread.c
++++ b/dlls/kernel32/thread.c
+@@ -462,6 +462,28 @@ DWORD_PTR WINAPI SetThreadAffinityMask( HANDLE hThread, DWORD_PTR dwThreadAffini
+     return tbi.AffinityMask;
+ }
+ 
++/**********************************************************************
++ *           SetThreadIdealProcessorEx   (KERNEL32.@)
++ */
++BOOL WINAPI SetThreadIdealProcessorEx(HANDLE thread, PROCESSOR_NUMBER *processor, PROCESSOR_NUMBER *previous)
++{
++    FIXME("(%p, %p, %p): stub\n", thread, processor, previous);
++
++    if (!processor || processor->Group > 0 || processor->Number > MAXIMUM_PROCESSORS)
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return FALSE;
++    }
++
++    if (previous)
++    {
++        previous->Group = 0;
++        previous->Number = 0;
++        previous->Reserved = 0;
++    }
++
++    return TRUE;
++}
+ 
+ /**********************************************************************
+  * SetThreadIdealProcessor [KERNEL32.@]  Sets preferred processor for thread.
+@@ -474,15 +496,19 @@ DWORD WINAPI SetThreadIdealProcessor(
+     HANDLE hThread,          /* [in] Specifies the thread of interest */
+     DWORD dwIdealProcessor)  /* [in] Specifies the new preferred processor */
+ {
+-    FIXME("(%p): stub\n",hThread);
+-    if (dwIdealProcessor > MAXIMUM_PROCESSORS)
+-    {
+-        SetLastError(ERROR_INVALID_PARAMETER);
++    PROCESSOR_NUMBER previous, current;
++
++    TRACE("(%p, %u)\n", hThread, dwIdealProcessor);
++
++    current.Group = 0;
++    current.Number = dwIdealProcessor;
++    current.Reserved = 0;
++
++    if (!SetThreadIdealProcessorEx(hThread, &current, &previous))
+         return ~0u;
+-    }
+-    return 0;
+-}
+ 
++    return previous.Number;
++}
+ 
+ /***********************************************************************
+  *           GetThreadSelectorEntry   (KERNEL32.@)
+diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
+index bdfc067cf6d..db1dbeeb0e1 100644
+--- a/dlls/kernelbase/kernelbase.spec
++++ b/dlls/kernelbase/kernelbase.spec
+@@ -1445,7 +1445,7 @@
+ @ stdcall SetThreadErrorMode(long ptr) kernel32.SetThreadErrorMode
+ @ stdcall SetThreadGroupAffinity(long ptr ptr) kernel32.SetThreadGroupAffinity
+ @ stdcall SetThreadIdealProcessor(long long) kernel32.SetThreadIdealProcessor
+-@ stub SetThreadIdealProcessorEx
++@ stdcall SetThreadIdealProcessorEx(long ptr ptr) kernel32.SetThreadIdealProcessorEx
+ @ stub SetThreadInformation
+ @ stdcall SetThreadLocale(long) kernel32.SetThreadLocale
+ @ stdcall SetThreadPreferredUILanguages(long ptr ptr) kernel32.SetThreadPreferredUILanguages
+-- 
+2.11.0
+

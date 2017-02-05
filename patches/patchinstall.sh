@@ -191,6 +191,7 @@ patch_enable_all ()
 	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
+	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
@@ -784,6 +785,9 @@ patch_enable ()
 			;;
 		kernel32-PE_Loader_Fixes)
 			enable_kernel32_PE_Loader_Fixes="$2"
+			;;
+		kernel32-Processor_Group)
+			enable_kernel32_Processor_Group="$2"
 			;;
 		kernel32-Profile)
 			enable_kernel32_Profile="$2"
@@ -2276,6 +2280,13 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	fi
 	enable_kernel32_BeingDebugged=1
 	enable_mscoree_CorValidateImage=1
+fi
+
+if test "$enable_kernel32_Processor_Group" -eq 1; then
+	if test "$enable_api_ms_win_Stub_DLLs" -gt 1; then
+		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-Processor_Group depends on that."
+	fi
+	enable_api_ms_win_Stub_DLLs=1
 fi
 
 if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
@@ -4716,6 +4727,26 @@ if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: On process entry store PEB address in %ebx.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a module reference leak leading to an undeletable temporary file.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add a PE test image that resembles format of some of 8k demos.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Processor_Group
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName, kernel32-UmsStubs, api-ms-win-Stub_DLLs
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
+# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/process.c,
+# | 	dlls/kernel32/thread.c, dlls/kernelbase/kernelbase.spec, include/winnt.h
+# |
+if test "$enable_kernel32_Processor_Group" -eq 1; then
+	patch_apply kernel32-Processor_Group/0001-kernel32-Implement-some-processor-group-functions.patch
+	patch_apply kernel32-Processor_Group/0002-kernel32-Add-stub-for-SetThreadIdealProcessorEx.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement some processor group functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for SetThreadIdealProcessorEx.", 1 },';
 	) >> "$patchlist"
 fi
 

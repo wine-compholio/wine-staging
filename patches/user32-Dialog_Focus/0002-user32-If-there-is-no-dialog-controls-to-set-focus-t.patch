@@ -1,0 +1,57 @@
+From 502fd4e2b80cd483ad3db0ed39a92998b4860777 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 31 Jan 2017 18:50:38 +0800
+Subject: user32: If there is no dialog controls to set focus to then set focus
+ to dialog itself.
+
+---
+ dlls/user32/dialog.c    | 2 ++
+ dlls/user32/tests/msg.c | 9 +++++----
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/user32/dialog.c b/dlls/user32/dialog.c
+index 8b77ae2158b..61aa6d3eff3 100644
+--- a/dlls/user32/dialog.c
++++ b/dlls/user32/dialog.c
+@@ -690,6 +690,8 @@ static HWND DIALOG_CreateIndirect( HINSTANCE hInst, LPCVOID dlgTemplate,
+                         SendMessageW( focus, EM_SETSEL, 0, MAXLONG );
+                     SetFocus( focus );
+                 }
++                else
++                    SetFocus( hwnd );
+             }
+         }
+ 
+diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
+index 39093a528e1..6f835f9f6cd 100644
+--- a/dlls/user32/tests/msg.c
++++ b/dlls/user32/tests/msg.c
+@@ -12303,10 +12303,12 @@ static const struct message WmCreateDialogParamSeq_1[] = {
+     { WM_MOVE, sent },
+     { WM_SETFONT, sent },
+     { WM_INITDIALOG, sent },
+-    { WM_GETDLGCODE, sent|wparam|lparam, 0, 0 },
++    { WM_GETDLGCODE, sent|wparam|lparam|optional, 0, 0 }, /* FIXME: Wine doesn't send it */
+     { HCBT_SETFOCUS, hook },
+     { HCBT_ACTIVATE, hook },
+-    { WM_WINDOWPOSCHANGING, sent|wparam, SWP_NOSIZE|SWP_NOMOVE },
++    { WM_QUERYNEWPALETTE, sent|optional },
++    { WM_PALETTEISCHANGING, sent|optional },
++    { WM_WINDOWPOSCHANGING, sent|wparam|optional, SWP_NOSIZE|SWP_NOMOVE },
+     { WM_ACTIVATEAPP, sent|wparam, 1 },
+     { WM_NCACTIVATE, sent },
+     { WM_ACTIVATE, sent|wparam, 1 },
+@@ -12489,9 +12491,8 @@ static void test_dialog_messages(void)
+     flush_sequence();
+     hdlg = CreateDialogParamA(0, "CLASS_TEST_DIALOG_2", 0, test_dlg_proc, 1);
+     ok(IsWindow(hdlg), "CreateDialogParam failed\n");
+-    ok_sequence(WmCreateDialogParamSeq_1, "CreateDialogParam_1", TRUE);
++    ok_sequence(WmCreateDialogParamSeq_1, "CreateDialogParam_1", FALSE);
+     hfocus = GetFocus();
+-todo_wine
+     ok(hfocus == hdlg, "wrong focus %p\n", hfocus);
+     EndDialog(hdlg, 0);
+     DestroyWindow(hdlg);
+-- 
+2.11.0
+

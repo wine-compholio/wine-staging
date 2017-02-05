@@ -347,6 +347,7 @@ patch_enable_all ()
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DeferWindowPos="$1"
 	enable_user32_DialogBoxParam="$1"
+	enable_user32_Dialog_Focus="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
@@ -1246,6 +1247,9 @@ patch_enable ()
 			;;
 		user32-DialogBoxParam)
 			enable_user32_DialogBoxParam="$2"
+			;;
+		user32-Dialog_Focus)
+			enable_user32_Dialog_Focus="$2"
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
@@ -7261,6 +7265,23 @@ if test "$enable_user32_DialogBoxParam" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Test DialogBoxParam using a dialog template with invalid control class.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: DialogBoxParam should return -1 when dialog control creation fails.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Dialog_Focus
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37425] Set focus to dialog itself when it has no controls
+# |
+# | Modified files:
+# |   *	dlls/user32/dialog.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_Dialog_Focus" -eq 1; then
+	patch_apply user32-Dialog_Focus/0001-user32-tests-Add-a-focus-test-for-an-empty-dialog-th.patch
+	patch_apply user32-Dialog_Focus/0002-user32-If-there-is-no-dialog-controls-to-set-focus-t.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a focus test for an empty dialog that returns TRUE in WM_INITDIALOG.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: If there is no dialog controls to set focus to then set focus to dialog itself.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -242,6 +242,7 @@ patch_enable_all ()
 	enable_ntdll_NtAllocateUuids="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
+	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -938,6 +939,9 @@ patch_enable ()
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
+			;;
+		ntdll-NtQueryVirtualMemory)
+			enable_ntdll_NtQueryVirtualMemory="$2"
 			;;
 		ntdll-NtSetInformationToken)
 			enable_ntdll_NtSetInformationToken="$2"
@@ -5542,6 +5546,23 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryVirtualMemory
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
+# |
+# | Modified files:
+# |   *	dlls/kernel32/virtual.c, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c
+# |
+if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
+	patch_apply ntdll-NtQueryVirtualMemory/0001-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0002-kernel32-Implement-K32GetMappedFileName.-v2.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 	) >> "$patchlist"
 fi
 

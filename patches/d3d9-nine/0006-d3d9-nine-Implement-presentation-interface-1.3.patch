@@ -1,0 +1,198 @@
+From c3b0062e31dc9cd8ce41a5619426a99403474a66 Mon Sep 17 00:00:00 2001
+From: Axel Davy <axel.davy@ens.fr>
+Date: Sun, 11 Dec 2016 16:36:52 +0100
+Subject: [PATCH 6/6] d3d9-nine: Implement presentation interface 1.3
+
+Add the new functions of presentation interface 1.3.
+---
+ dlls/d3d9-nine/dri3.c    | 52 ++++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/d3d9-nine/dri3.h    |  4 ++++
+ dlls/d3d9-nine/present.c | 42 ++++++++++++++++++++++++++++++++++----
+ 3 files changed, 94 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/d3d9-nine/dri3.c b/dlls/d3d9-nine/dri3.c
+index 77b0598..a566849 100644
+--- a/dlls/d3d9-nine/dri3.c
++++ b/dlls/d3d9-nine/dri3.c
+@@ -100,6 +100,7 @@ struct PRESENTPriv {
+     xcb_special_event_t *special_event;
+     PRESENTPixmapPriv *first_present_priv;
+     int pixmap_present_pending;
++    BOOL idle_notify_since_last_check;
+     BOOL notify_with_serial_pending;
+     CRITICAL_SECTION mutex_present; /* Protect readind/writing present_priv things */
+     CRITICAL_SECTION mutex_xcb_wait;
+@@ -657,6 +658,7 @@ static void PRESENThandle_events(PRESENTpriv *present_priv, xcb_present_generic_
+                 return;
+             }
+             present_pixmap_priv->released = TRUE;
++            present_priv->idle_notify_since_last_check = TRUE;
+             break;
+         }
+     }
+@@ -1348,6 +1350,8 @@ BOOL PRESENTWaitPixmapReleased(PRESENTPixmapPriv *present_pixmap_priv)
+ 
+     PRESENTflush_events(present_priv, FALSE);
+ 
++    /* The part with present_pixmap_priv->present_complete_pending is legacy behaviour.
++     * It matters for SwapEffectCopy with swapinterval > 0. */
+     while (!present_pixmap_priv->released || present_pixmap_priv->present_complete_pending)
+     {
+         /* Note: following if should not happen because we'll never
+@@ -1372,3 +1376,51 @@ BOOL PRESENTWaitPixmapReleased(PRESENTPixmapPriv *present_pixmap_priv)
+     LeaveCriticalSection(&present_priv->mutex_present);
+     return TRUE;
+ }
++
++BOOL PRESENTIsPixmapReleased(PRESENTPixmapPriv *present_pixmap_priv)
++{
++    PRESENTpriv *present_priv = present_pixmap_priv->present_priv;
++    BOOL ret;
++
++    EnterCriticalSection(&present_priv->mutex_present);
++
++    PRESENTflush_events(present_priv, FALSE);
++
++    ret = present_pixmap_priv->released;
++
++    LeaveCriticalSection(&present_priv->mutex_present);
++    return ret;
++}
++
++BOOL PRESENTWaitReleaseEvent(PRESENTpriv *present_priv)
++{
++
++    EnterCriticalSection(&present_priv->mutex_present);
++
++    while (!present_priv->idle_notify_since_last_check)
++    {
++        /* Note: following if should not happen because we'll never
++         * use two PRESENTWaitPixmapReleased in parallels on same window.
++         * However it would make it work in that case */
++        if (present_priv->xcb_wait)
++        {
++            /* we allow only one thread to dispatch events */
++            EnterCriticalSection(&present_priv->mutex_xcb_wait);
++            /* here the other thread got an event but hasn't treated it yet */
++            LeaveCriticalSection(&present_priv->mutex_xcb_wait);
++            LeaveCriticalSection(&present_priv->mutex_present);
++            Sleep(10); /* Let it treat the event */
++            EnterCriticalSection(&present_priv->mutex_present);
++        }
++        else if (!PRESENTwait_events(present_priv, TRUE))
++        {
++            ERR("Issue in PRESENTWaitReleaseEvent\n");
++            LeaveCriticalSection(&present_priv->mutex_present);
++            return FALSE;
++        }
++    }
++    present_priv->idle_notify_since_last_check = FALSE;
++
++    LeaveCriticalSection(&present_priv->mutex_present);
++    return TRUE;
++}
+diff --git a/dlls/d3d9-nine/dri3.h b/dlls/d3d9-nine/dri3.h
+index 554e2db..86654c0 100644
+--- a/dlls/d3d9-nine/dri3.h
++++ b/dlls/d3d9-nine/dri3.h
+@@ -84,4 +84,8 @@ BOOL PRESENTPixmap(Display *dpy, XID window, PRESENTPixmapPriv *present_pixmap_p
+ 
+ BOOL PRESENTWaitPixmapReleased(PRESENTPixmapPriv *present_pixmap_priv);
+ 
++BOOL PRESENTIsPixmapReleased(PRESENTPixmapPriv *present_pixmap_priv);
++
++BOOL PRESENTWaitReleaseEvent(PRESENTpriv *present_priv);
++
+ #endif /* __WINE_DRI3_H */
+diff --git a/dlls/d3d9-nine/present.c b/dlls/d3d9-nine/present.c
+index 708273a..5ca5143 100644
+--- a/dlls/d3d9-nine/present.c
++++ b/dlls/d3d9-nine/present.c
+@@ -43,7 +43,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d9nine);
+ #endif
+ 
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MAJOR 1
+-#if defined (ID3DPresent_ResolutionMismatch)
++#if defined (ID3DPresent_SetPresentParameters2)
++#define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 3
++#elif defined (ID3DPresent_ResolutionMismatch)
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 2
+ #elif defined (ID3DPresent_GetWindowOccluded)
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 1
+@@ -130,6 +132,8 @@ struct DRI3Present
+     UINT present_interval;
+     BOOL present_async;
+     BOOL present_swapeffectcopy;
++    BOOL allow_discard_delayed_release;
++    BOOL tear_free_discard;
+     struct d3d_drawable *d3d;
+ };
+ 
+@@ -735,6 +739,26 @@ static BOOL WINAPI DRI3Present_WaitForThread( struct DRI3Present *This, HANDLE t
+ }
+ #endif
+ 
++#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 3
++static HRESULT WINAPI DRI3Present_SetPresentParameters2( struct DRI3Present *This, D3DPRESENT_PARAMETERS2 *pParams )
++{
++    This->allow_discard_delayed_release = pParams->AllowDISCARDDelayedRelease;
++    This->tear_free_discard = pParams->AllowDISCARDDelayedRelease && pParams->TearFreeDISCARD;
++    return D3D_OK;
++}
++
++static BOOL WINAPI DRI3Present_IsBufferReleased( struct DRI3Present *This, struct D3DWindowBuffer *buffer )
++{
++    return PRESENTIsPixmapReleased(buffer->present_pixmap_priv);
++}
++
++static HRESULT WINAPI DRI3Present_WaitBufferReleaseEvent( struct DRI3Present *This )
++{
++    PRESENTWaitReleaseEvent(This->present_priv);
++    return D3D_OK;
++}
++#endif
++
+ /*----------*/
+ 
+ static ID3DPresentVtbl DRI3Present_vtable = {
+@@ -763,6 +787,11 @@ static ID3DPresentVtbl DRI3Present_vtable = {
+     (void *)DRI3Present_CreateThread,
+     (void *)DRI3Present_WaitForThread,
+ #endif
++#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 3
++    (void *)DRI3Present_SetPresentParameters2,
++    (void *)DRI3Present_IsBufferReleased,
++    (void *)DRI3Present_WaitBufferReleaseEvent,
++#endif
+ };
+ 
+ /* The following code is based on WINE's wined3d/device.c and
+@@ -1053,17 +1082,22 @@ static void DRI3Present_UpdatePresentationInterval(struct DRI3Present *This)
+         case D3DPRESENT_INTERVAL_IMMEDIATE:
+         default:
+             This->present_interval = 0;
+-            This->present_async = TRUE;
++            This->present_async =
++                !(This->params.SwapEffect == D3DSWAPEFFECT_DISCARD &&
++                  This->tear_free_discard);
+             break;
+     }
+ 
+     /* D3DSWAPEFFECT_COPY: Force Copy.
+      * This->present_interval == 0: Force Copy to have buffers
+      * release as soon as possible (the display server/compositor
+-     * won't hold any buffer) */
++     * won't hold any buffer), unless DISCARD and
++     * allow_discard_delayed_release */
+     This->present_swapeffectcopy =
+         This->params.SwapEffect == D3DSWAPEFFECT_COPY ||
+-        This->present_async;
++        (This->present_interval == 0 &&
++        !(This->params.SwapEffect == D3DSWAPEFFECT_DISCARD &&
++          This->allow_discard_delayed_release));
+ }
+ 
+ static HRESULT DRI3Present_ChangePresentParameters(struct DRI3Present *This,
+-- 
+2.7.4
+

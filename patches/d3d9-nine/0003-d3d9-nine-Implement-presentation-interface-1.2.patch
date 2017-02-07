@@ -1,0 +1,220 @@
+From 553b001324a7919408bb6cfaa5d33f9f70df7549 Mon Sep 17 00:00:00 2001
+From: Patrick Rudolph <siro@das-labor.org>
+Date: Mon, 22 Feb 2016 19:57:26 +0100
+Subject: [PATCH 3/6] d3d9-nine: Implement presentation interface 1.2
+
+Add new function for presentation interface 1.2.
+
+Fixes issue #102.
+
+Signed-off-by: Patrick Rudolph <siro@das-labor.org>
+---
+ dlls/d3d9-nine/d3dadapter9.c |  2 +-
+ dlls/d3d9-nine/present.c     | 73 +++++++++++++++++++++++++++++++++++++++-----
+ dlls/d3d9-nine/present.h     |  3 +-
+ 3 files changed, 69 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/d3d9-nine/d3dadapter9.c b/dlls/d3d9-nine/d3dadapter9.c
+index 15134cd..435bd61 100644
+--- a/dlls/d3d9-nine/d3dadapter9.c
++++ b/dlls/d3d9-nine/d3dadapter9.c
+@@ -440,7 +440,7 @@ static HRESULT WINAPI DECLSPEC_HOTPATCH d3dadapter9_CreateDeviceEx(struct d3dada
+             ordinal = Adapter - This->map[Adapter].master;
+         }
+         hr = present_create_present_group(This->gdi_display, group->devname, ordinal,
+-                hFocusWindow, pPresentationParameters, nparams, &present);
++                hFocusWindow, pPresentationParameters, nparams, &present, This->ex);
+     }
+ 
+     if (FAILED(hr))
+diff --git a/dlls/d3d9-nine/present.c b/dlls/d3d9-nine/present.c
+index 943eb21..c1f629a 100644
+--- a/dlls/d3d9-nine/present.c
++++ b/dlls/d3d9-nine/present.c
+@@ -42,12 +42,15 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d9nine);
+ #endif
+ 
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MAJOR 1
+-#ifdef ID3DPresent_GetWindowOccluded
++#if defined (ID3DPresent_ResolutionMismatch)
++#define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 2
++#elif defined (ID3DPresent_GetWindowOccluded)
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 1
+ #else
+ #define WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR 0
+ #endif
+ 
++
+ static const struct D3DAdapter9DRM *d3d9_drm = NULL;
+ #ifdef D3D9NINE_DRI2
+ static int is_dri2_fallback = 0;
+@@ -128,6 +131,9 @@ struct DRI3Present
+     HCURSOR hCursor;
+ 
+     DEVMODEW initial_mode;
++
++    BOOL ex;
++    BOOL resolution_mismatch;
+     BOOL occluded;
+     Display *gdi_display;
+ 
+@@ -740,6 +746,8 @@ static struct d3d_wnd_hooks *get_last_hook(void)
+ LRESULT CALLBACK HookCallback(int nCode, WPARAM wParam, LPARAM lParam)
+ {
+     struct d3d_wnd_hooks *hook = &d3d_hooks;
++    DEVMODEW current_mode;
++
+     if (nCode < 0)
+         return CallNextHookEx(hhook, nCode, wParam, lParam);
+ 
+@@ -775,6 +783,18 @@ LRESULT CALLBACK HookCallback(int nCode, WPARAM wParam, LPARAM lParam)
+                         }
+                     }
+                 break;
++                case WM_DISPLAYCHANGE:
++                    /* Ex restores display mode, while non Ex requires the
++                     * user to call Device::Reset() */
++                    ZeroMemory(&current_mode, sizeof(DEVMODEW));
++                    if (!hook->present->ex && !hook->present->params.Windowed &&
++                            EnumDisplaySettingsW(hook->present->devname, ENUM_CURRENT_SETTINGS, &current_mode) &&
++                           (current_mode.dmPelsWidth != hook->present->params.BackBufferWidth ||
++                            current_mode.dmPelsHeight != hook->present->params.BackBufferHeight))
++                        hook->present->resolution_mismatch = TRUE;
++                    else
++                        hook->present->resolution_mismatch = FALSE;
++                break;
+                 /* TODO: handle other window messages here */
+                 default:
+                 break;
+@@ -856,8 +876,37 @@ static BOOL WINAPI DRI3Present_GetWindowOccluded(struct DRI3Present *This)
+     return This->occluded;
+ }
+ #endif
+-/*----------*/
+ 
++#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 2
++static BOOL WINAPI DRI3Present_ResolutionMismatch(struct DRI3Present *This)
++{
++    /* The resolution might change due to a third party app.
++     * Poll this function to get the device's resolution match.
++     * A device reset is required to restore the requested resolution.
++     */
++    return This->resolution_mismatch;
++}
++
++static HANDLE WINAPI DRI3Present_CreateThread( struct DRI3Present *This,
++        void *pThreadfunc, void *pParam )
++{
++    LPTHREAD_START_ROUTINE lpStartAddress =
++            (LPTHREAD_START_ROUTINE) pThreadfunc;
++
++    return CreateThread(NULL, 0, lpStartAddress, pParam, 0, NULL);
++}
++
++static BOOL WINAPI DRI3Present_WaitForThread( struct DRI3Present *This, HANDLE thread )
++{
++    DWORD ExitCode = 0;
++    while (GetExitCodeThread(thread, &ExitCode) && ExitCode == STILL_ACTIVE)
++        Sleep(10);
++
++    return TRUE;
++}
++#endif
++
++/*----------*/
+ 
+ static ID3DPresentVtbl DRI3Present_vtable = {
+     (void *)DRI3Present_QueryInterface,
+@@ -878,7 +927,12 @@ static ID3DPresentVtbl DRI3Present_vtable = {
+     (void *)DRI3Present_SetGammaRamp,
+     (void *)DRI3Present_GetWindowInfo,
+ #if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 1
+-    (void *)DRI3Present_GetWindowOccluded
++    (void *)DRI3Present_GetWindowOccluded,
++#endif
++#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 2
++    (void *)DRI3Present_ResolutionMismatch,
++    (void *)DRI3Present_CreateThread,
++    (void *)DRI3Present_WaitForThread,
+ #endif
+ };
+ 
+@@ -993,7 +1047,8 @@ static HRESULT DRI3Present_ChangePresentParameters(struct DRI3Present *This,
+ }
+ 
+ static HRESULT DRI3Present_new(Display *gdi_display, const WCHAR *devname,
+-        D3DPRESENT_PARAMETERS *params, HWND focus_wnd, struct DRI3Present **out)
++        D3DPRESENT_PARAMETERS *params, HWND focus_wnd, struct DRI3Present **out,
++        boolean ex)
+ {
+     struct DRI3Present *This;
+     HRESULT hr;
+@@ -1018,6 +1073,7 @@ static HRESULT DRI3Present_new(Display *gdi_display, const WCHAR *devname,
+     This->vtable = &DRI3Present_vtable;
+     This->refs = 1;
+     This->focus_wnd = focus_wnd;
++    This->ex = ex;
+ 
+     strcpyW(This->devname, devname);
+ 
+@@ -1051,6 +1107,7 @@ struct DRI3PresentGroup
+     /* IUnknown reference count */
+     LONG refs;
+ 
++    boolean ex;
+     struct DRI3Present **present_backends;
+     unsigned npresent_backends;
+     Display *gdi_display;
+@@ -1128,7 +1185,8 @@ static HRESULT WINAPI DRI3PresentGroup_CreateAdditionalPresent(struct DRI3Presen
+ {
+     HRESULT hr;
+     hr = DRI3Present_new(This->gdi_display, This->present_backends[0]->devname,
+-            pPresentationParameters, 0, (struct DRI3Present **)ppPresent);
++            pPresentationParameters, 0, (struct DRI3Present **)ppPresent, This->ex);
++
+     return hr;
+ }
+ 
+@@ -1151,7 +1209,7 @@ static ID3DPresentGroupVtbl DRI3PresentGroup_vtable = {
+ 
+ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_name,
+         UINT adapter, HWND focus_wnd, D3DPRESENT_PARAMETERS *params,
+-        unsigned nparams, ID3DPresentGroup **group)
++        unsigned nparams, ID3DPresentGroup **group, boolean ex)
+ {
+     struct DRI3PresentGroup *This;
+     DISPLAY_DEVICEW dd;
+@@ -1169,6 +1227,7 @@ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_n
+     This->gdi_display = gdi_display;
+     This->vtable = &DRI3PresentGroup_vtable;
+     This->refs = 1;
++    This->ex = ex;
+     This->npresent_backends = nparams;
+     This->present_backends = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+             This->npresent_backends * sizeof(struct DRI3Present *));
+@@ -1194,7 +1253,7 @@ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_n
+ 
+         /* Create an ID3DPresent for it */
+         hr = DRI3Present_new(gdi_display, dd.DeviceName, &params[i],
+-                focus_wnd, &This->present_backends[i]);
++                focus_wnd, &This->present_backends[i], ex);
+         if (FAILED(hr))
+         {
+             DRI3PresentGroup_Release(This);
+diff --git a/dlls/d3d9-nine/present.h b/dlls/d3d9-nine/present.h
+index a3005dc..0f0bca9 100644
+--- a/dlls/d3d9-nine/present.h
++++ b/dlls/d3d9-nine/present.h
+@@ -28,7 +28,8 @@
+ #include <X11/Xlib.h>
+ 
+ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_name, UINT adapter,
+-        HWND focus, D3DPRESENT_PARAMETERS *params, unsigned nparams, ID3DPresentGroup **group);
++        HWND focus, D3DPRESENT_PARAMETERS *params, unsigned nparams, ID3DPresentGroup **group,
++        boolean ex);
+ 
+ HRESULT present_create_adapter9(Display *gdi_display, HDC hdc, ID3DAdapter9 **adapter);
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,194 @@
+From c9071495bf4a5d36ac63deea035dd1a1a2963dfd Mon Sep 17 00:00:00 2001
+From: Patrick Rudolph <siro@das-labor.org>
+Date: Fri, 7 Oct 2016 16:36:48 +0200
+Subject: [PATCH 5/6] d3d9-nine: Add shadervalidator interface
+
+Signed-off-by: Patrick Rudolph <siro@das-labor.org>
+---
+ dlls/d3d9-nine/Makefile.in        |  3 +-
+ dlls/d3d9-nine/d3d9_main.c        | 13 ++++--
+ dlls/d3d9-nine/shader_validator.c | 88 +++++++++++++++++++++++++++++++++++++++
+ dlls/d3d9-nine/shader_validator.h | 29 +++++++++++++
+ 4 files changed, 129 insertions(+), 4 deletions(-)
+ create mode 100644 dlls/d3d9-nine/shader_validator.c
+ create mode 100644 dlls/d3d9-nine/shader_validator.h
+
+diff --git a/dlls/d3d9-nine/Makefile.in b/dlls/d3d9-nine/Makefile.in
+index f737d80..c6df8d7 100644
+--- a/dlls/d3d9-nine/Makefile.in
++++ b/dlls/d3d9-nine/Makefile.in
+@@ -9,6 +9,7 @@ C_SRCS = \
+         device_wrap.c \
+         present.c \
+         dri3.c \
+-        wndproc.c
++        wndproc.c \
++        shader_validator.c
+ 
+ RC_SRCS = version.rc
+diff --git a/dlls/d3d9-nine/d3d9_main.c b/dlls/d3d9-nine/d3d9_main.c
+index dc53f2d..d1efdf4 100644
+--- a/dlls/d3d9-nine/d3d9_main.c
++++ b/dlls/d3d9-nine/d3d9_main.c
+@@ -30,6 +30,7 @@
+ 
+ #include "d3dadapter9.h"
+ #include "wndproc.h"
++#include "shader_validator.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(d3d9nine);
+ 
+@@ -65,12 +66,18 @@ HRESULT WINAPI DECLSPEC_HOTPATCH Direct3DCreate9Ex(UINT sdk_version, IDirect3D9E
+  * No documentation available for this function.
+  * SDK only says it is internal and shouldn't be used.
+  */
++
+ void* WINAPI Direct3DShaderValidatorCreate9(void)
+ {
+-    static int once;
++    IDirect3DShaderValidator9Impl* object =
++            HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
++                    sizeof(IDirect3DShaderValidator9Impl));
+ 
+-    if (!once++) FIXME("stub\n");
+-    return NULL;
++    object->lpVtbl = &IDirect3DShaderValidator9Vtbl;
++    object->ref = 1;
++
++    FIXME("Returning interface %p\n", object);
++    return (void*) object;
+ }
+ 
+ /*******************************************************************
+diff --git a/dlls/d3d9-nine/shader_validator.c b/dlls/d3d9-nine/shader_validator.c
+new file mode 100644
+index 0000000..03848b2
+--- /dev/null
++++ b/dlls/d3d9-nine/shader_validator.c
+@@ -0,0 +1,88 @@
++/*
++ * Direct3D 9 ShaderValidator
++ *
++ * Copyright 2016 Patrick Rudolph
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ *
++ */
++#include "wine/debug.h"
++WINE_DEFAULT_DEBUG_CHANNEL(d3d9nine);
++
++#include "winbase.h"
++
++#include "shader_validator.h"
++
++static HRESULT WINAPI IDirect3DShaderValidator9Impl_QueryInterface(IDirect3DShaderValidator9Impl *This,
++        REFIID riid, LPVOID* ppobj)
++{
++    /* TODO: AddRef(iface). */
++    *ppobj = This;
++    TRACE("This=%p, riid=%s, object=%p.\n", This, debugstr_guid(riid), ppobj);
++
++    return S_OK;
++}
++
++static ULONG WINAPI IDirect3DShaderValidator9Impl_AddRef(IDirect3DShaderValidator9Impl *This)
++{
++    ULONG ref = InterlockedIncrement(&This->ref);
++    TRACE("This=%p increasing refcount to %u.\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI IDirect3DShaderValidator9Impl_Release(IDirect3DShaderValidator9Impl *This)
++{
++    ULONG ref = InterlockedDecrement(&This->ref);
++    TRACE("This=%p decreasing refcount to %u.\n", This, ref);
++
++    if (ref == 0)
++        HeapFree(GetProcessHeap(), 0, This);
++
++    return ref;
++}
++
++static LONG WINAPI IDirect3DShaderValidator9Impl_Begin(IDirect3DShaderValidator9Impl *This,
++        void* callback, void* unknown1, ULONG unknown2)
++{
++    TRACE("This=%p, callback=%p, unknown1=%p, unknown2=%u\n", This, callback, unknown1, unknown2);
++    return 1;
++}
++
++static LONG WINAPI IDirect3DShaderValidator9Impl_Instruction(IDirect3DShaderValidator9Impl *This,
++        const char* unknown1, unsigned int unknown2, const unsigned long* unknown3, unsigned int unknown4)
++{
++    TRACE("This=%p, unknown1=%p, unknown2=%u, unknown3=%p, unknown4=%u\n", This, unknown1, unknown2, unknown3, unknown4);
++    return 1;
++}
++
++static LONG WINAPI IDirect3DShaderValidator9Impl_End(IDirect3DShaderValidator9Impl *This)
++{
++    TRACE("This=%p\n", This);
++    return 1;
++}
++
++const void *IDirect3DShaderValidator9Vtbl[] =
++{
++    /* IUnknown */
++    IDirect3DShaderValidator9Impl_QueryInterface,
++    IDirect3DShaderValidator9Impl_AddRef,
++    IDirect3DShaderValidator9Impl_Release,
++    /* IDirect3DShaderValidator9 */
++    IDirect3DShaderValidator9Impl_Begin,
++    IDirect3DShaderValidator9Impl_Instruction,
++    IDirect3DShaderValidator9Impl_End
++};
++
+diff --git a/dlls/d3d9-nine/shader_validator.h b/dlls/d3d9-nine/shader_validator.h
+new file mode 100644
+index 0000000..07a5e2d
+--- /dev/null
++++ b/dlls/d3d9-nine/shader_validator.h
+@@ -0,0 +1,29 @@
++/*
++ * Direct3D 9 ShaderValidator
++ *
++ * Copyright 2016 Patrick Rudolph
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ *
++ */
++
++typedef struct IDirect3DShaderValidator9Impl
++{
++    /* IUnknown fields */
++    void *lpVtbl;
++    LONG ref;
++} IDirect3DShaderValidator9Impl;
++
++const void *IDirect3DShaderValidator9Vtbl[6];
+-- 
+2.7.4
+

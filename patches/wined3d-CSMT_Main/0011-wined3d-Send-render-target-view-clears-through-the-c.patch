@@ -1,0 +1,170 @@
+From 84d03d3dd23a3f1f9f80297a2cb30a6c383ab7bb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 4 Jul 2013 21:10:16 +0200
+Subject: wined3d: Send render target view clears through the command stream
+
+---
+ dlls/d3d10core/tests/device.c  |  2 +-
+ dlls/d3d11/tests/d3d11.c       |  2 +-
+ dlls/d3d9/tests/visual.c       |  2 +-
+ dlls/wined3d/cs.c              | 51 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/device.c          |  6 ++---
+ dlls/wined3d/wined3d_private.h |  3 +++
+ 6 files changed, 59 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/d3d10core/tests/device.c b/dlls/d3d10core/tests/device.c
+index 5ca4a14fa6a..c1dbe9e835f 100644
+--- a/dlls/d3d10core/tests/device.c
++++ b/dlls/d3d10core/tests/device.c
+@@ -3759,7 +3759,7 @@ static void test_occlusion_query(void)
+     memset(&data, 0xff, sizeof(data));
+     hr = ID3D10Asynchronous_GetData(query, &data, sizeof(data), 0);
+     ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
+-    todo_wine ok(data.uint == 640 * 480, "Got unexpected query result 0x%08x%08x.\n", data.dword[1], data.dword[0]);
++    ok(data.uint == 640 * 480, "Got unexpected query result 0x%08x%08x.\n", data.dword[1], data.dword[0]);
+ 
+     memset(&data, 0xff, sizeof(data));
+     hr = ID3D10Asynchronous_GetData(query, &data, sizeof(DWORD), 0);
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index eb67dfc07fd..a63a4ea507b 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -5245,7 +5245,7 @@ static void test_occlusion_query(void)
+     memset(&data, 0xff, sizeof(data));
+     hr = ID3D11DeviceContext_GetData(context, query, &data, sizeof(data), 0);
+     ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
+-    todo_wine ok(data.uint == 640 * 480, "Got unexpected query result 0x%08x%08x.\n", data.dword[1], data.dword[0]);
++    ok(data.uint == 640 * 480, "Got unexpected query result 0x%08x%08x.\n", data.dword[1], data.dword[0]);
+ 
+     memset(&data, 0xff, sizeof(data));
+     hr = ID3D11DeviceContext_GetData(context, query, &data, sizeof(DWORD), 0);
+diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
+index 3543db7173c..e85f1ca7f0f 100644
+--- a/dlls/d3d9/tests/visual.c
++++ b/dlls/d3d9/tests/visual.c
+@@ -1337,7 +1337,7 @@ static void color_fill_test(void)
+          * result on Wine.
+          * {D3DFMT_YUY2,     "D3DFMT_YUY2",     BLOCKS,                              0},
+          * {D3DFMT_UYVY,     "D3DFMT_UYVY",     BLOCKS,                              0}, */
+-        {D3DFMT_DXT1,     "D3DFMT_DXT1",     BLOCKS | TODO_FILL_RETURN,           0},
++        {D3DFMT_DXT1,     "D3DFMT_DXT1",     BLOCKS,                              0},
+         /* Vendor-specific formats like ATI2N are a non-issue here since they're not
+          * supported as offscreen plain surfaces and do not support D3DUSAGE_RENDERTARGET
+          * when created as texture. */
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 30020d62c0c..3747197a26e 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -80,6 +80,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_SET_LIGHT,
+     WINED3D_CS_OP_SET_LIGHT_ENABLE,
+     WINED3D_CS_OP_BLT,
++    WINED3D_CS_OP_CLEAR_RTV,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -411,6 +412,18 @@ struct wined3d_cs_blt
+     enum wined3d_texture_filter_type filter;
+ };
+ 
++struct wined3d_cs_clear_rtv
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_rendertarget_view *view;
++    RECT rect;
++    DWORD flags;
++    struct wined3d_color color;
++    float depth;
++    DWORD stencil;
++    const struct blit_shader *blitter;
++};
++
+ static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
+ static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
+ 
+@@ -2081,6 +2094,43 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+     cs->ops->submit(cs);
+ }
+ 
++static UINT wined3d_cs_exec_clear_rtv(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_clear_rtv *op = data;
++    struct wined3d_device *device = cs->device;
++
++    if (op->flags & WINED3DCLEAR_TARGET)
++        op->blitter->color_fill(device, op->view, &op->rect, &op->color);
++    else
++        op->blitter->depth_fill(device, op->view, &op->rect, op->flags, op->depth, op->stencil);
++
++    wined3d_resource_release(op->view->resource);
++
++    return sizeof(*op);
++}
++
++void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
++        const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
++        const struct blit_shader *blitter)
++{
++    struct wined3d_cs_clear_rtv *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op));
++    op->opcode = WINED3D_CS_OP_CLEAR_RTV;
++    op->view = view;
++    op->rect = *rect;
++    op->flags = flags;
++    if (flags & WINED3DCLEAR_TARGET)
++        op->color = *color;
++    op->depth = depth;
++    op->stencil = stencil;
++    op->blitter = blitter;
++
++    wined3d_resource_acquire(view->resource);
++
++    cs->ops->submit(cs);
++}
++
+ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
+@@ -2126,6 +2176,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_SET_LIGHT                  */ wined3d_cs_exec_set_light,
+     /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
+     /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
++    /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index e1a02212900..4fcc496bb2d 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4333,10 +4333,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
+-    if (blit_op == WINED3D_BLIT_OP_COLOR_FILL)
+-        return blitter->color_fill(device, view, rect, color);
+-    else
+-        return blitter->depth_fill(device, view, rect, flags, depth, stencil);
++    wined3d_cs_emit_clear_rtv(device->cs, view, rect, flags, color, depth, stencil, blitter);
++    return WINED3D_OK;
+ }
+ 
+ struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(const struct wined3d_device *device,
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 84c592249aa..f3f356e2f66 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3170,6 +3170,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+         enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *rects,
+         DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
++        const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
++        const struct blit_shader *blitter) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_destroy_object(struct wined3d_cs *cs,
+         void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
+-- 
+2.11.0
+

@@ -1,0 +1,161 @@
+From dcd2476869c8a09f1c33e6761d42b8ba7e370efc Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 8 Feb 2017 13:20:19 +0100
+Subject: wined3d: Get rid of TLS for command stream.
+
+---
+ dlls/wined3d/cs.c              | 61 ++++++++++++++++++++++--------------------
+ dlls/wined3d/wined3d_private.h |  3 ++-
+ 2 files changed, 34 insertions(+), 30 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index da20da75a36..5c408ab4f75 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -612,17 +612,6 @@ static void wined3d_cs_list_init(struct wined3d_cs_list *list)
+     list_init(&list->blocks);
+ }
+ 
+-static struct wined3d_cs_block *wined3d_cs_get_thread_block(const struct wined3d_cs *cs)
+-{
+-    return TlsGetValue(cs->tls_idx);
+-}
+-
+-static void wined3d_cs_set_thread_block(const struct wined3d_cs *cs, struct wined3d_cs_block *block)
+-{
+-    if (!TlsSetValue(cs->tls_idx, block))
+-        ERR("Failed to set thread block.\n");
+-}
+-
+ static struct wined3d_cs_block *wined3d_cs_get_block(struct wined3d_cs *cs, struct wined3d_cs_list *list)
+ {
+     struct wined3d_cs_block *block;
+@@ -2768,18 +2757,31 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+ 
+ static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, int priority)
+ {
+-    struct wined3d_cs_block *block = wined3d_cs_get_thread_block(cs);
++    struct wined3d_cs_block *block;
+     struct wined3d_cs_list *list = priority ? &cs->exec_prio_list : &cs->exec_list;
+     void *data;
+ 
+     assert(size <= sizeof(block->data));
+ 
+-    if (!block || block->pos + size > sizeof(block->data) || block->list != list)
++    if (cs->thread_id == GetCurrentThreadId())
+     {
+-        if (block)
+-            wined3d_cs_mt_submit(cs);
+-        block = wined3d_cs_get_block(cs, list);
+-        wined3d_cs_set_thread_block(cs, block);
++        block = cs->block_worker;
++        if (!block || block->pos + size > sizeof(block->data) || block->list != list)
++        {
++            if (block) wined3d_cs_mt_submit(cs);
++            block = wined3d_cs_get_block(cs, list);
++            cs->block_worker = block;
++        }
++    }
++    else
++    {
++        block = cs->block_main;
++        if (!block || block->pos + size > sizeof(block->data) || block->list != list)
++        {
++            if (block) wined3d_cs_mt_submit(cs);
++            block = wined3d_cs_get_block(cs, list);
++            cs->block_main = block;
++        }
+     }
+ 
+     data = &block->data[block->pos];
+@@ -2790,13 +2792,20 @@ static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, int
+ 
+ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
+ {
+-    struct wined3d_cs_block *block = wined3d_cs_get_thread_block(cs);
+-    wined3d_cs_set_thread_block(cs, NULL);
++    struct wined3d_cs_block *block;
+ 
+     if (cs->thread_id == GetCurrentThreadId())
++    {
++        block = cs->block_worker;
++        cs->block_worker = NULL;
++
+         wined3d_cs_process_block(cs, block);
++    }
+     else
+     {
++        block = cs->block_main;
++        cs->block_main = NULL;
++
+         wined3d_cs_list_enqueue(block->list, block);
+ 
+         if (InterlockedCompareExchange(&cs->waiting_for_event, FALSE, TRUE))
+@@ -2806,9 +2815,10 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
+ 
+ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
+ {
+-    struct wined3d_cs_block *block = wined3d_cs_get_thread_block(cs);
++    struct wined3d_cs_block *block;
+     BOOL fence = FALSE;
+ 
++    block = (cs->thread_id == GetCurrentThreadId()) ? cs->block_worker : cs->block_main;
+     block->fence = &fence;
+     wined3d_cs_mt_submit(cs);
+ 
+@@ -2887,7 +2897,6 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+ 
+     if (!(cs = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*cs))))
+         return NULL;
+-    cs->tls_idx = TLS_OUT_OF_INDEXES;
+ 
+     if (FAILED(state_init(&cs->state, gl_info, &device->adapter->d3d_info,
+             WINED3D_STATE_NO_REF | WINED3D_STATE_INIT_DEFAULT)))
+@@ -2909,12 +2918,6 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+         goto err;
+     }
+ 
+-    if ((cs->tls_idx = TlsAlloc()) == TLS_OUT_OF_INDEXES)
+-    {
+-        ERR("Failed to allocate cs TLS index, err %#x.\n", GetLastError());
+-        goto err;
+-    }
+-
+     if (wined3d_settings.cs_multithreaded)
+     {
+         cs->ops = &wined3d_cs_mt_ops;
+@@ -2935,7 +2938,6 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+ err:
+     state_cleanup(&cs->state);
+     if (cs->event) CloseHandle(cs->event);
+-    if (cs->tls_idx != TLS_OUT_OF_INDEXES) TlsFree(cs->tls_idx);
+     HeapFree(GetProcessHeap(), 0, cs->data);
+     HeapFree(GetProcessHeap(), 0, cs);
+     return NULL;
+@@ -2964,7 +2966,8 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
+ #endif
+     }
+ 
+-    TlsFree(cs->tls_idx);
++    HeapFree(GetProcessHeap(), 0, cs->block_main);
++    HeapFree(GetProcessHeap(), 0, cs->block_worker);
+     HeapFree(GetProcessHeap(), 0, cs->data);
+     HeapFree(GetProcessHeap(), 0, cs);
+ }
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 8d0d591c62d..6c46aa04ebc 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3197,7 +3197,8 @@ struct wined3d_cs
+     struct wined3d_device *device;
+     struct wined3d_state state;
+     HANDLE thread;
+-    DWORD tls_idx;
++    struct wined3d_cs_block *block_main;
++    struct wined3d_cs_block *block_worker;
+     DWORD thread_id;
+     size_t data_size;
+     void *data;
+-- 
+2.11.0
+

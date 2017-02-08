@@ -1,0 +1,147 @@
+From 83d8362bfb2253c31b57f3ef6f7b68b239427b4d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 24 Oct 2013 18:56:13 +0200
+Subject: wined3d: Use an event to block the worker thread when it is idle.
+
+I could not find a canonical implementation for this. Suggestions are
+welcome.
+
+The main goal was to avoid SetEvent / WaitForSingleObject / ResetEvent
+calls at all costs. They go straight to wineserver, bringing it to 25%
+CPU time and cutting framerates in half. Hence the extra BOOL to tell
+cs_submit when to set the event.
+
+Finding the correct spin count is tricky. The value I set is high enough
+to prevent 3DMark2001 car chase high detail from waiting. This benchmark
+maps a lot of in-use managed buffers and thus waits for the CS. But what
+the ideal number is depends a lot on the game and CPU.
+
+A better heuristic is needed. E.g. we could tell the worker thread when
+the main thread is waiting for a resource to become idle and avoid
+waiting for the event in that case. We may have to use POSIX
+synchronization primitives for efficiency. On the other hand, the
+current implementation probably still spins way too much for an
+application that throttles the framerate to 30 fps by waiting in its own
+code. So it is probably only good enough for Microsoft Powerpoint.
+
+We should also think about blocking the main thread with events if it is
+waiting for the worker thread when waiting for resources, the swap
+counter or space in the command Stream. This should preserve power when
+vsync is turned on.
+---
+ dlls/wined3d/cs.c              | 43 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/wined3d_private.h |  5 +++++
+ 2 files changed, 48 insertions(+)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index c4bedb48153..95b86dc12a7 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -563,9 +563,33 @@ static struct wined3d_cs_block *wined3d_cs_list_dequeue(struct wined3d_cs_list *
+     return LIST_ENTRY(head, struct wined3d_cs_block, entry);
+ }
+ 
++static void wined3d_cs_wait_event(struct wined3d_cs *cs)
++{
++    InterlockedExchange(&cs->waiting_for_event, TRUE);
++
++    /* The main thread might enqueue a finish command and block on it
++     * after the worker thread decided to enter wined3d_cs_wait_event
++     * and before waiting_for_event was set to TRUE. Check again if
++     * the queues are empty */
++    if (cs->exec_list.count || cs->exec_prio_list.count)
++    {
++        /* The main thread might have signalled the event, or be in the process
++         * of doing so. Wait for the event to reset it. ResetEvent is not good
++         * because the main thread might be beween the waiting_for_event reset
++         * and SignalEvent call. */
++        if (!InterlockedCompareExchange(&cs->waiting_for_event, FALSE, TRUE))
++            WaitForSingleObject(cs->event, INFINITE);
++    }
++    else
++    {
++        WaitForSingleObject(cs->event, INFINITE);
++    }
++}
++
+ static struct wined3d_cs_block *wined3d_cs_dequeue_block(struct wined3d_cs *cs)
+ {
+     struct wined3d_cs_block *block;
++    DWORD spin_count = 0;
+ 
+     /* FIXME: Use an event to wait after a couple of spins. */
+     for (;;)
+@@ -574,6 +598,13 @@ static struct wined3d_cs_block *wined3d_cs_dequeue_block(struct wined3d_cs *cs)
+             return block;
+         if ((block = wined3d_cs_list_dequeue(&cs->exec_list)))
+             return block;
++
++        spin_count++;
++        if (spin_count >= WINED3D_CS_SPIN_COUNT)
++        {
++            wined3d_cs_wait_event(cs);
++            spin_count = 0;
++        }
+     }
+ }
+ 
+@@ -2831,7 +2862,12 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
+     if (cs->thread_id == GetCurrentThreadId())
+         wined3d_cs_process_block(cs, block);
+     else
++    {
+         wined3d_cs_list_enqueue(block->list, block);
++
++        if (InterlockedCompareExchange(&cs->waiting_for_event, FALSE, TRUE))
++            SetEvent(cs->event);
++    }
+ }
+ 
+ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
+@@ -2929,6 +2965,12 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+     if (!(cs->data = HeapAlloc(GetProcessHeap(), 0, cs->data_size)))
+         goto err;
+ 
++    if (!(cs->event = CreateEventW(NULL, FALSE, FALSE, NULL)))
++    {
++        ERR("Failed to allocate event, err %#x.\n", GetLastError());
++        goto err;
++    }
++
+     if ((cs->tls_idx = TlsAlloc()) == TLS_OUT_OF_INDEXES)
+     {
+         ERR("Failed to allocate cs TLS index, err %#x.\n", GetLastError());
+@@ -2954,6 +2996,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+ 
+ err:
+     state_cleanup(&cs->state);
++    if (cs->event) CloseHandle(cs->event);
+     if (cs->tls_idx != TLS_OUT_OF_INDEXES) TlsFree(cs->tls_idx);
+     HeapFree(GetProcessHeap(), 0, cs->data);
+     HeapFree(GetProcessHeap(), 0, cs);
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index cfbd1e0b70d..e1fdaa6574b 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3188,6 +3188,8 @@ struct wined3d_cs_ops
+     void (*submit_and_wait)(struct wined3d_cs *cs);
+ };
+ 
++#define WINED3D_CS_SPIN_COUNT 10000000
++
+ struct wined3d_cs
+ {
+     const struct wined3d_cs_ops *ops;
+@@ -3204,6 +3206,9 @@ struct wined3d_cs
+     struct wined3d_cs_list exec_prio_list;
+ 
+     LONG pending_presents;
++
++    HANDLE event;
++    BOOL waiting_for_event;
+ };
+ 
+ static inline void wined3d_resource_wait_idle(struct wined3d_resource *resource)
+-- 
+2.11.0
+

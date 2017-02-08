@@ -1,0 +1,57 @@
+From cd0503137f298188f2e99ab083b1cb3f4154d47b Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 8 Feb 2017 00:21:56 +0100
+Subject: wined3d: Use priority queue for maps/unmaps.
+
+---
+ dlls/wined3d/cs.c       | 4 ++--
+ dlls/wined3d/resource.c | 4 ++++
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 2a255060dc4..573175ef3c7 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1873,7 +1873,7 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+     struct wined3d_cs_map *op;
+     HRESULT hr;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op), 0);
++    op = cs->ops->require_space(cs, sizeof(*op), 1);
+     op->opcode = WINED3D_CS_OP_MAP;
+     op->resource = resource;
+     op->sub_resource_idx = sub_resource_idx;
+@@ -1902,7 +1902,7 @@ HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resourc
+     struct wined3d_cs_unmap *op;
+     HRESULT hr;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op), 0);
++    op = cs->ops->require_space(cs, sizeof(*op), 1);
+     op->opcode = WINED3D_CS_OP_UNMAP;
+     op->resource = resource;
+     op->sub_resource_idx = sub_resource_idx;
+diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
+index 51da49077ed..1a2671ceb92 100644
+--- a/dlls/wined3d/resource.c
++++ b/dlls/wined3d/resource.c
+@@ -356,6 +356,8 @@ HRESULT CDECL wined3d_resource_map(struct wined3d_resource *resource, unsigned i
+ 
+     flags = wined3d_resource_sanitise_map_flags(resource, flags);
+ 
++    wined3d_resource_wait_idle(resource);
++
+     return wined3d_cs_map(resource->device->cs, resource, sub_resource_idx, map_desc, box, flags);
+ }
+ 
+@@ -371,6 +373,8 @@ HRESULT CDECL wined3d_resource_unmap(struct wined3d_resource *resource, unsigned
+ {
+     TRACE("resource %p, sub_resource_idx %u.\n", resource, sub_resource_idx);
+ 
++    wined3d_resource_wait_idle(resource);
++
+     return wined3d_cs_unmap(resource->device->cs, resource, sub_resource_idx);
+ }
+ 
+-- 
+2.11.0
+

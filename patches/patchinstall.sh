@@ -405,6 +405,7 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_Blend_Factor="$1"
 	enable_wined3d_CSMT_Helper="$1"
+	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
@@ -1429,6 +1430,9 @@ patch_enable ()
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
 			;;
+		wined3d-CSMT_Main)
+			enable_wined3d_CSMT_Main="$2"
+			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
@@ -1957,6 +1961,13 @@ if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 		abort "Patchset winex11-_NET_ACTIVE_WINDOW disabled, but winex11-WM_WINDOWPOSCHANGING depends on that."
 	fi
 	enable_winex11__NET_ACTIVE_WINDOW=1
+fi
+
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
+		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
+	fi
+	enable_wined3d_CSMT_Helper=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -8443,6 +8454,80 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-CSMT_Main
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
+# | 	wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
+# |
+# | Modified files:
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c,
+# | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/sampler.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Replace surface_load_location with texture_load_location.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Recreate ctx and dummy textures through the CS after resets.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Call create_default_sampler from create_dummy_textures.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Do the sampler GL init through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not query available GPU memory on main thread when CSMT is enabled.", 1 },';
+		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer update subresource requests through CS.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer copy requests through CS.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send create_buffer_texture / create_texture_view through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add swapchain waits.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Map vertex buffers through cs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Optimize cs queue empty check.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Introduce a separate priority queue.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for maps/unmaps.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not allow to disable CSMT.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for query polls.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for get_dc / release_dc.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Simplify the fence handling.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not immediately submit stateblock updates.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Get rid of TLS for command stream.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Clean up cs lists on shutdown.", 1 },';
 	) >> "$patchlist"
 fi
 

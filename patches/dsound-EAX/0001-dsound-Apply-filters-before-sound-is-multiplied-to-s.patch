@@ -1,4 +1,4 @@
-From b23019f93121d8a1a57912c4ca335fa1c534c8d7 Mon Sep 17 00:00:00 2001
+From f6d6015507f7706db9db58b851b3032c56f4b3ed Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 28 Mar 2015 08:18:10 +0100
 Subject: dsound: Apply filters before sound is multiplied to speakers.
@@ -7,8 +7,8 @@ Based on a patch by Mark Harmstone.
 ---
  dlls/dsound/dsound.c         |   1 +
  dlls/dsound/dsound_private.h |   4 +-
- dlls/dsound/mixer.c          | 108 ++++++++++++++++++++++++++++++-------------
- 3 files changed, 79 insertions(+), 34 deletions(-)
+ dlls/dsound/mixer.c          | 110 ++++++++++++++++++++++++++++++-------------
+ 3 files changed, 80 insertions(+), 35 deletions(-)
 
 diff --git a/dlls/dsound/dsound.c b/dlls/dsound/dsound.c
 index 4d515adcaf3..65a00787098 100644
@@ -38,7 +38,7 @@ index 8e1e2dafc7c..f22849fb0a2 100644
      DSVOLUMEPAN                 volpan;
  
 diff --git a/dlls/dsound/mixer.c b/dlls/dsound/mixer.c
-index 1a99eebf30c..5b4af70093f 100644
+index 8413588edfb..a11d6c9e798 100644
 --- a/dlls/dsound/mixer.c
 +++ b/dlls/dsound/mixer.c
 @@ -278,23 +278,22 @@ static inline float get_current_sample(const IDirectSoundBufferImpl *dsb,
@@ -146,7 +146,7 @@ index 1a99eebf30c..5b4af70093f 100644
  /**
   * Mix at most the given amount of data into the allocated temporary buffer
   * of the given secondary buffer, starting from the dsb's first currently
-@@ -458,35 +473,64 @@ static inline DWORD DSOUND_BufPtrDiff(DWORD buflen, DWORD ptr1, DWORD ptr2)
+@@ -458,34 +473,63 @@ static inline DWORD DSOUND_BufPtrDiff(DWORD buflen, DWORD ptr1, DWORD ptr2)
   */
  static void DSOUND_MixToTemporary(IDirectSoundBufferImpl *dsb, DWORD frames)
  {
@@ -172,22 +172,18 @@ index 1a99eebf30c..5b4af70093f 100644
  			dsb->device->tmp_buffer = HeapAlloc(GetProcessHeap(), 0, size_bytes);
 +        dsb->device->tmp_buffer_len = size_bytes;
  	}
- 
 -	if(dsb->put_aux == putieee32_sum)
 -		memset(dsb->device->tmp_buffer, 0, dsb->device->tmp_buffer_len);
+-
+-	cp_fields(dsb, frames, &dsb->freqAccNum);
 +    if(dsb->put_aux == putieee32_sum)
 +        memset(dsb->device->tmp_buffer, 0, dsb->device->tmp_buffer_len);
- 
--	cp_fields(dsb, frames, &dsb->freqAccNum);
++
 +    if (using_filters) {
 +        put = putieee32_dsp;
 +        ostride = dsb->mix_channels * sizeof(float);
 +        size_bytes = frames * ostride;
- 
--	if (size_bytes > 0) {
--		for (i = 0; i < dsb->num_filters; i++) {
--			if (dsb->filters[i].inplace) {
--				hr = IMediaObjectInPlace_Process(dsb->filters[i].inplace, size_bytes, (BYTE*)dsb->device->tmp_buffer, 0, DMO_INPLACE_NORMAL);
++
 +        if (dsb->device->dsp_buffer_len < size_bytes || !dsb->device->dsp_buffer) {
 +            if (dsb->device->dsp_buffer)
 +                dsb->device->dsp_buffer = HeapReAlloc(GetProcessHeap(), 0, dsb->device->dsp_buffer, size_bytes);
@@ -197,12 +193,10 @@ index 1a99eebf30c..5b4af70093f 100644
 +        }
 +    }
  
--				if (FAILED(hr))
--					WARN("IMediaObjectInPlace_Process failed for filter %u\n", i);
--			} else
--				WARN("filter %u has no inplace object - unsupported\n", i);
--		}
--	}
+-	if (size_bytes > 0) {
+-		for (i = 0; i < dsb->num_filters; i++) {
+-			if (dsb->filters[i].inplace) {
+-				hr = IMediaObjectInPlace_Process(dsb->filters[i].inplace, size_bytes, (BYTE*)dsb->device->tmp_buffer, 0, DMO_INPLACE_NORMAL);
 +    cp_fields(dsb, put, ostride, frames, &dsb->freqAccNum);
 +
 +    if (using_filters) {
@@ -217,7 +211,13 @@ index 1a99eebf30c..5b4af70093f 100644
 +                    WARN("filter %u has no inplace object - unsupported\n", i);
 +            }
 +        }
-+
+ 
+-				if (FAILED(hr))
+-					WARN("IMediaObjectInPlace_Process failed for filter %u\n", i);
+-			} else
+-				WARN("filter %u has no inplace object - unsupported\n", i);
+-		}
+-	}
 +        istride = ostride;
 +        ostride = dsb->device->pwfx->nChannels * sizeof(float);
 +        for (i = 0; i < frames; i++) {

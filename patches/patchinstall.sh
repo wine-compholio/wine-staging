@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e08ed6cac218fc09044d06d3cbe2a54f7ec898cf"
+	echo "6bb8ca1e25a9cfc66f396b2ae6bc423a8057929c"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.1"
+	echo "Wine Staging 2.2 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -145,7 +145,6 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Initialize="$1"
 	enable_dmusic_SynthPort_IKsControl="$1"
-	enable_dsound_Clear_Mixing_Buffer="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -403,7 +402,6 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
-	enable_wined3d_Blend_Factor="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
@@ -650,9 +648,6 @@ patch_enable ()
 			;;
 		dmusic-SynthPort_IKsControl)
 			enable_dmusic_SynthPort_IKsControl="$2"
-			;;
-		dsound-Clear_Mixing_Buffer)
-			enable_dsound_Clear_Mixing_Buffer="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -1425,9 +1420,6 @@ patch_enable ()
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
 			;;
-		wined3d-Blend_Factor)
-			enable_wined3d_Blend_Factor="$2"
-			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
 			;;
@@ -2017,13 +2009,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_Silence_FIXMEs=1
 fi
 
-if test "$enable_wined3d_Blend_Factor" -eq 1; then
-	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
-		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-Blend_Factor depends on that."
-	fi
-	enable_wined3d_Silence_FIXMEs=1
-fi
-
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	if test "$enable_wineboot_DriveSerial" -gt 1; then
 		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
@@ -2377,16 +2362,12 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 fi
 
 if test "$enable_dsound_EAX" -eq 1; then
-	if test "$enable_dsound_Clear_Mixing_Buffer" -gt 1; then
-		abort "Patchset dsound-Clear_Mixing_Buffer disabled, but dsound-EAX depends on that."
-	fi
 	if test "$enable_dsound_Fast_Mixer" -gt 1; then
 		abort "Patchset dsound-Fast_Mixer disabled, but dsound-EAX depends on that."
 	fi
 	if test "$enable_dsound_Revert_Cleanup" -gt 1; then
 		abort "Patchset dsound-Revert_Cleanup disabled, but dsound-EAX depends on that."
 	fi
-	enable_dsound_Clear_Mixing_Buffer=1
 	enable_dsound_Fast_Mixer=1
 	enable_dsound_Revert_Cleanup=1
 fi
@@ -3836,18 +3817,6 @@ if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dsound-Clear_Mixing_Buffer
-# |
-# | Modified files:
-# |   *	dlls/dsound/mixer.c
-# |
-if test "$enable_dsound_Clear_Mixing_Buffer" -eq 1; then
-	patch_apply dsound-Clear_Mixing_Buffer/0001-dsound-Clear-the-temporary-mixing-buffer-after-alloc.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Clear the temporary mixing buffer after allocation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3880,7 +3849,7 @@ fi
 # Patchset dsound-EAX
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dsound-Clear_Mixing_Buffer, dsound-Fast_Mixer, dsound-Revert_Cleanup
+# |   *	dsound-Fast_Mixer, dsound-Revert_Cleanup
 # |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,
@@ -6020,7 +5989,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl.exe-Add-IoStopTimer-stub.patch
 	(
 		printf '%s\n' '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
@@ -6032,7 +6000,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Add IoStopTimer stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7446,7 +7413,7 @@ fi
 # Patchset user32-Dialog_Focus
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#37425] Set focus to dialog itself when it has no controls
+# |   *	[#5402] Set focus to dialog itself when it has no controls
 # |
 # | Modified files:
 # |   *	dlls/user32/dialog.c, dlls/user32/tests/msg.c
@@ -7537,20 +7504,13 @@ fi
 
 # Patchset user32-Groupbox_Rectangle
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41830] Fix groupbox rectangle calculation and font handling
-# |
 # | Modified files:
 # |   *	dlls/user32/button.c
 # |
 if test "$enable_user32_Groupbox_Rectangle" -eq 1; then
 	patch_apply user32-Groupbox_Rectangle/0001-user32-Always-restore-previously-selected-font-in-th.patch
-	patch_apply user32-Groupbox_Rectangle/0002-user32-BUTTON_CalcLabelRect-should-use-the-button-fo.patch
-	patch_apply user32-Groupbox_Rectangle/0003-user32-Fix-groupbox-rectangle-calculation-in-the-but.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Always restore previously selected font in the button painting helpers.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: BUTTON_CalcLabelRect should use the button font.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix groupbox rectangle calculation in the button'\''s WM_SETTEXT handler.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8325,50 +8285,6 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Silence_FIXMEs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42140] Silence noisy FIXME in gl_stencil_op
-# |
-# | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
-# |
-if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
-	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
-	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
-	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
-	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
-	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
-	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
-	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
-	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Blend_Factor
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-Silence_FIXMEs
-# |
-# | Modified files:
-# |   *	dlls/wined3d/state.c, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_Blend_Factor" -eq 1; then
-	patch_apply wined3d-Blend_Factor/0001-wined3d-Add-more-blend-modes.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add more blend modes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-QUERY_Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8407,6 +8323,35 @@ if test "$enable_wined3d_Revert_Pixel_Center_Offset" -eq 1; then
 	patch_apply wined3d-Revert_Pixel_Center_Offset/0001-Revert-wined3d-Slightly-offset-the-viewport-in-the-A.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Slightly offset the viewport in the ARB_clip_control case.\".", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Silence_FIXMEs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42140] Silence noisy FIXME in gl_stencil_op
+# |
+# | Modified files:
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
+# |
+if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
+	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
+	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
+	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
+	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
+	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
+	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
+	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
+	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
 	) >> "$patchlist"
 fi
 

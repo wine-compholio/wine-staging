@@ -1,43 +1,24 @@
-From 2f7c047b2c96b4506599e29ea245516d653582db Mon Sep 17 00:00:00 2001
+From 7c039b040883bf9cc22050f2dcb8b70cb9a2e5b8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 1 Apr 2015 04:34:20 +0200
 Subject: ntdll: Load CLI/.NET images in the same way as Windows XP and above.
 
 ---
- dlls/kernel32/process.c |  11 ++--
- dlls/ntdll/loader.c     | 132 +++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 133 insertions(+), 10 deletions(-)
+ dlls/ntdll/loader.c | 123 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 121 insertions(+), 2 deletions(-)
 
-diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 6d0fc74cdf4..389e056f9f9 100644
---- a/dlls/kernel32/process.c
-+++ b/dlls/kernel32/process.c
-@@ -1083,17 +1083,12 @@ static inline DWORD call_process_entry( PEB *peb, LPTHREAD_START_ROUTINE entry )
-  *
-  * Startup routine of a new process. Runs on the new process stack.
-  */
--static DWORD WINAPI start_process( PEB *peb )
-+static DWORD WINAPI start_process( LPTHREAD_START_ROUTINE entry )
- {
--    IMAGE_NT_HEADERS *nt;
--    LPTHREAD_START_ROUTINE entry;
-+    PEB *peb = NtCurrentTeb()->Peb;
-     BOOL being_debugged;
- 
--    nt = RtlImageNtHeader( peb->ImageBaseAddress );
--    entry = (LPTHREAD_START_ROUTINE)((char *)peb->ImageBaseAddress +
--                                     nt->OptionalHeader.AddressOfEntryPoint);
--
--    if (!nt->OptionalHeader.AddressOfEntryPoint)
-+    if (!entry)
-     {
-         ERR( "%s doesn't have an entry point, it cannot be executed\n",
-              debugstr_w(peb->ProcessParameters->ImagePathName.Buffer) );
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index f1ef7ab1bdd..2eae4f76f21 100644
+index cf758505a4c..e796e7552b0 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -104,6 +104,10 @@ static UINT tls_module_count;      /* number of modules with TLS directory */
+@@ -104,12 +104,17 @@ struct start_params
+     void                   *kernel_start;
+     LPTHREAD_START_ROUTINE  entry;
+ };
++static struct start_params start_params;
+ 
+ static HANDLE main_exe_file;
+ static UINT tls_module_count;      /* number of modules with TLS directory */
  static IMAGE_TLS_DIRECTORY *tls_dirs;  /* array of TLS directories */
  LIST_ENTRY tls_links = { &tls_links, &tls_links };
  
@@ -48,7 +29,7 @@ index f1ef7ab1bdd..2eae4f76f21 100644
  static RTL_CRITICAL_SECTION loader_section;
  static RTL_CRITICAL_SECTION_DEBUG critsect_debug =
  {
-@@ -337,6 +341,78 @@ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { ret
+@@ -343,6 +348,78 @@ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { ret
  
  
  /*************************************************************************
@@ -127,7 +108,7 @@ index f1ef7ab1bdd..2eae4f76f21 100644
   *		get_modref
   *
   * Looks for the referenced HMODULE in the current process
-@@ -886,6 +962,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
+@@ -892,6 +969,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
      if (!(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS)) return STATUS_SUCCESS;  /* already done */
      wm->ldr.Flags &= ~LDR_DONT_RESOLVE_REFS;
  
@@ -138,7 +119,7 @@ index f1ef7ab1bdd..2eae4f76f21 100644
      wm->ldr.TlsIndex = alloc_tls_slot( &wm->ldr );
  
      if (!(imports = RtlImageDirectoryEntryToData( wm->ldr.BaseAddress, TRUE,
-@@ -1090,8 +1170,43 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
+@@ -1096,8 +1177,47 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
      BOOL retv = FALSE;
  
      /* Skip calls for modules loaded with special load flags */
@@ -176,6 +157,10 @@ index f1ef7ab1bdd..2eae4f76f21 100644
 +        #else
 +            wm->ldr.EntryPoint = (char *)module + nt->OptionalHeader.AddressOfEntryPoint;
 +        #endif
++
++            if (!(wm->ldr.Flags & LDR_IMAGE_IS_DLL))
++                start_params.entry = wm->ldr.EntryPoint;
++
 +            entry = wm->ldr.EntryPoint;
 +        }
 +    }
@@ -183,28 +168,14 @@ index f1ef7ab1bdd..2eae4f76f21 100644
      if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
      if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
  
-@@ -3044,7 +3159,20 @@ static void load_global_options(void)
-  */
- static void start_process( void *kernel_start )
- {
--    call_thread_entry_point( kernel_start, NtCurrentTeb()->Peb );
-+    IMAGE_NT_HEADERS *nt;
-+    LPTHREAD_START_ROUTINE entry;
-+    PEB *peb = NtCurrentTeb()->Peb;
-+
-+    nt = RtlImageNtHeader( peb->ImageBaseAddress );
-+    entry = (LPTHREAD_START_ROUTINE)((char *)peb->ImageBaseAddress +
-+                                     nt->OptionalHeader.AddressOfEntryPoint);
-+
-+#ifdef __x86_64__
-+    if (is_cli_only_image( peb->ImageBaseAddress ))
-+        entry = (LPTHREAD_START_ROUTINE)p_CorExeMain;
-+#endif
-+
-+    call_thread_entry_point( kernel_start, entry );
- }
+@@ -3066,7 +3186,6 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     WINE_MODREF *wm;
+     LPCWSTR load_path;
+     PEB *peb = NtCurrentTeb()->Peb;
+-    struct start_params start_params;
  
- /******************************************************************
+     if (main_exe_file) NtClose( main_exe_file );  /* at this point the main module is created */
+ 
 -- 
 2.11.0
 

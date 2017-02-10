@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6bb8ca1e25a9cfc66f396b2ae6bc423a8057929c"
+	echo "06c5a9ab55751b1c66ea0847aea4d4a45d8d343c"
 }
 
 # Show version information
@@ -5198,7 +5198,7 @@ fi
 # |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader
 # |
 # | Modified files:
-# |   *	dlls/kernel32/process.c, dlls/ntdll/loader.c
+# |   *	dlls/ntdll/loader.c
 # |
 if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch

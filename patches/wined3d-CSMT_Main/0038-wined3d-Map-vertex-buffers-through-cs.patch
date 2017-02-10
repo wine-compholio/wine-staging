@@ -1,4 +1,4 @@
-From 74653b2cabe0b7abbab5682cbd0bf7e2c9b94d06 Mon Sep 17 00:00:00 2001
+From 520d1bc8ae2e65db6244cf3b2c5115d1cfcc519e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Feb 2017 22:37:58 +0100
 Subject: wined3d: Map vertex buffers through cs.
@@ -10,7 +10,7 @@ Subject: wined3d: Map vertex buffers through cs.
  3 files changed, 76 insertions(+), 44 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 36b07d1a54a..4cbab2a91f8 100644
+index 359f0ad4645..38e465b8f04 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -94,6 +94,7 @@ enum wined3d_cs_op
@@ -21,7 +21,7 @@ index 36b07d1a54a..4cbab2a91f8 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -525,6 +526,13 @@ struct wined3d_cs_delete_gl_contexts
+@@ -526,6 +527,13 @@ struct wined3d_cs_delete_gl_contexts
      struct wined3d_swapchain *swapchain;
  };
  
@@ -35,7 +35,7 @@ index 36b07d1a54a..4cbab2a91f8 100644
  static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
  
-@@ -2623,6 +2631,70 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
+@@ -2639,6 +2647,70 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
      cs->ops->submit_and_wait(cs);
  }
  
@@ -106,7 +106,7 @@ index 36b07d1a54a..4cbab2a91f8 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -2682,6 +2754,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2698,6 +2770,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CREATE_BUFFER_TEXTURE      */ wined3d_cs_exec_create_buffer_texture,
      /* WINED3D_CS_OP_CREATE_TEXTURE_VIEW        */ wined3d_cs_exec_create_texture_view,
      /* WINED3D_CS_OP_DELETE_GL_CONTEXTS         */ wined3d_cs_exec_delete_gl_contexts,
@@ -115,18 +115,18 @@ index 36b07d1a54a..4cbab2a91f8 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index b990682a921..1bafbcac067 100644
+index b392878e2f9..44ac8ccef42 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2837,7 +2837,6 @@ void CDECL wined3d_device_set_unordered_access_view(struct wined3d_device *devic
-         wined3d_unordered_access_view_decref(prev);
+@@ -2851,7 +2851,6 @@ void CDECL wined3d_device_set_unordered_access_view(struct wined3d_device *devic
+     wined3d_device_set_pipeline_unordered_access_view(device, WINED3D_PIPELINE_GRAPHICS, idx, uav);
  }
  
 -/* Context activation is done by the caller. */
  #define copy_and_next(dest, src, size) memcpy(dest, src, size); dest += (size)
  static HRESULT process_vertices_strided(const struct wined3d_device *device, DWORD dwDestIndex, DWORD dwCount,
          const struct wined3d_stream_info *stream_info, struct wined3d_buffer *dest, DWORD flags,
-@@ -3113,14 +3112,8 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
+@@ -3127,14 +3126,8 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
          UINT src_start_idx, UINT dst_idx, UINT vertex_count, struct wined3d_buffer *dst_buffer,
          const struct wined3d_vertex_declaration *declaration, DWORD flags, DWORD dst_fvf)
  {
@@ -141,7 +141,7 @@ index b990682a921..1bafbcac067 100644
  
      TRACE("device %p, src_start_idx %u, dst_idx %u, vertex_count %u, "
              "dst_buffer %p, declaration %p, flags %#x, dst_fvf %#x.\n",
-@@ -3130,47 +3123,11 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
+@@ -3144,47 +3137,11 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
      if (declaration)
          FIXME("Output vertex declaration not implemented yet.\n");
  
@@ -191,10 +191,10 @@ index b990682a921..1bafbcac067 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7035d537604..110fbfde605 100644
+index 6063aa7f390..d47aa20d5a4 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3316,6 +3316,8 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+@@ -3355,6 +3355,8 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, unsigned int flags) DECLSPEC_HIDDEN;
  HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;

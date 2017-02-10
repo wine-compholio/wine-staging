@@ -8493,6 +8493,8 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not immediately submit stateblock updates.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Get rid of TLS for command stream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Clean up cs lists on shutdown.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Use a separate lock for each CS list.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Don'\''t crash in context_release when device was not fully created.", 1 },';
 	) >> "$patchlist"
 fi
 

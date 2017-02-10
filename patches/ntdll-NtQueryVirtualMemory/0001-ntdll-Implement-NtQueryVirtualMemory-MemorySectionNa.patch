@@ -1,4 +1,4 @@
-From d2052ba205d0e1eb31f1806233000b3b9c0df3c3 Mon Sep 17 00:00:00 2001
+From 805c61e62ca54cb4b7240c2313bd0fc4c97a902f Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 1 Feb 2017 19:22:56 +0800
 Subject: ntdll: Implement NtQueryVirtualMemory(MemorySectionName). (v2)
@@ -10,19 +10,19 @@ Subject: ntdll: Implement NtQueryVirtualMemory(MemorySectionName). (v2)
  3 files changed, 164 insertions(+), 35 deletions(-)
 
 diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
-index 6652409eaca..9b8f3079125 100644
+index 448bc64c28a..90eb5bea015 100644
 --- a/dlls/ntdll/tests/info.c
 +++ b/dlls/ntdll/tests/info.c
-@@ -1748,6 +1748,8 @@ static void test_queryvirtualmemory(void)
+@@ -1714,6 +1714,8 @@ static void test_queryvirtualmemory(void)
      MEMORY_BASIC_INFORMATION mbi;
      char stackbuf[42];
      HMODULE module;
-+    char *buffer_name[sizeof(MEMORY_SECTION_NAME) + MAX_PATH * sizeof(WCHAR)];
++    char buffer_name[sizeof(MEMORY_SECTION_NAME) + MAX_PATH * sizeof(WCHAR)];
 +    MEMORY_SECTION_NAME *msn = (MEMORY_SECTION_NAME *)buffer_name;
  
      module = GetModuleHandleA( "ntdll.dll" );
      trace("Check flags of the PE header of NTDLL.DLL at %p\n", module);
-@@ -1821,6 +1823,39 @@ static void test_queryvirtualmemory(void)
+@@ -1787,6 +1789,39 @@ static void test_queryvirtualmemory(void)
              "mbi.Protect is 0x%x\n", mbi.Protect);
      }
      else skip( "bss is outside of module\n" );  /* this can happen on Mac OS */
@@ -63,10 +63,10 @@ index 6652409eaca..9b8f3079125 100644
  
  static void test_affinity(void)
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 105d90984a0..e0fec1ae3ac 100644
+index e826fa03c0c..fcf7733b5a1 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2332,41 +2332,17 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
+@@ -2240,41 +2240,17 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
      return 1;
  }
  
@@ -112,7 +112,7 @@ index 105d90984a0..e0fec1ae3ac 100644
      if (process != NtCurrentProcess())
      {
          NTSTATUS status;
-@@ -2481,6 +2457,130 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+@@ -2389,6 +2365,130 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
      return STATUS_SUCCESS;
  }
  

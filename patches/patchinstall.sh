@@ -2987,12 +2987,14 @@ fi
 # |   *	[#25625] Add implementation for comctl32.PROPSHEET_InsertPage.
 # |
 # | Modified files:
-# |   *	dlls/comctl32/propsheet.c, dlls/comctl32/tests/propsheet.c
+# |   *	dlls/comctl32/propsheet.c, dlls/comctl32/tests/propsheet.c, include/prsht.h
 # |
 if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
 	patch_apply comctl32-PROPSHEET_InsertPage/0002-comctl32-Implement-PROPSHEET_InsertPage-based-on-PRO.patch
+	patch_apply comctl32-PROPSHEET_InsertPage/0003-comctl32-Add-support-for-PSPCB_ADDREF-PSPCB_RELEASE-.patch
 	(
 		printf '%s\n' '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Add support for PSPCB_ADDREF/PSPCB_RELEASE callback notifications.", 2 },';
 	) >> "$patchlist"
 fi
 

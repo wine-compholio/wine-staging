@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "06c5a9ab55751b1c66ea0847aea4d4a45d8d343c"
+	echo "9c72376c8cc03a4ea86dddaa6d18a93a1a33fc73"
 }
 
 # Show version information
@@ -174,7 +174,6 @@ patch_enable_all ()
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
-	enable_kernel32_BeingDebugged="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
@@ -735,9 +734,6 @@ patch_enable ()
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
-			;;
-		kernel32-BeingDebugged)
-			enable_kernel32_BeingDebugged="$2"
 			;;
 		kernel32-COMSPEC)
 			enable_kernel32_COMSPEC="$2"
@@ -2280,13 +2276,9 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 fi
 
 if test "$enable_ntdll_CLI_Images" -eq 1; then
-	if test "$enable_kernel32_BeingDebugged" -gt 1; then
-		abort "Patchset kernel32-BeingDebugged disabled, but ntdll-CLI_Images depends on that."
-	fi
 	if test "$enable_mscoree_CorValidateImage" -gt 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
-	enable_kernel32_BeingDebugged=1
 	enable_mscoree_CorValidateImage=1
 fi
 
@@ -2430,13 +2422,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	enable_server_Misc_ACL=1
 fi
 
-if test "$enable_Staging" -eq 1; then
-	if test "$enable_kernel32_BeingDebugged" -gt 1; then
-		abort "Patchset kernel32-BeingDebugged disabled, but Staging depends on that."
-	fi
-	enable_kernel32_BeingDebugged=1
-fi
-
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2527,25 +2512,7 @@ if test "$enable_Pipelight" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-BeingDebugged
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41648] Replace Peb->BeingDebugged check by CheckRemoteDebuggerPresent
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, include/winbase.h
-# |
-if test "$enable_kernel32_BeingDebugged" -eq 1; then
-	patch_apply kernel32-BeingDebugged/0001-kernel32-Replace-Peb-BeingDebugged-check-by-CheckRem.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Replace Peb->BeingDebugged check by CheckRemoteDebuggerPresent().", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset Staging
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-BeingDebugged
 # |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
@@ -5192,7 +5159,7 @@ fi
 # Patchset ntdll-CLI_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-BeingDebugged, mscoree-CorValidateImage
+# |   *	mscoree-CorValidateImage
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader

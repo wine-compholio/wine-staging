@@ -3473,7 +3473,6 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
 # |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
-# |   *	[#14939] Black & White needs DXTn software decoding support
 # |   *	[#17913] Port Royale doesn't display ocean correctly
 # |
 # | Modified files:

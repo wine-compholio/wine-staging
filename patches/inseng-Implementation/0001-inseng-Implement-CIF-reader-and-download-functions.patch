@@ -1,10 +1,9 @@
-From b861a3f2d105bca65ade87b8dde7a683bc853b89 Mon Sep 17 00:00:00 2001
+From 1db0b7784f49f336ba7243fde42f5ff67eb67fa8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 5 Sep 2016 15:31:29 +0200
 Subject: inseng: Implement CIF reader and download functions.
 
 FIXME: Needs splitting.
-
 ---
  dlls/inseng/Makefile.in      |    7 +-
  dlls/inseng/icif.c           | 1745 ++++++++++++++++++++++++++++++++++++++++++
@@ -19,7 +18,7 @@ FIXME: Needs splitting.
  create mode 100644 dlls/inseng/inseng_private.h
 
 diff --git a/dlls/inseng/Makefile.in b/dlls/inseng/Makefile.in
-index 652e06b..d0aaa66 100644
+index 652e06b0f25..d0aaa663b08 100644
 --- a/dlls/inseng/Makefile.in
 +++ b/dlls/inseng/Makefile.in
 @@ -1,6 +1,9 @@
@@ -36,7 +35,7 @@ index 652e06b..d0aaa66 100644
  IDL_SRCS = inseng_classes.idl
 diff --git a/dlls/inseng/icif.c b/dlls/inseng/icif.c
 new file mode 100644
-index 0000000..177f1b8
+index 00000000000..177f1b892ce
 --- /dev/null
 +++ b/dlls/inseng/icif.c
 @@ -0,0 +1,1745 @@
@@ -1787,7 +1786,7 @@ index 0000000..177f1b8
 +}
 diff --git a/dlls/inseng/inf.c b/dlls/inseng/inf.c
 new file mode 100644
-index 0000000..4e164cc
+index 00000000000..4e164cc7b85
 --- /dev/null
 +++ b/dlls/inseng/inf.c
 @@ -0,0 +1,443 @@
@@ -2235,7 +2234,7 @@ index 0000000..4e164cc
 +    return hr;
 +}
 diff --git a/dlls/inseng/inseng.spec b/dlls/inseng/inseng.spec
-index 82c0b4d..7ae46fa 100644
+index 82c0b4d5fe1..7ae46fad3a7 100644
 --- a/dlls/inseng/inseng.spec
 +++ b/dlls/inseng/inseng.spec
 @@ -7,6 +7,6 @@
@@ -2248,7 +2247,7 @@ index 82c0b4d..7ae46fa 100644
 +@ stdcall GetICifRWFileFromFile(ptr str)
  @ stub PurgeDownloadDirectory
 diff --git a/dlls/inseng/inseng_main.c b/dlls/inseng/inseng_main.c
-index 03ec984..7b1e763 100644
+index c95d2c73216..7b1e763f2ff 100644
 --- a/dlls/inseng/inseng_main.c
 +++ b/dlls/inseng/inseng_main.c
 @@ -2,6 +2,7 @@
@@ -2274,12 +2273,12 @@ index 03ec984..7b1e763 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(inseng);
  
--static inline void *heap_alloc(size_t len)
+-static inline void* __WINE_ALLOC_SIZE(1) heap_alloc(size_t size)
 +static HINSTANCE instance;
 +
 +enum thread_operation
  {
--    return HeapAlloc(GetProcessHeap(), 0, len);
+-    return HeapAlloc(GetProcessHeap(), 0, size);
 -}
 +    OP_DOWNLOAD,
 +    OP_INSTALL
@@ -3462,7 +3461,7 @@ index 03ec984..7b1e763 100644
      IInstallEngine2_Release(&engine->IInstallEngine2_iface);
 diff --git a/dlls/inseng/inseng_private.h b/dlls/inseng/inseng_private.h
 new file mode 100644
-index 0000000..d5966b0
+index 00000000000..1e739d22128
 --- /dev/null
 +++ b/dlls/inseng/inseng_private.h
 @@ -0,0 +1,93 @@
@@ -3492,9 +3491,9 @@ index 0000000..d5966b0
 +#include "inseng.h"
 +#include "wine/unicode.h"
 +
-+static inline void *heap_alloc(size_t len)
++static inline void* __WINE_ALLOC_SIZE(1) heap_alloc(size_t size)
 +{
-+    return HeapAlloc(GetProcessHeap(), 0, len);
++    return HeapAlloc(GetProcessHeap(), 0, size);
 +}
 +
 +static inline void *heap_zero_alloc(size_t len)
@@ -3560,7 +3559,7 @@ index 0000000..d5966b0
 +void component_set_installed(ICifComponent *iface, BOOL value) DECLSPEC_HIDDEN;
 + char *component_get_id(ICifComponent *iface) DECLSPEC_HIDDEN;
 diff --git a/include/inseng.idl b/include/inseng.idl
-index 8a3f4c4..8292741 100644
+index 8a3f4c4d270..82927418a99 100644
 --- a/include/inseng.idl
 +++ b/include/inseng.idl
 @@ -1,5 +1,6 @@
@@ -3886,5 +3885,5 @@ index 8a3f4c4..8292741 100644
 +cpp_quote("HRESULT WINAPI GetICifFileFromFile(ICifFile **, const char *);")
 +cpp_quote("HRESULT WINAPI GetICifRWFileFromFile(ICifRWFile **, const char *);")
 -- 
-2.9.0
+2.11.0
 

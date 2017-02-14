@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9c72376c8cc03a4ea86dddaa6d18a93a1a33fc73"
+	echo "e804e9a5bc9fde9ad8b84dfd121d44afbe177752"
 }
 
 # Show version information
@@ -116,7 +116,6 @@ patch_enable_all ()
 	enable_d3d11_ResolveSubresource="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
-	enable_d3d9_Surface_Refcount="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
@@ -561,9 +560,6 @@ patch_enable ()
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
-			;;
-		d3d9-Surface_Refcount)
-			enable_d3d9_Surface_Refcount="$2"
 			;;
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
@@ -2987,17 +2983,12 @@ fi
 
 # Patchset comctl32-PROPSHEET_InsertPage
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25625] Add implementation for comctl32.PROPSHEET_InsertPage.
-# |
 # | Modified files:
-# |   *	dlls/comctl32/propsheet.c, dlls/comctl32/tests/propsheet.c, include/prsht.h
+# |   *	dlls/comctl32/propsheet.c, include/prsht.h
 # |
 if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
-	patch_apply comctl32-PROPSHEET_InsertPage/0002-comctl32-Implement-PROPSHEET_InsertPage-based-on-PRO.patch
 	patch_apply comctl32-PROPSHEET_InsertPage/0003-comctl32-Add-support-for-PSPCB_ADDREF-PSPCB_RELEASE-.patch
 	(
-		printf '%s\n' '+    { "Peter Hater", "comctl32: Implement PROPSHEET_InsertPage based on PROPSHEET_AddPage.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Add support for PSPCB_ADDREF/PSPCB_RELEASE callback notifications.", 2 },';
 	) >> "$patchlist"
 fi
@@ -3289,21 +3280,6 @@ if test "$enable_d3d9_DesktopWindow" -eq 1; then
 	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d9-Surface_Refcount
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18477] Avoid crashing when broken app tries to release surface although refcount is zero
-# |
-# | Modified files:
-# |   *	dlls/d3d9/surface.c
-# |
-if test "$enable_d3d9_Surface_Refcount" -eq 1; then
-	patch_apply d3d9-Surface_Refcount/0001-d3d9-Don-t-decrease-surface-refcount-when-its-alread.patch
-	(
-		printf '%s\n' '+    { "Henri Verbeet", "d3d9: Don'\''t decrease surface refcount when its already zero.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6506,8 +6482,8 @@ fi
 # |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/handle.c,
-# | 	server/object.c, server/object.h
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
+# | 	server/object.h
 # |
 if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
@@ -6517,7 +6493,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
 	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
 	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
-	patch_apply server-Stored_ACLs/0009-server-Give-all-access-rights-when-opening-an-object.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
@@ -6526,7 +6501,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Give all access rights when opening an object with MAXIMUM_ALLOWED.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8426,7 +8400,6 @@ fi
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Replace surface_load_location with texture_load_location.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';

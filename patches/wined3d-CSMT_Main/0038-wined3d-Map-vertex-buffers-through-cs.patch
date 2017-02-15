@@ -1,4 +1,4 @@
-From 520d1bc8ae2e65db6244cf3b2c5115d1cfcc519e Mon Sep 17 00:00:00 2001
+From 0c368a9fa4e1417a0f5114769fa0b9f44d35ebde Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Feb 2017 22:37:58 +0100
 Subject: wined3d: Map vertex buffers through cs.
@@ -10,18 +10,18 @@ Subject: wined3d: Map vertex buffers through cs.
  3 files changed, 76 insertions(+), 44 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 359f0ad4645..38e465b8f04 100644
+index 42779efe69d..42ce9bafb80 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -94,6 +94,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_CREATE_BUFFER_TEXTURE,
+     WINED3D_CS_OP_CREATE_BUFFER_VIEW,
      WINED3D_CS_OP_CREATE_TEXTURE_VIEW,
      WINED3D_CS_OP_DELETE_GL_CONTEXTS,
 +    WINED3D_CS_OP_MAP_vertex_buffers,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -526,6 +527,13 @@ struct wined3d_cs_delete_gl_contexts
+@@ -528,6 +529,13 @@ struct wined3d_cs_delete_gl_contexts
      struct wined3d_swapchain *swapchain;
  };
  
@@ -35,7 +35,7 @@ index 359f0ad4645..38e465b8f04 100644
  static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
  
-@@ -2639,6 +2647,70 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
+@@ -2655,6 +2663,70 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
      cs->ops->submit_and_wait(cs);
  }
  
@@ -106,8 +106,8 @@ index 359f0ad4645..38e465b8f04 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -2698,6 +2770,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_CREATE_BUFFER_TEXTURE      */ wined3d_cs_exec_create_buffer_texture,
+@@ -2714,6 +2786,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_CREATE_BUFFER_VIEW         */ wined3d_cs_exec_create_buffer_view,
      /* WINED3D_CS_OP_CREATE_TEXTURE_VIEW        */ wined3d_cs_exec_create_texture_view,
      /* WINED3D_CS_OP_DELETE_GL_CONTEXTS         */ wined3d_cs_exec_delete_gl_contexts,
 +    /* WINED3D_CS_OP_MAP_vertex_buffers         */ wined3d_cs_exec_map_vertex_buffers,
@@ -115,7 +115,7 @@ index 359f0ad4645..38e465b8f04 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index b392878e2f9..44ac8ccef42 100644
+index ccfaa7f19e6..369fc47c097 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -2851,7 +2851,6 @@ void CDECL wined3d_device_set_unordered_access_view(struct wined3d_device *devic
@@ -191,10 +191,10 @@ index b392878e2f9..44ac8ccef42 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 6063aa7f390..d47aa20d5a4 100644
+index c1200b127c5..a6a3eca0da2 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3355,6 +3355,8 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+@@ -3359,6 +3359,8 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, unsigned int flags) DECLSPEC_HIDDEN;
  HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;

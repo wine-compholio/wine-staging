@@ -1,4 +1,4 @@
-From 5295f80c011f058f42c2b4e56c5751d296dd98b3 Mon Sep 17 00:00:00 2001
+From 7888d0d12d9182cf9d5801cfe3b884f3f7a2708c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Fri, 11 Oct 2013 10:11:13 +0200
 Subject: wined3d: Delete GL contexts through the CS in reset.
@@ -11,18 +11,18 @@ Let's see if this fixes the remaining fglrx crashes...
  3 files changed, 46 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 01c81cde95e..1809f3f3484 100644
+index d65276072d4..1d7d6b9cd94 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -93,6 +93,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_BUFFER_COPY,
-     WINED3D_CS_OP_CREATE_BUFFER_TEXTURE,
+     WINED3D_CS_OP_CREATE_BUFFER_VIEW,
      WINED3D_CS_OP_CREATE_TEXTURE_VIEW,
 +    WINED3D_CS_OP_DELETE_GL_CONTEXTS,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -518,6 +519,12 @@ struct wined3d_cs_create_texture_view
+@@ -521,6 +522,12 @@ struct wined3d_cs_create_texture_view
      const struct wined3d_format *view_format;
  };
  
@@ -35,7 +35,7 @@ index 01c81cde95e..1809f3f3484 100644
  static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
  
-@@ -2596,6 +2603,26 @@ void wined3d_cs_emit_create_texture_view(struct wined3d_cs *cs, struct wined3d_g
+@@ -2628,6 +2635,26 @@ void wined3d_cs_emit_create_texture_view(struct wined3d_cs *cs, struct wined3d_g
      cs->ops->submit_and_wait(cs);
  }
  
@@ -62,9 +62,9 @@ index 01c81cde95e..1809f3f3484 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -2654,7 +2681,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2686,7 +2713,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_BUFFER_COPY                */ wined3d_cs_exec_buffer_copy,
-     /* WINED3D_CS_OP_CREATE_BUFFER_TEXTURE      */ wined3d_cs_exec_create_buffer_texture,
+     /* WINED3D_CS_OP_CREATE_BUFFER_VIEW         */ wined3d_cs_exec_create_buffer_view,
      /* WINED3D_CS_OP_CREATE_TEXTURE_VIEW        */ wined3d_cs_exec_create_texture_view,
 -
 +    /* WINED3D_CS_OP_DELETE_GL_CONTEXTS         */ wined3d_cs_exec_delete_gl_contexts,
@@ -72,10 +72,10 @@ index 01c81cde95e..1809f3f3484 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index d70d51a7d7a..762ab2747c2 100644
+index 3f5fd7988d4..880e6c002ac 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4621,22 +4621,12 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
+@@ -4635,22 +4635,12 @@ void CDECL wined3d_device_evict_managed_resources(struct wined3d_device *device)
      }
  }
  
@@ -99,7 +99,7 @@ index d70d51a7d7a..762ab2747c2 100644
      LIST_FOR_EACH_ENTRY(shader, &device->shaders, struct wined3d_shader, shader_list_entry)
      {
          device->shader_backend->shader_destroy(shader);
-@@ -4670,6 +4660,19 @@ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d
+@@ -4684,6 +4674,19 @@ static void delete_opengl_contexts(struct wined3d_device *device, struct wined3d
      swapchain->context = NULL;
  }
  
@@ -120,10 +120,10 @@ index d70d51a7d7a..762ab2747c2 100644
  {
      HRESULT hr;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index aa0ca4bcc06..c7c212f294f 100644
+index 454a64eb2ff..2eb5bbeca29 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2666,6 +2666,8 @@ void device_invalidate_state(const struct wined3d_device *device, DWORD state) D
+@@ -2708,6 +2708,8 @@ void device_invalidate_state(const struct wined3d_device *device, DWORD state) D
  void device_exec_update_texture(struct wined3d_context *context, struct wined3d_texture *src_texture,
          struct wined3d_texture *dst_texture) DECLSPEC_HIDDEN;
  void device_create_dummy_textures(struct wined3d_device *device, struct wined3d_context *context) DECLSPEC_HIDDEN;
@@ -132,7 +132,7 @@ index aa0ca4bcc06..c7c212f294f 100644
  struct wined3d_gl_bo *wined3d_device_get_bo(struct wined3d_device *device, UINT size, GLenum gl_usage,
          GLenum type_hint, struct wined3d_context *context) DECLSPEC_HIDDEN;
  void wined3d_device_release_bo(struct wined3d_device *device, struct wined3d_gl_bo *bo,
-@@ -3227,6 +3229,8 @@ void wined3d_cs_emit_create_buffer_texture(struct wined3d_cs *cs, struct wined3d
+@@ -3270,6 +3272,8 @@ HRESULT wined3d_cs_emit_create_buffer_view(struct wined3d_cs *cs, struct wined3d
  void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;

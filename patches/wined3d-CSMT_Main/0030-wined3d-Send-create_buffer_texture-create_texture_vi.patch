@@ -1,38 +1,40 @@
-From 2f3f8e0f66c51a459b0a2bbd25dc7f6a7c3fe6bd Mon Sep 17 00:00:00 2001
+From f7b258f07407779e76637835505a3c59b8466d8d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 7 Feb 2017 15:02:44 +0100
 Subject: wined3d: Send create_buffer_texture / create_texture_view through the
  CS.
 
 ---
- dlls/wined3d/cs.c              | 73 +++++++++++++++++++++++++++++++++++++++++-
- dlls/wined3d/view.c            | 13 ++++----
- dlls/wined3d/wined3d_private.h | 13 ++++++++
- 3 files changed, 92 insertions(+), 7 deletions(-)
+ dlls/wined3d/cs.c              | 81 +++++++++++++++++++++++++++++++++++++++++-
+ dlls/wined3d/view.c            | 15 ++++----
+ dlls/wined3d/wined3d_private.h | 15 ++++++++
+ 3 files changed, 103 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 51f315ee500..4778b73b0dc 100644
+index 5ecf15f5a01..9227a9c497c 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -91,6 +91,8 @@ enum wined3d_cs_op
      WINED3D_CS_OP_SAMPLER_INIT,
      WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION,
      WINED3D_CS_OP_BUFFER_COPY,
-+    WINED3D_CS_OP_CREATE_BUFFER_TEXTURE,
++    WINED3D_CS_OP_CREATE_BUFFER_VIEW,
 +    WINED3D_CS_OP_CREATE_TEXTURE_VIEW,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -499,6 +501,24 @@ struct wined3d_cs_buffer_copy
+@@ -499,6 +501,26 @@ struct wined3d_cs_buffer_copy
      unsigned int size;
  };
  
-+struct wined3d_cs_create_buffer_texture
++struct wined3d_cs_create_buffer_view
 +{
 +    enum wined3d_cs_op opcode;
 +    struct wined3d_gl_view *view;
++    const struct wined3d_view_desc *desc;
 +    struct wined3d_buffer *buffer;
 +    const struct wined3d_format *view_format;
++    HRESULT *hr;
 +};
 +
 +struct wined3d_cs_create_texture_view
@@ -48,7 +50,7 @@ index 51f315ee500..4778b73b0dc 100644
  static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
  
-@@ -2507,7 +2527,6 @@ void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
+@@ -2515,7 +2537,6 @@ void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
      cs->ops->submit(cs);
  }
  
@@ -56,31 +58,37 @@ index 51f315ee500..4778b73b0dc 100644
  static UINT wined3d_cs_exec_buffer_copy(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_buffer_copy *op = data;
-@@ -2542,6 +2561,55 @@ void wined3d_cs_emit_buffer_copy(struct wined3d_cs *cs, struct wined3d_buffer *d
+@@ -2550,6 +2571,61 @@ void wined3d_cs_emit_buffer_copy(struct wined3d_cs *cs, struct wined3d_buffer *d
      cs->ops->submit(cs);
  }
  
-+static UINT wined3d_cs_exec_create_buffer_texture(struct wined3d_cs *cs, const void *data)
++static UINT wined3d_cs_exec_create_buffer_view(struct wined3d_cs *cs, const void *data)
 +{
-+    const struct wined3d_cs_create_buffer_texture *op = data;
++    const struct wined3d_cs_create_buffer_view *op = data;
 +
-+    create_buffer_texture(op->view, op->buffer, op->view_format);
++    *op->hr = create_buffer_view(op->view, op->desc, op->buffer, op->view_format);
 +
 +    return sizeof(*op);
 +}
 +
-+void wined3d_cs_emit_create_buffer_texture(struct wined3d_cs *cs, struct wined3d_gl_view *view,
-+        struct wined3d_buffer *buffer, const struct wined3d_format *view_format)
++HRESULT wined3d_cs_emit_create_buffer_view(struct wined3d_cs *cs, struct wined3d_gl_view *view,
++        const struct wined3d_view_desc *desc, struct wined3d_buffer *buffer,
++        const struct wined3d_format *view_format)
 +{
-+    struct wined3d_cs_create_buffer_texture *op;
++    struct wined3d_cs_create_buffer_view *op;
++    HRESULT hr;
 +
 +    op = cs->ops->require_space(cs, sizeof(*op));
-+    op->opcode = WINED3D_CS_OP_CREATE_BUFFER_TEXTURE;
++    op->opcode = WINED3D_CS_OP_CREATE_BUFFER_VIEW;
 +    op->view = view;
++    op->desc = desc;
 +    op->buffer = buffer;
 +    op->view_format = view_format;
++    op->hr = &hr;
 +
 +    cs->ops->submit_and_wait(cs);
++
++    return hr;
 +}
 +
 +static UINT wined3d_cs_exec_create_texture_view(struct wined3d_cs *cs, const void *data)
@@ -112,18 +120,18 @@ index 51f315ee500..4778b73b0dc 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -2598,6 +2666,9 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2606,6 +2682,9 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_SAMPLER_INIT               */ wined3d_cs_exec_sampler_init,
      /* WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION   */ wined3d_cs_exec_texture_add_dirty_region,
      /* WINED3D_CS_OP_BUFFER_COPY                */ wined3d_cs_exec_buffer_copy,
-+    /* WINED3D_CS_OP_CREATE_BUFFER_TEXTURE      */ wined3d_cs_exec_create_buffer_texture,
++    /* WINED3D_CS_OP_CREATE_BUFFER_VIEW         */ wined3d_cs_exec_create_buffer_view,
 +    /* WINED3D_CS_OP_CREATE_TEXTURE_VIEW        */ wined3d_cs_exec_create_texture_view,
 +
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
-index b97a25add3e..60bb483e7ff 100644
+index dd87f73b339..e62288f7b78 100644
 --- a/dlls/wined3d/view.c
 +++ b/dlls/wined3d/view.c
 @@ -72,7 +72,7 @@ static GLenum get_texture_view_target(const struct wined3d_gl_info *gl_info,
@@ -135,25 +143,25 @@ index b97a25add3e..60bb483e7ff 100644
          const struct wined3d_view_desc *desc, struct wined3d_texture *texture,
          const struct wined3d_format *view_format)
  {
-@@ -133,7 +133,7 @@ static void create_texture_view(struct wined3d_gl_view *view, GLenum view_target
+@@ -181,7 +181,7 @@ static void create_buffer_texture(struct wined3d_gl_view *view,
      context_release(context);
  }
  
--static void create_buffer_texture(struct wined3d_gl_view *view,
-+void create_buffer_texture(struct wined3d_gl_view *view,
-         struct wined3d_buffer *buffer, const struct wined3d_format *view_format)
+-static HRESULT create_buffer_view(struct wined3d_gl_view *view,
++HRESULT create_buffer_view(struct wined3d_gl_view *view,
+         const struct wined3d_view_desc *desc, struct wined3d_buffer *buffer,
+         const struct wined3d_format *view_format)
  {
-     const struct wined3d_gl_info *gl_info;
-@@ -475,7 +475,7 @@ static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_
-                 FIXME("Ignoring buffer range %u-%u.\n", desc->u.buffer.start_idx, desc->u.buffer.count);
-             }
+@@ -515,7 +515,7 @@ static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_
+         struct wined3d_buffer *buffer = buffer_from_resource(resource);
+         HRESULT hr;
  
--            create_buffer_texture(&view->gl_view, buffer, view_format);
-+            wined3d_cs_emit_create_buffer_texture(resource->device->cs, &view->gl_view, buffer, view_format);
-         }
+-        if (FAILED(hr = create_buffer_view(&view->gl_view, desc, buffer, view_format)))
++        if (FAILED(hr = wined3d_cs_emit_create_buffer_view(resource->device->cs, &view->gl_view, desc, buffer, view_format)))
+             return hr;
      }
      else
-@@ -506,7 +506,8 @@ static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_
+@@ -546,7 +546,8 @@ static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_
          else if (resource->format->typeless_id == view_format->typeless_id
                  && resource->format->gl_view_class == view_format->gl_view_class)
          {
@@ -163,7 +171,16 @@ index b97a25add3e..60bb483e7ff 100644
          }
          else
          {
-@@ -671,8 +672,8 @@ static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_acces
+@@ -702,7 +703,7 @@ static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_acces
+         struct wined3d_buffer *buffer = buffer_from_resource(resource);
+         HRESULT hr;
+ 
+-        if (FAILED(hr = create_buffer_view(&view->gl_view, desc, buffer, view->format)))
++        if (FAILED(hr = wined3d_cs_emit_create_buffer_view(resource->device->cs, &view->gl_view, desc, buffer, view->format)))
+             return hr;
+     }
+     else
+@@ -724,8 +725,8 @@ static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_acces
  
          if (desc->u.texture.layer_idx || desc->u.texture.layer_count != depth_or_layer_count)
          {
@@ -175,10 +192,10 @@ index b97a25add3e..60bb483e7ff 100644
  
          view->layer_idx = desc->u.texture.layer_idx;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 76394cac3ca..dbf6ef47134 100644
+index 46660964eda..2cd708ca910 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3222,6 +3222,8 @@ static inline void wined3d_resource_wait_idle(struct wined3d_resource *resource)
+@@ -3225,6 +3225,8 @@ static inline void wined3d_resource_wait_idle(struct wined3d_resource *resource)
      while (InterlockedCompareExchange(&resource->access_count, 0, 0));
  }
  
@@ -187,12 +204,13 @@ index 76394cac3ca..dbf6ef47134 100644
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
  void wined3d_cs_destroy(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  
-@@ -3237,9 +3239,14 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+@@ -3240,9 +3242,15 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
  void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
          const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
          const struct blit_shader *blitter) DECLSPEC_HIDDEN;
-+void wined3d_cs_emit_create_buffer_texture(struct wined3d_cs *cs, struct wined3d_gl_view *view,
-+        struct wined3d_buffer *buffer, const struct wined3d_format *view_format) DECLSPEC_HIDDEN;
++HRESULT wined3d_cs_emit_create_buffer_view(struct wined3d_cs *cs, struct wined3d_gl_view *view,
++        const struct wined3d_view_desc *desc, struct wined3d_buffer *buffer,
++        const struct wined3d_format *view_format) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_create_dummy_textures(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  HRESULT wined3d_cs_emit_create_swapchain_context(struct wined3d_cs *cs,
          struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
@@ -202,12 +220,13 @@ index 76394cac3ca..dbf6ef47134 100644
  void wined3d_cs_emit_destroy_object(struct wined3d_cs *cs,
          void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
-@@ -3421,6 +3428,12 @@ struct wined3d_gl_view
+@@ -3424,6 +3432,13 @@ struct wined3d_gl_view
      GLuint name;
  };
  
-+void create_buffer_texture(struct wined3d_gl_view *view,
-+        struct wined3d_buffer *buffer, const struct wined3d_format *view_format) DECLSPEC_HIDDEN;
++HRESULT create_buffer_view(struct wined3d_gl_view *view,
++        const struct wined3d_view_desc *desc, struct wined3d_buffer *buffer,
++        const struct wined3d_format *view_format) DECLSPEC_HIDDEN;
 +void create_texture_view(struct wined3d_gl_view *view, GLenum view_target,
 +        const struct wined3d_view_desc *desc, struct wined3d_texture *texture,
 +        const struct wined3d_format *view_format) DECLSPEC_HIDDEN;

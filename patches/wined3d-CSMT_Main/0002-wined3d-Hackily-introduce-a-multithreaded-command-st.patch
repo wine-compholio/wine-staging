@@ -1,4 +1,4 @@
-From b79fac0cba54644719f1993f48550212666185ee Mon Sep 17 00:00:00 2001
+From 821cc7c5d0922b0e3eea0e2ce8d5dcc37ecca6d3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 1 Oct 2013 14:31:56 +0200
 Subject: wined3d: Hackily introduce a multithreaded command stream
@@ -14,7 +14,7 @@ Subject: wined3d: Hackily introduce a multithreaded command stream
  7 files changed, 517 insertions(+), 67 deletions(-)
 
 diff --git a/dlls/d3d10core/tests/device.c b/dlls/d3d10core/tests/device.c
-index 8cb90b796b8..b1b57a261a3 100644
+index dc9f77f302e..6197ea2ce8a 100644
 --- a/dlls/d3d10core/tests/device.c
 +++ b/dlls/d3d10core/tests/device.c
 @@ -3772,7 +3772,7 @@ static void test_occlusion_query(void)
@@ -27,10 +27,10 @@ index 8cb90b796b8..b1b57a261a3 100644
      memset(&data, 0xff, sizeof(data));
      hr = ID3D10Asynchronous_GetData(query, &data, sizeof(DWORD), 0);
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index e477f220817..380224e2de7 100644
+index ab3fa83a103..be7ef5b3b1a 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -5255,7 +5255,7 @@ static void test_occlusion_query(void)
+@@ -5271,7 +5271,7 @@ static void test_occlusion_query(void)
      memset(&data, 0xff, sizeof(data));
      hr = ID3D11DeviceContext_GetData(context, query, &data, sizeof(data), 0);
      ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
@@ -39,7 +39,7 @@ index e477f220817..380224e2de7 100644
  
      memset(&data, 0xff, sizeof(data));
      hr = ID3D11DeviceContext_GetData(context, query, &data, sizeof(DWORD), 0);
-@@ -9543,7 +9543,7 @@ static void test_draw_uav_only(void)
+@@ -9606,7 +9606,7 @@ static void test_draw_uav_only(void)
      draw_quad(&test_context);
      draw_quad(&test_context);
      draw_quad(&test_context);
@@ -48,7 +48,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11PixelShader_Release(ps);
      ID3D11Texture2D_Release(texture);
-@@ -13215,12 +13215,12 @@ static void test_cs_uav_store(void)
+@@ -13278,12 +13278,12 @@ static void test_cs_uav_store(void)
      ID3D11DeviceContext_CSSetShader(context, cs, NULL, 0);
  
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -63,7 +63,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13228,19 +13228,19 @@ static void test_cs_uav_store(void)
+@@ -13291,19 +13291,19 @@ static void test_cs_uav_store(void)
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_CSSetShader(context, NULL, NULL, 0);
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -86,7 +86,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13251,17 +13251,17 @@ static void test_cs_uav_store(void)
+@@ -13314,17 +13314,17 @@ static void test_cs_uav_store(void)
      input.x = 1.0f;
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, texture_desc.Width, texture_desc.Height, 1);
@@ -108,7 +108,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13273,16 +13273,16 @@ static void test_cs_uav_store(void)
+@@ -13336,16 +13336,16 @@ static void test_cs_uav_store(void)
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, 15, 15, 1);
      SetRect(&rect, 0, 0, 60, 60);
@@ -129,7 +129,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13293,12 +13293,12 @@ static void test_cs_uav_store(void)
+@@ -13356,12 +13356,12 @@ static void test_cs_uav_store(void)
      input.x = 0.3f;
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -144,7 +144,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13451,10 +13451,10 @@ static void test_ps_cs_uav_binding(void)
+@@ -13514,10 +13514,10 @@ static void test_ps_cs_uav_binding(void)
      ID3D11DeviceContext_PSSetShader(context, ps, NULL, 0);
  
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -157,7 +157,7 @@ index e477f220817..380224e2de7 100644
      check_texture_float(ps_texture, 1.0f, 2);
  
      input.x = 0.5f;
-@@ -13473,10 +13473,10 @@ static void test_ps_cs_uav_binding(void)
+@@ -13536,10 +13536,10 @@ static void test_ps_cs_uav_binding(void)
      input.x = 4.0f;
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)ps_cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -171,7 +171,7 @@ index e477f220817..380224e2de7 100644
  
      ID3D11ComputeShader_Release(cs);
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 778cd4679ff..d3b8c24f511 100644
+index b73c992d854..8483a28283f 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
 @@ -1353,6 +1353,9 @@ void context_release(struct wined3d_context *context)
@@ -184,9 +184,9 @@ index 778cd4679ff..d3b8c24f511 100644
      if (!--context->level)
      {
          if (context_restore_pixel_format(context))
-@@ -3692,6 +3695,13 @@ struct wined3d_context *context_acquire(const struct wined3d_device *device, str
+@@ -3702,6 +3705,13 @@ struct wined3d_context *context_acquire(const struct wined3d_device *device,
  
-     TRACE("device %p, target %p.\n", device, target);
+     TRACE("device %p, texture %p, sub_resource_idx %u.\n", device, texture, sub_resource_idx);
  
 +    if (wined3d_settings.cs_multithreaded && device->cs->thread_id != GetCurrentThreadId())
 +    {
@@ -1231,10 +1231,10 @@ index 3a46a3c9a30..aabcb675044 100644
      HeapFree(GetProcessHeap(), 0, cs->data);
      HeapFree(GetProcessHeap(), 0, cs);
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 3bdba105105..abb4a664c1a 100644
+index 880f82f12ce..90208e607f3 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -347,7 +347,7 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
+@@ -350,7 +350,7 @@ HRESULT CDECL wined3d_query_get_data(struct wined3d_query *query,
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -1274,7 +1274,7 @@ index e7962465279..a8409cfd4b8 100644
      if (hkey) RegCloseKey( hkey );
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 0931d6aea95..684a04716dd 100644
+index 02e9d949db9..9d969287efc 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -306,6 +306,7 @@ struct wined3d_settings

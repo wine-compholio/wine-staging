@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8af23cb93e4e1cd3686984399cb50d755f5171e3"
+	echo "d00f7315e0cec0c2fe34ba5ab2b55cf5718860dd"
 }
 
 # Show version information
@@ -8413,7 +8413,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in uninit_3d.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unload resources through the CS in device_reset.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create dummy textures through the CS.", 1 },';
@@ -8432,7 +8431,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in reset.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Delete GL contexts through the CS in uninit_3d.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add swapchain waits.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Run the cs asynchronously.", 1 },';

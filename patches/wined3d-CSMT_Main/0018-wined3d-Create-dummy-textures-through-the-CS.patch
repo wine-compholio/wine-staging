@@ -1,4 +1,4 @@
-From b8980974b1117ed0b1b792118e64265d2de984ff Mon Sep 17 00:00:00 2001
+From c3cc04eaa9c6274fdc189d39d995e2cfccab489a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 10 Oct 2013 16:29:42 +0200
 Subject: wined3d: Create dummy textures through the CS.
@@ -13,10 +13,10 @@ crash.
  4 files changed, 51 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 045e2fa54f2..2e67b720f56 100644
+index 507496cace1..ab3fa83a103 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -13205,12 +13205,12 @@ static void test_cs_uav_store(void)
+@@ -13278,12 +13278,12 @@ static void test_cs_uav_store(void)
      ID3D11DeviceContext_CSSetShader(context, cs, NULL, 0);
  
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -31,7 +31,7 @@ index 045e2fa54f2..2e67b720f56 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13218,19 +13218,19 @@ static void test_cs_uav_store(void)
+@@ -13291,19 +13291,19 @@ static void test_cs_uav_store(void)
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_CSSetShader(context, NULL, NULL, 0);
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -54,7 +54,7 @@ index 045e2fa54f2..2e67b720f56 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13241,17 +13241,17 @@ static void test_cs_uav_store(void)
+@@ -13314,17 +13314,17 @@ static void test_cs_uav_store(void)
      input.x = 1.0f;
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, texture_desc.Width, texture_desc.Height, 1);
@@ -76,7 +76,7 @@ index 045e2fa54f2..2e67b720f56 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13263,16 +13263,16 @@ static void test_cs_uav_store(void)
+@@ -13336,16 +13336,16 @@ static void test_cs_uav_store(void)
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, 15, 15, 1);
      SetRect(&rect, 0, 0, 60, 60);
@@ -97,7 +97,7 @@ index 045e2fa54f2..2e67b720f56 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13283,12 +13283,12 @@ static void test_cs_uav_store(void)
+@@ -13356,12 +13356,12 @@ static void test_cs_uav_store(void)
      input.x = 0.3f;
      ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)cb, 0, NULL, &input, 0, 0);
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -112,7 +112,7 @@ index 045e2fa54f2..2e67b720f56 100644
  
      ID3D11ComputeShader_Release(cs);
  
-@@ -13441,10 +13441,10 @@ static void test_ps_cs_uav_binding(void)
+@@ -13514,10 +13514,10 @@ static void test_ps_cs_uav_binding(void)
      ID3D11DeviceContext_PSSetShader(context, ps, NULL, 0);
  
      ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
@@ -126,7 +126,7 @@ index 045e2fa54f2..2e67b720f56 100644
  
      input.x = 0.5f;
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 9b267871a37..3a6bfe4d38a 100644
+index 7f5339599d8..bf6adf4be71 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -85,6 +85,7 @@ enum wined3d_cs_op
@@ -149,14 +149,14 @@ index 9b267871a37..3a6bfe4d38a 100644
  static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
  
-@@ -2323,6 +2329,27 @@ HRESULT wined3d_cs_emit_release_dc(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2331,6 +2337,27 @@ HRESULT wined3d_cs_emit_release_dc(struct wined3d_cs *cs, struct wined3d_texture
      return hr;
  }
  
 +static UINT wined3d_cs_exec_create_dummy_textures(struct wined3d_cs *cs, const void *data)
 +{
 +    const struct wined3d_cs_create_dummy_textures *op = data;
-+    struct wined3d_context *context = context_acquire(cs->device, NULL);
++    struct wined3d_context *context = context_acquire(cs->device, NULL, 0);
 +
 +    device_create_dummy_textures(cs->device, context);
 +
@@ -177,7 +177,7 @@ index 9b267871a37..3a6bfe4d38a 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -2373,6 +2400,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2381,6 +2408,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
      /* WINED3D_CS_OP_GET_DC                     */ wined3d_cs_exec_get_dc,
      /* WINED3D_CS_OP_RELEASE_DC                 */ wined3d_cs_exec_release_dc,
@@ -186,10 +186,10 @@ index 9b267871a37..3a6bfe4d38a 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index b62d3ba473f..4f5a45c1f60 100644
+index 9c69d04c3f0..008be8ae010 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -607,7 +607,7 @@ out:
+@@ -610,7 +610,7 @@ out:
  }
  
  /* Context activation is done by the caller. */
@@ -198,12 +198,21 @@ index b62d3ba473f..4f5a45c1f60 100644
  {
      const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
      const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
-@@ -1038,17 +1038,15 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+@@ -1029,7 +1029,7 @@ static HRESULT create_primary_opengl_context(struct wined3d_device *device, stru
+ 
+     target = swapchain->back_buffers ? swapchain->back_buffers[0] : swapchain->front_buffer;
+     context = context_acquire(device, target, 0);
+-    create_dummy_textures(device, context);
++    device_create_dummy_textures(device, context);
+     create_default_samplers(device, context);
+     context_release(context);
+ 
+@@ -1106,17 +1106,15 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
      device->swapchains[0] = swapchain;
      device_init_swapchain_state(device, swapchain);
  
 +    wined3d_cs_emit_create_dummy_textures(device->cs);
-     context = context_acquire(device, NULL);
+     context = context_acquire(device, NULL, 0);
 -
 -    create_dummy_textures(device, context);
      create_default_samplers(device, context);
@@ -218,17 +227,8 @@ index b62d3ba473f..4f5a45c1f60 100644
      /* Clear the screen */
      if (swapchain->back_buffers && swapchain->back_buffers[0])
          clear_flags |= WINED3DCLEAR_TARGET;
-@@ -4758,7 +4756,7 @@ static HRESULT create_primary_opengl_context(struct wined3d_device *device, stru
- 
-     swapchain->context[0] = context;
-     swapchain->num_contexts = 1;
--    create_dummy_textures(device, context);
-+    device_create_dummy_textures(device, context);
-     create_default_samplers(device, context);
-     context_release(context);
- 
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 1ccb02544ce..e6d349b8186 100644
+index 2d0a97f706c..efd4a4dfd6d 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -2672,6 +2672,7 @@ void device_resource_released(struct wined3d_device *device, struct wined3d_reso

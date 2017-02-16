@@ -1,13 +1,13 @@
-From 089e84881f1704b8280ee66ec74a06d641b07450 Mon Sep 17 00:00:00 2001
+From 83e81d1ca0c1a14e31f42253596859920f44ccb5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 20 Dec 2012 13:09:17 +0100
 Subject: wined3d: Move the framebuffer into wined3d_state
 
 ---
  dlls/wined3d/arb_program_shader.c |   4 +-
- dlls/wined3d/context.c            |  19 +++++--
- dlls/wined3d/cs.c                 |  52 ++++++++++---------
- dlls/wined3d/device.c             | 102 +++++++++++++++++---------------------
+ dlls/wined3d/context.c            |  19 ++++++--
+ dlls/wined3d/cs.c                 |  52 ++++++++++----------
+ dlls/wined3d/device.c             | 100 +++++++++++++++++---------------------
  dlls/wined3d/drawprim.c           |   2 +-
  dlls/wined3d/glsl_shader.c        |   2 +-
  dlls/wined3d/shader.c             |   2 +-
@@ -15,11 +15,11 @@ Subject: wined3d: Move the framebuffer into wined3d_state
  dlls/wined3d/stateblock.c         |  47 ++++++++++++++++--
  dlls/wined3d/surface.c            |   2 +-
  dlls/wined3d/utils.c              |   4 +-
- dlls/wined3d/wined3d_private.h    |  46 ++++++++++++-----
- 12 files changed, 183 insertions(+), 127 deletions(-)
+ dlls/wined3d/wined3d_private.h    |  46 +++++++++++++-----
+ 12 files changed, 182 insertions(+), 126 deletions(-)
 
 diff --git a/dlls/wined3d/arb_program_shader.c b/dlls/wined3d/arb_program_shader.c
-index 85ed462c78d..1191a6d5873 100644
+index 7ed83f4b609..86627090d29 100644
 --- a/dlls/wined3d/arb_program_shader.c
 +++ b/dlls/wined3d/arb_program_shader.c
 @@ -701,7 +701,7 @@ static void shader_arb_load_constants_internal(struct shader_arb_priv *priv,
@@ -41,10 +41,10 @@ index 85ed462c78d..1191a6d5873 100644
          }
  
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 31725b27c88..c1cbaa677a0 100644
+index 8483a28283f..71e1191649e 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -1726,6 +1726,11 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+@@ -1723,6 +1723,11 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
          goto out;
      }
  
@@ -56,7 +56,7 @@ index 31725b27c88..c1cbaa677a0 100644
      /* Initialize the texture unit mapping to a 1:1 mapping */
      for (s = 0; s < MAX_COMBINED_SAMPLERS; ++s)
      {
-@@ -2047,6 +2052,7 @@ out:
+@@ -2031,6 +2036,7 @@ out:
      if (hdc) wined3d_release_dc(swapchain->win_handle, hdc);
      device->shader_backend->shader_free_context_data(ret);
      device->adapter->fragment_pipe->free_context_data(ret);
@@ -64,7 +64,7 @@ index 31725b27c88..c1cbaa677a0 100644
      HeapFree(GetProcessHeap(), 0, ret->free_event_queries);
      HeapFree(GetProcessHeap(), 0, ret->free_occlusion_queries);
      HeapFree(GetProcessHeap(), 0, ret->free_timestamp_queries);
-@@ -2094,6 +2100,7 @@ void context_destroy(struct wined3d_device *device, struct wined3d_context *cont
+@@ -2078,6 +2084,7 @@ void context_destroy(struct wined3d_device *device, struct wined3d_context *cont
      device->shader_backend->shader_free_context_data(context);
      device->adapter->fragment_pipe->free_context_data(context);
      HeapFree(GetProcessHeap(), 0, context->fbo_key);
@@ -72,7 +72,7 @@ index 31725b27c88..c1cbaa677a0 100644
      HeapFree(GetProcessHeap(), 0, context->draw_buffers);
      HeapFree(GetProcessHeap(), 0, context->blit_targets);
      device_context_remove(device, context);
-@@ -2652,7 +2659,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+@@ -2640,7 +2647,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
      DWORD rt_mask = 0, *cur_mask;
      UINT i;
  
@@ -81,7 +81,7 @@ index 31725b27c88..c1cbaa677a0 100644
              || rt_count != gl_info->limits.buffers)
      {
          if (!context_validate_rt_config(rt_count, rts, dsv))
-@@ -2697,6 +2704,8 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+@@ -2685,6 +2692,8 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
              rt_mask = context_generate_rt_mask_no_fbo(context,
                      rt_count ? wined3d_rendertarget_view_get_surface(rts[0])->container : NULL);
          }
@@ -90,7 +90,7 @@ index 31725b27c88..c1cbaa677a0 100644
      }
      else if (wined3d_settings.offscreen_rendering_mode == ORM_FBO
              && (!rt_count || wined3d_resource_is_offscreen(rts[0]->resource)))
-@@ -2753,7 +2762,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+@@ -2741,7 +2750,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
  
  static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const struct wined3d_state *state)
  {
@@ -99,7 +99,7 @@ index 31725b27c88..c1cbaa677a0 100644
      struct wined3d_shader *ps = state->shader[WINED3D_SHADER_TYPE_PIXEL];
      DWORD rt_mask, rt_mask_bits;
      unsigned int i;
-@@ -2783,7 +2792,7 @@ static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const
+@@ -2771,7 +2780,7 @@ static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const
  void context_state_fb(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
  {
      DWORD rt_mask = find_draw_buffers_mask(context, state);
@@ -108,7 +108,7 @@ index 31725b27c88..c1cbaa677a0 100644
      DWORD *cur_mask;
  
      if (wined3d_settings.offscreen_rendering_mode == ORM_FBO)
-@@ -3072,6 +3081,8 @@ void context_state_drawbuf(struct wined3d_context *context, const struct wined3d
+@@ -3060,6 +3069,8 @@ void context_state_drawbuf(struct wined3d_context *context, const struct wined3d
          context_apply_draw_buffers(context, rt_mask);
          *cur_mask = rt_mask;
      }
@@ -117,7 +117,7 @@ index 31725b27c88..c1cbaa677a0 100644
  }
  
  static BOOL fixed_get_input(BYTE usage, BYTE usage_idx, unsigned int *regnum)
-@@ -3506,7 +3517,7 @@ BOOL context_apply_draw_state(struct wined3d_context *context,
+@@ -3504,7 +3515,7 @@ BOOL context_apply_draw_state(struct wined3d_context *context,
          const struct wined3d_device *device, const struct wined3d_state *state)
  {
      const struct StateEntry *state_table = context->state_table;
@@ -127,10 +127,10 @@ index 31725b27c88..c1cbaa677a0 100644
      WORD map;
  
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 4778b73b0dc..6d1ab033b4d 100644
+index c9626180db1..55c175ef093 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -622,7 +622,7 @@ static UINT wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
+@@ -624,7 +624,7 @@ static UINT wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
      wined3d_swapchain_set_window(swapchain, op->dst_window_override);
  
      swapchain->swapchain_ops->swapchain_present(swapchain, &op->src_rect, &op->dst_rect, op->flags,
@@ -139,7 +139,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
  
      InterlockedDecrement(&cs->pending_presents);
  
-@@ -685,19 +685,19 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+@@ -687,19 +687,19 @@ static UINT wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
      state = &cs->state;
      wined3d_get_draw_rect(state, &draw_rect);
      device_clear_render_targets(device, device->adapter->gl_info.limits.buffers,
@@ -163,7 +163,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
  
      return size;
  }
-@@ -722,12 +722,12 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+@@ -724,12 +724,12 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
      {
          for (i = 0; i < cs->device->adapter->gl_info.limits.buffers; ++i)
          {
@@ -179,7 +179,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
  
      cs->ops->submit(cs);
  }
-@@ -902,11 +902,11 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
+@@ -904,11 +904,11 @@ static UINT wined3d_cs_exec_draw(struct wined3d_cs *cs, const void *data)
      }
      for (i = 0; i < cs->device->adapter->gl_info.limits.buffers; ++i)
      {
@@ -195,7 +195,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
      release_shader_resources(state, ~(1u << WINED3D_SHADER_TYPE_COMPUTE));
      release_unordered_access_resources(state->shader[WINED3D_SHADER_TYPE_PIXEL],
              state->unordered_access_view[WINED3D_PIPELINE_GRAPHICS]);
-@@ -944,11 +944,11 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
+@@ -946,11 +946,11 @@ void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned i
      }
      for (i = 0; i < cs->device->adapter->gl_info.limits.buffers; ++i)
      {
@@ -211,7 +211,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
      acquire_shader_resources(state, ~(1u << WINED3D_SHADER_TYPE_COMPUTE));
      acquire_unordered_access_resources(state->shader[WINED3D_SHADER_TYPE_PIXEL],
              state->unordered_access_view[WINED3D_PIPELINE_GRAPHICS]);
-@@ -1024,7 +1024,7 @@ static UINT wined3d_cs_exec_set_rendertarget_view(struct wined3d_cs *cs, const v
+@@ -1026,7 +1026,7 @@ static UINT wined3d_cs_exec_set_rendertarget_view(struct wined3d_cs *cs, const v
  {
      const struct wined3d_cs_set_rendertarget_view *op = data;
  
@@ -220,7 +220,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
      device_invalidate_state(cs->device, STATE_FRAMEBUFFER);
  
      return sizeof(*op);
-@@ -1049,7 +1049,7 @@ static UINT wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
+@@ -1051,7 +1051,7 @@ static UINT wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
      struct wined3d_device *device = cs->device;
      struct wined3d_rendertarget_view *prev;
  
@@ -229,7 +229,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
      {
          struct wined3d_surface *prev_surface = wined3d_rendertarget_view_get_surface(prev);
  
-@@ -1061,7 +1061,7 @@ static UINT wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
+@@ -1063,7 +1063,7 @@ static UINT wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
          }
      }
  
@@ -238,7 +238,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
  
      if (!prev != !op->view)
      {
-@@ -1721,11 +1721,13 @@ void wined3d_cs_emit_set_material(struct wined3d_cs *cs, const struct wined3d_ma
+@@ -1731,11 +1731,13 @@ void wined3d_cs_emit_set_material(struct wined3d_cs *cs, const struct wined3d_ma
  static UINT wined3d_cs_exec_reset_state(struct wined3d_cs *cs, const void *data)
  {
      struct wined3d_adapter *adapter = cs->device->adapter;
@@ -254,7 +254,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
  
      return sizeof(struct wined3d_cs_reset_state);
  }
-@@ -2815,15 +2817,13 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2831,15 +2833,13 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
          return NULL;
      cs->tls_idx = TLS_OUT_OF_INDEXES;
  
@@ -272,7 +272,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
      cs->ops = &wined3d_cs_st_ops;
      cs->device = device;
  
-@@ -2856,7 +2856,6 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2872,7 +2872,6 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
  err:
      state_cleanup(&cs->state);
      if (cs->tls_idx != TLS_OUT_OF_INDEXES) TlsFree(cs->tls_idx);
@@ -280,7 +280,7 @@ index 4778b73b0dc..6d1ab033b4d 100644
      HeapFree(GetProcessHeap(), 0, cs->data);
      HeapFree(GetProcessHeap(), 0, cs);
      return NULL;
-@@ -2885,7 +2884,6 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
+@@ -2901,7 +2900,6 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
      }
  
      TlsFree(cs->tls_idx);
@@ -289,10 +289,10 @@ index 4778b73b0dc..6d1ab033b4d 100644
      HeapFree(GetProcessHeap(), 0, cs);
  }
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index c0f6f0421bb..c643b111aa2 100644
+index ec0f7d98ab7..3b619a37fee 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -955,7 +955,7 @@ static void device_init_swapchain_state(struct wined3d_device *device, struct wi
+@@ -958,7 +958,7 @@ static void device_init_swapchain_state(struct wined3d_device *device, struct wi
      BOOL ds_enable = !!swapchain->desc.enable_auto_depth_stencil;
      unsigned int i;
  
@@ -301,7 +301,7 @@ index c0f6f0421bb..c643b111aa2 100644
      {
          for (i = 0; i < device->adapter->gl_info.limits.buffers; ++i)
          {
-@@ -973,7 +973,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+@@ -1044,7 +1044,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
          struct wined3d_swapchain_desc *swapchain_desc)
  {
      static const struct wined3d_color black = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -309,7 +309,7 @@ index c0f6f0421bb..c643b111aa2 100644
      struct wined3d_swapchain *swapchain = NULL;
      DWORD clear_flags = 0;
      HRESULT hr;
-@@ -985,9 +984,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+@@ -1056,9 +1055,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
      if (device->wined3d->flags & WINED3D_NO3D)
          return WINED3DERR_INVALIDCALL;
  
@@ -319,7 +319,7 @@ index c0f6f0421bb..c643b111aa2 100644
      if (FAILED(hr = device->shader_backend->shader_alloc_private(device,
              device->adapter->vertex_pipe, device->adapter->fragment_pipe)))
      {
-@@ -1059,7 +1055,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
+@@ -1130,7 +1126,6 @@ HRESULT CDECL wined3d_device_init_3d(struct wined3d_device *device,
      return WINED3D_OK;
  
  err_out:
@@ -327,23 +327,14 @@ index c0f6f0421bb..c643b111aa2 100644
      HeapFree(GetProcessHeap(), 0, device->swapchains);
      device->swapchain_count = 0;
      if (device->back_buffer_view)
-@@ -1141,6 +1136,12 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1203,33 +1198,16 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
  
      state_unbind_resources(&device->state);
  
-+    if (device->auto_depth_stencil_view)
-+    {
-+        wined3d_rendertarget_view_decref(device->auto_depth_stencil_view);
-+        device->auto_depth_stencil_view = NULL;
-+    }
-+
-     /* Unload resources */
-     LIST_FOR_EACH_ENTRY_SAFE(resource, cursor, &device->resources, struct wined3d_resource, resource_list_entry)
-     {
-@@ -1170,29 +1171,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
- 
-     context_release(context);
- 
+-    wine_rb_clear(&device->samplers, device_free_sampler, NULL);
+-
+-    wined3d_device_delete_opengl_contexts(device);
+-
 -    if (device->fb.depth_stencil)
 -    {
 -        struct wined3d_rendertarget_view *view = device->fb.depth_stencil;
@@ -354,23 +345,28 @@ index c0f6f0421bb..c643b111aa2 100644
 -        wined3d_rendertarget_view_decref(view);
 -    }
 -
--    if (device->auto_depth_stencil_view)
--    {
+     if (device->auto_depth_stencil_view)
+     {
 -        struct wined3d_rendertarget_view *view = device->auto_depth_stencil_view;
 -
--        device->auto_depth_stencil_view = NULL;
++        wined3d_rendertarget_view_decref(device->auto_depth_stencil_view);
+         device->auto_depth_stencil_view = NULL;
 -        if (wined3d_rendertarget_view_decref(view))
 -            ERR("Something's still holding the auto depth/stencil view (%p).\n", view);
--    }
--
--    for (i = 0; i < gl_info->limits.buffers; ++i)
+     }
+ 
+-    for (i = 0; i < device->adapter->gl_info.limits.buffers; ++i)
 -    {
 -        wined3d_device_set_rendertarget_view(device, i, NULL, FALSE);
 -    }
++    wine_rb_clear(&device->samplers, device_free_sampler, NULL);
++
++    wined3d_device_delete_opengl_contexts(device);
++
      if (device->back_buffer_view)
      {
          wined3d_rendertarget_view_decref(device->back_buffer_view);
-@@ -1210,9 +1188,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
+@@ -1247,9 +1225,6 @@ HRESULT CDECL wined3d_device_uninit_3d(struct wined3d_device *device)
      device->swapchains = NULL;
      device->swapchain_count = 0;
  
@@ -380,7 +376,7 @@ index c0f6f0421bb..c643b111aa2 100644
      device->d3d_initialized = FALSE;
  
      return WINED3D_OK;
-@@ -2015,7 +1990,7 @@ static void resolve_depth_buffer(struct wined3d_state *state)
+@@ -2052,7 +2027,7 @@ static void resolve_depth_buffer(struct wined3d_state *state)
              || !(dst_texture->resource.format_flags & WINED3DFMT_FLAG_DEPTH))
          return;
  
@@ -389,7 +385,7 @@ index c0f6f0421bb..c643b111aa2 100644
          return;
      if (src_view->resource->type == WINED3D_RTYPE_BUFFER)
      {
-@@ -3537,6 +3512,8 @@ HRESULT CDECL wined3d_device_end_scene(struct wined3d_device *device)
+@@ -3574,6 +3549,8 @@ HRESULT CDECL wined3d_device_end_scene(struct wined3d_device *device)
  HRESULT CDECL wined3d_device_clear(struct wined3d_device *device, DWORD rect_count,
          const RECT *rects, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil)
  {
@@ -398,7 +394,7 @@ index c0f6f0421bb..c643b111aa2 100644
      TRACE("device %p, rect_count %u, rects %p, flags %#x, color %s, depth %.8e, stencil %u.\n",
              device, rect_count, rects, flags, debug_color(color), depth, stencil);
  
-@@ -3548,7 +3525,7 @@ HRESULT CDECL wined3d_device_clear(struct wined3d_device *device, DWORD rect_cou
+@@ -3585,7 +3562,7 @@ HRESULT CDECL wined3d_device_clear(struct wined3d_device *device, DWORD rect_cou
  
      if (flags & (WINED3DCLEAR_ZBUFFER | WINED3DCLEAR_STENCIL))
      {
@@ -407,7 +403,7 @@ index c0f6f0421bb..c643b111aa2 100644
          if (!ds)
          {
              WARN("Clearing depth and/or stencil without a depth stencil buffer attached, returning WINED3DERR_INVALIDCALL\n");
-@@ -3557,8 +3534,8 @@ HRESULT CDECL wined3d_device_clear(struct wined3d_device *device, DWORD rect_cou
+@@ -3594,8 +3571,8 @@ HRESULT CDECL wined3d_device_clear(struct wined3d_device *device, DWORD rect_cou
          }
          else if (flags & WINED3DCLEAR_TARGET)
          {
@@ -418,7 +414,7 @@ index c0f6f0421bb..c643b111aa2 100644
              {
                  WARN("Silently ignoring depth and target clear with mismatching sizes\n");
                  return WINED3D_OK;
-@@ -3908,8 +3885,8 @@ HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device
+@@ -3945,8 +3922,8 @@ HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device
      if (state->render_states[WINED3D_RS_ZENABLE] || state->render_states[WINED3D_RS_ZWRITEENABLE]
              || state->render_states[WINED3D_RS_STENCILENABLE])
      {
@@ -429,7 +425,7 @@ index c0f6f0421bb..c643b111aa2 100644
  
          if (ds && rt && (ds->width < rt->width || ds->height < rt->height))
          {
-@@ -4344,20 +4321,21 @@ struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(co
+@@ -4381,20 +4358,21 @@ struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(co
          return NULL;
      }
  
@@ -453,7 +449,7 @@ index c0f6f0421bb..c643b111aa2 100644
  
      TRACE("device %p, view_idx %u, view %p, set_viewport %#x.\n",
              device, view_idx, view, set_viewport);
-@@ -4394,13 +4372,13 @@ HRESULT CDECL wined3d_device_set_rendertarget_view(struct wined3d_device *device
+@@ -4431,13 +4409,13 @@ HRESULT CDECL wined3d_device_set_rendertarget_view(struct wined3d_device *device
      }
  
  
@@ -469,7 +465,7 @@ index c0f6f0421bb..c643b111aa2 100644
      wined3d_cs_emit_set_rendertarget_view(device->cs, view_idx, view);
      /* Release after the assignment, to prevent device_resource_released()
       * from seeing the surface as still in use. */
-@@ -4412,18 +4390,19 @@ HRESULT CDECL wined3d_device_set_rendertarget_view(struct wined3d_device *device
+@@ -4449,18 +4427,19 @@ HRESULT CDECL wined3d_device_set_rendertarget_view(struct wined3d_device *device
  
  void CDECL wined3d_device_set_depth_stencil_view(struct wined3d_device *device, struct wined3d_rendertarget_view *view)
  {
@@ -491,7 +487,7 @@ index c0f6f0421bb..c643b111aa2 100644
          wined3d_rendertarget_view_incref(view);
      wined3d_cs_emit_set_depth_stencil_view(device->cs, view);
      if (prev)
-@@ -4770,10 +4749,9 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4726,10 +4705,9 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
              wined3d_texture_decref(device->cursor_texture);
              device->cursor_texture = NULL;
          }
@@ -503,7 +499,7 @@ index c0f6f0421bb..c643b111aa2 100644
      {
          for (i = 0; i < device->adapter->gl_info.limits.buffers; ++i)
          {
-@@ -4784,6 +4762,11 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4740,6 +4718,11 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
  
      if (reset_state)
      {
@@ -515,9 +511,9 @@ index c0f6f0421bb..c643b111aa2 100644
          LIST_FOR_EACH_ENTRY_SAFE(resource, cursor, &device->resources, struct wined3d_resource, resource_list_entry)
          {
              TRACE("Enumerating resource %p.\n", resource);
-@@ -4952,27 +4935,28 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
+@@ -4911,27 +4894,28 @@ HRESULT CDECL wined3d_device_reset(struct wined3d_device *device,
          if (device->d3d_initialized)
-             delete_opengl_contexts(device, swapchain);
+             wined3d_device_delete_opengl_contexts(device);
  
 -        state_init(&device->state, &device->fb, &device->adapter->gl_info,
 -                &device->adapter->d3d_info, WINED3D_STATE_INIT_DEFAULT);
@@ -551,7 +547,7 @@ index c0f6f0421bb..c643b111aa2 100644
          wined3d_cs_emit_set_scissor_rect(device->cs, &state->scissor_rect);
      }
  
-@@ -5064,11 +5048,11 @@ void device_resource_released(struct wined3d_device *device, struct wined3d_reso
+@@ -5023,11 +5007,11 @@ void device_resource_released(struct wined3d_device *device, struct wined3d_reso
      {
          for (i = 0; i < device->adapter->gl_info.limits.buffers; ++i)
          {
@@ -565,7 +561,7 @@ index c0f6f0421bb..c643b111aa2 100644
              ERR("Resource %p is still in use as depth/stencil buffer.\n", resource);
      }
  
-@@ -5194,8 +5178,12 @@ HRESULT device_init(struct wined3d_device *device, struct wined3d *wined3d,
+@@ -5153,8 +5137,12 @@ HRESULT device_init(struct wined3d_device *device, struct wined3d *wined3d,
  
      device->blitter = adapter->blitter;
  
@@ -581,7 +577,7 @@ index c0f6f0421bb..c643b111aa2 100644
  
      if (!(device->cs = wined3d_cs_create(device)))
 diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
-index 49804131efb..28b4c5a48da 100644
+index 48421ef545e..d8f2ad17f2e 100644
 --- a/dlls/wined3d/drawprim.c
 +++ b/dlls/wined3d/drawprim.c
 @@ -411,7 +411,7 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
@@ -594,10 +590,10 @@ index 49804131efb..28b4c5a48da 100644
      struct wined3d_event_query *ib_query = NULL;
      struct wined3d_rendertarget_view *dsv, *rtv;
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 82e9fb7ea30..88dc4ee9cc6 100644
+index de2c0006ae1..8e902aae935 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -1629,7 +1629,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1630,7 +1630,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
          const struct wined3d_vec4 correction_params =
          {
              /* Position is relative to the framebuffer, not the viewport. */
@@ -607,10 +603,10 @@ index 82e9fb7ea30..88dc4ee9cc6 100644
              0.0f,
              0.0f,
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 814da178862..09ebbfa53c6 100644
+index 450e7913771..faf48a5126b 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -3231,7 +3231,7 @@ void find_ps_compile_args(const struct wined3d_state *state, const struct wined3
+@@ -3265,7 +3265,7 @@ void find_ps_compile_args(const struct wined3d_state *state, const struct wined3
      UINT i;
  
      memset(args, 0, sizeof(*args)); /* FIXME: Make sure all bits are set. */
@@ -824,10 +820,10 @@ index 8221b99977d..3c7b4b8a664 100644
      if (type == WINED3D_SBT_RECORDED)
          return WINED3D_OK;
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index e65630fafc8..c5ad5bd8475 100644
+index 15657ace57f..2753de76707 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -2514,7 +2514,7 @@ static HRESULT surface_blt_special(struct wined3d_surface *dst_surface, const RE
+@@ -2518,7 +2518,7 @@ static HRESULT surface_blt_special(struct wined3d_surface *dst_surface, const RE
  {
      struct wined3d_texture *dst_texture = dst_surface->container;
      struct wined3d_device *device = dst_texture->resource.device;
@@ -837,10 +833,10 @@ index e65630fafc8..c5ad5bd8475 100644
      struct wined3d_texture *src_texture;
  
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index dde75a36be5..718808861bc 100644
+index 48879bcd6a0..4b737ade91b 100644
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
-@@ -4651,7 +4651,7 @@ void get_projection_matrix(const struct wined3d_context *context, const struct w
+@@ -4640,7 +4640,7 @@ void get_projection_matrix(const struct wined3d_context *context, const struct w
          float y_offset = flip
                  ? (center_offset - (2.0f * y) - h) / h
                  : (center_offset - (2.0f * y) - h) / -h;
@@ -849,7 +845,7 @@ index dde75a36be5..718808861bc 100644
                  state->render_states[WINED3D_RS_ZENABLE] : WINED3D_ZB_FALSE;
          float z_scale = zenable ? clip_control ? 1.0f : 2.0f : 0.0f;
          float z_offset = zenable ? clip_control ? 0.0f : -1.0f : 0.0f;
-@@ -5450,7 +5450,7 @@ void gen_ffp_frag_op(const struct wined3d_context *context, const struct wined3d
+@@ -5439,7 +5439,7 @@ void gen_ffp_frag_op(const struct wined3d_context *context, const struct wined3d
                  break;
          }
      }
@@ -859,10 +855,10 @@ index dde75a36be5..718808861bc 100644
              || !state->render_states[WINED3D_RS_CLIPPLANEENABLE])
      {
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ad8a3516ac7..8fc67581cf2 100644
+index f3116d2fb33..019dc1ddf07 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1552,6 +1552,36 @@ struct wined3d_timestamp_query
+@@ -1554,6 +1554,36 @@ struct wined3d_timestamp_query
  void context_alloc_timestamp_query(struct wined3d_context *context, struct wined3d_timestamp_query *query) DECLSPEC_HIDDEN;
  void context_free_timestamp_query(struct wined3d_timestamp_query *query) DECLSPEC_HIDDEN;
  
@@ -899,7 +895,7 @@ index ad8a3516ac7..8fc67581cf2 100644
  struct wined3d_context
  {
      const struct wined3d_gl_info *gl_info;
-@@ -1567,6 +1597,7 @@ struct wined3d_context
+@@ -1569,6 +1599,7 @@ struct wined3d_context
      DWORD                   numDirtyEntries;
      DWORD isStateDirty[STATE_HIGHEST / (sizeof(DWORD) * CHAR_BIT) + 1]; /* Bitmap to find out quickly if a state is dirty */
      unsigned int dirty_compute_states[STATE_COMPUTE_COUNT / (sizeof(unsigned int) * CHAR_BIT) + 1];
@@ -907,7 +903,7 @@ index ad8a3516ac7..8fc67581cf2 100644
  
      struct wined3d_device *device;
      struct wined3d_swapchain *swapchain;
-@@ -1680,12 +1711,6 @@ struct wined3d_context
+@@ -1682,12 +1713,6 @@ struct wined3d_context
      GLuint                  dummy_arbfp_prog;
  };
  
@@ -920,7 +916,7 @@ index ad8a3516ac7..8fc67581cf2 100644
  typedef void (*APPLYSTATEFUNC)(struct wined3d_context *ctx, const struct wined3d_state *state, DWORD state_id);
  
  struct StateEntry
-@@ -2508,7 +2533,7 @@ struct wined3d_stream_state
+@@ -2511,7 +2536,7 @@ struct wined3d_stream_state
  struct wined3d_state
  {
      DWORD flags;
@@ -929,14 +925,14 @@ index ad8a3516ac7..8fc67581cf2 100644
  
      struct wined3d_vertex_declaration *vertex_declaration;
      struct wined3d_stream_output stream_output[MAX_STREAM_OUT];
-@@ -2622,7 +2647,6 @@ struct wined3d_device
+@@ -2625,7 +2650,6 @@ struct wined3d_device
      struct wine_rb_tree samplers;
  
      /* Render Target Support */
 -    struct wined3d_fb_state fb;
      struct wined3d_rendertarget_view *auto_depth_stencil_view;
  
-     /* For rendering to a texture using glCopyTexImage */
+     /* Cursor management */
 @@ -3164,9 +3188,8 @@ struct wined3d_stateblock
  void stateblock_init_contained_states(struct wined3d_stateblock *stateblock) DECLSPEC_HIDDEN;
  

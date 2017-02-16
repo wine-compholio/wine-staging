@@ -1,4 +1,4 @@
-From 0c368a9fa4e1417a0f5114769fa0b9f44d35ebde Mon Sep 17 00:00:00 2001
+From 4f06f7af54f1be5fee2c40c9a8d79d6f3d393a4e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Feb 2017 22:37:58 +0100
 Subject: wined3d: Map vertex buffers through cs.
@@ -10,7 +10,7 @@ Subject: wined3d: Map vertex buffers through cs.
  3 files changed, 76 insertions(+), 44 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 42779efe69d..42ce9bafb80 100644
+index c71019b06bf..bd1ea2594b6 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -94,6 +94,7 @@ enum wined3d_cs_op
@@ -21,8 +21,8 @@ index 42779efe69d..42ce9bafb80 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -528,6 +529,13 @@ struct wined3d_cs_delete_gl_contexts
-     struct wined3d_swapchain *swapchain;
+@@ -527,6 +528,13 @@ struct wined3d_cs_delete_gl_contexts
+     enum wined3d_cs_op opcode;
  };
  
 +struct wined3d_cs_map_vertex_buffers
@@ -35,7 +35,7 @@ index 42779efe69d..42ce9bafb80 100644
  static inline BOOL wined3d_cs_process_block(struct wined3d_cs *cs, struct wined3d_cs_block *block);
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs);
  
-@@ -2655,6 +2663,70 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs, struct wined3
+@@ -2653,6 +2661,70 @@ void wined3d_cs_emit_delete_opengl_contexts(struct wined3d_cs *cs)
      cs->ops->submit_and_wait(cs);
  }
  
@@ -50,7 +50,7 @@ index 42779efe69d..42ce9bafb80 100644
 +    WORD map;
 +
 +    /* Need any context to write to the vbo. */
-+    context = context_acquire(cs->device, NULL);
++    context = context_acquire(cs->device, NULL, 0);
 +    gl_info = context->gl_info;
 +
 +    vs = state->shader[WINED3D_SHADER_TYPE_VERTEX];
@@ -106,7 +106,7 @@ index 42779efe69d..42ce9bafb80 100644
  static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_FENCE                      */ wined3d_cs_exec_fence,
-@@ -2714,6 +2786,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2712,6 +2784,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CREATE_BUFFER_VIEW         */ wined3d_cs_exec_create_buffer_view,
      /* WINED3D_CS_OP_CREATE_TEXTURE_VIEW        */ wined3d_cs_exec_create_texture_view,
      /* WINED3D_CS_OP_DELETE_GL_CONTEXTS         */ wined3d_cs_exec_delete_gl_contexts,
@@ -115,10 +115,10 @@ index 42779efe69d..42ce9bafb80 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index ccfaa7f19e6..369fc47c097 100644
+index 9752912b1b0..5ef2886df06 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2851,7 +2851,6 @@ void CDECL wined3d_device_set_unordered_access_view(struct wined3d_device *devic
+@@ -2916,7 +2916,6 @@ void CDECL wined3d_device_set_unordered_access_view(struct wined3d_device *devic
      wined3d_device_set_pipeline_unordered_access_view(device, WINED3D_PIPELINE_GRAPHICS, idx, uav);
  }
  
@@ -126,7 +126,7 @@ index ccfaa7f19e6..369fc47c097 100644
  #define copy_and_next(dest, src, size) memcpy(dest, src, size); dest += (size)
  static HRESULT process_vertices_strided(const struct wined3d_device *device, DWORD dwDestIndex, DWORD dwCount,
          const struct wined3d_stream_info *stream_info, struct wined3d_buffer *dest, DWORD flags,
-@@ -3127,14 +3126,8 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
+@@ -3192,14 +3191,8 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
          UINT src_start_idx, UINT dst_idx, UINT vertex_count, struct wined3d_buffer *dst_buffer,
          const struct wined3d_vertex_declaration *declaration, DWORD flags, DWORD dst_fvf)
  {
@@ -141,12 +141,12 @@ index ccfaa7f19e6..369fc47c097 100644
  
      TRACE("device %p, src_start_idx %u, dst_idx %u, vertex_count %u, "
              "dst_buffer %p, declaration %p, flags %#x, dst_fvf %#x.\n",
-@@ -3144,47 +3137,11 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
+@@ -3209,47 +3202,11 @@ HRESULT CDECL wined3d_device_process_vertices(struct wined3d_device *device,
      if (declaration)
          FIXME("Output vertex declaration not implemented yet.\n");
  
 -    /* Need any context to write to the vbo. */
--    context = context_acquire(device, NULL);
+-    context = context_acquire(device, NULL, 0);
 -    gl_info = context->gl_info;
 -
 -    vs = state->shader[WINED3D_SHADER_TYPE_VERTEX];
@@ -191,10 +191,10 @@ index ccfaa7f19e6..369fc47c097 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index c1200b127c5..a6a3eca0da2 100644
+index 6d8495f1993..aa54fc3a3e6 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3359,6 +3359,8 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+@@ -3354,6 +3354,8 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, unsigned int flags) DECLSPEC_HIDDEN;
  HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;

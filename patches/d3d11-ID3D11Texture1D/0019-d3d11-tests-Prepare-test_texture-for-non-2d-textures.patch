@@ -1,17 +1,17 @@
-From 6a2fdc55c5d480b3bd0a26d3aaed1b31e4a7f8bb Mon Sep 17 00:00:00 2001
+From a30b83149208635d5e114f553c98ea8af569cbeb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 25 Aug 2016 20:06:28 +0200
 Subject: d3d11/tests: Prepare test_texture for non 2d textures.
 
 ---
- dlls/d3d11/tests/d3d11.c | 131 +++++++++++++++++++++++++++++------------------
- 1 file changed, 81 insertions(+), 50 deletions(-)
+ dlls/d3d11/tests/d3d11.c | 137 +++++++++++++++++++++++++++++------------------
+ 1 file changed, 85 insertions(+), 52 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 0dd286d..7768cdb 100644
+index 21c5627b862..1a3adee346f 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -5671,6 +5671,7 @@ static void test_texture(void)
+@@ -5955,6 +5955,7 @@ static void test_texture(void)
      };
      struct texture
      {
@@ -19,7 +19,7 @@ index 0dd286d..7768cdb 100644
          UINT width;
          UINT height;
          UINT miplevel_count;
-@@ -5682,7 +5683,7 @@ static void test_texture(void)
+@@ -5966,7 +5967,7 @@ static void test_texture(void)
      D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
      struct d3d11_test_context test_context;
      const struct texture *current_texture;
@@ -28,7 +28,7 @@ index 0dd286d..7768cdb 100644
      D3D11_SAMPLER_DESC sampler_desc;
      const struct shader *current_ps;
      D3D_FEATURE_LEVEL feature_level;
-@@ -5690,7 +5691,7 @@ static void test_texture(void)
+@@ -5974,7 +5975,7 @@ static void test_texture(void)
      ID3D11DeviceContext *context;
      ID3D11SamplerState *sampler;
      struct resource_readback rb;
@@ -37,7 +37,7 @@ index 0dd286d..7768cdb 100644
      struct vec4 ps_constant;
      ID3D11PixelShader *ps;
      ID3D11Device *device;
-@@ -6030,6 +6031,7 @@ static void test_texture(void)
+@@ -6328,6 +6329,7 @@ static void test_texture(void)
      };
      static const struct texture rgba_texture =
      {
@@ -45,7 +45,7 @@ index 0dd286d..7768cdb 100644
          4, 4, 3, 1, DXGI_FORMAT_R8G8B8A8_UNORM,
          {
              {rgba_level_0, 4 * sizeof(*rgba_level_0), 0},
-@@ -6037,33 +6039,51 @@ static void test_texture(void)
+@@ -6335,33 +6337,51 @@ static void test_texture(void)
              {rgba_level_2,     sizeof(*rgba_level_2), 0},
          }
      };
@@ -120,7 +120,21 @@ index 0dd286d..7768cdb 100644
          4, 4, 1, 3, DXGI_FORMAT_R8G8B8A8_UNORM,
          {
              {red_data,   6 * sizeof(*red_data)},
-@@ -6338,12 +6358,12 @@ static void test_texture(void)
+@@ -6369,9 +6389,11 @@ static void test_texture(void)
+             {blue_data,  5 * sizeof(*blue_data)},
+         }
+     };
+-    static const struct texture r32f_typeless = {4, 4, 1, 1, DXGI_FORMAT_R32_TYPELESS,
++    static const struct texture r32f_typeless = {D3D11_RESOURCE_DIMENSION_TEXTURE2D,
++        4, 4, 1, 1, DXGI_FORMAT_R32_TYPELESS,
+         {{r32_float, 4 * sizeof(*r32_float)}}};
+-    static const struct texture r32u_typeless = {4, 4, 1, 1, DXGI_FORMAT_R32_TYPELESS,
++    static const struct texture r32u_typeless = {D3D11_RESOURCE_DIMENSION_TEXTURE2D,
++        4, 4, 1, 1, DXGI_FORMAT_R32_TYPELESS,
+         {{r32_uint, 4 * sizeof(*r32_uint)}}};
+     static const DWORD red_colors[] =
+     {
+@@ -6660,12 +6682,12 @@ static void test_texture(void)
  
      ID3D11DeviceContext_PSSetConstantBuffers(context, 0, 1, &cb);
  
@@ -139,7 +153,7 @@ index 0dd286d..7768cdb 100644
  
      sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
      sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-@@ -6401,7 +6421,7 @@ static void test_texture(void)
+@@ -6723,7 +6745,7 @@ static void test_texture(void)
          if (current_texture != test->texture)
          {
              if (texture)
@@ -148,7 +162,7 @@ index 0dd286d..7768cdb 100644
              if (srv)
                  ID3D11ShaderResourceView_Release(srv);
  
-@@ -6409,16 +6429,23 @@ static void test_texture(void)
+@@ -6731,16 +6753,23 @@ static void test_texture(void)
  
              if (current_texture)
              {
@@ -166,21 +180,21 @@ index 0dd286d..7768cdb 100644
 +                    texture2d_desc.MipLevels = current_texture->miplevel_count;
 +                    texture2d_desc.ArraySize = current_texture->array_size;
 +                    texture2d_desc.Format = current_texture->format;
-+
+ 
+-                hr = ID3D11Device_CreateTexture2D(device, &texture_desc, current_texture->data, &texture);
+-                ok(SUCCEEDED(hr), "Test %u: Failed to create 2d texture, hr %#x.\n", i, hr);
 +                    hr = ID3D11Device_CreateTexture2D(device, &texture2d_desc, current_texture->data, &texture2d);
 +                    ok(SUCCEEDED(hr), "Test %u: Failed to create 2d texture, hr %#x.\n", i, hr);
 +                    texture = (ID3D11Resource *)texture2d;
 +                }
  
--                hr = ID3D11Device_CreateTexture2D(device, &texture_desc, current_texture->data, &texture);
--                ok(SUCCEEDED(hr), "Test %u: Failed to create 2d texture, hr %#x.\n", i, hr);
- 
 -                hr = ID3D11Device_CreateShaderResourceView(device, (ID3D11Resource *)texture, NULL, &srv);
++
 +                hr = ID3D11Device_CreateShaderResourceView(device, texture, NULL, &srv);
                  ok(SUCCEEDED(hr), "Test %u: Failed to create shader resource view, hr %#x.\n", i, hr);
              }
              else
-@@ -6472,7 +6499,7 @@ static void test_texture(void)
+@@ -6794,7 +6823,7 @@ static void test_texture(void)
          ID3D11ShaderResourceView_Release(srv);
      ID3D11SamplerState_Release(sampler);
      if (texture)
@@ -189,7 +203,7 @@ index 0dd286d..7768cdb 100644
      ID3D11PixelShader_Release(ps);
  
      if (is_warp_device(device) && feature_level < D3D_FEATURE_LEVEL_10_1)
-@@ -6517,26 +6544,30 @@ static void test_texture(void)
+@@ -6839,26 +6868,30 @@ static void test_texture(void)
  
          if (current_texture != test->texture)
          {
@@ -228,7 +242,7 @@ index 0dd286d..7768cdb 100644
          ok(SUCCEEDED(hr), "Test %u: Failed to create shader resource view, hr %#x.\n", i, hr);
  
          ID3D11DeviceContext_PSSetShaderResources(context, 0, 1, &srv);
-@@ -6561,7 +6592,7 @@ static void test_texture(void)
+@@ -6883,7 +6916,7 @@ static void test_texture(void)
          release_resource_readback(&rb);
      }
      ID3D11PixelShader_Release(ps);
@@ -238,5 +252,5 @@ index 0dd286d..7768cdb 100644
      ID3D11SamplerState_Release(sampler);
  
 -- 
-2.8.1
+2.11.0
 

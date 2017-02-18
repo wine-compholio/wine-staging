@@ -1,4 +1,4 @@
-From 703cd39ce88d6b50c0ca7da3ba7533ac3ce91950 Mon Sep 17 00:00:00 2001
+From 8147386e251ecad87d6df713d0396c2d097ab83a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 30 Aug 2016 01:15:44 +0200
 Subject: server: Implement changing the label of a security descriptor.
@@ -10,28 +10,28 @@ Subject: server: Implement changing the label of a security descriptor.
  3 files changed, 243 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 877250c1ebf..84a451eb834 100644
+index 57297760832..685ab1c2b5f 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -6434,6 +6434,8 @@ static void test_integrity(void)
+@@ -6382,6 +6382,8 @@ static void test_AddMandatoryAce(void)
  {
      static SID low_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
-                                                     {SECURITY_MANDATORY_LOW_RID}};
+                             {SECURITY_MANDATORY_LOW_RID}};
 +    static SID medium_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
-+                                                    {SECURITY_MANDATORY_MEDIUM_RID}};
++                               {SECURITY_MANDATORY_MEDIUM_RID}};
      SYSTEM_MANDATORY_LABEL_ACE *ace;
      char buffer_sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
      SECURITY_DESCRIPTOR *sd2, *sd = (SECURITY_DESCRIPTOR *)&buffer_sd;
-@@ -6441,7 +6443,7 @@ static void test_integrity(void)
+@@ -6389,7 +6391,7 @@ static void test_AddMandatoryAce(void)
      char buffer_acl[256];
-     ACL *pAcl = (ACL*)&buffer_acl;
+     ACL *pAcl = (ACL *)&buffer_acl;
      ACL *sAcl;
 -    BOOL defaulted, present, ret, found;
 +    BOOL defaulted, present, ret, found, found2;
      HANDLE handle;
      DWORD index, size;
  
-@@ -6545,6 +6547,115 @@ static void test_integrity(void)
+@@ -6493,6 +6495,115 @@ static void test_AddMandatoryAce(void)
      ok(found, "Could not find mandatory label\n");
  
      HeapFree(GetProcessHeap(), 0, sd2);
@@ -148,10 +148,10 @@ index 877250c1ebf..84a451eb834 100644
  }
  
 diff --git a/dlls/ntdll/sec.c b/dlls/ntdll/sec.c
-index f588545f322..5cf6c788ffb 100644
+index 3f7aa793236..5c858b5bcbb 100644
 --- a/dlls/ntdll/sec.c
 +++ b/dlls/ntdll/sec.c
-@@ -1782,7 +1782,8 @@ NTSTATUS WINAPI NtSetSecurityObject(HANDLE Handle,
+@@ -1775,7 +1775,8 @@ NTSTATUS WINAPI NtSetSecurityObject(HANDLE Handle,
              return STATUS_INVALID_SECURITY_DESCR;
      }
  
@@ -162,10 +162,10 @@ index f588545f322..5cf6c788ffb 100644
          status = RtlGetSaclSecurityDescriptor( SecurityDescriptor, &present, &sacl, &defaulted );
          if (status != STATUS_SUCCESS) return status;
 diff --git a/server/handle.c b/server/handle.c
-index 3d5485fcdf9..a0e27b9507e 100644
+index 5ffcd74e464..3a216702026 100644
 --- a/server/handle.c
 +++ b/server/handle.c
-@@ -683,12 +683,89 @@ DECL_HANDLER(get_object_info)
+@@ -673,12 +673,89 @@ DECL_HANDLER(get_object_info)
      release_object( obj );
  }
  
@@ -255,7 +255,7 @@ index 3d5485fcdf9..a0e27b9507e 100644
  
      if (!sd_is_valid( sd, sd_size ))
      {
-@@ -697,7 +774,8 @@ DECL_HANDLER(set_security_object)
+@@ -687,7 +764,8 @@ DECL_HANDLER(set_security_object)
      }
  
      if (req->security_info & OWNER_SECURITY_INFORMATION ||
@@ -265,7 +265,7 @@ index 3d5485fcdf9..a0e27b9507e 100644
          access |= WRITE_OWNER;
      if (req->security_info & SACL_SECURITY_INFORMATION)
          access |= ACCESS_SYSTEM_SECURITY;
-@@ -706,8 +784,57 @@ DECL_HANDLER(set_security_object)
+@@ -696,8 +774,57 @@ DECL_HANDLER(set_security_object)
  
      if (!(obj = get_handle_obj( current->process, req->handle, access, NULL ))) return;
  

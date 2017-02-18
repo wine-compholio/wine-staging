@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a2f2de1e960d37840bb0df541e31d64941e65197"
+	echo "9eb56e25e37b4adec0d72875455ffb787238672f"
 }
 
 # Show version information
@@ -86,7 +86,6 @@ patch_enable_all ()
 	enable_Coverity="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_advapi32_AddMandatoryAce="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LookupSecurityDescriptorParts="$1"
 	enable_advapi32_LsaLookupSids="$1"
@@ -348,7 +347,6 @@ patch_enable_all ()
 	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
-	enable_user32_DeferWindowPos="$1"
 	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Focus="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -469,9 +467,6 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
-			;;
-		advapi32-AddMandatoryAce)
-			enable_advapi32_AddMandatoryAce="$2"
 			;;
 		advapi32-GetExplicitEntriesFromAclW)
 			enable_advapi32_GetExplicitEntriesFromAclW="$2"
@@ -1255,9 +1250,6 @@ patch_enable ()
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
-			;;
-		user32-DeferWindowPos)
-			enable_user32_DeferWindowPos="$2"
 			;;
 		user32-DialogBoxParam)
 			enable_user32_DialogBoxParam="$2"
@@ -2118,9 +2110,6 @@ if test "$enable_server_Pipe_ObjectName" -eq 1; then
 fi
 
 if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
-	if test "$enable_advapi32_AddMandatoryAce" -gt 1; then
-		abort "Patchset advapi32-AddMandatoryAce disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
-	fi
 	if test "$enable_advapi32_GetExplicitEntriesFromAclW" -gt 1; then
 		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
 	fi
@@ -2130,7 +2119,6 @@ if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
 	if test "$enable_server_Stored_ACLs" -gt 1; then
 		abort "Patchset server-Stored_ACLs disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
 	fi
-	enable_advapi32_AddMandatoryAce=1
 	enable_advapi32_GetExplicitEntriesFromAclW=1
 	enable_server_Misc_ACL=1
 	enable_server_Stored_ACLs=1
@@ -2519,19 +2507,6 @@ if test "$enable_Staging" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-AddMandatoryAce
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, dlls/ntdll/ntdll.spec, dlls/ntdll/sec.c, include/winbase.h,
-# | 	include/winternl.h
-# |
-if test "$enable_advapi32_AddMandatoryAce" -eq 1; then
-	patch_apply advapi32-AddMandatoryAce/0001-advapi32-Implement-AddMandatoryAce.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement AddMandatoryAce.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4718,8 +4693,8 @@ fi
 # |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ws2_32/tests/sock.c, include/winternl.h,
-# | 	server/fd.c, server/protocol.def
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ws2_32/tests/sock.c, server/fd.c,
+# | 	server/protocol.def
 # |
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
@@ -6529,8 +6504,7 @@ fi
 # Patchset server-LABEL_SECURITY_INFORMATION
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	advapi32-AddMandatoryAce, advapi32-GetExplicitEntriesFromAclW, server-Misc_ACL, ntdll-DOS_Attributes, server-
-# | 	File_Permissions, server-Stored_ACLs
+# |   *	advapi32-GetExplicitEntriesFromAclW, server-Misc_ACL, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/sec.c, include/winnt.h, server/handle.c, server/object.c,
@@ -7310,21 +7284,6 @@ if test "$enable_user32_DM_SETDEFID" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Do not initialize dialog info for every window passed to DefDlgProc.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a bunch of tests for DM_SETDEFID/DM_GETDEFID handling by a DefDlgProc.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-DeferWindowPos
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23187] Fix error handling in DeferWindowPos when passing an invalid HWND
-# |
-# | Modified files:
-# |   *	dlls/user32/winpos.c
-# |
-if test "$enable_user32_DeferWindowPos" -eq 1; then
-	patch_apply user32-DeferWindowPos/0001-user32-Fix-error-handling-in-Begin-End-DeferWindowPo.patch
-	(
-		printf '%s\n' '+    { "Rodrigo Rivas", "user32: Fix error handling in {Begin,End,}DeferWindowPos() to match Windows behavior.", 1 },';
 	) >> "$patchlist"
 fi
 

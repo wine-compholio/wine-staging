@@ -1,4 +1,4 @@
-From a05c00f17a61a2d34a5e439b5c4f835f011187b0 Mon Sep 17 00:00:00 2001
+From d5ba417b0a446d5c6fccfec1d44999c32fb106c3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 29 Aug 2016 20:35:51 +0200
 Subject: server: Implement querying the security label of a security
@@ -11,18 +11,18 @@ Subject: server: Implement querying the security label of a security
  3 files changed, 134 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 98f98721a0c..877250c1ebf 100644
+index 90b8392313d..57297760832 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -6435,10 +6435,15 @@ static void test_integrity(void)
+@@ -6383,10 +6383,15 @@ static void test_AddMandatoryAce(void)
      static SID low_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
-                                                     {SECURITY_MANDATORY_LOW_RID}};
+                             {SECURITY_MANDATORY_LOW_RID}};
      SYSTEM_MANDATORY_LABEL_ACE *ace;
 +    char buffer_sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
 +    SECURITY_DESCRIPTOR *sd2, *sd = (SECURITY_DESCRIPTOR *)&buffer_sd;
 +    SECURITY_ATTRIBUTES sa;
      char buffer_acl[256];
-     ACL *pAcl = (ACL*)&buffer_acl;
+     ACL *pAcl = (ACL *)&buffer_acl;
 -    BOOL ret, found;
 -    DWORD index;
 +    ACL *sAcl;
@@ -32,7 +32,7 @@ index 98f98721a0c..877250c1ebf 100644
  
      if (!pAddMandatoryAce)
      {
-@@ -6446,6 +6451,36 @@ static void test_integrity(void)
+@@ -6394,6 +6399,36 @@ static void test_AddMandatoryAce(void)
          return;
      }
  
@@ -69,10 +69,10 @@ index 98f98721a0c..877250c1ebf 100644
      ret = InitializeAcl(pAcl, 256, ACL_REVISION);
      ok(ret, "InitializeAcl failed with %u\n", GetLastError());
  
-@@ -6470,6 +6505,47 @@ static void test_integrity(void)
-         }
+@@ -6418,6 +6453,47 @@ static void test_AddMandatoryAce(void)
+         found = TRUE;
      }
-     ok(found, "Could not find mandatory label\n");
+     ok(found, "Could not find mandatory label ace\n");
 +
 +    ret = SetSecurityDescriptorSacl(sd, TRUE, pAcl, FALSE);
 +    ok(ret, "SetSecurityDescriptorSacl failed with %u\n", GetLastError());
@@ -116,12 +116,12 @@ index 98f98721a0c..877250c1ebf 100644
 +    CloseHandle(handle);
  }
  
- static void test_AdjustTokenPrivileges(void)
+ static void test_system_security_access(void)
 diff --git a/include/winnt.h b/include/winnt.h
-index 392f77b217d..97d6295bdef 100644
+index de7622fbe6f..0af83dcbcb7 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
-@@ -5282,6 +5282,7 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
+@@ -5276,6 +5276,7 @@ typedef struct _TAPE_GET_MEDIA_PARAMETERS {
  #define GROUP_SECURITY_INFORMATION	0x00000002
  #define DACL_SECURITY_INFORMATION	0x00000004
  #define SACL_SECURITY_INFORMATION	0x00000008
@@ -130,10 +130,10 @@ index 392f77b217d..97d6295bdef 100644
  #define REG_OPTION_RESERVED		0x00000000
  #define REG_OPTION_NON_VOLATILE		0x00000000
 diff --git a/server/handle.c b/server/handle.c
-index 391f4688b6a..3d5485fcdf9 100644
+index 3f42352bceb..5ffcd74e464 100644
 --- a/server/handle.c
 +++ b/server/handle.c
-@@ -710,6 +710,52 @@ DECL_HANDLER(set_security_object)
+@@ -700,6 +700,52 @@ DECL_HANDLER(set_security_object)
      release_object( obj );
  }
  
@@ -186,7 +186,7 @@ index 391f4688b6a..3d5485fcdf9 100644
  DECL_HANDLER(get_security_object)
  {
      const struct security_descriptor *sd;
-@@ -719,6 +765,7 @@ DECL_HANDLER(get_security_object)
+@@ -709,6 +755,7 @@ DECL_HANDLER(get_security_object)
      int present;
      const SID *owner, *group;
      const ACL *sacl, *dacl;
@@ -194,7 +194,7 @@ index 391f4688b6a..3d5485fcdf9 100644
  
      if (req->security_info & SACL_SECURITY_INFORMATION)
          access |= ACCESS_SYSTEM_SECURITY;
-@@ -746,6 +793,12 @@ DECL_HANDLER(get_security_object)
+@@ -736,6 +783,12 @@ DECL_HANDLER(get_security_object)
          sacl = sd_get_sacl( sd, &present );
          if (req->security_info & SACL_SECURITY_INFORMATION && present)
              req_sd.sacl_len = sd->sacl_len;
@@ -207,7 +207,7 @@ index 391f4688b6a..3d5485fcdf9 100644
          else
              req_sd.sacl_len = 0;
  
-@@ -776,7 +829,9 @@ DECL_HANDLER(get_security_object)
+@@ -766,7 +819,9 @@ DECL_HANDLER(get_security_object)
              set_error(STATUS_BUFFER_TOO_SMALL);
      }
  

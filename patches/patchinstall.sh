@@ -3250,14 +3250,16 @@ fi
 # Patchset d3d9-Tests
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
 # |
 if test "$enable_d3d9_Tests" -eq 1; then
 	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
 	patch_apply d3d9-Tests/0002-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
+	patch_apply d3d9-Tests/0003-d3d11-tests-Avoid-test-failures.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Avoid test failures.", 1 },';
 	) >> "$patchlist"
 fi
 

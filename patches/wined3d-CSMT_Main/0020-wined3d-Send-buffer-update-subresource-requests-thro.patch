@@ -1,0 +1,59 @@
+From 6f933585f6c0fb35a9e3ef65645c86f8ecb6f4da Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Tue, 7 Feb 2017 14:01:52 +0100
+Subject: wined3d: Send buffer update subresource requests through CS.
+
+---
+ dlls/wined3d/cs.c     | 11 +++++++++++
+ dlls/wined3d/device.c |  7 +------
+ 2 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 5b529d000f4..7e032d8ec05 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -2012,6 +2012,17 @@ static void wined3d_cs_exec_update_sub_resource(struct wined3d_cs *cs, const voi
+     struct wined3d_texture *texture;
+     unsigned int width, height, depth, level;
+ 
++    if (op->resource->type == WINED3D_RTYPE_BUFFER)
++    {
++        struct wined3d_buffer *buffer = buffer_from_resource(op->resource);
++        HRESULT hr;
++
++        if (FAILED(hr = wined3d_buffer_upload_data(buffer, op->box, op->data)))
++            WARN("Failed to update buffer data, hr %#x.\n", hr);
++
++        return;
++    }
++
+     texture = wined3d_texture_from_resource(op->resource);
+ 
+     level = op->sub_resource_idx % texture->level_count;
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index bd3a132c496..bf647d5241c 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4178,18 +4178,13 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+ 
+     if (resource->type == WINED3D_RTYPE_BUFFER)
+     {
+-        struct wined3d_buffer *buffer = buffer_from_resource(resource);
+-        HRESULT hr;
+-
+         if (sub_resource_idx > 0)
+         {
+             WARN("Invalid sub_resource_idx %u.\n", sub_resource_idx);
+             return;
+         }
+ 
+-        if (FAILED(hr = wined3d_buffer_upload_data(buffer, box, data)))
+-            WARN("Failed to update buffer data, hr %#x.\n", hr);
+-
++        wined3d_cs_emit_update_sub_resource(device->cs, resource, sub_resource_idx, box, data, row_pitch, depth_pitch);
+         return;
+     }
+ 
+-- 
+2.11.0
+

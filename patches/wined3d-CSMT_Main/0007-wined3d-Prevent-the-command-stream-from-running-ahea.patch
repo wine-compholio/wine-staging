@@ -1,0 +1,68 @@
+From 7e1cd67f99767509847f9914eb1ad37973f9034c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Wed, 10 Apr 2013 19:10:41 +0200
+Subject: wined3d: Prevent the command stream from running ahead too far
+
+---
+ dlls/wined3d/cs.c              | 16 ++++++++++++++++
+ dlls/wined3d/wined3d_private.h |  2 ++
+ 2 files changed, 18 insertions(+)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index d6e5179235b..66f7034686f 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -416,6 +416,8 @@ static void wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
+     swapchain->swapchain_ops->swapchain_present(swapchain, &op->src_rect, &op->dst_rect, op->flags,
+             cs->state.fb->depth_stencil);
+ 
++    InterlockedDecrement(&cs->pending_presents);
++
+     wined3d_resource_release(&swapchain->front_buffer->resource);
+     for (i = 0; i < swapchain->desc.backbuffer_count; ++i)
+     {
+@@ -428,6 +430,7 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
+ {
+     struct wined3d_cs_present *op;
+     unsigned int i;
++    LONG pending;
+ 
+     op = cs->ops->require_space(cs, sizeof(*op));
+     op->opcode = WINED3D_CS_OP_PRESENT;
+@@ -443,7 +446,20 @@ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *sw
+         wined3d_resource_acquire(&swapchain->back_buffers[i]->resource);
+     }
+ 
++    pending = InterlockedIncrement(&cs->pending_presents);
++
+     cs->ops->submit(cs);
++
++    /* D3D10 documentation suggests that Windows allows the game to run
++     * 3 frames ahead of the GPU. Increasing this above 1 causes uneven
++     * animation in some games, most notably StarCraft II. The framerates
++     * don't show this problem. The issue is more noticable with vsync
++     * on, but also happens with vsync off.
++     *
++     * In Counter-Strike: Source a frame difference of 3 causes noticable
++     * input delay that makes the game unplayable. */
++    while (pending > 1)
++        pending = InterlockedCompareExchange(&cs->pending_presents, 0, 0);
+ }
+ 
+ static void wined3d_cs_exec_clear(struct wined3d_cs *cs, const void *data)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 4986cb33465..772a8492fb0 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3180,6 +3180,8 @@ struct wined3d_cs
+ 
+     size_t data_size, start, end;
+     void *data;
++
++    LONG pending_presents;
+ };
+ 
+ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HIDDEN;
+-- 
+2.11.0
+

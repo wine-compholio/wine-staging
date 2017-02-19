@@ -1,0 +1,264 @@
+From e565d8dfb0453633c53c6a74f5f204e99231729a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 6 Feb 2017 05:50:11 +0100
+Subject: wined3d: Send push_constants through the CS.
+
+---
+ dlls/wined3d/cs.c              | 113 +++++++++++++++++++++++++----------------
+ dlls/wined3d/device.c          |  12 ++---
+ dlls/wined3d/wined3d_private.h |  10 +---
+ 3 files changed, 77 insertions(+), 58 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 990cb6735d7..4612244ce0c 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -63,6 +63,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_UNLOAD_RESOURCE,
+     WINED3D_CS_OP_MAP,
+     WINED3D_CS_OP_UNMAP,
++    WINED3D_CS_OP_PUSH_CONSTANTS,
+ };
+ 
+ struct wined3d_cs_sync
+@@ -340,6 +341,15 @@ struct wined3d_cs_unmap
+     HRESULT *hr;
+ };
+ 
++struct wined3d_cs_push_constants
++{
++    enum wined3d_cs_op opcode;
++    enum wined3d_push_constants p;
++    unsigned int start_idx;
++    unsigned int count;
++    BYTE constants[1];
++};
++
+ static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
+ {
+ }
+@@ -1579,6 +1589,64 @@ HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resourc
+     return hr;
+ }
+ 
++static const struct
++{
++    size_t offset;
++    size_t size;
++    DWORD mask;
++}
++push_constant_info[] =
++{
++    /* WINED3D_PUSH_CONSTANTS_VS_F */
++    {FIELD_OFFSET(struct wined3d_state, vs_consts_f), sizeof(struct wined3d_vec4),  WINED3D_SHADER_CONST_VS_F},
++    /* WINED3D_PUSH_CONSTANTS_PS_F */
++    {FIELD_OFFSET(struct wined3d_state, ps_consts_f), sizeof(struct wined3d_vec4),  WINED3D_SHADER_CONST_PS_F},
++    /* WINED3D_PUSH_CONSTANTS_VS_I */
++    {FIELD_OFFSET(struct wined3d_state, vs_consts_i), sizeof(struct wined3d_ivec4), WINED3D_SHADER_CONST_VS_I},
++    /* WINED3D_PUSH_CONSTANTS_PS_I */
++    {FIELD_OFFSET(struct wined3d_state, ps_consts_i), sizeof(struct wined3d_ivec4), WINED3D_SHADER_CONST_PS_I},
++    /* WINED3D_PUSH_CONSTANTS_VS_B */
++    {FIELD_OFFSET(struct wined3d_state, vs_consts_b), sizeof(BOOL),                 WINED3D_SHADER_CONST_VS_B},
++    /* WINED3D_PUSH_CONSTANTS_PS_B */
++    {FIELD_OFFSET(struct wined3d_state, ps_consts_b), sizeof(BOOL),                 WINED3D_SHADER_CONST_PS_B},
++};
++
++static void wined3d_cs_exec_push_constants(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_push_constants *op = data;
++    struct wined3d_device *device = cs->device;
++    unsigned int context_count;
++    unsigned int i;
++    size_t offset;
++
++    if (op->p == WINED3D_PUSH_CONSTANTS_VS_F)
++        device->shader_backend->shader_update_float_vertex_constants(device, op->start_idx, op->count);
++    else if (op->p == WINED3D_PUSH_CONSTANTS_PS_F)
++        device->shader_backend->shader_update_float_pixel_constants(device, op->start_idx, op->count);
++
++    offset = push_constant_info[op->p].offset + op->start_idx * push_constant_info[op->p].size;
++    memcpy((BYTE *)&cs->state + offset, op->constants, op->count * push_constant_info[op->p].size);
++    for (i = 0, context_count = device->context_count; i < context_count; ++i)
++    {
++        device->contexts[i]->constant_update_mask |= push_constant_info[op->p].mask;
++    }
++}
++
++void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_constants p,
++        unsigned int start_idx, unsigned int count, const void *constants)
++{
++    struct wined3d_cs_push_constants *op;
++
++    op = cs->ops->require_space(cs, FIELD_OFFSET(struct wined3d_cs_push_constants, constants[count * push_constant_info[p].size]));
++    op->opcode = WINED3D_CS_OP_PUSH_CONSTANTS;
++    op->p = p;
++    op->start_idx = start_idx;
++    op->count = count;
++    memcpy(op->constants, constants, count * push_constant_info[p].size);
++
++    cs->ops->submit(cs);
++}
++
+ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
+ {
+     /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
+@@ -1618,6 +1686,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_UNLOAD_RESOURCE            */ wined3d_cs_exec_unload_resource,
+     /* WINED3D_CS_OP_MAP                        */ wined3d_cs_exec_map,
+     /* WINED3D_CS_OP_UNMAP                      */ wined3d_cs_exec_unmap,
++    /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
+@@ -1664,55 +1733,11 @@ static void wined3d_cs_st_submit(struct wined3d_cs *cs)
+         HeapFree(GetProcessHeap(), 0, data);
+ }
+ 
+-static void wined3d_cs_st_push_constants(struct wined3d_cs *cs, enum wined3d_push_constants p,
+-        unsigned int start_idx, unsigned int count, const void *constants)
+-{
+-    struct wined3d_device *device = cs->device;
+-    unsigned int context_count;
+-    unsigned int i;
+-    size_t offset;
+-
+-    static const struct
+-    {
+-        size_t offset;
+-        size_t size;
+-        DWORD mask;
+-    }
+-    push_constant_info[] =
+-    {
+-        /* WINED3D_PUSH_CONSTANTS_VS_F */
+-        {FIELD_OFFSET(struct wined3d_state, vs_consts_f), sizeof(struct wined3d_vec4),  WINED3D_SHADER_CONST_VS_F},
+-        /* WINED3D_PUSH_CONSTANTS_PS_F */
+-        {FIELD_OFFSET(struct wined3d_state, ps_consts_f), sizeof(struct wined3d_vec4),  WINED3D_SHADER_CONST_PS_F},
+-        /* WINED3D_PUSH_CONSTANTS_VS_I */
+-        {FIELD_OFFSET(struct wined3d_state, vs_consts_i), sizeof(struct wined3d_ivec4), WINED3D_SHADER_CONST_VS_I},
+-        /* WINED3D_PUSH_CONSTANTS_PS_I */
+-        {FIELD_OFFSET(struct wined3d_state, ps_consts_i), sizeof(struct wined3d_ivec4), WINED3D_SHADER_CONST_PS_I},
+-        /* WINED3D_PUSH_CONSTANTS_VS_B */
+-        {FIELD_OFFSET(struct wined3d_state, vs_consts_b), sizeof(BOOL),                 WINED3D_SHADER_CONST_VS_B},
+-        /* WINED3D_PUSH_CONSTANTS_PS_B */
+-        {FIELD_OFFSET(struct wined3d_state, ps_consts_b), sizeof(BOOL),                 WINED3D_SHADER_CONST_PS_B},
+-    };
+-
+-    if (p == WINED3D_PUSH_CONSTANTS_VS_F)
+-        device->shader_backend->shader_update_float_vertex_constants(device, start_idx, count);
+-    else if (p == WINED3D_PUSH_CONSTANTS_PS_F)
+-        device->shader_backend->shader_update_float_pixel_constants(device, start_idx, count);
+-
+-    offset = push_constant_info[p].offset + start_idx * push_constant_info[p].size;
+-    memcpy((BYTE *)&cs->state + offset, constants, count * push_constant_info[p].size);
+-    for (i = 0, context_count = device->context_count; i < context_count; ++i)
+-    {
+-        device->contexts[i]->constant_update_mask |= push_constant_info[p].mask;
+-    }
+-}
+-
+ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+ {
+     wined3d_cs_st_require_space,
+     wined3d_cs_st_submit,
+     wined3d_cs_st_submit,
+-    wined3d_cs_st_push_constants,
+ };
+ 
+ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index b449225d2e9..5e17ba185de 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -2347,7 +2347,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_b(struct wined3d_device *device,
+     }
+     else
+     {
+-        wined3d_cs_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_VS_B, start_idx, count, constants);
++        wined3d_cs_emit_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_VS_B, start_idx, count, constants);
+     }
+ 
+     return WINED3D_OK;
+@@ -2396,7 +2396,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
+     }
+     else
+     {
+-        wined3d_cs_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_VS_I, start_idx, count, constants);
++        wined3d_cs_emit_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_VS_I, start_idx, count, constants);
+     }
+ 
+     return WINED3D_OK;
+@@ -2441,7 +2441,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_f(struct wined3d_device *device,
+         memset(&device->recording->changed.vs_consts_f[start_idx], 1,
+                 count * sizeof(*device->recording->changed.vs_consts_f));
+     else
+-        wined3d_cs_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_VS_F, start_idx, count, constants);
++        wined3d_cs_emit_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_VS_F, start_idx, count, constants);
+ 
+     return WINED3D_OK;
+ }
+@@ -2580,7 +2580,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_b(struct wined3d_device *device,
+     }
+     else
+     {
+-        wined3d_cs_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_PS_B, start_idx, count, constants);
++        wined3d_cs_emit_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_PS_B, start_idx, count, constants);
+     }
+ 
+     return WINED3D_OK;
+@@ -2629,7 +2629,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
+     }
+     else
+     {
+-        wined3d_cs_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_PS_I, start_idx, count, constants);
++        wined3d_cs_emit_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_PS_I, start_idx, count, constants);
+     }
+ 
+     return WINED3D_OK;
+@@ -2675,7 +2675,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_f(struct wined3d_device *device,
+         memset(&device->recording->changed.ps_consts_f[start_idx], 1,
+                 count * sizeof(*device->recording->changed.ps_consts_f));
+     else
+-        wined3d_cs_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_PS_F, start_idx, count, constants);
++        wined3d_cs_emit_push_constants(device->cs, WINED3D_PUSH_CONSTANTS_PS_F, start_idx, count, constants);
+ 
+     return WINED3D_OK;
+ }
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 46ca81b4e77..df05dcb8fc8 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3169,8 +3169,6 @@ struct wined3d_cs_ops
+     void *(*require_space)(struct wined3d_cs *cs, size_t size);
+     void (*submit)(struct wined3d_cs *cs);
+     void (*submit_and_wait)(struct wined3d_cs *cs);
+-    void (*push_constants)(struct wined3d_cs *cs, enum wined3d_push_constants p,
+-            unsigned int start_idx, unsigned int count, const void *constants);
+ };
+ 
+ struct wined3d_cs
+@@ -3198,6 +3196,8 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_preload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *swapchain,
+         const RECT *src_rect, const RECT *dst_rect, HWND dst_window_override, DWORD flags) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_constants p,
++        unsigned int start_idx, unsigned int count, const void *constants) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_clip_plane(struct wined3d_cs *cs, UINT plane_idx,
+@@ -3253,12 +3253,6 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+ HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource,
+         unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
+ 
+-static inline void wined3d_cs_push_constants(struct wined3d_cs *cs, enum wined3d_push_constants p,
+-        unsigned int start_idx, unsigned int count, const void *constants)
+-{
+-    cs->ops->push_constants(cs, p, start_idx, count, constants);
+-}
+-
+ /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
+  * fixed function semantics as D3DCOLOR or FLOAT16 */
+ enum wined3d_buffer_conversion_type
+-- 
+2.11.0
+

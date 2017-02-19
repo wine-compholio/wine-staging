@@ -399,6 +399,7 @@ patch_enable_all ()
 	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
+	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
@@ -1407,6 +1408,9 @@ patch_enable ()
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
 			;;
+		wined3d-CSMT_Main)
+			enable_wined3d_CSMT_Main="$2"
+			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
@@ -1943,9 +1947,19 @@ if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	enable_winex11__NET_ACTIVE_WINDOW=1
 fi
 
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
+		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
+	fi
+	enable_wined3d_CSMT_Helper=1
+fi
+
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
 		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Helper depends on that."
+	fi
+	if test "$enable_d3d9_Tests" -gt 1; then
+		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Helper depends on that."
 	fi
 	if test "$enable_makedep_PARENTSPEC" -gt 1; then
 		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
@@ -1975,6 +1989,7 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
 	enable_d3d11_Deferred_Context=1
+	enable_d3d9_Tests=1
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_1DTextures=1
@@ -8254,7 +8269,7 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Deferred_Context, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
+# |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
 # | 	wined3d-Revert_Buffer_Upload, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
 # |
@@ -8327,6 +8342,72 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-CSMT_Main
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
+# | 	wined3d-Revert_Buffer_Upload, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
+# |
+# | Modified files:
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c,
+# | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
+# | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send query_poll through the command stream.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
+		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer update subresource requests through CS.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer copy requests through CS.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add a separate variable to check if queries are started.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Map vertex buffers through cs.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add swapchain waits.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Run the cs asynchronously.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Introduce a separate priority queue.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for maps/unmaps.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for query polls.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for get_dc / release_dc.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not immediately submit stateblock updates.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for update_sub_resource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Use spin lock for cs list critical sections.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Don'\''t wait for events that have not been issued yet.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Synchronize before resizing swapchain context array.", 1 },';
 	) >> "$patchlist"
 fi
 

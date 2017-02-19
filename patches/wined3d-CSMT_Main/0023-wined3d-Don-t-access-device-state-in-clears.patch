@@ -1,0 +1,89 @@
+From fabdd4237545714b754ab6ddce9fcbca433d5876 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefandoesinger@gmx.at>
+Date: Thu, 7 Apr 2016 19:51:54 +0100
+Subject: wined3d: Don't access device state in clears.
+
+---
+ dlls/wined3d/context.c         | 7 ++++---
+ dlls/wined3d/device.c          | 5 ++---
+ dlls/wined3d/wined3d_private.h | 2 +-
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index bb65538ad7b..adffe0127bc 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -2635,7 +2635,7 @@ static BOOL context_validate_rt_config(UINT rt_count, struct wined3d_rendertarge
+ }
+ 
+ /* Context activation is done by the caller. */
+-BOOL context_apply_clear_state(struct wined3d_context *context, const struct wined3d_state *state,
++BOOL context_apply_clear_state(struct wined3d_context *context,
+         UINT rt_count, const struct wined3d_fb_state *fb)
+ {
+     struct wined3d_rendertarget_view **rts = fb->render_targets;
+@@ -2644,7 +2644,7 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+     DWORD rt_mask = 0, *cur_mask;
+     UINT i;
+ 
+-    if (isStateDirty(context, STATE_FRAMEBUFFER) || !wined3d_fb_equal(fb, &state->fb)
++    if (isStateDirty(context, STATE_FRAMEBUFFER) || !wined3d_fb_equal(fb, &context->current_fb)
+             || rt_count != gl_info->limits.buffers)
+     {
+         if (!context_validate_rt_config(rt_count, rts, dsv))
+@@ -2730,7 +2730,8 @@ BOOL context_apply_clear_state(struct wined3d_context *context, const struct win
+     gl_info->gl_ops.gl.p_glEnable(GL_SCISSOR_TEST);
+     if (rt_count && gl_info->supported[ARB_FRAMEBUFFER_SRGB])
+     {
+-        if (needs_srgb_write(context, state, fb))
++        /* FIXME: The way to access the state is ugly. */
++        if (needs_srgb_write(context, &rts[0]->resource->device->cs->state, fb))
+             gl_info->gl_ops.gl.p_glEnable(GL_FRAMEBUFFER_SRGB);
+         else
+             gl_info->gl_ops.gl.p_glDisable(GL_FRAMEBUFFER_SRGB);
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 62abafd4125..32d25cd1d0f 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -223,7 +223,6 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+     struct wined3d_surface *target = rtv ? wined3d_rendertarget_view_get_surface(rtv) : NULL;
+     struct wined3d_rendertarget_view *dsv = fb->depth_stencil;
+     struct wined3d_surface *depth_stencil = dsv ? wined3d_rendertarget_view_get_surface(dsv) : NULL;
+-    const struct wined3d_state *state = &device->state;
+     const struct wined3d_gl_info *gl_info;
+     UINT drawable_width, drawable_height;
+     struct wined3d_color corrected_color;
+@@ -293,7 +292,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+                 dsv->sub_resource_idx, context, location);
+     }
+ 
+-    if (!context_apply_clear_state(context, state, rt_count, fb))
++    if (!context_apply_clear_state(context, rt_count, fb))
+     {
+         context_release(context);
+         WARN("Failed to apply clear state, skipping clear.\n");
+@@ -350,7 +349,7 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+             wined3d_texture_invalidate_location(texture, rtv->sub_resource_idx, ~rtv->resource->draw_binding);
+         }
+ 
+-        if (!gl_info->supported[ARB_FRAMEBUFFER_SRGB] && needs_srgb_write(context, state, fb))
++        if (!gl_info->supported[ARB_FRAMEBUFFER_SRGB] && needs_srgb_write(context, &device->cs->state, fb))
+         {
+             if (rt_count > 1)
+                 WARN("Clearing multiple sRGB render targets with no GL_ARB_framebuffer_sRGB "
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 7d921011577..7ad99bca086 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -1852,7 +1852,7 @@ void context_alloc_event_query(struct wined3d_context *context,
+ void context_alloc_occlusion_query(struct wined3d_context *context,
+         struct wined3d_occlusion_query *query) DECLSPEC_HIDDEN;
+ void context_apply_blit_state(struct wined3d_context *context, const struct wined3d_device *device) DECLSPEC_HIDDEN;
+-BOOL context_apply_clear_state(struct wined3d_context *context, const struct wined3d_state *state,
++BOOL context_apply_clear_state(struct wined3d_context *context,
+         UINT rt_count, const struct wined3d_fb_state *fb) DECLSPEC_HIDDEN;
+ void context_apply_compute_state(struct wined3d_context *context,
+         const struct wined3d_device *device, const struct wined3d_state *state) DECLSPEC_HIDDEN;
+-- 
+2.11.0
+

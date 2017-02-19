@@ -1,0 +1,56 @@
+From 125cc8384a0f759df49cbf0e753877c3057ba2d1 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 8 Feb 2017 11:57:52 +0100
+Subject: wined3d: Use priority queue for get_dc / release_dc.
+
+---
+ dlls/wined3d/cs.c      | 4 ++--
+ dlls/wined3d/texture.c | 4 ++++
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 1c9d8e1d192..1d2d9d7b990 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -2210,7 +2210,7 @@ HRESULT wined3d_cs_emit_get_dc(struct wined3d_cs *cs, struct wined3d_texture *te
+     struct wined3d_cs_get_release_dc *op;
+     HRESULT hr;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op), 0);
++    op = cs->ops->require_space(cs, sizeof(*op), 1);
+     op->opcode = WINED3D_CS_OP_GET_DC;
+     op->texture = texture;
+     op->sub_resource_idx = sub_resource_idx;
+@@ -2236,7 +2236,7 @@ HRESULT wined3d_cs_emit_release_dc(struct wined3d_cs *cs, struct wined3d_texture
+     struct wined3d_cs_get_release_dc *op;
+     HRESULT hr;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op), 0);
++    op = cs->ops->require_space(cs, sizeof(*op), 1);
+     op->opcode = WINED3D_CS_OP_RELEASE_DC;
+     op->texture = texture;
+     op->sub_resource_idx = sub_resource_idx;
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index bff7452e773..18ae2ae23cf 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -3536,6 +3536,8 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
+     if (texture->resource.map_count && !(texture->flags & WINED3D_TEXTURE_GET_DC_LENIENT))
+         return WINED3DERR_INVALIDCALL;
+ 
++    wined3d_resource_wait_idle(&texture->resource);
++
+     hr = wined3d_cs_emit_get_dc(device->cs, texture, sub_resource_idx);
+     if (FAILED(hr))
+         return hr;
+@@ -3592,5 +3594,7 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
+         return WINED3DERR_INVALIDCALL;
+     }
+ 
++    wined3d_resource_wait_idle(&texture->resource);
++
+     return wined3d_cs_emit_release_dc(device->cs, texture, sub_resource_idx);
+ }
+-- 
+2.11.0
+

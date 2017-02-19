@@ -1,0 +1,62 @@
+From 31a69723040b5337806a75dc3b9706da2e4dbe08 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Sun, 19 Feb 2017 05:10:26 +0100
+Subject: wined3d: Add a separate variable to check if queries are started.
+
+---
+ dlls/wined3d/query.c           | 6 ++++--
+ dlls/wined3d/wined3d_private.h | 1 +
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
+index 15935ab4469..70603367894 100644
+--- a/dlls/wined3d/query.c
++++ b/dlls/wined3d/query.c
+@@ -504,7 +504,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+      * restart. */
+     if (flags & WINED3DISSUE_BEGIN)
+     {
+-        if (query->state == QUERY_BUILDING)
++        if (oq->started)
+         {
+             if (oq->context->tid != GetCurrentThreadId())
+             {
+@@ -535,13 +535,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+         checkGLcall("glBeginQuery()");
+ 
+         context_release(context);
++        oq->started = TRUE;
+     }
+     if (flags & WINED3DISSUE_END)
+     {
+         /* MSDN says END on a non-building occlusion query returns an error,
+          * but our tests show that it returns OK. But OpenGL doesn't like it,
+          * so avoid generating an error. */
+-        if (query->state == QUERY_BUILDING)
++        if (oq->started)
+         {
+             if (oq->context->tid != GetCurrentThreadId())
+             {
+@@ -558,6 +559,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+                 context_release(context);
+             }
+         }
++        oq->started = FALSE;
+     }
+ }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 7ad99bca086..9fa4d00c24f 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -1540,6 +1540,7 @@ struct wined3d_occlusion_query
+     GLuint id;
+     struct wined3d_context *context;
+     UINT64 samples;
++    BOOL started;
+ };
+ 
+ struct wined3d_timestamp_query
+-- 
+2.11.0
+

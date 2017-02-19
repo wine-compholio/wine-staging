@@ -1,0 +1,44 @@
+From 994f9e8861db01f02f2dc8724a27ee0e7eea5100 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
+Date: Thu, 5 Nov 2015 17:46:50 +0100
+Subject: wined3d: Add swapchain waits.
+
+---
+ dlls/wined3d/swapchain.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
+index 592cbd96db4..1566d21a944 100644
+--- a/dlls/wined3d/swapchain.c
++++ b/dlls/wined3d/swapchain.c
+@@ -112,6 +112,10 @@ ULONG CDECL wined3d_swapchain_decref(struct wined3d_swapchain *swapchain)
+ 
+     if (!refcount)
+     {
++        struct wined3d_device *device = swapchain->device;
++
++        wined3d_cs_emit_sync(device->cs);
++
+         swapchain_cleanup(swapchain);
+         swapchain->parent_ops->wined3d_object_destroyed(swapchain->parent);
+         HeapFree(GetProcessHeap(), 0, swapchain);
+@@ -1307,6 +1311,7 @@ HRESULT CDECL wined3d_swapchain_resize_buffers(struct wined3d_swapchain *swapcha
+         enum wined3d_multisample_type multisample_type, unsigned int multisample_quality)
+ {
+     BOOL update_desc = FALSE;
++    struct wined3d_device *device = swapchain->device;
+ 
+     TRACE("swapchain %p, buffer_count %u, width %u, height %u, format %s, "
+             "multisample_type %#x, multisample_quality %#x.\n",
+@@ -1318,6 +1323,8 @@ HRESULT CDECL wined3d_swapchain_resize_buffers(struct wined3d_swapchain *swapcha
+     if (buffer_count && buffer_count != swapchain->desc.backbuffer_count)
+         FIXME("Cannot change the back buffer count yet.\n");
+ 
++    wined3d_cs_emit_sync(device->cs);
++
+     if (!width || !height)
+     {
+         /* The application is requesting that either the swapchain width or
+-- 
+2.11.0
+

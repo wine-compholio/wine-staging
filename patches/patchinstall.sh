@@ -8400,7 +8400,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for query polls.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Unset some objects in state_init_default.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for get_dc / release_dc.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not immediately submit stateblock updates.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for update_sub_resource.", 1 },';
@@ -8408,6 +8407,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Don'\''t wait for events that have not been issued yet.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Synchronize before resizing swapchain context array.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Set all default state values to zero.", 1 },';
 	) >> "$patchlist"
 fi
 

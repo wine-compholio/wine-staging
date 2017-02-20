@@ -96,6 +96,34 @@ diff --git a/dlls/wined3d/arb_program_shader.c b/dlls/wined3d/arb_program_shader
              shader_arb_ps_local_constants(compiled, context, state, rt_height);
          }
  
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -1270,6 +1270,9 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+         const struct wined3d_box *box, const void *data)
+ {
+     UINT offset, size;
++#if defined(STAGING_CSMT)
++    DWORD flags = 0;
++#endif /* STAGING_CSMT */
+     HRESULT hr;
+     BYTE *ptr;
+ 
+@@ -1284,7 +1287,14 @@ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+         size = buffer->resource.size;
+     }
+ 
++#if !defined(STAGING_CSMT)
+     if (FAILED(hr = wined3d_buffer_map(buffer, offset, size, &ptr, 0)))
++#else  /* STAGING_CSMT */
++    if (offset == 0 && size == buffer->resource.size)
++        flags = WINED3D_MAP_DISCARD;
++
++    if (FAILED(hr = wined3d_buffer_map(buffer, offset, size, &ptr, flags)))
++#endif /* STAGING_CSMT */
+         return hr;
+ 
+     memcpy(ptr, data, size);
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c

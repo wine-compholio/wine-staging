@@ -8357,10 +8357,10 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c,
-# | 	dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
-# | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# | 	dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
@@ -8409,6 +8409,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Synchronize before resizing swapchain context array.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Set all default state values to zero.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Discard buffer during upload when replacing complete content.", 1 },';
 	) >> "$patchlist"
 fi
 

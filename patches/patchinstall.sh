@@ -234,6 +234,7 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LdrEnumerateLoadedModules="$1"
+	enable_ntdll_LdrGetDllHandle="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtAllocateUuids="$1"
@@ -914,6 +915,9 @@ patch_enable ()
 			;;
 		ntdll-LdrEnumerateLoadedModules)
 			enable_ntdll_LdrEnumerateLoadedModules="$2"
+			;;
+		ntdll-LdrGetDllHandle)
+			enable_ntdll_LdrGetDllHandle="$2"
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
@@ -5442,6 +5446,18 @@ if test "$enable_ntdll_LdrEnumerateLoadedModules" -eq 1; then
 	patch_apply ntdll-LdrEnumerateLoadedModules/0001-ntdll-Implement-LdrEnumerateLoadedModules.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement LdrEnumerateLoadedModules.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-LdrGetDllHandle
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_LdrGetDllHandle" -eq 1; then
+	patch_apply ntdll-LdrGetDllHandle/0001-ntdll-Improve-speed-of-LdrGetDllHandle-when-searchin.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Improve speed of LdrGetDllHandle when searching for the basename of modules that are not loaded.", 1 },';
 	) >> "$patchlist"
 fi
 

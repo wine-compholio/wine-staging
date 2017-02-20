@@ -1,0 +1,154 @@
+From 65c46cb888fd621f85b2ea35f011bbdb5042ba22 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 20 Feb 2017 00:27:25 +0100
+Subject: wined3d: Improve wined3d_cs_emit_update_sub_resource.
+
+---
+ dlls/wined3d/cs.c     | 82 ++++++++++++++++++++++++++++++++++++++++++++++++---
+ dlls/wined3d/device.c |  2 --
+ 2 files changed, 78 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 67d6b736dab..b43130b0ab0 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -427,10 +427,13 @@ struct wined3d_cs_update_texture
+ struct wined3d_cs_update_sub_resource
+ {
+     enum wined3d_cs_op opcode;
++    unsigned int size;
+     struct wined3d_resource *resource;
+     unsigned int sub_resource_idx, row_pitch, depth_pitch;
+     const struct wined3d_box *box;
+     const void *data;
++    struct wined3d_box copy_box;
++    BYTE copy_data[1];
+ };
+ 
+ struct wined3d_cs_get_release_dc
+@@ -2146,7 +2149,9 @@ static UINT wined3d_cs_exec_update_sub_resource(struct wined3d_cs *cs, const voi
+         if (FAILED(hr = wined3d_buffer_upload_data(buffer, op->box, op->data)))
+             WARN("Failed to update buffer data, hr %#x.\n", hr);
+ 
+-        return sizeof(*op);
++        wined3d_resource_release(op->resource);
++
++        return op->size;
+     }
+ 
+     texture = wined3d_texture_from_resource(op->resource);
+@@ -2176,7 +2181,9 @@ static UINT wined3d_cs_exec_update_sub_resource(struct wined3d_cs *cs, const voi
+     wined3d_texture_validate_location(texture, op->sub_resource_idx, WINED3D_LOCATION_TEXTURE_RGB);
+     wined3d_texture_invalidate_location(texture, op->sub_resource_idx, ~WINED3D_LOCATION_TEXTURE_RGB);
+ 
+-    return sizeof(*op);
++    wined3d_resource_release(op->resource);
++
++    return op->size;
+ }
+ 
+ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
+@@ -2184,9 +2191,76 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+         unsigned int depth_pitch)
+ {
+     struct wined3d_cs_update_sub_resource *op;
++    unsigned int update_w, update_h, update_d;
++    size_t data_size, size;
++
++    if (resource->type != WINED3D_RTYPE_BUFFER && resource->format_flags & WINED3DFMT_FLAG_BLOCKS)
++        goto no_async;
++
++    if (box)
++    {
++        update_w = box->right - box->left;
++        update_h = box->bottom - box->top;
++        update_d = box->back - box->front;
++    }
++    else if (resource->type != WINED3D_RTYPE_BUFFER)
++    {
++        struct wined3d_texture *texture = wined3d_texture_from_resource(resource);
++        unsigned int level = sub_resource_idx % texture->level_count;
++        update_w = wined3d_texture_get_level_width(texture, level);
++        update_h = wined3d_texture_get_level_height(texture, level);
++        update_d = wined3d_texture_get_level_depth(texture, level);
++    }
++    else
++    {
++        update_w = resource->size;
++    }
++
++    data_size = 0;
++    switch (resource->type)
++    {
++        case WINED3D_RTYPE_TEXTURE_3D:
++            data_size += max(update_d - 1, 0) * depth_pitch;
++            /* fall-through */
++        case WINED3D_RTYPE_TEXTURE_2D:
++            data_size += max(update_h - 1, 0) * row_pitch;
++            /* fall-through */
++        case WINED3D_RTYPE_TEXTURE_1D:
++            data_size += update_w * resource->format->byte_count;
++            break;
++        case WINED3D_RTYPE_BUFFER:
++            data_size = update_w;
++            break;
++    }
++
++    size = FIELD_OFFSET(struct wined3d_cs_update_sub_resource, copy_data[data_size]);
++    if (size > sizeof(cs->current_block->data))
++        goto no_async;
++
++    op = cs->ops->require_space(cs, size, 0);
++    op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
++    op->size = size;
++    op->resource = resource;
++    op->sub_resource_idx = sub_resource_idx;
++    op->box = box ? &op->copy_box : NULL;
++    op->data = op->copy_data;
++    op->row_pitch = row_pitch;
++    op->depth_pitch = depth_pitch;
++
++    if (box) op->copy_box = *box;
++    memcpy(op->copy_data, data, data_size);
++
++    wined3d_resource_acquire(resource);
++
++    cs->ops->submit(cs);
++    return;
++
++no_async:
++    wined3d_resource_wait_idle(resource);
+ 
+     op = cs->ops->require_space(cs, sizeof(*op), 1);
+     op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
++    op->size = sizeof(*op);
+     op->resource = resource;
+     op->sub_resource_idx = sub_resource_idx;
+     op->box = box;
+@@ -2194,8 +2268,8 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+     op->row_pitch = row_pitch;
+     op->depth_pitch = depth_pitch;
+ 
+-    /* The data pointer may go away, need to wait until the data is read. Copying the data may be faster.
+-     * Don't forget to copy box as well in this case. */
++    wined3d_resource_acquire(resource);
++
+     cs->ops->submit_and_wait(cs);
+ }
+ 
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index c32d967df88..1b77fa7d09d 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4112,8 +4112,6 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+     TRACE("device %p, resource %p, sub_resource_idx %u, box %s, data %p, row_pitch %u, depth_pitch %u.\n",
+             device, resource, sub_resource_idx, debug_box(box), data, row_pitch, depth_pitch);
+ 
+-    wined3d_resource_wait_idle(resource);
+-
+     if (resource->type == WINED3D_RTYPE_BUFFER)
+     {
+         if (sub_resource_idx > 0)
+-- 
+2.11.0
+

@@ -8408,6 +8408,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Synchronize before resizing swapchain context array.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Set all default state values to zero.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 	) >> "$patchlist"
 fi
 

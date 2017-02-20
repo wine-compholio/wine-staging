@@ -180,6 +180,7 @@ patch_enable_all ()
 	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetPackageFullName="$1"
 	enable_kernel32_GetShortPathName="$1"
+	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_Locale_Definitions="$1"
 	enable_kernel32_Misalign_Workaround="$1"
@@ -750,6 +751,9 @@ patch_enable ()
 			;;
 		kernel32-GetShortPathName)
 			enable_kernel32_GetShortPathName="$2"
+			;;
+		kernel32-K32GetPerformanceInfo)
+			enable_kernel32_K32GetPerformanceInfo="$2"
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
@@ -4452,6 +4456,18 @@ if test "$enable_kernel32_GetShortPathName" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add some tests for GetLongPathName/GetShortPathName called with a wildcard.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetShortPathName should fail when called with a wildcard.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetLongPathName should fail when called with a wildcard.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-K32GetPerformanceInfo
+# |
+# | Modified files:
+# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
+# |
+if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
+	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
 	) >> "$patchlist"
 fi
 

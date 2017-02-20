@@ -375,6 +375,7 @@ patch_enable_all ()
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
+	enable_wbemprox_Win32_VideoController="$1"
 	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
@@ -1336,6 +1337,9 @@ patch_enable ()
 			;;
 		wbemprox-Printer)
 			enable_wbemprox_Printer="$2"
+			;;
+		wbemprox-Win32_VideoController)
+			enable_wbemprox_Win32_VideoController="$2"
 			;;
 		wevtapi-EvtNext)
 			enable_wevtapi_EvtNext="$2"
@@ -7752,6 +7756,24 @@ if test "$enable_wbemprox_Printer" -eq 1; then
 	patch_apply wbemprox-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemprox-Win32_VideoController
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/builtin.c
+# |
+if test "$enable_wbemprox_Win32_VideoController" -eq 1; then
+	patch_apply wbemprox-Win32_VideoController/0001-wbemprox-Add-ConfigManagerErrorCode-for-Win32_VideoC.patch
+	patch_apply wbemprox-Win32_VideoController/0002-wbemprox-Add-Status-for-Win32_VideoController.patch
+	patch_apply wbemprox-Win32_VideoController/0003-wbemprox-Add-InstalledDisplayDrivers-for-Win32_Video.patch
+	patch_apply wbemprox-Win32_VideoController/0004-wbemprox-Add-DriverDate-for-Win32_VideoController.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add ConfigManagerErrorCode for Win32_VideoController.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add Status for Win32_VideoController.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add InstalledDisplayDrivers for Win32_VideoController.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add DriverDate for Win32_VideoController.", 1 },';
 	) >> "$patchlist"
 fi
 

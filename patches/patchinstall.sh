@@ -416,6 +416,7 @@ patch_enable_all ()
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
+	enable_winemp3_acm_Fix_Compilation="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
@@ -1461,6 +1462,9 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
+			;;
+		winemp3.acm-Fix_Compilation)
+			enable_winemp3_acm_Fix_Compilation="$2"
 			;;
 		winemp3.acm-MPEG3_StreamOpen)
 			enable_winemp3_acm_MPEG3_StreamOpen="$2"
@@ -8503,6 +8507,18 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winemp3.acm-Fix_Compilation
+# |
+# | Modified files:
+# |   *	dlls/winemp3.acm/mpegl3.c
+# |
+if test "$enable_winemp3_acm_Fix_Compilation" -eq 1; then
+	patch_apply winemp3.acm-Fix_Compilation/0001-winemp3.acm-Fixes-compilation-for-older-mpg123-libra.patch
+	(
+		printf '%s\n' '+    { "Bruno Jesus", "winemp3.acm: Fixes compilation for older mpg123 library versions.", 2 },';
 	) >> "$patchlist"
 fi
 

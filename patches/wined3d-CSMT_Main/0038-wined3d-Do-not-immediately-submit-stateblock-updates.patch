@@ -1,4 +1,4 @@
-From 622caa7589fb639f654b2b569925343412dc7bc6 Mon Sep 17 00:00:00 2001
+From 534625394e8964ca4b36c9319fde24d74887e6f6 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 8 Feb 2017 12:32:55 +0100
 Subject: wined3d: Do not immediately submit stateblock updates.
@@ -9,7 +9,7 @@ Subject: wined3d: Do not immediately submit stateblock updates.
  2 files changed, 37 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 1d2d9d7b990..d37c9ce6d38 100644
+index 7c58e67901e..6f00fe64848 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -881,7 +881,7 @@ void wined3d_cs_emit_set_predication(struct wined3d_cs *cs, struct wined3d_query
@@ -227,35 +227,8 @@ index 1d2d9d7b990..d37c9ce6d38 100644
 +    cs->ops->submit_delayed(cs);
  }
  
- static UINT wined3d_cs_exec_reset_state(struct wined3d_cs *cs, const void *data)
-@@ -1653,7 +1653,7 @@ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs)
-     op = cs->ops->require_space(cs, sizeof(*op), 0);
-     op->opcode = WINED3D_CS_OP_RESET_STATE;
- 
--    cs->ops->submit(cs);
-+    cs->ops->submit_delayed(cs);
- }
- 
- static UINT wined3d_cs_exec_callback(struct wined3d_cs *cs, const void *data)
-@@ -1902,7 +1902,7 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
-     op->count = count;
-     memcpy(op->constants, constants, count * push_constant_info[p].size);
- 
--    cs->ops->submit(cs);
-+    cs->ops->submit_delayed(cs);
- }
- 
- static UINT wined3d_cs_exec_set_primitive_type(struct wined3d_cs *cs, const void *data)
-@@ -1928,7 +1928,7 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
-     op->opcode = WINED3D_CS_OP_SET_PRIMITIVE_TYPE;
-     op->gl_primitive_type = primitive_type;
- 
--    cs->ops->submit(cs);
-+    cs->ops->submit_delayed(cs);
- }
- 
  static UINT wined3d_cs_exec_set_light(struct wined3d_cs *cs, const void *data)
-@@ -1978,7 +1978,7 @@ void wined3d_cs_emit_set_light(struct wined3d_cs *cs, const struct wined3d_light
+@@ -1679,7 +1679,7 @@ void wined3d_cs_emit_set_light(struct wined3d_cs *cs, const struct wined3d_light
      op->opcode = WINED3D_CS_OP_SET_LIGHT;
      op->light = *light;
  
@@ -264,7 +237,7 @@ index 1d2d9d7b990..d37c9ce6d38 100644
  }
  
  static UINT wined3d_cs_exec_set_light_enable(struct wined3d_cs *cs, const void *data)
-@@ -2015,7 +2015,7 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enab
+@@ -1715,7 +1715,7 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, unsigned int idx, B
      op->idx = idx;
      op->enable = enable;
  
@@ -272,8 +245,35 @@ index 1d2d9d7b990..d37c9ce6d38 100644
 +    cs->ops->submit_delayed(cs);
  }
  
+ static UINT wined3d_cs_exec_reset_state(struct wined3d_cs *cs, const void *data)
+@@ -1739,7 +1739,7 @@ void wined3d_cs_emit_reset_state(struct wined3d_cs *cs)
+     op = cs->ops->require_space(cs, sizeof(*op), 0);
+     op->opcode = WINED3D_CS_OP_RESET_STATE;
+ 
+-    cs->ops->submit(cs);
++    cs->ops->submit_delayed(cs);
+ }
+ 
+ static UINT wined3d_cs_exec_callback(struct wined3d_cs *cs, const void *data)
+@@ -1988,7 +1988,7 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
+     op->count = count;
+     memcpy(op->constants, constants, count * push_constant_info[p].size);
+ 
+-    cs->ops->submit(cs);
++    cs->ops->submit_delayed(cs);
+ }
+ 
+ static UINT wined3d_cs_exec_set_primitive_type(struct wined3d_cs *cs, const void *data)
+@@ -2014,7 +2014,7 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
+     op->opcode = WINED3D_CS_OP_SET_PRIMITIVE_TYPE;
+     op->gl_primitive_type = primitive_type;
+ 
+-    cs->ops->submit(cs);
++    cs->ops->submit_delayed(cs);
+ }
+ 
  static UINT wined3d_cs_exec_blt(struct wined3d_cs *cs, const void *data)
-@@ -2536,6 +2536,7 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+@@ -2535,6 +2535,7 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
      wined3d_cs_st_require_space,
      wined3d_cs_st_submit,
      wined3d_cs_st_submit,
@@ -281,7 +281,7 @@ index 1d2d9d7b990..d37c9ce6d38 100644
  };
  
  static void wined3d_cs_list_enqueue(struct wined3d_cs_list *list, struct wined3d_cs_block *block)
-@@ -2712,11 +2713,17 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
+@@ -2711,11 +2712,17 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
      while (!InterlockedCompareExchange(&fence, TRUE, TRUE));
  }
  
@@ -300,10 +300,10 @@ index 1d2d9d7b990..d37c9ce6d38 100644
  
  static void wined3d_cs_mt_emit_stop(struct wined3d_cs *cs)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 10a7b4a8660..62f6ad52457 100644
+index 6ed9ec6f557..b9db6e880b7 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3228,6 +3228,7 @@ struct wined3d_cs_ops
+@@ -3230,6 +3230,7 @@ struct wined3d_cs_ops
      void *(*require_space)(struct wined3d_cs *cs, size_t size, int priority);
      void (*submit)(struct wined3d_cs *cs);
      void (*submit_and_wait)(struct wined3d_cs *cs);

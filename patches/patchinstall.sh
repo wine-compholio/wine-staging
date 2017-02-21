@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9eb56e25e37b4adec0d72875455ffb787238672f"
+	echo "60c98caa94465799d0868b69149bce29cf767de4"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.2"
+	echo "Wine Staging 2.3 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -87,7 +87,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
-	enable_advapi32_LookupSecurityDescriptorParts="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
@@ -475,9 +474,6 @@ patch_enable ()
 			;;
 		advapi32-GetExplicitEntriesFromAclW)
 			enable_advapi32_GetExplicitEntriesFromAclW="$2"
-			;;
-		advapi32-LookupSecurityDescriptorParts)
-			enable_advapi32_LookupSecurityDescriptorParts="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -2553,21 +2549,6 @@ if test "$enable_advapi32_GetExplicitEntriesFromAclW" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset advapi32-LookupSecurityDescriptorParts
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41682] Add stub for advapi32.LookupSecurityDescriptorPartsA/W
-# |
-# | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/security.c
-# |
-if test "$enable_advapi32_LookupSecurityDescriptorParts" -eq 1; then
-	patch_apply advapi32-LookupSecurityDescriptorParts/0001-advapi32-add-LookupSecurityDescriptorPartsA-W-stubs.patch
-	(
-		printf '%s\n' '+    { "Austin English", "advapi32: Add LookupSecurityDescriptorPartsA/W stubs.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2979,7 +2960,7 @@ fi
 # Patchset comctl32-PROPSHEET_InsertPage
 # |
 # | Modified files:
-# |   *	dlls/comctl32/propsheet.c, include/prsht.h
+# |   *	dlls/comctl32/propsheet.c
 # |
 if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
 	patch_apply comctl32-PROPSHEET_InsertPage/0003-comctl32-Add-support-for-PSPCB_ADDREF-PSPCB_RELEASE-.patch
@@ -8426,7 +8407,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send light updates through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';

@@ -1,4 +1,4 @@
-From 057495030f198c62cefb1f93c0d73e6ce714f7f9 Mon Sep 17 00:00:00 2001
+From 1c832f8fd2760bff7b0a0234f68c11af66dba8d1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 4 Jul 2013 21:10:16 +0200
 Subject: wined3d: Send render target view clears through the command stream
@@ -11,7 +11,7 @@ Subject: wined3d: Send render target view clears through the command stream
  4 files changed, 55 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index 7fb3dbb7fe8..0aa4939e92b 100644
+index f6eb188837d..5700577709e 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
 @@ -1337,7 +1337,7 @@ static void color_fill_test(void)
@@ -24,12 +24,12 @@ index 7fb3dbb7fe8..0aa4939e92b 100644
           * supported as offscreen plain surfaces and do not support D3DUSAGE_RENDERTARGET
           * when created as texture. */
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 6bea12aa713..85eff68043d 100644
+index 420a2cc8327..1dff1ff8af6 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -68,6 +68,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_SET_LIGHT,
-     WINED3D_CS_OP_SET_LIGHT_ENABLE,
+     WINED3D_CS_OP_PUSH_CONSTANTS,
+     WINED3D_CS_OP_SET_PRIMITIVE_TYPE,
      WINED3D_CS_OP_BLT,
 +    WINED3D_CS_OP_CLEAR_RTV,
  };
@@ -54,7 +54,7 @@ index 6bea12aa713..85eff68043d 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -1844,6 +1857,41 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -1843,6 +1856,41 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
      cs->ops->submit(cs);
  }
  
@@ -96,19 +96,19 @@ index 6bea12aa713..85eff68043d 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -1888,6 +1936,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_SET_LIGHT                  */ wined3d_cs_exec_set_light,
-     /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
+@@ -1887,6 +1935,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
+     /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
      /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
 +    /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 66815f80647..3176aed1ddc 100644
+index 6195122ff10..1388dda5c78 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4273,10 +4273,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+@@ -4272,10 +4272,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -122,10 +122,10 @@ index 66815f80647..3176aed1ddc 100644
  
  struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(const struct wined3d_device *device,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 8dc18c856c9..2b3ac98c35e 100644
+index be01b6f3b6a..2b58f655c25 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3197,6 +3197,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -3199,6 +3199,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
          enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *rects,
          DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil) DECLSPEC_HIDDEN;

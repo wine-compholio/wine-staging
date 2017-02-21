@@ -1,4 +1,4 @@
-From 878bdfc42f19e26f2e4dbefdb9bd0b50bd341d97 Mon Sep 17 00:00:00 2001
+From cb83d4886548b66c4c4fd0c006c3eca43d134067 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Mon, 29 Apr 2013 18:49:53 +0200
 Subject: wined3d: Send blits through the command stream.
@@ -13,19 +13,19 @@ between surface_blt and surface_blt_ugly isn't particularly nice.
  4 files changed, 228 insertions(+), 97 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 66f7034686f..6bea12aa713 100644
+index 130478e8882..420a2cc8327 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -67,6 +67,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_UNMAP,
+     WINED3D_CS_OP_PUSH_CONSTANTS,
      WINED3D_CS_OP_SET_PRIMITIVE_TYPE,
-     WINED3D_CS_OP_SET_LIGHT,
-     WINED3D_CS_OP_SET_LIGHT_ENABLE,
 +    WINED3D_CS_OP_BLT,
  };
  
  struct wined3d_cs_sync
-@@ -372,6 +373,18 @@ struct wined3d_cs_set_light_enable
-     BOOL enable;
+@@ -372,6 +373,18 @@ struct wined3d_cs_set_primitive_type
+     GLenum gl_primitive_type;
  };
  
 +struct wined3d_cs_blt
@@ -43,7 +43,7 @@ index 66f7034686f..6bea12aa713 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -1793,6 +1806,44 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, UINT idx, BOOL enab
+@@ -1792,6 +1805,44 @@ void wined3d_cs_emit_set_primitive_type(struct wined3d_cs *cs, GLenum primitive_
      cs->ops->submit(cs);
  }
  
@@ -88,19 +88,19 @@ index 66f7034686f..6bea12aa713 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -1836,6 +1887,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1835,6 +1886,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_UNMAP                      */ wined3d_cs_exec_unmap,
+     /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
      /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
-     /* WINED3D_CS_OP_SET_LIGHT                  */ wined3d_cs_exec_set_light,
-     /* WINED3D_CS_OP_SET_LIGHT_ENABLE           */ wined3d_cs_exec_set_light_enable,
 +    /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index dd8943d2e3e..66815f80647 100644
+index 0b1b389af0b..6195122ff10 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4017,6 +4017,7 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4016,6 +4016,7 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
      struct wined3d_texture *dst_texture, *src_texture;
      RECT dst_rect, src_rect;
      HRESULT hr;
@@ -108,7 +108,7 @@ index dd8943d2e3e..66815f80647 100644
  
      TRACE("device %p, dst_resource %p, dst_sub_resource_idx %u, dst_x %u, dst_y %u, dst_z %u, "
              "src_resource %p, src_sub_resource_idx %u, src_box %s.\n",
-@@ -4104,6 +4105,14 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4103,6 +4104,14 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
  
      if (src_box)
      {
@@ -123,7 +123,7 @@ index dd8943d2e3e..66815f80647 100644
          SetRect(&src_rect, src_box->left, src_box->top, src_box->right, src_box->bottom);
      }
      else
-@@ -4117,6 +4126,23 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4116,6 +4125,23 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
      SetRect(&dst_rect, dst_x, dst_y, dst_x + (src_rect.right - src_rect.left),
              dst_y + (src_rect.bottom - src_rect.top));
  
@@ -483,10 +483,10 @@ index 19d6aa74373..5b8434d63b8 100644
 +    return WINED3D_OK;
 +}
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 772a8492fb0..8dc18c856c9 100644
+index b04d2f502bf..be01b6f3b6a 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3036,6 +3036,9 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
+@@ -3038,6 +3038,9 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
  void wined3d_surface_upload_data(struct wined3d_surface *surface, const struct wined3d_gl_info *gl_info,
          const struct wined3d_format *format, const RECT *src_rect, UINT src_pitch, const POINT *dst_point,
          BOOL srgb, const struct wined3d_const_bo_address *data) DECLSPEC_HIDDEN;
@@ -496,7 +496,7 @@ index 772a8492fb0..8dc18c856c9 100644
  
  void draw_textured_quad(const struct wined3d_surface *src_surface, struct wined3d_context *context,
          const RECT *src_rect, const RECT *dst_rect, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
-@@ -3188,6 +3191,10 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HID
+@@ -3190,6 +3193,10 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device) DECLSPEC_HID
  void wined3d_cs_destroy(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_destroy_object(struct wined3d_cs *cs,
          void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;

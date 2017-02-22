@@ -1,4 +1,4 @@
-From 022ab9291e3d8c324c7c2dacbfb0b23e234fb4ae Mon Sep 17 00:00:00 2001
+From a1fc59cdba707d5c4262988b4bfd6612b77e429f Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 26 Apr 2016 18:28:21 +0800
 Subject: comdlg32: Postpone setting ofn->lpstrFileTitle to work around an
@@ -10,42 +10,38 @@ approximately 428 bytes above the current stack pointer, and since Wine's
 GetSaveFileNameW() uses more than 4096 bytes one of internal stack frames is
 guaranteed to be trashed after copying file name to ofn->lpstrFileTitle.
 ---
- dlls/comdlg32/filedlg.c | 31 ++++++++++++++-----------------
- 1 file changed, 14 insertions(+), 17 deletions(-)
+ dlls/comdlg32/filedlg.c | 34 +++++++++++++++++-----------------
+ 1 file changed, 17 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/comdlg32/filedlg.c b/dlls/comdlg32/filedlg.c
-index 1453396..6a6a093 100644
+index 0c9f34a84e8..cde474936ce 100644
 --- a/dlls/comdlg32/filedlg.c
 +++ b/dlls/comdlg32/filedlg.c
-@@ -463,6 +463,13 @@ static BOOL GetFileDialog95A(LPOPENFILENAMEA ofn,UINT iDlgType)
-       ret = FALSE;
-   }
+@@ -463,6 +463,23 @@ static BOOL GetFileDialog95(FileOpenDlgInfos *info, UINT dlg_type)
+         ret = FALSE;
+     }
  
-+  /* set the lpstrFileTitle */
-+  if (ret && ofn->lpstrFile && ofn->lpstrFileTitle)
-+  {
-+      LPSTR lpstrFileTitle = PathFindFileNameA(ofn->lpstrFile);
-+      lstrcpynA(ofn->lpstrFileTitle, lpstrFileTitle, ofn->nMaxFileTitle);
-+  }
++    /* set the lpstrFileTitle */
++    if (ret && info->ofnInfos->lpstrFile && info->ofnInfos->lpstrFileTitle)
++    {
++        if (info->unicode)
++        {
++            LPOPENFILENAMEW ofn = info->ofnInfos;
++            WCHAR *file_title = PathFindFileNameW(ofn->lpstrFile);
++            lstrcpynW(ofn->lpstrFileTitle, file_title, ofn->nMaxFileTitle);
++        }
++        else
++        {
++            LPOPENFILENAMEA ofn = (LPOPENFILENAMEA)info->ofnInfos;
++            char *file_title = PathFindFileNameA(ofn->lpstrFile);
++            lstrcpynA(ofn->lpstrFileTitle, file_title, ofn->nMaxFileTitle);
++        }
++    }
 +
-   if (lpstrSavDir)
-   {
-       SetCurrentDirectoryA(lpstrSavDir);
-@@ -555,6 +562,13 @@ static BOOL GetFileDialog95W(LPOPENFILENAMEW ofn,UINT iDlgType)
-       ret = FALSE;
-   }
- 
-+  /* set the lpstrFileTitle */
-+  if (ret && ofn->lpstrFile && ofn->lpstrFileTitle)
-+  {
-+      LPWSTR lpstrFileTitle = PathFindFileNameW(ofn->lpstrFile);
-+      lstrcpynW(ofn->lpstrFileTitle, lpstrFileTitle, ofn->nMaxFileTitle);
-+  }
-+
-   if (lpstrSavDir)
-   {
-       SetCurrentDirectoryW(lpstrSavDir);
-@@ -2735,23 +2749,6 @@ BOOL FILEDLG95_OnOpen(HWND hwnd)
+     if (current_dir)
+     {
+         SetCurrentDirectoryW(current_dir);
+@@ -2690,23 +2707,6 @@ BOOL FILEDLG95_OnOpen(HWND hwnd)
                fodInfos->ofnInfos->nFileExtension = (*lpszTemp) ? (lpszTemp - tempFileA) + 1 : 0;
            }
  
@@ -70,5 +66,5 @@ index 1453396..6a6a093 100644
            if (fodInfos->ofnInfos->lpstrCustomFilter)
            {
 -- 
-2.8.0
+2.11.0
 

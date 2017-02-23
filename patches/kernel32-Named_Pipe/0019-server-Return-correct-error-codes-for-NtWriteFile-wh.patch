@@ -1,4 +1,4 @@
-From 8bba3ddd8ee9234d7c1f9d21b2aa3f4cdcdd1b3a Mon Sep 17 00:00:00 2001
+From 260d35bbb99549c5ebf8447f6f1bf0680f6e3943 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 6 Jun 2015 01:21:05 +0200
 Subject: server: Return correct error codes for NtWriteFile when pipes are
@@ -39,10 +39,10 @@ index ab34d99d5b6..d0662d9ae59 100644
          }
      }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index e480f31a00e..eccf6a463f5 100644
+index 6c6a8b40bd1..47a88790fa3 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -147,6 +147,7 @@ static const struct object_ops named_pipe_ops =
+@@ -150,6 +150,7 @@ static const struct object_ops named_pipe_ops =
  /* server end functions */
  static void pipe_server_dump( struct object *obj, int verbose );
  static struct fd *pipe_server_get_fd( struct object *obj );
@@ -50,7 +50,7 @@ index e480f31a00e..eccf6a463f5 100644
  static void pipe_server_destroy( struct object *obj);
  static obj_handle_t pipe_server_flush( struct fd *fd, struct async *async, int blocking );
  static enum server_fd_type pipe_server_get_fd_type( struct fd *fd );
-@@ -172,7 +173,7 @@ static const struct object_ops pipe_server_ops =
+@@ -175,7 +176,7 @@ static const struct object_ops pipe_server_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
@@ -59,7 +59,7 @@ index e480f31a00e..eccf6a463f5 100644
      pipe_server_destroy           /* destroy */
  };
  
-@@ -193,6 +194,7 @@ static const struct fd_ops pipe_server_fd_ops =
+@@ -196,6 +197,7 @@ static const struct fd_ops pipe_server_fd_ops =
  static void pipe_client_dump( struct object *obj, int verbose );
  static int pipe_client_signaled( struct object *obj, struct wait_queue_entry *entry );
  static struct fd *pipe_client_get_fd( struct object *obj );
@@ -67,7 +67,7 @@ index e480f31a00e..eccf6a463f5 100644
  static void pipe_client_destroy( struct object *obj );
  static obj_handle_t pipe_client_flush( struct fd *fd, struct async *async, int blocking );
  static enum server_fd_type pipe_client_get_fd_type( struct fd *fd );
-@@ -216,7 +218,7 @@ static const struct object_ops pipe_client_ops =
+@@ -219,7 +221,7 @@ static const struct object_ops pipe_client_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
@@ -76,7 +76,7 @@ index e480f31a00e..eccf6a463f5 100644
      pipe_client_destroy           /* destroy */
  };
  
-@@ -281,6 +283,8 @@ static const struct fd_ops named_pipe_device_fd_ops =
+@@ -284,6 +286,8 @@ static const struct fd_ops named_pipe_device_fd_ops =
      default_fd_reselect_async         /* reselect_async */
  };
  
@@ -85,8 +85,8 @@ index e480f31a00e..eccf6a463f5 100644
  static void named_pipe_dump( struct object *obj, int verbose )
  {
      fputs( "Named pipe\n", stderr );
-@@ -390,6 +394,23 @@ static void do_disconnect( struct pipe_server *server )
-     server->fd = NULL;
+@@ -393,6 +397,23 @@ static void do_disconnect( struct pipe_server *server )
+     server->pipe_end.fd = NULL;
  }
  
 +static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
@@ -97,10 +97,10 @@ index e480f31a00e..eccf6a463f5 100644
 +    int unix_fd;
 +
 +    assert( obj->ops == &pipe_server_ops );
-+    if (obj->handle_count == 1 && client && client->fd && (unix_fd = get_unix_fd( client->fd )) != -1)
++    if (obj->handle_count == 1 && client && client->pipe_end.fd && (unix_fd = get_unix_fd( client->pipe_end.fd )) != -1)
 +    {
 +        /* set the NAMED_PIPE_CLOSED_HANDLE flag, to distinguish disconnect / closing pipe */
-+        fcntl( unix_fd, F_SETSIG, messagemode_flags( client->pipe_flags ) | NAMED_PIPE_CLOSED_HANDLE );
++        fcntl( unix_fd, F_SETSIG, messagemode_flags( client->pipe_end.flags ) | NAMED_PIPE_CLOSED_HANDLE );
 +    }
 +#endif
 +    return 1;
@@ -109,7 +109,7 @@ index e480f31a00e..eccf6a463f5 100644
  static void pipe_server_destroy( struct object *obj)
  {
      struct pipe_server *server = (struct pipe_server *)obj;
-@@ -416,6 +437,24 @@ static void pipe_server_destroy( struct object *obj)
+@@ -419,6 +440,24 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -121,11 +121,11 @@ index e480f31a00e..eccf6a463f5 100644
 +    int unix_fd;
 +
 +    assert( obj->ops == &pipe_client_ops );
-+    if (obj->handle_count == 1 && server && server->fd &&
-+        server->state != ps_wait_connect && (unix_fd = get_unix_fd( server->fd )) != -1)
++    if (obj->handle_count == 1 && server && server->pipe_end.fd &&
++        server->state != ps_wait_connect && (unix_fd = get_unix_fd( server->pipe_end.fd )) != -1)
 +    {
 +        /* set the NAMED_PIPE_CLOSED_HANDLE flag, to distinguish disconnect / closing pipe */
-+        fcntl( unix_fd, F_SETSIG, messagemode_flags( server->pipe_flags ) | NAMED_PIPE_CLOSED_HANDLE );
++        fcntl( unix_fd, F_SETSIG, messagemode_flags( server->pipe_end.flags ) | NAMED_PIPE_CLOSED_HANDLE );
 +    }
 +#endif
 +    return 1;

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3d62cd26d1b988b373efae0b9c4a0a988985d45f"
+	echo "1cc93e3f05bce5ae9758fad44f69f44e1462d81b"
 }
 
 # Show version information
@@ -2730,7 +2730,7 @@ fi
 # | 	dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
 # | 	dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
 # | 	dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec,
-# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/main.c, dlls/uiautomationcore/uiautomationcore.spec,
+# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec,
 # | 	include/Makefile.in, include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
@@ -2757,7 +2757,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
-	patch_apply api-ms-win-Stub_DLLs/0028-uiautomationcore-Add-stub-for-UiaClientsAreListening.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
@@ -2782,7 +2781,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "uiautomationcore: Add stub for UiaClientsAreListening.", 1 },';
 	) >> "$patchlist"
 fi
 

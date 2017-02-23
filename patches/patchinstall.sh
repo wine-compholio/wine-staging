@@ -8444,6 +8444,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Set all default state values to zero.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Discard buffer during upload when replacing complete content.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Enforce a memory limit of about 16 MB for CSMT blocks.", 1 },';
 	) >> "$patchlist"
 fi
 

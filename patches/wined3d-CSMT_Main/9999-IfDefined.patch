@@ -2060,13 +2060,13 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
      op->hr = &hr;
  
 +#if !defined(STAGING_CSMT)
-+    cs->ops->submit(cs);
+     cs->ops->submit(cs);
 +#else  /* STAGING_CSMT */
 +    cs->ops->submit_and_wait(cs);
-+
-+    return hr;
-+}
-+
+ 
+     return hr;
+ }
+ 
 +static const struct
 +{
 +    size_t offset;
@@ -2228,7 +2228,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 +
 +    wined3d_resource_acquire(view->resource);
 +
-     cs->ops->submit(cs);
++    cs->ops->submit(cs);
 +}
 +
 +static UINT wined3d_cs_exec_update_texture(struct wined3d_cs *cs, const void *data)
@@ -2450,10 +2450,10 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 +    op->hr = &hr;
 +
 +    cs->ops->submit_and_wait(cs);
- 
-     return hr;
- }
- 
++
++    return hr;
++}
++
 +static UINT wined3d_cs_exec_create_swapchain_context(struct wined3d_cs *cs, const void *data)
 +{
 +    const struct wined3d_cs_create_swapchain_context *op = data;
@@ -2694,7 +2694,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
  static void wined3d_cs_st_push_constants(struct wined3d_cs *cs, enum wined3d_push_constants p,
          unsigned int start_idx, unsigned int count, const void *constants)
  {
-@@ -1757,15 +3212,269 @@ static void wined3d_cs_st_push_constants(struct wined3d_cs *cs, enum wined3d_pus
+@@ -1757,15 +3212,271 @@ static void wined3d_cs_st_push_constants(struct wined3d_cs *cs, enum wined3d_pus
      for (i = 0, context_count = device->context_count; i < context_count; ++i)
      {
          device->contexts[i]->constant_update_mask |= push_constant_info[p].mask;
@@ -2725,14 +2725,14 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 +    {
 +        LeaveCriticalSection(&list->lock);
 +        return NULL;
-+    }
+     }
 +    list_remove(head);
 +    LeaveCriticalSection(&list->lock);
 +    InterlockedDecrement(&list->count);
 +
 +    return LIST_ENTRY(head, struct wined3d_cs_block, entry);
-+}
-+
+ }
+ 
 +static void wined3d_cs_wait_event(struct wined3d_cs *cs)
 +{
 +    InterlockedExchange(&cs->waiting_for_event, TRUE);
@@ -2754,9 +2754,9 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 +    {
 +        WaitForSingleObject(cs->event, INFINITE);
 +#endif /* STAGING_CSMT */
-     }
- }
- 
++    }
++}
++
 +#if !defined(STAGING_CSMT)
  static const struct wined3d_cs_ops wined3d_cs_st_ops =
  {
@@ -2813,13 +2813,15 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 +{
 +    struct wined3d_cs_block *block;
 +
-+    if (!(block = wined3d_cs_list_dequeue(&cs->free_list)))
++    while (!(block = wined3d_cs_list_dequeue(&cs->free_list)))
 +    {
-+        if (!(block = HeapAlloc(GetProcessHeap(), 0, sizeof(*block))))
++        if (cs->num_blocks < 1024 &&  /* limit memory usage to about 16 MB */
++            (block = HeapAlloc(GetProcessHeap(), 0, sizeof(*block))))
 +        {
-+            ERR("Failed to get new block.\n");
-+            return NULL;
++            cs->num_blocks++;
++            break;
 +        }
++        while (!InterlockedCompareExchange(&cs->free_list.count, 0, 0));
 +    }
 +
 +    block->pos = 0;
@@ -2964,7 +2966,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
  
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
  {
-@@ -1775,15 +3484,22 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -1775,15 +3486,22 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
      if (!(cs = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*cs))))
          return NULL;
  
@@ -2987,7 +2989,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
      cs->ops = &wined3d_cs_st_ops;
      cs->device = device;
  
-@@ -1791,18 +3507,65 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -1791,18 +3509,65 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
      if (!(cs->data = HeapAlloc(GetProcessHeap(), 0, cs->data_size)))
      {
          state_cleanup(&cs->state);
@@ -5909,7 +5911,7 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
  struct wined3d_cs_ops
  {
      void *(*require_space)(struct wined3d_cs *cs, size_t size);
-@@ -3174,32 +3277,114 @@ struct wined3d_cs_ops
+@@ -3174,32 +3277,115 @@ struct wined3d_cs_ops
      void (*push_constants)(struct wined3d_cs *cs, enum wined3d_push_constants p,
              unsigned int start_idx, unsigned int count, const void *constants);
  };
@@ -5962,6 +5964,7 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
 +    struct wined3d_cs_list free_list;
 +    struct wined3d_cs_list exec_list;
 +    struct wined3d_cs_list exec_prio_list;
++    LONG num_blocks;
 +
 +    LONG pending_presents;
 +
@@ -6024,7 +6027,7 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
  void wined3d_cs_emit_reset_state(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_clip_plane(struct wined3d_cs *cs, UINT plane_idx,
          const struct wined3d_vec4 *plane) DECLSPEC_HIDDEN;
-@@ -3216,6 +3401,10 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, unsigned int idx, B
+@@ -3216,6 +3402,10 @@ void wined3d_cs_emit_set_light_enable(struct wined3d_cs *cs, unsigned int idx, B
  void wined3d_cs_emit_set_material(struct wined3d_cs *cs, const struct wined3d_material *material) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_predication(struct wined3d_cs *cs,
          struct wined3d_query *predicate, BOOL value) DECLSPEC_HIDDEN;
@@ -6035,7 +6038,7 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
  void wined3d_cs_emit_set_rasterizer_state(struct wined3d_cs *cs,
          struct wined3d_rasterizer_state *rasterizer_state) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_render_state(struct wined3d_cs *cs,
-@@ -3247,19 +3436,37 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
+@@ -3247,19 +3437,37 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
  void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
          struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;
@@ -6073,7 +6076,7 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
  
  /* TODO: Add tests and support for FLOAT16_4 POSITIONT, D3DCOLOR position, other
   * fixed function semantics as D3DCOLOR or FLOAT16 */
-@@ -3397,7 +3604,12 @@ void wined3d_unordered_access_view_invalidate_location(struct wined3d_unordered_
+@@ -3397,7 +3605,12 @@ void wined3d_unordered_access_view_invalidate_location(struct wined3d_unordered_
  struct wined3d_swapchain_ops
  {
      void (*swapchain_present)(struct wined3d_swapchain *swapchain,
@@ -6086,7 +6089,7 @@ diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
      void (*swapchain_frontbuffer_updated)(struct wined3d_swapchain *swapchain);
  };
  
-@@ -3434,6 +3646,10 @@ struct wined3d_swapchain
+@@ -3434,6 +3647,10 @@ struct wined3d_swapchain
  
  void wined3d_swapchain_activate(struct wined3d_swapchain *swapchain, BOOL activate) DECLSPEC_HIDDEN;
  struct wined3d_context *swapchain_get_context(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;

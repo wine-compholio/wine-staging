@@ -1,0 +1,49 @@
+From e7bbfe3b2bac3311d455b16b7f67ae1fec4f3c1f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 23 Feb 2017 02:22:46 +0100
+Subject: wined3d: Enforce a memory limit of about 16 MB for CSMT blocks.
+
+---
+ dlls/wined3d/cs.c              | 10 ++++++----
+ dlls/wined3d/wined3d_private.h |  1 +
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index b5b2d94e619..ce0306bdb71 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -2713,13 +2713,15 @@ static struct wined3d_cs_block *wined3d_cs_get_block(struct wined3d_cs *cs, stru
+ {
+     struct wined3d_cs_block *block;
+ 
+-    if (!(block = wined3d_cs_list_dequeue(&cs->free_list)))
++    while (!(block = wined3d_cs_list_dequeue(&cs->free_list)))
+     {
+-        if (!(block = HeapAlloc(GetProcessHeap(), 0, sizeof(*block))))
++        if (cs->num_blocks < 1024 &&  /* limit memory usage to about 16 MB */
++            (block = HeapAlloc(GetProcessHeap(), 0, sizeof(*block))))
+         {
+-            ERR("Failed to get new block.\n");
+-            return NULL;
++            cs->num_blocks++;
++            break;
+         }
++        while (!InterlockedCompareExchange(&cs->free_list.count, 0, 0));
+     }
+ 
+     block->pos = 0;
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 74032096a60..ad999649965 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3252,6 +3252,7 @@ struct wined3d_cs
+     struct wined3d_cs_list free_list;
+     struct wined3d_cs_list exec_list;
+     struct wined3d_cs_list exec_prio_list;
++    LONG num_blocks;
+ 
+     LONG pending_presents;
+ 
+-- 
+2.11.0
+

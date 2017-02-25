@@ -3252,7 +3252,7 @@ fi
 # Patchset d3d9-Tests
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
 # |
 if test "$enable_d3d9_Tests" -eq 1; then
 	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
@@ -8373,11 +8373,11 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c,
-# | 	dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c,
+# | 	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c,
+# | 	dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c,
+# | 	dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch

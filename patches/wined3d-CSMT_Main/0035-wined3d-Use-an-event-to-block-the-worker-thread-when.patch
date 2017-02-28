@@ -1,4 +1,4 @@
-From a0962ea827e829d8fe589cc0f8c3893341e2c3b6 Mon Sep 17 00:00:00 2001
+From c1afe12bb6d64352554ac5ca4e8599de2fae62f1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 24 Oct 2013 18:56:13 +0200
 Subject: wined3d: Use an event to block the worker thread when it is idle.
@@ -34,10 +34,10 @@ vsync is turned on.
  2 files changed, 52 insertions(+)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index a5a6fc0fa4a..1c9d8e1d192 100644
+index 74b8b024cc3..c47d918b81e 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -2564,9 +2564,33 @@ static struct wined3d_cs_block *wined3d_cs_list_dequeue(struct wined3d_cs_list *
+@@ -2542,9 +2542,33 @@ static struct wined3d_cs_block *wined3d_cs_list_dequeue(struct wined3d_cs_list *
      return LIST_ENTRY(head, struct wined3d_cs_block, entry);
  }
  
@@ -71,7 +71,7 @@ index a5a6fc0fa4a..1c9d8e1d192 100644
  
      /* FIXME: Use an event to wait after a couple of spins. */
      for (;;)
-@@ -2575,6 +2599,13 @@ static struct wined3d_cs_block *wined3d_cs_dequeue_command(struct wined3d_cs *cs
+@@ -2553,6 +2577,13 @@ static struct wined3d_cs_block *wined3d_cs_dequeue_command(struct wined3d_cs *cs
              return block;
          if ((block = wined3d_cs_list_dequeue(&cs->exec_list)))
              return block;
@@ -85,7 +85,7 @@ index a5a6fc0fa4a..1c9d8e1d192 100644
      }
  }
  
-@@ -2655,6 +2686,9 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
+@@ -2633,6 +2664,9 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
      block = cs->current_block;
      wined3d_cs_list_enqueue(block->list, block);
      cs->current_block = NULL;
@@ -95,7 +95,7 @@ index a5a6fc0fa4a..1c9d8e1d192 100644
  }
  
  static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
-@@ -2670,6 +2704,9 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
+@@ -2648,6 +2682,9 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
      wined3d_cs_list_enqueue(block->list, block);
      cs->current_block = NULL;
  
@@ -105,7 +105,7 @@ index a5a6fc0fa4a..1c9d8e1d192 100644
      /* A busy wait should be fine, we're not supposed to have to wait very
       * long. */
      while (!InterlockedCompareExchange(&fence, TRUE, TRUE));
-@@ -2766,6 +2803,14 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2747,6 +2784,14 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
          return NULL;
      }
  
@@ -120,27 +120,27 @@ index a5a6fc0fa4a..1c9d8e1d192 100644
      if (wined3d_settings.cs_multithreaded)
      {
          cs->ops = &wined3d_cs_mt_ops;
-@@ -2778,6 +2823,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2759,6 +2804,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
          {
              ERR("Failed to create wined3d command stream thread.\n");
              state_cleanup(&cs->state);
 +            CloseHandle(cs->event);
+             HeapFree(GetProcessHeap(), 0, cs->fb.render_targets);
              HeapFree(GetProcessHeap(), 0, cs->data);
              HeapFree(GetProcessHeap(), 0, cs);
-             return NULL;
-@@ -2802,6 +2848,7 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
+@@ -2784,6 +2830,7 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
          wined3d_cs_list_cleanup(&cs->free_list);
      }
  
 +    CloseHandle(cs->event);
+     HeapFree(GetProcessHeap(), 0, cs->fb.render_targets);
      HeapFree(GetProcessHeap(), 0, cs->data);
      HeapFree(GetProcessHeap(), 0, cs);
- }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ba371f13d8d..10a7b4a8660 100644
+index c1919b314bc..e71dfbb2ca8 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3230,6 +3230,8 @@ struct wined3d_cs_ops
+@@ -3218,6 +3218,8 @@ struct wined3d_cs_ops
      void (*submit_and_wait)(struct wined3d_cs *cs);
  };
  
@@ -149,7 +149,7 @@ index ba371f13d8d..10a7b4a8660 100644
  struct wined3d_cs
  {
      const struct wined3d_cs_ops *ops;
-@@ -3247,6 +3249,9 @@ struct wined3d_cs
+@@ -3236,6 +3238,9 @@ struct wined3d_cs
      struct wined3d_cs_list exec_prio_list;
  
      LONG pending_presents;

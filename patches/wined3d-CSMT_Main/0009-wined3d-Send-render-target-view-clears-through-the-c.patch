@@ -1,4 +1,4 @@
-From 1c832f8fd2760bff7b0a0234f68c11af66dba8d1 Mon Sep 17 00:00:00 2001
+From 71236080e419dcf33176b5f8f54bbaf2dbefb630 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 4 Jul 2013 21:10:16 +0200
 Subject: wined3d: Send render target view clears through the command stream
@@ -11,7 +11,7 @@ Subject: wined3d: Send render target view clears through the command stream
  4 files changed, 55 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index f6eb188837d..5700577709e 100644
+index 8e5be756654..88e0e44c4d3 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
 @@ -1337,7 +1337,7 @@ static void color_fill_test(void)
@@ -24,18 +24,18 @@ index f6eb188837d..5700577709e 100644
           * supported as offscreen plain surfaces and do not support D3DUSAGE_RENDERTARGET
           * when created as texture. */
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 420a2cc8327..1dff1ff8af6 100644
+index 1517df9da95..ebc4e4f15e5 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -68,6 +68,7 @@ enum wined3d_cs_op
+@@ -67,6 +67,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_UNMAP,
      WINED3D_CS_OP_PUSH_CONSTANTS,
-     WINED3D_CS_OP_SET_PRIMITIVE_TYPE,
      WINED3D_CS_OP_BLT,
 +    WINED3D_CS_OP_CLEAR_RTV,
  };
  
  struct wined3d_cs_sync
-@@ -385,6 +386,18 @@ struct wined3d_cs_blt
+@@ -379,6 +380,18 @@ struct wined3d_cs_blt
      enum wined3d_texture_filter_type filter;
  };
  
@@ -54,7 +54,7 @@ index 420a2cc8327..1dff1ff8af6 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -1843,6 +1856,41 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -1827,6 +1840,41 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
      cs->ops->submit(cs);
  }
  
@@ -96,19 +96,19 @@ index 420a2cc8327..1dff1ff8af6 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -1887,6 +1935,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1870,6 +1918,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_UNMAP                      */ wined3d_cs_exec_unmap,
      /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
-     /* WINED3D_CS_OP_SET_PRIMITIVE_TYPE         */ wined3d_cs_exec_set_primitive_type,
      /* WINED3D_CS_OP_BLT                        */ wined3d_cs_exec_blt,
 +    /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 6195122ff10..1388dda5c78 100644
+index 7644e2aa250..35c57ff7b94 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4272,10 +4272,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+@@ -4283,10 +4283,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -122,10 +122,10 @@ index 6195122ff10..1388dda5c78 100644
  
  struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(const struct wined3d_device *device,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index be01b6f3b6a..2b58f655c25 100644
+index 62f9c484287..334cdf0fb8b 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3199,6 +3199,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
+@@ -3208,6 +3208,9 @@ void wined3d_cs_emit_blt(struct wined3d_cs *cs, struct wined3d_surface *dst_surf
          enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *rects,
          DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil) DECLSPEC_HIDDEN;
@@ -134,7 +134,7 @@ index be01b6f3b6a..2b58f655c25 100644
 +        const struct blit_shader *blitter) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
          unsigned int group_count_x, unsigned int group_count_y, unsigned int group_count_z) DECLSPEC_HIDDEN;
- void wined3d_cs_emit_draw(struct wined3d_cs *cs, int base_vertex_idx, unsigned int start_idx, unsigned int index_count,
+ void wined3d_cs_emit_draw(struct wined3d_cs *cs, GLenum primitive_type, int base_vertex_idx,
 -- 
 2.11.0
 

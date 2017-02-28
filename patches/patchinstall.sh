@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "adedebf47a9a02694b79965eb2aa670b3906b398"
+	echo "b47487af999f48ba2700b4dd5ff6cd47891d4787"
 }
 
 # Show version information
@@ -8373,18 +8373,16 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/arb_program_shader.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c,
-# | 	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/query.c,
-# | 	dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c,
-# | 	dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
-# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c,
+# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c,
+# | 	dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c,
+# | 	dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send primitive type updates through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
@@ -8402,8 +8400,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer update subresource requests through CS.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer copy requests through CS.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Move the framebuffer into wined3d_state.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t access device state in clears.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add a separate variable to check if queries are started.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Map vertex buffers through cs.", 1 },';

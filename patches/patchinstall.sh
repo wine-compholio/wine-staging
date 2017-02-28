@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b47487af999f48ba2700b4dd5ff6cd47891d4787"
+	echo "89b75296128e8c2cadc77cb06ecd7faa1f80d012"
 }
 
 # Show version information
@@ -8374,17 +8374,14 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c,
-# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c,
-# | 	dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c,
-# | 	dlls/wined3d/wined3d_private.h
+# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Give the cs its own state.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Pass the depth stencil to swapchain->present.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
@@ -8419,7 +8416,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Don'\''t wait for events that have not been issued yet.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Synchronize before resizing swapchain context array.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Set all default state values to zero.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Discard buffer during upload when replacing complete content.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Enforce a memory limit of about 16 MB for CSMT blocks.", 1 },';

@@ -1,4 +1,4 @@
-From 28c54b09deec1d91899a2317f52931f0b1697f7e Mon Sep 17 00:00:00 2001
+From 99532d442dd915def1f20d52586e39f67b79c9ec Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 10 Oct 2013 16:43:19 +0200
 Subject: wined3d: Create the initial context through the CS.
@@ -6,12 +6,12 @@ Subject: wined3d: Create the initial context through the CS.
 Very hacky.
 ---
  dlls/wined3d/cs.c              |  31 +++++++++++
- dlls/wined3d/swapchain.c       | 119 ++++++++++++++++++++++-------------------
+ dlls/wined3d/swapchain.c       | 121 ++++++++++++++++++++++-------------------
  dlls/wined3d/wined3d_private.h |   4 ++
- 3 files changed, 100 insertions(+), 54 deletions(-)
+ 3 files changed, 101 insertions(+), 55 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 24051b16899..c9273e5508e 100644
+index eaa9267e5ba..544a6bf89e6 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -73,6 +73,7 @@ enum wined3d_cs_op
@@ -36,7 +36,7 @@ index 24051b16899..c9273e5508e 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -2068,6 +2076,28 @@ HRESULT wined3d_cs_emit_release_dc(struct wined3d_cs *cs, struct wined3d_texture
+@@ -2067,6 +2075,28 @@ HRESULT wined3d_cs_emit_release_dc(struct wined3d_cs *cs, struct wined3d_texture
      return hr;
  }
  
@@ -65,7 +65,7 @@ index 24051b16899..c9273e5508e 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -2117,6 +2147,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2116,6 +2146,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
      /* WINED3D_CS_OP_GET_DC                     */ wined3d_cs_exec_get_dc,
      /* WINED3D_CS_OP_RELEASE_DC                 */ wined3d_cs_exec_release_dc,
@@ -74,10 +74,10 @@ index 24051b16899..c9273e5508e 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 7e48b5d12b5..592cbd96db4 100644
+index b3da7f6e20a..8d69820d400 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
-@@ -786,6 +786,69 @@ static void wined3d_swapchain_apply_sample_count_override(const struct wined3d_s
+@@ -787,6 +787,69 @@ static void wined3d_swapchain_apply_sample_count_override(const struct wined3d_s
      *quality = 0;
  }
  
@@ -102,7 +102,6 @@ index 7e48b5d12b5..592cbd96db4 100644
 +        ERR("Failed to create the context array.\n");
 +        return E_OUTOFMEMORY;
 +    }
-+    swapchain->num_contexts = 1;
 +
 +    /* In WGL both color, depth and stencil are features of a pixel format. In case of D3D they are separate.
 +     * You are able to add a depth + stencil surface at a later stage when you need it.
@@ -131,6 +130,7 @@ index 7e48b5d12b5..592cbd96db4 100644
 +        swapchain->context = NULL;
 +        return WINED3DERR_NOTAVAILABLE;
 +    }
++    swapchain->num_contexts = 1;
 +
 +    if (wined3d_settings.offscreen_rendering_mode != ORM_FBO
 +            && (!swapchain->desc.enable_auto_depth_stencil
@@ -147,7 +147,7 @@ index 7e48b5d12b5..592cbd96db4 100644
  static HRESULT swapchain_init(struct wined3d_swapchain *swapchain, struct wined3d_device *device,
          struct wined3d_swapchain_desc *desc, void *parent, const struct wined3d_parent_ops *parent_ops)
  {
-@@ -912,61 +975,9 @@ static HRESULT swapchain_init(struct wined3d_swapchain *swapchain, struct wined3
+@@ -913,61 +976,9 @@ static HRESULT swapchain_init(struct wined3d_swapchain *swapchain, struct wined3
  
      if (!(device->wined3d->flags & WINED3D_NO3D))
      {
@@ -167,11 +167,8 @@ index 7e48b5d12b5..592cbd96db4 100644
 -        {
 -            ERR("Failed to create the context array.\n");
 -            hr = E_OUTOFMEMORY;
-+        hr = wined3d_cs_emit_create_swapchain_context(device->cs, swapchain);
-+        if (FAILED(hr))
-             goto err;
+-            goto err;
 -        }
--        swapchain->num_contexts = 1;
 -
 -        /* In WGL both color, depth and stencil are features of a pixel format. In case of D3D they are separate.
 -         * You are able to add a depth + stencil surface at a later stage when you need it.
@@ -199,6 +196,7 @@ index 7e48b5d12b5..592cbd96db4 100644
 -            hr = WINED3DERR_NOTAVAILABLE;
 -            goto err;
 -        }
+-        swapchain->num_contexts = 1;
 -
 -        if (wined3d_settings.offscreen_rendering_mode != ORM_FBO
 -                && (!desc->enable_auto_depth_stencil
@@ -208,14 +206,17 @@ index 7e48b5d12b5..592cbd96db4 100644
 -        }
 -        context_release(swapchain->context[0]);
 -        swapchain_update_swap_interval(swapchain);
++        hr = wined3d_cs_emit_create_swapchain_context(device->cs, swapchain);
++        if (FAILED(hr))
++             goto err;
      }
  
      if (swapchain->desc.backbuffer_count > 0)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 065f118fcb7..c4830e3ab44 100644
+index ffcc6c400fb..c6c2a5902fa 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3218,6 +3218,8 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
+@@ -3221,6 +3221,8 @@ void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *
  void wined3d_cs_emit_clear_rtv(struct wined3d_cs *cs, struct wined3d_rendertarget_view *view,
          const RECT *rect, DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil,
          const struct blit_shader *blitter) DECLSPEC_HIDDEN;
@@ -224,7 +225,7 @@ index 065f118fcb7..c4830e3ab44 100644
  void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
          unsigned int group_count_x, unsigned int group_count_y, unsigned int group_count_z) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_draw(struct wined3d_cs *cs, GLenum primitive_type, int base_vertex_idx,
-@@ -3470,6 +3472,8 @@ struct wined3d_swapchain
+@@ -3472,6 +3474,8 @@ struct wined3d_swapchain
  
  void wined3d_swapchain_activate(struct wined3d_swapchain *swapchain, BOOL activate) DECLSPEC_HIDDEN;
  struct wined3d_context *swapchain_get_context(struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;

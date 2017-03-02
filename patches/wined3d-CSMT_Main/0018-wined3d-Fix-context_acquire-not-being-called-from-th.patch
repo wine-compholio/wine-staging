@@ -1,4 +1,4 @@
-From a25b97bf63e04c95f9f2028f48db60d5fc511433 Mon Sep 17 00:00:00 2001
+From d8510f1a77606628c1868332f11f5dd8ec90f82e Mon Sep 17 00:00:00 2001
 From: Nils Kuhnhenn <nils@volafile.io>
 Date: Fri, 5 Aug 2016 20:28:46 +0200
 Subject: wined3d: Fix context_acquire not being called from the command thread
@@ -11,18 +11,18 @@ Subject: wined3d: Fix context_acquire not being called from the command thread
  3 files changed, 51 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index c7ed94f623c..5b529d000f4 100644
+index 770760f78c7..8b13ca2f792 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -76,6 +76,7 @@ enum wined3d_cs_op
+@@ -74,6 +74,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_GET_DC,
      WINED3D_CS_OP_RELEASE_DC,
-     WINED3D_CS_OP_CREATE_SWAPCHAIN_CONTEXT,
      WINED3D_CS_OP_UPDATE_SWAP_INTERVAL,
 +    WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION,
  };
  
  struct wined3d_cs_sync
-@@ -449,6 +450,13 @@ struct wined3d_cs_update_swap_interval
+@@ -435,6 +436,13 @@ struct wined3d_cs_update_swap_interval
      struct wined3d_swapchain *swapchain;
  };
  
@@ -36,7 +36,7 @@ index c7ed94f623c..5b529d000f4 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -2140,6 +2148,45 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
+@@ -2092,6 +2100,45 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
      cs->ops->submit_and_wait(cs);
  }
  
@@ -82,19 +82,19 @@ index c7ed94f623c..5b529d000f4 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -2192,6 +2239,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2142,6 +2189,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_GET_DC                     */ wined3d_cs_exec_get_dc,
      /* WINED3D_CS_OP_RELEASE_DC                 */ wined3d_cs_exec_release_dc,
-     /* WINED3D_CS_OP_CREATE_SWAPCHAIN_CONTEXT   */ wined3d_cs_exec_create_swapchain_context,
      /* WINED3D_CS_OP_UPDATE_SWAP_INTERVAL       */ wined3d_cs_exec_update_swap_interval,
 +    /* WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION   */ wined3d_cs_exec_texture_add_dirty_region,
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 70c4590f74a..de118e4d564 100644
+index baecda0b9ed..4c6a8e96611 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1521,7 +1521,6 @@ struct wined3d_texture_sub_resource *wined3d_texture_get_sub_resource(struct win
+@@ -1523,7 +1523,6 @@ struct wined3d_texture_sub_resource *wined3d_texture_get_sub_resource(struct win
  HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
          UINT layer, const struct wined3d_box *dirty_region)
  {
@@ -102,7 +102,7 @@ index 70c4590f74a..de118e4d564 100644
      unsigned int sub_resource_idx;
  
      TRACE("texture %p, layer %u, dirty_region %s.\n", texture, layer, debug_box(dirty_region));
-@@ -1533,19 +1532,7 @@ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
+@@ -1535,19 +1534,7 @@ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
      }
      sub_resource_idx = layer * texture->level_count;
  
@@ -124,10 +124,10 @@ index 70c4590f74a..de118e4d564 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ce02d81914f..7cabc276a0b 100644
+index 6e215b8f2c4..efa3b879098 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3274,6 +3274,8 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
+@@ -3296,6 +3296,8 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
  void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
          struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "89b75296128e8c2cadc77cb06ecd7faa1f80d012"
+	echo "e6f8f136fa557d282f44654be509573cb45a831f"
 }
 
 # Show version information
@@ -3619,15 +3619,13 @@ fi
 # |   *	[#17233] Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces
 # |
 # | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/main.c, dlls/ddraw/tests/d3d.c
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c
 # |
 if test "$enable_ddraw_EnumSurfaces" -eq 1; then
 	patch_apply ddraw-EnumSurfaces/0001-ddraw-tests-Add-more-tests-for-IDirectDraw7-EnumSurf.patch
-	patch_apply ddraw-EnumSurfaces/0002-ddraw-Fix-arguments-to-IDirectDraw7-EnumSurfaces-in-.patch
 	patch_apply ddraw-EnumSurfaces/0003-ddraw-Implement-DDENUMSURFACES_CANBECREATED-flag-in-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirectDraw7::EnumSurfaces.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ddraw: Fix arguments to IDirectDraw7::EnumSurfaces in DllMain.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED flag in ddraw7_EnumSurfaces.", 1 },';
 	) >> "$patchlist"
 fi
@@ -8390,7 +8388,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send query_poll through the command stream.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create the initial context through the CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
 		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';

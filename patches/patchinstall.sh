@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e6f8f136fa557d282f44654be509573cb45a831f"
+	echo "e918c6fd8b426e8298eca5951d917960e4236d95"
 }
 
 # Show version information
@@ -100,7 +100,6 @@ patch_enable_all ()
 	enable_combase_RoApi="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_Listview_DrawItem="$1"
-	enable_comctl32_PROPSHEET_InsertPage="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -511,9 +510,6 @@ patch_enable ()
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
-			;;
-		comctl32-PROPSHEET_InsertPage)
-			enable_comctl32_PROPSHEET_InsertPage="$2"
 			;;
 		comctl32-TTM_ADDTOOLW)
 			enable_comctl32_TTM_ADDTOOLW="$2"
@@ -2944,18 +2940,6 @@ if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctl32-PROPSHEET_InsertPage
-# |
-# | Modified files:
-# |   *	dlls/comctl32/propsheet.c
-# |
-if test "$enable_comctl32_PROPSHEET_InsertPage" -eq 1; then
-	patch_apply comctl32-PROPSHEET_InsertPage/0003-comctl32-Add-support-for-PSPCB_ADDREF-PSPCB_RELEASE-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Add support for PSPCB_ADDREF/PSPCB_RELEASE callback notifications.", 2 },';
 	) >> "$patchlist"
 fi
 

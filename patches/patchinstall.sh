@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_Context_Menu="$1"
 	enable_shell32_File_Property_Dialog="$1"
+	enable_shell32_FolderItemsImpl_get_Count="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Microsoft_Windows_Themes="$1"
 	enable_shell32_NewMenu_Interface="$1"
@@ -1188,6 +1189,9 @@ patch_enable ()
 			;;
 		shell32-File_Property_Dialog)
 			enable_shell32_File_Property_Dialog="$2"
+			;;
+		shell32-FolderItemsImpl_get_Count)
+			enable_shell32_FolderItemsImpl_get_Count="$2"
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
@@ -6898,6 +6902,18 @@ if test "$enable_shell32_File_Property_Dialog" -eq 1; then
 	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-FolderItemsImpl_get_Count
+# |
+# | Modified files:
+# |   *	dlls/shell32/shelldispatch.c, dlls/shell32/tests/shelldispatch.c
+# |
+if test "$enable_shell32_FolderItemsImpl_get_Count" -eq 1; then
+	patch_apply shell32-FolderItemsImpl_get_Count/0001-shell32-Improve-FolderItemsImpl_get_Count-stub.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "shell32: Improve FolderItemsImpl_get_Count stub.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -3199,8 +3199,10 @@ fi
 # |
 if test "$enable_d3d11_ResolveSubresource" -eq 1; then
 	patch_apply d3d11-ResolveSubresource/0001-d3d11-Implement-ResolveSubresource-by-copying-sub-re.patch
+	patch_apply d3d11-ResolveSubresource/0002-d3d11-Implement-d3d10_device_ResolveSubresource-in-t.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ResolveSubresource by copying sub resource (there is no multisample texture support yet).", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_device_ResolveSubresource in the same way as for d3d11.", 1 },';
 	) >> "$patchlist"
 fi
 

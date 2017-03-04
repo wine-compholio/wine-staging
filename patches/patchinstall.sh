@@ -140,6 +140,7 @@ patch_enable_all ()
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Write_Vtable="$1"
+	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Initialize="$1"
 	enable_dmusic_SynthPort_IKsControl="$1"
 	enable_dsound_EAX="$1"
@@ -634,6 +635,9 @@ patch_enable ()
 			;;
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
+			;;
+		devenum-AudioCompressorCategory)
+			enable_devenum_AudioCompressorCategory="$2"
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
@@ -3712,6 +3716,18 @@ if test "$enable_ddraw_Write_Vtable" -eq 1; then
 	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset devenum-AudioCompressorCategory
+# |
+# | Modified files:
+# |   *	dlls/devenum/Makefile.in, dlls/devenum/createdevenum.c
+# |
+if test "$enable_devenum_AudioCompressorCategory" -eq 1; then
+	patch_apply devenum-AudioCompressorCategory/0001-devenum-Populate-AudioCompressorCategory.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "devenum: Populate AudioCompressorCategory.", 1 },';
 	) >> "$patchlist"
 fi
 

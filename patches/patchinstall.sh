@@ -433,6 +433,7 @@ patch_enable_all ()
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
+	enable_wininet_Http_Decoding="$1"
 	enable_wininet_InternetCrackUrlW="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
@@ -1511,6 +1512,9 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
+			;;
+		wininet-Http_Decoding)
+			enable_wininet_Http_Decoding="$2"
 			;;
 		wininet-InternetCrackUrlW)
 			enable_wininet_InternetCrackUrlW="$2"
@@ -8771,6 +8775,21 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-Http_Decoding
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42374] Allow to set INTERNET_OPTION_HTTP_DECODING on wininet sessions and connections
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c, dlls/wininet/internet.c, dlls/wininet/internet.h, dlls/wininet/tests/http.c
+# |
+if test "$enable_wininet_Http_Decoding" -eq 1; then
+	patch_apply wininet-Http_Decoding/0001-wininet-Allow-to-set-INTERNET_OPTION_HTTP_DECODING-o.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wininet: Allow to set INTERNET_OPTION_HTTP_DECODING on sessions and connections.", 1 },';
 	) >> "$patchlist"
 fi
 

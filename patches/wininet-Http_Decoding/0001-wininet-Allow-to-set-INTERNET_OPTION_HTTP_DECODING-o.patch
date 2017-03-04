@@ -1,0 +1,179 @@
+From d67b893edc3566b0163c8ec33b0f0f85a6e22fff Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 2 Mar 2017 21:10:41 +0100
+Subject: wininet: Allow to set INTERNET_OPTION_HTTP_DECODING on sessions and
+ connections.
+
+---
+ dlls/wininet/http.c       |  9 +++----
+ dlls/wininet/internet.c   | 17 ++++++++++---
+ dlls/wininet/internet.h   |  2 +-
+ dlls/wininet/tests/http.c | 62 +++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 80 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/wininet/http.c b/dlls/wininet/http.c
+index dfff22306de..1f2420f011e 100644
+--- a/dlls/wininet/http.c
++++ b/dlls/wininet/http.c
+@@ -2359,11 +2359,6 @@ static DWORD HTTPREQ_SetOption(object_header_t *hdr, DWORD option, void *buffer,
+         if (!(req->session->appInfo->proxyPassword = heap_strdupW(buffer))) return ERROR_OUTOFMEMORY;
+         return ERROR_SUCCESS;
+ 
+-    case INTERNET_OPTION_HTTP_DECODING:
+-        if(size != sizeof(BOOL))
+-            return ERROR_INVALID_PARAMETER;
+-        req->decoding = *(BOOL*)buffer;
+-        return ERROR_SUCCESS;
+     }
+ 
+     return INET_SetOption(hdr, option, buffer, size);
+@@ -2955,7 +2950,7 @@ static DWORD set_content_length(http_request_t *request)
+         request->contentLength = ~0u;
+     }
+ 
+-    if(request->decoding) {
++    if(request->hdr.decoding) {
+         int encoding_idx;
+ 
+         static const WCHAR deflateW[] = {'d','e','f','l','a','t','e',0};
+@@ -3379,6 +3374,7 @@ static DWORD HTTP_HttpOpenRequestW(http_session_t *session,
+     request->hdr.htype = WH_HHTTPREQ;
+     request->hdr.dwFlags = dwFlags;
+     request->hdr.dwContext = dwContext;
++    request->hdr.decoding = session->hdr.decoding;
+     request->contentLength = ~0u;
+ 
+     request->netconn_stream.data_stream.vtbl = &netconn_stream_vtbl;
+@@ -5873,6 +5869,7 @@ DWORD HTTP_Connect(appinfo_t *hIC, LPCWSTR lpszServerName,
+     session->hdr.dwFlags = dwFlags;
+     session->hdr.dwContext = dwContext;
+     session->hdr.dwInternalFlags |= dwInternalFlags;
++    session->hdr.decoding = hIC->hdr.decoding;
+ 
+     WININET_AddRef( &hIC->hdr );
+     session->appInfo = hIC;
+diff --git a/dlls/wininet/internet.c b/dlls/wininet/internet.c
+index cd93dadeea5..b5868726cb2 100644
+--- a/dlls/wininet/internet.c
++++ b/dlls/wininet/internet.c
+@@ -2865,10 +2865,21 @@ BOOL WINAPI InternetSetOptionW(HINTERNET hInternet, DWORD dwOption,
+ 	 FIXME("Option INTERNET_OPTION_DISABLE_AUTODIAL; STUB\n");
+ 	 break;
+     case INTERNET_OPTION_HTTP_DECODING:
+-        FIXME("INTERNET_OPTION_HTTP_DECODING; STUB\n");
+-        SetLastError(ERROR_INTERNET_INVALID_OPTION);
+-        ret = FALSE;
++    {
++        if (!lpwhh)
++        {
++            SetLastError(ERROR_INTERNET_INCORRECT_HANDLE_TYPE);
++            return FALSE;
++        }
++        if (!lpBuffer || dwBufferLength != sizeof(BOOL))
++        {
++            SetLastError(ERROR_INVALID_PARAMETER);
++            ret = FALSE;
++        }
++        else
++            lpwhh->decoding = *(BOOL *)lpBuffer;
+         break;
++    }
+     case INTERNET_OPTION_COOKIES_3RD_PARTY:
+         FIXME("INTERNET_OPTION_COOKIES_3RD_PARTY; STUB\n");
+         SetLastError(ERROR_INTERNET_INVALID_OPTION);
+diff --git a/dlls/wininet/internet.h b/dlls/wininet/internet.h
+index d400df00e4f..d6d15c96afb 100644
+--- a/dlls/wininet/internet.h
++++ b/dlls/wininet/internet.h
+@@ -301,6 +301,7 @@ struct _object_header_t
+     ULONG  ErrorMask;
+     DWORD  dwInternalFlags;
+     LONG   refs;
++    BOOL   decoding;
+     INTERNET_STATUS_CALLBACK lpfnStatusCB;
+     struct list entry;
+     struct list children;
+@@ -397,7 +398,6 @@ typedef struct
+     DWORD read_size;      /* valid data size in read_buf */
+     BYTE  read_buf[READ_BUFFER_SIZE]; /* buffer for already read but not returned data */
+ 
+-    BOOL decoding;
+     data_stream_t *data_stream;
+     netconn_stream_t netconn_stream;
+ } http_request_t;
+diff --git a/dlls/wininet/tests/http.c b/dlls/wininet/tests/http.c
+index 4f0669063d6..fe11e0aab58 100644
+--- a/dlls/wininet/tests/http.c
++++ b/dlls/wininet/tests/http.c
+@@ -3881,6 +3881,68 @@ static void test_cache_read_gzipped(int port)
+     InternetCloseHandle(con);
+     InternetCloseHandle(ses);
+ 
++    /* Decompression doesn't work while reading from cache */
++    test_cache_gzip = 0;
++    sprintf(cache_url, cache_url_fmt, port, get_gzip);
++    DeleteUrlCacheEntryA(cache_url);
++
++    ses = InternetOpenA("winetest", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
++    ok(ses != NULL,"InternetOpen failed with error %u\n", GetLastError());
++
++    ret = TRUE;
++    ret = InternetSetOptionA(ses, INTERNET_OPTION_HTTP_DECODING, &ret, sizeof(ret));
++    ok(ret, "InternetSetOption(INTERNET_OPTION_HTTP_DECODING) failed: %d\n", GetLastError());
++
++    con = InternetConnectA(ses, "localhost", port, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
++    ok(con != NULL, "InternetConnect failed with error %u\n", GetLastError());
++
++    req = HttpOpenRequestA(con, NULL, get_gzip, NULL, NULL, NULL, 0, 0);
++    ok(req != NULL, "HttpOpenRequest failed\n");
++
++    ret = HttpSendRequestA(req, "Accept-Encoding: gzip", -1, NULL, 0);
++    ok(ret, "HttpSendRequest failed with error %u\n", GetLastError());
++    size = 0;
++    while(InternetReadFile(req, buf+size, sizeof(buf)-1-size, &read) && read)
++        size += read;
++    ok(size == 10, "read %d bytes of data\n", size);
++    buf[size] = 0;
++    ok(!strncmp(buf, content, size), "incorrect page content: %s\n", buf);
++    InternetCloseHandle(req);
++
++    InternetCloseHandle(con);
++    InternetCloseHandle(ses);
++
++    /* Decompression doesn't work while reading from cache */
++    test_cache_gzip = 0;
++    sprintf(cache_url, cache_url_fmt, port, get_gzip);
++    DeleteUrlCacheEntryA(cache_url);
++
++    ses = InternetOpenA("winetest", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
++    ok(ses != NULL,"InternetOpen failed with error %u\n", GetLastError());
++
++    con = InternetConnectA(ses, "localhost", port, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
++    ok(con != NULL, "InternetConnect failed with error %u\n", GetLastError());
++
++    ret = TRUE;
++    ret = InternetSetOptionA(con, INTERNET_OPTION_HTTP_DECODING, &ret, sizeof(ret));
++    ok(ret, "InternetSetOption(INTERNET_OPTION_HTTP_DECODING) failed: %d\n", GetLastError());
++
++    req = HttpOpenRequestA(con, NULL, get_gzip, NULL, NULL, NULL, 0, 0);
++    ok(req != NULL, "HttpOpenRequest failed\n");
++
++    ret = HttpSendRequestA(req, "Accept-Encoding: gzip", -1, NULL, 0);
++    ok(ret, "HttpSendRequest failed with error %u\n", GetLastError());
++    size = 0;
++    while(InternetReadFile(req, buf+size, sizeof(buf)-1-size, &read) && read)
++        size += read;
++    ok(size == 10, "read %d bytes of data\n", size);
++    buf[size] = 0;
++    ok(!strncmp(buf, content, size), "incorrect page content: %s\n", buf);
++    InternetCloseHandle(req);
++
++    InternetCloseHandle(con);
++    InternetCloseHandle(ses);
++
+     DeleteUrlCacheEntryA(cache_url);
+ }
+ 
+-- 
+2.11.0
+

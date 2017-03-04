@@ -375,6 +375,7 @@ patch_enable_all ()
 	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
+	enable_virtdisk_GetStorageDependencyInformation="$1"
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
@@ -1340,6 +1341,9 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
+			;;
+		virtdisk-GetStorageDependencyInformation)
+			enable_virtdisk_GetStorageDependencyInformation="$2"
 			;;
 		vulkan-Vulkan_Implementation)
 			enable_vulkan_Vulkan_Implementation="$2"
@@ -7746,6 +7750,23 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset virtdisk-GetStorageDependencyInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42577] Add stub for virtdisk.GetStorageDependencyInformation
+# |
+# | Modified files:
+# |   *	dlls/virtdisk/virtdisk.spec, dlls/virtdisk/virtdisk_main.c, include/Makefile.in, include/virtdisk.h
+# |
+if test "$enable_virtdisk_GetStorageDependencyInformation" -eq 1; then
+	patch_apply virtdisk-GetStorageDependencyInformation/0001-include-add-headerfile-virtdisk.h.patch
+	patch_apply virtdisk-GetStorageDependencyInformation/0002-virtdisk-Add-GetStorageDependencyInformation-stub.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "include: Add headerfile virtdisk.h.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "virtdisk: Add GetStorageDependencyInformation stub.", 1 },';
 	) >> "$patchlist"
 fi
 

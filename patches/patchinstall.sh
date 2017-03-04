@@ -210,6 +210,7 @@ patch_enable_all ()
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
+	enable_msvcrt_CurrentScheduler_Id="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -841,6 +842,9 @@ patch_enable ()
 			;;
 		msvcr120-_SetWinRTOutOfMemoryExceptionCallback)
 			enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$2"
+			;;
+		msvcrt-CurrentScheduler_Id)
+			enable_msvcrt_CurrentScheduler_Id="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -5007,6 +5011,22 @@ if test "$enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback" -eq 1; then
 	patch_apply msvcr120-_SetWinRTOutOfMemoryExceptionCallback/0001-msvcr120-Add-stub-for-_SetWinRTOutOfMemoryExceptionC.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "msvcr120: Add stub for _SetWinRTOutOfMemoryExceptionCallback.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvcrt-CurrentScheduler_Id
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40628] Implement stub for Concurrency::details::_CurrentScheduler::_Id
+# |
+# | Modified files:
+# |   *	dlls/concrt140/concrt140.spec, dlls/msvcr110/msvcr110.spec, dlls/msvcr120/msvcr120.spec,
+# | 	dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/lock.c
+# |
+if test "$enable_msvcrt_CurrentScheduler_Id" -eq 1; then
+	patch_apply msvcrt-CurrentScheduler_Id/0001-msvcrt-Add-stub-for-Concurrency-details-_CurrentSche.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "msvcrt: Add stub for Concurrency::details::_CurrentScheduler::_Id.", 1 },';
 	) >> "$patchlist"
 fi
 

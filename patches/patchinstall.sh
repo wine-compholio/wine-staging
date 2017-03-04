@@ -8335,14 +8335,17 @@ fi
 # Patchset wined3d-check_format_support
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/device.c, dlls/wined3d/wined3d.spec, include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/device.c,
+# | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_check_format_support" -eq 1; then
 	patch_apply wined3d-check_format_support/0001-wined3d-Add-wined3d_check_device_format_support.patch
 	patch_apply wined3d-check_format_support/0002-d3d11-Implement-ID3D11Device_CheckFormatSupport.patch
+	patch_apply wined3d-check_format_support/0003-d3d11-Implement-ID3D10Device_CheckFormatSupport.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D10Device_CheckFormatSupport.", 1 },';
 	) >> "$patchlist"
 fi
 

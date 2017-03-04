@@ -106,6 +106,7 @@ patch_enable_all ()
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
+	enable_crypt32_MS_Root_Certs="$1"
 	enable_crypt32_SHA_OIDs="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
@@ -528,6 +529,9 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
+			;;
+		crypt32-MS_Root_Certs)
+			enable_crypt32_MS_Root_Certs="$2"
 			;;
 		crypt32-SHA_OIDs)
 			enable_crypt32_SHA_OIDs="$2"
@@ -3028,6 +3032,18 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset crypt32-MS_Root_Certs
+# |
+# | Modified files:
+# |   *	dlls/crypt32/rootstore.c
+# |
+if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
+	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010/2011.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -6582,6 +6582,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	advapi32-GetExplicitEntriesFromAclW, server-Misc_ACL, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42014] Implement support for LABEL_SECURITY_INFORMATION
+# |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/sec.c, include/winnt.h, server/handle.c, server/object.c,
 # | 	server/process.c, server/protocol.def, server/security.h, server/token.c

@@ -2704,14 +2704,19 @@ fi
 
 # Patchset kernel32-GetCurrentPackageFamilyName
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42586] Add stub for kernel32.GetCurrentPackageFullName
+# |
 # | Modified files:
 # |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
 # | 	dlls/kernel32/version.c
 # |
 if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
 	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
+	patch_apply kernel32-GetCurrentPackageFamilyName/0002-kernel32-add-stub-for-GetCurrentPackageFullName.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "kernel32: Add stub for GetCurrentPackageFullName.", 1 },';
 	) >> "$patchlist"
 fi
 

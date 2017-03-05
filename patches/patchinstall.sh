@@ -226,6 +226,7 @@ patch_enable_all ()
 	enable_ntdll_DllOverrides_WOW64="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
+	enable_ntdll_FileAccessInformation="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
@@ -897,6 +898,9 @@ patch_enable ()
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
+			;;
+		ntdll-FileAccessInformation)
+			enable_ntdll_FileAccessInformation="$2"
 			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
@@ -5319,6 +5323,21 @@ if test "$enable_ntdll_Exception" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Throw exception if invalid handle is passed to NtClose and debugger enabled.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-FileAccessInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42550] Implement FileAccessInformation class
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_FileAccessInformation" -eq 1; then
+	patch_apply ntdll-FileAccessInformation/0001-ntdll-Implement-FileAccessInformation-class-in-NtQue.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileAccessInformation class in NtQueryInformationFile.", 1 },';
 	) >> "$patchlist"
 fi
 

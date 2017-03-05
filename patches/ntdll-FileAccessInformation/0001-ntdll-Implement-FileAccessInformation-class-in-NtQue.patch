@@ -1,0 +1,80 @@
+From f9538d02d978180bbf563f14cf265b0eac8d71c5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 5 Mar 2017 21:48:27 +0100
+Subject: ntdll: Implement FileAccessInformation class in
+ NtQueryInformationFile.
+
+---
+ dlls/ntdll/file.c       | 13 +++++++++++++
+ dlls/ntdll/tests/file.c | 24 ++++++++++++++++++++++++
+ 2 files changed, 37 insertions(+)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 88ecb2a2f04..d92db6b7db9 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2852,6 +2852,19 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+             info->EaSize = 0;
+         }
+         break;
++    case FileAccessInformation:
++        {
++            FILE_ACCESS_INFORMATION *info = ptr;
++            SERVER_START_REQ( get_object_info )
++            {
++                req->handle = wine_server_obj_handle( hFile );
++                io->u.Status = wine_server_call( req );
++                if (io->u.Status == STATUS_SUCCESS)
++                    info->AccessFlags = reply->access;
++            }
++            SERVER_END_REQ;
++        }
++        break;
+     case FileEndOfFileInformation:
+         if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
+         else fill_file_info( &st, attr, ptr, class );
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 9cbbdba55e0..05c5454871c 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -3509,6 +3509,29 @@ static void test_file_id_information(void)
+     CloseHandle( h );
+ }
+ 
++static void test_file_access_information(void)
++{
++    FILE_ACCESS_INFORMATION info;
++    IO_STATUS_BLOCK io;
++    NTSTATUS status;
++    HANDLE h;
++
++    if (!(h = create_temp_file(0))) return;
++
++    status = pNtQueryInformationFile( h, &io, &info, sizeof(info) - 1, FileAccessInformation );
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status );
++
++    status = pNtQueryInformationFile( (HANDLE)0xdeadbeef, &io, &info, sizeof(info), FileAccessInformation );
++    ok( status == STATUS_INVALID_HANDLE, "expected STATUS_INVALID_HANDLE, got %08x\n", status );
++
++    memset(&info, 0x11, sizeof(info));
++    status = pNtQueryInformationFile( h, &io, &info, sizeof(info), FileAccessInformation );
++    ok( status == STATUS_SUCCESS, "expected STATUS_SUCCESS, got %08x\n", status );
++    ok( info.AccessFlags == 0x13019f, "got %08x\n", info.AccessFlags );
++
++    CloseHandle( h );
++}
++
+ static void test_query_volume_information_file(void)
+ {
+     NTSTATUS status;
+@@ -4912,6 +4935,7 @@ START_TEST(file)
+     test_file_disposition_information();
+     test_file_completion_information();
+     test_file_id_information();
++    test_file_access_information();
+     test_query_volume_information_file();
+     test_query_attribute_information_file();
+     test_ioctl();
+-- 
+2.11.0
+

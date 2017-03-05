@@ -271,6 +271,7 @@ patch_enable_all ()
 	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntdll_raise_func_trampoline="$1"
 	enable_ntoskrnl_DriverTest="$1"
+	enable_ntoskrnl_InStackQueuedSpinLock="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -1030,6 +1031,9 @@ patch_enable ()
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
+			;;
+		ntoskrnl-InStackQueuedSpinLock)
+			enable_ntoskrnl_InStackQueuedSpinLock="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -5971,6 +5975,24 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-InStackQueuedSpinLock
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41472] Add stubs for Ke{Aquire,Release}InStackQueuedSpinLock functions
+# |
+# | Modified files:
+# |   *	dlls/hal/hal.spec, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h,
+# | 	tools/make_specfiles
+# |
+if test "$enable_ntoskrnl_InStackQueuedSpinLock" -eq 1; then
+	patch_apply ntoskrnl-InStackQueuedSpinLock/0001-ntoskrnl.exe-add-KeAcquireInStackQueuedSpinLock-stub.patch
+	patch_apply ntoskrnl-InStackQueuedSpinLock/0002-ntoskrnl.exe-Add-KeReleaseInStackQueuedSpinLock-stub.patch
+	(
+		printf '%s\n' '+    { "Austin English", "ntoskrnl.exe: Add KeAcquireInStackQueuedSpinLock stub.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe: Add KeReleaseInStackQueuedSpinLock stub.", 1 },';
 	) >> "$patchlist"
 fi
 

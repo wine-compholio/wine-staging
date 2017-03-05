@@ -293,6 +293,7 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
+	enable_qcap_O_CLOEXEC="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_rasapi32_RasEnumDevicesA="$1"
@@ -1097,6 +1098,9 @@ patch_enable ()
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
+			;;
+		qcap-O_CLOEXEC)
+			enable_qcap_O_CLOEXEC="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -6415,6 +6419,21 @@ if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset qcap-O_CLOEXEC
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42478] Fix compile error when O_CLOEXEC is not defined
+# |
+# | Modified files:
+# |   *	dlls/qcap/v4l.c
+# |
+if test "$enable_qcap_O_CLOEXEC" -eq 1; then
+	patch_apply qcap-O_CLOEXEC/0001-qcap-Fix-compile-error-when-O_CLOEXEC-is-not-defined.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "qcap: Fix compile error when O_CLOEXEC is not defined.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -2868,6 +2868,7 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#41951] Implement bcrypt.BCryptDuplicateHash
 # |   *	[#40418] Implement BCrypt AES provider
+# |   *	[#42553] Implement BCrypt ECB chaining mode
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c,
@@ -2900,6 +2901,7 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0023-bcrypt-Add-support-for-auth-data-in-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0024-bcrypt-tests-Add-tests-for-auth-data-in-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
+	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
 	(
 		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
@@ -2926,6 +2928,7 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for auth data in AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for auth data in AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Implement support for ECB chain mode.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -269,6 +269,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
+	enable_ntdll_raise_func_trampoline="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -1023,6 +1024,9 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
+			;;
+		ntdll-raise_func_trampoline)
+			enable_ntdll_raise_func_trampoline="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -5936,6 +5940,18 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-raise_func_trampoline
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_raise_func_trampoline" -eq 1; then
+	patch_apply ntdll-raise_func_trampoline/0001-ntdll-Save-rdi-and-rsi-in-raise_func_trampoline.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Save rdi and rsi in raise_func_trampoline.", 1 },';
 	) >> "$patchlist"
 fi
 

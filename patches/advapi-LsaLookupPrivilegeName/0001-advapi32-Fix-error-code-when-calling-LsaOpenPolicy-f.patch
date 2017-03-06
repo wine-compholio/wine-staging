@@ -1,0 +1,55 @@
+From ce0ab0ccd6e4953a9673d15e00cf602668469c2c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 5 Mar 2017 23:04:36 +0100
+Subject: advapi32: Fix error code when calling LsaOpenPolicy for non existing
+ remote machine.
+
+---
+ dlls/advapi32/lsa.c       |  2 +-
+ dlls/advapi32/tests/lsa.c | 10 ++++++++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/advapi32/lsa.c b/dlls/advapi32/lsa.c
+index b8dedbd6d58..e5e3b1649c0 100644
+--- a/dlls/advapi32/lsa.c
++++ b/dlls/advapi32/lsa.c
+@@ -692,7 +692,7 @@ NTSTATUS WINAPI LsaOpenPolicy(
+           ObjectAttributes, DesiredAccess, PolicyHandle);
+ 
+     ADVAPI_ForceLocalComputer(SystemName ? SystemName->Buffer : NULL,
+-                              STATUS_ACCESS_VIOLATION);
++                              RPC_NT_SERVER_UNAVAILABLE);
+     dumpLsaAttributes(ObjectAttributes);
+ 
+     if(PolicyHandle) *PolicyHandle = (LSA_HANDLE)0xcafe;
+diff --git a/dlls/advapi32/tests/lsa.c b/dlls/advapi32/tests/lsa.c
+index 4daf75f58d1..7ddda731be2 100644
+--- a/dlls/advapi32/tests/lsa.c
++++ b/dlls/advapi32/tests/lsa.c
+@@ -70,6 +70,8 @@ static BOOL init(void)
+ 
+ static void test_lsa(void)
+ {
++    static WCHAR machineW[] = {'W','i','n','e','N','o','M','a','c','h','i','n','e',0};
++    LSA_UNICODE_STRING machine;
+     NTSTATUS status;
+     LSA_HANDLE handle;
+     LSA_OBJECT_ATTRIBUTES object_attributes;
+@@ -77,6 +79,14 @@ static void test_lsa(void)
+     ZeroMemory(&object_attributes, sizeof(object_attributes));
+     object_attributes.Length = sizeof(object_attributes);
+ 
++    machine.Buffer = machineW;
++    machine.Length = sizeof(machineW) - 2;
++    machine.MaximumLength = sizeof(machineW);
++
++    status = pLsaOpenPolicy( &machine, &object_attributes, POLICY_LOOKUP_NAMES, &handle);
++    ok(status == RPC_NT_SERVER_UNAVAILABLE,
++       "LsaOpenPolicy(POLICY_LOOKUP_NAMES) for invalid machine returned 0x%08x\n", status);
++
+     status = pLsaOpenPolicy( NULL, &object_attributes, POLICY_ALL_ACCESS, &handle);
+     ok(status == STATUS_SUCCESS || status == STATUS_ACCESS_DENIED,
+        "LsaOpenPolicy(POLICY_ALL_ACCESS) returned 0x%08x\n", status);
+-- 
+2.11.0
+

@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_Coverity="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_advapi_LsaLookupPrivilegeName="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
@@ -478,6 +479,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		advapi-LsaLookupPrivilegeName)
+			enable_advapi_LsaLookupPrivilegeName="$2"
 			;;
 		advapi32-GetExplicitEntriesFromAclW)
 			enable_advapi32_GetExplicitEntriesFromAclW="$2"
@@ -2562,6 +2566,25 @@ if test "$enable_Staging" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi-LsaLookupPrivilegeName
+# |
+# | Modified files:
+# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/advapi32_misc.h, dlls/advapi32/lsa.c, dlls/advapi32/security.c,
+# | 	dlls/advapi32/tests/lsa.c, include/ntsecapi.h
+# |
+if test "$enable_advapi_LsaLookupPrivilegeName" -eq 1; then
+	patch_apply advapi-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
+	patch_apply advapi-LsaLookupPrivilegeName/0002-advapi32-Use-TRACE-for-LsaOpenPolicy-LsaClose.patch
+	patch_apply advapi-LsaLookupPrivilegeName/0003-advapi32-Implement-LsaLookupPrivilegeName.patch
+	patch_apply advapi-LsaLookupPrivilegeName/0004-advapi32-Add-stub-for-LsaLookupPrivilegeDisplayName.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement LsaLookupPrivilegeName.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Add stub for LsaLookupPrivilegeDisplayName.", 1 },';
 	) >> "$patchlist"
 fi
 

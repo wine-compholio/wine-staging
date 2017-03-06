@@ -1,0 +1,47 @@
+From d9725ddf519112095da4ac55c484681d839d86b0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 6 Mar 2017 17:40:49 +0100
+Subject: wined3d: Do not pin large buffers.
+
+---
+ dlls/wined3d/buffer.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index c584147717b..4b53c42dbfe 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -1455,6 +1455,7 @@ HRESULT CDECL wined3d_buffer_create(struct wined3d_device *device, const struct
+         struct wined3d_buffer **buffer)
+ {
+     struct wined3d_buffer *object;
++    enum wined3d_pool pool;
+     HRESULT hr;
+ 
+     TRACE("device %p, desc %p, data %p, parent %p, parent_ops %p, buffer %p.\n",
+@@ -1465,8 +1466,21 @@ HRESULT CDECL wined3d_buffer_create(struct wined3d_device *device, const struct
+ 
+     FIXME("Ignoring access flags (pool).\n");
+ 
++    /* Some applications map the whole buffer even if they
++     * only update a small portion of it. If we pin such a
++     * buffer into system memory things get very slow as
++     * we upload the whole buffer even though just parts of
++     * it changed. Most drivers can handle this case more
++     * efficient using the OpenGL map functions. Applications
++     * affected by this problem are Banished and Witcher 3.
++     */
++    if (desc->byte_width > 0x10000)
++        pool = WINED3D_POOL_DEFAULT;
++    else
++        pool = WINED3D_POOL_MANAGED;
++
+     if (FAILED(hr = buffer_init(object, device, desc->byte_width, desc->usage, WINED3DFMT_UNKNOWN,
+-            WINED3D_POOL_MANAGED, desc->bind_flags, data, parent, parent_ops)))
++            pool, desc->bind_flags, data, parent, parent_ops)))
+     {
+         WARN("Failed to initialize buffer, hr %#x.\n", hr);
+         HeapFree(GetProcessHeap(), 0, object);
+-- 
+2.11.0
+

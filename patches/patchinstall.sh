@@ -9039,7 +9039,7 @@ if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
 	(
 		printf '%s\n' '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
-		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 1 },';
+		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 2 },';
 	) >> "$patchlist"
 fi
 

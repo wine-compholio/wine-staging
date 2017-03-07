@@ -1,4 +1,4 @@
-From 77e96719b681f37950972bd78478c1c08a5faebc Mon Sep 17 00:00:00 2001
+From 331d0798182a0e5fab1fe59e6503d5e8597ff403 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 8 Feb 2017 19:35:36 +0100
 Subject: Revert "wined3d: Implement wined3d_buffer_upload_data() on top of
@@ -7,15 +7,15 @@ Subject: Revert "wined3d: Implement wined3d_buffer_upload_data() on top of
 This reverts commit e2dbbec1af8ae2ea8813148d56e14c8c211ee334.
 ---
  dlls/wined3d/buffer.c          | 30 +++++++++++++++++++-----------
- dlls/wined3d/device.c          | 14 +++-----------
+ dlls/wined3d/cs.c              | 13 +++----------
  dlls/wined3d/wined3d_private.h |  2 +-
- 3 files changed, 23 insertions(+), 23 deletions(-)
+ 3 files changed, 23 insertions(+), 22 deletions(-)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index fa3e3a7380a..5cf7b1068f9 100644
+index c584147717b..18933d1f6df 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -532,7 +532,7 @@ ULONG CDECL wined3d_buffer_incref(struct wined3d_buffer *buffer)
+@@ -525,7 +525,7 @@ ULONG CDECL wined3d_buffer_incref(struct wined3d_buffer *buffer)
  
  /* Context activation is done by the caller. */
  static void wined3d_buffer_upload_ranges(struct wined3d_buffer *buffer, struct wined3d_context *context,
@@ -24,7 +24,7 @@ index fa3e3a7380a..5cf7b1068f9 100644
  {
      const struct wined3d_gl_info *gl_info = context->gl_info;
      const struct wined3d_map_range *range;
-@@ -543,7 +543,7 @@ static void wined3d_buffer_upload_ranges(struct wined3d_buffer *buffer, struct w
+@@ -536,7 +536,7 @@ static void wined3d_buffer_upload_ranges(struct wined3d_buffer *buffer, struct w
      {
          range = &ranges[range_count];
          GL_EXTCALL(glBufferSubData(buffer->buffer_type_hint,
@@ -33,7 +33,7 @@ index fa3e3a7380a..5cf7b1068f9 100644
      }
      checkGLcall("glBufferSubData");
  }
-@@ -599,7 +599,7 @@ static void buffer_conversion_upload(struct wined3d_buffer *buffer, struct wined
+@@ -592,7 +592,7 @@ static void buffer_conversion_upload(struct wined3d_buffer *buffer, struct wined
          }
      }
  
@@ -42,7 +42,7 @@ index fa3e3a7380a..5cf7b1068f9 100644
  
      HeapFree(GetProcessHeap(), 0, data);
  }
-@@ -683,7 +683,7 @@ BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer,
+@@ -676,7 +676,7 @@ BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer,
          case WINED3D_LOCATION_BUFFER:
              if (!buffer->conversion_map)
                  wined3d_buffer_upload_ranges(buffer, context, buffer->resource.heap_memory,
@@ -51,7 +51,7 @@ index fa3e3a7380a..5cf7b1068f9 100644
              else
                  buffer_conversion_upload(buffer, context);
              break;
-@@ -1267,23 +1267,31 @@ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_
+@@ -1261,23 +1261,31 @@ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_
      return WINED3D_OK;
  }
  
@@ -90,43 +90,37 @@ index fa3e3a7380a..5cf7b1068f9 100644
  }
  
  static ULONG buffer_resource_incref(struct wined3d_resource *resource)
-diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index a7ee5bc099d..a3adf3255f1 100644
---- a/dlls/wined3d/device.c
-+++ b/dlls/wined3d/device.c
-@@ -4127,6 +4127,7 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
-     if (resource->type == WINED3D_RTYPE_BUFFER)
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 9f3de815be5..39071faef32 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1669,18 +1669,11 @@ static void wined3d_cs_exec_update_sub_resource(struct wined3d_cs *cs, const voi
+     if (op->resource->type == WINED3D_RTYPE_BUFFER)
      {
-         struct wined3d_buffer *buffer = buffer_from_resource(resource);
+         struct wined3d_buffer *buffer = buffer_from_resource(op->resource);
 +        HRESULT hr;
  
-         if (sub_resource_idx > 0)
-         {
-@@ -4134,17 +4135,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
-             return;
-         }
- 
--        context = context_acquire(resource->device, NULL, 0);
+-        context = context_acquire(op->resource->device, NULL, 0);
 -        if (!wined3d_buffer_load_location(buffer, context, WINED3D_LOCATION_BUFFER))
 -        {
 -            ERR("Failed to load buffer location.\n");
 -            context_release(context);
--            return;
+-            goto done;
 -        }
--
--        wined3d_buffer_upload_data(buffer, context, box, data);
--        wined3d_buffer_invalidate_location(buffer, ~WINED3D_LOCATION_BUFFER);
--        context_release(context);
-+        if (FAILED(hr = wined3d_buffer_upload_data(buffer, box, data)))
++        if (FAILED(hr = wined3d_buffer_upload_data(buffer, box, op->data.data)))
 +            WARN("Failed to update buffer data, hr %#x.\n", hr);
  
-         return;
+-        wined3d_buffer_upload_data(buffer, context, box, op->data.data);
+-        wined3d_buffer_invalidate_location(buffer, ~WINED3D_LOCATION_BUFFER);
+-        context_release(context);
+         goto done;
      }
+ 
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 50b7c93cad8..30de702098a 100644
+index 48f2f368d20..3883792f6fe 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3300,7 +3300,7 @@ BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer,
+@@ -3343,7 +3343,7 @@ BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer,
  BYTE *wined3d_buffer_load_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *context) DECLSPEC_HIDDEN;
  HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_offset,
          struct wined3d_buffer *src_buffer, unsigned int src_offset, unsigned int size) DECLSPEC_HIDDEN;

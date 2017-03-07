@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a2460b2424163bbf5b885db6a5423c3d98f883e0"
+	echo "3f50319ec384730360d16dd79d703adafaa953fc"
 }
 
 # Show version information
@@ -2744,10 +2744,8 @@ fi
 # |
 if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
 	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
-	patch_apply kernel32-GetCurrentPackageFamilyName/0002-kernel32-add-stub-for-GetCurrentPackageFullName.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
-		printf '%s\n' '+    { "Louis Lenders", "kernel32: Add stub for GetCurrentPackageFullName.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8436,7 +8434,7 @@ fi
 # Patchset wined3d-Revert_Buffer_Upload
 # |
 # | Modified files:
-# |   *	dlls/wined3d/buffer.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Revert_Buffer_Upload" -eq 1; then
 	patch_apply wined3d-Revert_Buffer_Upload/0001-Revert-wined3d-Implement-wined3d_buffer_upload_data-.patch
@@ -8593,18 +8591,15 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_sub_resource calls through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send query_poll through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
 		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer update subresource requests through CS.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer copy requests through CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add a separate variable to check if queries are started.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Map vertex buffers through cs.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add swapchain waits.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';

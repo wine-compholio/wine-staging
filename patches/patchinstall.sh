@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3f50319ec384730360d16dd79d703adafaa953fc"
+	echo "9eecacbeb1561218d4870c83f89a233cabbf7e0c"
 }
 
 # Show version information
@@ -227,7 +227,6 @@ patch_enable_all ()
 	enable_ntdll_DllOverrides_WOW64="$1"
 	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
-	enable_ntdll_FileAccessInformation="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
@@ -271,9 +270,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
-	enable_ntdll_raise_func_trampoline="$1"
 	enable_ntoskrnl_DriverTest="$1"
-	enable_ntoskrnl_InStackQueuedSpinLock="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -904,9 +901,6 @@ patch_enable ()
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
 			;;
-		ntdll-FileAccessInformation)
-			enable_ntdll_FileAccessInformation="$2"
-			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
 			;;
@@ -1036,14 +1030,8 @@ patch_enable ()
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
 			;;
-		ntdll-raise_func_trampoline)
-			enable_ntdll_raise_func_trampoline="$2"
-			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
-			;;
-		ntoskrnl-InStackQueuedSpinLock)
-			enable_ntoskrnl_InStackQueuedSpinLock="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -2734,9 +2722,6 @@ if test "$enable_combase_RoApi" -eq 1; then
 fi
 
 # Patchset kernel32-GetCurrentPackageFamilyName
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42586] Add stub for kernel32.GetCurrentPackageFullName
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
@@ -5354,21 +5339,6 @@ if test "$enable_ntdll_Exception" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-FileAccessInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42550] Implement FileAccessInformation class
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_FileAccessInformation" -eq 1; then
-	patch_apply ntdll-FileAccessInformation/0001-ntdll-Implement-FileAccessInformation-class-in-NtQue.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileAccessInformation class in NtQueryInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileFsFullSizeInformation
 # |
 # | Modified files:
@@ -6003,18 +5973,6 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-raise_func_trampoline
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_raise_func_trampoline" -eq 1; then
-	patch_apply ntdll-raise_func_trampoline/0001-ntdll-Save-rdi-and-rsi-in-raise_func_trampoline.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Save rdi and rsi in raise_func_trampoline.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntoskrnl-DriverTest
 # |
 # | Modified files:
@@ -6031,24 +5989,6 @@ if test "$enable_ntoskrnl_DriverTest" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-InStackQueuedSpinLock
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41472] Add stubs for Ke{Aquire,Release}InStackQueuedSpinLock functions
-# |
-# | Modified files:
-# |   *	dlls/hal/hal.spec, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h,
-# | 	tools/make_specfiles
-# |
-if test "$enable_ntoskrnl_InStackQueuedSpinLock" -eq 1; then
-	patch_apply ntoskrnl-InStackQueuedSpinLock/0001-ntoskrnl.exe-add-KeAcquireInStackQueuedSpinLock-stub.patch
-	patch_apply ntoskrnl-InStackQueuedSpinLock/0002-ntoskrnl.exe-Add-KeReleaseInStackQueuedSpinLock-stub.patch
-	(
-		printf '%s\n' '+    { "Austin English", "ntoskrnl.exe: Add KeAcquireInStackQueuedSpinLock stub.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe: Add KeReleaseInStackQueuedSpinLock stub.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9eecacbeb1561218d4870c83f89a233cabbf7e0c"
+	echo "1ddf2b4db8c42da36bdccd43dc336eee6ba03cce"
 }
 
 # Show version information
@@ -97,7 +97,6 @@ patch_enable_all ()
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_Improvements="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_cabinet_iFolder="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_Listview_DrawItem="$1"
@@ -178,7 +177,6 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
-	enable_kernel32_GetCurrentPackageFamilyName="$1"
 	enable_kernel32_GetPackageFullName="$1"
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
@@ -295,7 +293,6 @@ patch_enable_all ()
 	enable_qcap_O_CLOEXEC="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
-	enable_rasapi32_RasEnumDevicesA="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
@@ -510,9 +507,6 @@ patch_enable ()
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
-			;;
-		cabinet-iFolder)
-			enable_cabinet_iFolder="$2"
 			;;
 		combase-RoApi)
 			enable_combase_RoApi="$2"
@@ -753,9 +747,6 @@ patch_enable ()
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
-			;;
-		kernel32-GetCurrentPackageFamilyName)
-			enable_kernel32_GetCurrentPackageFamilyName="$2"
 			;;
 		kernel32-GetPackageFullName)
 			enable_kernel32_GetPackageFullName="$2"
@@ -1104,9 +1095,6 @@ patch_enable ()
 			;;
 		quartz-Silence_FIXMEs)
 			enable_quartz_Silence_FIXMEs="$2"
-			;;
-		rasapi32-RasEnumDevicesA)
-			enable_rasapi32_RasEnumDevicesA="$2"
 			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
@@ -2335,11 +2323,7 @@ if test "$enable_kernel32_GetPackageFullName" -eq 1; then
 	if test "$enable_api_ms_win_Stub_DLLs" -gt 1; then
 		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-GetPackageFullName depends on that."
 	fi
-	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
-		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but kernel32-GetPackageFullName depends on that."
-	fi
 	enable_api_ms_win_Stub_DLLs=1
-	enable_kernel32_GetCurrentPackageFamilyName=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -2428,14 +2412,10 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
-	if test "$enable_kernel32_GetCurrentPackageFamilyName" -gt 1; then
-		abort "Patchset kernel32-GetCurrentPackageFamilyName disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
 	if test "$enable_kernel32_UmsStubs" -gt 1; then
 		abort "Patchset kernel32-UmsStubs disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
 	enable_combase_RoApi=1
-	enable_kernel32_GetCurrentPackageFamilyName=1
 	enable_kernel32_UmsStubs=1
 fi
 
@@ -2721,19 +2701,6 @@ if test "$enable_combase_RoApi" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetCurrentPackageFamilyName
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
-# | 	dlls/kernel32/version.c
-# |
-if test "$enable_kernel32_GetCurrentPackageFamilyName" -eq 1; then
-	patch_apply kernel32-GetCurrentPackageFamilyName/0001-kernel32-Add-stub-for-GetCurrentPackageFamilyName-an.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for GetCurrentPackageFamilyName and add related functions to spec file.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-UmsStubs
 # |
 # | Modified files:
@@ -2752,7 +2719,7 @@ fi
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName, kernel32-UmsStubs
+# |   *	combase-RoApi, kernel32-UmsStubs
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40451] Add feclient dll
@@ -2953,21 +2920,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset cabinet-iFolder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#10858] Set index of folder in FDICopy callback
-# |
-# | Modified files:
-# |   *	dlls/cabinet/fdi.c
-# |
-if test "$enable_cabinet_iFolder" -eq 1; then
-	patch_apply cabinet-iFolder/0001-cabinet-Set-index-of-folder-in-FDICopy-callback.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "cabinet: Set index of folder in FDICopy callback.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4476,7 +4428,7 @@ fi
 # Patchset kernel32-GetPackageFullName
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName, kernel32-UmsStubs, api-ms-win-Stub_DLLs
+# |   *	combase-RoApi, kernel32-UmsStubs, api-ms-win-Stub_DLLs
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
@@ -4719,7 +4671,7 @@ fi
 # Patchset kernel32-Processor_Group
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-GetCurrentPackageFamilyName, kernel32-UmsStubs, api-ms-win-Stub_DLLs
+# |   *	combase-RoApi, kernel32-UmsStubs, api-ms-win-Stub_DLLs
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
@@ -6458,21 +6410,6 @@ if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset rasapi32-RasEnumDevicesA
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30378] Initialize *lpcDevices in RasEnumDevicesA
-# |
-# | Modified files:
-# |   *	dlls/rasapi32/rasapi.c, dlls/rasapi32/tests/rasapi.c
-# |
-if test "$enable_rasapi32_RasEnumDevicesA" -eq 1; then
-	patch_apply rasapi32-RasEnumDevicesA/0001-rasapi32-Set-lpcDevices-in-RasEnumDevicesA.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "rasapi32: Set *lpcDevices in RasEnumDevicesA.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8537,7 +8474,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
 		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send buffer copy requests through CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add a separate variable to check if queries are started.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';

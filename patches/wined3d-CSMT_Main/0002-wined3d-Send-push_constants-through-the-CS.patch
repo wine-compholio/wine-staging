@@ -1,4 +1,4 @@
-From ec1172f3bd0ba8c66347ed17edf086c850665f24 Mon Sep 17 00:00:00 2001
+From 9e6e4d61e56980850bbbc340d510e9a57f9d5627 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 6 Feb 2017 05:50:11 +0100
 Subject: wined3d: Send push_constants through the CS.
@@ -10,18 +10,18 @@ Subject: wined3d: Send push_constants through the CS.
  3 files changed, 77 insertions(+), 58 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 543528ae570..72c0ace384c 100644
+index 8c0abf449f2..0d74ea806a9 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -66,6 +66,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_MAP,
+@@ -67,6 +67,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_UNMAP,
+     WINED3D_CS_OP_BLT_SUB_RESOURCE,
      WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
 +    WINED3D_CS_OP_PUSH_CONSTANTS,
  };
  
  struct wined3d_cs_sync
-@@ -366,6 +367,15 @@ struct wined3d_cs_update_sub_resource
+@@ -381,6 +382,15 @@ struct wined3d_cs_update_sub_resource
      struct wined3d_sub_resource_data data;
  };
  
@@ -37,7 +37,7 @@ index 543528ae570..72c0ace384c 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -1773,6 +1783,64 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+@@ -1856,6 +1866,64 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
      cs->ops->submit_and_wait(cs);
  }
  
@@ -102,15 +102,15 @@ index 543528ae570..72c0ace384c 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -1815,6 +1883,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_MAP                        */ wined3d_cs_exec_map,
+@@ -1899,6 +1967,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_UNMAP                      */ wined3d_cs_exec_unmap,
+     /* WINED3D_CS_OP_BLT_SUB_RESOURCE           */ wined3d_cs_exec_blt_sub_resource,
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
 +    /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
-@@ -1861,55 +1930,11 @@ static void wined3d_cs_st_submit(struct wined3d_cs *cs)
+@@ -1945,55 +2014,11 @@ static void wined3d_cs_st_submit(struct wined3d_cs *cs)
          HeapFree(GetProcessHeap(), 0, data);
  }
  
@@ -167,10 +167,10 @@ index 543528ae570..72c0ace384c 100644
  
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index ea27553e8c8..a06cae6412e 100644
+index e328f32403f..c3a10a2d13a 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2337,7 +2337,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_b(struct wined3d_device *device,
+@@ -2376,7 +2376,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_b(struct wined3d_device *device,
      }
      else
      {
@@ -179,7 +179,7 @@ index ea27553e8c8..a06cae6412e 100644
      }
  
      return WINED3D_OK;
-@@ -2386,7 +2386,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
+@@ -2425,7 +2425,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_i(struct wined3d_device *device,
      }
      else
      {
@@ -188,7 +188,7 @@ index ea27553e8c8..a06cae6412e 100644
      }
  
      return WINED3D_OK;
-@@ -2431,7 +2431,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_f(struct wined3d_device *device,
+@@ -2470,7 +2470,7 @@ HRESULT CDECL wined3d_device_set_vs_consts_f(struct wined3d_device *device,
          memset(&device->recording->changed.vs_consts_f[start_idx], 1,
                  count * sizeof(*device->recording->changed.vs_consts_f));
      else
@@ -197,7 +197,7 @@ index ea27553e8c8..a06cae6412e 100644
  
      return WINED3D_OK;
  }
-@@ -2570,7 +2570,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_b(struct wined3d_device *device,
+@@ -2591,7 +2591,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_b(struct wined3d_device *device,
      }
      else
      {
@@ -206,7 +206,7 @@ index ea27553e8c8..a06cae6412e 100644
      }
  
      return WINED3D_OK;
-@@ -2619,7 +2619,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
+@@ -2640,7 +2640,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_i(struct wined3d_device *device,
      }
      else
      {
@@ -215,7 +215,7 @@ index ea27553e8c8..a06cae6412e 100644
      }
  
      return WINED3D_OK;
-@@ -2665,7 +2665,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_f(struct wined3d_device *device,
+@@ -2686,7 +2686,7 @@ HRESULT CDECL wined3d_device_set_ps_consts_f(struct wined3d_device *device,
          memset(&device->recording->changed.ps_consts_f[start_idx], 1,
                  count * sizeof(*device->recording->changed.ps_consts_f));
      else
@@ -225,10 +225,10 @@ index ea27553e8c8..a06cae6412e 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index d2e0052067f..2a8f075667a 100644
+index 2922caaa412..9c68628ed6c 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3199,8 +3199,6 @@ struct wined3d_cs_ops
+@@ -3200,8 +3200,6 @@ struct wined3d_cs_ops
      void *(*require_space)(struct wined3d_cs *cs, size_t size);
      void (*submit)(struct wined3d_cs *cs);
      void (*submit_and_wait)(struct wined3d_cs *cs);
@@ -237,7 +237,7 @@ index d2e0052067f..2a8f075667a 100644
  };
  
  struct wined3d_cs
-@@ -3229,6 +3227,8 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
+@@ -3234,6 +3232,8 @@ void wined3d_cs_emit_glfinish(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_preload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *swapchain,
          const RECT *src_rect, const RECT *dst_rect, HWND dst_window_override, DWORD flags) DECLSPEC_HIDDEN;
@@ -246,7 +246,7 @@ index d2e0052067f..2a8f075667a 100644
  void wined3d_cs_emit_query_issue(struct wined3d_cs *cs, struct wined3d_query *query, DWORD flags) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_reset_state(struct wined3d_cs *cs) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_clip_plane(struct wined3d_cs *cs, UINT plane_idx,
-@@ -3289,12 +3289,6 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+@@ -3294,12 +3294,6 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
  HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx) DECLSPEC_HIDDEN;
  

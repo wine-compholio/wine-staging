@@ -7281,10 +7281,12 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 	patch_apply taskmgr-Memory_Usage/0002-ntdll-Report-system-information-SystemPerformanceInf.patch
 	patch_apply taskmgr-Memory_Usage/0003-taskmgr-Use-system-font-instead-of-special-bitmap-fo.patch
 	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
+	patch_apply taskmgr-Memory_Usage/0005-ntdll-Implement-basic-IO-stats-for-SystemPerformance.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement basic IO stats for SystemPerformanceInformation in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

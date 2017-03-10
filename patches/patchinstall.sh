@@ -261,6 +261,7 @@ patch_enable_all ()
 	enable_ntdll_SystemRecommendedSharedDataAlignment="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
+	enable_ntdll_Thread_Creation_Time="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
@@ -1000,6 +1001,9 @@ patch_enable ()
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
+			;;
+		ntdll-Thread_Creation_Time)
+			enable_ntdll_Thread_Creation_Time="$2"
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
@@ -2143,6 +2147,13 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
+fi
+
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	if test "$enable_ntdll_Thread_Creation_Time" -gt 1; then
+		abort "Patchset ntdll-Thread_Creation_Time disabled, but server-Realtime_Priority depends on that."
+	fi
+	enable_ntdll_Thread_Creation_Time=1
 fi
 
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
@@ -5794,6 +5805,18 @@ if test "$enable_ntdll_ThreadTime" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Thread_Creation_Time
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, server/protocol.def, server/snapshot.c, server/thread.h
+# |
+if test "$enable_ntdll_Thread_Creation_Time" -eq 1; then
+	patch_apply ntdll-Thread_Creation_Time/0001-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Threading
 # |
 # | Modified files:
@@ -6650,6 +6673,9 @@ if test "$enable_server_Pipe_ObjectName" -eq 1; then
 fi
 
 # Patchset server-Realtime_Priority
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Thread_Creation_Time
 # |
 # | Modified files:
 # |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h

@@ -1,0 +1,74 @@
+From e6832d1b0f923e7589424ade7571cc67dc768c4d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 9 Mar 2017 00:00:46 +0100
+Subject: ntdll: Set correct thread creation time for SystemProcessInformation
+ in NtQuerySystemInformation.
+
+---
+ dlls/ntdll/nt.c     |  2 +-
+ server/protocol.def |  1 +
+ server/snapshot.c   | 11 ++++++-----
+ server/thread.h     |  1 +
+ 4 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 86beb031e9c..fc8e3b1eb4e 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2012,7 +2012,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+ 
+                                     memset(&spi->ti[i], 0, sizeof(spi->ti));
+ 
+-                                    spi->ti[i].CreateTime.QuadPart = 0xdeadbeef;
++                                    spi->ti[i].CreateTime.QuadPart = reply->creation_time;
+                                     spi->ti[i].ClientId.UniqueProcess = UlongToHandle(reply->pid);
+                                     spi->ti[i].ClientId.UniqueThread  = UlongToHandle(reply->tid);
+                                     spi->ti[i].dwCurrentPriority = reply->base_pri + reply->delta_pri;
+diff --git a/server/protocol.def b/server/protocol.def
+index 60865a6ffc2..15adc51462f 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1783,6 +1783,7 @@ enum char_info_mode
+     int          count;         /* thread usage count */
+     process_id_t pid;           /* process id */
+     thread_id_t  tid;           /* thread id */
++    timeout_t    creation_time; /* thread creation time */
+     int          base_pri;      /* base priority */
+     int          delta_pri;     /* delta priority */
+ @END
+diff --git a/server/snapshot.c b/server/snapshot.c
+index e35588a136c..858fca898a7 100644
+--- a/server/snapshot.c
++++ b/server/snapshot.c
+@@ -144,11 +144,12 @@ static int snapshot_next_thread( struct snapshot *snapshot, struct next_thread_r
+         return 0;
+     }
+     ptr = &snapshot->threads[snapshot->thread_pos++];
+-    reply->count     = ptr->count;
+-    reply->pid       = get_process_id( ptr->thread->process );
+-    reply->tid       = get_thread_id( ptr->thread );
+-    reply->base_pri  = ptr->priority;
+-    reply->delta_pri = 0;  /* FIXME */
++    reply->count         = ptr->count;
++    reply->pid           = get_process_id( ptr->thread->process );
++    reply->tid           = get_thread_id( ptr->thread );
++    reply->creation_time = get_thread_creation_time( ptr->thread );
++    reply->base_pri      = ptr->priority;
++    reply->delta_pri     = 0;  /* FIXME */
+     return 1;
+ }
+ 
+diff --git a/server/thread.h b/server/thread.h
+index 282199149e6..2098c76a472 100644
+--- a/server/thread.h
++++ b/server/thread.h
+@@ -145,5 +145,6 @@ static inline void clear_error(void)             { set_error(0); }
+ static inline void set_win32_error( unsigned int err ) { set_error( 0xc0010000 | err ); }
+ 
+ static inline thread_id_t get_thread_id( struct thread *thread ) { return thread->id; }
++static inline timeout_t get_thread_creation_time( struct thread *thread ) { return thread->creation_time; }
+ 
+ #endif  /* __WINE_SERVER_THREAD_H */
+-- 
+2.11.0
+

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1ddf2b4db8c42da36bdccd43dc336eee6ba03cce"
+	echo "be0e05604a5560e26757d161708c2c3dae717834"
 }
 
 # Show version information
@@ -2848,15 +2848,11 @@ fi
 # |   *	[#42553] Implement BCrypt ECB chaining mode
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c,
-# | 	dlls/bcrypt/sha256.c, dlls/bcrypt/sha384.c, dlls/bcrypt/sha512.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
 # | 	include/bcrypt.h, include/ntstatus.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0001-bcrypt-Add-AES-provider.patch
-	patch_apply bcrypt-Improvements/0002-bcrypt-Directly-implement-hmac-computation.patch
-	patch_apply bcrypt-Improvements/0003-bcrypt-Add-internal-fallback-implementation-for-hash.patch
-	patch_apply bcrypt-Improvements/0004-bcrypt-Use-hash-fallback-implementation-as-default-a.patch
 	patch_apply bcrypt-Improvements/0005-bcrypt-Implement-BCryptDuplicateHash.patch
 	patch_apply bcrypt-Improvements/0006-bcrypt-Fix-handling-of-padding-when-input-size-equal.patch
 	patch_apply bcrypt-Improvements/0007-bcrypt-Properly-handle-padding-in-AES-decryption.patch
@@ -2881,9 +2877,6 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
 	(
 		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Directly implement hmac computation.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add internal fallback implementation for hash calculations.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Use hash fallback implementation as default and remove gnutls / commoncrypto hash implemetation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';

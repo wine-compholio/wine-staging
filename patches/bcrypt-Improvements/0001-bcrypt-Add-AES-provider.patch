@@ -1,15 +1,15 @@
-From 489a67ec803b382248134be53f3449c206e208ff Mon Sep 17 00:00:00 2001
+From 6af9d620b8e766dbb45ac4237e392c752cd69f64 Mon Sep 17 00:00:00 2001
 From: Hans Leidekker <hans@codeweavers.com>
 Date: Mon, 19 Dec 2016 19:38:52 +0100
 Subject: bcrypt: Add AES provider.
 
 ---
  dlls/bcrypt/bcrypt.spec    |  10 +-
- dlls/bcrypt/bcrypt_main.c  | 347 ++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/bcrypt/bcrypt_main.c  | 346 ++++++++++++++++++++++++++++++++++++++++++++-
  dlls/bcrypt/tests/bcrypt.c |  18 +--
  dlls/ncrypt/ncrypt.spec    |  10 +-
  include/bcrypt.h           |   3 +
- 5 files changed, 357 insertions(+), 31 deletions(-)
+ 5 files changed, 357 insertions(+), 30 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
 index e299fe0cce8..962953e509b 100644
@@ -53,10 +53,10 @@ index e299fe0cce8..962953e509b 100644
  @ stub BCryptUnregisterConfigChangeNotify
  @ stub BCryptUnregisterProvider
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 6023c942e49..5867dbdc3fa 100644
+index cf4e3c6ccc3..b28699c26d5 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -49,6 +49,10 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+@@ -51,6 +51,10 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
  
  static void *libgnutls_handle;
  #define MAKE_FUNCPTR(f) static typeof(f) * p##f
@@ -67,7 +67,7 @@ index 6023c942e49..5867dbdc3fa 100644
  MAKE_FUNCPTR(gnutls_global_deinit);
  MAKE_FUNCPTR(gnutls_global_init);
  MAKE_FUNCPTR(gnutls_global_set_log_function);
-@@ -84,6 +88,10 @@ static BOOL gnutls_initialize(void)
+@@ -80,6 +84,10 @@ static BOOL gnutls_initialize(void)
          goto fail; \
      }
  
@@ -78,7 +78,7 @@ index 6023c942e49..5867dbdc3fa 100644
      LOAD_FUNCPTR(gnutls_global_deinit)
      LOAD_FUNCPTR(gnutls_global_init)
      LOAD_FUNCPTR(gnutls_global_set_log_function)
-@@ -138,6 +146,7 @@ NTSTATUS WINAPI BCryptEnumAlgorithms(ULONG dwAlgOperations, ULONG *pAlgCount,
+@@ -128,6 +136,7 @@ NTSTATUS WINAPI BCryptEnumAlgorithms(ULONG dwAlgOperations, ULONG *pAlgCount,
  
  #define MAGIC_ALG  (('A' << 24) | ('L' << 16) | ('G' << 8) | '0')
  #define MAGIC_HASH (('H' << 24) | ('A' << 16) | ('S' << 8) | 'H')
@@ -86,7 +86,7 @@ index 6023c942e49..5867dbdc3fa 100644
  struct object
  {
      ULONG magic;
-@@ -145,6 +154,7 @@ struct object
+@@ -135,6 +144,7 @@ struct object
  
  enum alg_id
  {
@@ -94,15 +94,15 @@ index 6023c942e49..5867dbdc3fa 100644
      ALG_ID_MD5,
      ALG_ID_RNG,
      ALG_ID_SHA1,
-@@ -157,6 +167,7 @@ static const struct {
-     ULONG hash_length;
+@@ -151,6 +161,7 @@ static const struct {
+     ULONG block_bits;
      const WCHAR *alg_name;
  } alg_props[] = {
-+    /* ALG_ID_AES    */ {  0, BCRYPT_AES_ALGORITHM },
-     /* ALG_ID_MD5    */ { 16, BCRYPT_MD5_ALGORITHM },
-     /* ALG_ID_RNG    */ {  0, BCRYPT_RNG_ALGORITHM },
-     /* ALG_ID_SHA1   */ { 20, BCRYPT_SHA1_ALGORITHM },
-@@ -215,11 +226,10 @@ NTSTATUS WINAPI BCryptGenRandom(BCRYPT_ALG_HANDLE handle, UCHAR *buffer, ULONG c
++    /* ALG_ID_AES    */ {  0,    0, BCRYPT_AES_ALGORITHM },
+     /* ALG_ID_MD5    */ { 16,  512, BCRYPT_MD5_ALGORITHM },
+     /* ALG_ID_RNG    */ {  0,    0, BCRYPT_RNG_ALGORITHM },
+     /* ALG_ID_SHA1   */ { 20,  512, BCRYPT_SHA1_ALGORITHM },
+@@ -209,11 +220,10 @@ NTSTATUS WINAPI BCryptGenRandom(BCRYPT_ALG_HANDLE handle, UCHAR *buffer, ULONG c
  
  NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR id, LPCWSTR implementation, DWORD flags )
  {
@@ -115,7 +115,7 @@ index 6023c942e49..5867dbdc3fa 100644
      TRACE( "%p, %s, %s, %08x\n", handle, wine_dbgstr_w(id), wine_dbgstr_w(implementation), flags );
  
      if (!handle || !id) return STATUS_INVALID_PARAMETER;
-@@ -229,9 +239,10 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
+@@ -223,9 +233,10 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
          return STATUS_NOT_IMPLEMENTED;
      }
  
@@ -127,17 +127,9 @@ index 6023c942e49..5867dbdc3fa 100644
      else if (!strcmpW( id, BCRYPT_SHA256_ALGORITHM )) alg_id = ALG_ID_SHA256;
      else if (!strcmpW( id, BCRYPT_SHA384_ALGORITHM )) alg_id = ALG_ID_SHA384;
      else if (!strcmpW( id, BCRYPT_SHA512_ALGORITHM )) alg_id = ALG_ID_SHA512;
-@@ -430,7 +441,6 @@ static NTSTATUS hash_finish( struct hash *hash, UCHAR *output, ULONG size )
- static NTSTATUS hmac_finish( struct hash *hash, UCHAR *output, ULONG size )
- {
-     CCHmacFinal( &hash->u.hmac_ctx, output );
--
-     return STATUS_SUCCESS;
- }
- #elif defined(HAVE_GNUTLS_HASH)
-@@ -586,12 +596,19 @@ static NTSTATUS hmac_finish( struct hash *hash, UCHAR *output, ULONG size )
- }
- #endif
+@@ -387,12 +398,19 @@ struct hash
+     struct hash_impl inner;
+ };
  
 +#ifdef _WIN64
 +#define OBJECT_LENGTH_AES       654
@@ -155,7 +147,7 @@ index 6023c942e49..5867dbdc3fa 100644
  static NTSTATUS generic_alg_property( enum alg_id id, const WCHAR *prop, UCHAR *buf, ULONG size, ULONG *ret_size )
  {
      if (!strcmpW( prop, BCRYPT_HASH_LENGTH ))
-@@ -628,6 +645,34 @@ static NTSTATUS get_alg_property( enum alg_id id, const WCHAR *prop, UCHAR *buf,
+@@ -429,6 +447,34 @@ static NTSTATUS get_alg_property( enum alg_id id, const WCHAR *prop, UCHAR *buf,
  
      switch (id)
      {
@@ -190,7 +182,7 @@ index 6023c942e49..5867dbdc3fa 100644
      case ALG_ID_MD5:
          if (!strcmpW( prop, BCRYPT_OBJECT_LENGTH ))
          {
-@@ -731,6 +776,13 @@ NTSTATUS WINAPI BCryptGetProperty( BCRYPT_HANDLE handle, LPCWSTR prop, UCHAR *bu
+@@ -532,6 +578,13 @@ NTSTATUS WINAPI BCryptGetProperty( BCRYPT_HANDLE handle, LPCWSTR prop, UCHAR *bu
      }
  }
  
@@ -204,7 +196,7 @@ index 6023c942e49..5867dbdc3fa 100644
  NTSTATUS WINAPI BCryptCreateHash( BCRYPT_ALG_HANDLE algorithm, BCRYPT_HASH_HANDLE *handle, UCHAR *object, ULONG objectlen,
                                    UCHAR *secret, ULONG secretlen, ULONG flags )
  {
-@@ -854,6 +906,293 @@ NTSTATUS WINAPI BCryptHash( BCRYPT_ALG_HANDLE algorithm, UCHAR *secret, ULONG se
+@@ -670,6 +723,293 @@ NTSTATUS WINAPI BCryptHash( BCRYPT_ALG_HANDLE algorithm, UCHAR *secret, ULONG se
      return BCryptDestroyHash( handle );
  }
  

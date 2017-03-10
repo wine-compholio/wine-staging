@@ -244,6 +244,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
+	enable_ntdll_ProcessImageFileNameWin32="$1"
 	enable_ntdll_ProcessPriorityClass="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
@@ -948,6 +949,9 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
+			;;
+		ntdll-ProcessImageFileNameWin32)
+			enable_ntdll_ProcessImageFileNameWin32="$2"
 			;;
 		ntdll-ProcessPriorityClass)
 			enable_ntdll_ProcessPriorityClass="$2"
@@ -5562,6 +5566,18 @@ if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ProcessImageFileNameWin32
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c, include/winternl.h
+# |
+if test "$enable_ntdll_ProcessImageFileNameWin32" -eq 1; then
+	patch_apply ntdll-ProcessImageFileNameWin32/0001-ntdll-Implement-ProcessImageFileNameWin32-in-NtQuery.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ProcessImageFileNameWin32 in NtQueryInformationProcess.", 1 },';
 	) >> "$patchlist"
 fi
 

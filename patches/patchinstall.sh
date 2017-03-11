@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "be0e05604a5560e26757d161708c2c3dae717834"
+	echo "4b1445940d47870895b7fa87b7d69d12abe701ef"
 }
 
 # Show version information
@@ -2858,7 +2858,6 @@ fi
 # Patchset bcrypt-Improvements
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#41951] Implement bcrypt.BCryptDuplicateHash
 # |   *	[#40418] Implement BCrypt AES provider
 # |   *	[#42553] Implement BCrypt ECB chaining mode
 # |
@@ -2868,11 +2867,9 @@ fi
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0001-bcrypt-Add-AES-provider.patch
-	patch_apply bcrypt-Improvements/0005-bcrypt-Implement-BCryptDuplicateHash.patch
 	patch_apply bcrypt-Improvements/0006-bcrypt-Fix-handling-of-padding-when-input-size-equal.patch
 	patch_apply bcrypt-Improvements/0007-bcrypt-Properly-handle-padding-in-AES-decryption.patch
 	patch_apply bcrypt-Improvements/0008-bcrypt-Fix-use-after-free-in-key_init.patch
-	patch_apply bcrypt-Improvements/0009-bcrypt-Handle-NULL-pointers-in-BCryptDuplicateHash-a.patch
 	patch_apply bcrypt-Improvements/0010-bcrypt-tests-Add-test-for-bugs-in-BCryptGetProperty.patch
 	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0012-bcrypt-Pass-object-to-get_-alg-hash-_property-instea.patch
@@ -2892,11 +2889,9 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
 	(
 		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateHash.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix use-after-free in key_init.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Handle NULL pointers in BCryptDuplicateHash and add tests.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
@@ -5985,7 +5980,6 @@ fi
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	patch_apply ntoskrnl-Stubs/0001-ntoskrnl.exe-add-KeWaitForMultipleObjects-stub.patch
 	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
 	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
@@ -5996,7 +5990,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
 	(
-		printf '%s\n' '+    { "Austin English", "ntoskrnl.exe: Add KeWaitForMultipleObjects stub.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';

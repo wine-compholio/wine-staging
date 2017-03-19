@@ -5446,6 +5446,9 @@ fi
 
 # Patchset ntdll-Interrupt-0x2e
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42647] Implement stub handler for int 0x2e
+# |
 # | Modified files:
 # |   *	dlls/ntdll/signal_i386.c, include/wine/exception.h
 # |

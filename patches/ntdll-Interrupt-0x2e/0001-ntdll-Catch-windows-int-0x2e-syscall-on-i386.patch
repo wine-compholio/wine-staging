@@ -1,0 +1,56 @@
+From 40f4e264b0c957eafe187bc0de597c3aa18dc6be Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 19 Mar 2017 19:08:34 +0100
+Subject: ntdll: Catch windows int 0x2e syscall on i386.
+
+---
+ dlls/ntdll/signal_i386.c | 13 +++++++++++++
+ include/wine/exception.h |  1 +
+ 2 files changed, 14 insertions(+)
+
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index d76fe95dfa..93d9418527 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1572,6 +1572,14 @@ static inline BOOL handle_interrupt( unsigned int interrupt, EXCEPTION_RECORD *r
+         rec->ExceptionInformation[1] = context->Ecx;
+         rec->ExceptionInformation[2] = context->Edx;
+         return TRUE;
++    case 0x2e:
++        context->Eip += 2;
++        rec->ExceptionCode = EXCEPTION_WINE_SYSCALL;
++        rec->ExceptionAddress = (void *)context->Eip;
++        rec->NumberParameters = 2;
++        rec->ExceptionInformation[0] = context->Eax;
++        rec->ExceptionInformation[1] = context->Edx;
++        return TRUE;
+     default:
+         return FALSE;
+     }
+@@ -1953,6 +1961,11 @@ static void WINAPI raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context
+             }
+         }
+         break;
++    case EXCEPTION_WINE_SYSCALL:
++        FIXME("unimplemented syscall handler for 0x%lx, stack 0x%lx\n",
++              rec->ExceptionInformation[0], rec->ExceptionInformation[1]);
++        context->Eax = STATUS_INVALID_SYSTEM_SERVICE;
++        goto done;
+     }
+     status = NtRaiseException( rec, context, TRUE );
+     raise_status( status, rec );
+diff --git a/include/wine/exception.h b/include/wine/exception.h
+index f275568f4d..b8aeb3b866 100644
+--- a/include/wine/exception.h
++++ b/include/wine/exception.h
+@@ -259,6 +259,7 @@ static inline EXCEPTION_REGISTRATION_RECORD *__wine_get_frame(void)
+ 
+ #define EXCEPTION_WINE_STUB       0x80000100  /* stub entry point called */
+ #define EXCEPTION_WINE_ASSERTION  0x80000101  /* assertion failed */
++#define EXCEPTION_WINE_SYSCALL    0x80000103
+ 
+ /* unhandled return status from vm86 mode */
+ #define EXCEPTION_VM86_INTx       0x80000110
+-- 
+2.11.0
+

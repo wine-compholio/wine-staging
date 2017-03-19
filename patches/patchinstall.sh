@@ -233,6 +233,7 @@ patch_enable_all ()
 	enable_ntdll_Grow_Virtual_Heap="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
+	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_LdrEnumerateLoadedModules="$1"
@@ -918,6 +919,9 @@ patch_enable ()
 			;;
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
+			;;
+		ntdll-Interrupt-0x2e)
+			enable_ntdll_Interrupt_0x2e="$2"
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
@@ -5422,6 +5426,18 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Interrupt-0x2e
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c, include/wine/exception.h
+# |
+if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
+	patch_apply ntdll-Interrupt-0x2e/0001-ntdll-Catch-windows-int-0x2e-syscall-on-i386.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Catch windows int 0x2e syscall on i386.", 1 },';
 	) >> "$patchlist"
 fi
 

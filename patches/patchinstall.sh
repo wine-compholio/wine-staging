@@ -233,6 +233,7 @@ patch_enable_all ()
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Junction_Points="$1"
+	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_LdrEnumerateLoadedModules="$1"
 	enable_ntdll_LdrGetDllHandle="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
@@ -917,6 +918,9 @@ patch_enable ()
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
+			;;
+		ntdll-LDR_MODULE)
+			enable_ntdll_LDR_MODULE="$2"
 			;;
 		ntdll-LdrEnumerateLoadedModules)
 			enable_ntdll_LdrEnumerateLoadedModules="$2"
@@ -5424,6 +5428,20 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-LDR_MODULE
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_LDR_MODULE" -eq 1; then
+	patch_apply ntdll-LDR_MODULE/0001-ntdll-Mark-LDR-data-as-initialized.patch
+	patch_apply ntdll-LDR_MODULE/0002-include-Update-LDR_MODULE-to-more-recent-windows-ver.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Mark LDR data as initialized.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Update LDR_MODULE to more recent windows versions.", 1 },';
 	) >> "$patchlist"
 fi
 

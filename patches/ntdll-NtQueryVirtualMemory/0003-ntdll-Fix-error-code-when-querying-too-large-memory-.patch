@@ -1,0 +1,65 @@
+From 103ff9d293f7ffd9a96fb8801057ecc781352efc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 7 Mar 2017 04:58:57 +0100
+Subject: ntdll: Fix error code when querying too large memory address.
+
+---
+ dlls/ntdll/tests/info.c | 23 +++++++++++++++++++++++
+ dlls/ntdll/virtual.c    |  2 +-
+ 2 files changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index 448bc64c28..407d230cfd 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -2013,6 +2013,26 @@ static void test_query_data_alignment(void)
+     ok(value == 64, "Expected 64, got %u\n", value);
+ }
+ 
++static void test_working_set_limit(void)
++{
++    DWORD_PTR lower = 0, upper = ~(DWORD_PTR)0;
++    MEMORY_BASIC_INFORMATION mbi;
++    SIZE_T readcount;
++    NTSTATUS status;
++
++    while (lower != upper)
++    {
++        DWORD_PTR check = (lower >> 1) + (upper >> 1) + (lower & upper & 1);
++        status = pNtQueryVirtualMemory(NtCurrentProcess(), (void *)check, MemoryBasicInformation,
++                                       &mbi, sizeof(MEMORY_BASIC_INFORMATION), &readcount);
++        if (status == STATUS_INVALID_PARAMETER) upper = check;
++        else lower = check + 1;
++    }
++
++    trace("working set limit is %p\n", (void *)upper);
++    ok(upper != ~(DWORD_PTR)0, "expected != ~(DWORD_PTR)0\n");
++}
++
+ START_TEST(info)
+ {
+     char **argv;
+@@ -2148,4 +2168,7 @@ START_TEST(info)
+ 
+     trace("Starting test_query_data_alignment()\n");
+     test_query_data_alignment();
++
++    trace("Starting test_working_set_limit()\n");
++    test_working_set_limit();
+ }
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index e826fa03c0..a6297115fe 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -2306,7 +2306,7 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+ 
+     base = ROUND_ADDR( addr, page_mask );
+ 
+-    if (is_beyond_limit( base, 1, working_set_limit )) return STATUS_WORKING_SET_LIMIT_RANGE;
++    if (is_beyond_limit( base, 1, working_set_limit )) return STATUS_INVALID_PARAMETER;
+ 
+     /* Find the view containing the address */
+ 
+-- 
+2.11.0
+

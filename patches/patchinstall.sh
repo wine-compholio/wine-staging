@@ -5543,9 +5543,11 @@ fi
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0001-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0002-kernel32-Implement-K32GetMappedFileName.-v2.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';
 	) >> "$patchlist"
 fi
 

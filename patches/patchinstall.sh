@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a5031391f40c6196b9baccbf69f5ccbe3b59e17c"
+	echo "6a05069a43f1a8f0e69c4cedd134f8d7400b8a95"
 }
 
 # Show version information
@@ -8498,10 +8498,8 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send getdc and releasedc through the command stream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send query_poll through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Create initial DCs through the CS.", 1 },';
 		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
@@ -8515,7 +8513,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for query polls.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Use an event to block the worker thread when it is idle.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for get_dc / release_dc.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Do not immediately submit stateblock updates.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Use spin lock for cs list critical sections.", 1 },';

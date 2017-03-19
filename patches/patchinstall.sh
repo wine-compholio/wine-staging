@@ -139,6 +139,7 @@ patch_enable_all ()
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
+	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Initialize="$1"
@@ -636,6 +637,9 @@ patch_enable ()
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
+			;;
+		ddraw-Silence_FIXMEs)
+			enable_ddraw_Silence_FIXMEs="$2"
 			;;
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
@@ -3698,6 +3702,18 @@ if test "$enable_ddraw_Rendering_Targets" -eq 1; then
 	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/ddraw/executebuffer.c
+# |
+if test "$enable_ddraw_Silence_FIXMEs" -eq 1; then
+	patch_apply ddraw-Silence_FIXMEs/0001-ddraw-Silence-noisy-FIXME-about-unimplemented-D3DPRO.patch
+	(
+		printf '%s\n' '+    { "Christian Costa", "ddraw: Silence noisy FIXME about unimplemented D3DPROCESSVERTICES_UPDATEEXTENTS.", 1 },';
 	) >> "$patchlist"
 fi
 

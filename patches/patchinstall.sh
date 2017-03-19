@@ -263,7 +263,6 @@ patch_enable_all ()
 	enable_ntdll_SystemRecommendedSharedDataAlignment="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
-	enable_ntdll_Thread_Creation_Time="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
@@ -1009,9 +1008,6 @@ patch_enable ()
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
-			;;
-		ntdll-Thread_Creation_Time)
-			enable_ntdll_Thread_Creation_Time="$2"
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
@@ -2158,10 +2154,10 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 fi
 
 if test "$enable_server_Realtime_Priority" -eq 1; then
-	if test "$enable_ntdll_Thread_Creation_Time" -gt 1; then
-		abort "Patchset ntdll-Thread_Creation_Time disabled, but server-Realtime_Priority depends on that."
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
 	fi
-	enable_ntdll_Thread_Creation_Time=1
+	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
@@ -2296,7 +2292,11 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	if test "$enable_ntdll_Attach_Process_DLLs" -gt 1; then
 		abort "Patchset ntdll-Attach_Process_DLLs disabled, but ntdll-Hide_Wine_Exports depends on that."
 	fi
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
 	enable_ntdll_Attach_Process_DLLs=1
+	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_ntdll_DllRedirects" -eq 1; then
@@ -5383,10 +5383,34 @@ if test "$enable_ntdll_Heap_FreeLists" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-ThreadTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#20230] Return correct values for GetThreadTimes function
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/thread.c, server/protocol.def, server/snapshot.c, server/thread.c,
+# | 	server/thread.h
+# |
+if test "$enable_ntdll_ThreadTime" -eq 1; then
+	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
+	patch_apply ntdll-ThreadTime/0002-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
+	patch_apply ntdll-ThreadTime/0003-ntdll-Fill-process-kernel-and-user-time.patch
+	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
+	patch_apply ntdll-ThreadTime/0005-ntdll-Fill-out-thread-times-in-process-enumeration.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process kernel and user time.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill out thread times in process enumeration.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Hide_Wine_Exports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Attach_Process_DLLs
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38656] Add support for hiding wine version information from applications
@@ -5818,33 +5842,6 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ThreadTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#20230] Return correct values for GetThreadTimes function
-# |
-# | Modified files:
-# |   *	dlls/ntdll/thread.c, server/protocol.def, server/thread.c
-# |
-if test "$enable_ntdll_ThreadTime" -eq 1; then
-	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Thread_Creation_Time
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c, server/protocol.def, server/snapshot.c, server/thread.h
-# |
-if test "$enable_ntdll_Thread_Creation_Time" -eq 1; then
-	patch_apply ntdll-Thread_Creation_Time/0001-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6704,7 +6701,7 @@ fi
 # Patchset server-Realtime_Priority
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Thread_Creation_Time
+# |   *	ntdll-ThreadTime
 # |
 # | Modified files:
 # |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h

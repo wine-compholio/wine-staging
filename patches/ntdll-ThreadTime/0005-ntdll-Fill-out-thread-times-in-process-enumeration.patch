@@ -1,0 +1,82 @@
+From 6c3b7e0065c239b488bb224c1c67ff971562fdca Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 9 Mar 2017 21:14:13 +0100
+Subject: ntdll: Fill out thread times in process enumeration.
+
+---
+ dlls/ntdll/nt.c     | 6 ++++++
+ server/protocol.def | 1 +
+ server/snapshot.c   | 1 +
+ server/thread.h     | 1 +
+ 4 files changed, 9 insertions(+)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 8c54e7edfb..8b84cd865b 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -1928,6 +1928,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+             WCHAR* exename;
+             DWORD wlen = 0;
+             DWORD procstructlen = 0;
++            int unix_pid = -1;
+ 
+             SERVER_START_REQ( create_snapshot )
+             {
+@@ -1982,6 +1983,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+                             if (reply->unix_pid != -1)
+                                 read_process_time(reply->unix_pid, -1, clk_tck,
+                                                   &spi->KernelTime, &spi->UserTime);
++                            unix_pid = reply->unix_pid;
+                         }
+                         len += procstructlen;
+                     }
+@@ -2022,6 +2024,10 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+                                     spi->ti[i].ClientId.UniqueThread  = UlongToHandle(reply->tid);
+                                     spi->ti[i].dwCurrentPriority = reply->base_pri + reply->delta_pri;
+                                     spi->ti[i].dwBasePriority = reply->base_pri;
++
++                                    if (unix_pid != -1 && reply->unix_tid != -1)
++                                        read_process_time(unix_pid, reply->unix_tid, clk_tck,
++                                                          &spi->ti[i].KernelTime, &spi->ti[i].UserTime);
+                                     i++;
+                                 }
+                             }
+diff --git a/server/protocol.def b/server/protocol.def
+index b0b837cb93..542060decd 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1789,6 +1789,7 @@ enum char_info_mode
+     timeout_t    creation_time; /* thread creation time */
+     int          base_pri;      /* base priority */
+     int          delta_pri;     /* delta priority */
++    int          unix_tid;      /* Unix tid */
+ @END
+ 
+ 
+diff --git a/server/snapshot.c b/server/snapshot.c
+index cc8a9be1b5..a32207c720 100644
+--- a/server/snapshot.c
++++ b/server/snapshot.c
+@@ -151,6 +151,7 @@ static int snapshot_next_thread( struct snapshot *snapshot, struct next_thread_r
+     reply->creation_time = get_thread_creation_time( ptr->thread );
+     reply->base_pri      = ptr->priority;
+     reply->delta_pri     = 0;  /* FIXME */
++    reply->unix_tid      = get_thread_unix_tid( ptr->thread );
+     return 1;
+ }
+ 
+diff --git a/server/thread.h b/server/thread.h
+index 2098c76a47..9614e2140d 100644
+--- a/server/thread.h
++++ b/server/thread.h
+@@ -145,6 +145,7 @@ static inline void clear_error(void)             { set_error(0); }
+ static inline void set_win32_error( unsigned int err ) { set_error( 0xc0010000 | err ); }
+ 
+ static inline thread_id_t get_thread_id( struct thread *thread ) { return thread->id; }
++static inline int get_thread_unix_tid( struct thread *thread ) { return thread->unix_tid; }
+ static inline timeout_t get_thread_creation_time( struct thread *thread ) { return thread->creation_time; }
+ 
+ #endif  /* __WINE_SERVER_THREAD_H */
+-- 
+2.11.0
+

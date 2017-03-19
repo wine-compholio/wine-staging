@@ -1,0 +1,64 @@
+From e048ad0cd3879fb8f752af7e2eeda770864f9982 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 9 Mar 2017 16:32:59 +0100
+Subject: ntdll: Set process start time.
+
+---
+ dlls/ntdll/nt.c     |  1 +
+ server/protocol.def |  1 +
+ server/snapshot.c   | 15 ++++++++-------
+ 3 files changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 03cfd032bc..45572cb393 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2058,6 +2058,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+                             spi->UniqueProcessId = UlongToHandle(reply->pid);
+                             spi->ParentProcessId = UlongToHandle(reply->ppid);
+                             spi->HandleCount = reply->handles;
++                            spi->CreationTime.QuadPart = reply->start_time;
+ 
+                             /* spi->ti will be set later on */
+ 
+diff --git a/server/protocol.def b/server/protocol.def
+index 320e34384a..1347defe70 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1808,6 +1808,7 @@ enum char_info_mode
+     int          priority;      /* process priority */
+     int          handles;       /* number of handles */
+     int          unix_pid;      /* Unix pid */
++    timeout_t    start_time;    /* start time */
+     VARARG(filename,unicode_str); /* file name of main exe */
+ @END
+ 
+diff --git a/server/snapshot.c b/server/snapshot.c
+index f2903d522e..e509e0aca9 100644
+--- a/server/snapshot.c
++++ b/server/snapshot.c
+@@ -114,13 +114,14 @@ static int snapshot_next_process( struct snapshot *snapshot, struct next_process
+         return 0;
+     }
+     ptr = &snapshot->processes[snapshot->process_pos++];
+-    reply->count    = ptr->count;
+-    reply->pid      = get_process_id( ptr->process );
+-    reply->ppid     = ptr->process->parent_id;
+-    reply->threads  = ptr->threads;
+-    reply->priority = ptr->priority;
+-    reply->handles  = ptr->handles;
+-    reply->unix_pid = ptr->process->unix_pid;
++    reply->count      = ptr->count;
++    reply->pid        = get_process_id( ptr->process );
++    reply->ppid       = ptr->process->parent_id;
++    reply->threads    = ptr->threads;
++    reply->priority   = ptr->priority;
++    reply->handles    = ptr->handles;
++    reply->unix_pid   = ptr->process->unix_pid;
++    reply->start_time = ptr->process->start_time;
+     if ((exe_module = get_process_exe_module( ptr->process )) && exe_module->filename)
+     {
+         data_size_t len = min( exe_module->namelen, get_reply_max_size() );
+-- 
+2.11.0
+

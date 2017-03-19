@@ -310,6 +310,7 @@ patch_enable_all ()
 	enable_server_LABEL_SECURITY_INFORMATION="$1"
 	enable_server_Map_EXDEV_Error="$1"
 	enable_server_Misc_ACL="$1"
+	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
@@ -1150,6 +1151,9 @@ patch_enable ()
 			;;
 		server-Misc_ACL)
 			enable_server_Misc_ACL="$2"
+			;;
+		server-Object_Types)
+			enable_server_Object_Types="$2"
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
@@ -2134,6 +2138,31 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
+	fi
+	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_server_Pipe_ObjectName" -eq 1; then
+	if test "$enable_kernel32_Named_Pipe" -gt 1; then
+		abort "Patchset kernel32-Named_Pipe disabled, but server-Pipe_ObjectName depends on that."
+	fi
+	enable_kernel32_Named_Pipe=1
+fi
+
+if test "$enable_server_Object_Types" -eq 1; then
+	if test "$enable_server_Misc_ACL" -gt 1; then
+		abort "Patchset server-Misc_ACL disabled, but server-Object_Types depends on that."
+	fi
+	if test "$enable_server_Shared_Memory" -gt 1; then
+		abort "Patchset server-Shared_Memory disabled, but server-Object_Types depends on that."
+	fi
+	enable_server_Misc_ACL=1
+	enable_server_Shared_Memory=1
+fi
+
 if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
@@ -2155,20 +2184,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
-fi
-
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
-	fi
-	enable_ntdll_ThreadTime=1
-fi
-
-if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	if test "$enable_kernel32_Named_Pipe" -gt 1; then
-		abort "Patchset kernel32-Named_Pipe disabled, but server-Pipe_ObjectName depends on that."
-	fi
-	enable_kernel32_Named_Pipe=1
 fi
 
 if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
@@ -6699,50 +6714,6 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Pipe_ObjectName
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount, kernel32-Named_Pipe
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h
-# |
-if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	patch_apply server-Pipe_ObjectName/0001-server-Store-a-reference-to-the-parent-object-for-pi.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Realtime_Priority
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
-# |
-# | Modified files:
-# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
-# |
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
-	(
-		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Registry_Notifications
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/reg.c, server/registry.c
-# |
-if test "$enable_server_Registry_Notifications" -eq 1; then
-	patch_apply server-Registry_Notifications/0001-server-Allow-multiple-registry-notifications-for-the.patch
-	patch_apply server-Registry_Notifications/0002-server-Introduce-refcounting-for-registry-notificati.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow multiple registry notifications for the same key.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce refcounting for registry notifications.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Signal_Thread
 # |
 # | Modified files:
@@ -6786,6 +6757,88 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Object_Types
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Misc_ACL, ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage, server-Signal_Thread, server-
+# | 	Shared_Memory
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/om.c, dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, include/winternl.h,
+# | 	server/completion.c, server/directory.c, server/event.c, server/file.c, server/handle.c, server/mailslot.c,
+# | 	server/main.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c, server/object.h,
+# | 	server/process.c, server/protocol.def, server/registry.c, server/semaphore.c, server/symlink.c, server/thread.c,
+# | 	server/timer.c, server/token.c, server/winstation.c
+# |
+if test "$enable_server_Object_Types" -eq 1; then
+	patch_apply server-Object_Types/0001-ntdll-Implement-SystemExtendedHandleInformation-in-N.patch
+	patch_apply server-Object_Types/0002-ntdll-Implement-ObjectTypesInformation-in-NtQueryObj.patch
+	patch_apply server-Object_Types/0003-server-Register-types-during-startup.patch
+	patch_apply server-Object_Types/0004-server-Rename-ObjectType-to-Type.patch
+	patch_apply server-Object_Types/0005-server-Add-type-Token.patch
+	patch_apply server-Object_Types/0006-server-Add-type-Process.patch
+	patch_apply server-Object_Types/0007-server-Add-type-Thread.patch
+	patch_apply server-Object_Types/0008-ntdll-Set-TypeIndex-for-ObjectTypeInformation-in-NtQ.patch
+	patch_apply server-Object_Types/0009-ntdll-Set-object-type-for-System-Extended-HandleInfo.patch
+	patch_apply server-Object_Types/0010-ntdll-Mimic-object-type-behavior-for-different-windo.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement SystemExtendedHandleInformation in NtQuerySystemInformation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ObjectTypesInformation in NtQueryObject.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Register types during startup.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Rename ObjectType to Type.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Add type Token.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Add type Process.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Add type Thread.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set TypeIndex for ObjectTypeInformation in NtQueryObject.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set object type for System(Extended)HandleInformation in NtQuerySystemInformation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Mimic object type behavior for different windows versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Pipe_ObjectName
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Desktop_Refcount, kernel32-Named_Pipe
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h
+# |
+if test "$enable_server_Pipe_ObjectName" -eq 1; then
+	patch_apply server-Pipe_ObjectName/0001-server-Store-a-reference-to-the-parent-object-for-pi.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Realtime_Priority
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime
+# |
+# | Modified files:
+# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
+# |
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
+	(
+		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Registry_Notifications
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/reg.c, server/registry.c
+# |
+if test "$enable_server_Registry_Notifications" -eq 1; then
+	patch_apply server-Registry_Notifications/0001-server-Allow-multiple-registry-notifications-for-the.patch
+	patch_apply server-Registry_Notifications/0002-server-Introduce-refcounting-for-registry-notificati.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow multiple registry notifications for the same key.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce refcounting for registry notifications.", 1 },';
 	) >> "$patchlist"
 fi
 

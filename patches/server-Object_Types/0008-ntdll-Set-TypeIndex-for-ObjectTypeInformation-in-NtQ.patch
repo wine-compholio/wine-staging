@@ -1,0 +1,71 @@
+From 1e3e93483b223c6e0e9d712fff4a8874c503c973 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 8 Mar 2017 17:41:11 +0100
+Subject: ntdll: Set TypeIndex for ObjectTypeInformation in NtQueryObject.
+
+---
+ dlls/ntdll/om.c     | 4 ++++
+ server/directory.c  | 5 ++++-
+ server/protocol.def | 1 +
+ 3 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
+index 8911a28b20..8f54d4f49f 100644
+--- a/dlls/ntdll/om.c
++++ b/dlls/ntdll/om.c
+@@ -184,6 +184,10 @@ NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
+                         p->TypeName.Buffer[res / sizeof(WCHAR)] = 0;
+                         if (used_len) *used_len = sizeof(*p) + p->TypeName.MaximumLength;
+                     }
++                    if (status == STATUS_SUCCESS)
++                    {
++                        p->TypeIndex = reply->index;
++                    }
+                 }
+             }
+             SERVER_END_REQ;
+diff --git a/server/directory.c b/server/directory.c
+index b4f53e2edf..59c8194d09 100644
+--- a/server/directory.c
++++ b/server/directory.c
+@@ -44,6 +44,7 @@
+ struct object_type
+ {
+     struct object     obj;        /* object header */
++    unsigned int      index;      /* type index */
+ };
+ 
+ static void object_type_dump( struct object *obj, int verbose );
+@@ -239,7 +240,8 @@ struct object_type *get_object_type( const struct unicode_str *name )
+         if (get_error() != STATUS_OBJECT_NAME_EXISTS)
+         {
+             assert( object_type_count < sizeof(object_type_list)/sizeof(object_type_list[0]) );
+-            object_type_list[ object_type_count++ ] = (struct object_type *)grab_object( type );
++            type->index = object_type_count++;
++            object_type_list[ type->index ] = (struct object_type *)grab_object( type );
+             make_object_static( &type->obj );
+         }
+         clear_error();
+@@ -528,6 +530,7 @@ DECL_HANDLER(get_object_type)
+     {
+         if ((name = get_object_name( &type->obj, &reply->total )))
+             set_reply_data( name, min( reply->total, get_reply_max_size() ) );
++        reply->index = type->index;
+         release_object( type );
+     }
+     release_object( obj );
+diff --git a/server/protocol.def b/server/protocol.def
+index 98c4c58a4e..d6847f8d55 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3543,6 +3543,7 @@ struct handle_info
+ @REQ(get_object_type)
+     obj_handle_t   handle;        /* handle to the object */
+ @REPLY
++    unsigned int   index;         /* type index */
+     data_size_t    total;         /* needed size for type name */
+     VARARG(type,unicode_str);     /* type name */
+ @END
+-- 
+2.11.0
+

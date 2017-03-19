@@ -1,0 +1,108 @@
+From ba10e334a375c7dde7cd890554fbbade1be81a9d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 8 Mar 2017 17:44:17 +0100
+Subject: ntdll: Set object type for System(Extended)HandleInformation in
+ NtQuerySystemInformation.
+
+---
+ dlls/ntdll/nt.c     |  4 +++-
+ server/directory.c  |  6 ++++++
+ server/handle.c     | 10 ++++++++++
+ server/object.h     |  1 +
+ server/protocol.def |  1 +
+ 5 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index a939298d19..211b67f98b 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2280,7 +2280,8 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+                         shi->Handle[i].OwnerPid     = info[i].owner;
+                         shi->Handle[i].HandleValue  = info[i].handle;
+                         shi->Handle[i].AccessMask   = info[i].access;
+-                        /* FIXME: Fill out ObjectType, HandleFlags, ObjectPointer */
++                        shi->Handle[i].ObjectType   = info[i].type;
++                        /* FIXME: Fill out HandleFlags, ObjectPointer */
+                     }
+                 }
+                 else if (ret == STATUS_BUFFER_TOO_SMALL)
+@@ -2331,6 +2332,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+                         shi->Handle[i].UniqueProcessId = info[i].owner;
+                         shi->Handle[i].HandleValue     = info[i].handle;
+                         shi->Handle[i].GrantedAccess   = info[i].access;
++                        shi->Handle[i].ObjectTypeIndex = info[i].type;
+                         /* FIXME: Fill out remaining fields */
+                     }
+                 }
+diff --git a/server/directory.c b/server/directory.c
+index 59c8194d09..f61a5cecf1 100644
+--- a/server/directory.c
++++ b/server/directory.c
+@@ -249,6 +249,12 @@ struct object_type *get_object_type( const struct unicode_str *name )
+     return type;
+ }
+ 
++/* retrieve the object type index */
++unsigned int type_get_index( struct object_type *type )
++{
++    return type->index;
++}
++
+ /* Global initialization */
+ 
+ static void create_session( unsigned int id )
+diff --git a/server/handle.c b/server/handle.c
+index 0e909ff27e..e29cead46b 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -971,6 +971,7 @@ static int enum_handles( struct process *process, void *user )
+     struct handle_table *table = process->handles;
+     struct handle_entry *entry;
+     struct handle_info *handle;
++    struct object_type *type;
+     unsigned int i;
+ 
+     if (!table)
+@@ -989,6 +990,15 @@ static int enum_handles( struct process *process, void *user )
+         handle->owner  = process->id;
+         handle->handle = index_to_handle(i);
+         handle->access = entry->access & ~RESERVED_ALL;
++
++        if ((type = entry->ptr->ops->get_type(entry->ptr)))
++        {
++            handle->type = type_get_index(type);
++            release_object(type);
++        }
++        else
++            handle->type = 0;
++
+         info->count--;
+     }
+ 
+diff --git a/server/object.h b/server/object.h
+index 3ba3f4b431..4a5d282a47 100644
+--- a/server/object.h
++++ b/server/object.h
+@@ -264,6 +264,7 @@ static const WCHAR type_Type[] =          {'T','y','p','e'};
+ static const WCHAR type_WindowStation[] = {'W','i','n','d','o','w','S','t','a','t','i','o','n'};
+ 
+ extern void init_types(void);
++extern unsigned int type_get_index( struct object_type *type );
+ 
+ /* symbolic link functions */
+ 
+diff --git a/server/protocol.def b/server/protocol.def
+index d6847f8d55..35730d60cb 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3433,6 +3433,7 @@ struct handle_info
+     process_id_t owner;
+     obj_handle_t handle;
+     unsigned int access;
++    unsigned int type;
+ };
+ 
+ /* Return a list of all opened handles */
+-- 
+2.11.0
+

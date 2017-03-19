@@ -1,0 +1,187 @@
+From 0384d32afa328e76bff7f8e508201ce2535ee763 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 7 Mar 2017 18:30:33 +0100
+Subject: ntdll: Implement SystemExtendedHandleInformation in
+ NtQuerySystemInformation.
+
+---
+ dlls/ntdll/nt.c         | 51 +++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/info.c | 60 +++++++++++++++++++++++++++++++++++++++++++++++++
+ include/winternl.h      | 21 +++++++++++++++++
+ 3 files changed, 132 insertions(+)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index de8f16f9a0..a939298d19 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2294,6 +2294,57 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+             RtlFreeHeap( GetProcessHeap(), 0, info );
+         }
+         break;
++    case SystemExtendedHandleInformation:
++        {
++            struct handle_info *info;
++            DWORD i, num_handles;
++
++            if (Length < sizeof(SYSTEM_HANDLE_INFORMATION_EX))
++            {
++                ret = STATUS_INFO_LENGTH_MISMATCH;
++                break;
++            }
++
++            if (!SystemInformation)
++            {
++                ret = STATUS_ACCESS_VIOLATION;
++                break;
++            }
++
++            num_handles = (Length - FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle ));
++            num_handles /= sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX);
++            if (!(info = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*info) * num_handles )))
++                return STATUS_NO_MEMORY;
++
++            SERVER_START_REQ( get_system_handles )
++            {
++                wine_server_set_reply( req, info, sizeof(*info) * num_handles );
++                if (!(ret = wine_server_call( req )))
++                {
++                    SYSTEM_HANDLE_INFORMATION_EX *shi = SystemInformation;
++                    shi->Count = wine_server_reply_size( req ) / sizeof(*info);
++                    shi->Reserved = 0;
++                    len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle[shi->Count] );
++                    for (i = 0; i < shi->Count; i++)
++                    {
++                        memset( &shi->Handle[i], 0, sizeof(shi->Handle[i]) );
++                        shi->Handle[i].UniqueProcessId = info[i].owner;
++                        shi->Handle[i].HandleValue     = info[i].handle;
++                        shi->Handle[i].GrantedAccess   = info[i].access;
++                        /* FIXME: Fill out remaining fields */
++                    }
++                }
++                else if (ret == STATUS_BUFFER_TOO_SMALL)
++                {
++                    len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle[reply->count] );
++                    ret = STATUS_INFO_LENGTH_MISMATCH;
++                }
++            }
++            SERVER_END_REQ;
++
++            RtlFreeHeap( GetProcessHeap(), 0, info );
++        }
++        break;
+     case SystemCacheInformation:
+         {
+             SYSTEM_CACHE_INFORMATION sci;
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index 32cb4f5a5d..c65a74bf5e 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -561,6 +561,62 @@ done:
+     HeapFree( GetProcessHeap(), 0, shi);
+ }
+ 
++static void test_query_handle_ex(void)
++{
++    NTSTATUS status;
++    ULONG ExpectedLength, ReturnLength;
++    ULONG SystemInformationLength = sizeof(SYSTEM_HANDLE_INFORMATION_EX);
++    SYSTEM_HANDLE_INFORMATION_EX* shi = HeapAlloc(GetProcessHeap(), 0, SystemInformationLength);
++    HANDLE EventHandle;
++    BOOL found;
++    INT i;
++
++    EventHandle = CreateEventA(NULL, FALSE, FALSE, NULL);
++    ok( EventHandle != NULL, "CreateEventA failed %u\n", GetLastError() );
++
++    ReturnLength = 0xdeadbeef;
++    status = pNtQuerySystemInformation(SystemExtendedHandleInformation, shi, SystemInformationLength, &ReturnLength);
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "Expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status);
++    ok( ReturnLength != 0xdeadbeef, "Expected valid ReturnLength\n" );
++
++    SystemInformationLength = ReturnLength;
++    shi = HeapReAlloc(GetProcessHeap(), 0, shi , SystemInformationLength);
++    memset(shi, 0x55, SystemInformationLength);
++
++    ReturnLength = 0xdeadbeef;
++    status = pNtQuerySystemInformation(SystemExtendedHandleInformation, shi, SystemInformationLength, &ReturnLength);
++    ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status );
++    ExpectedLength = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION_EX, Handle[shi->Count]);
++    ok( ReturnLength == ExpectedLength, "Expected length %u, got %u\n", ExpectedLength, ReturnLength );
++    ok( shi->Count > 1, "Expected more than 1 handle, got %u\n", (DWORD)shi->Count );
++
++    for (i = 0, found = FALSE; i < shi->Count && !found; i++)
++        found = (shi->Handle[i].UniqueProcessId == GetCurrentProcessId()) &&
++                ((HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == EventHandle);
++    ok( found, "Expected to find event handle %p (pid %x) in handle list\n", EventHandle, GetCurrentProcessId() );
++
++    if (!found)
++    {
++        for (i = 0; i < shi->Count; i++)
++            trace( "%d: handle %x pid %x\n", i, (DWORD)shi->Handle[i].HandleValue, (DWORD)shi->Handle[i].UniqueProcessId );
++    }
++
++    CloseHandle(EventHandle);
++
++    ReturnLength = 0xdeadbeef;
++    status = pNtQuerySystemInformation(SystemExtendedHandleInformation, shi, SystemInformationLength, &ReturnLength);
++    ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status );
++    for (i = 0, found = FALSE; i < shi->Count && !found; i++)
++        found = (shi->Handle[i].UniqueProcessId == GetCurrentProcessId()) &&
++                ((HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == EventHandle);
++    ok( !found, "Unexpectedly found event handle in handle list\n" );
++
++    status = pNtQuerySystemInformation(SystemExtendedHandleInformation, NULL, SystemInformationLength, &ReturnLength);
++    ok( status == STATUS_ACCESS_VIOLATION, "Expected STATUS_ACCESS_VIOLATION, got %08x\n", status );
++
++    HeapFree( GetProcessHeap(), 0, shi);
++}
++
+ static void test_query_cache(void)
+ {
+     NTSTATUS status;
+@@ -2147,6 +2203,10 @@ START_TEST(info)
+     trace("Starting test_query_handle()\n");
+     test_query_handle();
+ 
++    /* 0x40 SystemHandleInformation */
++    trace("Starting test_query_handle_ex()\n");
++    test_query_handle_ex();
++
+     /* 0x15 SystemCacheInformation */
+     trace("Starting test_query_cache()\n");
+     test_query_cache();
+diff --git a/include/winternl.h b/include/winternl.h
+index 87b2c4d253..7ffe4f6c81 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -1442,6 +1442,27 @@ typedef struct _SYSTEM_HANDLE_INFORMATION {
+     SYSTEM_HANDLE_ENTRY Handle[1];
+ } SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
+ 
++/* System Information Class 0x40 */
++
++typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX
++{
++    PVOID     Object;
++    ULONG_PTR UniqueProcessId;
++    ULONG_PTR HandleValue;
++    ULONG     GrantedAccess;
++    USHORT    CreatorBackTraceIndex;
++    USHORT    ObjectTypeIndex;
++    ULONG     HandleAttributes;
++    ULONG     Reserved;
++} SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX, *PSYSTEM_HANDLE_TABLE_ENTRY_INFO_EX;
++
++typedef struct _SYSTEM_HANDLE_INFORMATION_EX
++{
++    ULONG_PTR  Count;
++    ULONG_PTR  Reserved;
++    SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX Handle[1];
++} SYSTEM_HANDLE_INFORMATION_EX, *PSYSTEM_HANDLE_INFORMATION_EX;
++
+ /* System Information Class 0x15 */
+ 
+ typedef struct _SYSTEM_CACHE_INFORMATION {
+-- 
+2.11.0
+

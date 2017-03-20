@@ -156,6 +156,7 @@ patch_enable_all ()
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
+	enable_gdi32_GetCharacterPlacement="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
@@ -690,6 +691,9 @@ patch_enable ()
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
+			;;
+		gdi32-GetCharacterPlacement)
+			enable_gdi32_GetCharacterPlacement="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -4074,6 +4078,21 @@ if test "$enable_fsutil_Stub_Program" -eq 1; then
 	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-GetCharacterPlacement
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42669] Treat lpResults as optional in gdi32.GetCharacterPlacement
+# |
+# | Modified files:
+# |   *	dlls/gdi32/font.c, dlls/gdi32/tests/font.c
+# |
+if test "$enable_gdi32_GetCharacterPlacement" -eq 1; then
+	patch_apply gdi32-GetCharacterPlacement/0001-gdi32-Treat-lpResults-as-optional-in-GetCharacterPla.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "gdi32: Treat lpResults as optional in GetCharacterPlacement.", 1 },';
 	) >> "$patchlist"
 fi
 

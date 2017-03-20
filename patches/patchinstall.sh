@@ -371,6 +371,7 @@ patch_enable_all ()
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
+	enable_user32_Sorted_Listbox="$1"
 	enable_user32_WM_MEASUREITEM="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
@@ -1335,6 +1336,9 @@ patch_enable ()
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
 			;;
+		user32-Sorted_Listbox)
+			enable_user32_Sorted_Listbox="$2"
+			;;
 		user32-WM_MEASUREITEM)
 			enable_user32_WM_MEASUREITEM="$2"
 			;;
@@ -2104,6 +2108,13 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but uxtheme-GTK_Theming depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
+fi
+
+if test "$enable_user32_Sorted_Listbox" -eq 1; then
+	if test "$enable_user32_WM_MEASUREITEM" -gt 1; then
+		abort "Patchset user32-WM_MEASUREITEM disabled, but user32-Sorted_Listbox depends on that."
+	fi
+	enable_user32_WM_MEASUREITEM=1
 fi
 
 if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
@@ -7776,6 +7787,30 @@ if test "$enable_user32_WM_MEASUREITEM" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Sorted_Listbox
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	user32-WM_MEASUREITEM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42602] Multiple fixes for owner-drawn and sorted listbox
+# |
+# | Modified files:
+# |   *	dlls/user32/listbox.c, dlls/user32/tests/msg.c
+# |
+if test "$enable_user32_Sorted_Listbox" -eq 1; then
+	patch_apply user32-Sorted_Listbox/0001-user32-tests-Add-a-message-test-for-an-owner-drawn-s.patch
+	patch_apply user32-Sorted_Listbox/0002-user32-Fix-order-of-items-passed-in-WM_COMPAREITEM-d.patch
+	patch_apply user32-Sorted_Listbox/0003-user32-Fix-the-listbox-sorting-algorithm.patch
+	patch_apply user32-Sorted_Listbox/0004-user32-For-an-owner-drawn-listbox-without-strings-WM.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for an owner-drawn sorted listbox.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix order of items passed in WM_COMPAREITEM data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the listbox sorting algorithm.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: For an owner-drawn listbox without strings WM_MEASUREITEM still needs correct itemData.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -5419,8 +5419,8 @@ fi
 # |   *	[#20230] Return correct values for GetThreadTimes function
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/thread.c, server/protocol.def, server/snapshot.c, server/thread.c,
-# | 	server/thread.h
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/tests/info.c, dlls/ntdll/thread.c,
+# | 	server/protocol.def, server/snapshot.c, server/thread.c, server/thread.h
 # |
 if test "$enable_ntdll_ThreadTime" -eq 1; then
 	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
@@ -5428,12 +5428,14 @@ if test "$enable_ntdll_ThreadTime" -eq 1; then
 	patch_apply ntdll-ThreadTime/0003-ntdll-Fill-process-kernel-and-user-time.patch
 	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
 	patch_apply ntdll-ThreadTime/0005-ntdll-Fill-out-thread-times-in-process-enumeration.patch
+	patch_apply ntdll-ThreadTime/0006-ntdll-Fill-process-virtual-memory-counters-in-NtQuer.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process kernel and user time.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill out thread times in process enumeration.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process virtual memory counters in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

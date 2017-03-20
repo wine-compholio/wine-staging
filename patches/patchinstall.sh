@@ -7961,11 +7961,13 @@ if test "$enable_wbemprox_Win32_VideoController" -eq 1; then
 	patch_apply wbemprox-Win32_VideoController/0002-wbemprox-Add-Status-for-Win32_VideoController.patch
 	patch_apply wbemprox-Win32_VideoController/0003-wbemprox-Add-InstalledDisplayDrivers-for-Win32_Video.patch
 	patch_apply wbemprox-Win32_VideoController/0004-wbemprox-Add-DriverDate-for-Win32_VideoController.patch
+	patch_apply wbemprox-Win32_VideoController/0005-wbemprox-Add-Vendor-field-in-Win32_ComputerSystemPro.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add ConfigManagerErrorCode for Win32_VideoController.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add Status for Win32_VideoController.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add InstalledDisplayDrivers for Win32_VideoController.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add DriverDate for Win32_VideoController.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add Vendor field in Win32_ComputerSystemProduct.", 1 },';
 	) >> "$patchlist"
 fi
 

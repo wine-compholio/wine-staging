@@ -1,0 +1,57 @@
+From f1b82c151d064eeafe234cdd95a4b29d7000232a Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sun, 5 Mar 2017 13:18:21 +0800
+Subject: gdiplus: Remove ceilf/floorf calls from bilinear scaler. (v2)
+
+This improves performance by about 55%.
+---
+ dlls/gdiplus/graphics.c | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/gdiplus/graphics.c b/dlls/gdiplus/graphics.c
+index ef26887d14..58cfebb923 100644
+--- a/dlls/gdiplus/graphics.c
++++ b/dlls/gdiplus/graphics.c
+@@ -526,7 +526,7 @@ static ARGB blend_colors(ARGB start, ARGB end, REAL position)
+     INT start_a, end_a, final_a;
+     INT pos;
+ 
+-    pos = gdip_round(position * 0xff);
++    pos = (INT)(position * 255.0f + 0.5f);
+ 
+     start_a = ((start >> 24) & 0xff) * (pos ^ 0xff);
+     end_a = ((end >> 24) & 0xff) * pos;
+@@ -928,6 +928,11 @@ static ARGB sample_bitmap_pixel(GDIPCONST GpRect *src_rect, LPBYTE bits, UINT wi
+     return ((DWORD*)(bits))[(x - src_rect->X) + (y - src_rect->Y) * src_rect->Width];
+ }
+ 
++static FORCEINLINE int positive_ceilf(float f)
++{
++    return f - (int)f > 0.0f ? f + 1.0f : f;
++}
++
+ static ARGB resample_bitmap_pixel(GDIPCONST GpRect *src_rect, LPBYTE bits, UINT width,
+     UINT height, GpPointF *point, GDIPCONST GpImageAttributes *attributes,
+     InterpolationMode interpolation, PixelOffsetMode offset_mode)
+@@ -948,12 +953,12 @@ static ARGB resample_bitmap_pixel(GDIPCONST GpRect *src_rect, LPBYTE bits, UINT
+         ARGB top, bottom;
+         float x_offset;
+ 
+-        leftxf = floorf(point->X);
+-        leftx = (INT)leftxf;
+-        rightx = (INT)ceilf(point->X);
+-        topyf = floorf(point->Y);
+-        topy = (INT)topyf;
+-        bottomy = (INT)ceilf(point->Y);
++        leftx = (INT)point->X;
++        leftxf = (REAL)leftx;
++        rightx = positive_ceilf(point->X);
++        topy = (INT)point->Y;
++        topyf = (REAL)topy;
++        bottomy = positive_ceilf(point->Y);
+ 
+         if (leftx == rightx && topy == bottomy)
+             return sample_bitmap_pixel(src_rect, bits, width, height,
+-- 
+2.11.0
+

@@ -163,6 +163,7 @@ patch_enable_all ()
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_DC_Handling="$1"
 	enable_gdiplus_Grayscale_PNG="$1"
+	enable_gdiplus_Performance_Improvements="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
@@ -712,6 +713,9 @@ patch_enable ()
 			;;
 		gdiplus-Grayscale_PNG)
 			enable_gdiplus_Grayscale_PNG="$2"
+			;;
+		gdiplus-Performance-Improvements)
+			enable_gdiplus_Performance_Improvements="$2"
 			;;
 		hal-KeQueryPerformanceCounter)
 			enable_hal_KeQueryPerformanceCounter="$2"
@@ -4199,6 +4203,24 @@ if test "$enable_gdiplus_Grayscale_PNG" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for image flags to PNG grayscale image tests.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Set correct color space flags for grayscale images.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-Performance-Improvements
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/graphics.c
+# |
+if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
+	patch_apply gdiplus-Performance-Improvements/0001-gdiplus-Change-the-order-of-x-y-loops-in-the-scaler.patch
+	patch_apply gdiplus-Performance-Improvements/0002-gdiplus-Change-multiplications-by-additions-in-the-x.patch
+	patch_apply gdiplus-Performance-Improvements/0003-gdiplus-Remove-ceilf-floorf-calls-from-bilinear-scal.patch
+	patch_apply gdiplus-Performance-Improvements/0004-gdiplus-Prefer-using-pre-multiplied-ARGB-data-in-the.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change the order of x/y loops in the scaler.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change multiplications by additions in the x/y scaler loops.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Remove ceilf/floorf calls from bilinear scaler.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Prefer using pre-multiplied ARGB data in the scaler.", 1 },';
 	) >> "$patchlist"
 fi
 

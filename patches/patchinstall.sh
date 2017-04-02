@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6a05069a43f1a8f0e69c4cedd134f8d7400b8a95"
+	echo "5b4f8a385b46a8a8a8b09b8ca6578aa7b7995a1e"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.4"
+	echo "Wine Staging 2.5 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -5460,8 +5460,8 @@ fi
 # |   *	[#20230] Return correct values for GetThreadTimes function
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/tests/info.c, dlls/ntdll/thread.c,
-# | 	server/protocol.def, server/snapshot.c, server/thread.c, server/thread.h
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/thread.c, server/protocol.def,
+# | 	server/snapshot.c, server/thread.c, server/thread.h
 # |
 if test "$enable_ntdll_ThreadTime" -eq 1; then
 	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch

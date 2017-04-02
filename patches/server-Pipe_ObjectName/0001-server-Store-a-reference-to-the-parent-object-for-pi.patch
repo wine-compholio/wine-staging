@@ -1,4 +1,4 @@
-From 0cd60112c33592a78b573201b55bdcc0eb20e52e Mon Sep 17 00:00:00 2001
+From 1e74c7027e966201f44742df6736e9cdc1ad4ee8 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 01:11:47 +0200
 Subject: server: Store a reference to the parent object for pipe servers. (v2)
@@ -11,7 +11,7 @@ Subject: server: Store a reference to the parent object for pipe servers. (v2)
  4 files changed, 53 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index 43c5ee46d71..9a1ba670ab7 100644
+index 43c5ee46d7..9a1ba670ab 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
 @@ -1487,14 +1487,11 @@ static void test_query_object(void)
@@ -30,10 +30,10 @@ index 43c5ee46d71..9a1ba670ab7 100644
          "name too short %s\n", wine_dbgstr_w(str->Buffer) );
      trace( "got %s len %u\n", wine_dbgstr_w(str->Buffer), len );
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index e5c5c4968c4..bc4b6f08fde 100644
+index df9f5c4926..5adbb2058b 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -150,6 +150,8 @@ static const struct object_ops named_pipe_ops =
+@@ -157,6 +157,8 @@ static void pipe_end_queue_async( struct fd *fd, struct async *async, int type,
  /* server end functions */
  static void pipe_server_dump( struct object *obj, int verbose );
  static struct fd *pipe_server_get_fd( struct object *obj );
@@ -42,7 +42,7 @@ index e5c5c4968c4..bc4b6f08fde 100644
  static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
  static void pipe_server_destroy( struct object *obj);
  static obj_handle_t pipe_server_flush( struct fd *fd, struct async *async, int blocking );
-@@ -173,8 +175,8 @@ static const struct object_ops pipe_server_ops =
+@@ -179,8 +181,8 @@ static const struct object_ops pipe_server_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -53,7 +53,7 @@ index e5c5c4968c4..bc4b6f08fde 100644
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
      pipe_server_close_handle,     /* close_handle */
-@@ -198,6 +200,8 @@ static const struct fd_ops pipe_server_fd_ops =
+@@ -204,6 +206,8 @@ static const struct fd_ops pipe_server_fd_ops =
  static void pipe_client_dump( struct object *obj, int verbose );
  static int pipe_client_signaled( struct object *obj, struct wait_queue_entry *entry );
  static struct fd *pipe_client_get_fd( struct object *obj );
@@ -62,7 +62,7 @@ index e5c5c4968c4..bc4b6f08fde 100644
  static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
  static void pipe_client_destroy( struct object *obj );
  static obj_handle_t pipe_client_flush( struct fd *fd, struct async *async, int blocking );
-@@ -219,8 +223,8 @@ static const struct object_ops pipe_client_ops =
+@@ -224,8 +228,8 @@ static const struct object_ops pipe_client_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -73,7 +73,7 @@ index e5c5c4968c4..bc4b6f08fde 100644
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
      pipe_client_close_handle,     /* close_handle */
-@@ -399,6 +403,17 @@ static void do_disconnect( struct pipe_server *server )
+@@ -422,6 +426,17 @@ static void do_disconnect( struct pipe_server *server )
      server->pipe_end.fd = NULL;
  }
  
@@ -91,7 +91,7 @@ index e5c5c4968c4..bc4b6f08fde 100644
  static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
  {
  #ifdef __linux__
-@@ -442,6 +457,17 @@ static void pipe_server_destroy( struct object *obj)
+@@ -467,6 +482,17 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -109,7 +109,7 @@ index e5c5c4968c4..bc4b6f08fde 100644
  static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
  {
  #ifdef __linux__
-@@ -761,9 +787,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags )
+@@ -786,9 +812,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
  static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned int options,
                                                 unsigned int pipe_flags )
  {
@@ -121,13 +121,13 @@ index e5c5c4968c4..bc4b6f08fde 100644
      if (!server)
          return NULL;
  
-@@ -785,11 +812,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
+@@ -810,11 +837,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
      return server;
  }
  
--static struct pipe_client *create_pipe_client( unsigned int flags, unsigned int pipe_flags )
+-static struct pipe_client *create_pipe_client( unsigned int flags, unsigned int pipe_flags, data_size_t buffer_size )
 +static struct pipe_client *create_pipe_client( struct named_pipe *pipe, unsigned int flags,
-+                                               unsigned int pipe_flags )
++                                               unsigned int pipe_flags, data_size_t buffer_size )
  {
 +    static const struct unicode_str str = { NULL, 0 };
      struct pipe_client *client;
@@ -137,20 +137,20 @@ index e5c5c4968c4..bc4b6f08fde 100644
      if (!client)
          return NULL;
  
-@@ -888,7 +917,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -913,7 +942,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
          return NULL;
      }
  
--    if ((client = create_pipe_client( options, pipe->flags )))
-+    if ((client = create_pipe_client( pipe, options, pipe->flags )))
+-    if ((client = create_pipe_client( options, pipe->flags, pipe->outsize )))
++    if ((client = create_pipe_client( pipe, options, pipe->flags, pipe->outsize )))
      {
          type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && is_messagemode_supported()) ?
                 SOCK_SEQPACKET : SOCK_STREAM;
 diff --git a/server/object.c b/server/object.c
-index f5d7d9f02fd..0d067458a56 100644
+index 46f020e522..653687d5bf 100644
 --- a/server/object.c
 +++ b/server/object.c
-@@ -162,7 +162,7 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
+@@ -176,7 +176,7 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
      while (ptr && ptr->name)
      {
          struct object_name *name = ptr->name;
@@ -159,7 +159,7 @@ index f5d7d9f02fd..0d067458a56 100644
          ptr = name->parent;
      }
      if (!len) return NULL;
-@@ -172,9 +172,12 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
+@@ -186,9 +186,12 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
      while (obj && obj->name)
      {
          struct object_name *name = obj->name;
@@ -175,7 +175,7 @@ index f5d7d9f02fd..0d067458a56 100644
          obj = name->parent;
      }
      return (WCHAR *)ret;
-@@ -262,8 +265,8 @@ struct object *lookup_named_object( struct object *root, const struct unicode_st
+@@ -276,8 +279,8 @@ struct object *lookup_named_object( struct object *root, const struct unicode_st
      return parent;
  }
  
@@ -186,7 +186,7 @@ index f5d7d9f02fd..0d067458a56 100644
  {
      struct object *obj;
      struct object_name *name_ptr;
-@@ -358,8 +361,11 @@ static void dump_name( struct object *obj )
+@@ -372,8 +375,11 @@ static void dump_name( struct object *obj )
  
      if (!name) return;
      if (name->parent) dump_name( name->parent );
@@ -201,7 +201,7 @@ index f5d7d9f02fd..0d067458a56 100644
  
  /* dump the name of an object to stderr */
 diff --git a/server/object.h b/server/object.h
-index 72ad8528c5a..ddb4410525b 100644
+index 72ad8528c5..ddb4410525 100644
 --- a/server/object.h
 +++ b/server/object.h
 @@ -135,6 +135,8 @@ extern WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len );

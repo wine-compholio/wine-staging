@@ -1,4 +1,4 @@
-From a6015c0c962802b44e1bf918e454745f1cc377b8 Mon Sep 17 00:00:00 2001
+From 104443cbb9a1087ec753af2462ccf41ba26eb444 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 4 Aug 2014 05:01:11 +0200
 Subject: server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to
@@ -27,16 +27,16 @@ Changes in v6:
   * When running on an older kernel make sure that ntdll doesn't try to use message mode features.
 ---
  dlls/kernel32/sync.c       |   2 +-
- dlls/kernel32/tests/pipe.c |  17 ++-----
- dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++------
- server/named_pipe.c        | 117 ++++++++++++++++++++++++++++++++++++---------
+ dlls/kernel32/tests/pipe.c |  17 ++------
+ dlls/ntdll/file.c          | 106 ++++++++++++++++++++++++++++++++++++++-------
+ server/named_pipe.c        | 103 ++++++++++++++++++++++++++++++++++++-------
  server/sock.c              |   4 +-
- server/sock.h              |  26 ++++++++++
- 6 files changed, 219 insertions(+), 53 deletions(-)
+ server/sock.h              |  26 +++++++++++
+ 6 files changed, 212 insertions(+), 46 deletions(-)
  create mode 100644 server/sock.h
 
 diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
-index 494db9c1a31..38aaccfa55c 100644
+index 494db9c1a3..38aaccfa55 100644
 --- a/dlls/kernel32/sync.c
 +++ b/dlls/kernel32/sync.c
 @@ -1475,7 +1475,7 @@ BOOL WINAPI PeekNamedPipe( HANDLE hPipe, LPVOID lpvBuffer, DWORD cbBuffer,
@@ -49,7 +49,7 @@ index 494db9c1a31..38aaccfa55c 100644
      }
      else SetLastError( RtlNtStatusToDosError(status) );
 diff --git a/dlls/kernel32/tests/pipe.c b/dlls/kernel32/tests/pipe.c
-index e7cfce4c00e..71d75be90e8 100644
+index e7cfce4c00..71d75be90e 100644
 --- a/dlls/kernel32/tests/pipe.c
 +++ b/dlls/kernel32/tests/pipe.c
 @@ -294,7 +294,6 @@ static void test_CreateNamedPipe(int pipemode)
@@ -149,7 +149,7 @@ index e7cfce4c00e..71d75be90e8 100644
              ret = RpcReadFile(hnp, ibuf + 8, sizeof(ibuf), &readden, NULL);
              ok(ret, "RpcReadFile 10\n");
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index af582ecfdb0..42b81fb3fbb 100644
+index 41d44c9af4..1b0eff02f2 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -96,6 +96,10 @@
@@ -329,7 +329,7 @@ index af582ecfdb0..42b81fb3fbb 100644
              if (needs_close) close( fd );
          }
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index c75a7379283..6c6a8b40bd1 100644
+index b215816650..74a9a44dcf 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -42,6 +42,10 @@
@@ -351,7 +351,7 @@ index c75a7379283..6c6a8b40bd1 100644
  #include "handle.h"
  #include "thread.h"
  #include "request.h"
-@@ -761,14 +766,43 @@ static int named_pipe_link_name( struct object *obj, struct object_name *name, s
+@@ -804,14 +809,43 @@ static int named_pipe_link_name( struct object *obj, struct object_name *name, s
      return 1;
  }
  
@@ -396,19 +396,26 @@ index c75a7379283..6c6a8b40bd1 100644
  
      if (!(server = find_available_server( pipe )))
      {
-@@ -787,7 +821,10 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -830,6 +864,9 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
  
-     if ((client = create_pipe_client( options, pipe->flags )))
+     if ((client = create_pipe_client( options, pipe->flags, pipe->outsize )))
      {
--        if (!socketpair( PF_UNIX, SOCK_STREAM, 0, fds ))
 +        type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && is_messagemode_supported()) ?
 +               SOCK_SEQPACKET : SOCK_STREAM;
 +
-+        if (!socketpair( PF_UNIX, type, 0, fds ))
+         if (use_server_io( &server->pipe_end ))
+         {
+             client->pipe_end.fd = alloc_pseudo_fd( &pipe_client_fd_ops, &client->pipe_end.obj, options );
+@@ -845,7 +882,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+                 client = NULL;
+             }
+         }
+-        else if (!socketpair( PF_UNIX, SOCK_STREAM, 0, fds ))
++        else if (!socketpair( PF_UNIX, type, 0, fds ))
          {
              assert( !server->pipe_end.fd );
  
-@@ -797,32 +834,55 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -855,25 +892,48 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
              if (is_overlapped( options )) fcntl( fds[1], F_SETFL, O_NONBLOCK );
              if (is_overlapped( server->options )) fcntl( fds[0], F_SETFL, O_NONBLOCK );
  
@@ -445,14 +452,7 @@ index c75a7379283..6c6a8b40bd1 100644
 +            if (type != SOCK_SEQPACKET || (setsockopt( fds[0], SOL_SOCKET, SO_PEEK_OFF, &zero, sizeof(zero) ) != -1 &&
 +                                           setsockopt( fds[1], SOL_SOCKET, SO_PEEK_OFF, &zero, sizeof(zero) ) != -1))
              {
--                allow_fd_caching( client->pipe_end.fd );
--                allow_fd_caching( server->pipe_end.fd );
 -                fd_copy_completion( server->ioctl_fd, server->pipe_end.fd );
--                if (server->state == ps_wait_open)
--                    fd_async_wake_up( server->ioctl_fd, ASYNC_TYPE_WAIT, STATUS_SUCCESS );
--                set_server_state( server, ps_connected_server );
--                server->client = client;
--                client->server = server;
 +            #ifdef __linux__
 +                fcntl( fds[0], F_SETSIG, messagemode_flags( server->pipe_end.flags ) );
 +                fcntl( fds[1], F_SETSIG, messagemode_flags( client->pipe_end.flags ) );
@@ -462,14 +462,7 @@ index c75a7379283..6c6a8b40bd1 100644
 +                server->pipe_end.fd = create_anonymous_fd( &pipe_server_fd_ops, fds[0], &server->pipe_end.obj, server->options );
 +                if (client->pipe_end.fd && server->pipe_end.fd)
 +                {
-+                    allow_fd_caching( client->pipe_end.fd );
-+                    allow_fd_caching( server->pipe_end.fd );
 +                    fd_copy_completion( server->ioctl_fd, server->pipe_end.fd );
-+                    if (server->state == ps_wait_open)
-+                        fd_async_wake_up( server->ioctl_fd, ASYNC_TYPE_WAIT, STATUS_SUCCESS );
-+                    set_server_state( server, ps_connected_server );
-+                    server->client = client;
-+                    client->server = server;
 +                }
 +                else
 +                {
@@ -483,7 +476,7 @@ index c75a7379283..6c6a8b40bd1 100644
                  release_object( client );
                  client = NULL;
              }
-@@ -907,7 +967,7 @@ DECL_HANDLER(create_named_pipe)
+@@ -970,7 +1030,7 @@ DECL_HANDLER(create_named_pipe)
          return;
      }
  
@@ -492,7 +485,7 @@ index c75a7379283..6c6a8b40bd1 100644
  
      if (!name.len)  /* pipes need a root directory even without a name */
      {
-@@ -1010,6 +1070,9 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1073,6 +1133,9 @@ DECL_HANDLER(set_named_pipe_info)
  {
      struct pipe_server *server;
      struct pipe_client *client = NULL;
@@ -502,7 +495,7 @@ index c75a7379283..6c6a8b40bd1 100644
  
      server = get_pipe_server_obj( current->process, req->handle, FILE_WRITE_ATTRIBUTES );
      if (!server)
-@@ -1036,10 +1099,20 @@ DECL_HANDLER(set_named_pipe_info)
+@@ -1099,10 +1162,20 @@ DECL_HANDLER(set_named_pipe_info)
      else if (client)
      {
          client->pipe_end.flags = server->pipe->flags | req->flags;
@@ -524,7 +517,7 @@ index c75a7379283..6c6a8b40bd1 100644
  
      if (client)
 diff --git a/server/sock.c b/server/sock.c
-index d6b4fb2fa5c..49b6d3d5758 100644
+index d6b4fb2fa5..49b6d3d575 100644
 --- a/server/sock.c
 +++ b/server/sock.c
 @@ -61,6 +61,7 @@
@@ -554,7 +547,7 @@ index d6b4fb2fa5c..49b6d3d5758 100644
  }
 diff --git a/server/sock.h b/server/sock.h
 new file mode 100644
-index 00000000000..21551b42b1c
+index 0000000000..21551b42b1
 --- /dev/null
 +++ b/server/sock.h
 @@ -0,0 +1,26 @@

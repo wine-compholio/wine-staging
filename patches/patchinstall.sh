@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5b4f8a385b46a8a8a8b09b8ca6578aa7b7995a1e"
+	echo "ec8485ec10e3c27b89ec5f1289bc8a3cdad5f3f6"
 }
 
 # Show version information
@@ -2787,30 +2787,29 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0/api-ms-win-core-
-# | 	heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/Makefile.in, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-
-# | 	quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-
-# | 	obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in,
-# | 	dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-
-# | 	window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls
-# | 	/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-
-# | 	obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-
-# | 	shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-
-# | 	ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls
-# | 	/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec,
-# | 	dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-
-# | 	rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-
-# | 	themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-
-# | 	pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in,
-# | 	dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
-# | 	dlls/iertutil/main.c, dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c,
-# | 	dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec,
-# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec,
-# | 	include/Makefile.in, include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
+# | 	heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-
+# | 	obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec,
+# | 	dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-
+# | 	ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-
+# | 	window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-
+# | 	ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in,
+# | 	dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-
+# | 	thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-
+# | 	appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-
+# | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
+# | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
+# | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
+# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
+# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
+# | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
+# | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
+# | 	dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, dlls/uiautomationcore/Makefile.in,
+# | 	dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in,
+# | 	include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
-	patch_apply api-ms-win-Stub_DLLs/0002-api-ms-win-core-quirks-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-heap-l2-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
 	patch_apply api-ms-win-Stub_DLLs/0007-shcore-Add-dll.patch
@@ -2834,7 +2833,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-quirks-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';

@@ -79,6 +79,7 @@ class PatchSet(object):
         self.name           = name
         self.variable       = None
         self.directory      = directory
+        self.config         = []
         self.fixes          = []
         self.changes        = []
         self.disabled       = False
@@ -178,11 +179,26 @@ def load_patchsets():
     for name, directory in enum_patchsets(config.path_patches):
         patch = PatchSet(name, directory)
 
+        # Load the definition file
+        try:
+            with open(os.path.join(directory, "definition")) as fp:
+                for line in fp:
+                    if line.startswith("#"):
+                        continue
+                    tmp = line.split(":", 1)
+                    if len(tmp) != 2:
+                        continue
+                    patch.config.append((tmp[0].lower(), tmp[1].strip()))
+        except IOError:
+            pass
+
         # Enumerate .patch files in the given directory, enumerate individual patches and affected files
         for f in sorted(os.listdir(directory)):
             if not re.match("^[0-9]{4}-.*\\.patch$", f):
                 continue
             if f.startswith(config.path_IfDefined):
+                continue
+            if ("exclude", f) in patch.config:
                 continue
             if not os.path.isfile(os.path.join(directory, f)):
                 continue
@@ -202,24 +218,10 @@ def load_patchsets():
 
     # Now read the definition files in a second step
     for i, patch in all_patches.iteritems():
-        filename = os.path.join(os.path.join(config.path_patches, patch.name), "definition")
-        try:
-            with open(filename) as fp:
-                content = fp.read()
-        except IOError:
-            continue # Skip this definition file
-
-        for line in content.split("\n"):
-            if line.startswith("#"):
-                continue
-            tmp = line.split(":", 1)
-            if len(tmp) != 2:
-                continue
-
-            key, val = tmp[0].lower(), tmp[1].strip()
+        for key, val in patch.config:
             if key == "depends":
                 if not name_to_id.has_key(val):
-                    raise PatchUpdaterError("Definition file %s references unknown dependency %s" % (filename, val))
+                    raise PatchUpdaterError("Definition file for %s references unknown dependency %s" % (patch.name, val))
                 patch.depends.add(name_to_id[val])
 
             elif key == "apply-after":
@@ -244,11 +246,14 @@ def load_patchsets():
             elif key == "disabled":
                 patch.disabled = _parse_int(val)
 
+            elif key == "exclude":
+                pass # Already processed above
+
             elif key == "ifdefined":
                 patch.ifdefined = val
 
             else:
-                print "WARNING: Ignoring unknown command in definition file %s: %s" % (filename, line)
+                print "WARNING: Ignoring unknown command in definition file for %s: %s" % (patch.name, line)
 
     # Filter autodepends on disabled patchsets
     for i, patch in all_patches.iteritems():

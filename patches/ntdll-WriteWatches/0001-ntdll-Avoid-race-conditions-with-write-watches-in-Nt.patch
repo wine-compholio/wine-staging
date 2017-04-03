@@ -1,19 +1,19 @@
-From 8f87412b097475e203ad9aa5289f35905c4a8327 Mon Sep 17 00:00:00 2001
+From d587367c1f1e2dbe9b284b32027db068691838eb Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 10 Feb 2015 06:36:52 +0100
 Subject: ntdll: Avoid race-conditions with write watches in NtReadFile.
 
 Rebased against kernel32-NamedPipe patchset by Sebastian Lackner <sebastian@fds-team.de>.
 ---
- dlls/kernel32/tests/virtual.c | 8 ++++----
- dlls/ntdll/file.c             | 5 +++++
- 2 files changed, 9 insertions(+), 4 deletions(-)
+ dlls/kernel32/tests/virtual.c |  8 ++++----
+ dlls/ntdll/file.c             | 18 ++++++++++++++++++
+ 2 files changed, 22 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/tests/virtual.c b/dlls/kernel32/tests/virtual.c
-index e80ba38..29740b5 100644
+index 40de97ada2..4765cd6c58 100644
 --- a/dlls/kernel32/tests/virtual.c
 +++ b/dlls/kernel32/tests/virtual.c
-@@ -1637,16 +1637,16 @@ static void test_write_watch(void)
+@@ -1722,16 +1722,16 @@ static void test_write_watch(void)
  
      num_bytes = 0;
      success = GetOverlappedResult( readpipe, &overlapped, &num_bytes, TRUE );
@@ -35,28 +35,48 @@ index e80ba38..29740b5 100644
      CloseHandle( readpipe );
      CloseHandle( writepipe );
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 15500b9..1f35a55 100644
+index c153e7bb5c..34fd08fb0b 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -627,6 +627,8 @@ static NTSTATUS read_unix_fd(int fd, char *buf, ULONG *total, ULONG length,
-             else
-                 return STATUS_PENDING;
+@@ -514,6 +514,10 @@ static NTSTATUS FILE_AsyncReadService( void *user, IO_STATUS_BLOCK *iosb,
+         {
+             if (errno == EAGAIN || errno == EINTR)
+                 status = STATUS_PENDING;
++            else if (errno == EFAULT)
++                status = (wine_uninterrupted_write_memory( &fileio->buffer[fileio->already], NULL,
++                          fileio->count - fileio->already ) >= (fileio->count - fileio->already)) ?
++                         STATUS_PENDING : STATUS_ACCESS_VIOLATION;
+             else /* check to see if the transfer is complete */
+                 status = FILE_GetNtStatus();
          }
-+        else if (errno == EFAULT && wine_uninterrupted_write_memory( buf + *total, NULL, length - *total ) >= (length - *total))
-+            continue;
-         else if (errno != EINTR)
-             return FILE_GetNtStatus();
-     }
-@@ -968,6 +970,9 @@ NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
+@@ -875,6 +879,13 @@ NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
              /* async I/O doesn't make sense on regular files */
              while ((result = pread( unix_handle, buffer, length, offset->QuadPart )) == -1)
              {
-+                if (errno == EFAULT && virtual_check_buffer_for_write( buffer, length ))
-+                    continue;
-+
++                if (errno == EFAULT)
++                {
++                    if (virtual_check_buffer_for_write( buffer, length ) >= length)
++                        continue;
++                    else
++                        errno = EFAULT;
++                }
                  if (errno != EINTR)
                  {
                      status = FILE_GetNtStatus();
+@@ -949,6 +960,13 @@ NTSTATUS WINAPI NtReadFile(HANDLE hFile, HANDLE hEvent,
+         else if (errno != EAGAIN)
+         {
+             if (errno == EINTR) continue;
++            if (errno == EFAULT)
++            {
++                if (wine_uninterrupted_write_memory( (char *)buffer + total, NULL, length - total ) >= (length - total))
++                    continue;
++                else
++                    errno = EFAULT;
++            }
+             if (!total) status = FILE_GetNtStatus();
+             goto done;
+         }
 -- 
-2.6.1
+2.11.0
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ec8485ec10e3c27b89ec5f1289bc8a3cdad5f3f6"
+	echo "42ed54b5d8e67aeb647d5a4fc8af7c8962285c7f"
 }
 
 # Show version information
@@ -187,7 +187,6 @@ patch_enable_all ()
 	enable_kernel32_Locale_Definitions="$1"
 	enable_kernel32_Misalign_Workaround="$1"
 	enable_kernel32_MoveFile="$1"
-	enable_kernel32_Named_Pipe="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
@@ -785,9 +784,6 @@ patch_enable ()
 			;;
 		kernel32-MoveFile)
 			enable_kernel32_MoveFile="$2"
-			;;
-		kernel32-Named_Pipe)
-			enable_kernel32_Named_Pipe="$2"
 			;;
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
@@ -2165,10 +2161,10 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 fi
 
 if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	if test "$enable_kernel32_Named_Pipe" -gt 1; then
-		abort "Patchset kernel32-Named_Pipe disabled, but server-Pipe_ObjectName depends on that."
+	if test "$enable_server_Desktop_Refcount" -gt 1; then
+		abort "Patchset server-Desktop_Refcount disabled, but server-Pipe_ObjectName depends on that."
 	fi
-	enable_kernel32_Named_Pipe=1
+	enable_server_Desktop_Refcount=1
 fi
 
 if test "$enable_server_Object_Types" -eq 1; then
@@ -2267,13 +2263,9 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 fi
 
 if test "$enable_ntdll_WriteWatches" -eq 1; then
-	if test "$enable_kernel32_Named_Pipe" -gt 1; then
-		abort "Patchset kernel32-Named_Pipe disabled, but ntdll-WriteWatches depends on that."
-	fi
 	if test "$enable_ws2_32_WriteWatches" -gt 1; then
 		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WriteWatches depends on that."
 	fi
-	enable_kernel32_Named_Pipe=1
 	enable_ws2_32_WriteWatches=1
 fi
 
@@ -2371,13 +2363,6 @@ if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
 		abort "Patchset kernel32-Misalign_Workaround disabled, but kernel32-PE_Loader_Fixes depends on that."
 	fi
 	enable_kernel32_Misalign_Workaround=1
-fi
-
-if test "$enable_kernel32_Named_Pipe" -eq 1; then
-	if test "$enable_server_Desktop_Refcount" -gt 1; then
-		abort "Patchset server-Desktop_Refcount disabled, but kernel32-Named_Pipe depends on that."
-	fi
-	enable_server_Desktop_Refcount=1
 fi
 
 if test "$enable_kernel32_GetPackageFullName" -eq 1; then
@@ -4632,89 +4617,6 @@ if test "$enable_kernel32_MoveFile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Desktop_Refcount
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/winstation.c, dlls/user32/winstation.c, include/winuser.h, programs/explorer/desktop.c,
-# | 	server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c,
-# | 	server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c, server/handle.c,
-# | 	server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c,
-# | 	server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c,
-# | 	server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c,
-# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
-# |
-if test "$enable_server_Desktop_Refcount" -eq 1; then
-	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
-	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
-	patch_apply server-Desktop_Refcount/0003-user32-Implement-CWF_CREATE_ONLY-flag-for-CreateWind.patch
-	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Named_Pipe
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#17195] Support for named pipe message mode (Linux only)
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/sync.c, dlls/kernel32/tests/pipe.c, dlls/ntdll/file.c, include/winternl.h,
-# | 	server/named_pipe.c, server/protocol.def, server/sock.c, server/sock.h
-# |
-if test "$enable_kernel32_Named_Pipe" -eq 1; then
-	patch_apply kernel32-Named_Pipe/0001-kernel32-tests-Only-allow-one-test-result.patch
-	patch_apply kernel32-Named_Pipe/0002-kernel32-tests-Add-tests-for-PeekNamedPipe-with-part.patch
-	patch_apply kernel32-Named_Pipe/0003-kernel32-tests-Add-tests-for-sending-and-receiving-l.patch
-	patch_apply kernel32-Named_Pipe/0004-server-Show-warning-if-message-mode-is-not-supported.patch
-	patch_apply kernel32-Named_Pipe/0005-ntdll-Unify-similar-code-in-NtReadFile-and-FILE_Asyn.patch
-	patch_apply kernel32-Named_Pipe/0006-ntdll-Move-logic-to-check-for-broken-pipe-into-a-sep.patch
-	patch_apply kernel32-Named_Pipe/0007-ntdll-Unify-similar-code-in-NtWriteFile-and-FILE_Asy.patch
-	patch_apply kernel32-Named_Pipe/0008-server-Use-SOCK_SEQPACKET-socket-in-combination-with.patch
-	patch_apply kernel32-Named_Pipe/0009-ntdll-Add-handling-for-partially-received-messages-i.patch
-	patch_apply kernel32-Named_Pipe/0010-kernel32-tests-Add-more-tests-with-overlapped-IO-and.patch
-	patch_apply kernel32-Named_Pipe/0011-ntdll-Fix-some-tests-for-overlapped-partial-reads.patch
-	patch_apply kernel32-Named_Pipe/0012-kernel32-tests-Test-sending-peeking-and-receiving-an.patch
-	patch_apply kernel32-Named_Pipe/0013-ntdll-Add-support-for-nonblocking-pipes.patch
-	patch_apply kernel32-Named_Pipe/0014-kernel32-tests-Add-tests-for-PIPE_NOWAIT-in-message-.patch
-	patch_apply kernel32-Named_Pipe/0015-ntdll-Allow-to-set-PIPE_NOWAIT-on-byte-mode-pipes.patch
-	patch_apply kernel32-Named_Pipe/0016-kernel32-tests-Add-additional-tests-for-PIPE_NOWAIT-.patch
-	patch_apply kernel32-Named_Pipe/0017-ntdll-Improve-ReadDataAvailable-handling-in-FilePipe.patch
-	patch_apply kernel32-Named_Pipe/0018-ntdll-Set-NamedPipeState-to-FILE_PIPE_CLOSING_STATE-.patch
-	patch_apply kernel32-Named_Pipe/0019-server-Return-correct-error-codes-for-NtWriteFile-wh.patch
-	patch_apply kernel32-Named_Pipe/0020-ntdll-Pre-cache-file-descriptors-after-opening-a-fil.patch
-	patch_apply kernel32-Named_Pipe/0021-server-Do-not-allow-to-queue-async-operation-for-bro.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Only allow one test result.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PeekNamedPipe with partial received messages.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add tests for sending and receiving large messages.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Show warning if message mode is not supported.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtReadFile and FILE_AsyncReadService.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move logic to check for broken pipe into a separate function.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Unify similar code in NtWriteFile and FILE_AsyncWriteService.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Use SOCK_SEQPACKET socket in combination with SO_PEEK_OFF to implement message mode on Unix.", 6 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add handling for partially received messages in NtReadFile.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add more tests with overlapped IO and partial reads from named pipes.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix some tests for overlapped partial reads.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Test sending, peeking and receiving an empty message.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for nonblocking pipes.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add tests for PIPE_NOWAIT in message mode.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to set PIPE_NOWAIT on byte-mode pipes.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for PIPE_NOWAIT in overlapped mode.", 1 },';
-		printf '%s\n' '+    { "Qian Hong", "ntdll: Improve ReadDataAvailable handling in FilePipeLocalInformation class support.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set NamedPipeState to FILE_PIPE_CLOSING_STATE on broken pipe in NtQueryInformationFile.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Return correct error codes for NtWriteFile when pipes are closed without disconnecting.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Pre-cache file descriptors after opening a file.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not allow to queue async operation for broken pipes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-NeedCurrentDirectoryForExePath
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6017,7 +5919,7 @@ fi
 # Patchset ntdll-WriteWatches
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount, kernel32-Named_Pipe, ws2_32-WriteWatches
+# |   *	ws2_32-WriteWatches
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
@@ -6629,6 +6531,30 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Desktop_Refcount
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/winstation.c, dlls/user32/winstation.c, include/winuser.h, programs/explorer/desktop.c,
+# | 	server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c,
+# | 	server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c, server/handle.c,
+# | 	server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c,
+# | 	server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c,
+# | 	server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c,
+# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
+# |
+if test "$enable_server_Desktop_Refcount" -eq 1; then
+	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
+	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
+	patch_apply server-Desktop_Refcount/0003-user32-Implement-CWF_CREATE_ONLY-flag-for-CreateWind.patch
+	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-FileEndOfFileInformation
 # |
 # | Modified files:
@@ -6856,7 +6782,7 @@ fi
 # Patchset server-Pipe_ObjectName
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount, kernel32-Named_Pipe
+# |   *	server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h

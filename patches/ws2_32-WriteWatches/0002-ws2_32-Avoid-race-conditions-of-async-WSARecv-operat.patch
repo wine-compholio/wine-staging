@@ -1,4 +1,4 @@
-From 1fa875d307b456f103fd9ab225fe4b5a6272e602 Mon Sep 17 00:00:00 2001
+From 252e65f38146194200160b94bf2b4c1963980a07 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 21 Nov 2014 12:22:46 +0100
 Subject: ws2_32: Avoid race-conditions of async WSARecv() operations with
@@ -37,14 +37,14 @@ Based on the code it looks like we could savely remove the write-watch check
 at the beginning of WS2_recv_base, which might make the application think
 that data is immediately available.
 ---
- dlls/ws2_32/socket.c | 12 +++++++++++-
- 1 file changed, 11 insertions(+), 1 deletion(-)
+ dlls/ws2_32/socket.c | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 4444011..e287c2b 100644
+index d13fbf4da4..a532c2591d 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -2014,7 +2014,17 @@ static int WS2_recv( int fd, struct ws2_async *wsa, int flags )
+@@ -2332,7 +2332,20 @@ static int WS2_recv( int fd, struct ws2_async *wsa, int flags )
  
      while ((n = recvmsg(fd, &hdr, flags)) == -1)
      {
@@ -56,7 +56,10 @@ index 4444011..e287c2b 100644
 +            {
 +                struct iovec *iov = &wsa->iovec[i];
 +                if (wine_uninterrupted_write_memory( iov->iov_base, NULL, iov->iov_len ) < iov->iov_len)
++                {
++                    errno = EFAULT;
 +                    return -1;
++                }
 +            }
 +        }
 +        else if (errno != EINTR)
@@ -64,5 +67,5 @@ index 4444011..e287c2b 100644
      }
  
 -- 
-2.3.3
+2.11.0
 

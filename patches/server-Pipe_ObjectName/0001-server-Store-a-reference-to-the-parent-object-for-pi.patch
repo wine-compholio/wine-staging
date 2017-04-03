@@ -1,4 +1,4 @@
-From 85ccf78e42e8c913c71385fa8ff469d757fb5ffd Mon Sep 17 00:00:00 2001
+From aaeefae082df9cd44092a36d5781de6d6a0fabee Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 01:11:47 +0200
 Subject: server: Store a reference to the parent object for pipe servers. (v2)
@@ -11,10 +11,10 @@ Subject: server: Store a reference to the parent object for pipe servers. (v2)
  4 files changed, 53 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index b58f76365f..84b783b80a 100644
+index 43c5ee46d7..9a1ba670ab 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
-@@ -1503,14 +1503,11 @@ static void test_query_object(void)
+@@ -1487,14 +1487,11 @@ static void test_query_object(void)
      status = pNtQueryObject( handle, ObjectNameInformation, buffer, sizeof(buffer), &len );
      ok( status == STATUS_SUCCESS , "NtQueryObject returned %x\n", status );
      str = (UNICODE_STRING *)buffer;
@@ -30,19 +30,19 @@ index b58f76365f..84b783b80a 100644
          "name too short %s\n", wine_dbgstr_w(str->Buffer) );
      trace( "got %s len %u\n", wine_dbgstr_w(str->Buffer), len );
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index a7811c1185..3d19e6c42c 100644
+index 0d10f11669..2713614776 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -169,6 +169,8 @@ static void pipe_end_reselect_async( struct fd *fd, struct async_queue *queue );
+@@ -164,6 +164,8 @@ static void pipe_end_reselect_async( struct fd *fd, struct async_queue *queue );
  /* server end functions */
  static void pipe_server_dump( struct object *obj, int verbose );
  static struct fd *pipe_server_get_fd( struct object *obj );
 +static int pipe_server_link_name( struct object *obj, struct object_name *name, struct object *parent );
 +static void pipe_server_unlink_name( struct object *obj, struct object_name *name );
- static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
  static void pipe_server_destroy( struct object *obj);
  static obj_handle_t pipe_server_flush( struct fd *fd, struct async *async, int blocking );
-@@ -191,8 +193,8 @@ static const struct object_ops pipe_server_ops =
+ static enum server_fd_type pipe_server_get_fd_type( struct fd *fd );
+@@ -185,8 +187,8 @@ static const struct object_ops pipe_server_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -52,17 +52,17 @@ index a7811c1185..3d19e6c42c 100644
 +    pipe_server_unlink_name,      /* unlink_name */
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
-     pipe_server_close_handle,     /* close_handle */
-@@ -216,6 +218,8 @@ static const struct fd_ops pipe_server_fd_ops =
+     fd_close_handle,              /* close_handle */
+@@ -210,6 +212,8 @@ static const struct fd_ops pipe_server_fd_ops =
  static void pipe_client_dump( struct object *obj, int verbose );
  static int pipe_client_signaled( struct object *obj, struct wait_queue_entry *entry );
  static struct fd *pipe_client_get_fd( struct object *obj );
 +static int pipe_client_link_name( struct object *obj, struct object_name *name, struct object *parent );
 +static void pipe_client_unlink_name( struct object *obj, struct object_name *name );
- static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
  static void pipe_client_destroy( struct object *obj );
  static obj_handle_t pipe_client_flush( struct fd *fd, struct async *async, int blocking );
-@@ -238,8 +242,8 @@ static const struct object_ops pipe_client_ops =
+ static obj_handle_t pipe_client_ioctl( struct fd *fd, ioctl_code_t code, struct async *async,
+@@ -231,8 +235,8 @@ static const struct object_ops pipe_client_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -72,8 +72,8 @@ index a7811c1185..3d19e6c42c 100644
 +    pipe_client_unlink_name,      /* unlink_name */
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
-     pipe_client_close_handle,     /* close_handle */
-@@ -486,6 +490,17 @@ static void pipe_end_destroy( struct pipe_end *pipe_end )
+     fd_close_handle,              /* close_handle */
+@@ -484,6 +488,17 @@ static void pipe_end_destroy( struct pipe_end *pipe_end )
      free_async_queue( pipe_end->write_q );
  }
  
@@ -88,10 +88,10 @@ index a7811c1185..3d19e6c42c 100644
 +{
 +}
 +
- static int pipe_server_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
+ static void pipe_server_destroy( struct object *obj)
  {
- #ifdef __linux__
-@@ -532,6 +547,17 @@ static void pipe_server_destroy( struct object *obj)
+     struct pipe_server *server = (struct pipe_server *)obj;
+@@ -513,6 +528,17 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -106,10 +106,10 @@ index a7811c1185..3d19e6c42c 100644
 +{
 +}
 +
- static int pipe_client_close_handle( struct object *obj, struct process *process, obj_handle_t handle )
+ static void pipe_client_destroy( struct object *obj)
  {
- #ifdef __linux__
-@@ -1003,9 +1029,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
+     struct pipe_client *client = (struct pipe_client *)obj;
+@@ -1072,9 +1098,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
  static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned int options,
                                                 unsigned int pipe_flags )
  {
@@ -121,7 +121,7 @@ index a7811c1185..3d19e6c42c 100644
      if (!server)
          return NULL;
  
-@@ -1027,11 +1054,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
+@@ -1096,11 +1123,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
      return server;
  }
  
@@ -137,17 +137,17 @@ index a7811c1185..3d19e6c42c 100644
      if (!client)
          return NULL;
  
-@@ -1130,7 +1159,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -1170,7 +1199,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
          return NULL;
      }
  
 -    if ((client = create_pipe_client( options, pipe->flags, pipe->outsize )))
 +    if ((client = create_pipe_client( pipe, options, pipe->flags, pipe->outsize )))
      {
-         type = ((pipe->flags & NAMED_PIPE_MESSAGE_STREAM_WRITE) && is_messagemode_supported()) ?
-                SOCK_SEQPACKET : SOCK_STREAM;
+         if (use_server_io( &server->pipe_end ))
+         {
 diff --git a/server/object.c b/server/object.c
-index 2ce1cdcd56..37ac0adce6 100644
+index 46f020e522..653687d5bf 100644
 --- a/server/object.c
 +++ b/server/object.c
 @@ -176,7 +176,7 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
@@ -201,7 +201,7 @@ index 2ce1cdcd56..37ac0adce6 100644
  
  /* dump the name of an object to stderr */
 diff --git a/server/object.h b/server/object.h
-index 9ff123ebff..4a5d282a47 100644
+index 72ad8528c5..ddb4410525 100644
 --- a/server/object.h
 +++ b/server/object.h
 @@ -135,6 +135,8 @@ extern WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len );

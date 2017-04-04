@@ -447,6 +447,7 @@ patch_enable_all ()
 	enable_wininet_InternetCrackUrlW="$1"
 	enable_wininet_Internet_Settings="$1"
 	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
+	enable_wininet_Redirect="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintrust_WinVerifyTrust="$1"
@@ -1565,6 +1566,9 @@ patch_enable ()
 		wininet-ParseX509EncodedCertificateForListBoxEntry)
 			enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$2"
 			;;
+		wininet-Redirect)
+			enable_wininet_Redirect="$2"
+			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
 			;;
@@ -1990,6 +1994,13 @@ if test "$enable_wpcap_Dynamic_Linking" -eq 1; then
 		abort "Patchset wpcap-Several_Fixes disabled, but wpcap-Dynamic_Linking depends on that."
 	fi
 	enable_wpcap_Several_Fixes=1
+fi
+
+if test "$enable_wininet_Redirect" -eq 1; then
+	if test "$enable_wininet_Cleanup" -gt 1; then
+		abort "Patchset wininet-Cleanup disabled, but wininet-Redirect depends on that."
+	fi
+	enable_wininet_Cleanup=1
 fi
 
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
@@ -9017,6 +9028,24 @@ if test "$enable_wininet_ParseX509EncodedCertificateForListBoxEntry" -eq 1; then
 	patch_apply wininet-ParseX509EncodedCertificateForListBoxEntry/0001-wininet-add-ParseX509EncodedCertificateForListBoxEnt.patch
 	(
 		printf '%s\n' '+    { "Austin English", "wininet: Add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wininet-Redirect
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wininet-Cleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41398] Return failure when handling http redirect without hostname
+# |
+# | Modified files:
+# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
+# |
+if test "$enable_wininet_Redirect" -eq 1; then
+	patch_apply wininet-Redirect/0001-wininet-Return-failure-when-handling-http-redirect-w.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wininet: Return failure when handling http redirect without hostname.", 1 },';
 	) >> "$patchlist"
 fi
 

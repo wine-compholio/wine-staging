@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "63bcfa3354edd910ee52b8134af191f7a774b701"
+	echo "64e4a03a92498abea428dc567372f3996fa9dc3a"
 }
 
 # Show version information
@@ -2788,10 +2788,10 @@ fi
 # | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
 # | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
 # | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
-# | 	dlls/kernelbase/Makefile.in, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/misc.c, dlls/shcore/Makefile.in,
-# | 	dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/shlwapi/shlwapi.spec, dlls/uiautomationcore/Makefile.in,
-# | 	dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in,
-# | 	include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c, dlls/shcore/Makefile.in, dlls/shcore/main.c,
+# | 	dlls/shcore/shcore.spec, dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c,
+# | 	dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in, include/shellscalingapi.h,
+# | 	include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
@@ -2812,7 +2812,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0022-shcore-Add-SetProcessDpiAwareness-stub.patch
 	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Implement-stub-for-GetDpiForMonitor.patch
-	patch_apply api-ms-win-Stub_DLLs/0024-kernelbase-Add-stub-for-QuirkIsEnabled3.patch
 	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
@@ -2835,7 +2834,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add stub for QuirkIsEnabled3.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
@@ -8611,7 +8609,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
 		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Avoid destroying views in color and depth fills.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add a separate variable to check if queries are started.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add swapchain waits.", 1 },';

@@ -1,17 +1,17 @@
-From bf11cf98c90e7f841ac3ccc1860409f918325203 Mon Sep 17 00:00:00 2001
+From 8ec257b616f5e216f9c41eb5a08c8e1e10e57495 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 4 Jul 2013 21:10:16 +0200
 Subject: wined3d: Send render target view clears through the command stream
 
 ---
- dlls/d3d9/tests/visual.c       |  2 +-
+ dlls/d3d9/tests/visual.c       |  4 ++--
  dlls/wined3d/cs.c              | 49 ++++++++++++++++++++++++++++++++++++++++++
  dlls/wined3d/device.c          |  6 ++----
  dlls/wined3d/wined3d_private.h |  3 +++
- 4 files changed, 55 insertions(+), 5 deletions(-)
+ 4 files changed, 56 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index 7070895aa2..c3034c4909 100644
+index 7070895aa2..c14ac9e938 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
 @@ -1337,7 +1337,7 @@ static void color_fill_test(void)
@@ -23,8 +23,17 @@ index 7070895aa2..c3034c4909 100644
          /* Vendor-specific formats like ATI2N are a non-issue here since they're not
           * supported as offscreen plain surfaces and do not support D3DUSAGE_RENDERTARGET
           * when created as texture. */
+@@ -1458,7 +1458,7 @@ static void color_fill_test(void)
+         {
+             hr = IDirect3DDevice9_ColorFill(device, surface, &rect2, 0xdeadbeef);
+             if (formats[i].flags & BLOCKS)
+-                todo_wine ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#x, fmt=%s.\n", hr, formats[i].name);
++                ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#x, fmt=%s.\n", hr, formats[i].name);
+             else
+                 ok(SUCCEEDED(hr), "Failed to color fill, hr %#x, fmt=%s.\n", hr, formats[i].name);
+         }
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index bf1b63b897..72e177a41e 100644
+index 80a9322224..c30dfbc898 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -68,6 +68,7 @@ enum wined3d_cs_op
@@ -54,7 +63,7 @@ index bf1b63b897..72e177a41e 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -1940,6 +1953,41 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
+@@ -1952,6 +1965,41 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
      cs->ops->submit(cs);
  }
  
@@ -96,7 +105,7 @@ index bf1b63b897..72e177a41e 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -1984,6 +2032,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -1996,6 +2044,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_BLT_SUB_RESOURCE           */ wined3d_cs_exec_blt_sub_resource,
      /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE        */ wined3d_cs_exec_update_sub_resource,
      /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
@@ -105,10 +114,10 @@ index bf1b63b897..72e177a41e 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 500506d789..f1b90f5ee1 100644
+index 9dc893bfeb..33c1451a99 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4328,10 +4328,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
+@@ -4324,10 +4324,8 @@ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *devi
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -122,10 +131,10 @@ index 500506d789..f1b90f5ee1 100644
  
  struct wined3d_rendertarget_view * CDECL wined3d_device_get_rendertarget_view(const struct wined3d_device *device,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ad72e10d7a..59b446167b 100644
+index 26df981c77..43cca136d1 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3232,6 +3232,9 @@ void wined3d_cs_emit_blt_sub_resource(struct wined3d_cs *cs, struct wined3d_reso
+@@ -3237,6 +3237,9 @@ void wined3d_cs_emit_blt_sub_resource(struct wined3d_cs *cs, struct wined3d_reso
          const struct wined3d_blt_fx *fx, enum wined3d_texture_filter_type filter) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_clear(struct wined3d_cs *cs, DWORD rect_count, const RECT *rects,
          DWORD flags, const struct wined3d_color *color, float depth, DWORD stencil) DECLSPEC_HIDDEN;

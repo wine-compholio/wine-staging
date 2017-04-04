@@ -13,7 +13,7 @@ Installation
 
 Ready-to-use packages for Wine Staging are available for a variety of Linux
 distributions and for Mac OS X. Just follow the
-[installation instructions](https://github.com/wine-compholio/wine-staging/wiki/Installation)
+[installation instructions](https://wine-staging.com/installation.html)
 for your operating system.
 
 On most distributions the `wine-staging` package is installed to

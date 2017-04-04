@@ -230,6 +230,7 @@ patch_enable_all ()
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
+	enable_ntdll_FileNameInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Grow_Virtual_Heap="$1"
 	enable_ntdll_Heap_FreeLists="$1"
@@ -914,6 +915,9 @@ patch_enable ()
 			;;
 		ntdll-FileFsVolumeInformation)
 			enable_ntdll_FileFsVolumeInformation="$2"
+			;;
+		ntdll-FileNameInformation)
+			enable_ntdll_FileNameInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -5318,6 +5322,18 @@ if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
 	patch_apply ntdll-FileFsVolumeInformation/0001-ntdll-Add-semi-stub-for-FileFsVolumeInformation-info.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-FileNameInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_FileNameInformation" -eq 1; then
+	patch_apply ntdll-FileNameInformation/0001-ntdll-Implement-querying-for-FileNameInformation-of-.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement querying for FileNameInformation of named pipes in NtQueryInformationFile.", 1 },';
 	) >> "$patchlist"
 fi
 

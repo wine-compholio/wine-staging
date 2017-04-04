@@ -1,0 +1,164 @@
+From e8808565313aeb31f096c26a1d262fce1992dc25 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 21 Mar 2017 17:25:37 +0100
+Subject: ntdll: Implement querying for FileNameInformation of named pipes in
+ NtQueryInformationFile.
+
+---
+ dlls/ntdll/file.c       | 73 +++++++++++++++++++++++++++++++++++++++++++++++--
+ dlls/ntdll/tests/file.c | 25 +++++++++++++++++
+ 2 files changed, 96 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 3568c256c8..327b71df2b 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2593,6 +2593,41 @@ NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name )
+     return ret;
+ }
+ 
++static NTSTATUS server_get_object_name( HANDLE handle, UNICODE_STRING *object_name )
++{
++    data_size_t total, size = 1024;
++    NTSTATUS ret;
++    WCHAR *name;
++
++    for (;;)
++    {
++        name = RtlAllocateHeap( GetProcessHeap(), 0, size + 2 );
++        if (!name) return STATUS_NO_MEMORY;
++        object_name->MaximumLength = size + 2;
++
++        SERVER_START_REQ( get_object_info )
++        {
++            req->handle = wine_server_obj_handle( handle );
++            wine_server_set_reply( req, name, size );
++            ret = wine_server_call( req );
++            total = reply->total;
++        }
++        SERVER_END_REQ;
++        if (ret) break;
++
++        if (total <= size)
++        {
++            name[total / sizeof(WCHAR)] = 0;
++            object_name->Buffer = name;
++            object_name->Length = total;
++            break;
++        }
++        RtlFreeHeap( GetProcessHeap(), 0, name );
++        size = total;
++    }
++    return ret;
++}
++
+ static NTSTATUS fill_name_info( const ANSI_STRING *unix_name, FILE_NAME_INFORMATION *info, LONG *name_len )
+ {
+     UNICODE_STRING nt_name;
+@@ -2729,7 +2764,14 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+     if (class != FilePipeInformation && class != FilePipeLocalInformation)
+     {
+         if ((io->u.Status = server_get_unix_fd( hFile, 0, &fd, &needs_close, NULL, NULL )))
+-            return io->u.Status;
++        {
++            if (io->u.Status != STATUS_PIPE_LISTENING || class != FileNameInformation)
++                return io->u.Status;
++
++            io->u.Status = STATUS_SUCCESS;
++            needs_close = FALSE;
++            fd = -1;
++        }
+     }
+ 
+     switch (class)
+@@ -2910,16 +2952,43 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+         break;
+     case FileNameInformation:
+         {
++            LONG name_len = len - FIELD_OFFSET(FILE_NAME_INFORMATION, FileName);
+             FILE_NAME_INFORMATION *info = ptr;
+             ANSI_STRING unix_name;
+ 
+             if (!(io->u.Status = server_get_unix_name( hFile, &unix_name )))
+             {
+-                LONG name_len = len - FIELD_OFFSET(FILE_NAME_INFORMATION, FileName);
+                 io->u.Status = fill_name_info( &unix_name, info, &name_len );
+                 RtlFreeAnsiString( &unix_name );
+                 io->Information = FIELD_OFFSET(FILE_NAME_INFORMATION, FileName) + name_len;
+             }
++            else if (io->u.Status == STATUS_OBJECT_TYPE_MISMATCH)
++            {
++                static const WCHAR pipe_prefixW[] = {'\\','D','e','v','i','c','e','\\','N','a','m','e','d','P','i','p','e'};
++                UNICODE_STRING object_name;
++
++                if ((io->u.Status = server_get_object_name( hFile, &object_name )))
++                    break;
++
++                if (strncmpW(object_name.Buffer, pipe_prefixW, sizeof(pipe_prefixW) / sizeof(WCHAR)) ||
++                    object_name.Buffer[ sizeof(pipe_prefixW) / sizeof(WCHAR) ] != '\\')
++                {
++                    io->u.Status = STATUS_OBJECT_TYPE_MISMATCH;
++                    RtlFreeUnicodeString( &object_name );
++                    break;
++                }
++
++                if (name_len < object_name.Length - sizeof(pipe_prefixW))
++                    io->u.Status = STATUS_BUFFER_OVERFLOW;
++                else
++                    name_len = object_name.Length - sizeof(pipe_prefixW);
++
++                info->FileNameLength = name_len;
++                memcpy(info->FileName, object_name.Buffer + sizeof(pipe_prefixW) / sizeof(WCHAR), name_len);
++
++                RtlFreeUnicodeString( &object_name );
++                io->Information = FIELD_OFFSET(FILE_NAME_INFORMATION, FileName) + name_len;
++            }
+         }
+         break;
+     case FileNetworkOpenInformation:
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 9b0bdf4e03..59ce63fa24 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -1890,6 +1890,7 @@ static void test_file_rename_information(void)
+ 
+ static void test_file_link_information(void)
+ {
++    static const WCHAR pipeW[] = {'\\','\\','.','\\','p','i','p','e','\\','w','i','n','e','_','t','e','s','t',0};
+     static const WCHAR foo_txtW[] = {'\\','f','o','o','.','t','x','t',0};
+     static const WCHAR fooW[] = {'f','o','o',0};
+     WCHAR tmp_path[MAX_PATH], oldpath[MAX_PATH + 16], newpath[MAX_PATH + 16], *filename, *p;
+@@ -2512,6 +2513,30 @@ static void test_file_link_information(void)
+ 
+     CloseHandle( handle );
+     CloseHandle( handle2 );
++
++    handle = CreateEventA( NULL, FALSE, FALSE, "wine_test_event" );
++    ok( !!handle, "Failed to create event: %u\n", GetLastError());
++
++    fni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
++    res = pNtQueryInformationFile( handle, &io, fni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
++    ok( res == STATUS_OBJECT_TYPE_MISMATCH, "res expected STATUS_OBJECT_TYPE_MISMATCH, got %x\n", res );
++    HeapFree( GetProcessHeap(), 0, fni );
++
++    CloseHandle( handle );
++
++    handle = CreateNamedPipeW( pipeW, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE|PIPE_READMODE_BYTE, 10, 512, 512, 0, NULL);
++    ok( handle != INVALID_HANDLE_VALUE, "Failed to create named pipe: %u\n", GetLastError());
++
++    fni = HeapAlloc( GetProcessHeap(), 0, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR) );
++    res = pNtQueryInformationFile( handle, &io, fni, sizeof(FILE_NAME_INFORMATION) + MAX_PATH * sizeof(WCHAR), FileNameInformation );
++    ok( res == STATUS_SUCCESS, "res expected STATUS_SUCCESS, got %x\n", res );
++    fni->FileName[ fni->FileNameLength / sizeof(WCHAR) ] = 0;
++    ok( !lstrcmpiW(fni->FileName, pipeW + 8), "FileName expected %s, got %s\n",
++        wine_dbgstr_w(pipeW + 8), wine_dbgstr_w(fni->FileName) );
++    HeapFree( GetProcessHeap(), 0, fni );
++
++    CloseHandle( handle );
++
+     HeapFree( GetProcessHeap(), 0, fli );
+     delete_object( oldpath );
+     delete_object( newpath );
+-- 
+2.11.0
+

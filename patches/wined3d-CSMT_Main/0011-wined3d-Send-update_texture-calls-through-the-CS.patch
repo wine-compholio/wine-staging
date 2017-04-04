@@ -1,4 +1,4 @@
-From 8f9e2da3bc48abffee005b95c2b996352db2de16 Mon Sep 17 00:00:00 2001
+From 27c6d619ed9ad1090a5ee9724e25492f5d945de7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Thu, 1 Aug 2013 00:33:48 +0200
 Subject: wined3d: Send update_texture calls through the CS
@@ -11,7 +11,7 @@ FIXME: This logic duplication is ugly.
  3 files changed, 141 insertions(+), 75 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index b8c99985af4..bbea6bbb454 100644
+index 72e177a41e..82dbe684e2 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -69,6 +69,7 @@ enum wined3d_cs_op
@@ -23,7 +23,7 @@ index b8c99985af4..bbea6bbb454 100644
  
  struct wined3d_cs_sync
 @@ -404,6 +405,12 @@ struct wined3d_cs_clear_rtv
-     const struct blit_shader *blitter;
+     const struct wined3d_blitter_ops *blitter;
  };
  
 +struct wined3d_cs_update_texture
@@ -80,10 +80,10 @@ index b8c99985af4..bbea6bbb454 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 364eac4411e..d0e1fe6e9d7 100644
+index 1805cd71a8..0192552a14 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3659,34 +3659,17 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
+@@ -3667,34 +3667,17 @@ void CDECL wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device
              start_idx, index_count, start_instance, instance_count, TRUE);
  }
  
@@ -122,7 +122,7 @@ index 364eac4411e..d0e1fe6e9d7 100644
  
      /* Only a prepare, since we're uploading entire volumes. */
      wined3d_texture_prepare_texture(dst_texture, context, FALSE);
-@@ -3694,32 +3677,89 @@ static HRESULT wined3d_device_update_texture_3d(struct wined3d_device *device,
+@@ -3702,32 +3685,89 @@ static HRESULT wined3d_device_update_texture_3d(struct wined3d_device *device,
  
      for (i = 0; i < level_count; ++i)
      {
@@ -222,7 +222,7 @@ index 364eac4411e..d0e1fe6e9d7 100644
  
      TRACE("device %p, src_texture %p, dst_texture %p.\n", device, src_texture, dst_texture);
  
-@@ -3756,63 +3796,48 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
+@@ -3764,63 +3804,48 @@ HRESULT CDECL wined3d_device_update_texture(struct wined3d_device *device,
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -316,10 +316,10 @@ index 364eac4411e..d0e1fe6e9d7 100644
  
  HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index f69cead4d1c..fcefe12d226 100644
+index 59b446167b..7026544526 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2703,6 +2703,8 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
+@@ -2709,6 +2709,8 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
  void device_resource_add(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void device_resource_released(struct wined3d_device *device, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void device_invalidate_state(const struct wined3d_device *device, DWORD state) DECLSPEC_HIDDEN;
@@ -328,7 +328,7 @@ index f69cead4d1c..fcefe12d226 100644
  
  static inline BOOL isStateDirty(const struct wined3d_context *context, DWORD state)
  {
-@@ -3292,6 +3294,8 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
+@@ -3299,6 +3301,8 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
  void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx, const struct wined3d_box *box, const void *data, unsigned int row_pitch,
          unsigned int slice_pitch) DECLSPEC_HIDDEN;

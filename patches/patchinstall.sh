@@ -244,6 +244,7 @@ patch_enable_all ()
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtAllocateUuids="$1"
 	enable_ntdll_NtQueryEaFile="$1"
+	enable_ntdll_NtQueryInformationJobObject="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetInformationToken="$1"
@@ -957,6 +958,9 @@ patch_enable ()
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
+			;;
+		ntdll-NtQueryInformationJobObject)
+			enable_ntdll_NtQueryInformationJobObject="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -5568,6 +5572,21 @@ if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
 	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryInformationJobObject
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42744] Add more stub classes in NtQueryInformationJobObject
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c
+# |
+if test "$enable_ntdll_NtQueryInformationJobObject" -eq 1; then
+	patch_apply ntdll-NtQueryInformationJobObject/0001-ntdll-Add-stub-for-JobObjectBasicAccountingInformati.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for JobObjectBasicAccountingInformation and JobObjectBasicProcessIdList in NtQueryInformationJobObject.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,101 @@
+From 4f38042b0df2d9bee21b3cffc8f18a61affaa963 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 31 Mar 2017 16:17:35 +0200
+Subject: ntdll: Add stub for JobObjectBasicAccountingInformation and
+ JobObjectBasicProcessIdList in NtQueryInformationJobObject.
+
+---
+ dlls/kernel32/tests/process.c | 10 ++++++++--
+ dlls/ntdll/sync.c             | 24 ++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 04feb71a63..c480a278c9 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -2515,7 +2515,6 @@ static void test_QueryInformationJobObject(void)
+     ret = QueryInformationJobObject(job, JobObjectBasicProcessIdList, pid_list,
+                                     FIELD_OFFSET(JOBOBJECT_BASIC_PROCESS_ID_LIST, ProcessIdList), &ret_len);
+     ok(!ret, "QueryInformationJobObject expected failure\n");
+-    todo_wine
+     expect_eq_d(ERROR_BAD_LENGTH, GetLastError());
+ 
+     SetLastError(0xdeadbeef);
+@@ -2524,18 +2523,20 @@ static void test_QueryInformationJobObject(void)
+     pid_list->NumberOfProcessIdsInList  = 42;
+     ret = QueryInformationJobObject(job, JobObjectBasicProcessIdList, pid_list,
+                                     FIELD_OFFSET(JOBOBJECT_BASIC_PROCESS_ID_LIST, ProcessIdList[1]), &ret_len);
++    todo_wine
+     ok(!ret, "QueryInformationJobObject expected failure\n");
+     todo_wine
+     expect_eq_d(ERROR_MORE_DATA, GetLastError());
+     if (ret)
+     {
++        todo_wine
+         expect_eq_d(42, pid_list->NumberOfAssignedProcesses);
++        todo_wine
+         expect_eq_d(42, pid_list->NumberOfProcessIdsInList);
+     }
+ 
+     memset(buf, 0, sizeof(buf));
+     ret = pQueryInformationJobObject(job, JobObjectBasicProcessIdList, pid_list, sizeof(buf), &ret_len);
+-    todo_wine
+     ok(ret, "QueryInformationJobObject error %u\n", GetLastError());
+     if(ret)
+     {
+@@ -2545,12 +2546,17 @@ static void test_QueryInformationJobObject(void)
+         {
+             ULONG_PTR *list = pid_list->ProcessIdList;
+ 
++            todo_wine
+             ok(ret_len == FIELD_OFFSET(JOBOBJECT_BASIC_PROCESS_ID_LIST, ProcessIdList[2]),
+                "QueryInformationJobObject returned ret_len=%u\n", ret_len);
+ 
++            todo_wine
+             expect_eq_d(2, pid_list->NumberOfAssignedProcesses);
++            todo_wine
+             expect_eq_d(2, pid_list->NumberOfProcessIdsInList);
++            todo_wine
+             expect_eq_d(pi[0].dwProcessId, list[0]);
++            todo_wine
+             expect_eq_d(pi[1].dwProcessId, list[1]);
+         }
+     }
+diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
+index c1797601de..cfb5cbce0e 100644
+--- a/dlls/ntdll/sync.c
++++ b/dlls/ntdll/sync.c
+@@ -645,6 +645,30 @@ NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS c
+ 
+     switch (class)
+     {
++    case JobObjectBasicAccountingInformation:
++        {
++            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION *accounting;
++            if (len < sizeof(*accounting))
++                return STATUS_INFO_LENGTH_MISMATCH;
++
++            accounting = (JOBOBJECT_BASIC_ACCOUNTING_INFORMATION *)info;
++            memset(accounting, 0, sizeof(*accounting));
++            if (ret_len) *ret_len = sizeof(*accounting);
++            return STATUS_SUCCESS;
++        }
++
++    case JobObjectBasicProcessIdList:
++        {
++            JOBOBJECT_BASIC_PROCESS_ID_LIST *process;
++            if (len < sizeof(*process))
++                return STATUS_INFO_LENGTH_MISMATCH;
++
++            process = (JOBOBJECT_BASIC_PROCESS_ID_LIST *)info;
++            memset(process, 0, sizeof(*process));
++            if (ret_len) *ret_len = sizeof(*process);
++            return STATUS_SUCCESS;
++        }
++
+     case JobObjectExtendedLimitInformation:
+         {
+             JOBOBJECT_EXTENDED_LIMIT_INFORMATION *extended_limit;
+-- 
+2.11.0
+

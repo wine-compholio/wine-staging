@@ -233,6 +233,7 @@ patch_enable_all ()
 	enable_ntdll_FileNameInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Grow_Virtual_Heap="$1"
+	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_FreeLists="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
@@ -927,6 +928,9 @@ patch_enable ()
 			;;
 		ntdll-Grow_Virtual_Heap)
 			enable_ntdll_Grow_Virtual_Heap="$2"
+			;;
+		ntdll-HashLinks)
+			enable_ntdll_HashLinks="$2"
 			;;
 		ntdll-Heap_FreeLists)
 			enable_ntdll_Heap_FreeLists="$2"
@@ -2368,6 +2372,17 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	fi
 	enable_ntdll_Attach_Process_DLLs=1
 	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_ntdll_HashLinks" -eq 1; then
+	if test "$enable_ntdll_CLI_Images" -gt 1; then
+		abort "Patchset ntdll-CLI_Images disabled, but ntdll-HashLinks depends on that."
+	fi
+	if test "$enable_ntdll_LDR_MODULE" -gt 1; then
+		abort "Patchset ntdll-LDR_MODULE disabled, but ntdll-HashLinks depends on that."
+	fi
+	enable_ntdll_CLI_Images=1
+	enable_ntdll_LDR_MODULE=1
 fi
 
 if test "$enable_ntdll_DllRedirects" -eq 1; then
@@ -5393,6 +5408,37 @@ if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-LDR_MODULE
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_LDR_MODULE" -eq 1; then
+	patch_apply ntdll-LDR_MODULE/0001-ntdll-Mark-LDR-data-as-initialized.patch
+	patch_apply ntdll-LDR_MODULE/0002-include-Update-LDR_MODULE-to-more-recent-windows-ver.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Mark LDR data as initialized.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Update LDR_MODULE to more recent windows versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-HashLinks
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, include/winternl.h
+# |
+if test "$enable_ntdll_HashLinks" -eq 1; then
+	patch_apply ntdll-HashLinks/0001-ntdll-Implement-HashLinks-field-in-LDR-module-data.patch
+	patch_apply ntdll-HashLinks/0002-ntdll-Use-HashLinks-when-searching-for-a-dll-using-t.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement HashLinks field in LDR module data.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Use HashLinks when searching for a dll using the basename.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Heap_FreeLists
 # |
 # | Modified files:
@@ -5507,20 +5553,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-LDR_MODULE
-# |
-# | Modified files:
-# |   *	dlls/ntdll/thread.c, include/winternl.h
-# |
-if test "$enable_ntdll_LDR_MODULE" -eq 1; then
-	patch_apply ntdll-LDR_MODULE/0001-ntdll-Mark-LDR-data-as-initialized.patch
-	patch_apply ntdll-LDR_MODULE/0002-include-Update-LDR_MODULE-to-more-recent-windows-ver.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Mark LDR data as initialized.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Update LDR_MODULE to more recent windows versions.", 1 },';
 	) >> "$patchlist"
 fi
 

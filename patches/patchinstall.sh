@@ -256,6 +256,7 @@ patch_enable_all ()
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
+	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
@@ -995,6 +996,9 @@ patch_enable ()
 			;;
 		ntdll-RtlCaptureStackBackTrace)
 			enable_ntdll_RtlCaptureStackBackTrace="$2"
+			;;
+		ntdll-RtlGetUnloadEventTraceEx)
+			enable_ntdll_RtlGetUnloadEventTraceEx="$2"
 			;;
 		ntdll-RtlIpStringToAddress_Stubs)
 			enable_ntdll_RtlIpStringToAddress_Stubs="$2"
@@ -2309,6 +2313,13 @@ fi
 if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
 		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlIpStringToAddress_Tests depends on that."
+	fi
+	enable_ntdll_RtlQueryPackageIdentity=1
+fi
+
+if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
+	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
+		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlGetUnloadEventTraceEx depends on that."
 	fi
 	enable_ntdll_RtlQueryPackageIdentity=1
 fi
@@ -5756,6 +5767,21 @@ if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlGetUnloadEventTraceEx
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-RtlQueryPackageIdentity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c
+# |
+if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
+	patch_apply ntdll-RtlGetUnloadEventTraceEx/0001-ntdll-Add-stub-for-RtlGetUnloadEventTraceEx.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlGetUnloadEventTraceEx.", 1 },';
 	) >> "$patchlist"
 fi
 

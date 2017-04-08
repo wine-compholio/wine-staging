@@ -1,0 +1,363 @@
+From cf25edc841ba3490113f23f8f5b64ba099f84d8e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 21 Mar 2017 23:12:09 +0100
+Subject: ntdll: Implement NtSuspendProcess and NtResumeProcess.
+
+---
+ dlls/ntdll/process.c         |  28 +++++-
+ dlls/ntdll/tests/Makefile.in |   1 +
+ dlls/ntdll/tests/process.c   | 207 +++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def          |  12 +++
+ server/thread.c              |  49 ++++++++++
+ 5 files changed, 293 insertions(+), 4 deletions(-)
+ create mode 100644 dlls/ntdll/tests/process.c
+
+diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
+index ffc9bff690..ac1dc0a889 100644
+--- a/dlls/ntdll/process.c
++++ b/dlls/ntdll/process.c
+@@ -737,8 +737,18 @@ NTSTATUS  WINAPI NtOpenProcess(PHANDLE handle, ACCESS_MASK access,
+  */
+ NTSTATUS WINAPI NtResumeProcess( HANDLE handle )
+ {
+-    FIXME("stub: %p\n", handle);
+-    return STATUS_NOT_IMPLEMENTED;
++    NTSTATUS    status;
++
++    TRACE("(%p)\n", handle);
++
++    SERVER_START_REQ( resume_process )
++    {
++        req->handle = wine_server_obj_handle( handle );
++        status = wine_server_call( req );
++    }
++    SERVER_END_REQ;
++
++    return status;
+ }
+ 
+ /******************************************************************************
+@@ -747,6 +757,16 @@ NTSTATUS WINAPI NtResumeProcess( HANDLE handle )
+  */
+ NTSTATUS WINAPI NtSuspendProcess( HANDLE handle )
+ {
+-    FIXME("stub: %p\n", handle);
+-    return STATUS_NOT_IMPLEMENTED;
++    NTSTATUS    status;
++
++    TRACE("(%p)\n", handle);
++
++    SERVER_START_REQ( suspend_process )
++    {
++        req->handle = wine_server_obj_handle( handle );
++        status = wine_server_call( req );
++    }
++    SERVER_END_REQ;
++
++    return status;
+ }
+diff --git a/dlls/ntdll/tests/Makefile.in b/dlls/ntdll/tests/Makefile.in
+index 0de4fe8f20..c5c519150e 100644
+--- a/dlls/ntdll/tests/Makefile.in
++++ b/dlls/ntdll/tests/Makefile.in
+@@ -16,6 +16,7 @@ C_SRCS = \
+ 	path.c \
+ 	pipe.c \
+ 	port.c \
++	process.c \
+ 	reg.c \
+ 	rtl.c \
+ 	rtlbitmap.c \
+diff --git a/dlls/ntdll/tests/process.c b/dlls/ntdll/tests/process.c
+new file mode 100644
+index 0000000000..41303b7e9a
+--- /dev/null
++++ b/dlls/ntdll/tests/process.c
+@@ -0,0 +1,207 @@
++/*
++ * Unit test suite for process functions
++ *
++ * Copyright 2017 Michael Müller
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdio.h>
++
++#include "ntdll_test.h"
++
++#include "windef.h"
++#include "winbase.h"
++
++static NTSTATUS (WINAPI *pNtResumeProcess)(HANDLE);
++static NTSTATUS (WINAPI *pNtSuspendProcess)(HANDLE);
++static NTSTATUS (WINAPI *pNtSuspendThread)(HANDLE,PULONG);
++static NTSTATUS (WINAPI *pNtResumeThread)(HANDLE);
++
++static void test_NtSuspendProcess(char *process_name)
++{
++    PROCESS_INFORMATION info;
++    DEBUG_EVENT ev;
++    STARTUPINFOA startup;
++    NTSTATUS status;
++    HANDLE event;
++    char buffer[MAX_PATH];
++    ULONG count;
++    DWORD ret;
++
++    status = pNtResumeProcess(GetCurrentProcess());
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    event = CreateEventA(NULL, TRUE, FALSE, "wine_suspend_event");
++    ok(!!event, "Failed to create event: %u\n", GetLastError());
++
++    memset(&startup, 0, sizeof(startup));
++    startup.cb = sizeof(startup);
++
++    sprintf(buffer, "%s tests/process.c dummy_process wine_suspend_event", process_name);
++    ret = CreateProcessA(NULL, buffer, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &info);
++    ok(ret, "CreateProcess failed with error %u\n", GetLastError());
++
++    ret = WaitForSingleObject(event, 500);
++    ok(ret == WAIT_OBJECT_0, "Event was not signaled: %d\n", ret);
++
++    status = pNtSuspendProcess(info.hProcess);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    ResetEvent(event);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    status = NtResumeThread(info.hThread, &count);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++    ok(count == 1, "Expected count 1, got %d\n", count);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_OBJECT_0, "Event was not signaled: %d\n", ret);
++
++    status = pNtResumeProcess(info.hProcess);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    status = pNtSuspendThread(info.hThread, &count);
++    ok(status == STATUS_SUCCESS, "NtSuspendThread failed: %x\n", status);
++    ok(count == 0, "Expected count 0, got %d\n", count);
++
++    ResetEvent(event);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    status = pNtResumeProcess(info.hProcess);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_OBJECT_0, "Event was not signaled: %d\n", ret);
++
++    status = pNtSuspendThread(info.hThread, &count);
++    ok(status == STATUS_SUCCESS, "NtSuspendThread failed: %x\n", status);
++    ok(count == 0, "Expected count 0, got %d\n", count);
++
++    status = pNtSuspendThread(info.hThread, &count);
++    ok(status == STATUS_SUCCESS, "NtSuspendThread failed: %x\n", status);
++    ok(count == 1, "Expected count 1, got %d\n", count);
++
++    ResetEvent(event);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    status = pNtResumeProcess(info.hProcess);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    status = pNtResumeProcess(info.hProcess);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_OBJECT_0, "Event was not signaled: %d\n", ret);
++
++    ret = DebugActiveProcess(info.dwProcessId);
++    ok(ret, "Failed to debug process: %d\n", GetLastError());
++
++    ResetEvent(event);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    for (;;)
++    {
++        ret = WaitForDebugEvent(&ev, INFINITE);
++        ok(ret, "WaitForDebugEvent failed, last error %#x.\n", GetLastError());
++        if (!ret) break;
++
++        if (ev.dwDebugEventCode == OUTPUT_DEBUG_STRING_EVENT) break;
++
++        ret = ContinueDebugEvent(ev.dwProcessId, ev.dwThreadId, DBG_CONTINUE);
++        ok(ret, "ContinueDebugEvent failed, last error %#x.\n", GetLastError());
++        if (!ret) break;
++    }
++
++    ResetEvent(event);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    status = pNtResumeProcess(info.hProcess);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    status = NtResumeThread(info.hThread, &count);
++    ok(status == STATUS_SUCCESS, "NtResumeProcess failed: %x\n", status);
++    ok(count == 0, "Expected count 0, got %d\n", count);
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_TIMEOUT, "Expected timeout, got: %d\n", ret);
++
++    ret = ContinueDebugEvent(ev.dwProcessId, ev.dwThreadId, DBG_CONTINUE);
++    ok(ret, "ContinueDebugEvent failed, last error %#x.\n", GetLastError());
++
++    ret = WaitForSingleObject(event, 200);
++    ok(ret == WAIT_OBJECT_0, "Event was not signaled: %d\n", ret);
++
++    TerminateProcess(info.hProcess, 0);
++
++    CloseHandle(info.hProcess);
++    CloseHandle(info.hThread);
++}
++
++static void dummy_process(char *event_name)
++{
++    HANDLE event = OpenEventA(EVENT_ALL_ACCESS, FALSE, event_name);
++
++    while (TRUE)
++    {
++        SetEvent(event);
++        OutputDebugStringA("test");
++        Sleep(5);
++    }
++}
++
++START_TEST(process)
++{
++    HMODULE mod;
++    char **argv;
++    int argc;
++
++    argc = winetest_get_mainargs(&argv);
++    if (argc >= 4 && strcmp(argv[2], "dummy_process") == 0)
++    {
++        dummy_process(argv[3]);
++        return;
++    }
++
++    mod = GetModuleHandleA("ntdll.dll");
++    if (!mod)
++    {
++        win_skip("Not running on NT, skipping tests\n");
++        return;
++    }
++
++    pNtResumeProcess  = (void*)GetProcAddress(mod, "NtResumeProcess");
++    pNtSuspendProcess = (void*)GetProcAddress(mod, "NtSuspendProcess");
++    pNtResumeThread   = (void*)GetProcAddress(mod, "NtResumeThread");
++    pNtSuspendThread  = (void*)GetProcAddress(mod, "NtSuspendThread");
++
++    test_NtSuspendProcess(argv[0]);
++}
+diff --git a/server/protocol.def b/server/protocol.def
+index 04377e16c5..f886d958d8 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3887,3 +3887,15 @@ struct handle_info
+     unsigned int threads;     /* number of threads */
+     unsigned int handles;     /* number of handles */
+ @END
++
++
++/* Suspend a process */
++@REQ(suspend_process)
++    obj_handle_t handle;       /* process handle */
++@END
++
++
++/* Resume a process */
++@REQ(resume_process)
++    obj_handle_t handle;       /* process handle */
++@END
+diff --git a/server/thread.c b/server/thread.c
+index 108444ebc5..5b9b80d303 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -1797,3 +1797,52 @@ DECL_HANDLER(get_selector_entry)
+         release_object( thread );
+     }
+ }
++
++/* Suspend a process */
++DECL_HANDLER(suspend_process)
++{
++    struct process *process;
++
++    if ((process = get_process_from_handle( req->handle, PROCESS_SUSPEND_RESUME )))
++    {
++        struct list *ptr, *next;
++
++        LIST_FOR_EACH( ptr, &process->thread_list )
++        {
++            struct thread *thread = LIST_ENTRY( ptr, struct thread, proc_entry );
++            if (thread->suspend >= MAXIMUM_SUSPEND_COUNT)
++            {
++                set_error( STATUS_SUSPEND_COUNT_EXCEEDED );
++                release_object( process );
++                return;
++            }
++        }
++
++        LIST_FOR_EACH_SAFE( ptr, next, &process->thread_list )
++        {
++            struct thread *thread = LIST_ENTRY( ptr, struct thread, proc_entry );
++            suspend_thread( thread );
++        }
++
++        release_object( process );
++    }
++}
++
++/* Resume a process */
++DECL_HANDLER(resume_process)
++{
++    struct process *process;
++
++    if ((process = get_process_from_handle( req->handle, PROCESS_SUSPEND_RESUME )))
++    {
++        struct list *ptr, *next;
++
++        LIST_FOR_EACH_SAFE( ptr, next, &process->thread_list )
++        {
++            struct thread *thread = LIST_ENTRY( ptr, struct thread, proc_entry );
++            resume_thread( thread );
++        }
++
++        release_object( process );
++    }
++}
+-- 
+2.11.0
+

@@ -249,6 +249,7 @@ patch_enable_all ()
 	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
+	enable_ntdll_NtSuspendProcess="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessImageFileNameWin32="$1"
 	enable_ntdll_ProcessPriorityClass="$1"
@@ -973,6 +974,9 @@ patch_enable ()
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
+			;;
+		ntdll-NtSuspendProcess)
+			enable_ntdll_NtSuspendProcess="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -2314,6 +2318,13 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but ntdll-Purist_Mode depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
+fi
+
+if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
+	if test "$enable_kernel32_K32GetPerformanceInfo" -gt 1; then
+		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
+	fi
+	enable_kernel32_K32GetPerformanceInfo=1
 fi
 
 if test "$enable_ntdll_LdrEnumerateLoadedModules" -eq 1; then
@@ -5649,6 +5660,21 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtSetLdtEntries.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "libs/wine: Allow to modify reserved LDT entries.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtSuspendProcess
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-K32GetPerformanceInfo
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/process.c, server/protocol.def, server/thread.c
+# |
+if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
+	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
 	) >> "$patchlist"
 fi
 

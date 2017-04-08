@@ -6436,8 +6436,10 @@ fi
 # |
 if test "$enable_oleaut32_OleLoadPicture" -eq 1; then
 	patch_apply oleaut32-OleLoadPicture/0001-oleaut32-OleLoadPicture-should-create-a-DIB-section-.patch
+	patch_apply oleaut32-OleLoadPicture/0002-oleaut32-Make-OleLoadPicture-load-DIBs-using-WIC-dec.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: OleLoadPicture should create a DIB section for a being loaded bitmap.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Make OleLoadPicture load DIBs using WIC decoder.", 1 },';
 	) >> "$patchlist"
 fi
 

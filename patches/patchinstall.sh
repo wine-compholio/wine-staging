@@ -2407,6 +2407,13 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	enable_mscoree_CorValidateImage=1
 fi
 
+if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
+	if test "$enable_ntdll_FileNameInformation" -gt 1; then
+		abort "Patchset ntdll-FileNameInformation disabled, but kernel32-SetFileCompletionNotificationModes depends on that."
+	fi
+	enable_ntdll_FileNameInformation=1
+fi
+
 if test "$enable_kernel32_Processor_Group" -eq 1; then
 	if test "$enable_api_ms_win_Stub_DLLs" -gt 1; then
 		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-Processor_Group depends on that."
@@ -4769,23 +4776,44 @@ if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-FileNameInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_FileNameInformation" -eq 1; then
+	patch_apply ntdll-FileNameInformation/0001-ntdll-Implement-querying-for-FileNameInformation-of-.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement querying for FileNameInformation of named pipes in NtQueryInformationFile.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-SetFileCompletionNotificationModes
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-FileNameInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ws2_32/tests/sock.c, server/fd.c,
-# | 	server/protocol.def
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ntdll/tests/pipe.c, dlls/ws2_32/tests/sock.c,
+# | 	server/async.c, server/fd.c, server/file.h, server/protocol.def
 # |
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0002-ntdll-Allow-to-query-file-IO-completion-notification.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0003-ws2_32-tests-Add-test-for-completion-notification-fl.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0004-ntdll-tests-Add-more-tests-for-FileIoCompletionNotif.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0005-ntdll-Do-not-require-unix-fd-for-FileIoCompletionNot.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0006-server-Skip-async-completion-when-possible.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query file IO completion notification mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Add test for completion notification flags.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add more tests for FileIoCompletionNotificationInformation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5366,18 +5394,6 @@ if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-FileNameInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_FileNameInformation" -eq 1; then
-	patch_apply ntdll-FileNameInformation/0001-ntdll-Implement-querying-for-FileNameInformation-of-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement querying for FileNameInformation of named pipes in NtQueryInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Fix_Alignment
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5513,7 +5529,7 @@ fi
 # Patchset ntdll-NtQueryEaFile
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileCompletionNotificationModes
+# |   *	ntdll-FileNameInformation, kernel32-SetFileCompletionNotificationModes
 # |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
@@ -5528,7 +5544,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileCompletionNotificationModes, ntdll-NtQueryEaFile
+# |   *	ntdll-FileNameInformation, kernel32-SetFileCompletionNotificationModes, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points

@@ -1,0 +1,121 @@
+From 714b2b8a22566f7c6c0d92ed74bd9886062fb16e Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 9 Apr 2017 03:13:25 +0200
+Subject: server: Skip async completion when possible.
+
+---
+ dlls/ntdll/tests/pipe.c |  2 --
+ server/async.c          | 12 +++++++++++-
+ server/fd.c             |  4 ++++
+ server/file.h           |  1 +
+ 4 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/tests/pipe.c b/dlls/ntdll/tests/pipe.c
+index 013eb2b39f..631013c755 100644
+--- a/dlls/ntdll/tests/pipe.c
++++ b/dlls/ntdll/tests/pipe.c
+@@ -389,9 +389,7 @@ static void test_completion(void)
+ 
+     pov = (void *)0xdeadbeef;
+     ret = GetQueuedCompletionStatus(port, &num_bytes, &key, &pov, 1000);
+-    todo_wine
+     ok(!ret, "GetQueuedCompletionStatus succeeded\n");
+-    todo_wine
+     ok(pov == NULL, "expected NULL, got %p\n", pov);
+ 
+     CloseHandle(ov.hEvent);
+diff --git a/server/async.c b/server/async.c
+index e113681bb0..5a64565d5f 100644
+--- a/server/async.c
++++ b/server/async.c
+@@ -45,6 +45,7 @@ struct async
+     struct timeout_user *timeout;
+     unsigned int         timeout_status;  /* status to report upon timeout */
+     int                  signaled;
++    int                  skip_completion; /* skip completion */
+     struct event        *event;
+     async_data_t         data;            /* data for async I/O call */
+     struct iosb         *iosb;            /* I/O status block */
+@@ -165,6 +166,14 @@ static void async_queue_destroy( struct object *obj )
+     if (async_queue->completion) release_object( async_queue->completion );
+ }
+ 
++void async_skip_completion( struct async *async, int comp_flags )
++{
++    if (!async->data.callback) return;
++    if (!(comp_flags & COMPLETION_SKIP_ON_SUCCESS)) return;
++    async->skip_completion = (async->status == STATUS_SUCCESS ||
++                              async->status == STATUS_ALERTED);
++}
++
+ /* notifies client thread of new status of its async request */
+ void async_terminate( struct async *async, unsigned int status )
+ {
+@@ -263,6 +272,7 @@ struct async *create_async( struct thread *thread, const async_data_t *data, str
+     async->timeout = NULL;
+     async->queue   = NULL;
+     async->signaled = 0;
++    async->skip_completion = 0;
+ 
+     if (iosb) async->iosb = (struct iosb *)grab_object( iosb );
+     else async->iosb = NULL;
+@@ -328,7 +338,7 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
+         async->status = status;
+         if (status == STATUS_MORE_PROCESSING_REQUIRED) return;  /* don't report the completion */
+ 
+-        if (async->queue && async->data.cvalue)
++        if (async->queue && async->data.cvalue && !async->skip_completion)
+             add_async_completion( async->queue, async->data.cvalue, status, total );
+         if (apc)
+         {
+diff --git a/server/fd.c b/server/fd.c
+index 9617fa1279..e0c2ee4f26 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -2381,6 +2381,7 @@ DECL_HANDLER(flush)
+     if (async)
+     {
+         reply->event = fd->fd_ops->flush( fd, async, req->blocking );
++        async_skip_completion( async, fd->comp_flags );
+         release_object( async );
+     }
+     release_object( fd );
+@@ -2461,6 +2462,7 @@ DECL_HANDLER(read)
+         {
+             reply->wait    = fd->fd_ops->read( fd, async, req->blocking, req->pos );
+             reply->options = fd->options;
++            async_skip_completion( async, fd->comp_flags );
+             release_object( async );
+         }
+         release_object( iosb );
+@@ -2484,6 +2486,7 @@ DECL_HANDLER(write)
+         {
+             reply->wait    = fd->fd_ops->write( fd, async, req->blocking, req->pos );
+             reply->options = fd->options;
++            async_skip_completion( async, fd->comp_flags );
+             release_object( async );
+         }
+         release_object( iosb );
+@@ -2507,6 +2510,7 @@ DECL_HANDLER(ioctl)
+         {
+             reply->wait    = fd->fd_ops->ioctl( fd, req->code, async, req->blocking );
+             reply->options = fd->options;
++            async_skip_completion( async, fd->comp_flags );
+             release_object( async );
+         }
+         release_object( iosb );
+diff --git a/server/file.h b/server/file.h
+index 398733c460..19bc3cbfe4 100644
+--- a/server/file.h
++++ b/server/file.h
+@@ -182,6 +182,7 @@ extern void async_set_result( struct object *obj, unsigned int status,
+                               apc_param_t total, client_ptr_t apc, client_ptr_t apc_arg );
+ extern int async_queued( struct async_queue *queue );
+ extern int async_waiting( struct async_queue *queue );
++extern void async_skip_completion( struct async *async, int comp_flags );
+ extern void async_terminate( struct async *async, unsigned int status );
+ extern void async_wake_up( struct async_queue *queue, unsigned int status );
+ extern struct completion *fd_get_completion( struct fd *fd, apc_param_t *p_key );
+-- 
+2.11.0
+

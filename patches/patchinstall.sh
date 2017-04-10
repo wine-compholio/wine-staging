@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "64e4a03a92498abea428dc567372f3996fa9dc3a"
+	echo "8b1737c0fdf1d3d905bea281d9241f1f48f333e9"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.5"
+	echo "Wine Staging 2.6 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -147,7 +147,6 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
-	enable_dwrite_Missing_Initialization="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -213,7 +212,6 @@ patch_enable_all ()
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
-	enable_msvcrt_CurrentScheduler_Id="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -673,9 +671,6 @@ patch_enable ()
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
 			;;
-		dwrite-Missing_Initialization)
-			enable_dwrite_Missing_Initialization="$2"
-			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
 			;;
@@ -870,9 +865,6 @@ patch_enable ()
 			;;
 		msvcr120-_SetWinRTOutOfMemoryExceptionCallback)
 			enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$2"
-			;;
-		msvcrt-CurrentScheduler_Id)
-			enable_msvcrt_CurrentScheduler_Id="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -3956,18 +3948,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dwrite-Missing_Initialization
-# |
-# | Modified files:
-# |   *	dlls/dwrite/font.c
-# |
-if test "$enable_dwrite_Missing_Initialization" -eq 1; then
-	patch_apply dwrite-Missing_Initialization/0001-dwrite-Added-missing-max-bitmap-size-initialization.patch
-	(
-		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Added missing max bitmap size initialization.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxdiagn-Display_Information
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5128,22 +5108,6 @@ if test "$enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback" -eq 1; then
 	patch_apply msvcr120-_SetWinRTOutOfMemoryExceptionCallback/0001-msvcr120-Add-stub-for-_SetWinRTOutOfMemoryExceptionC.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "msvcr120: Add stub for _SetWinRTOutOfMemoryExceptionCallback.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcrt-CurrentScheduler_Id
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40628] Implement stub for Concurrency::details::_CurrentScheduler::_Id
-# |
-# | Modified files:
-# |   *	dlls/concrt140/concrt140.spec, dlls/msvcr110/msvcr110.spec, dlls/msvcr120/msvcr120.spec,
-# | 	dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/lock.c
-# |
-if test "$enable_msvcrt_CurrentScheduler_Id" -eq 1; then
-	patch_apply msvcrt-CurrentScheduler_Id/0001-msvcrt-Add-stub-for-Concurrency-details-_CurrentSche.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "msvcrt: Add stub for Concurrency::details::_CurrentScheduler::_Id.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8781,9 +8745,9 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c,
-# | 	dlls/wined3d/query.c, dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/query.c,
+# | 	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/view.c,
+# | 	dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch

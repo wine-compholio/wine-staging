@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8b1737c0fdf1d3d905bea281d9241f1f48f333e9"
+	echo "35ca862025fa14065d4ebed761783de225cb6690"
 }
 
 # Show version information
@@ -8756,7 +8756,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send push_constants through the CS.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send render target view clears through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send update_texture calls through the CS.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send query_poll through the command stream.", 1 },';

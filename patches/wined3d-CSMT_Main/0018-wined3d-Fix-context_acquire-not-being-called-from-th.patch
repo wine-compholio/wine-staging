@@ -1,4 +1,4 @@
-From b3788f5f7f5a57baeb565e5d3a08cfaf263de01e Mon Sep 17 00:00:00 2001
+From 9fcf11a9d8a434369e31ab08c7f6b80f47b5203a Mon Sep 17 00:00:00 2001
 From: Nils Kuhnhenn <nils@volafile.io>
 Date: Fri, 5 Aug 2016 20:28:46 +0200
 Subject: wined3d: Fix context_acquire not being called from the command thread
@@ -11,18 +11,18 @@ Subject: wined3d: Fix context_acquire not being called from the command thread
  3 files changed, 51 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 1da3addcdd..d0c0d94537 100644
+index cfcbbfbacc..e380f9edcb 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -72,6 +72,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_CLEAR_RTV,
+@@ -71,6 +71,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_PUSH_CONSTANTS,
      WINED3D_CS_OP_UPDATE_TEXTURE,
      WINED3D_CS_OP_UPDATE_SWAP_INTERVAL,
 +    WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION,
  };
  
  struct wined3d_cs_sync
-@@ -427,6 +428,13 @@ struct wined3d_cs_update_swap_interval
+@@ -417,6 +418,13 @@ struct wined3d_cs_update_swap_interval
      struct wined3d_swapchain *swapchain;
  };
  
@@ -36,7 +36,7 @@ index 1da3addcdd..d0c0d94537 100644
  static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
  {
  }
-@@ -2082,6 +2090,45 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
+@@ -2093,6 +2101,45 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
      cs->ops->submit_and_wait(cs);
  }
  
@@ -82,8 +82,8 @@ index 1da3addcdd..d0c0d94537 100644
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
-@@ -2130,6 +2177,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_CLEAR_RTV                  */ wined3d_cs_exec_clear_rtv,
+@@ -2140,6 +2187,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_PUSH_CONSTANTS             */ wined3d_cs_exec_push_constants,
      /* WINED3D_CS_OP_UPDATE_TEXTURE             */ wined3d_cs_exec_update_texture,
      /* WINED3D_CS_OP_UPDATE_SWAP_INTERVAL       */ wined3d_cs_exec_update_swap_interval,
 +    /* WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION   */ wined3d_cs_exec_texture_add_dirty_region,
@@ -91,10 +91,10 @@ index 1da3addcdd..d0c0d94537 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 41da65112d..7edb214c2a 100644
+index 2b249c26c0..700e587f8d 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1658,7 +1658,6 @@ static struct wined3d_texture_sub_resource *wined3d_texture_get_sub_resource(str
+@@ -1654,7 +1654,6 @@ static struct wined3d_texture_sub_resource *wined3d_texture_get_sub_resource(str
  HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
          UINT layer, const struct wined3d_box *dirty_region)
  {
@@ -102,7 +102,7 @@ index 41da65112d..7edb214c2a 100644
      unsigned int sub_resource_idx;
  
      TRACE("texture %p, layer %u, dirty_region %s.\n", texture, layer, debug_box(dirty_region));
-@@ -1670,19 +1669,7 @@ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
+@@ -1666,19 +1665,7 @@ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
      }
      sub_resource_idx = layer * texture->level_count;
  
@@ -124,7 +124,7 @@ index 41da65112d..7edb214c2a 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b5a27dcbac..c846148069 100644
+index f377367b6f..21bc1cde7e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -3300,6 +3300,8 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined

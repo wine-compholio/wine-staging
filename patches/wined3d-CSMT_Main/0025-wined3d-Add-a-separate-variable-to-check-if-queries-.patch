@@ -1,4 +1,4 @@
-From 31a69723040b5337806a75dc3b9706da2e4dbe08 Mon Sep 17 00:00:00 2001
+From 2c32b3dc13fe6872a69e430cb7cb0a2a2f111875 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Sun, 19 Feb 2017 05:10:26 +0100
 Subject: wined3d: Add a separate variable to check if queries are started.
@@ -9,19 +9,19 @@ Subject: wined3d: Add a separate variable to check if queries are started.
  2 files changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index 15935ab4469..70603367894 100644
+index f437c49faa..5965a330d5 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -504,7 +504,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -491,7 +491,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
       * restart. */
      if (flags & WINED3DISSUE_BEGIN)
      {
 -        if (query->state == QUERY_BUILDING)
 +        if (oq->started)
          {
-             if (oq->context->tid != GetCurrentThreadId())
+             if ((context = context_reacquire(device, oq->context)))
              {
-@@ -535,13 +535,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -518,13 +518,14 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
          checkGLcall("glBeginQuery()");
  
          context_release(context);
@@ -35,10 +35,10 @@ index 15935ab4469..70603367894 100644
 -        if (query->state == QUERY_BUILDING)
 +        if (oq->started)
          {
-             if (oq->context->tid != GetCurrentThreadId())
+             if ((context = context_reacquire(device, oq->context)))
              {
-@@ -558,6 +559,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
-                 context_release(context);
+@@ -538,6 +539,7 @@ static void wined3d_occlusion_query_ops_issue(struct wined3d_query *query, DWORD
+                 FIXME("Wrong thread, can't end query.\n");
              }
          }
 +        oq->started = FALSE;
@@ -46,10 +46,10 @@ index 15935ab4469..70603367894 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7ad99bca086..9fa4d00c24f 100644
+index b564036b55..7cef5c4dcb 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1540,6 +1540,7 @@ struct wined3d_occlusion_query
+@@ -1617,6 +1617,7 @@ struct wined3d_occlusion_query
      GLuint id;
      struct wined3d_context *context;
      UINT64 samples;

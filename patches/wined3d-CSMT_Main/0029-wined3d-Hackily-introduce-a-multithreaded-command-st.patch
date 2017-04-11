@@ -1,21 +1,21 @@
-From 18746e1192dc09909f0e2478d35667e526230371 Mon Sep 17 00:00:00 2001
+From 6b760fb77f50a2f5632656c048f4fb3c2f015cf7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Tue, 1 Oct 2013 14:31:56 +0200
 Subject: wined3d: Hackily introduce a multithreaded command stream
 
 ---
  dlls/wined3d/context.c         |   3 +
- dlls/wined3d/cs.c              | 428 ++++++++++++++++++++++++++++++++++++-----
+ dlls/wined3d/cs.c              | 441 +++++++++++++++++++++++++++++++++++------
  dlls/wined3d/device.c          |   2 +-
  dlls/wined3d/wined3d_main.c    |  10 +
- dlls/wined3d/wined3d_private.h |  33 +++-
- 5 files changed, 419 insertions(+), 57 deletions(-)
+ dlls/wined3d/wined3d_private.h |  33 ++-
+ 5 files changed, 426 insertions(+), 63 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 71c683d119..2db127af3a 100644
+index 6b05c0a71c..cbf63fdac7 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -3787,6 +3787,9 @@ struct wined3d_context *context_acquire(const struct wined3d_device *device,
+@@ -3841,6 +3841,9 @@ struct wined3d_context *context_acquire(const struct wined3d_device *device,
  
      TRACE("device %p, texture %p, sub_resource_idx %u.\n", device, texture, sub_resource_idx);
  
@@ -26,7 +26,7 @@ index 71c683d119..2db127af3a 100644
          current_context = NULL;
  
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index e380f9edcb..81695b7b14 100644
+index db84f087dd..cdf71e7c3c 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -18,6 +18,7 @@
@@ -791,7 +791,63 @@ index e380f9edcb..81695b7b14 100644
  {
      const struct wined3d_cs_blt_sub_resource *op = data;
  
-@@ -1895,6 +1985,8 @@ static void wined3d_cs_exec_blt_sub_resource(struct wined3d_cs *cs, const void *
+@@ -1896,14 +1986,14 @@ static void wined3d_cs_exec_blt_sub_resource(struct wined3d_cs *cs, const void *
+         {
+             FIXME("Flags %#x not implemented for %s resources.\n",
+                     op->flags, debug_d3dresourcetype(op->dst_resource->type));
+-            return;
++            goto done;
+         }
+ 
+         if (op->src_resource->format != op->dst_resource->format)
+         {
+             FIXME("Format conversion not implemented for %s resources.\n",
+                     debug_d3dresourcetype(op->dst_resource->type));
+-            return;
++            goto done;
+         }
+ 
+         update_w = op->dst_box.right - op->dst_box.left;
+@@ -1915,14 +2005,14 @@ static void wined3d_cs_exec_blt_sub_resource(struct wined3d_cs *cs, const void *
+         {
+             FIXME("Stretching not implemented for %s resources.\n",
+                     debug_d3dresourcetype(op->dst_resource->type));
+-            return;
++            goto done;
+         }
+ 
+         if (op->src_box.left || op->src_box.top || op->src_box.front)
+         {
+             FIXME("Source box %s not supported for %s resources.\n",
+                     debug_box(&op->src_box), debug_d3dresourcetype(op->dst_resource->type));
+-            return;
++            goto done;
+         }
+ 
+         dst_texture = texture_from_resource(op->dst_resource);
+@@ -1936,7 +2026,7 @@ static void wined3d_cs_exec_blt_sub_resource(struct wined3d_cs *cs, const void *
+             ERR("Failed to load source sub-resource into %s.\n",
+                     wined3d_debug_location(src_texture->resource.map_binding));
+             context_release(context);
+-            return;
++            goto done;
+         }
+ 
+         level = op->dst_sub_resource_idx % dst_texture->level_count;
+@@ -1951,7 +2041,7 @@ static void wined3d_cs_exec_blt_sub_resource(struct wined3d_cs *cs, const void *
+         {
+             ERR("Failed to load destination sub-resource.\n");
+             context_release(context);
+-            return;
++            goto done;
+         }
+ 
+         wined3d_texture_get_memory(src_texture, op->src_sub_resource_idx, &addr, src_texture->resource.map_binding);
+@@ -1971,9 +2061,12 @@ static void wined3d_cs_exec_blt_sub_resource(struct wined3d_cs *cs, const void *
+         FIXME("Not implemented for %s resources.\n", debug_d3dresourcetype(op->dst_resource->type));
+     }
+ 
++done:
      if (op->src_resource)
          wined3d_resource_release(op->src_resource);
      wined3d_resource_release(op->dst_resource);
@@ -800,7 +856,7 @@ index e380f9edcb..81695b7b14 100644
  }
  
  void wined3d_cs_emit_blt_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *dst_resource,
-@@ -1924,7 +2016,7 @@ void wined3d_cs_emit_blt_sub_resource(struct wined3d_cs *cs, struct wined3d_reso
+@@ -2003,7 +2096,7 @@ void wined3d_cs_emit_blt_sub_resource(struct wined3d_cs *cs, struct wined3d_reso
      cs->ops->submit(cs);
  }
  
@@ -809,7 +865,7 @@ index e380f9edcb..81695b7b14 100644
  {
      const struct wined3d_cs_update_sub_resource *op = data;
      const struct wined3d_box *box = &op->box;
-@@ -1974,6 +2066,7 @@ static void wined3d_cs_exec_update_sub_resource(struct wined3d_cs *cs, const voi
+@@ -2053,6 +2146,7 @@ static void wined3d_cs_exec_update_sub_resource(struct wined3d_cs *cs, const voi
  
  done:
      wined3d_resource_release(op->resource);
@@ -817,7 +873,7 @@ index e380f9edcb..81695b7b14 100644
  }
  
  void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
-@@ -2018,10 +2111,11 @@ push_constant_info[] =
+@@ -2097,10 +2191,11 @@ push_constant_info[] =
      {FIELD_OFFSET(struct wined3d_state, ps_consts_b), sizeof(BOOL),                 WINED3D_SHADER_CONST_PS_B},
  };
  
@@ -830,7 +886,7 @@ index e380f9edcb..81695b7b14 100644
      unsigned int context_count;
      unsigned int i;
      size_t offset;
-@@ -2037,6 +2131,8 @@ static void wined3d_cs_exec_push_constants(struct wined3d_cs *cs, const void *da
+@@ -2116,6 +2211,8 @@ static void wined3d_cs_exec_push_constants(struct wined3d_cs *cs, const void *da
      {
          device->contexts[i]->constant_update_mask |= push_constant_info[op->p].mask;
      }
@@ -839,7 +895,7 @@ index e380f9edcb..81695b7b14 100644
  }
  
  void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_constants p,
-@@ -2054,7 +2150,7 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
+@@ -2133,7 +2230,7 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
      cs->ops->submit(cs);
  }
  
@@ -848,7 +904,7 @@ index e380f9edcb..81695b7b14 100644
  {
      const struct wined3d_cs_update_texture *op = data;
      struct wined3d_context *context;
-@@ -2065,6 +2161,8 @@ static void wined3d_cs_exec_update_texture(struct wined3d_cs *cs, const void *da
+@@ -2144,6 +2241,8 @@ static void wined3d_cs_exec_update_texture(struct wined3d_cs *cs, const void *da
  
      wined3d_resource_release(&op->src->resource);
      wined3d_resource_release(&op->dst->resource);
@@ -857,7 +913,7 @@ index e380f9edcb..81695b7b14 100644
  }
  
  void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_texture *src,
-@@ -2083,11 +2181,13 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
+@@ -2162,11 +2261,13 @@ void wined3d_cs_emit_update_texture(struct wined3d_cs *cs, struct wined3d_textur
      cs->ops->submit(cs);
  }
  
@@ -872,7 +928,7 @@ index e380f9edcb..81695b7b14 100644
  }
  
  void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_swapchain *swapchain)
-@@ -2101,7 +2201,7 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
+@@ -2180,7 +2281,7 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
      cs->ops->submit_and_wait(cs);
  }
  
@@ -881,7 +937,7 @@ index e380f9edcb..81695b7b14 100644
  {
      const struct wined3d_cs_texture_add_dirty_region *op = data;
      struct wined3d_texture *texture = op->texture;
-@@ -2119,6 +2219,8 @@ static void wined3d_cs_exec_texture_add_dirty_region(struct wined3d_cs *cs, cons
+@@ -2198,6 +2299,8 @@ static void wined3d_cs_exec_texture_add_dirty_region(struct wined3d_cs *cs, cons
      context_release(context);
  
      wined3d_resource_release(&texture->resource);
@@ -890,7 +946,7 @@ index e380f9edcb..81695b7b14 100644
  }
  
  void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
-@@ -2140,7 +2242,7 @@ void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
+@@ -2219,7 +2322,7 @@ void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
      cs->ops->submit(cs);
  }
  
@@ -899,7 +955,7 @@ index e380f9edcb..81695b7b14 100644
  {
      /* WINED3D_CS_OP_SYNC                       */ wined3d_cs_exec_sync,
      /* WINED3D_CS_OP_GLFINISH                   */ wined3d_cs_exec_glfinish,
-@@ -2241,6 +2343,201 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+@@ -2320,6 +2423,201 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
      wined3d_cs_st_submit,
  };
  
@@ -1101,7 +1157,7 @@ index e380f9edcb..81695b7b14 100644
  struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
  {
      const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
-@@ -2270,12 +2567,41 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2349,12 +2647,41 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
          return NULL;
      }
  
@@ -1144,7 +1200,7 @@ index e380f9edcb..81695b7b14 100644
      HeapFree(GetProcessHeap(), 0, cs->data);
      HeapFree(GetProcessHeap(), 0, cs);
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 6a07197eb7..7cebd54adc 100644
+index fff869d863..37d1272f78 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -1307,7 +1307,7 @@ UINT CDECL wined3d_device_get_available_texture_mem(const struct wined3d_device
@@ -1187,7 +1243,7 @@ index 1ce5937f17..4ef747ca89 100644
      if (hkey) RegCloseKey( hkey );
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7cef5c4dcb..99f598f4fe 100644
+index 40b1e8753a..2699ee33b5 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -390,6 +390,7 @@ struct wined3d_settings
@@ -1198,7 +1254,7 @@ index 7cef5c4dcb..99f598f4fe 100644
  };
  
  extern struct wined3d_settings wined3d_settings DECLSPEC_HIDDEN;
-@@ -2805,11 +2806,6 @@ static inline void wined3d_resource_release(struct wined3d_resource *resource)
+@@ -2816,11 +2817,6 @@ static inline void wined3d_resource_release(struct wined3d_resource *resource)
      InterlockedDecrement(&resource->access_count);
  }
  
@@ -1210,7 +1266,7 @@ index 7cef5c4dcb..99f598f4fe 100644
  void resource_cleanup(struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *device,
          enum wined3d_resource_type type, const struct wined3d_format *format,
-@@ -3221,6 +3217,21 @@ enum wined3d_push_constants
+@@ -3232,6 +3228,21 @@ enum wined3d_push_constants
      WINED3D_PUSH_CONSTANTS_PS_B,
  };
  
@@ -1232,7 +1288,7 @@ index 7cef5c4dcb..99f598f4fe 100644
  struct wined3d_cs_ops
  {
      void *(*require_space)(struct wined3d_cs *cs, size_t size);
-@@ -3238,9 +3249,21 @@ struct wined3d_cs
+@@ -3249,9 +3260,21 @@ struct wined3d_cs
      size_t data_size, start, end;
      void *data;
  

@@ -1,4 +1,4 @@
-From 714b2b8a22566f7c6c0d92ed74bd9886062fb16e Mon Sep 17 00:00:00 2001
+From 7618743260a673e0556845b352bc7c2620775164 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 9 Apr 2017 03:13:25 +0200
 Subject: server: Skip async completion when possible.
@@ -25,7 +25,7 @@ index 013eb2b39f..631013c755 100644
  
      CloseHandle(ov.hEvent);
 diff --git a/server/async.c b/server/async.c
-index e113681bb0..5a64565d5f 100644
+index 7323047d8d..ad7c1f097f 100644
 --- a/server/async.c
 +++ b/server/async.c
 @@ -45,6 +45,7 @@ struct async
@@ -42,7 +42,7 @@ index e113681bb0..5a64565d5f 100644
  
 +void async_skip_completion( struct async *async, int comp_flags )
 +{
-+    if (!async->data.callback) return;
++    if (!async->data.user) return;
 +    if (!(comp_flags & COMPLETION_SKIP_ON_SUCCESS)) return;
 +    async->skip_completion = (async->status == STATUS_SUCCESS ||
 +                              async->status == STATUS_ALERTED);
@@ -51,7 +51,7 @@ index e113681bb0..5a64565d5f 100644
  /* notifies client thread of new status of its async request */
  void async_terminate( struct async *async, unsigned int status )
  {
-@@ -263,6 +272,7 @@ struct async *create_async( struct thread *thread, const async_data_t *data, str
+@@ -262,6 +271,7 @@ struct async *create_async( struct thread *thread, const async_data_t *data, str
      async->timeout = NULL;
      async->queue   = NULL;
      async->signaled = 0;
@@ -59,14 +59,14 @@ index e113681bb0..5a64565d5f 100644
  
      if (iosb) async->iosb = (struct iosb *)grab_object( iosb );
      else async->iosb = NULL;
-@@ -328,7 +338,7 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
+@@ -326,7 +336,7 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
          async->status = status;
          if (status == STATUS_MORE_PROCESSING_REQUIRED) return;  /* don't report the completion */
  
--        if (async->queue && async->data.cvalue)
-+        if (async->queue && async->data.cvalue && !async->skip_completion)
-             add_async_completion( async->queue, async->data.cvalue, status, total );
-         if (apc)
+-        if (async->queue && !async->data.apc && async->data.apc_context)
++        if (async->queue && !async->data.apc && async->data.apc_context && !async->skip_completion)
+             add_async_completion( async->queue, async->data.apc_context, status, total );
+         if (async->data.apc)
          {
 diff --git a/server/fd.c b/server/fd.c
 index 9617fa1279..e0c2ee4f26 100644
@@ -105,11 +105,11 @@ index 9617fa1279..e0c2ee4f26 100644
          }
          release_object( iosb );
 diff --git a/server/file.h b/server/file.h
-index 398733c460..19bc3cbfe4 100644
+index 94cc37ff2e..6c68153d38 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -182,6 +182,7 @@ extern void async_set_result( struct object *obj, unsigned int status,
-                               apc_param_t total, client_ptr_t apc, client_ptr_t apc_arg );
+@@ -181,6 +181,7 @@ extern void async_set_timeout( struct async *async, timeout_t timeout, unsigned
+ extern void async_set_result( struct object *obj, unsigned int status, apc_param_t total );
  extern int async_queued( struct async_queue *queue );
  extern int async_waiting( struct async_queue *queue );
 +extern void async_skip_completion( struct async *async, int comp_flags );

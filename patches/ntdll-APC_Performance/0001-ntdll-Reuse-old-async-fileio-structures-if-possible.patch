@@ -1,4 +1,4 @@
-From e9f0a1256a3e1850f5a19bf33f44fafb05caa4e2 Mon Sep 17 00:00:00 2001
+From 31994d20fb36774cb6cc0652bdd432e524ce4837 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 3 Mar 2015 03:39:12 +0100
 Subject: ntdll: Reuse old async fileio structures if possible.
@@ -11,18 +11,18 @@ often possible to reuse old fileio structures.
  1 file changed, 18 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index b07e5f9..7b6c2b9 100644
+index 264ad65fe0..011e47a1ca 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -332,6 +332,7 @@ NTSTATUS WINAPI NtCreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATTRIB
- struct async_fileio
+@@ -352,6 +352,7 @@ struct async_fileio
  {
+     async_callback_t    *callback; /* must be the first field */
      struct async_fileio *next;
 +    DWORD                size;
      HANDLE               handle;
-     PIO_APC_ROUTINE      apc;
-     void                *apc_arg;
-@@ -370,17 +371,28 @@ static struct async_fileio *alloc_fileio( DWORD size, HANDLE handle, PIO_APC_ROU
+ };
+ 
+@@ -396,18 +397,29 @@ static struct async_fileio *alloc_fileio( DWORD size, async_callback_t callback,
  {
      /* first free remaining previous fileinfos */
  
@@ -53,10 +53,11 @@ index b07e5f9..7b6c2b9 100644
 -    if ((io = RtlAllocateHeap( GetProcessHeap(), 0, size )))
 +    if (io || (io = RtlAllocateHeap( GetProcessHeap(), 0, size )))
      {
-+        io->size    = size;
-         io->handle  = handle;
-         io->apc     = apc;
-         io->apc_arg = arg;
+         io->callback = callback;
++        io->size     = size;
+         io->handle   = handle;
+     }
+     return io;
 -- 
-2.3.0
+2.11.0
 

@@ -1,4 +1,4 @@
-From 826d8b385ffe74c04815d60b01ee8b43b0f9e2c3 Mon Sep 17 00:00:00 2001
+From f48daa130158a7637b0726a45fca28a814052f41 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 8 Feb 2017 00:12:31 +0100
 Subject: wined3d: Introduce a separate priority queue.
@@ -9,7 +9,7 @@ Subject: wined3d: Introduce a separate priority queue.
  2 files changed, 67 insertions(+), 56 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 7dc1cab014..d456b8fb68 100644
+index 141c4f7194..f4769431a6 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -435,7 +435,7 @@ void wined3d_cs_emit_sync(struct wined3d_cs *cs)
@@ -399,7 +399,16 @@ index 7dc1cab014..d456b8fb68 100644
      op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
      op->resource = resource;
      op->sub_resource_idx = sub_resource_idx;
-@@ -2213,7 +2213,7 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
+@@ -2190,7 +2190,7 @@ void wined3d_cs_emit_add_dirty_texture_region(struct wined3d_cs *cs,
+ {
+     struct wined3d_cs_add_dirty_texture_region *op;
+ 
+-    op = cs->ops->require_space(cs, sizeof(*op));
++    op = cs->ops->require_space(cs, sizeof(*op), 0);
+     op->opcode = WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION;
+     op->texture = texture;
+     op->layer = layer;
+@@ -2251,7 +2251,7 @@ void wined3d_cs_emit_push_constants(struct wined3d_cs *cs, enum wined3d_push_con
  {
      struct wined3d_cs_push_constants *op;
  
@@ -408,7 +417,7 @@ index 7dc1cab014..d456b8fb68 100644
      op->opcode = WINED3D_CS_OP_PUSH_CONSTANTS;
      op->p = p;
      op->start_idx = start_idx;
-@@ -2236,7 +2236,7 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
+@@ -2274,7 +2274,7 @@ void wined3d_cs_emit_update_swap_interval(struct wined3d_cs *cs, struct wined3d_
  {
      struct wined3d_cs_update_swap_interval *op;
  
@@ -417,17 +426,8 @@ index 7dc1cab014..d456b8fb68 100644
      op->opcode = WINED3D_CS_OP_UPDATE_SWAP_INTERVAL;
      op->swapchain = swapchain;
  
-@@ -2279,7 +2279,7 @@ void wined3d_cs_emit_texture_add_dirty_region(struct wined3d_cs *cs,
-     if (dirty_region)
-         WARN("Ignoring dirty_region %s.\n", debug_box(dirty_region));
- 
--    op = cs->ops->require_space(cs, sizeof(*op));
-+    op = cs->ops->require_space(cs, sizeof(*op), 0);
-     op->opcode = WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION;
-     op->texture = texture;
-     op->sub_resource_idx = sub_resource_idx;
-@@ -2338,7 +2338,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_TEXTURE_ADD_DIRTY_REGION   */ wined3d_cs_exec_texture_add_dirty_region,
+@@ -2330,7 +2330,7 @@ static UINT (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_UPDATE_SWAP_INTERVAL       */ wined3d_cs_exec_update_swap_interval,
  };
  
 -static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size)
@@ -435,7 +435,7 @@ index 7dc1cab014..d456b8fb68 100644
  {
      if (size > (cs->data_size - cs->end))
      {
-@@ -2422,6 +2422,8 @@ static struct wined3d_cs_block *wined3d_cs_dequeue_command(struct wined3d_cs *cs
+@@ -2414,6 +2414,8 @@ static struct wined3d_cs_block *wined3d_cs_dequeue_command(struct wined3d_cs *cs
      /* FIXME: Use an event to wait after a couple of spins. */
      for (;;)
      {
@@ -444,7 +444,7 @@ index 7dc1cab014..d456b8fb68 100644
          if ((block = wined3d_cs_list_dequeue(&cs->exec_list)))
              return block;
      }
-@@ -2449,7 +2451,7 @@ static void wined3d_cs_list_cleanup(struct wined3d_cs_list *list)
+@@ -2441,7 +2443,7 @@ static void wined3d_cs_list_cleanup(struct wined3d_cs_list *list)
      DeleteCriticalSection(&list->lock);
  }
  
@@ -453,7 +453,7 @@ index 7dc1cab014..d456b8fb68 100644
  {
      struct wined3d_cs_block *block;
  
-@@ -2463,26 +2465,28 @@ static struct wined3d_cs_block *wined3d_cs_get_block(struct wined3d_cs *cs)
+@@ -2455,26 +2457,28 @@ static struct wined3d_cs_block *wined3d_cs_get_block(struct wined3d_cs *cs)
      }
  
      block->pos = 0;
@@ -486,7 +486,7 @@ index 7dc1cab014..d456b8fb68 100644
          cs->current_block = block;
      }
  
-@@ -2494,10 +2498,13 @@ static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size)
+@@ -2486,10 +2490,13 @@ static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size)
  
  static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
  {
@@ -501,7 +501,7 @@ index 7dc1cab014..d456b8fb68 100644
      cs->current_block = NULL;
  }
  
-@@ -2511,7 +2518,7 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
+@@ -2503,7 +2510,7 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
  
      block = cs->current_block;
      block->fence = &fence;
@@ -510,7 +510,7 @@ index 7dc1cab014..d456b8fb68 100644
      cs->current_block = NULL;
  
      /* A busy wait should be fine, we're not supposed to have to wait very
-@@ -2533,7 +2540,7 @@ static void wined3d_cs_mt_emit_stop(struct wined3d_cs *cs)
+@@ -2525,7 +2532,7 @@ static void wined3d_cs_mt_emit_stop(struct wined3d_cs *cs)
      assert(cs->thread_id != GetCurrentThreadId());
      assert(cs->ops == &wined3d_cs_mt_ops);
  
@@ -519,7 +519,7 @@ index 7dc1cab014..d456b8fb68 100644
      op->opcode = WINED3D_CS_OP_STOP;
  
      cs->ops->submit(cs);
-@@ -2619,6 +2626,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
+@@ -2611,6 +2618,7 @@ struct wined3d_cs *wined3d_cs_create(struct wined3d_device *device)
  
          wined3d_cs_list_init(&cs->free_list);
          wined3d_cs_list_init(&cs->exec_list);
@@ -527,7 +527,7 @@ index 7dc1cab014..d456b8fb68 100644
  
          if (!(cs->thread = CreateThread(NULL, 0, wined3d_cs_run, cs, 0, &cs->thread_id)))
          {
-@@ -2644,6 +2652,7 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
+@@ -2636,6 +2644,7 @@ void wined3d_cs_destroy(struct wined3d_cs *cs)
          WaitForSingleObject(cs->thread, INFINITE);
          CloseHandle(cs->thread);
  
@@ -536,7 +536,7 @@ index 7dc1cab014..d456b8fb68 100644
          wined3d_cs_list_cleanup(&cs->free_list);
      }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 1bdabe73a6..d9a0e8f788 100644
+index 1f8af50116..12ace4e746 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -3245,13 +3245,14 @@ struct wined3d_cs_block

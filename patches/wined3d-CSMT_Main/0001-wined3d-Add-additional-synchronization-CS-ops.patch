@@ -1,4 +1,4 @@
-From d8e7bb3cf2730686403c387bb3ed9b79e513294f Mon Sep 17 00:00:00 2001
+From bf9af9d4fc2546603587ce2e57eb6feff9744892 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 19 Feb 2017 00:57:12 +0100
 Subject: wined3d: Add additional synchronization CS ops.
@@ -13,7 +13,7 @@ Subject: wined3d: Add additional synchronization CS ops.
  6 files changed, 74 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index f5bf70d2ee..8c0abf449f 100644
+index ed567bc571..445a11d07e 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -26,6 +26,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d);
@@ -25,8 +25,8 @@ index f5bf70d2ee..8c0abf449f 100644
      WINED3D_CS_OP_PRESENT,
      WINED3D_CS_OP_CLEAR,
      WINED3D_CS_OP_DISPATCH,
-@@ -67,6 +69,16 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
+@@ -68,6 +70,16 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION,
  };
  
 +struct wined3d_cs_sync
@@ -42,8 +42,8 @@ index f5bf70d2ee..8c0abf449f 100644
  struct wined3d_cs_present
  {
      enum wined3d_cs_op opcode;
-@@ -369,6 +381,38 @@ struct wined3d_cs_update_sub_resource
-     struct wined3d_sub_resource_data data;
+@@ -380,6 +392,38 @@ struct wined3d_cs_add_dirty_texture_region
+     unsigned int layer;
  };
  
 +static void wined3d_cs_exec_sync(struct wined3d_cs *cs, const void *data)
@@ -81,7 +81,7 @@ index f5bf70d2ee..8c0abf449f 100644
  static void wined3d_cs_exec_present(struct wined3d_cs *cs, const void *data)
  {
      const struct wined3d_cs_present *op = data;
-@@ -1643,7 +1687,7 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
+@@ -1710,7 +1754,7 @@ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource,
      op->flags = flags;
      op->hr = &hr;
  
@@ -90,7 +90,7 @@ index f5bf70d2ee..8c0abf449f 100644
  
      return hr;
  }
-@@ -1667,7 +1711,7 @@ HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resourc
+@@ -1734,7 +1778,7 @@ HRESULT wined3d_cs_unmap(struct wined3d_cs *cs, struct wined3d_resource *resourc
      op->sub_resource_idx = sub_resource_idx;
      op->hr = &hr;
  
@@ -99,13 +99,16 @@ index f5bf70d2ee..8c0abf449f 100644
  
      return hr;
  }
-@@ -1809,11 +1853,13 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+@@ -1955,7 +1999,7 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
  
      wined3d_resource_acquire(resource);
  
 -    cs->ops->submit(cs);
 +    cs->ops->submit_and_wait(cs);
  }
+ 
+ static void wined3d_cs_exec_add_dirty_texture_region(struct wined3d_cs *cs, const void *data)
+@@ -1996,6 +2040,8 @@ void wined3d_cs_emit_add_dirty_texture_region(struct wined3d_cs *cs,
  
  static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void *data) =
  {
@@ -114,7 +117,7 @@ index f5bf70d2ee..8c0abf449f 100644
      /* WINED3D_CS_OP_PRESENT                    */ wined3d_cs_exec_present,
      /* WINED3D_CS_OP_CLEAR                      */ wined3d_cs_exec_clear,
      /* WINED3D_CS_OP_DISPATCH                   */ wined3d_cs_exec_dispatch,
-@@ -1946,6 +1992,7 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
+@@ -2129,6 +2175,7 @@ static const struct wined3d_cs_ops wined3d_cs_st_ops =
  {
      wined3d_cs_st_require_space,
      wined3d_cs_st_submit,
@@ -123,10 +126,10 @@ index f5bf70d2ee..8c0abf449f 100644
  };
  
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 94879b5de1..e328f32403 100644
+index f557306dfb..62580f6867 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -1029,6 +1029,7 @@ static void wined3d_device_delete_opengl_contexts_cs(void *object)
+@@ -1023,6 +1023,7 @@ static void wined3d_device_delete_opengl_contexts_cs(void *object)
  static void wined3d_device_delete_opengl_contexts(struct wined3d_device *device)
  {
      wined3d_cs_destroy_object(device->cs, wined3d_device_delete_opengl_contexts_cs, device);
@@ -134,7 +137,7 @@ index 94879b5de1..e328f32403 100644
  }
  
  static void wined3d_device_create_primary_opengl_context_cs(void *object)
-@@ -1064,6 +1065,7 @@ static void wined3d_device_create_primary_opengl_context_cs(void *object)
+@@ -1061,6 +1062,7 @@ static void wined3d_device_create_primary_opengl_context_cs(void *object)
  static HRESULT wined3d_device_create_primary_opengl_context(struct wined3d_device *device)
  {
      wined3d_cs_init_object(device->cs, wined3d_device_create_primary_opengl_context_cs, device);
@@ -143,7 +146,7 @@ index 94879b5de1..e328f32403 100644
          return E_FAIL;
  
 diff --git a/dlls/wined3d/swapchain.c b/dlls/wined3d/swapchain.c
-index 25deaeb1ae..bd23999fb1 100644
+index 026322d7eb..b01607be4b 100644
 --- a/dlls/wined3d/swapchain.c
 +++ b/dlls/wined3d/swapchain.c
 @@ -66,6 +66,7 @@ static void swapchain_cleanup(struct wined3d_swapchain *swapchain)
@@ -154,7 +157,7 @@ index 25deaeb1ae..bd23999fb1 100644
  
      /* Restore the screen resolution if we rendered in fullscreen.
       * This will restore the screen resolution to what it was before creating
-@@ -965,6 +966,7 @@ static HRESULT swapchain_init(struct wined3d_swapchain *swapchain, struct wined3
+@@ -857,6 +858,7 @@ static HRESULT swapchain_init(struct wined3d_swapchain *swapchain, struct wined3
          }
  
          wined3d_cs_init_object(device->cs, wined3d_swapchain_cs_init, swapchain);
@@ -163,10 +166,10 @@ index 25deaeb1ae..bd23999fb1 100644
          if (!swapchain->context[0])
          {
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 91f0cc36ed..0197f6daae 100644
+index 288ef8078a..c259bbfe8c 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1391,6 +1391,7 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+@@ -1387,6 +1387,7 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
      if (surface->dc)
      {
          wined3d_cs_destroy_object(device->cs, texture2d_destroy_dc, surface);
@@ -174,7 +177,7 @@ index 91f0cc36ed..0197f6daae 100644
          create_dib = TRUE;
      }
  
-@@ -1451,7 +1452,10 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
+@@ -1447,7 +1448,10 @@ HRESULT CDECL wined3d_texture_update_desc(struct wined3d_texture *texture, UINT
      wined3d_texture_invalidate_location(texture, 0, ~valid_location);
  
      if (create_dib)
@@ -185,7 +188,7 @@ index 91f0cc36ed..0197f6daae 100644
  
      return WINED3D_OK;
  }
-@@ -2856,6 +2860,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
+@@ -2840,6 +2844,7 @@ static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3
              if ((desc->usage & WINED3DUSAGE_OWNDC) || (device->wined3d->flags & WINED3D_NO3D))
              {
                  wined3d_cs_init_object(device->cs, texture2d_create_dc, surface);
@@ -193,7 +196,7 @@ index 91f0cc36ed..0197f6daae 100644
                  if (!surface->dc)
                  {
                      wined3d_texture_cleanup_sync(texture);
-@@ -3653,7 +3658,10 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
+@@ -3627,7 +3632,10 @@ HRESULT CDECL wined3d_texture_get_dc(struct wined3d_texture *texture, unsigned i
          return WINED3DERR_INVALIDCALL;
  
      if (!surface->dc)
@@ -204,7 +207,7 @@ index 91f0cc36ed..0197f6daae 100644
      if (!surface->dc)
          return WINED3DERR_INVALIDCALL;
  
-@@ -3697,7 +3705,10 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
+@@ -3671,7 +3679,10 @@ HRESULT CDECL wined3d_texture_release_dc(struct wined3d_texture *texture, unsign
      }
  
      if (!(texture->resource.usage & WINED3DUSAGE_OWNDC) && !(device->wined3d->flags & WINED3D_NO3D))
@@ -216,10 +219,10 @@ index 91f0cc36ed..0197f6daae 100644
      --sub_resource->map_count;
      if (!--texture->resource.map_count && texture->update_map_binding)
 diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
-index 3cd20ea8fa..9b9e7eef4c 100644
+index dc225f4f81..cd09c9c8ee 100644
 --- a/dlls/wined3d/view.c
 +++ b/dlls/wined3d/view.c
-@@ -594,6 +594,8 @@ static void wined3d_shader_resource_view_cs_init(void *object)
+@@ -632,6 +632,8 @@ static void wined3d_shader_resource_view_cs_init(void *object)
                      debug_d3dformat(resource->format->id), debug_d3dformat(view_format->id));
          }
      }
@@ -228,7 +231,7 @@ index 3cd20ea8fa..9b9e7eef4c 100644
  }
  
  static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_view *view,
-@@ -610,6 +612,7 @@ static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_
+@@ -648,6 +650,7 @@ static HRESULT wined3d_shader_resource_view_init(struct wined3d_shader_resource_
  
      wined3d_resource_incref(view->resource = resource);
  
@@ -236,7 +239,7 @@ index 3cd20ea8fa..9b9e7eef4c 100644
      wined3d_cs_init_object(resource->device->cs, wined3d_shader_resource_view_cs_init, view);
  
      return WINED3D_OK;
-@@ -786,6 +789,8 @@ static void wined3d_unordered_access_view_cs_init(void *object)
+@@ -829,6 +832,8 @@ static void wined3d_unordered_access_view_cs_init(void *object)
                      desc, texture, view->format);
          }
      }
@@ -245,7 +248,7 @@ index 3cd20ea8fa..9b9e7eef4c 100644
  }
  
  static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_access_view *view,
-@@ -805,6 +810,7 @@ static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_acces
+@@ -848,6 +853,7 @@ static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_acces
  
      wined3d_resource_incref(view->resource = resource);
  
@@ -254,10 +257,10 @@ index 3cd20ea8fa..9b9e7eef4c 100644
  
      return WINED3D_OK;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 987f3dc70b..9918f13f08 100644
+index ab6472339b..d5b26d1f43 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3209,6 +3209,7 @@ struct wined3d_cs_ops
+@@ -3229,6 +3229,7 @@ struct wined3d_cs_ops
  {
      void *(*require_space)(struct wined3d_cs *cs, size_t size);
      void (*submit)(struct wined3d_cs *cs);
@@ -265,7 +268,7 @@ index 987f3dc70b..9918f13f08 100644
      void (*push_constants)(struct wined3d_cs *cs, enum wined3d_push_constants p,
              unsigned int start_idx, unsigned int count, const void *constants);
  };
-@@ -3239,6 +3240,7 @@ void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
+@@ -3263,6 +3264,7 @@ void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
  void wined3d_cs_emit_draw(struct wined3d_cs *cs, GLenum primitive_type, int base_vertex_idx,
          unsigned int start_idx, unsigned int index_count, unsigned int start_instance,
          unsigned int instance_count, BOOL indexed) DECLSPEC_HIDDEN;
@@ -273,7 +276,7 @@ index 987f3dc70b..9918f13f08 100644
  void wined3d_cs_emit_preload_resource(struct wined3d_cs *cs, struct wined3d_resource *resource) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_present(struct wined3d_cs *cs, struct wined3d_swapchain *swapchain,
          const RECT *src_rect, const RECT *dst_rect, HWND dst_window_override, DWORD flags) DECLSPEC_HIDDEN;
-@@ -3290,6 +3292,7 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
+@@ -3314,6 +3316,7 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
  void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
          struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
  void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;

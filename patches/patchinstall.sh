@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9e35dd15454be28c487b0f1bebefbbe530b2aca4"
+	echo "d6557e812984e010a989a3360039453eb978bd12"
 }
 
 # Show version information
@@ -8759,7 +8759,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Get rid of the end_scene flush and finish.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Send query_poll through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Update the swap interval through the CS in reset.", 1 },';
-		printf '%s\n' '+    { "Nils Kuhnhenn", "wined3d: Fix context_acquire not being called from the command thread in wined3d_texture_add_dirty_region.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add a separate variable to check if queries are started.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';

@@ -1,4 +1,4 @@
-From 7618743260a673e0556845b352bc7c2620775164 Mon Sep 17 00:00:00 2001
+From 663bd84bef7a95f85a935fe52662186930235237 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 9 Apr 2017 03:13:25 +0200
 Subject: server: Skip async completion when possible.
@@ -25,7 +25,7 @@ index 013eb2b39f..631013c755 100644
  
      CloseHandle(ov.hEvent);
 diff --git a/server/async.c b/server/async.c
-index 7323047d8d..ad7c1f097f 100644
+index f9d8af36b9..be7da06b65 100644
 --- a/server/async.c
 +++ b/server/async.c
 @@ -45,6 +45,7 @@ struct async
@@ -69,20 +69,20 @@ index 7323047d8d..ad7c1f097f 100644
          if (async->data.apc)
          {
 diff --git a/server/fd.c b/server/fd.c
-index 9617fa1279..e0c2ee4f26 100644
+index 288f6976e1..fdbd07ef59 100644
 --- a/server/fd.c
 +++ b/server/fd.c
 @@ -2381,6 +2381,7 @@ DECL_HANDLER(flush)
      if (async)
      {
-         reply->event = fd->fd_ops->flush( fd, async, req->blocking );
+         reply->event = fd->fd_ops->flush( fd, async );
 +        async_skip_completion( async, fd->comp_flags );
          release_object( async );
      }
      release_object( fd );
 @@ -2461,6 +2462,7 @@ DECL_HANDLER(read)
          {
-             reply->wait    = fd->fd_ops->read( fd, async, req->blocking, req->pos );
+             reply->wait    = fd->fd_ops->read( fd, async, req->pos );
              reply->options = fd->options;
 +            async_skip_completion( async, fd->comp_flags );
              release_object( async );
@@ -90,7 +90,7 @@ index 9617fa1279..e0c2ee4f26 100644
          release_object( iosb );
 @@ -2484,6 +2486,7 @@ DECL_HANDLER(write)
          {
-             reply->wait    = fd->fd_ops->write( fd, async, req->blocking, req->pos );
+             reply->wait    = fd->fd_ops->write( fd, async, req->pos );
              reply->options = fd->options;
 +            async_skip_completion( async, fd->comp_flags );
              release_object( async );
@@ -98,14 +98,14 @@ index 9617fa1279..e0c2ee4f26 100644
          release_object( iosb );
 @@ -2507,6 +2510,7 @@ DECL_HANDLER(ioctl)
          {
-             reply->wait    = fd->fd_ops->ioctl( fd, req->code, async, req->blocking );
+             reply->wait    = fd->fd_ops->ioctl( fd, req->code, async );
              reply->options = fd->options;
 +            async_skip_completion( async, fd->comp_flags );
              release_object( async );
          }
          release_object( iosb );
 diff --git a/server/file.h b/server/file.h
-index 94cc37ff2e..6c68153d38 100644
+index 5ea8f0f5cb..ff605c3719 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -181,6 +181,7 @@ extern void async_set_timeout( struct async *async, timeout_t timeout, unsigned

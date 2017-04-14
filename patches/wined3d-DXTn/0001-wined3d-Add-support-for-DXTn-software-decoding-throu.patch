@@ -1,4 +1,4 @@
-From b14633555358bcce6ab3dbef2573f19f72a5b2e8 Mon Sep 17 00:00:00 2001
+From 6fb6fb2e293e57e2645d988e82c12782db1c30b9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 20 Sep 2014 02:48:07 +0200
 Subject: wined3d: Add support for DXTn software decoding through libtxc_dxtn.
@@ -22,10 +22,10 @@ Changes in rev 3:
  create mode 100644 dlls/wined3d/dxtn.c
 
 diff --git a/configure.ac b/configure.ac
-index 76fb87d..7a80fff 100644
+index 1a5b0de0e3..adf7cd0f4d 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1622,6 +1622,9 @@ fi
+@@ -1633,6 +1633,9 @@ fi
  WINE_NOTICE_WITH(tiff,[test "x$ac_cv_lib_soname_tiff" = "x"],
                   [libtiff ${notice_platform}development files not found, TIFF won't be supported.])
  
@@ -36,7 +36,7 @@ index 76fb87d..7a80fff 100644
  if test "x$with_mpg123" != "xno"
  then
 diff --git a/dlls/wined3d/Makefile.in b/dlls/wined3d/Makefile.in
-index 655800b..ee0615f 100644
+index edee58845a..70f47c6a5f 100644
 --- a/dlls/wined3d/Makefile.in
 +++ b/dlls/wined3d/Makefile.in
 @@ -11,6 +11,7 @@ C_SRCS = \
@@ -49,7 +49,7 @@ index 655800b..ee0615f 100644
  	nvidia_texture_shader.c \
 diff --git a/dlls/wined3d/dxtn.c b/dlls/wined3d/dxtn.c
 new file mode 100644
-index 0000000..ce98949
+index 0000000000..ce989490ef
 --- /dev/null
 +++ b/dlls/wined3d/dxtn.c
 @@ -0,0 +1,299 @@
@@ -353,10 +353,10 @@ index 0000000..ce98949
 +        wine_dlclose(txc_dxtn_handle, NULL, 0);
 +}
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index abbab26..3668c25 100644
+index 2ba80605a5..3a91e98e98 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -1697,6 +1697,66 @@ static void convert_yuy2_r5g6b5(const BYTE *src, BYTE *dst,
+@@ -1215,6 +1215,66 @@ static void convert_yuy2_r5g6b5(const BYTE *src, BYTE *dst,
      }
  }
  
@@ -423,7 +423,7 @@ index abbab26..3668c25 100644
  struct d3dfmt_converter_desc
  {
      enum wined3d_format_id from, to;
-@@ -1713,6 +1773,20 @@ static const struct d3dfmt_converter_desc converters[] =
+@@ -1231,6 +1291,20 @@ static const struct d3dfmt_converter_desc converters[] =
      {WINED3DFMT_YUY2,           WINED3DFMT_B5G6R5_UNORM,    convert_yuy2_r5g6b5},
  };
  
@@ -444,7 +444,7 @@ index abbab26..3668c25 100644
  static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_format_id from,
          enum wined3d_format_id to)
  {
-@@ -1724,6 +1798,12 @@ static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_fo
+@@ -1242,6 +1316,12 @@ static inline const struct d3dfmt_converter_desc *find_converter(enum wined3d_fo
              return &converters[i];
      }
  
@@ -458,10 +458,10 @@ index abbab26..3668c25 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_main.c b/dlls/wined3d/wined3d_main.c
-index d584664..cb55ef8 100644
+index f662c3a48d..dca6a2a64d 100644
 --- a/dlls/wined3d/wined3d_main.c
 +++ b/dlls/wined3d/wined3d_main.c
-@@ -333,6 +333,8 @@ static BOOL wined3d_dll_init(HINSTANCE hInstDLL)
+@@ -336,6 +336,8 @@ static BOOL wined3d_dll_init(HINSTANCE hInstDLL)
      if (appkey) RegCloseKey( appkey );
      if (hkey) RegCloseKey( hkey );
  
@@ -470,7 +470,7 @@ index d584664..cb55ef8 100644
      return TRUE;
  }
  
-@@ -364,6 +366,9 @@ static BOOL wined3d_dll_destroy(HINSTANCE hInstDLL)
+@@ -367,6 +369,9 @@ static BOOL wined3d_dll_destroy(HINSTANCE hInstDLL)
  
      DeleteCriticalSection(&wined3d_wndproc_cs);
      DeleteCriticalSection(&wined3d_cs);
@@ -481,11 +481,11 @@ index d584664..cb55ef8 100644
  }
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 9a7dff4..e14786c 100644
+index 1ed0846939..e6f9ebc79a 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3483,6 +3483,19 @@ static inline struct wined3d_surface *context_get_rt_surface(const struct wined3
-     return texture->sub_resources[context->current_rt.sub_resource_idx].u.surface;
+@@ -4062,6 +4062,19 @@ static inline void wined3d_not_from_cs(struct wined3d_cs *cs)
+     assert(cs->thread_id != GetCurrentThreadId());
  }
  
 +BOOL wined3d_dxt1_decode(const BYTE *src, BYTE *dst, DWORD pitch_in, DWORD pitch_out,
@@ -505,5 +505,5 @@ index 9a7dff4..e14786c 100644
  #define WINED3D_OPENGL_WINDOW_CLASS_NAME "WineD3D_OpenGL"
  
 -- 
-2.7.1
+2.11.0
 

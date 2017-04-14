@@ -1,4 +1,4 @@
-From d02a092f2e480b6ca82273de0a50534c5cb7d42f Mon Sep 17 00:00:00 2001
+From 834cd708e0bc3ea23ea2a8b0c3563f9add49fcdd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 22 Jan 2017 01:51:51 +0100
 Subject: d3d11: Add dummy support for D3D11_QUERY_PIPELINE_STATISTICS query.
@@ -6,15 +6,15 @@ Subject: d3d11: Add dummy support for D3D11_QUERY_PIPELINE_STATISTICS query.
 ---
  dlls/d3d10core/tests/device.c |  2 +-
  dlls/d3d11/tests/d3d11.c      |  2 +-
- dlls/wined3d/query.c          | 45 +++++++++++++++++++++++++++++++++++++++++++
- include/wine/wined3d.h        | 15 +++++++++++++++
- 4 files changed, 62 insertions(+), 2 deletions(-)
+ dlls/wined3d/query.c          | 47 +++++++++++++++++++++++++++++++++++++++++++
+ include/wine/wined3d.h        | 15 ++++++++++++++
+ 4 files changed, 64 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/d3d10core/tests/device.c b/dlls/d3d10core/tests/device.c
-index 6c87a979ba6..be915a8ff86 100644
+index 8276f98873..12d690fb6d 100644
 --- a/dlls/d3d10core/tests/device.c
 +++ b/dlls/d3d10core/tests/device.c
-@@ -3604,7 +3604,7 @@ static void test_create_query(void)
+@@ -3658,7 +3658,7 @@ static void test_create_query(void)
          {D3D10_QUERY_OCCLUSION,             FALSE, FALSE},
          {D3D10_QUERY_TIMESTAMP,             FALSE, FALSE},
          {D3D10_QUERY_TIMESTAMP_DISJOINT,    FALSE, FALSE},
@@ -24,10 +24,10 @@ index 6c87a979ba6..be915a8ff86 100644
          {D3D10_QUERY_SO_STATISTICS,         FALSE, FALSE},
          {D3D10_QUERY_SO_OVERFLOW_PREDICATE, TRUE,  FALSE},
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 9d8d827b306..fbbede8dd79 100644
+index e532ee28c8..97b1f2ce1b 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -4564,7 +4564,7 @@ static void test_create_query(void)
+@@ -4645,7 +4645,7 @@ static void test_create_query(void)
          {D3D11_QUERY_OCCLUSION,                     D3D_FEATURE_LEVEL_10_0, FALSE, FALSE, FALSE},
          {D3D11_QUERY_TIMESTAMP,                     D3D_FEATURE_LEVEL_10_0, FALSE, FALSE, FALSE},
          {D3D11_QUERY_TIMESTAMP_DISJOINT,            D3D_FEATURE_LEVEL_10_0, FALSE, FALSE, FALSE},
@@ -37,10 +37,10 @@ index 9d8d827b306..fbbede8dd79 100644
          {D3D11_QUERY_SO_STATISTICS,                 D3D_FEATURE_LEVEL_10_0, FALSE, FALSE, FALSE},
          {D3D11_QUERY_SO_OVERFLOW_PREDICATE,         D3D_FEATURE_LEVEL_10_0, TRUE,  TRUE,  FALSE},
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index c5ca37d4878..23a07a9e09c 100644
+index 95d735c05e..f1e0d680b9 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
-@@ -304,6 +304,10 @@ static void wined3d_query_destroy_object(void *object)
+@@ -301,6 +301,10 @@ static void wined3d_query_destroy_object(void *object)
      {
          HeapFree(GetProcessHeap(), 0, query);
      }
@@ -51,26 +51,28 @@ index c5ca37d4878..23a07a9e09c 100644
      else
      {
          ERR("Query %p has invalid type %#x.\n", query, query->type);
-@@ -646,6 +650,18 @@ static void wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD
-     FIXME("query %p, flags %#x.\n", query, flags);
+@@ -669,6 +673,20 @@ static BOOL wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD
+     return FALSE;
  }
  
-+static HRESULT wined3d_pipeline_query_ops_poll(struct wined3d_query *query, DWORD flags)
++static BOOL wined3d_pipeline_query_ops_poll(struct wined3d_query *query, DWORD flags)
 +{
 +    TRACE("query %p, flags %#x.\n", query, flags);
 +
 +    return TRUE;
 +}
 +
-+static void wined3d_pipeline_query_ops_issue(struct wined3d_query *query, DWORD flags)
++static BOOL wined3d_pipeline_query_ops_issue(struct wined3d_query *query, DWORD flags)
 +{
 +    FIXME("query %p, flags %#x.\n", query, flags);
++
++    return FALSE;
 +}
 +
  static const struct wined3d_query_ops event_query_ops =
  {
      wined3d_event_query_ops_poll,
-@@ -838,6 +854,32 @@ static HRESULT wined3d_overflow_query_create(struct wined3d_device *device,
+@@ -861,6 +879,32 @@ static HRESULT wined3d_overflow_query_create(struct wined3d_device *device,
      return WINED3D_OK;
  }
  
@@ -103,7 +105,7 @@ index c5ca37d4878..23a07a9e09c 100644
  HRESULT CDECL wined3d_query_create(struct wined3d_device *device,
          enum wined3d_query_type type, void *parent, struct wined3d_query **query)
  {
-@@ -864,6 +906,9 @@ HRESULT CDECL wined3d_query_create(struct wined3d_device *device,
+@@ -887,6 +931,9 @@ HRESULT CDECL wined3d_query_create(struct wined3d_device *device,
          case WINED3D_QUERY_TYPE_SO_OVERFLOW:
              return wined3d_overflow_query_create(device, type, parent, query);
  
@@ -114,10 +116,10 @@ index c5ca37d4878..23a07a9e09c 100644
              FIXME("Unhandled query type %#x.\n", type);
              return WINED3DERR_NOTAVAILABLE;
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 0357bfda6d8..2625cf5a879 100644
+index 30925d2ca3..52db093676 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -711,6 +711,21 @@ struct wined3d_query_data_so_statistics
+@@ -715,6 +715,21 @@ struct wined3d_query_data_so_statistics
      UINT64 needed;
  };
  

@@ -8556,7 +8556,7 @@ fi
 # Patchset winecfg-Unmounted_Devices
 # |
 # | Modified files:
-# |   *	programs/winecfg/drive.c, programs/winecfg/driveui.c
+# |   *	programs/winecfg/drive.c, programs/winecfg/drivedetect.c, programs/winecfg/driveui.c
 # |
 if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
 	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch

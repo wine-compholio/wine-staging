@@ -1,15 +1,16 @@
-From 3cdf8418055efc6fc1d1e0b290ad02a6e0ed2128 Mon Sep 17 00:00:00 2001
+From 3e5b8bf7e113dbf266d8da3df50a8f65c212e932 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 30 Mar 2015 04:38:21 +0200
 Subject: winecfg: Show unmounted devices and allow changing the device value.
 
 ---
- programs/winecfg/drive.c   | 24 ++++++++++++------------
- programs/winecfg/driveui.c | 27 ++++++++++++++++++---------
- 2 files changed, 30 insertions(+), 21 deletions(-)
+ programs/winecfg/drive.c       | 24 ++++++++++++------------
+ programs/winecfg/drivedetect.c | 22 +++++++---------------
+ programs/winecfg/driveui.c     | 27 ++++++++++++++++++---------
+ 3 files changed, 37 insertions(+), 36 deletions(-)
 
 diff --git a/programs/winecfg/drive.c b/programs/winecfg/drive.c
-index 8cad14a..a740d74 100644
+index b5ef69d423..248ae800e1 100644
 --- a/programs/winecfg/drive.c
 +++ b/programs/winecfg/drive.c
 @@ -106,7 +106,7 @@ BOOL add_drive(char letter, const char *targetpath, const char *device, const WC
@@ -74,8 +75,63 @@ index 8cad14a..a740d74 100644
  
          if (DeviceIoControl( mgr, IOCTL_MOUNTMGR_DEFINE_UNIX_DRIVE, ioctl, len, NULL, 0, NULL, NULL ))
          {
+diff --git a/programs/winecfg/drivedetect.c b/programs/winecfg/drivedetect.c
+index 253c6296a9..71d50c8ab8 100644
+--- a/programs/winecfg/drivedetect.c
++++ b/programs/winecfg/drivedetect.c
+@@ -131,12 +131,15 @@ static BOOL should_ignore_mnt_dir(char *dir)
+     return FALSE;
+ }
+ 
+-static BOOL is_drive_defined(char *path)
++static BOOL is_drive_defined(const char *path)
+ {
+     int i;
+     
+     for (i = 0; i < 26; i++)
+-        if (drives[i].in_use && !strcmp(drives[i].unixpath, path)) return TRUE;
++    {
++        if (!drives[i].in_use || !drives[i].unixpath) continue;
++        if (!strcmp(drives[i].unixpath, path)) return TRUE;
++    }
+ 
+     return FALSE;
+ }
+@@ -222,13 +225,7 @@ static void report_error(int code)
+ 
+ static void ensure_root_is_mapped(void)
+ {
+-    int i;
+-    BOOL mapped = FALSE;
+-
+-    for (i = 0; i < 26; i++)
+-        if (drives[i].in_use && !strcmp(drives[i].unixpath, "/")) mapped = TRUE;
+-
+-    if (!mapped)
++    if (!is_drive_defined("/"))
+     {
+         /* work backwards from Z, trying to map it */
+         char letter;
+@@ -249,16 +246,11 @@ static void ensure_root_is_mapped(void)
+ 
+ static void ensure_home_is_mapped(void)
+ {
+-    int i;
+-    BOOL mapped = FALSE;
+     char *home = getenv("HOME");
+ 
+     if (!home) return;
+ 
+-    for (i = 0; i < 26; i++)
+-        if (drives[i].in_use && !strcmp(drives[i].unixpath, home)) mapped = TRUE;
+-
+-    if (!mapped)
++    if (!is_drive_defined(home))
+     {
+         char letter;
+ 
 diff --git a/programs/winecfg/driveui.c b/programs/winecfg/driveui.c
-index 98e057b..fcd7ac3 100644
+index 98e057bd79..fcd7ac38aa 100644
 --- a/programs/winecfg/driveui.c
 +++ b/programs/winecfg/driveui.c
 @@ -176,14 +176,12 @@ static void enable_labelserial_box(HWND dialog, int mode)
@@ -150,5 +206,5 @@ index 98e057b..fcd7ac3 100644
          }
      }
 -- 
-2.3.3
+2.12.2
 

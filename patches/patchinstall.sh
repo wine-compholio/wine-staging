@@ -103,6 +103,7 @@ patch_enable_all ()
 	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
+	enable_configure_OSMesa="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -538,6 +539,9 @@ patch_enable ()
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
+			;;
+		configure-OSMesa)
+			enable_configure_OSMesa="$2"
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
@@ -3091,6 +3095,18 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset configure-OSMesa
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/gdi32/dibdrv/opengl.c
+# |
+if test "$enable_configure_OSMesa" -eq 1; then
+	patch_apply configure-OSMesa/0001-configure-Support-for-recent-OSMesa-versions.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "configure: Support for recent OSMesa versions.", 1 },';
 	) >> "$patchlist"
 fi
 

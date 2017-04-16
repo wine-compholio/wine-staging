@@ -1,0 +1,61 @@
+From 11e0603c3ec889f0b8b2f28f9a44d96a8183de31 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 16 Apr 2017 19:18:21 +0200
+Subject: configure: Support for recent OSMesa versions.
+
+---
+ configure.ac               |  2 +-
+ dlls/gdi32/dibdrv/opengl.c | 17 +++++++++--------
+ 2 files changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 1a5b0de0e3..f5b587c80a 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1149,7 +1149,7 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+ 
+         if test "x$with_osmesa" != "xno"
+         then
+-            WINE_CHECK_SONAME(OSMesa,glAccum,,,[$X_LIBS -lm $X_EXTRA_LIBS])
++            WINE_CHECK_SONAME(OSMesa,OSMesaGetProcAddress,,,[$X_LIBS -lm $X_EXTRA_LIBS])
+             WINE_NOTICE_WITH(osmesa,[test "x$ac_cv_lib_soname_OSMesa" = "x"],
+                              [libOSMesa ${notice_platform}development files not found (or too old), OpenGL rendering in bitmaps won't be supported.])
+         fi
+diff --git a/dlls/gdi32/dibdrv/opengl.c b/dlls/gdi32/dibdrv/opengl.c
+index 41331169c4..77d63201cf 100644
+--- a/dlls/gdi32/dibdrv/opengl.c
++++ b/dlls/gdi32/dibdrv/opengl.c
+@@ -113,14 +113,6 @@ static BOOL init_opengl(void)
+         return FALSE;
+     }
+ 
+-    for (i = 0; i < sizeof(opengl_func_names)/sizeof(opengl_func_names[0]); i++)
+-    {
+-        if (!(((void **)&opengl_funcs.gl)[i] = wine_dlsym( osmesa_handle, opengl_func_names[i], buffer, sizeof(buffer) )))
+-        {
+-            ERR( "%s not found in %s (%s), disabling.\n", opengl_func_names[i], SONAME_LIBOSMESA, buffer );
+-            goto failed;
+-        }
+-    }
+ #define LOAD_FUNCPTR(f) do if (!(p##f = wine_dlsym( osmesa_handle, #f, buffer, sizeof(buffer) ))) \
+     { \
+         ERR( "%s not found in %s (%s), disabling.\n", #f, SONAME_LIBOSMESA, buffer ); \
+@@ -134,6 +126,15 @@ static BOOL init_opengl(void)
+     LOAD_FUNCPTR(OSMesaPixelStore);
+ #undef LOAD_FUNCPTR
+ 
++    for (i = 0; i < sizeof(opengl_func_names)/sizeof(opengl_func_names[0]); i++)
++    {
++        if (!(((void **)&opengl_funcs.gl)[i] = pOSMesaGetProcAddress( opengl_func_names[i] )))
++        {
++            ERR( "%s not found in %s, disabling.\n", opengl_func_names[i], SONAME_LIBOSMESA );
++            goto failed;
++        }
++    }
++
+     return TRUE;
+ 
+ failed:
+-- 
+2.12.2
+

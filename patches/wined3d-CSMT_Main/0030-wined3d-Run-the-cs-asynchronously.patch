@@ -1,34 +1,49 @@
-From 13fe67e10d483f6fe5047f693949bdf6560758ed Mon Sep 17 00:00:00 2001
+From f37495b98b6c9ddd4624326dfb5658e184978917 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 19 Feb 2017 07:01:45 +0100
 Subject: wined3d: Run the cs asynchronously.
 
 ---
- dlls/wined3d/cs.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ dlls/wined3d/cs.c | 19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index c8394533a86..a656c93684a 100644
+index 659cfdf7c3..73d5c48e86 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -2637,7 +2637,7 @@ static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size)
-     return data;
- }
+@@ -2333,6 +2333,23 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
  
--/* static */ void wined3d_cs_mt_submit(struct wined3d_cs *cs)
-+static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
- {
-     if (cs->thread_id == GetCurrentThreadId())
-         return wined3d_cs_st_submit(cs);
-@@ -2667,7 +2667,7 @@ static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
- static const struct wined3d_cs_ops wined3d_cs_mt_ops =
+     if (InterlockedCompareExchange(&cs->waiting_for_event, FALSE, TRUE))
+         SetEvent(cs->event);
++}
++
++static void wined3d_cs_mt_submit_and_wait(struct wined3d_cs *cs)
++{
++    struct wined3d_cs_queue *queue = &cs->queue;
++    struct wined3d_cs_packet *packet;
++    size_t packet_size;
++
++    if (cs->thread_id == GetCurrentThreadId())
++        return wined3d_cs_st_submit(cs);
++
++    packet = (struct wined3d_cs_packet *)&queue->data[queue->head];
++    packet_size = FIELD_OFFSET(struct wined3d_cs_packet, data[packet->size]);
++    InterlockedExchange(&queue->head, (queue->head + packet_size) & (WINED3D_CS_QUEUE_SIZE - 1));
++
++    if (InterlockedCompareExchange(&cs->waiting_for_event, FALSE, TRUE))
++        SetEvent(cs->event);
+ 
+     while (!wined3d_cs_queue_is_empty(queue))
+         wined3d_pause();
+@@ -2407,7 +2424,7 @@ static const struct wined3d_cs_ops wined3d_cs_mt_ops =
  {
      wined3d_cs_mt_require_space,
--    wined3d_cs_mt_submit_and_wait,  /* FIXME */
-+    wined3d_cs_mt_submit,
-     wined3d_cs_mt_submit_and_wait,
+     wined3d_cs_mt_submit,
+-    wined3d_cs_mt_submit,
++    wined3d_cs_mt_submit_and_wait,
+     wined3d_cs_mt_push_constants,
  };
  
 -- 
-2.11.0
+2.12.2
 

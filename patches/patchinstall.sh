@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f7402accc40b66140be4d27c5ad1b2fee8532dfc"
+	echo "6c7760f2175e241b330cde0a902c96d9007922e0"
 }
 
 # Show version information
@@ -419,7 +419,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_Error_Handling="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
@@ -1488,9 +1487,6 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
-			;;
-		wined3d-Error_Handling)
-			enable_wined3d_Error_Handling="$2"
 			;;
 		wined3d-GTX_560M)
 			enable_wined3d_GTX_560M="$2"
@@ -8688,20 +8684,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Error_Handling
-# |
-# | Modified files:
-# |   *	dlls/wined3d/cs.c, dlls/wined3d/shader.c
-# |
-if test "$enable_wined3d_Error_Handling" -eq 1; then
-	patch_apply wined3d-Error_Handling/0001-wined3d-Release-resources-on-error-in-wined3d_cs_exe.patch
-	patch_apply wined3d-Error_Handling/0002-wined3d-Fix-doublefree-race-condition-in-geometry_sh.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Release resources on error in wined3d_cs_exec_blt_sub_resource.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Fix doublefree / race condition in geometry_shader_init.", 1 },';
 	) >> "$patchlist"
 fi
 

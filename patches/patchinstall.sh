@@ -423,7 +423,6 @@ patch_enable_all ()
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
-	enable_wined3d_Revert_Pixel_Center_Offset="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
@@ -1500,9 +1499,6 @@ patch_enable ()
 		wined3d-Revert_Buffer_Upload)
 			enable_wined3d_Revert_Buffer_Upload="$2"
 			;;
-		wined3d-Revert_Pixel_Center_Offset)
-			enable_wined3d_Revert_Pixel_Center_Offset="$2"
-			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
 			;;
@@ -2069,9 +2065,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_Revert_Buffer_Upload" -gt 1; then
 		abort "Patchset wined3d-Revert_Buffer_Upload disabled, but wined3d-CSMT_Helper depends on that."
 	fi
-	if test "$enable_wined3d_Revert_Pixel_Center_Offset" -gt 1; then
-		abort "Patchset wined3d-Revert_Pixel_Center_Offset disabled, but wined3d-CSMT_Helper depends on that."
-	fi
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2084,7 +2077,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Buffer_Upload=1
-	enable_wined3d_Revert_Pixel_Center_Offset=1
 	enable_wined3d_Silence_FIXMEs=1
 fi
 
@@ -8629,18 +8621,6 @@ if test "$enable_wined3d_Revert_Buffer_Upload" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Revert_Pixel_Center_Offset
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/state.c, dlls/wined3d/utils.c
-# |
-if test "$enable_wined3d_Revert_Pixel_Center_Offset" -eq 1; then
-	patch_apply wined3d-Revert_Pixel_Center_Offset/0001-Revert-wined3d-Slightly-offset-the-viewport-in-the-A.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Slightly offset the viewport in the ARB_clip_control case.\".", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8675,7 +8655,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Buffer_Upload, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs
+# | 	wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -8757,7 +8737,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Buffer_Upload, wined3d-Revert_Pixel_Center_Offset, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# | 	wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

@@ -193,7 +193,6 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
-	enable_kernel32_SetFileInformationByHandle="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -807,9 +806,6 @@ patch_enable ()
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
-			;;
-		kernel32-SetFileInformationByHandle)
-			enable_kernel32_SetFileInformationByHandle="$2"
 			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
@@ -2435,13 +2431,9 @@ if test "$enable_kernel32_GetPackageFullName" -eq 1; then
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
-	if test "$enable_kernel32_SetFileInformationByHandle" -gt 1; then
-		abort "Patchset kernel32-SetFileInformationByHandle disabled, but kernel32-CopyFileEx depends on that."
-	fi
 	if test "$enable_ntdll_FileDispositionInformation" -gt 1; then
 		abort "Patchset ntdll-FileDispositionInformation disabled, but kernel32-CopyFileEx depends on that."
 	fi
-	enable_kernel32_SetFileInformationByHandle=1
 	enable_ntdll_FileDispositionInformation=1
 fi
 
@@ -4444,18 +4436,6 @@ if test "$enable_kernel32_COMSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileInformationByHandle
-# |
-# | Modified files:
-# |   *	include/winbase.h
-# |
-if test "$enable_kernel32_SetFileInformationByHandle" -eq 1; then
-	patch_apply kernel32-SetFileInformationByHandle/0001-include-Declare-a-couple-more-file-information-class.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "include: Declare a couple more file information class structures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4507,7 +4487,7 @@ fi
 # Patchset kernel32-CopyFileEx
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation
+# |   *	server-File_Permissions, ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22692] Add support for CopyFileEx progress callback
@@ -7262,8 +7242,7 @@ fi
 # Patchset shell32-Progress_Dialog
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
-# | 	shell32-SHFileOperation_Move
+# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move
 # |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
@@ -7328,8 +7307,8 @@ fi
 # Patchset shell32-SHFileOperation_Win9x
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileInformationByHandle, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
-# | 	shell32-SHFileOperation_Move, shell32-Progress_Dialog
+# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move,
+# | 	shell32-Progress_Dialog
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37916] Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW

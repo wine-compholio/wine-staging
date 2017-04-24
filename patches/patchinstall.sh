@@ -168,7 +168,6 @@ patch_enable_all ()
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
-	enable_iexplore_Revert_ProductVersion="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -733,9 +732,6 @@ patch_enable ()
 			;;
 		ieframe-IViewObject-Draw)
 			enable_ieframe_IViewObject_Draw="$2"
-			;;
-		iexplore-Revert_ProductVersion)
-			enable_iexplore_Revert_ProductVersion="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -4324,18 +4320,6 @@ if test "$enable_ieframe_IViewObject_Draw" -eq 1; then
 	patch_apply ieframe-IViewObject-Draw/0001-ieframe-Return-S_OK-in-IViewObject-Draw-stub.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ieframe: Return S_OK in IViewObject::Draw stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset iexplore-Revert_ProductVersion
-# |
-# | Modified files:
-# |   *	programs/iexplore/iexplore.rc
-# |
-if test "$enable_iexplore_Revert_ProductVersion" -eq 1; then
-	patch_apply iexplore-Revert_ProductVersion/0001-Revert-iexplore-Sync-registry-and-program-resource-v.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"iexplore: Sync registry and program resource values.\".", 1 },';
 	) >> "$patchlist"
 fi
 

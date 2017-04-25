@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cced5dfbde8b685022dd74e666f8ad4ea8473453"
+	echo "e49feb63f489141c08a967a9c47930559e1de4f7"
 }
 
 # Show version information
@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
-	enable_configure_OSMesa="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
@@ -180,7 +179,6 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
-	enable_kernel32_GetPackageFullName="$1"
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -244,7 +242,6 @@ patch_enable_all ()
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtAllocateUuids="$1"
 	enable_ntdll_NtQueryEaFile="$1"
-	enable_ntdll_NtQueryInformationJobObject="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetInformationToken="$1"
@@ -381,7 +378,6 @@ patch_enable_all ()
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
-	enable_vcomp__vcomp_for_static_init="$1"
 	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
@@ -536,9 +532,6 @@ patch_enable ()
 			;;
 		configure-Absolute_RPATH)
 			enable_configure_Absolute_RPATH="$2"
-			;;
-		configure-OSMesa)
-			enable_configure_OSMesa="$2"
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
@@ -768,9 +761,6 @@ patch_enable ()
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
 			;;
-		kernel32-GetPackageFullName)
-			enable_kernel32_GetPackageFullName="$2"
-			;;
 		kernel32-GetShortPathName)
 			enable_kernel32_GetShortPathName="$2"
 			;;
@@ -959,9 +949,6 @@ patch_enable ()
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
-			;;
-		ntdll-NtQueryInformationJobObject)
-			enable_ntdll_NtQueryInformationJobObject="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -1370,9 +1357,6 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
-			;;
-		vcomp-_vcomp_for_static_init)
-			enable_vcomp__vcomp_for_static_init="$2"
 			;;
 		version-GetFileVersionInfoSizeExW)
 			enable_version_GetFileVersionInfoSizeExW="$2"
@@ -2423,13 +2407,6 @@ if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
 	enable_kernel32_Misalign_Workaround=1
 fi
 
-if test "$enable_kernel32_GetPackageFullName" -eq 1; then
-	if test "$enable_api_ms_win_Stub_DLLs" -gt 1; then
-		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-GetPackageFullName depends on that."
-	fi
-	enable_api_ms_win_Stub_DLLs=1
-fi
-
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	if test "$enable_ntdll_FileDispositionInformation" -gt 1; then
 		abort "Patchset ntdll-FileDispositionInformation disabled, but kernel32-CopyFileEx depends on that."
@@ -3082,18 +3059,6 @@ if test "$enable_configure_Absolute_RPATH" -eq 1; then
 	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "configure: Also add the absolute RPATH when linking against libwine.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset configure-OSMesa
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/gdi32/dibdrv/opengl.c
-# |
-if test "$enable_configure_OSMesa" -eq 1; then
-	patch_apply configure-OSMesa/0001-configure-Support-for-recent-OSMesa-versions.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "configure: Support for recent OSMesa versions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4053,7 +4018,6 @@ fi
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	patch_apply dxva2-Video_Decoder/0001-dxva2-Implement-semi-stub-for-Direct3DDeviceManager9.patch
 	patch_apply dxva2-Video_Decoder/0002-dxva2-Implement-stubbed-interfaces-for-IDirectXVideo.patch
-	patch_apply dxva2-Video_Decoder/0003-include-Fix-an-invalid-UUID-in-dxva2api.idl.patch
 	patch_apply dxva2-Video_Decoder/0004-dxva2-Implement-stubbed-DirectX-Software-VideoProces.patch
 	patch_apply dxva2-Video_Decoder/0005-include-Add-dxva.h-header-file.patch
 	patch_apply dxva2-Video_Decoder/0006-dxva2-tests-Add-tests-for-dxva2-decoder.patch
@@ -4066,7 +4030,6 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Fix an invalid UUID in dxva2api.idl.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed DirectX Software VideoProcessor interface.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include: Add dxva.h header file.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2/tests: Add tests for dxva2 decoder.", 1 },';
@@ -4544,22 +4507,6 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-GetPackageFullName
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-UmsStubs, api-ms-win-Stub_DLLs
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-appmodel-runtime-l1-1-1/api-ms-win-appmodel-runtime-l1-1-1.spec, dlls/kernel32/kernel32.spec,
-# | 	dlls/kernel32/version.c, dlls/kernelbase/kernelbase.spec
-# |
-if test "$enable_kernel32_GetPackageFullName" -eq 1; then
-	patch_apply kernel32-GetPackageFullName/0001-kernel32-Add-stub-for-GetPackageFullName.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for GetPackageFullName.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-GetShortPathName
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4922,14 +4869,13 @@ fi
 # | Modified files:
 # |   *	configure.ac, dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c,
 # | 	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/Makefile.in,
-# | 	dlls/mfplat/tests/mfplat.c, include/Makefile.in, include/mfidl.idl, include/rpcndr.h, loader/wine.inf.in
+# | 	dlls/mfplat/tests/mfplat.c, include/mfidl.idl, include/rpcndr.h, loader/wine.inf.in
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
 	patch_apply mfplat-MFTRegister/0002-mfplat-Implement-MFTUnregister.patch
 	patch_apply mfplat-MFTRegister/0003-mfplat-Implement-MFTEnum.patch
 	patch_apply mfplat-MFTRegister/0004-mfplat-tests-Add-tests.patch
-	patch_apply mfplat-MFTRegister/0005-include-mfidl.idl-Add-IMFMediaSession-interface-and-.patch
 	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
 	patch_apply mfplat-MFTRegister/0007-include-rpcndr.h-Fix-definition-of-EXTERN_GUID.patch
 	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
@@ -4939,7 +4885,6 @@ if test "$enable_mfplat_MFTRegister" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include/mfidl.idl: Add IMFMediaSession interface and dependencies.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
@@ -5433,13 +5378,11 @@ fi
 # Patchset ntdll-LDR_MODULE
 # |
 # | Modified files:
-# |   *	dlls/ntdll/thread.c, include/winternl.h
+# |   *	include/winternl.h
 # |
 if test "$enable_ntdll_LDR_MODULE" -eq 1; then
-	patch_apply ntdll-LDR_MODULE/0001-ntdll-Mark-LDR-data-as-initialized.patch
 	patch_apply ntdll-LDR_MODULE/0002-include-Update-LDR_MODULE-to-more-recent-windows-ver.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Mark LDR data as initialized.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include: Update LDR_MODULE to more recent windows versions.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5622,21 +5565,6 @@ if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
 	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtQueryInformationJobObject
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42744] Add more stub classes in NtQueryInformationJobObject
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_NtQueryInformationJobObject" -eq 1; then
-	patch_apply ntdll-NtQueryInformationJobObject/0001-ntdll-Add-stub-for-JobObjectBasicAccountingInformati.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for JobObjectBasicAccountingInformation and JobObjectBasicProcessIdList in NtQueryInformationJobObject.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7953,18 +7881,6 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset vcomp-_vcomp_for_static_init
-# |
-# | Modified files:
-# |   *	dlls/vcomp/main.c, dlls/vcomp/tests/vcomp.c
-# |
-if test "$enable_vcomp__vcomp_for_static_init" -eq 1; then
-	patch_apply vcomp-_vcomp_for_static_init/0001-vcomp-Handle-begin-NULL-in-_vcomp_for_static_init.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "vcomp: Handle begin == NULL in _vcomp_for_static_init.", 1 },';
 	) >> "$patchlist"
 fi
 

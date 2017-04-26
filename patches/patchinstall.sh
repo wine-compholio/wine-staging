@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e49feb63f489141c08a967a9c47930559e1de4f7"
+	echo "89ef7b59f548a76960b2278d819a8f915c81e132"
 }
 
 # Show version information
@@ -7615,7 +7615,7 @@ fi
 # |   *	[#42106] Implement user32.GetAutoRotationState
 # |
 # | Modified files:
-# |   *	dlls/user32/sysparams.c, dlls/user32/tests/sysparams.c, dlls/user32/user32.spec, include/winuser.h
+# |   *	dlls/user32/sysparams.c, dlls/user32/tests/sysparams.c
 # |
 if test "$enable_user32_GetAutoRotationState" -eq 1; then
 	patch_apply user32-GetAutoRotationState/0001-user32-Add-semi-stub-for-GetAutoRotationState.patch

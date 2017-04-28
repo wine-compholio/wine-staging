@@ -1,4 +1,4 @@
-From 498edc59046c38c028f6d9e2d91264ad08d93d57 Mon Sep 17 00:00:00 2001
+From 38079a15e97192b7f0f80b9317a47530d6430a5f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Jan 2017 16:56:56 +0100
 Subject: d3d11: Initial implementation for deferred contexts.
@@ -8,7 +8,7 @@ Subject: d3d11: Initial implementation for deferred contexts.
  1 file changed, 1043 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
-index 45467480905..4ee9d500802 100644
+index 366f330bf0..7aac903b54 100644
 --- a/dlls/d3d11/device.c
 +++ b/dlls/d3d11/device.c
 @@ -19,12 +19,181 @@
@@ -724,8 +724,8 @@ index 45467480905..4ee9d500802 100644
 +
  static void STDMETHODCALLTYPE d3d_null_wined3d_object_destroyed(void *parent) {}
  
- const struct wined3d_parent_ops d3d_null_wined3d_parent_ops =
-@@ -1139,7 +1830,20 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_ResolveSubresource(ID3D11D
+ static const struct wined3d_parent_ops d3d_null_wined3d_parent_ops =
+@@ -1133,7 +1824,20 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_ResolveSubresource(ID3D11D
  static void STDMETHODCALLTYPE d3d11_immediate_context_ExecuteCommandList(ID3D11DeviceContext *iface,
          ID3D11CommandList *command_list, BOOL restore_state)
  {
@@ -747,7 +747,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_immediate_context_HSSetShaderResources(ID3D11DeviceContext *iface,
-@@ -1953,7 +2657,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_CSGetConstantBuffers(ID3D1
+@@ -2260,7 +2964,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_CSGetConstantBuffers(ID3D1
  
  static void STDMETHODCALLTYPE d3d11_immediate_context_ClearState(ID3D11DeviceContext *iface)
  {
@@ -756,7 +756,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_immediate_context_Flush(ID3D11DeviceContext *iface)
-@@ -2165,6 +2869,7 @@ static ULONG STDMETHODCALLTYPE d3d11_deferred_context_Release(ID3D11DeviceContex
+@@ -2472,6 +3176,7 @@ static ULONG STDMETHODCALLTYPE d3d11_deferred_context_Release(ID3D11DeviceContex
  
      if (!refcount)
      {
@@ -764,7 +764,7 @@ index 45467480905..4ee9d500802 100644
          wined3d_private_store_cleanup(&context->private_store);
          ID3D11Device_Release(context->device);
          HeapFree(GetProcessHeap(), 0, context);
-@@ -2216,43 +2921,86 @@ static HRESULT STDMETHODCALLTYPE d3d11_deferred_context_SetPrivateDataInterface(
+@@ -2523,43 +3228,86 @@ static HRESULT STDMETHODCALLTYPE d3d11_deferred_context_SetPrivateDataInterface(
  static void STDMETHODCALLTYPE d3d11_deferred_context_VSSetConstantBuffers(ID3D11DeviceContext *iface,
          UINT start_slot, UINT buffer_count, ID3D11Buffer *const *buffers)
  {
@@ -857,7 +857,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_Draw(ID3D11DeviceContext *iface,
-@@ -2265,53 +3013,171 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_Draw(ID3D11DeviceContext *i
+@@ -2572,53 +3320,171 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_Draw(ID3D11DeviceContext *i
  static HRESULT STDMETHODCALLTYPE d3d11_deferred_context_Map(ID3D11DeviceContext *iface, ID3D11Resource *resource,
          UINT subresource_idx, D3D11_MAP map_type, UINT map_flags, D3D11_MAPPED_SUBRESOURCE *mapped_subresource)
  {
@@ -1038,7 +1038,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_DrawInstanced(ID3D11DeviceContext *iface,
-@@ -2340,7 +3206,16 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_GSSetShader(ID3D11DeviceCon
+@@ -2647,7 +3513,16 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_GSSetShader(ID3D11DeviceCon
  static void STDMETHODCALLTYPE d3d11_deferred_context_IASetPrimitiveTopology(ID3D11DeviceContext *iface,
          D3D11_PRIMITIVE_TOPOLOGY topology)
  {
@@ -1056,7 +1056,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_VSSetShaderResources(ID3D11DeviceContext *iface,
-@@ -2400,8 +3275,28 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_OMSetRenderTargets(ID3D11De
+@@ -2707,8 +3582,28 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_OMSetRenderTargets(ID3D11De
          UINT render_target_view_count, ID3D11RenderTargetView *const *render_target_views,
          ID3D11DepthStencilView *depth_stencil_view)
  {
@@ -1086,7 +1086,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_OMSetRenderTargetsAndUnorderedAccessViews(
-@@ -2421,15 +3316,44 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_OMSetRenderTargetsAndUnorde
+@@ -2728,15 +3623,44 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_OMSetRenderTargetsAndUnorde
  static void STDMETHODCALLTYPE d3d11_deferred_context_OMSetBlendState(ID3D11DeviceContext *iface,
          ID3D11BlendState *blend_state, const float blend_factor[4], UINT sample_mask)
  {
@@ -1133,7 +1133,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_SOSetTargets(ID3D11DeviceContext *iface, UINT buffer_count,
-@@ -2471,13 +3395,34 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_DispatchIndirect(ID3D11Devi
+@@ -2778,13 +3702,34 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_DispatchIndirect(ID3D11Devi
  static void STDMETHODCALLTYPE d3d11_deferred_context_RSSetState(ID3D11DeviceContext *iface,
          ID3D11RasterizerState *rasterizer_state)
  {
@@ -1170,7 +1170,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_RSSetScissorRects(ID3D11DeviceContext *iface,
-@@ -2592,8 +3537,18 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetShaderResources(ID3D11
+@@ -2899,8 +3844,18 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetShaderResources(ID3D11
  static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetShader(ID3D11DeviceContext *iface,
          ID3D11HullShader *shader, ID3D11ClassInstance *const *class_instances, UINT class_instance_count)
  {
@@ -1190,7 +1190,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetSamplers(ID3D11DeviceContext *iface,
-@@ -2606,36 +3561,62 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetSamplers(ID3D11DeviceC
+@@ -2913,36 +3868,62 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetSamplers(ID3D11DeviceC
  static void STDMETHODCALLTYPE d3d11_deferred_context_HSSetConstantBuffers(ID3D11DeviceContext *iface,
          UINT start_slot, UINT buffer_count, ID3D11Buffer *const *buffers)
  {
@@ -1258,7 +1258,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_CSSetShaderResources(ID3D11DeviceContext *iface,
-@@ -2936,7 +3917,15 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_CSGetConstantBuffers(ID3D11
+@@ -3243,7 +4224,15 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_CSGetConstantBuffers(ID3D11
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_ClearState(ID3D11DeviceContext *iface)
  {
@@ -1275,7 +1275,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_Flush(ID3D11DeviceContext *iface)
-@@ -2961,9 +3950,29 @@ static UINT STDMETHODCALLTYPE d3d11_deferred_context_GetContextFlags(ID3D11Devic
+@@ -3268,9 +4257,29 @@ static UINT STDMETHODCALLTYPE d3d11_deferred_context_GetContextFlags(ID3D11Devic
  static HRESULT STDMETHODCALLTYPE d3d11_deferred_context_FinishCommandList(ID3D11DeviceContext *iface,
          BOOL restore, ID3D11CommandList **command_list)
  {
@@ -1307,7 +1307,7 @@ index 45467480905..4ee9d500802 100644
  }
  
  static const struct ID3D11DeviceContextVtbl d3d11_deferred_context_vtbl =
-@@ -3724,6 +4733,8 @@ static HRESULT STDMETHODCALLTYPE d3d11_device_CreateDeferredContext(ID3D11Device
+@@ -4059,6 +5068,8 @@ static HRESULT STDMETHODCALLTYPE d3d11_device_CreateDeferredContext(ID3D11Device
      object->device = iface;
      object->refcount = 1;
  
@@ -1317,5 +1317,5 @@ index 45467480905..4ee9d500802 100644
      wined3d_private_store_init(&object->private_store);
  
 -- 
-2.11.0
+2.12.2
 

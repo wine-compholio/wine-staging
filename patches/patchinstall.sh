@@ -373,6 +373,7 @@ patch_enable_all ()
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
+	enable_user32_ShowWindow="$1"
 	enable_user32_Sorted_Listbox="$1"
 	enable_user32_WM_MEASUREITEM="$1"
 	enable_user32_lpCreateParams="$1"
@@ -1342,6 +1343,9 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
+			;;
+		user32-ShowWindow)
+			enable_user32_ShowWindow="$2"
 			;;
 		user32-Sorted_Listbox)
 			enable_user32_Sorted_Listbox="$2"
@@ -7790,6 +7794,21 @@ if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix return value of ScrollWindowEx for invisible windows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-ShowWindow
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39731] Fix handling of ShowWindow when window is already visible
+# |
+# | Modified files:
+# |   *	dlls/user32/winpos.c
+# |
+if test "$enable_user32_ShowWindow" -eq 1; then
+	patch_apply user32-ShowWindow/0001-user32-ShowWindow-should-not-send-message-when-windo.patch
+	(
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "user32: ShowWindow should not send message when window is already visible.", 1 },';
 	) >> "$patchlist"
 fi
 

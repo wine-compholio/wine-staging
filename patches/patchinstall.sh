@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
+	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
 	enable_setupapi_SetupDiGetDeviceInterfaceDetail="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -1199,6 +1200,9 @@ patch_enable ()
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
+			;;
+		setupapi-SPFILENOTIFY_FILEINCABINET)
+			enable_setupapi_SPFILENOTIFY_FILEINCABINET="$2"
 			;;
 		setupapi-SP_COPY_IN_USE_NEEDS_REBOOT)
 			enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$2"
@@ -6960,6 +6964,27 @@ if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
 	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-SPFILENOTIFY_FILEINCABINET
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42827] Fix Param2 in SPFILENOTIFY_FILEINCABINET handler
+# |
+# | Modified files:
+# |   *	dlls/setupapi/setupcab.c, dlls/setupapi/tests/setupcab.c
+# |
+if test "$enable_setupapi_SPFILENOTIFY_FILEINCABINET" -eq 1; then
+	patch_apply setupapi-SPFILENOTIFY_FILEINCABINET/0001-setupapi-tests-Add-more-tests-for-SPFILENOTIFY_FILEI.patch
+	patch_apply setupapi-SPFILENOTIFY_FILEINCABINET/0002-setupapi-Fix-CabinetName-passed-to-SPFILENOTIFY_CABI.patch
+	patch_apply setupapi-SPFILENOTIFY_FILEINCABINET/0003-setupapi-tests-Add-tests-for-cabinet-name-passed-to-.patch
+	patch_apply setupapi-SPFILENOTIFY_FILEINCABINET/0004-setupapi-Fix-parameters-of-SPFILENOTIFY_FILEINCABINE.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "setupapi/tests: Add more tests for SPFILENOTIFY_FILEINCABINET handler.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Fix CabinetName passed to SPFILENOTIFY_CABINETINFO handler.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "setupapi/tests: Add tests for cabinet name passed to SPFILENOTIFY_FILEEXTRACTED.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "setupapi: Fix parameters of SPFILENOTIFY_FILEINCABINET handler.", 1 },';
 	) >> "$patchlist"
 fi
 

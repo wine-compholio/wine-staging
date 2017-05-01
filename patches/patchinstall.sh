@@ -3833,9 +3833,6 @@ fi
 
 # Patchset dmusic-SynthPort_IKsControl
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30105] Implement IKsControl stub subinterface for SynthPort
-# |
 # | Modified files:
 # |   *	dlls/dmusic/buffer.c
 # |

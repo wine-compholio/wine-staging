@@ -143,6 +143,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Initialize="$1"
+	enable_dmloader_Tests="$1"
 	enable_dmusic_SynthPort_IKsControl="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -652,6 +653,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dmloader-Tests)
+			enable_dmloader_Tests="$2"
 			;;
 		dmusic-SynthPort_IKsControl)
 			enable_dmusic_SynthPort_IKsControl="$2"
@@ -3808,6 +3812,18 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dmloader-Tests
+# |
+# | Modified files:
+# |   *	dlls/dmloader/tests/loader.c
+# |
+if test "$enable_dmloader_Tests" -eq 1; then
+	patch_apply dmloader-Tests/0001-dmloader-tests-Fix-test-failures.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "dmloader/tests: Fix test failures.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -5667,7 +5667,7 @@ fi
 # Patchset ntdll-ProcessImageFileNameWin32
 # |
 # | Modified files:
-# |   *	dlls/ntdll/process.c, include/winternl.h
+# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/process.c, include/winternl.h
 # |
 if test "$enable_ntdll_ProcessImageFileNameWin32" -eq 1; then
 	patch_apply ntdll-ProcessImageFileNameWin32/0001-ntdll-Implement-ProcessImageFileNameWin32-in-NtQuery.patch

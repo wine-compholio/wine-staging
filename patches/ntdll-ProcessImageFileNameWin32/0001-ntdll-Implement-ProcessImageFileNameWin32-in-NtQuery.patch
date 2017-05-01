@@ -1,19 +1,83 @@
-From 02c1bbeb9c610518d282c65aaa6f9563c3d80b73 Mon Sep 17 00:00:00 2001
+From ce3e6afdf294cffd77b6a9ec3eb781d0d199e19e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Mar 2017 01:57:42 +0100
 Subject: ntdll: Implement ProcessImageFileNameWin32 in
  NtQueryInformationProcess.
 
 ---
- dlls/ntdll/process.c |  1 +
- include/winternl.h   | 16 ++++++++++++++++
- 2 files changed, 17 insertions(+)
+ dlls/kernel32/tests/process.c | 26 ++++++++++++++++----------
+ dlls/ntdll/process.c          |  1 +
+ include/winternl.h            | 16 ++++++++++++++++
+ 3 files changed, 33 insertions(+), 10 deletions(-)
 
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index c480a278c9..c83cbac3b9 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -3085,23 +3085,23 @@ static void test_process_info(void)
+         sizeof(buf) /* ProcessHandleTracing */,
+         sizeof(ULONG) /* ProcessIoPriority */,
+         sizeof(ULONG) /* ProcessExecuteFlags */,
+-#if 0 /* FIXME: Add remaining classes */
+-        ProcessResourceManagement,
+-        sizeof(ULONG) /* ProcessCookie */,
++        0 /* FIXME: sizeof(?) ProcessTlsInformation */,
++        0 /* FIXME: sizeof(?) ProcessCookie */,
+         sizeof(SECTION_IMAGE_INFORMATION) /* ProcessImageInformation */,
+-        sizeof(PROCESS_CYCLE_TIME_INFORMATION) /* ProcessCycleTime */,
++        0 /* FIXME: sizeof(PROCESS_CYCLE_TIME_INFORMATION) ProcessCycleTime */,
+         sizeof(ULONG) /* ProcessPagePriority */,
+         40 /* ProcessInstrumentationCallback */,
+-        sizeof(PROCESS_STACK_ALLOCATION_INFORMATION) /* ProcessThreadStackAllocation */,
+-        sizeof(PROCESS_WS_WATCH_INFORMATION_EX[]) /* ProcessWorkingSetWatchEx */,
++        0 /* FIXME: sizeof(PROCESS_STACK_ALLOCATION_INFORMATION) ProcessThreadStackAllocation */,
++        0 /* FIXME: sizeof(PROCESS_WS_WATCH_INFORMATION_EX[]) ProcessWorkingSetWatchEx */,
+         sizeof(buf) /* ProcessImageFileNameWin32 */,
+         sizeof(HANDLE) /* ProcessImageFileMapping */,
+-        sizeof(PROCESS_AFFINITY_UPDATE_MODE) /* ProcessAffinityUpdateMode */,
+-        sizeof(PROCESS_MEMORY_ALLOCATION_MODE) /* ProcessMemoryAllocationMode */,
+-        sizeof(USHORT[]) /* ProcessGroupInformation */,
++        0 /* FIXME: sizeof(PROCESS_AFFINITY_UPDATE_MODE) ProcessAffinityUpdateMode */,
++        0 /* FIXME: sizeof(PROCESS_MEMORY_ALLOCATION_MODE) ProcessMemoryAllocationMode */,
++        sizeof(USHORT) /* ProcessGroupInformation */,
+         sizeof(ULONG) /* ProcessTokenVirtualizationEnabled */,
+         sizeof(ULONG_PTR) /* ProcessConsoleHostProcess */,
+-        sizeof(PROCESS_WINDOW_INFORMATION) /* ProcessWindowInformation */,
++        0 /* FIXME: sizeof(PROCESS_WINDOW_INFORMATION) ProcessWindowInformation */,
++#if 0 /* FIXME: Add remaining classes */
+         sizeof(PROCESS_HANDLE_SNAPSHOT_INFORMATION) /* ProcessHandleInformation */,
+         sizeof(PROCESS_MITIGATION_POLICY_INFORMATION) /* ProcessMitigationPolicy */,
+         sizeof(ProcessDynamicFunctionTableInformation) /* ProcessDynamicFunctionTableInformation */,
+@@ -3166,11 +3166,16 @@ static void test_process_info(void)
+         case ProcessDefaultHardErrorMode:
+         case ProcessHandleCount:
+         case ProcessImageFileName:
++        case ProcessImageInformation:
++        case ProcessPagePriority:
++        case ProcessImageFileNameWin32:
+             ok(status == STATUS_SUCCESS, "for info %u expected STATUS_SUCCESS, got %08x (ret_len %u)\n", i, status, ret_len);
+             break;
+ 
+         case ProcessAffinityMask:
+         case ProcessBreakOnTermination:
++        case ProcessGroupInformation:
++        case ProcessConsoleHostProcess:
+             ok(status == STATUS_ACCESS_DENIED /* before win8 */ || status == STATUS_SUCCESS /* win8 is less strict */,
+                "for info %u expected STATUS_SUCCESS, got %08x (ret_len %u)\n", i, status, ret_len);
+             break;
+@@ -3183,6 +3188,7 @@ static void test_process_info(void)
+         case ProcessExecuteFlags:
+         case ProcessDebugPort:
+         case ProcessDebugFlags:
++        case ProcessCookie:
+ todo_wine
+             ok(status == STATUS_ACCESS_DENIED, "for info %u expected STATUS_ACCESS_DENIED, got %08x (ret_len %u)\n", i, status, ret_len);
+             break;
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index a14b6707167..39cd8be6019 100644
+index 952225688c..bf8e4598a1 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
-@@ -498,6 +498,7 @@ NTSTATUS WINAPI NtQueryInformationProcess(
+@@ -501,6 +501,7 @@ NTSTATUS WINAPI NtQueryInformationProcess(
      case ProcessImageFileName:
          /* FIXME: this will return a DOS path. Windows returns an NT path. Changing this would require also changing kernel32.QueryFullProcessImageName.
           * The latter may be harder because of the lack of RtlNtPathNameToDosPathName. */
@@ -22,10 +86,10 @@ index a14b6707167..39cd8be6019 100644
          {
              UNICODE_STRING *image_file_name_str = ProcessInformation;
 diff --git a/include/winternl.h b/include/winternl.h
-index 8acb7fd3e11..4a137f42b49 100644
+index 5cd1664f1f..3026e63adf 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -829,6 +829,22 @@ typedef enum _PROCESSINFOCLASS {
+@@ -824,6 +824,22 @@ typedef enum _PROCESSINFOCLASS {
      ProcessDebugFlags = 31,
      ProcessHandleTracing = 32,
      ProcessExecuteFlags = 34,
@@ -49,5 +113,5 @@ index 8acb7fd3e11..4a137f42b49 100644
  } PROCESSINFOCLASS, PROCESS_INFORMATION_CLASS;
  
 -- 
-2.11.0
+2.12.2
 

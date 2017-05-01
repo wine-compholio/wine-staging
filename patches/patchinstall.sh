@@ -182,7 +182,6 @@ patch_enable_all ()
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
-	enable_kernel32_Locale_Definitions="$1"
 	enable_kernel32_Misalign_Workaround="$1"
 	enable_kernel32_MoveFile="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -770,9 +769,6 @@ patch_enable ()
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
-			;;
-		kernel32-Locale_Definitions)
-			enable_kernel32_Locale_Definitions="$2"
 			;;
 		kernel32-Misalign_Workaround)
 			enable_kernel32_Misalign_Workaround="$2"
@@ -4554,20 +4550,6 @@ if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	patch_apply kernel32-LocaleNameToLCID/0001-kernel32-Silence-repeated-LocaleNameToLCID-unsupport.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "kernel32: Silence repeated LocaleNameToLCID unsupported flags message.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Locale_Definitions
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale_rc.rc, dlls/kernel32/nls/srl.nls, dlls/kernel32/nls/srsl.nls
-# |
-if test "$enable_kernel32_Locale_Definitions" -eq 1; then
-	patch_apply kernel32-Locale_Definitions/0001-kernel32-Update-sr-Latn-locale-definition.patch
-	patch_apply kernel32-Locale_Definitions/0002-kernel32-Add-sr-Latn-RS-locale-definition.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Update sr-Latn locale definition.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Add sr-Latn-RS locale definition.", 1 },';
 	) >> "$patchlist"
 fi
 

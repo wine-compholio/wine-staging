@@ -156,6 +156,7 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
+	enable_fonts_Tahoma="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_GetCharacterPlacement="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
@@ -693,6 +694,9 @@ patch_enable ()
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
+			;;
+		fonts-Tahoma)
+			enable_fonts_Tahoma="$2"
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
@@ -4095,6 +4099,18 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset fonts-Tahoma
+# |
+# | Modified files:
+# |   *	fonts/tahoma.sfd, fonts/tahoma.ttf
+# |
+if test "$enable_fonts_Tahoma" -eq 1; then
+	patch_apply fonts-Tahoma/0001-fonts-tahoma.sfd-Add-glyphs-U-FB01-and-U-FB02.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "fonts/tahoma.sfd: Add glyphs U+FB01 and U+FB02.", 1 },';
 	) >> "$patchlist"
 fi
 

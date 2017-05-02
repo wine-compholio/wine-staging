@@ -2944,6 +2944,7 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0024-bcrypt-tests-Add-tests-for-auth-data-in-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
 	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
+	patch_apply bcrypt-Improvements/0027-bcrypt-Fix-BCryptEncrypt-with-AES_GCM-and-no-input-a.patch
 	(
 		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
@@ -2966,6 +2967,7 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for auth data in AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Implement support for ECB chain mode.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "bcrypt: Fix BCryptEncrypt with AES_GCM and no input and no output.", 1 },';
 	) >> "$patchlist"
 fi
 

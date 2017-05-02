@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "07cf14dc928a1a00baecbbc7ca5a6f3fe680238c"
+	echo "7cd7f14696dc3fb7aa41ef253ad144d458304a28"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.7"
+	echo "Wine Staging 2.8 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -144,7 +144,6 @@ patch_enable_all ()
 	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Initialize="$1"
 	enable_dmloader_Tests="$1"
-	enable_dmusic_SynthPort_IKsControl="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -237,7 +236,6 @@ patch_enable_all ()
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
-	enable_ntdll_LdrEnumerateLoadedModules="$1"
 	enable_ntdll_LdrGetDllHandle="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -659,9 +657,6 @@ patch_enable ()
 		dmloader-Tests)
 			enable_dmloader_Tests="$2"
 			;;
-		dmusic-SynthPort_IKsControl)
-			enable_dmusic_SynthPort_IKsControl="$2"
-			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
 			;;
@@ -937,9 +932,6 @@ patch_enable ()
 			;;
 		ntdll-LDR_MODULE)
 			enable_ntdll_LDR_MODULE="$2"
-			;;
-		ntdll-LdrEnumerateLoadedModules)
-			enable_ntdll_LdrEnumerateLoadedModules="$2"
 			;;
 		ntdll-LdrGetDllHandle)
 			enable_ntdll_LdrGetDllHandle="$2"
@@ -2324,13 +2316,6 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
 	fi
 	enable_kernel32_K32GetPerformanceInfo=1
-fi
-
-if test "$enable_ntdll_LdrEnumerateLoadedModules" -eq 1; then
-	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
-		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-LdrEnumerateLoadedModules depends on that."
-	fi
-	enable_ntdll_RtlQueryPackageIdentity=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -3832,18 +3817,6 @@ if test "$enable_dmloader_Tests" -eq 1; then
 	patch_apply dmloader-Tests/0001-dmloader-tests-Fix-test-failures.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dmloader/tests: Fix test failures.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dmusic-SynthPort_IKsControl
-# |
-# | Modified files:
-# |   *	dlls/dmusic/buffer.c
-# |
-if test "$enable_dmusic_SynthPort_IKsControl" -eq 1; then
-	patch_apply dmusic-SynthPort_IKsControl/0001-dmusic-Implement-IDirectMusicBuffer-PackStructured.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "dmusic: Implement IDirectMusicBuffer::PackStructured.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5514,40 +5487,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlQueryPackageIdentity
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c, include/shobjidl.idl
-# |
-if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
-	patch_apply ntdll-RtlQueryPackageIdentity/0001-ntdll-Add-stub-for-RtlQueryPackageIdentity.patch
-	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
-	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-LdrEnumerateLoadedModules
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-RtlQueryPackageIdentity
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42296] Implement ntdll.LdrEnumerateLoadedModules
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_LdrEnumerateLoadedModules" -eq 1; then
-	patch_apply ntdll-LdrEnumerateLoadedModules/0001-ntdll-Implement-LdrEnumerateLoadedModules.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement LdrEnumerateLoadedModules.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-LdrGetDllHandle
 # |
 # | Modified files:
@@ -5742,6 +5681,22 @@ if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlQueryPackageIdentity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c, include/shobjidl.idl
+# |
+if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
+	patch_apply ntdll-RtlQueryPackageIdentity/0001-ntdll-Add-stub-for-RtlQueryPackageIdentity.patch
+	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
+	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
 	) >> "$patchlist"
 fi
 

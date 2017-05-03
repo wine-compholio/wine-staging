@@ -1,4 +1,4 @@
-From bc0a87c3b6553fae719b2181bc878e8b9e59838c Mon Sep 17 00:00:00 2001
+From ee2d4cc10c524a813e4eefcf3935c63479bb84be Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Mon, 29 Apr 2013 18:49:53 +0200
 Subject: wined3d: Send blits through the command stream.
@@ -6,15 +6,15 @@ Subject: wined3d: Send blits through the command stream.
 This needs more work. This patch breaks error handling, and the split
 between surface_blt and surface_blt_ugly isn't particularly nice.
 ---
- dlls/wined3d/device.c  | 18 +++++++++---------
- dlls/wined3d/texture.c |  9 +++++++--
- 2 files changed, 16 insertions(+), 11 deletions(-)
+ dlls/wined3d/device.c  | 19 ++++++++++---------
+ dlls/wined3d/texture.c | 10 ++++++++--
+ 2 files changed, 18 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 8fced7ece3..9dc893bfeb 100644
+index cbb0406dccf..613df2077a5 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4148,16 +4148,16 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4199,16 +4199,17 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
              return WINED3DERR_INVALIDCALL;
          }
  
@@ -30,7 +30,8 @@ index 8fced7ece3..9dc893bfeb 100644
 -        {
 -            WARN("Source sub-resource %u is mapped.\n", src_sub_resource_idx);
 -            return WINED3DERR_INVALIDCALL;
-+            wined3d_cs_emit_sync(dst_texture->resource.device->cs);
++            struct wined3d_device *device = dst_texture->resource.device;
++            device->cs->ops->finish(device->cs);
 +            if (dst_texture->sub_resources[dst_sub_resource_idx].map_count ||
 +                src_texture->sub_resources[src_sub_resource_idx].map_count)
 +            {
@@ -41,16 +42,17 @@ index 8fced7ece3..9dc893bfeb 100644
  
          if (!src_box)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 8a92a77872..2b249c26c0 100644
+index ebc317bd43d..d43ee068a30 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -3301,8 +3301,13 @@ HRESULT CDECL wined3d_texture_blt(struct wined3d_texture *dst_texture, unsigned
+@@ -3231,8 +3231,14 @@ HRESULT CDECL wined3d_texture_blt(struct wined3d_texture *dst_texture, unsigned
      if (dst_texture->sub_resources[dst_sub_resource_idx].map_count
              || src_texture->sub_resources[src_sub_resource_idx].map_count)
      {
 -        WARN("Sub-resource is busy, returning WINEDDERR_SURFACEBUSY.\n");
 -        return WINEDDERR_SURFACEBUSY;
-+        wined3d_cs_emit_sync(dst_texture->resource.device->cs);
++        struct wined3d_device *device = dst_texture->resource.device;
++        device->cs->ops->finish(device->cs);
 +        if (dst_texture->sub_resources[dst_sub_resource_idx].map_count
 +                || (src_texture && src_texture->sub_resources[src_sub_resource_idx].map_count))
 +        {
@@ -61,5 +63,5 @@ index 8a92a77872..2b249c26c0 100644
  
      if ((src_format_flags & (WINED3DFMT_FLAG_DEPTH | WINED3DFMT_FLAG_STENCIL))
 -- 
-2.11.0
+2.12.2
 

@@ -1,66 +1,56 @@
-From 9e643b1eb9f0050b72e17665fcc803756184637d Mon Sep 17 00:00:00 2001
+From ebc82ef6a886955f8e2abff6b1b126c8b41b6515 Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
 Date: Tue, 29 Dec 2015 00:48:02 -0700
-Subject: ntdll: Do a device check before returning a default serial port name.
+Subject: mountmgr.sys: Do a device check before returning a default serial
+ port name.
 
 Fixes https://bugs.winehq.org/show_bug.cgi?id=39793
-
-Signed-off-by: Alex Henrie <alexhenrie24@gmail.com>
 ---
- dlls/ntdll/directory.c | 26 ++++++++++++++++++++++++++
- 1 file changed, 26 insertions(+)
+ dlls/mountmgr.sys/device.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
 
-diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index f3c6aa2..046f1b9 100644
---- a/dlls/ntdll/directory.c
-+++ b/dlls/ntdll/directory.c
-@@ -83,6 +83,9 @@
- #ifdef HAVE_SYS_STATFS_H
- #include <sys/statfs.h>
- #endif
+diff --git a/dlls/mountmgr.sys/device.c b/dlls/mountmgr.sys/device.c
+index ee2599984a6..994e3676176 100644
+--- a/dlls/mountmgr.sys/device.c
++++ b/dlls/mountmgr.sys/device.c
+@@ -25,6 +25,9 @@
+ #include <errno.h>
+ #include <stdarg.h>
+ #include <stdio.h>
 +#ifdef HAVE_TERMIOS_H
 +# include <termios.h>
 +#endif
- #include <time.h>
- #ifdef HAVE_UNISTD_H
- # include <unistd.h>
-@@ -321,6 +324,24 @@ static void flush_dir_queue(void)
-     }
- }
+ #include <sys/time.h>
+ 
+ #define NONAMELESSUNION
+@@ -1038,6 +1041,27 @@ static BOOL create_port_device( DRIVER_OBJECT *driver, int n, const char *unix_p
+     if (!unix_path)
+         return FALSE;
  
 +#ifdef linux
-+/* Serial port device files almost always exist on Linux even if the corresponding serial
-+ * ports don't exist. Do a basic functionality check before advertising a serial port. */
-+static BOOL is_serial_device( const char *unix_name )
-+{
-+    struct termios tios;
-+    BOOL ret = FALSE;
-+    int fd;
-+
-+    if ((fd = open( unix_name, O_RDONLY )) != -1)
++    /* Serial port device files almost always exist on Linux even if the corresponding serial
++     * ports don't exist. Do a basic functionality check before advertising a serial port. */
++    if (driver == serial_driver)
 +    {
-+        ret = tcgetattr( fd, &tios ) != -1;
++        struct termios tios;
++        int fd;
++
++        if ((fd = open( unix_path, O_RDONLY )) == -1)
++            return FALSE;
++
++        if (tcgetattr( fd, &tios ) == -1)
++        {
++            close( fd );
++            return FALSE;
++        }
++
 +        close( fd );
 +    }
-+
-+    return ret;
-+}
 +#endif
- 
- /***********************************************************************
-  *           get_default_com_device
-@@ -336,6 +357,11 @@ static char *get_default_com_device( int num )
-     ret = RtlAllocateHeap( GetProcessHeap(), 0, sizeof("/dev/ttyS256") );
-     if (!ret) return NULL;
-     sprintf( ret, "/dev/ttyS%d", num - 1 );
-+    if (!is_serial_device( ret ))
-+    {
-+        RtlFreeHeap( GetProcessHeap(), 0, ret );
-+        ret = NULL;
-+    }
- #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-     ret = RtlAllocateHeap( GetProcessHeap(), 0, sizeof("/dev/cuau256") );
-     if (!ret) return NULL;
++
+     /* create DOS device */
+     sprintf( p, "%u", n );
+     if (symlink( unix_path, dosdevices_path ) != 0)
 -- 
-2.6.4
+2.12.2
 

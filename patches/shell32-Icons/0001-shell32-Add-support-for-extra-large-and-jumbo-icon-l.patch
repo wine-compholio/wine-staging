@@ -1,16 +1,17 @@
-From 7648652cd46e37da1dc51c3dee6d0dcd953e96a9 Mon Sep 17 00:00:00 2001
+From 4d4320e632de06b391bb6ddff4376f7aabe92d51 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 3 Aug 2014 02:23:44 +0200
 Subject: shell32: Add support for extra large and jumbo icon lists. (v2)
 
 ---
- dlls/shell32/iconcache.c    | 228 ++++++++++++++++++++++++++++----------------
- dlls/shell32/shell32_main.h |   3 +
- dlls/shell32/shellord.c     |  28 ++++--
- 3 files changed, 170 insertions(+), 89 deletions(-)
+ dlls/shell32/iconcache.c       | 223 ++++++++++++++++++++++++++---------------
+ dlls/shell32/shell32_main.h    |   3 +
+ dlls/shell32/shellord.c        |  28 ++++--
+ dlls/shell32/tests/shelllink.c |   7 +-
+ 4 files changed, 169 insertions(+), 92 deletions(-)
 
 diff --git a/dlls/shell32/iconcache.c b/dlls/shell32/iconcache.c
-index 737f4d5023..9105b7ab29 100644
+index 0ea2eb9e0e8..767c90e8e71 100644
 --- a/dlls/shell32/iconcache.c
 +++ b/dlls/shell32/iconcache.c
 @@ -62,7 +62,9 @@ typedef struct
@@ -24,7 +25,7 @@ index 737f4d5023..9105b7ab29 100644
  
  static CRITICAL_SECTION SHELL32_SicCS;
  static CRITICAL_SECTION_DEBUG critsect_debug =
-@@ -109,7 +111,7 @@ static int SIC_LoadOverlayIcon(int icon_idx);
+@@ -158,7 +160,7 @@ static int SIC_LoadOverlayIcon(int icon_idx);
   *  Creates a new icon as a copy of the passed-in icon, overlaid with a
   *  shortcut image. 
   */
@@ -33,7 +34,7 @@ index 737f4d5023..9105b7ab29 100644
  {	ICONINFO SourceIconInfo, ShortcutIconInfo, TargetIconInfo;
  	HICON ShortcutIcon, TargetIcon;
  	BITMAP SourceBitmapInfo, ShortcutBitmapInfo;
-@@ -139,10 +141,16 @@ static HICON SIC_OverlayShortcutImage(HICON SourceIcon, BOOL large)
+@@ -188,10 +190,16 @@ static HICON SIC_OverlayShortcutImage(HICON SourceIcon, BOOL large)
  
  	if (s_imgListIdx != -1)
  	{
@@ -54,7 +55,7 @@ index 737f4d5023..9105b7ab29 100644
  	} else
  	    ShortcutIcon = NULL;
  
-@@ -258,11 +266,14 @@ fail:
+@@ -307,11 +315,14 @@ fail:
   * NOTES
   *  appends an icon pair to the end of the cache
   */
@@ -73,7 +74,7 @@ index 737f4d5023..9105b7ab29 100644
  
  	lpsice = SHAlloc(sizeof(SIC_ENTRY));
  
-@@ -284,13 +295,14 @@ static INT SIC_IconAppend (LPCWSTR sSourceFile, INT dwSourceIndex, HICON hSmallI
+@@ -333,13 +344,14 @@ static INT SIC_IconAppend (LPCWSTR sSourceFile, INT dwSourceIndex, HICON hSmallI
  	}
  	else
  	{
@@ -94,7 +95,7 @@ index 737f4d5023..9105b7ab29 100644
  	  lpsice->dwListIndex = index;
  	  ret = lpsice->dwListIndex;
  	}
-@@ -304,7 +316,7 @@ static BOOL get_imagelist_icon_size(int list, SIZE *size)
+@@ -353,7 +365,7 @@ static BOOL get_imagelist_icon_size(int list, SIZE *size)
      HIMAGELIST image_list;
  
      if (list < SHIL_LARGE || list > SHIL_SMALL) return FALSE;
@@ -103,7 +104,7 @@ index 737f4d5023..9105b7ab29 100644
  
      return ImageList_GetIconSize( image_list, &size->cx, &size->cy );
  }
-@@ -317,19 +329,25 @@ static BOOL get_imagelist_icon_size(int list, SIZE *size)
+@@ -366,19 +378,25 @@ static BOOL get_imagelist_icon_size(int list, SIZE *size)
   */
  static INT SIC_LoadIcon (LPCWSTR sSourceFile, INT dwSourceIndex, DWORD dwFlags)
  {
@@ -142,7 +143,7 @@ index 737f4d5023..9105b7ab29 100644
  	{
  	  WARN("failure loading icon %i from %s (%p %p)\n", dwSourceIndex, debugstr_w(sSourceFile), hiconLarge, hiconSmall);
  	  return -1;
-@@ -337,44 +355,69 @@ static INT SIC_LoadIcon (LPCWSTR sSourceFile, INT dwSourceIndex, DWORD dwFlags)
+@@ -386,28 +404,42 @@ static INT SIC_LoadIcon (LPCWSTR sSourceFile, INT dwSourceIndex, DWORD dwFlags)
  
  	if (0 != (dwFlags & GIL_FORSHORTCUT))
  	{
@@ -202,9 +203,9 @@ index 737f4d5023..9105b7ab29 100644
 +    DestroyIcon( hiconJumbo );
 +    return ret;
  }
--
- /*****************************************************************************
-  * SIC_Initialize			[internal]
+ 
+ static int get_shell_icon_size(void)
+@@ -433,9 +465,11 @@ static int get_shell_icon_size(void)
   */
  static BOOL WINAPI SIC_Initialize( INIT_ONCE *once, void *param, void **context )
  {
@@ -217,25 +218,23 @@ index 737f4d5023..9105b7ab29 100644
 +    int     cx_extralarge, cy_extralarge;
 +    int     cx_jumbo, cy_jumbo;
  
- 	cx_small = GetSystemMetrics(SM_CXSMICON);
- 	cy_small = GetSystemMetrics(SM_CYSMICON);
- 	cx_large = GetSystemMetrics(SM_CXICON);
- 	cy_large = GetSystemMetrics(SM_CYICON);
+         if (!IsProcessDPIAware())
+         {
+@@ -451,7 +485,13 @@ static BOOL WINAPI SIC_Initialize( INIT_ONCE *once, void *param, void **context
+             cy_small = cy_large / 2;
+         }
  
-+    /*
-+     * TODO: according to
-+     * http://msdn.microsoft.com/en-us/library/windows/desktop/bb762185(v=vs.85).aspx
-+     * the size can be configured, but where is the value defined?
-+     */
-+    cx_extralarge = 48;
-+    cy_extralarge = 48;
-+    cx_jumbo = 256;
-+    cy_jumbo = 256;
++	    cx_extralarge = (GetSystemMetrics( SM_CXICON ) * 3) / 2;
++	    cy_extralarge = (GetSystemMetrics( SM_CYICON ) * 3) / 2;
++	    cx_jumbo = 256;
++	    cy_jumbo = 256;
 +
- 	TRACE("\n");
+         TRACE("large %dx%d small %dx%d\n", cx_large, cy_large, cx_small, cx_small);
++        TRACE("extra %dx%d jumbo %dx%d\n", cx_extralarge, cy_extralarge, cx_jumbo, cy_jumbo);
  
  	sic_hdpa = DPA_Create(16);
-@@ -384,28 +427,36 @@ static BOOL WINAPI SIC_Initialize( INIT_ONCE *once, void *param, void **context
+ 
+@@ -460,28 +500,36 @@ static BOOL WINAPI SIC_Initialize( INIT_ONCE *once, void *param, void **context
  	  return(FALSE);
  	}
  
@@ -292,7 +291,7 @@ index 737f4d5023..9105b7ab29 100644
  
  	return TRUE;
  }
-@@ -429,13 +480,17 @@ void SIC_Destroy(void)
+@@ -505,13 +553,17 @@ void SIC_Destroy(void)
  
  	if (sic_hdpa) DPA_DestroyCallback(sic_hdpa, sic_free, NULL );
  
@@ -317,7 +316,7 @@ index 737f4d5023..9105b7ab29 100644
  }
  
  /*****************************************************************************
-@@ -549,10 +604,21 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
+@@ -625,10 +677,21 @@ BOOL WINAPI Shell_GetImageLists(HIMAGELIST * lpBigList, HIMAGELIST * lpSmallList
  {
      TRACE("(%p,%p)\n",lpBigList,lpSmallList);
      InitOnceExecuteOnce( &sic_init_once, SIC_Initialize, NULL, NULL );
@@ -341,10 +340,10 @@ index 737f4d5023..9105b7ab29 100644
   * PidlToSicIndex			[INTERNAL]
   *
 diff --git a/dlls/shell32/shell32_main.h b/dlls/shell32/shell32_main.h
-index bdebcba0e3..fbb8e8811a 100644
+index 941ca74f321..3007bbf4539 100644
 --- a/dlls/shell32/shell32_main.h
 +++ b/dlls/shell32/shell32_main.h
-@@ -235,4 +235,7 @@ static inline WCHAR *strdupW(const WCHAR *src)
+@@ -236,4 +236,7 @@ static inline WCHAR *strdupW(const WCHAR *src)
      return dest;
  }
  
@@ -353,7 +352,7 @@ index bdebcba0e3..fbb8e8811a 100644
 +
  #endif
 diff --git a/dlls/shell32/shellord.c b/dlls/shell32/shellord.c
-index f9814997da..5102bf0e47 100644
+index f9814997dae..5102bf0e475 100644
 --- a/dlls/shell32/shellord.c
 +++ b/dlls/shell32/shellord.c
 @@ -2146,18 +2146,30 @@ void WINAPI SHFlushSFCache(void)
@@ -395,6 +394,24 @@ index f9814997da..5102bf0e47 100644
 -
      return HIMAGELIST_QueryInterface(hNew, riid, ppv);
  }
+diff --git a/dlls/shell32/tests/shelllink.c b/dlls/shell32/tests/shelllink.c
+index ad254c83498..03878af46dd 100644
+--- a/dlls/shell32/tests/shelllink.c
++++ b/dlls/shell32/tests/shelllink.c
+@@ -1363,10 +1363,9 @@ static void test_SHGetImageList(void)
+     for (i = 0; i <= SHIL_LAST; i++)
+     {
+         hr = SHGetImageList( i, &IID_IImageList, (void **)&list );
+-        todo_wine_if(i == SHIL_EXTRALARGE || i == SHIL_JUMBO)
+-            ok( hr == S_OK ||
+-                broken( i == SHIL_JUMBO && hr == E_INVALIDARG ), /* XP and 2003 */
+-                "%d: got %08x\n", i, hr );
++        ok( hr == S_OK ||
++            broken( i == SHIL_JUMBO && hr == E_INVALIDARG ), /* XP and 2003 */
++            "%d: got %08x\n", i, hr );
+         if (FAILED(hr)) continue;
+         IImageList_GetIconSize( list, &width, &height );
+         switch (i)
 -- 
 2.12.2
 

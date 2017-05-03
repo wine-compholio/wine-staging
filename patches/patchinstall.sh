@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7cd7f14696dc3fb7aa41ef253ad144d458304a28"
+	echo "b1203af6ba44ff8858ee9ca50fc05f4f3f633892"
 }
 
 # Show version information
@@ -5774,12 +5774,12 @@ fi
 # |   *	[#39793] Do a device check before returning a default serial port name
 # |
 # | Modified files:
-# |   *	dlls/ntdll/directory.c
+# |   *	dlls/mountmgr.sys/device.c
 # |
 if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	patch_apply ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
 	(
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Do a device check before returning a default serial port name.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "mountmgr.sys: Do a device check before returning a default serial port name.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7094,7 +7094,7 @@ fi
 # |   *	[#24721] Support for extra large and jumbo icon lists in shell32
 # |
 # | Modified files:
-# |   *	dlls/shell32/iconcache.c, dlls/shell32/shell32_main.h, dlls/shell32/shellord.c
+# |   *	dlls/shell32/iconcache.c, dlls/shell32/shell32_main.h, dlls/shell32/shellord.c, dlls/shell32/tests/shelllink.c
 # |
 if test "$enable_shell32_Icons" -eq 1; then
 	patch_apply shell32-Icons/0001-shell32-Add-support-for-extra-large-and-jumbo-icon-l.patch
@@ -8642,19 +8642,14 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Prevent the command stream from running ahead too far.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wait for the cs to finish before destroying the device.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Add swapchain waits.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Hackily introduce a multithreaded command stream.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Run the cs asynchronously.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Introduce a separate priority queue.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for maps/unmaps.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Synchronize before resizing swapchain context array.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Discard buffer during upload when replacing complete content.", 1 },';
 	) >> "$patchlist"

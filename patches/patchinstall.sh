@@ -267,6 +267,7 @@ patch_enable_all ()
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
+	enable_ntdll_TokenLogonSid="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
@@ -1027,6 +1028,9 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
+			;;
+		ntdll-TokenLogonSid)
+			enable_ntdll_TokenLogonSid="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -5890,6 +5894,18 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-TokenLogonSid
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_TokenLogonSid" -eq 1; then
+	patch_apply ntdll-TokenLogonSid/0001-ntdll-TokenLogonSid-stub-in-NtQueryInformationToken.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenLogonSid stub in NtQueryInformationToken.", 1 },';
 	) >> "$patchlist"
 fi
 

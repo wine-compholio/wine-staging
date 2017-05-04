@@ -1,0 +1,66 @@
+From 5e36c591d2d8a8c175afad91878909d11a92a00c Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Wed, 3 May 2017 14:59:38 -0500
+Subject: ntdll: TokenLogonSid stub in NtQueryInformationToken.
+
+Signed-off-by: Andrew Wesie <awesie@gmail.com>
+---
+ dlls/ntdll/nt.c | 28 +++++++++++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index a793b572211..b0473a5ffd9 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -271,6 +271,21 @@ NTSTATUS WINAPI NtQueryInformationToken(
+ 	ULONG tokeninfolength,
+ 	PULONG retlen )
+ {
++    static const struct
++    {
++        /* same fields as struct _SID */
++        BYTE Revision;
++        BYTE SubAuthorityCount;
++        SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
++        DWORD SubAuthority[SECURITY_LOGON_IDS_RID_COUNT];
++    }
++    logon_sid =
++    {
++        SID_REVISION,
++        SECURITY_LOGON_IDS_RID_COUNT,
++        {SECURITY_NT_AUTHORITY},
++        {SECURITY_LOGON_IDS_RID, 0, 0}
++    };
+     static const ULONG info_len [] =
+     {
+         0,
+@@ -301,7 +316,7 @@ NTSTATUS WINAPI NtQueryInformationToken(
+         sizeof(TOKEN_MANDATORY_LABEL) + sizeof(SID), /* TokenIntegrityLevel [sizeof(SID) includes one SubAuthority] */
+         0,    /* TokenUIAccess */
+         0,    /* TokenMandatoryPolicy */
+-        0,    /* TokenLogonSid */
++        sizeof(TOKEN_GROUPS) + sizeof(logon_sid), /* TokenLogonSid */
+         sizeof(DWORD), /* TokenIsAppContainer */
+         0,    /* TokenCapabilities */
+         sizeof(TOKEN_APPCONTAINER_INFORMATION) + sizeof(SID), /* TokenAppContainerSid */
+@@ -569,6 +584,17 @@ NTSTATUS WINAPI NtQueryInformationToken(
+             *(DWORD*)tokeninfo = 0;
+             break;
+         }
++    case TokenLogonSid:
++        {
++            TOKEN_GROUPS *groups = tokeninfo;
++            SID *sid = (SID *)(groups + 1);
++            FIXME("QueryInformationToken( ..., TokenLogonSid, ...) semi-stub\n");
++            groups->GroupCount = 1;
++            groups->Groups[0].Sid = sid;
++            groups->Groups[0].Attributes = 0;
++            memcpy(sid, &logon_sid, sizeof(logon_sid));
++        }
++        break;
+     default:
+         {
+             ERR("Unhandled Token Information class %d!\n", tokeninfoclass);
+-- 
+2.12.2
+

@@ -240,6 +240,7 @@ patch_enable_all ()
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtAllocateUuids="$1"
+	enable_ntdll_NtCreateThreadEx="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
@@ -945,6 +946,9 @@ patch_enable ()
 			;;
 		ntdll-NtAllocateUuids)
 			enable_ntdll_NtAllocateUuids="$2"
+			;;
+		ntdll-NtCreateThreadEx)
+			enable_ntdll_NtCreateThreadEx="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -5529,6 +5533,18 @@ if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
 	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtCreateThreadEx
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_NtCreateThreadEx" -eq 1; then
+	patch_apply ntdll-NtCreateThreadEx/0001-ntdll-Implement-NtCreateThreadEx.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Implement NtCreateThreadEx.", 1 },';
 	) >> "$patchlist"
 fi
 

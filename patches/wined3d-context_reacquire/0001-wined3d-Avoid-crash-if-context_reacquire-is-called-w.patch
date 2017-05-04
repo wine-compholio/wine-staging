@@ -1,0 +1,108 @@
+From 7b9c1fda3cbebc0d87518458bd41c59a045bb02e Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 25 Apr 2017 06:01:04 +0000
+Subject: wined3d: Avoid crash if context_reacquire is called with NULL
+ context.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Test was provided by Józef Kucia.
+
+Fixes https://bugs.winehq.org/show_bug.cgi?id=42873
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/d3d11/tests/d3d11.c | 57 ++++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/context.c   |  2 +-
+ 2 files changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index 30450d88f6d..a2d79478e50 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -18402,6 +18402,62 @@ done:
+     release_test_context(&test_context);
+ }
+ 
++static void test_destroyed_context_query_poll(void)
++{
++    struct d3d11_test_context test_context;
++    ID3D11Asynchronous *timestamp_query;
++    ID3D11DeviceContext *context;
++    D3D11_QUERY_DESC query_desc;
++    ID3D11Device *device;
++    UINT64 timestamp;
++    unsigned int i;
++    HRESULT hr;
++
++    static const struct vec4 white = {1.0f, 1.0f, 1.0f, 1.0f};
++
++    if (!init_test_context(&test_context, NULL))
++        return;
++
++    device = test_context.device;
++    context = test_context.immediate_context;
++
++    query_desc.Query = D3D11_QUERY_TIMESTAMP;
++    query_desc.MiscFlags = 0;
++    hr = ID3D11Device_CreateQuery(device, &query_desc, (ID3D11Query **)&timestamp_query);
++    ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
++
++    ID3D11DeviceContext_ClearRenderTargetView(context, test_context.backbuffer_rtv, &white.x);
++    ID3D11DeviceContext_End(context, timestamp_query);
++
++    ID3D11RenderTargetView_Release(test_context.backbuffer_rtv);
++    test_context.backbuffer_rtv = NULL;
++    ID3D11Texture2D_Release(test_context.backbuffer);
++    test_context.backbuffer = NULL;
++    IDXGISwapChain_Release(test_context.swapchain);
++    test_context.swapchain = create_swapchain(device, test_context.window, NULL);
++    hr = IDXGISwapChain_GetBuffer(test_context.swapchain, 0, &IID_ID3D11Texture2D,
++            (void **)&test_context.backbuffer);
++    ok(SUCCEEDED(hr), "Failed to get backbuffer, hr %#x.\n", hr);
++    hr = ID3D11Device_CreateRenderTargetView(device, (ID3D11Resource *)test_context.backbuffer,
++            NULL, &test_context.backbuffer_rtv);
++    ok(SUCCEEDED(hr), "Failed to create rendertarget view, hr %#x.\n", hr);
++    ID3D11DeviceContext_OMSetRenderTargets(context, 1, &test_context.backbuffer_rtv, NULL);
++    ID3D11DeviceContext_ClearRenderTargetView(context, test_context.backbuffer_rtv, &white.x);
++
++    for (i = 0; i < 500; ++i)
++    {
++        if ((hr = ID3D11DeviceContext_GetData(context, timestamp_query, NULL, 0, 0)) != S_FALSE)
++            break;
++        Sleep(10);
++    }
++    ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
++    hr = ID3D11DeviceContext_GetData(context, timestamp_query, &timestamp, sizeof(timestamp), 0);
++    ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
++
++    ID3D11Asynchronous_Release(timestamp_query);
++    release_test_context(&test_context);
++}
++
+ START_TEST(d3d11)
+ {
+     test_create_device();
+@@ -18493,4 +18549,5 @@ START_TEST(d3d11)
+     test_fl10_stream_output_desc();
+     test_stream_output_resume();
+     test_gather();
++    test_destroyed_context_query_poll();
+ }
+diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
+index b6e8096fffb..27bff98be45 100644
+--- a/dlls/wined3d/context.c
++++ b/dlls/wined3d/context.c
+@@ -3987,7 +3987,7 @@ struct wined3d_context *context_reacquire(const struct wined3d_device *device,
+ {
+     struct wined3d_context *current_context;
+ 
+-    if (context->tid != GetCurrentThreadId())
++    if (!context || context->tid != GetCurrentThreadId())
+         return NULL;
+ 
+     current_context = context_acquire(device, context->current_rt.texture,
+-- 
+2.12.2
+

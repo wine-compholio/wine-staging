@@ -422,6 +422,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_check_format_support="$1"
+	enable_wined3d_context_reacquire="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
@@ -1490,6 +1491,9 @@ patch_enable ()
 			;;
 		wined3d-check_format_support)
 			enable_wined3d_check_format_support="$2"
+			;;
+		wined3d-context_reacquire)
+			enable_wined3d_context_reacquire="$2"
 			;;
 		winedbg-Process_Arguments)
 			enable_winedbg_Process_Arguments="$2"
@@ -8620,6 +8624,21 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D10Device_CheckFormatSupport.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-context_reacquire
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42873] Avoid crash if context_reacquire is called with NULL context
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c
+# |
+if test "$enable_wined3d_context_reacquire" -eq 1; then
+	patch_apply wined3d-context_reacquire/0001-wined3d-Avoid-crash-if-context_reacquire-is-called-w.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wined3d: Avoid crash if context_reacquire is called with NULL context.", 1 },';
 	) >> "$patchlist"
 fi
 

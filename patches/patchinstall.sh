@@ -5595,8 +5595,10 @@ fi
 # |
 if test "$enable_ntdll_NtSetInformationToken" -eq 1; then
 	patch_apply ntdll-NtSetInformationToken/0001-ntdll-Return-success-for-TokenSessionId-in-NtSetInfo.patch
+	patch_apply ntdll-NtSetInformationToken/0002-ntdll-TokenIntegrityLevel-stub-in-NtSetInformationTo.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Return success for TokenSessionId in NtSetInformationToken.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenIntegrityLevel stub in NtSetInformationToken.", 1 },';
 	) >> "$patchlist"
 fi
 

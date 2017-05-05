@@ -2422,13 +2422,6 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	enable_imagehlp_Cleanup=1
 fi
 
-if test "$enable_dxva2_Video_Decoder" -eq 1; then
-	if test "$enable_winecfg_Staging" -gt 1; then
-		abort "Patchset winecfg-Staging disabled, but dxva2-Video_Decoder depends on that."
-	fi
-	enable_winecfg_Staging=1
-fi
-
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	if test "$enable_dxdiagn_Enumerate_DirectSound" -gt 1; then
 		abort "Patchset dxdiagn-Enumerate_DirectSound disabled, but dxdiagn-GetChildContainer_Leaf_Nodes depends on that."
@@ -4152,31 +4145,7 @@ if test "$enable_dxgi_MakeWindowAssociation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winecfg-Staging
-# |
-# | Modified files:
-# |   *	programs/winecfg/Makefile.in, programs/winecfg/about.c, programs/winecfg/main.c, programs/winecfg/resource.h,
-# | 	programs/winecfg/staging.c, programs/winecfg/winecfg.h, programs/winecfg/winecfg.rc
-# |
-if test "$enable_winecfg_Staging" -eq 1; then
-	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
-	patch_apply winecfg-Staging/0002-winecfg-Add-checkbox-to-enable-disable-vaapi-GPU-dec.patch
-	patch_apply winecfg-Staging/0003-winecfg-Add-checkbox-to-enable-disable-EAX-support.patch
-	patch_apply winecfg-Staging/0004-winecfg-Add-checkbox-to-enable-disable-HideWineExpor.patch
-	patch_apply winecfg-Staging/0005-winecfg-Add-option-to-enable-disable-GTK3-theming.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
-		printf '%s\n' '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winecfg: Add option to enable/disable GTK3 theming.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxva2-Video_Decoder
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	winecfg-Staging
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxva2/Makefile.in, dlls/dxva2/backend.idl, dlls/dxva2/devicemanager.c, dlls/dxva2/dxva2_private.h,
@@ -8541,6 +8510,27 @@ if test "$enable_winecfg_Libraries" -eq 1; then
 	patch_apply winecfg-Libraries/0001-winecfg-Double-click-in-dlls-list-to-edit-item-s-ove.patch
 	(
 		printf '%s\n' '+    { "Hao Peng", "winecfg: Double click in dlls list to edit item'\''s overides.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winecfg-Staging
+# |
+# | Modified files:
+# |   *	programs/winecfg/Makefile.in, programs/winecfg/about.c, programs/winecfg/main.c, programs/winecfg/resource.h,
+# | 	programs/winecfg/staging.c, programs/winecfg/winecfg.h, programs/winecfg/winecfg.rc
+# |
+if test "$enable_winecfg_Staging" -eq 1; then
+	patch_apply winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
+	patch_apply winecfg-Staging/0002-winecfg-Add-checkbox-to-enable-disable-vaapi-GPU-dec.patch
+	patch_apply winecfg-Staging/0003-winecfg-Add-checkbox-to-enable-disable-EAX-support.patch
+	patch_apply winecfg-Staging/0004-winecfg-Add-checkbox-to-enable-disable-HideWineExpor.patch
+	patch_apply winecfg-Staging/0005-winecfg-Add-option-to-enable-disable-GTK3-theming.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "winecfg: Add staging tab for CSMT.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable vaapi GPU decoder.", 1 },';
+		printf '%s\n' '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winecfg: Add option to enable/disable GTK3 theming.", 1 },';
 	) >> "$patchlist"
 fi
 

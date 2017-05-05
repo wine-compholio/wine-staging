@@ -2273,6 +2273,13 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
+if test "$enable_ntdll_User_Shared_Data" -eq 1; then
+	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
+		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
+	fi
+	enable_ntdll_Hide_Wine_Exports=1
+fi
+
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -6008,15 +6015,26 @@ fi
 
 # Patchset ntdll-User_Shared_Data
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29168] Update user shared data at realtime
+# |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, dlls/ntoskrnl.exe/instr.c
+# |   *	dlls/kernel32/cpu.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c,
+# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
 # |
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
 	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
+	patch_apply ntdll-User_Shared_Data/0003-ntdll-Create-thread-to-update-user_shared_data-time-.patch
+	patch_apply ntdll-User_Shared_Data/0004-ntdll-tests-Test-updating-TickCount-in-user_shared_d.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Create thread to update user_shared_data time values when necessary.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll/tests: Test updating TickCount in user_shared_data.", 1 },';
 	) >> "$patchlist"
 fi
 

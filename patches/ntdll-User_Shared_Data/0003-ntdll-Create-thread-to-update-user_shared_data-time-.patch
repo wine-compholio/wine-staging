@@ -1,0 +1,253 @@
+From b01774078f03dcdc89d045d6c27106ce4059904e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 5 May 2017 05:40:50 +0200
+Subject: ntdll: Create thread to update user_shared_data time values when
+ necessary.
+
+---
+ dlls/kernel32/cpu.c     |  4 +--
+ dlls/ntdll/loader.c     | 32 ++++++++++++++++++++++
+ dlls/ntdll/ntdll_misc.h |  3 +++
+ dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++-----
+ dlls/ntdll/virtual.c    | 16 +++++++++++
+ 5 files changed, 116 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
+index 01cb469b8db..d112368dcb4 100644
+--- a/dlls/kernel32/cpu.c
++++ b/dlls/kernel32/cpu.c
+@@ -46,7 +46,7 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(reg);
+ 
+-#define SHARED_DATA     ((KSHARED_USER_DATA*)0x7ffe0000)
++extern KSHARED_USER_DATA* CDECL __wine_user_shared_data(void);
+ 
+ /****************************************************************************
+  *		QueryPerformanceCounter (KERNEL32.@)
+@@ -206,7 +206,7 @@ BOOL WINAPI IsProcessorFeaturePresent (
+ 	DWORD feature	/* [in] Feature number, (PF_ constants from "winnt.h") */) 
+ {
+   if (feature < PROCESSOR_FEATURE_MAX)
+-    return SHARED_DATA->ProcessorFeatures[feature];
++    return __wine_user_shared_data()->ProcessorFeatures[feature];
+   else
+     return FALSE;
+ }
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 630a9f66dc8..a00c3e17734 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -3514,6 +3514,37 @@ static void start_process( void *arg )
+     call_thread_entry_point( start_params->kernel_start, start_params->entry );
+ }
+ 
++
++/***********************************************************************
++ *           user_shared_data_init
++ *
++ * Initializes a user shared
++ */
++static void user_shared_data_init(void)
++{
++    void *addr = user_shared_data_external;
++    SIZE_T data_size = page_size;
++    ULONG old_prot;
++
++    /* initialize time fields */
++    __wine_user_shared_data();
++
++    /* invalidate high times to prevent race conditions */
++    user_shared_data->SystemTime.High2Time = 0;
++    user_shared_data->SystemTime.High1Time = -1;
++
++    user_shared_data->InterruptTime.High2Time = 0;
++    user_shared_data->InterruptTime.High1Time = -1;
++
++    user_shared_data->u.TickCount.High2Time  = 0;
++    user_shared_data->u.TickCount.High1Time  = -1;
++
++    /* copy to correct address and make it non accessible */
++    memcpy(user_shared_data_external, user_shared_data, sizeof(*user_shared_data));
++    NtProtectVirtualMemory( NtCurrentProcess(), &addr, &data_size, PAGE_NOACCESS, &old_prot );
++}
++
++
+ /******************************************************************
+  *		LdrInitializeThunk (NTDLL.@)
+  *
+@@ -3545,6 +3576,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+         peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
+     version_init( wm->ldr.FullDllName.Buffer );
+     hidden_exports_init( wm->ldr.FullDllName.Buffer );
++    user_shared_data_init();
+     virtual_set_large_address_space();
+ 
+     LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index d556a21ee67..3ddbb6367c4 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -180,6 +180,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
+ extern void virtual_release_address_space(void) DECLSPEC_HIDDEN;
+ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+ extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
++extern struct _KUSER_SHARED_DATA *user_shared_data_external DECLSPEC_HIDDEN;
++extern void create_user_shared_data_thread(void) DECLSPEC_HIDDEN;
++extern BYTE* __wine_user_shared_data(void);
+ 
+ /* completion */
+ extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 8da0779f4b2..b6cf2c8b794 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -43,6 +43,7 @@
+ #include "wine/library.h"
+ #include "wine/server.h"
+ #include "wine/debug.h"
++#include "winbase.h"
+ #include "ntdll_misc.h"
+ #include "ddk/wdm.h"
+ #include "wine/exception.h"
+@@ -50,7 +51,9 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+ WINE_DECLARE_DEBUG_CHANNEL(relay);
+ 
+-struct _KUSER_SHARED_DATA *user_shared_data = NULL;
++static struct _KUSER_SHARED_DATA user_shared_data_internal;
++struct _KUSER_SHARED_DATA *user_shared_data_external;
++struct _KUSER_SHARED_DATA *user_shared_data = &user_shared_data_internal;
+ 
+ PUNHANDLED_EXCEPTION_FILTER unhandled_exception_filter = NULL;
+ 
+@@ -345,18 +348,71 @@ static ULONG_PTR get_image_addr(void)
+  */
+ BYTE* CDECL __wine_user_shared_data(void)
+ {
++    static int spinlock;
++    ULARGE_INTEGER interrupt;
+     LARGE_INTEGER now;
++
++    while (interlocked_cmpxchg( &spinlock, 1, 0 ) != 0);
++
+     NtQuerySystemTime( &now );
+-    user_shared_data->SystemTime.LowPart = now.u.LowPart;
+-    user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
+-    user_shared_data->u.TickCountQuad = (now.QuadPart - server_start_time) / 10000;
+-    user_shared_data->u.TickCount.High2Time = user_shared_data->u.TickCount.High1Time;
+-    user_shared_data->TickCountLowDeprecated = user_shared_data->u.TickCount.LowPart;
++    user_shared_data->SystemTime.High2Time = now.u.HighPart;
++    user_shared_data->SystemTime.LowPart   = now.u.LowPart;
++    user_shared_data->SystemTime.High1Time = now.u.HighPart;
++
++    RtlQueryUnbiasedInterruptTime( &interrupt.QuadPart );
++    user_shared_data->InterruptTime.High2Time = interrupt.HighPart;
++    user_shared_data->InterruptTime.LowPart   = interrupt.LowPart;
++    user_shared_data->InterruptTime.High1Time = interrupt.HighPart;
++
++    interrupt.QuadPart /= 10000;
++    user_shared_data->u.TickCount.High2Time  = interrupt.HighPart;
++    user_shared_data->u.TickCount.LowPart    = interrupt.LowPart;
++    user_shared_data->u.TickCount.High1Time  = interrupt.HighPart;
++    user_shared_data->TickCountLowDeprecated = interrupt.LowPart;
+     user_shared_data->TickCountMultiplier = 1 << 24;
++
++    spinlock = 0;
+     return (BYTE *)user_shared_data;
+ }
+ 
+ 
++static void *user_shared_data_thread(void *arg)
++{
++    struct timeval tv;
++
++    while (TRUE)
++    {
++        __wine_user_shared_data();
++
++        tv.tv_sec = 0;
++        tv.tv_usec = 15600;
++        select(0, NULL, NULL, NULL, &tv);
++    }
++    return NULL;
++}
++
++
++void create_user_shared_data_thread(void)
++{
++    static int thread_created;
++    pthread_attr_t attr;
++    pthread_t thread;
++
++    if (interlocked_cmpxchg(&thread_created, 1, 0) != 0)
++        return;
++
++    FIXME("Creating user shared data update thread.\n");
++
++    user_shared_data = user_shared_data_external;
++    __wine_user_shared_data();
++
++    pthread_attr_init(&attr);
++    pthread_attr_setstacksize(&attr, 0x10000);
++    pthread_create(&thread, &attr, user_shared_data_thread, NULL);
++    pthread_attr_destroy(&attr);
++}
++
++
+ /***********************************************************************
+  *           thread_init
+  *
+@@ -388,7 +444,7 @@ HANDLE thread_init(void)
+         MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
+         exit(1);
+     }
+-    user_shared_data = addr;
++    user_shared_data_external = addr;
+ 
+     /* allocate and initialize the PEB */
+ 
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 872b1ce2d8f..bd8f54f78c3 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1561,6 +1561,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+     struct file_view *view;
+     NTSTATUS ret = STATUS_ACCESS_VIOLATION;
+     sigset_t sigset;
++    BOOL update_shared_data = FALSE;
+ 
+     server_enter_uninterrupted_section( &csVirtual, &sigset );
+     if ((view = VIRTUAL_FindView( addr, 0 )))
+@@ -1582,6 +1583,17 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+             /* ignore fault if page is writable now */
+             if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
+         }
++        else if (page == user_shared_data_external)
++        {
++            if (!(*vprot & VPROT_READ))
++            {
++                *vprot |= VPROT_READ | VPROT_WRITE;
++                VIRTUAL_SetProt( view, page, page_size, *vprot );
++                update_shared_data = TRUE;
++            }
++            /* ignore fault if page is readable now */
++            if (VIRTUAL_GetUnixProt( *vprot ) & PROT_READ) ret = STATUS_SUCCESS;
++        }
+         if (!on_signal_stack && (*vprot & VPROT_GUARD))
+         {
+             VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
+@@ -1589,6 +1601,10 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+         }
+     }
+     server_leave_uninterrupted_section( &csVirtual, &sigset );
++
++    if (update_shared_data)
++        create_user_shared_data_thread();
++
+     return ret;
+ }
+ 
+-- 
+2.12.2
+

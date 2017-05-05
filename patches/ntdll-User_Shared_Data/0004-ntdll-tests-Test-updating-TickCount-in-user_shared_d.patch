@@ -1,0 +1,69 @@
+From 3f4763cc335ea4d8293862677fabe0f8218c5542 Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Tue, 2 May 2017 21:19:03 -0500
+Subject: ntdll/tests: Test updating TickCount in user_shared_data.
+
+---
+ dlls/ntdll/tests/time.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/dlls/ntdll/tests/time.c b/dlls/ntdll/tests/time.c
+index b684bc1980d..0c8300a3428 100644
+--- a/dlls/ntdll/tests/time.c
++++ b/dlls/ntdll/tests/time.c
+@@ -18,7 +18,9 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
++#define NONAMELESSUNION
+ #include "ntdll_test.h"
++#include "ddk/wdm.h"
+ 
+ #define TICKSPERSEC        10000000
+ #define TICKSPERMSEC       10000
+@@ -27,6 +29,7 @@
+ static VOID (WINAPI *pRtlTimeToTimeFields)( const LARGE_INTEGER *liTime, PTIME_FIELDS TimeFields) ;
+ static VOID (WINAPI *pRtlTimeFieldsToTime)(  PTIME_FIELDS TimeFields,  PLARGE_INTEGER Time) ;
+ static NTSTATUS (WINAPI *pNtQueryPerformanceCounter)( LARGE_INTEGER *counter, LARGE_INTEGER *frequency );
++static ULONG (WINAPI *pNtGetTickCount)(void);
+ 
+ static const int MonthLengths[2][12] =
+ {
+@@ -115,15 +118,34 @@ static void test_NtQueryPerformanceCounter(void)
+     ok(status == STATUS_SUCCESS, "expected STATUS_SUCCESS, got %08x\n", status);
+ }
+ 
++static void test_NtGetTickCount(void)
++{
++#ifndef _WIN64
++    KSHARED_USER_DATA *user_shared_data = (void *)0x7ffe0000;
++    LONG diff;
++    int i;
++
++    for (i = 0; i < 5; ++i)
++    {
++        diff = (user_shared_data->u.TickCountQuad * user_shared_data->TickCountMultiplier) >> 24;
++        diff = NtGetTickCount() - diff;
++        ok(diff < 32, "NtGetTickCount - TickCountQuad too high, expected < 32 got %d\n", diff);
++        Sleep(50);
++    }
++#endif
++}
++
+ START_TEST(time)
+ {
+     HMODULE mod = GetModuleHandleA("ntdll.dll");
+     pRtlTimeToTimeFields = (void *)GetProcAddress(mod,"RtlTimeToTimeFields");
+     pRtlTimeFieldsToTime = (void *)GetProcAddress(mod,"RtlTimeFieldsToTime");
+     pNtQueryPerformanceCounter = (void *)GetProcAddress(mod, "NtQueryPerformanceCounter");
++    pNtGetTickCount = (void *)GetProcAddress(mod,"NtGetTickCount");
+     if (pRtlTimeToTimeFields && pRtlTimeFieldsToTime)
+         test_pRtlTimeToTimeFields();
+     else
+         win_skip("Required time conversion functions are not available\n");
+     test_NtQueryPerformanceCounter();
++    test_NtGetTickCount();
+ }
+-- 
+2.12.2
+

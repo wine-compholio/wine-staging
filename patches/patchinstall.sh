@@ -307,6 +307,7 @@ patch_enable_all ()
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
+	enable_server_Debug_Registers="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -1150,6 +1151,9 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
+			;;
+		server-Debug_Registers)
+			enable_server_Debug_Registers="$2"
 			;;
 		server-Desktop_Refcount)
 			enable_server_Desktop_Refcount="$2"
@@ -6694,6 +6698,21 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	patch_apply server-ClipCursor/0001-winex11-Forward-all-clipping-requests-to-the-right-t.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Debug_Registers
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32515] Reset debug registers when creating threads
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, server/thread.c
+# |
+if test "$enable_server_Debug_Registers" -eq 1; then
+	patch_apply server-Debug_Registers/0001-server-Reset-debug-registers-when-creating-threads.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "server: Reset debug registers when creating threads.", 1 },';
 	) >> "$patchlist"
 fi
 

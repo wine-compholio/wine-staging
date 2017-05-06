@@ -1,0 +1,131 @@
+From efe0c98d7107a86987c7a34dbd071c527c248fc9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 6 May 2017 00:10:01 +0200
+Subject: server: Reset debug registers when creating threads.
+
+---
+ dlls/ntdll/signal_i386.c     | 13 -------------
+ dlls/ntdll/tests/exception.c | 29 ++++++++++++++++++++++++-----
+ server/thread.c              |  5 +++++
+ 3 files changed, 29 insertions(+), 18 deletions(-)
+
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index 93d9418527..ac98ed0dba 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -2375,7 +2375,6 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+ {
+     static size_t sigstack_zero_bits;
+     struct ntdll_thread_data *thread_data;
+-    struct ntdll_thread_data *parent_data = NULL;
+     SIZE_T size;
+     void *addr = NULL;
+     NTSTATUS status;
+@@ -2389,7 +2388,6 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+         signal_stack_mask = (1 << sigstack_zero_bits) - 1;
+         signal_stack_size = (1 << sigstack_zero_bits) - teb_size;
+     }
+-    else parent_data = ntdll_get_thread_data();
+ 
+     size = signal_stack_mask + 1;
+     if (!(status = NtAllocateVirtualMemory( NtCurrentProcess(), &addr, sigstack_zero_bits,
+@@ -2405,17 +2403,6 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+             NtFreeVirtualMemory( NtCurrentProcess(), &addr, &size, MEM_RELEASE );
+             status = STATUS_TOO_MANY_THREADS;
+         }
+-        if (parent_data)
+-        {
+-            /* inherit debug registers from parent thread */
+-            thread_data->dr0 = parent_data->dr0;
+-            thread_data->dr1 = parent_data->dr1;
+-            thread_data->dr2 = parent_data->dr2;
+-            thread_data->dr3 = parent_data->dr3;
+-            thread_data->dr6 = parent_data->dr6;
+-            thread_data->dr7 = parent_data->dr7;
+-        }
+-
+     }
+     return status;
+ }
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index ab4b3e4294..cf3b235b2f 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -2002,8 +2002,23 @@ static void test___C_specific_handler(void)
+ 
+ #if defined(__i386__) || defined(__x86_64__)
+ 
+-static DWORD WINAPI dummy_thread(void *arg)
++static DWORD WINAPI register_check_thread(void *arg)
+ {
++    NTSTATUS status;
++    CONTEXT ctx;
++
++    memset(&ctx, 0, sizeof(ctx));
++    ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
++
++    status = pNtGetContextThread(GetCurrentThread(), &ctx);
++    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
++    ok(!ctx.Dr0, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr0);
++    ok(!ctx.Dr1, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr1);
++    ok(!ctx.Dr2, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr2);
++    ok(!ctx.Dr3, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr3);
++    ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
++    ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
++
+     return 0;
+ }
+ 
+@@ -2060,8 +2075,10 @@ static void test_debug_registers(void)
+     ctx.Dr7 = 0x00000400;
+     status = pNtSetContextThread(GetCurrentThread(), &ctx);
+     ok(status == STATUS_SUCCESS, "NtSetContextThread failed with %x\n", status);
+-    thread = CreateThread(NULL, 0, dummy_thread, NULL, CREATE_SUSPENDED, NULL);
++
++    thread = CreateThread(NULL, 0, register_check_thread, NULL, CREATE_SUSPENDED, NULL);
+     ok(thread != INVALID_HANDLE_VALUE, "CreateThread failed with %d\n", GetLastError());
++
+     ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+     status = pNtGetContextThread(thread, &ctx);
+     ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
+@@ -2069,9 +2086,11 @@ static void test_debug_registers(void)
+     ok(!ctx.Dr1, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr1);
+     ok(!ctx.Dr2, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr2);
+     ok(!ctx.Dr3, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr3);
+-    todo_wine ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
+-    todo_wine ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
+-    TerminateThread(thread, 0);
++    ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
++    ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
++
++    ResumeThread(thread);
++    WaitForSingleObject(thread, INFINITE);
+     CloseHandle(thread);
+ }
+ 
+diff --git a/server/thread.c b/server/thread.c
+index c92657e060..e4baf3c11f 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -1299,6 +1299,7 @@ DECL_HANDLER(new_thread)
+ /* initialize a new thread */
+ DECL_HANDLER(init_thread)
+ {
++    static const context_t zero_context;
+     struct process *process = current->process;
+     int wait_fd, reply_fd;
+ 
+@@ -1357,6 +1358,10 @@ DECL_HANDLER(init_thread)
+         }
+         if (process->unix_pid != current->unix_pid)
+             process->unix_pid = -1;  /* can happen with linuxthreads */
++
++        /* Linux preserves dr6/dr7 and FreeBSD all debug registers (unlike windows) */
++        set_thread_context( current, &zero_context, SERVER_CTX_DEBUG_REGISTERS );
++
+         stop_thread_if_suspended( current );
+         generate_debug_event( current, CREATE_THREAD_DEBUG_EVENT, &req->entry );
+         set_thread_affinity( current, current->affinity );
+-- 
+2.12.2
+

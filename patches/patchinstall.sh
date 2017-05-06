@@ -130,6 +130,7 @@ patch_enable_all ()
 	enable_d3dx9_36_FindNextValidTechnique="$1"
 	enable_d3dx9_36_GetShaderSemantics="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
+	enable_d3dx9_36_Tests="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
@@ -618,6 +619,9 @@ patch_enable ()
 			;;
 		d3dx9_36-Optimize_Inplace)
 			enable_d3dx9_36_Optimize_Inplace="$2"
+			;;
+		d3dx9_36-Tests)
+			enable_d3dx9_36_Tests="$2"
 			;;
 		d3dx9_36-Texture_Align)
 			enable_d3dx9_36_Texture_Align="$2"
@@ -3775,6 +3779,18 @@ if test "$enable_d3dx9_36_Optimize_Inplace" -eq 1; then
 	patch_apply d3dx9_36-Optimize_Inplace/0001-d3dx9_36-No-need-to-fail-if-we-don-t-support-vertice.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: No need to fail if we don'\''t support vertices reordering in D3DXMESHOPT_ATTRSORT.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-Tests
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/tests/math.c
+# |
+if test "$enable_d3dx9_36_Tests" -eq 1; then
+	patch_apply d3dx9_36-Tests/0001-d3dx9_36-tests-Fix-some-test-failures.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36/tests: Fix some test failures.", 1 },';
 	) >> "$patchlist"
 fi
 

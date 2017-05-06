@@ -1,0 +1,92 @@
+From f0087cfcdb93cfbed95dea8c700726be687a2a8f Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 28 Mar 2017 14:43:39 +0800
+Subject: windowscodecs: Simplify a bit comparison of two PROPVARIANTs.
+
+---
+ dlls/windowscodecs/Makefile.in       |  2 +-
+ dlls/windowscodecs/metadatahandler.c | 42 +++---------------------------------
+ 2 files changed, 4 insertions(+), 40 deletions(-)
+
+diff --git a/dlls/windowscodecs/Makefile.in b/dlls/windowscodecs/Makefile.in
+index 78e2059132..3505e804ca 100644
+--- a/dlls/windowscodecs/Makefile.in
++++ b/dlls/windowscodecs/Makefile.in
+@@ -1,6 +1,6 @@
+ MODULE    = windowscodecs.dll
+ IMPORTLIB = windowscodecs
+-IMPORTS   = uuid ole32 oleaut32 rpcrt4 shlwapi user32 gdi32 advapi32
++IMPORTS   = uuid ole32 oleaut32 propsys rpcrt4 shlwapi user32 gdi32 advapi32
+ EXTRAINCL = $(JPEG_CFLAGS) $(PNG_CFLAGS) $(TIFF_CFLAGS)
+ EXTRALIBS = $(APPLICATIONSERVICES_LIBS)
+ 
+diff --git a/dlls/windowscodecs/metadatahandler.c b/dlls/windowscodecs/metadatahandler.c
+index e394064f2a..2f67807354 100644
+--- a/dlls/windowscodecs/metadatahandler.c
++++ b/dlls/windowscodecs/metadatahandler.c
+@@ -29,6 +29,7 @@
+ #include "winbase.h"
+ #include "winternl.h"
+ #include "objbase.h"
++#include "propvarutil.h"
+ 
+ #include "wincodecs_private.h"
+ 
+@@ -211,43 +212,6 @@ static HRESULT WINAPI MetadataHandler_GetValueByIndex(IWICMetadataWriter *iface,
+     return hr;
+ }
+ 
+-static BOOL get_int_value(const PROPVARIANT *pv, LONGLONG *value)
+-{
+-    switch (pv->vt)
+-    {
+-    case VT_NULL:
+-    case VT_EMPTY:
+-        *value = 0;
+-        break;
+-    case VT_I1:
+-        *value = pv->u.cVal;
+-        break;
+-    case VT_UI1:
+-        *value = pv->u.bVal;
+-        break;
+-    case VT_I2:
+-        *value = pv->u.iVal;
+-        break;
+-    case VT_UI2:
+-        *value = pv->u.uiVal;
+-        break;
+-    case VT_I4:
+-        *value = pv->u.lVal;
+-        break;
+-    case VT_UI4:
+-        *value = pv->u.ulVal;
+-        break;
+-    case VT_I8:
+-    case VT_UI8:
+-        *value = pv->u.hVal.QuadPart;
+-        break;
+-    default:
+-        FIXME("not supported variant type %d\n", pv->vt);
+-        return FALSE;
+-    }
+-    return TRUE;
+-}
+-
+ /* FiXME: Use propsys.PropVariantCompareEx once it's implemented */
+ static int propvar_cmp(const PROPVARIANT *v1, const PROPVARIANT *v2)
+ {
+@@ -263,8 +227,8 @@ static int propvar_cmp(const PROPVARIANT *v1, const PROPVARIANT *v2)
+         return lstrcmpiW(v1->u.pwszVal, v2->u.pwszVal);
+     }
+ 
+-    if (!get_int_value(v1, &value1)) return -1;
+-    if (!get_int_value(v2, &value2)) return -1;
++    if (PropVariantToInt64(v1, &value1) != S_OK) return -1;
++    if (PropVariantToInt64(v2, &value2) != S_OK) return -1;
+ 
+     value1 -= value2;
+     if (value1) return value1 < 0 ? -1 : 1;
+-- 
+2.12.2
+

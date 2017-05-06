@@ -399,6 +399,7 @@ patch_enable_all ()
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
+	enable_windowscodecs_Metadata="$1"
 	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
@@ -1428,6 +1429,9 @@ patch_enable ()
 		windowscodecs-IWICPalette_InitializeFromBitmap)
 			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
 			;;
+		windowscodecs-Metadata)
+			enable_windowscodecs_Metadata="$2"
+			;;
 		windowscodecs-Palette_Images)
 			enable_windowscodecs_Palette_Images="$2"
 			;;
@@ -2093,6 +2097,17 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	fi
 	enable_wineboot_DriveSerial=1
 	enable_wineboot_drivers_etc_Stubs=1
+fi
+
+if test "$enable_windowscodecs_Metadata" -eq 1; then
+	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
+		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-Metadata depends on that."
+	fi
+	if test "$enable_windowscodecs_WICCreateBitmapFromSection" -gt 1; then
+		abort "Patchset windowscodecs-WICCreateBitmapFromSection disabled, but windowscodecs-Metadata depends on that."
+	fi
+	enable_windowscodecs_TIFF_Support=1
+	enable_windowscodecs_WICCreateBitmapFromSection=1
 fi
 
 if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
@@ -8398,6 +8413,35 @@ if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-Metadata
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
+# | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support, windowscodecs-WICCreateBitmapFromSection
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/Makefile.in, dlls/windowscodecs/gifformat.c, dlls/windowscodecs/imgfactory.c,
+# | 	dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/metadataquery.c, dlls/windowscodecs/tests/converter.c,
+# | 	dlls/windowscodecs/tests/metadata.c, dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/windowscodecs.spec,
+# | 	include/wincodec.idl, include/wincodecsdk.idl
+# |
+if test "$enable_windowscodecs_Metadata" -eq 1; then
+	patch_apply windowscodecs-Metadata/0001-windowscodecs-Implement-WICMapGuidToShortName.patch
+	patch_apply windowscodecs-Metadata/0002-windowscodecs-Implement-WICMapShortNameToGuid.patch
+	patch_apply windowscodecs-Metadata/0003-windowscodecs-Implement-WICMapSchemaToName.patch
+	patch_apply windowscodecs-Metadata/0004-windowscodecs-Implement-IWICMetadataQueryReader-GetC.patch
+	patch_apply windowscodecs-Metadata/0005-include-Fix-typos-in-WICPersistOptions-enumeration-n.patch
+	patch_apply windowscodecs-Metadata/0006-windowscodecs-Simplify-a-bit-comparison-of-two-PROPV.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapGuidToShortName.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapShortNameToGuid.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapSchemaToName.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICMetadataQueryReader::GetContainerFormat.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Fix typos in WICPersistOptions enumeration names.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Simplify a bit comparison of two PROPVARIANTs.", 1 },';
 	) >> "$patchlist"
 fi
 

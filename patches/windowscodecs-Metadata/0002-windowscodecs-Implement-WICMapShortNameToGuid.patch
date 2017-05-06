@@ -1,0 +1,120 @@
+From 1566ba6bda11a9c2d1f1aed638627adb76f84bdf Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Tue, 28 Mar 2017 12:24:54 +0800
+Subject: windowscodecs: Implement WICMapShortNameToGuid.
+
+---
+ dlls/windowscodecs/metadataquery.c    | 20 +++++++++++++++++++
+ dlls/windowscodecs/tests/metadata.c   | 36 +++++++++++++++++++++++++++++++++++
+ dlls/windowscodecs/windowscodecs.spec |  2 +-
+ include/wincodec.idl                  |  1 +
+ 4 files changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/windowscodecs/metadataquery.c b/dlls/windowscodecs/metadataquery.c
+index e3c0d1b096..beae81d72f 100644
+--- a/dlls/windowscodecs/metadataquery.c
++++ b/dlls/windowscodecs/metadataquery.c
+@@ -278,3 +278,23 @@ HRESULT WINAPI WICMapGuidToShortName(REFGUID guid, UINT len, WCHAR *name, UINT *
+ 
+     return WINCODEC_ERR_PROPERTYNOTFOUND;
+ }
++
++HRESULT WINAPI WICMapShortNameToGuid(const WCHAR *name, GUID *guid)
++{
++    UINT i;
++
++    TRACE("%s,%p\n", debugstr_w(name), guid);
++
++    if (!name || !guid) return E_INVALIDARG;
++
++    for (i = 0; i < sizeof(guid2name)/sizeof(guid2name[0]); i++)
++    {
++        if (!strcmpiW(name, guid2name[i].name))
++        {
++            *guid = *guid2name[i].guid;
++            return S_OK;
++        }
++    }
++
++    return WINCODEC_ERR_PROPERTYNOTFOUND;
++}
+diff --git a/dlls/windowscodecs/tests/metadata.c b/dlls/windowscodecs/tests/metadata.c
+index db3d995589..c4cecebbb2 100644
+--- a/dlls/windowscodecs/tests/metadata.c
++++ b/dlls/windowscodecs/tests/metadata.c
+@@ -2017,11 +2017,47 @@ static void test_WICMapGuidToShortName(void)
+     ok(hr == E_INVALIDARG, "got %#x\n", hr);
+ }
+ 
++static void test_WICMapShortNameToGuid(void)
++{
++    static const WCHAR unkW[] = { 'u','n','k',0 };
++    static const WCHAR xmpW[] = { 'x','m','p',0 };
++    static const WCHAR XmPW[] = { 'X','m','P',0 };
++    static const WCHAR unknownW[] = { 'u','n','k','n','o','w','n',0 };
++    HRESULT hr;
++    GUID guid;
++
++    hr = WICMapShortNameToGuid(NULL, NULL);
++    ok(hr == E_INVALIDARG, "got %#x\n", hr);
++
++    hr = WICMapShortNameToGuid(NULL, &guid);
++    ok(hr == E_INVALIDARG, "got %#x\n", hr);
++
++    hr = WICMapShortNameToGuid(unknownW, NULL);
++    ok(hr == E_INVALIDARG, "got %#x\n", hr);
++
++    hr = WICMapShortNameToGuid(unkW, &guid);
++    ok(hr == WINCODEC_ERR_PROPERTYNOTFOUND, "got %#x\n", hr);
++
++    hr = WICMapShortNameToGuid(unknownW, &guid);
++    ok(hr == S_OK, "got %#x\n", hr);
++    ok(IsEqualGUID(&guid, &GUID_MetadataFormatUnknown), "got %s\n", wine_dbgstr_guid(&guid));
++
++    hr = WICMapShortNameToGuid(xmpW, &guid);
++    ok(hr == S_OK, "got %#x\n", hr);
++    ok(IsEqualGUID(&guid, &GUID_MetadataFormatXMP), "got %s\n", wine_dbgstr_guid(&guid));
++
++    guid = GUID_NULL;
++    hr = WICMapShortNameToGuid(XmPW, &guid);
++    ok(hr == S_OK, "got %#x\n", hr);
++    ok(IsEqualGUID(&guid, &GUID_MetadataFormatXMP), "got %s\n", wine_dbgstr_guid(&guid));
++}
++
+ START_TEST(metadata)
+ {
+     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+ 
+     test_WICMapGuidToShortName();
++    test_WICMapShortNameToGuid();
+     test_metadata_unknown();
+     test_metadata_tEXt();
+     test_metadata_gAMA();
+diff --git a/dlls/windowscodecs/windowscodecs.spec b/dlls/windowscodecs/windowscodecs.spec
+index 1765a508a1..2fc73520d0 100644
+--- a/dlls/windowscodecs/windowscodecs.spec
++++ b/dlls/windowscodecs/windowscodecs.spec
+@@ -112,7 +112,7 @@
+ @ stub WICGetMetadataContentSize
+ @ stdcall WICMapGuidToShortName(ptr long ptr ptr)
+ @ stub WICMapSchemaToName
+-@ stub WICMapShortNameToGuid
++@ stdcall WICMapShortNameToGuid(wstr ptr)
+ @ stub WICMatchMetadataContent
+ @ stub WICSerializeMetadataContent
+ @ stdcall WICSetEncoderFormat_Proxy(ptr ptr ptr ptr)
+diff --git a/include/wincodec.idl b/include/wincodec.idl
+index c8b5b592c0..802644bb55 100644
+--- a/include/wincodec.idl
++++ b/include/wincodec.idl
+@@ -1007,6 +1007,7 @@ cpp_quote("HRESULT WINAPI WICCreateBitmapFromSection(UINT width, UINT height, RE
+ cpp_quote("HRESULT WINAPI WICCreateBitmapFromSectionEx(UINT width, UINT height, REFWICPixelFormatGUID format, HANDLE section, UINT stride, UINT offset, WICSectionAccessLevel access, IWICBitmap **bitmap);")
+ 
+ cpp_quote("HRESULT WINAPI WICMapGuidToShortName(REFGUID,UINT,WCHAR *,UINT *);")
++cpp_quote("HRESULT WINAPI WICMapShortNameToGuid(const WCHAR *,GUID *);")
+ 
+ cpp_quote("DEFINE_GUID(CLSID_WICBmpDecoder, 0x6b462062,0x7cbf,0x400d,0x9f,0xdb,0x81,0x3d,0xd1,0x0f,0x27,0x78);")
+ cpp_quote("DEFINE_GUID(CLSID_WICPngDecoder, 0x389ea17b,0x5078,0x4cde,0xb6,0xef,0x25,0xc1,0x51,0x75,0xc7,0x51);")
+-- 
+2.12.2
+

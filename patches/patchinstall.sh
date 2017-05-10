@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b6a4b2f593503a105dde01e7bd11ffdde243117a"
+	echo "8ef79b023a06f00ca6ab37afb8089d358b277d73"
 }
 
 # Show version information
@@ -5002,29 +5002,20 @@ fi
 # Patchset mfplat-MFTRegister
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#37811] Add implementation for mfplat.MFTRegister
-# |   *	[#39309] Add implementation for mfplat.MFTEnum
 # |   *	[#39367] Return stub interface from mf.MFCreateMediaSession
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c,
-# | 	dlls/mfplat/Makefile.in, dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/Makefile.in,
-# | 	dlls/mfplat/tests/mfplat.c, include/mfidl.idl, include/rpcndr.h, loader/wine.inf.in
+# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, dlls/mfplat/main.c,
+# | 	dlls/mfplat/mfplat.spec, include/mfidl.idl, include/rpcndr.h
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
-	patch_apply mfplat-MFTRegister/0001-mfplat-Implement-MFTRegister.patch
-	patch_apply mfplat-MFTRegister/0002-mfplat-Implement-MFTUnregister.patch
-	patch_apply mfplat-MFTRegister/0003-mfplat-Implement-MFTEnum.patch
-	patch_apply mfplat-MFTRegister/0004-mfplat-tests-Add-tests.patch
+	patch_apply mfplat-MFTRegister/0001-mfplat-Fix-invalid-memory-access.patch
 	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
 	patch_apply mfplat-MFTRegister/0007-include-rpcndr.h-Fix-definition-of-EXTERN_GUID.patch
 	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
 	patch_apply mfplat-MFTRegister/0009-mfplat-Add-stub-for-MFCreateSourceResolver.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTRegister.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTUnregister.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "mfplat: Implement MFTEnum.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "mfplat/tests: Add tests.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "mfplat: Fix invalid memory access.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';

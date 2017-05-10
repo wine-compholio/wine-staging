@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8ef79b023a06f00ca6ab37afb8089d358b277d73"
+	echo "0647abc5071913506e681bfc5239f9a6078dca54"
 }
 
 # Show version information
@@ -299,7 +299,6 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
-	enable_qcap_O_CLOEXEC="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
@@ -1128,9 +1127,6 @@ patch_enable ()
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
-			;;
-		qcap-O_CLOEXEC)
-			enable_qcap_O_CLOEXEC="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -5009,13 +5005,11 @@ fi
 # | 	dlls/mfplat/mfplat.spec, include/mfidl.idl, include/rpcndr.h
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
-	patch_apply mfplat-MFTRegister/0001-mfplat-Fix-invalid-memory-access.patch
 	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
 	patch_apply mfplat-MFTRegister/0007-include-rpcndr.h-Fix-definition-of-EXTERN_GUID.patch
 	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
 	patch_apply mfplat-MFTRegister/0009-mfplat-Add-stub-for-MFCreateSourceResolver.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "mfplat: Fix invalid memory access.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
@@ -6583,21 +6577,6 @@ if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset qcap-O_CLOEXEC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42478] Fix compile error when O_CLOEXEC is not defined
-# |
-# | Modified files:
-# |   *	dlls/qcap/v4l.c
-# |
-if test "$enable_qcap_O_CLOEXEC" -eq 1; then
-	patch_apply qcap-O_CLOEXEC/0001-qcap-Fix-compile-error-when-O_CLOEXEC-is-not-defined.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "qcap: Fix compile error when O_CLOEXEC is not defined.", 1 },';
 	) >> "$patchlist"
 fi
 

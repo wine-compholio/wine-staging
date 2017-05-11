@@ -6686,9 +6686,6 @@ fi
 
 # Patchset server-Debug_Registers
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32515] Reset debug registers when creating threads
-# |
 # | Modified files:
 # |   *	dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, server/thread.c
 # |

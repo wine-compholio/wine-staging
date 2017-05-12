@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b77688102a84e1c7b7278340c46f53db3e1cda00"
+	echo "4eaaf06ce4e5d7424eec2cf303c8256610544b39"
 }
 
 # Show version information
@@ -8300,7 +8300,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	patch_apply windowscodecs-TIFF_Support/0007-windowscodecs-Add-support-for-3bps-RGB-format-to-TIF.patch
 	patch_apply windowscodecs-TIFF_Support/0008-windowscodecs-Add-support-for-12bpp-RGB-format-to-TI.patch
 	patch_apply windowscodecs-TIFF_Support/0009-windowscodecs-Add-support-for-128bppRGBAFloat-format.patch
-	patch_apply windowscodecs-TIFF_Support/0010-include-Fix-the-GUID_WICPixelFormat32bppCMYK-definit.patch
 	patch_apply windowscodecs-TIFF_Support/0011-windowscodecs-Add-support-for-32bppCMYK-and-64bppCMY.patch
 	patch_apply windowscodecs-TIFF_Support/0012-windowscodecs-Add-support-for-4bpp-RGBA-format-to-TI.patch
 	patch_apply windowscodecs-TIFF_Support/0013-windowscodecs-Add-support-for-16bpp-RGBA-format-to-T.patch
@@ -8318,7 +8317,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 128bppRGBAFloat format to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Fix the GUID_WICPixelFormat32bppCMYK definition.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
@@ -8388,24 +8386,21 @@ fi
 # | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support, windowscodecs-WICCreateBitmapFromSection
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/Makefile.in, dlls/windowscodecs/gifformat.c, dlls/windowscodecs/imgfactory.c,
-# | 	dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/metadataquery.c, dlls/windowscodecs/tests/converter.c,
-# | 	dlls/windowscodecs/tests/metadata.c, dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/windowscodecs.spec,
-# | 	include/wincodec.idl, include/wincodecsdk.idl
+# |   *	dlls/windowscodecs/Makefile.in, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/metadataquery.c,
+# | 	dlls/windowscodecs/tests/metadata.c, dlls/windowscodecs/windowscodecs.spec, include/wincodec.idl,
+# | 	include/wincodecsdk.idl
 # |
 if test "$enable_windowscodecs_Metadata" -eq 1; then
 	patch_apply windowscodecs-Metadata/0001-windowscodecs-Implement-WICMapGuidToShortName.patch
 	patch_apply windowscodecs-Metadata/0002-windowscodecs-Implement-WICMapShortNameToGuid.patch
 	patch_apply windowscodecs-Metadata/0003-windowscodecs-Implement-WICMapSchemaToName.patch
 	patch_apply windowscodecs-Metadata/0004-windowscodecs-Implement-IWICMetadataQueryReader-GetC.patch
-	patch_apply windowscodecs-Metadata/0005-include-Fix-typos-in-WICPersistOptions-enumeration-n.patch
 	patch_apply windowscodecs-Metadata/0006-windowscodecs-Simplify-a-bit-comparison-of-two-PROPV.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapGuidToShortName.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapShortNameToGuid.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapSchemaToName.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICMetadataQueryReader::GetContainerFormat.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Fix typos in WICPersistOptions enumeration names.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Simplify a bit comparison of two PROPVARIANTs.", 1 },';
 	) >> "$patchlist"
 fi

@@ -400,7 +400,7 @@ patch_enable_all ()
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
-	enable_windowscodecs_Metadata="$1"
+	enable_windowscodecs_MetadataQueryParser="$1"
 	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
@@ -1434,8 +1434,8 @@ patch_enable ()
 		windowscodecs-IWICPalette_InitializeFromBitmap)
 			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
 			;;
-		windowscodecs-Metadata)
-			enable_windowscodecs_Metadata="$2"
+		windowscodecs-MetadataQueryParser)
+			enable_windowscodecs_MetadataQueryParser="$2"
 			;;
 		windowscodecs-Palette_Images)
 			enable_windowscodecs_Palette_Images="$2"
@@ -2114,12 +2114,12 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	enable_wineboot_drivers_etc_Stubs=1
 fi
 
-if test "$enable_windowscodecs_Metadata" -eq 1; then
+if test "$enable_windowscodecs_MetadataQueryParser" -eq 1; then
 	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
-		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-Metadata depends on that."
+		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-MetadataQueryParser depends on that."
 	fi
 	if test "$enable_windowscodecs_WICCreateBitmapFromSection" -gt 1; then
-		abort "Patchset windowscodecs-WICCreateBitmapFromSection disabled, but windowscodecs-Metadata depends on that."
+		abort "Patchset windowscodecs-WICCreateBitmapFromSection disabled, but windowscodecs-MetadataQueryParser depends on that."
 	fi
 	enable_windowscodecs_TIFF_Support=1
 	enable_windowscodecs_WICCreateBitmapFromSection=1
@@ -8450,7 +8450,7 @@ if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-Metadata
+# Patchset windowscodecs-MetadataQueryParser
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
@@ -8461,12 +8461,12 @@ fi
 # | 	dlls/windowscodecs/tests/metadata.c, dlls/windowscodecs/windowscodecs.spec, include/wincodec.idl,
 # | 	include/wincodecsdk.idl
 # |
-if test "$enable_windowscodecs_Metadata" -eq 1; then
-	patch_apply windowscodecs-Metadata/0001-windowscodecs-Implement-WICMapGuidToShortName.patch
-	patch_apply windowscodecs-Metadata/0002-windowscodecs-Implement-WICMapShortNameToGuid.patch
-	patch_apply windowscodecs-Metadata/0003-windowscodecs-Implement-WICMapSchemaToName.patch
-	patch_apply windowscodecs-Metadata/0004-windowscodecs-Implement-IWICMetadataQueryReader-GetC.patch
-	patch_apply windowscodecs-Metadata/0006-windowscodecs-Simplify-a-bit-comparison-of-two-PROPV.patch
+if test "$enable_windowscodecs_MetadataQueryParser" -eq 1; then
+	patch_apply windowscodecs-MetadataQueryParser/0001-windowscodecs-Implement-WICMapGuidToShortName.patch
+	patch_apply windowscodecs-MetadataQueryParser/0002-windowscodecs-Implement-WICMapShortNameToGuid.patch
+	patch_apply windowscodecs-MetadataQueryParser/0003-windowscodecs-Implement-WICMapSchemaToName.patch
+	patch_apply windowscodecs-MetadataQueryParser/0004-windowscodecs-Implement-IWICMetadataQueryReader-GetC.patch
+	patch_apply windowscodecs-MetadataQueryParser/0006-windowscodecs-Simplify-a-bit-comparison-of-two-PROPV.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapGuidToShortName.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapShortNameToGuid.", 1 },';

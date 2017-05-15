@@ -334,6 +334,7 @@ patch_enable_all ()
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
+	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
 	enable_shell32_File_Property_Dialog="$1"
 	enable_shell32_FolderItemsImpl_get_Count="$1"
@@ -1233,6 +1234,9 @@ patch_enable ()
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
+			;;
+		shell32-ACE_Viewer)
+			enable_shell32_ACE_Viewer="$2"
 			;;
 		shell32-Context_Menu)
 			enable_shell32_Context_Menu="$2"
@@ -2192,6 +2196,17 @@ if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
 		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation_Win9x depends on that."
 	fi
+	enable_shell32_Progress_Dialog=1
+fi
+
+if test "$enable_shell32_ACE_Viewer" -eq 1; then
+	if test "$enable_shell32_File_Property_Dialog" -gt 1; then
+		abort "Patchset shell32-File_Property_Dialog disabled, but shell32-ACE_Viewer depends on that."
+	fi
+	if test "$enable_shell32_Progress_Dialog" -gt 1; then
+		abort "Patchset shell32-Progress_Dialog disabled, but shell32-ACE_Viewer depends on that."
+	fi
+	enable_shell32_File_Property_Dialog=1
 	enable_shell32_Progress_Dialog=1
 fi
 
@@ -7110,6 +7125,76 @@ if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset shell32-File_Property_Dialog
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40426] Implement general tab for file property dialog
+# |
+# | Modified files:
+# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlview_cmenu.c, dlls/shell32/shresdef.h
+# |
+if test "$enable_shell32_File_Property_Dialog" -eq 1; then
+	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-SHFileOperation_Move
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25207] SHFileOperation with FO_MOVE should create new directory on Vista+
+# |
+# | Modified files:
+# |   *	dlls/shell32/shlfileop.c, dlls/shell32/tests/shlfileop.c
+# |
+if test "$enable_shell32_SHFileOperation_Move" -eq 1; then
+	patch_apply shell32-SHFileOperation_Move/0001-shell32-Fix-SHFileOperation-FO_MOVE-for-creating-sub.patch
+	(
+		printf '%s\n' '+    { "Zhenbo Li", "shell32: Fix SHFileOperation(FO_MOVE) for creating subdirectories.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-Progress_Dialog
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move
+# |
+# | Modified files:
+# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
+# |
+if test "$enable_shell32_Progress_Dialog" -eq 1; then
+	patch_apply shell32-Progress_Dialog/0001-shell32-Correct-indentation-in-shfileop.c.patch
+	patch_apply shell32-Progress_Dialog/0002-shell32-Pass-FILE_INFORMATION-into-SHNotify-function.patch
+	patch_apply shell32-Progress_Dialog/0003-shell32-Implement-file-operation-progress-dialog.patch
+	patch_apply shell32-Progress_Dialog/0004-shell32-Show-animation-during-SHFileOperation.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "shell32: Correct indentation in shfileop.c.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Show animation during SHFileOperation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-ACE_Viewer
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	shell32-File_Property_Dialog, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
+# | 	shell32-SHFileOperation_Move, shell32-Progress_Dialog
+# |
+# | Modified files:
+# |   *	dlls/aclui/Makefile.in, dlls/aclui/aclui.rc, dlls/aclui/aclui_main.c, dlls/aclui/resource.h, dlls/aclui/user_icons.bmp,
+# | 	dlls/shell32/Makefile.in, dlls/shell32/shell32.rc, dlls/shell32/shlview_cmenu.c, dlls/shell32/shresdef.h
+# |
+if test "$enable_shell32_ACE_Viewer" -eq 1; then
+	patch_apply shell32-ACE_Viewer/0001-aclui-Add-basic-ACE-viewer.patch
+	patch_apply shell32-ACE_Viewer/0002-shell32-Add-security-property-tab.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "aclui: Add basic ACE viewer.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Add security property tab.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset shell32-Context_Menu
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7138,21 +7223,6 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Recognize cut/copy/paste string verbs in item menu context menu.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-File_Property_Dialog
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40426] Implement general tab for file property dialog
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlview_cmenu.c, dlls/shell32/shresdef.h
-# |
-if test "$enable_shell32_File_Property_Dialog" -eq 1; then
-	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7226,42 +7296,6 @@ if test "$enable_shell32_Placeholder_Icons" -eq 1; then
 	patch_apply shell32-Placeholder_Icons/0001-shell32-Add-placeholder-icons-to-match-icon-offset-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Add placeholder icons to match icon offset with XP.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-SHFileOperation_Move
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25207] SHFileOperation with FO_MOVE should create new directory on Vista+
-# |
-# | Modified files:
-# |   *	dlls/shell32/shlfileop.c, dlls/shell32/tests/shlfileop.c
-# |
-if test "$enable_shell32_SHFileOperation_Move" -eq 1; then
-	patch_apply shell32-SHFileOperation_Move/0001-shell32-Fix-SHFileOperation-FO_MOVE-for-creating-sub.patch
-	(
-		printf '%s\n' '+    { "Zhenbo Li", "shell32: Fix SHFileOperation(FO_MOVE) for creating subdirectories.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-Progress_Dialog
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
-# |
-if test "$enable_shell32_Progress_Dialog" -eq 1; then
-	patch_apply shell32-Progress_Dialog/0001-shell32-Correct-indentation-in-shfileop.c.patch
-	patch_apply shell32-Progress_Dialog/0002-shell32-Pass-FILE_INFORMATION-into-SHNotify-function.patch
-	patch_apply shell32-Progress_Dialog/0003-shell32-Implement-file-operation-progress-dialog.patch
-	patch_apply shell32-Progress_Dialog/0004-shell32-Show-animation-during-SHFileOperation.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Correct indentation in shfileop.c.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "shell32: Pass FILE_INFORMATION into SHNotify* functions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "shell32: Implement file operation progress dialog.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "shell32: Show animation during SHFileOperation.", 1 },';
 	) >> "$patchlist"
 fi
 

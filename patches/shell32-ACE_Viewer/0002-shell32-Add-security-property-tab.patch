@@ -1,0 +1,515 @@
+From 4bfacb4f36a83c5b9cd5826742da89d305d1c1b3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 8 May 2017 23:33:45 +0200
+Subject: shell32: Add security property tab.
+
+---
+ dlls/shell32/Makefile.in     |   2 +-
+ dlls/shell32/shell32.rc      |  27 +++
+ dlls/shell32/shlview_cmenu.c | 383 +++++++++++++++++++++++++++++++++++++++++++
+ dlls/shell32/shresdef.h      |  27 +++
+ 4 files changed, 438 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/shell32/Makefile.in b/dlls/shell32/Makefile.in
+index b12d6169fb5..fd0b49a26d7 100644
+--- a/dlls/shell32/Makefile.in
++++ b/dlls/shell32/Makefile.in
+@@ -1,7 +1,7 @@
+ EXTRADEFS = -D_SHELL32_
+ MODULE    = shell32.dll
+ IMPORTLIB = shell32
+-IMPORTS   = uuid shlwapi user32 gdi32 advapi32
++IMPORTS   = uuid shlwapi user32 gdi32 advapi32 aclui
+ DELAYIMPORTS = ole32 oleaut32 shdocvw version comctl32 gdiplus
+ EXTRALIBS = $(CORESERVICES_LIBS)
+ # AUTHORS file is in the top-level directory
+diff --git a/dlls/shell32/shell32.rc b/dlls/shell32/shell32.rc
+index e11002db92e..11deef73f93 100644
+--- a/dlls/shell32/shell32.rc
++++ b/dlls/shell32/shell32.rc
+@@ -205,6 +205,33 @@ the folder?"
+         IDS_RUNDLG_BROWSE_FILTER_EXE "Executable files (*.exe)"
+         IDS_RUNDLG_BROWSE_FILTER_ALL "All files (*.*)"
+ 
++        /* Security dialog - General */
++        IDS_SECURITY_ALL_ACCESS "Full Control"
++        IDS_SECURITY_MODIFY     "Modify"
++        IDS_SECURITY_READ_EXEC  "Read & Execute"
++        IDS_SECURITY_READ       "Read"
++        IDS_SECURITY_WRITE      "Write"
++        IDS_SECURITY_DIR_LIST   "List Folder Contents"
++
++        /* Security dialog - Advanced */
++        IDS_SECURITY_TRAVERSE      "Traverse Folder"
++        IDS_SECURITY_EXECUTE       "Execute File"
++        IDS_SECURITY_LIST_FOLDER   "List Folder"
++        IDS_SECURITY_READ_DATA     "Read Data"
++        IDS_SECURITY_READ_ATTR     "Read Attributes"
++        IDS_SECURITY_READ_EX_ATTR  "Read Extended Attributes"
++        IDS_SECURITY_CREATE_FILES  "Create Files"
++        IDS_SECURITY_WRITE_DATA    "Write Data"
++        IDS_SEUCRITY_CREATE_FOLDER "Create Folders"
++        IDS_SECURITY_APPEND_DATA   "Append Data"
++        IDS_SECURITY_WRITE_ATTR    "Write Attributes"
++        IDS_SECURITY_WRITE_EX_ATTR "Write Extended Attributes"
++        IDS_SECURITY_DELETE_CHILD  "Delete Subfolders and Files"
++        IDS_SECURITY_DELETE        "Delete"
++        IDS_SECURITY_READ_PERM     "Read Permissions"
++        IDS_SECURITY_CHANGE_PERM   "Change Permissions"
++        IDS_SECURITY_CHANGE_OWNER  "Take Ownership"
++
+         /* shell folder path default values */
+ 	/* FIXME: Some will be unused until desktop.ini support is implemented */
+ 	IDS_PROGRAMS                "Programs"
+diff --git a/dlls/shell32/shlview_cmenu.c b/dlls/shell32/shlview_cmenu.c
+index 50b4da11014..7545c598b39 100644
+--- a/dlls/shell32/shlview_cmenu.c
++++ b/dlls/shell32/shlview_cmenu.c
+@@ -40,9 +40,128 @@
+ 
+ #include "shresdef.h"
+ #include "shlwapi.h"
++#include "aclui.h"
++#include "aclapi.h"
++
++/* Small hack: We need to remove DECLSPEC_HIDDEN from the aclui export. */
++const GUID IID_ISecurityInformation = {0x965fc360, 0x16ff, 0x11d0, {0x91, 0xcb, 0x0, 0xaa, 0x0, 0xbb, 0xb7, 0x23}};
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(shell);
+ 
++/* According to https://blogs.msdn.microsoft.com/oldnewthing/20070726-00/?p=25833 */
++static const SI_ACCESS access_rights_files[] =
++{
++    /* General access rights */
++    {
++        &GUID_NULL,
++        FILE_ALL_ACCESS, MAKEINTRESOURCEW(IDS_SECURITY_ALL_ACCESS),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_READ | FILE_GENERIC_WRITE | FILE_GENERIC_EXECUTE | DELETE,
++        MAKEINTRESOURCEW(IDS_SECURITY_MODIFY),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_READ | FILE_GENERIC_EXECUTE,
++        MAKEINTRESOURCEW(IDS_SECURITY_READ_EXEC),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_READ,
++        MAKEINTRESOURCEW(IDS_SECURITY_READ),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_WRITE & ~READ_CONTROL,
++        MAKEINTRESOURCEW(IDS_SECURITY_WRITE),
++        SI_ACCESS_GENERAL
++    },
++
++    /* Advanced permissions */
++    { &GUID_NULL, FILE_ALL_ACCESS,       MAKEINTRESOURCEW(IDS_SECURITY_ALL_ACCESS),    SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_EXECUTE,          MAKEINTRESOURCEW(IDS_SECURITY_EXECUTE),       SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_READ_DATA,        MAKEINTRESOURCEW(IDS_SECURITY_READ_DATA),     SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_READ_ATTRIBUTES,  MAKEINTRESOURCEW(IDS_SECURITY_READ_ATTR),     SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_READ_EA,          MAKEINTRESOURCEW(IDS_SECURITY_READ_EX_ATTR),  SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_WRITE_DATA,       MAKEINTRESOURCEW(IDS_SECURITY_WRITE_DATA),    SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_APPEND_DATA,      MAKEINTRESOURCEW(IDS_SECURITY_APPEND_DATA),   SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_WRITE_ATTRIBUTES, MAKEINTRESOURCEW(IDS_SECURITY_WRITE_ATTR),    SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_WRITE_EA,         MAKEINTRESOURCEW(IDS_SECURITY_WRITE_EX_ATTR), SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, DELETE,                MAKEINTRESOURCEW(IDS_SECURITY_DELETE),        SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, READ_CONTROL,          MAKEINTRESOURCEW(IDS_SECURITY_READ_PERM),     SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, WRITE_DAC,             MAKEINTRESOURCEW(IDS_SECURITY_CHANGE_PERM),   SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, WRITE_OWNER,           MAKEINTRESOURCEW(IDS_SECURITY_CHANGE_OWNER),  SI_ACCESS_SPECIFIC },
++};
++
++static const SI_ACCESS access_rights_directories[] =
++{
++    /* General access rights */
++    {
++        &GUID_NULL,
++        FILE_ALL_ACCESS,
++        MAKEINTRESOURCEW(IDS_SECURITY_ALL_ACCESS),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_READ | FILE_GENERIC_WRITE | FILE_GENERIC_EXECUTE | DELETE,
++        MAKEINTRESOURCEW(IDS_SECURITY_MODIFY),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_READ | FILE_GENERIC_EXECUTE,
++        MAKEINTRESOURCEW(IDS_SECURITY_DIR_LIST),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_READ,
++        MAKEINTRESOURCEW(IDS_SECURITY_READ),
++        SI_ACCESS_GENERAL
++    },
++    {
++        &GUID_NULL,
++        FILE_GENERIC_WRITE & ~READ_CONTROL,
++        MAKEINTRESOURCEW(IDS_SECURITY_WRITE),
++        SI_ACCESS_GENERAL
++    },
++
++    /* Advanced permissions */
++    { &GUID_NULL, FILE_ALL_ACCESS,       MAKEINTRESOURCEW(IDS_SECURITY_ALL_ACCESS),    SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_TRAVERSE,         MAKEINTRESOURCEW(IDS_SECURITY_TRAVERSE),      SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_LIST_DIRECTORY,   MAKEINTRESOURCEW(IDS_SECURITY_LIST_FOLDER),   SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_READ_ATTRIBUTES,  MAKEINTRESOURCEW(IDS_SECURITY_READ_ATTR),     SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_READ_EA,          MAKEINTRESOURCEW(IDS_SECURITY_READ_EX_ATTR),  SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_ADD_FILE,         MAKEINTRESOURCEW(IDS_SECURITY_CREATE_FILES),  SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_ADD_SUBDIRECTORY, MAKEINTRESOURCEW(IDS_SEUCRITY_CREATE_FOLDER), SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_WRITE_ATTRIBUTES, MAKEINTRESOURCEW(IDS_SECURITY_WRITE_ATTR),    SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_WRITE_EA,         MAKEINTRESOURCEW(IDS_SECURITY_WRITE_EX_ATTR), SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, FILE_DELETE_CHILD,     MAKEINTRESOURCEW(IDS_SECURITY_DELETE_CHILD),  SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, DELETE,                MAKEINTRESOURCEW(IDS_SECURITY_DELETE),        SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, READ_CONTROL,          MAKEINTRESOURCEW(IDS_SECURITY_READ_PERM),     SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, WRITE_DAC,             MAKEINTRESOURCEW(IDS_SECURITY_CHANGE_PERM),   SI_ACCESS_SPECIFIC },
++    { &GUID_NULL, WRITE_OWNER,           MAKEINTRESOURCEW(IDS_SECURITY_CHANGE_OWNER),  SI_ACCESS_SPECIFIC },
++};
++
++struct FileSecurity
++{
++    ISecurityInformation ISecurityInformation_iface;
++    LONG ref;
++    WCHAR *path;
++    BOOL directory;
++};
++
++static inline struct FileSecurity *impl_from_ISecurityInformation(ISecurityInformation *iface)
++{
++    return CONTAINING_RECORD(iface, struct FileSecurity, ISecurityInformation_iface);
++}
++
+ typedef struct
+ {
+     IContextMenu3 IContextMenu3_iface;
+@@ -684,6 +803,269 @@ error:
+     HeapFree(GetProcessHeap(), 0, props);
+ }
+ 
++static HRESULT WINAPI filesecurity_QueryInterface(ISecurityInformation *iface, REFIID riid, void **ppv)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    if (IsEqualGUID(&IID_IUnknown, riid))
++    {
++        TRACE("(%p)->(IID_IUnknown %p)\n", This, ppv);
++        *ppv = &This->ISecurityInformation_iface;
++    }
++    else if (IsEqualGUID(&IID_ISecurityInformation, riid))
++    {
++        TRACE("(%p)->(IID_ISecurityInformation %p)\n", This, ppv);
++        *ppv = &This->ISecurityInformation_iface;
++    }
++    else
++    {
++        *ppv = NULL;
++        WARN("Unsupported interface %s\n", debugstr_guid(riid));
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown *)*ppv);
++    return S_OK;
++}
++
++static ULONG WINAPI filesecurity_AddRef(ISecurityInformation *iface)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    TRACE("(%p)\n", This);
++
++    return InterlockedIncrement(&This->ref);
++}
++
++static ULONG WINAPI filesecurity_Release(ISecurityInformation *iface)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++    ULONG ref;
++
++    TRACE("(%p)\n", This);
++
++    ref = InterlockedDecrement(&This->ref);
++    if (!ref)
++    {
++        HeapFree(GetProcessHeap(), 0, This->path);
++        HeapFree(GetProcessHeap(), 0, This);
++    }
++
++    return ref;
++}
++
++static HRESULT WINAPI filesecurity_GetObjectInformation(ISecurityInformation *iface, SI_OBJECT_INFO *info)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    TRACE("(%p, %p)\n", This, info);
++
++    info->dwFlags = SI_ADVANCED;
++    info->hInstance = shell32_hInstance;
++    info->pszServerName = NULL;
++    info->pszObjectName = This->path;
++    info->pszPageTitle = NULL;
++    memcpy(&info->guidObjectType, &GUID_NULL, sizeof(GUID));
++
++    return S_OK;
++}
++
++static HRESULT WINAPI filesecurity_GetSecurity(ISecurityInformation *iface, SECURITY_INFORMATION info, PSECURITY_DESCRIPTOR *sd, BOOL default_sd)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    TRACE("(%p, %u, %p, %u)\n", This, info, sd, default_sd);
++
++    if (default_sd)
++        FIXME("Returning a default sd is not implemented\n");
++
++    if (GetNamedSecurityInfoW(This->path, SE_FILE_OBJECT, info, NULL, NULL, NULL, NULL, sd) != ERROR_SUCCESS)
++        return E_FAIL;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI filesecurity_SetSecurity(ISecurityInformation *iface, SECURITY_INFORMATION info, PSECURITY_DESCRIPTOR sd)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++    BOOL present, defaulted;
++    PSID owner, group;
++    ACL *dacl, *sacl;
++
++    TRACE("(%p, %u, %p)\n", This, info, sd);
++
++    if (!GetSecurityDescriptorOwner(sd, &owner, &defaulted))
++        return E_FAIL;
++
++    if (!GetSecurityDescriptorGroup(sd, &group, &defaulted))
++        return E_FAIL;
++
++    if (!GetSecurityDescriptorDacl(sd, &present, &dacl, &defaulted))
++        return E_FAIL;
++    if (!present) dacl = NULL;
++
++    if (!GetSecurityDescriptorSacl(sd, &present, &sacl, &defaulted))
++        return E_FAIL;
++    if (!present) sacl = NULL;
++
++    if (SetNamedSecurityInfoW(This->path, SE_FILE_OBJECT, info, owner, group, dacl, sacl) != ERROR_SUCCESS)
++        return E_FAIL;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI filesecurity_GetAccessRights(ISecurityInformation *iface, const GUID* type, DWORD flags, SI_ACCESS **access,
++                                                   ULONG *count, ULONG *default_access )
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    TRACE("(%p, %s, %x, %p, %p, %p)\n", This, debugstr_guid(type), flags, access, count, default_access);
++
++    if (This->directory)
++    {
++        *access = (SI_ACCESS *)access_rights_directories;
++        *count = sizeof(access_rights_directories) / sizeof(access_rights_directories[0]);
++    }
++    else
++    {
++        *access = (SI_ACCESS *)access_rights_files;
++        *count = sizeof(access_rights_files) / sizeof(access_rights_files[0]);
++    }
++
++    *default_access = 0;
++    return S_OK;
++}
++
++static HRESULT WINAPI filesecurity_MapGeneric(ISecurityInformation *iface, const GUID *type, UCHAR *ace_flags, ACCESS_MASK *mask)
++{
++    static GENERIC_MAPPING file_access_map =
++    {
++        FILE_GENERIC_READ,
++        FILE_GENERIC_WRITE,
++        FILE_GENERIC_EXECUTE,
++        FILE_ALL_ACCESS
++    };
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    FIXME("(%p, %s, %p, %p): semi-stub!\n", This, debugstr_guid(type), ace_flags, mask);
++
++    MapGenericMask((DWORD*)mask, &file_access_map);
++    return S_OK;
++}
++
++static HRESULT WINAPI filesecurity_GetInheritTypes(ISecurityInformation *iface, PSI_INHERIT_TYPE *types, ULONG *count)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    FIXME("(%p, %p, %p): stub!\n", This, types, count);
++
++    *types = NULL;
++    *count = 0;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI filesecurity_PropertySheetPageCallback(ISecurityInformation *iface, HWND hwnd, UINT msg, SI_PAGE_TYPE page)
++{
++    struct FileSecurity *This = impl_from_ISecurityInformation(iface);
++
++    TRACE("(%p, %p, %u, %u)\n", This, hwnd, msg, page);
++    return S_OK;
++}
++
++static const struct ISecurityInformationVtbl filesecurity_vtbl =
++{
++    /* IUnknown */
++    filesecurity_QueryInterface,
++    filesecurity_AddRef,
++    filesecurity_Release,
++    /* ISecurityInformation */
++    filesecurity_GetObjectInformation,
++    filesecurity_GetSecurity,
++    filesecurity_SetSecurity,
++    filesecurity_GetAccessRights,
++    filesecurity_MapGeneric,
++    filesecurity_GetInheritTypes,
++    filesecurity_PropertySheetPageCallback,
++};
++
++static ISecurityInformation *create_filesecurity_information(WCHAR *path, BOOL directory)
++{
++    struct FileSecurity *security;
++    DWORD len;
++
++    security = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*security));
++    if (!security) return NULL;
++
++    security->ISecurityInformation_iface.lpVtbl = &filesecurity_vtbl;
++    security->ref = 1;
++    security->directory = directory;
++
++    len = (strlenW(path) + 1) * sizeof(WCHAR);
++    security->path = HeapAlloc(GetProcessHeap(), 0, len);
++    if (!security->path) goto error;
++
++    memcpy(security->path, path, len);
++    return &security->ISecurityInformation_iface;
++
++error:
++    HeapFree(GetProcessHeap(), 0, security);
++    return NULL;
++}
++
++static void init_security_properties_pages(IDataObject *pDo, LPFNADDPROPSHEETPAGE lpfnAddPage, LPARAM lParam)
++{
++    ISecurityInformation *security;
++    HPROPSHEETPAGE security_page;
++    FORMATETC format;
++    STGMEDIUM stgm;
++    DWORD attrib;
++    WCHAR *path;
++    UINT len;
++
++    format.cfFormat = CF_HDROP;
++    format.ptd      = NULL;
++    format.dwAspect = DVASPECT_CONTENT;
++    format.lindex   = -1;
++    format.tymed    = TYMED_HGLOBAL;
++
++    if (FAILED(IDataObject_GetData(pDo, &format, &stgm)))
++        return;
++
++    if (!(len = DragQueryFileW((HDROP)stgm.DUMMYUNIONNAME.hGlobal, 0, NULL, 0)))
++    {
++        ReleaseStgMedium(&stgm);
++        return;
++    }
++
++    if (!(path = HeapAlloc(GetProcessHeap(), 0, (len + 1) * sizeof(WCHAR))))
++    {
++        ReleaseStgMedium(&stgm);
++        return;
++    }
++
++    len = DragQueryFileW((HDROP)stgm.DUMMYUNIONNAME.hGlobal, 0, path, len + 1);
++    ReleaseStgMedium(&stgm);
++    if (!len) goto done;
++
++    attrib = GetFileAttributesW(path);
++    if (attrib == INVALID_FILE_ATTRIBUTES)
++        goto done;
++
++    if (!(security = create_filesecurity_information(path, attrib & FILE_ATTRIBUTE_DIRECTORY)))
++        goto done;
++
++    security_page = CreateSecurityPage(security);
++    IUnknown_Release((IUnknown *)security);
++    if (!security_page) goto done;
++
++    lpfnAddPage(security_page, lParam);
++
++done:
++    HeapFree(GetProcessHeap(), 0, path);
++}
++
++
+ #define MAX_PROP_PAGES 99
+ 
+ static void DoOpenProperties(ContextMenu *This, HWND hwnd)
+@@ -766,6 +1148,7 @@ static void DoOpenProperties(ContextMenu *This, HWND hwnd)
+     if (SUCCEEDED(ret))
+     {
+         init_file_properties_pages(lpDo, Properties_AddPropSheetCallback, (LPARAM)&psh);
++        init_security_properties_pages(lpDo, Properties_AddPropSheetCallback, (LPARAM)&psh);
+ 
+         hpsxa = SHCreatePropSheetExtArrayEx(HKEY_CLASSES_ROOT, wszFiletype, MAX_PROP_PAGES - psh.nPages, lpDo);
+         if (hpsxa != NULL)
+diff --git a/dlls/shell32/shresdef.h b/dlls/shell32/shresdef.h
+index 1445077b86e..974da3c7ab5 100644
+--- a/dlls/shell32/shresdef.h
++++ b/dlls/shell32/shresdef.h
+@@ -157,6 +157,33 @@
+ #define IDS_FILEOP_FROM             337
+ #define IDS_FILEOP_PREFLIGHT        338
+ 
++/* Strings for security dialog - General */
++#define IDS_SECURITY_ALL_ACCESS     340
++#define IDS_SECURITY_MODIFY         341
++#define IDS_SECURITY_READ_EXEC      342
++#define IDS_SECURITY_READ           343
++#define IDS_SECURITY_WRITE          344
++#define IDS_SECURITY_DIR_LIST       345
++
++/* Strings for security dialog - Advanced */
++#define IDS_SECURITY_TRAVERSE       346
++#define IDS_SECURITY_EXECUTE        347
++#define IDS_SECURITY_LIST_FOLDER    348
++#define IDS_SECURITY_READ_DATA      349
++#define IDS_SECURITY_READ_ATTR      350
++#define IDS_SECURITY_READ_EX_ATTR   351
++#define IDS_SECURITY_CREATE_FILES   352
++#define IDS_SECURITY_WRITE_DATA     353
++#define IDS_SEUCRITY_CREATE_FOLDER  354
++#define IDS_SECURITY_APPEND_DATA    355
++#define IDS_SECURITY_WRITE_ATTR     356
++#define IDS_SECURITY_WRITE_EX_ATTR  357
++#define IDS_SECURITY_DELETE_CHILD   358
++#define IDS_SECURITY_DELETE         359
++#define IDS_SECURITY_READ_PERM      360
++#define IDS_SECURITY_CHANGE_PERM    361
++#define IDS_SECURITY_CHANGE_OWNER   362
++
+ /* Note: this string is referenced from the registry*/
+ #define IDS_RECYCLEBIN_FOLDER_NAME   8964
+ 
+-- 
+2.12.2
+

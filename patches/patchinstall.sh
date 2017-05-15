@@ -7748,9 +7748,6 @@ fi
 
 # Patchset user32-GetAutoRotationState
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42106] Implement user32.GetAutoRotationState
-# |
 # | Modified files:
 # |   *	dlls/user32/sysparams.c, dlls/user32/tests/sysparams.c
 # |

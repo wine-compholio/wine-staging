@@ -1,0 +1,86 @@
+From 1908c1582fcd927a08c0aa7b0a6c1e11c614942f Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 31 Mar 2017 13:53:14 +0800
+Subject: propsys: Add support for VT_LPSTR and VT_LPWSTR to
+ PropVariantCompareEx. (v2)
+
+---
+ dlls/propsys/propvar.c       | 28 ++++++++++++++++++++++++++--
+ dlls/propsys/tests/propsys.c |  4 ++--
+ 2 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/propsys/propvar.c b/dlls/propsys/propvar.c
+index 8233d2f362f..0c366d5a053 100644
+--- a/dlls/propsys/propvar.c
++++ b/dlls/propsys/propvar.c
+@@ -18,8 +18,12 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
++#include "config.h"
++#include "wine/port.h"
++
+ #include <stdarg.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ 
+ #define NONAMELESSUNION
+ 
+@@ -112,6 +116,15 @@ static HRESULT PROPVAR_ConvertNumber(REFPROPVARIANT pv, int dest_bits,
+         src_signed = FALSE;
+         *res = 0;
+         break;
++    case VT_LPSTR:
++        *res = strtoll(pv->u.pszVal, NULL, 0);
++        src_signed = *res < 0;
++        break;
++    case VT_LPWSTR:
++    case VT_BSTR:
++        *res = strtolW(pv->u.pwszVal, NULL, 0);
++        src_signed = *res < 0;
++        break;
+     default:
+         FIXME("unhandled vt %d\n", pv->vt);
+         return E_NOTIMPL;
+@@ -698,8 +711,19 @@ INT WINAPI PropVariantCompareEx(REFPROPVARIANT propvar1, REFPROPVARIANT propvar2
+         CMP_INT_VALUE(uhVal.QuadPart);
+         break;
+     case VT_BSTR:
+-        /* FIXME: Use string flags. */
+-        res = lstrcmpW(propvar1->u.bstrVal, propvar2->u.bstrVal);
++    case VT_LPWSTR:
++        /* FIXME: Use other string flags. */
++        if (flags & (PVCF_USESTRCMPI | PVCF_USESTRCMPIC))
++            res = lstrcmpiW(propvar1->u.bstrVal, propvar2_converted->u.bstrVal);
++        else
++            res = lstrcmpW(propvar1->u.bstrVal, propvar2_converted->u.bstrVal);
++        break;
++    case VT_LPSTR:
++        /* FIXME: Use other string flags. */
++        if (flags & (PVCF_USESTRCMPI | PVCF_USESTRCMPIC))
++            res = lstrcmpiA(propvar1->u.pszVal, propvar2_converted->u.pszVal);
++        else
++            res = lstrcmpA(propvar1->u.pszVal, propvar2_converted->u.pszVal);
+         break;
+     default:
+         FIXME("vartype %d not handled\n", propvar1->vt);
+diff --git a/dlls/propsys/tests/propsys.c b/dlls/propsys/tests/propsys.c
+index 71b6a93df17..54b45ace9bd 100644
+--- a/dlls/propsys/tests/propsys.c
++++ b/dlls/propsys/tests/propsys.c
+@@ -735,10 +735,10 @@ static void test_PropVariantCompare(void)
+     ok(res == 0, "res=%i\n", res);
+ 
+     res = PropVariantCompareEx(&i2_2, &str_2, 0, 0);
+-    todo_wine ok(res == 0, "res=%i\n", res);
++    ok(res == 0, "res=%i\n", res);
+ 
+     res = PropVariantCompareEx(&i2_2, &str_02, 0, 0);
+-    todo_wine ok(res == 0, "res=%i\n", res);
++    ok(res == 0, "res=%i\n", res);
+ 
+     res = PropVariantCompareEx(&str_2, &i2_2, 0, 0);
+     todo_wine ok(res == 0, "res=%i\n", res);
+-- 
+2.12.2
+

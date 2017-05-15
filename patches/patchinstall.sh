@@ -411,6 +411,7 @@ patch_enable_all ()
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_ProxySettings="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
+	enable_winebuild_Fake_Dlls="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
@@ -1464,6 +1465,9 @@ patch_enable ()
 		wineboot-drivers_etc_Stubs)
 			enable_wineboot_drivers_etc_Stubs="$2"
 			;;
+		winebuild-Fake_Dlls)
+			enable_winebuild_Fake_Dlls="$2"
+			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
 			;;
@@ -2082,6 +2086,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Buffer_Upload=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_Interrupt_0x2e" -gt 1; then
+		abort "Patchset ntdll-Interrupt-0x2e disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	enable_ntdll_Interrupt_0x2e=1
 fi
 
 if test "$enable_wineboot_ProxySettings" -eq 1; then
@@ -8537,6 +8548,33 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wineboot: Initialize proxy settings registry key.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winebuild-Fake_Dlls
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Interrupt-0x2e
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42741] Various improvements for fake dlls
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c, tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c,
+# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# |
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	patch_apply winebuild-Fake_Dlls/0001-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
+	patch_apply winebuild-Fake_Dlls/0002-winebuild-Use-Windows-7-WOW64-signature-for-syscall-.patch
+	patch_apply winebuild-Fake_Dlls/0003-winebuild-Use-multipass-label-system-to-generate-fak.patch
+	patch_apply winebuild-Fake_Dlls/0004-winebuild-Add-stub-functions-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-syscall-thunks-in-fake-dlls.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Use Windows 7 WOW64 signature for syscall thunks.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
 	) >> "$patchlist"
 fi
 

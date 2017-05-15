@@ -1,0 +1,246 @@
+From d9cb75b157dd6929d99c5a7b0b37639d87cfa0dd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 15 May 2017 16:27:56 +0200
+Subject: winebuild: Add stub functions in fake dlls.
+
+---
+ dlls/ntdll/signal_i386.c |  17 +++++++
+ tools/winebuild/build.h  |   1 +
+ tools/winebuild/spec32.c | 117 ++++++++++++++++++++++++++++++++++++++++++++++-
+ tools/winebuild/utils.c  |  10 +++-
+ 4 files changed, 141 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index 115f48d3dd1..3730afd38e0 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -1904,6 +1904,20 @@ static inline DWORD get_fpu_code( const CONTEXT *context )
+     return EXCEPTION_FLT_INVALID_OPERATION;  /* generic error */
+ }
+ 
++static void fakedll_stub ( CONTEXT *context )
++{
++    EXCEPTION_RECORD record;
++
++    record.ExceptionCode    = EXCEPTION_WINE_STUB;
++    record.ExceptionFlags   = EH_NONCONTINUABLE;
++    record.ExceptionRecord  = NULL;
++    record.ExceptionAddress = (void*)context->Eip;
++    record.NumberParameters = 2;
++    record.ExceptionInformation[0] = (ULONG_PTR)context->Ecx;
++    record.ExceptionInformation[1] = (ULONG_PTR)context->Edx;
++
++    for (;;) NtRaiseException( &record, context, TRUE );
++}
+ 
+ /**********************************************************************
+  *		raise_segv_exception
+@@ -1963,6 +1977,9 @@ static void WINAPI raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context
+         }
+         break;
+     case EXCEPTION_WINE_SYSCALL:
++        if (rec->ExceptionInformation[0] == 0xdeadc0de)
++            fakedll_stub( context );
++
+         FIXME("unimplemented syscall handler for 0x%lx, stack 0x%lx\n",
+               rec->ExceptionInformation[0], rec->ExceptionInformation[1]);
+         context->Eax = STATUS_INVALID_SYSTEM_SERVICE;
+diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
+index 3434cfe9c90..e76800bb5da 100644
+--- a/tools/winebuild/build.h
++++ b/tools/winebuild/build.h
+@@ -343,6 +343,7 @@ extern void put_word( unsigned short val );
+ extern void put_dword( unsigned int val );
+ extern void put_qword( unsigned int val );
+ extern void put_pword( unsigned int val );
++extern void put_str( const char *str );
+ extern void align_output( unsigned int align );
+ extern void align_output_rva( unsigned int file_align, unsigned int rva_align );
+ extern size_t label_pos( const char *name );
+diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
+index bc47cd7b32e..e2f7dcf43e0 100644
+--- a/tools/winebuild/spec32.c
++++ b/tools/winebuild/spec32.c
+@@ -701,6 +701,113 @@ void BuildSpec32File( DLLSPEC *spec )
+ }
+ 
+ 
++static void create_stub_exports_x86( DLLSPEC *spec )
++{
++    static const unsigned char dll_main[] = { 0xb8, 0x01, 0x00, 0x00, 0x00, /* mov eax, 0x1 */
++                                              0xc2, 0x0c, 0x00 };           /* ret 12 */
++    int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
++
++    /* entry function */
++    put_data( dll_main, sizeof(dll_main) );
++
++    if (!nr_exports) return;
++
++    /* pic thunk function */
++    align_output_rva( 16, 16 );
++    put_label( "_thunk_eax" );
++    put_byte( 0x8b ); put_byte( 0x04 ); put_byte( 0x24 ); /* mov eax, dword[esp] */
++    put_byte( 0xc3 );                                     /* ret */
++
++    /* output stub code for exports */
++    for (i = 0; i < spec->nb_entry_points; i++)
++    {
++        ORDDEF *odp = &spec->entry_points[i];
++        const char *name = get_stub_name( odp, spec );
++        size_t rva;
++
++        align_output_rva( 16, 16 );
++        put_label( name );
++
++        put_byte( 0x8b ); put_byte( 0xff );                           /* mov edi, edi */
++        put_byte( 0x55 );                                             /* push ebp */
++        put_byte( 0x8b ); put_byte( 0xec );                           /* mov ebp, esp */
++        rva = output_buffer_rva + 5;
++        put_byte( 0xe8 ); put_dword( label_rva("_thunk_eax") - rva ); /* call _thunk_eax */
++        put_byte( 0x8d ); put_byte( 0x88 );                           /* lea ecx, [eax + dll_name] */
++        put_dword( label_rva("dll_fake_name") - rva );
++        if (!odp->name || (odp->flags & FLAG_NONAME))
++        {
++            put_byte( 0xba ); put_dword( odp->ordinal );              /* mov edx, ordinal */
++        }
++        else
++        {
++            put_byte( 0x8d ); put_byte( 0x90 );                       /* lea edx, [eax + func_name] */
++            put_dword( label_rva(strmake("str_%s", name)) - rva );
++        }
++        put_byte( 0xb8 ); put_dword( 0xdeadc0de );                    /* mov eax, 0xdeadc0de */
++        put_byte( 0xcd ); put_byte( 0x2e );                           /* int 0x2e */
++        put_byte( 0x5d );                                             /* pop ebp */
++        put_byte( 0xc3 );                                             /* ret */
++    }
++
++    /* name to show in stub message */
++    align_output_rva( 16, 16 );
++    put_label( "dll_fake_name" );
++    put_str( strmake("(fake) %s", spec->file_name) );
++
++    /* export directory */
++    align_output_rva( 16, 16 );
++    put_label( "export_start" );
++    put_dword( 0 );                             /* Characteristics */
++    put_dword( 0 );                             /* TimeDateStamp */
++    put_dword( 0 );                             /* MajorVersion/MinorVersion */
++    put_dword( label_rva("dll_name") );         /* Name */
++    put_dword( spec->base );                    /* Base */
++    put_dword( nr_exports );                    /* NumberOfFunctions */
++    put_dword( spec->nb_names );                /* NumberOfNames */
++    put_dword( label_rva("export_funcs") );     /* AddressOfFunctions */
++    put_dword( label_rva("export_names") );     /* AddressOfNames */
++    put_dword( label_rva("export_ordinals") );  /* AddressOfNameOrdinals */
++
++    put_label( "export_funcs" );
++    for (i = spec->base; i <= spec->limit; i++)
++    {
++        ORDDEF *odp = spec->ordinals[i];
++        if (odp)
++        {
++            const char *name = get_stub_name( odp, spec );
++            put_dword( label_rva( name ) );
++        }
++        else
++            put_dword( 0 );
++    }
++
++    if (spec->nb_names)
++    {
++        put_label( "export_names" );
++        for (i = 0; i < spec->nb_names; i++)
++            put_dword( label_rva(strmake("str_%s", get_stub_name(spec->names[i], spec))) );
++
++        put_label( "export_ordinals" );
++        for (i = 0; i < spec->nb_names; i++)
++            put_word( spec->names[i]->ordinal - spec->base );
++        if (spec->nb_names % 2)
++            put_word( 0 );
++    }
++
++    put_label( "dll_name" );
++    put_str( spec->file_name );
++
++    for (i = 0; i < spec->nb_names; i++)
++    {
++        put_label( strmake("str_%s", get_stub_name(spec->names[i], spec)) );
++        put_str( spec->names[i]->name );
++    }
++
++    put_label( "export_end" );
++}
++
++
+ /*******************************************************************
+  *         output_fake_module_pass
+  *
+@@ -799,7 +906,8 @@ static void output_fake_module_pass( DLLSPEC *spec )
+     put_dword( 0 );                                  /* LoaderFlags */
+     put_dword( 16 );                                 /* NumberOfRvaAndSizes */
+ 
+-    put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT] */
++    put_dword( label_rva("export_start") ); /* DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT] */
++    put_dword( label_pos("export_end") - label_pos("export_start") );
+     put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] */
+     if (spec->nb_resources)           /* DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE] */
+     {
+@@ -873,7 +981,12 @@ static void output_fake_module_pass( DLLSPEC *spec )
+     align_output_rva( file_align, section_align );
+     put_label( "text_start" );
+     if (spec->characteristics & IMAGE_FILE_DLL)
+-        put_data( dll_code_section, sizeof(dll_code_section) );
++    {
++        if (target_cpu == CPU_x86)
++            create_stub_exports_x86( spec );
++        else
++            put_data( dll_code_section, sizeof(dll_code_section) );
++    }
+     else
+         put_data( exe_code_section, sizeof(exe_code_section) );
+     put_label( "text_end" );
+diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
+index eada46604ec..b37ce9dc16f 100644
+--- a/tools/winebuild/utils.c
++++ b/tools/winebuild/utils.c
+@@ -525,7 +525,7 @@ size_t output_buffer_size;
+ struct label
+ {
+     struct list entry;
+-    const char *name;
++    char *name;
+     size_t pos;
+     size_t rva;
+ };
+@@ -543,7 +543,7 @@ struct label *get_label( const char *name )
+     }
+ 
+     label = xmalloc( sizeof(*label) );
+-    label->name = name;
++    label->name = xstrdup( name );
+     label->pos = 0;
+     label->rva = 0;
+ 
+@@ -595,6 +595,7 @@ void free_labels( void )
+     LIST_FOR_EACH_ENTRY_SAFE( label, label2, &labels, struct label, entry )
+     {
+         list_remove( &label->entry );
++        free( label->name );
+         free( label );
+     }
+ }
+@@ -729,6 +730,11 @@ void put_pword( unsigned int val )
+     else put_dword( val );
+ }
+ 
++void put_str( const char *str )
++{
++    put_data( str, strlen(str)+1 );
++}
++
+ void align_output( unsigned int align )
+ {
+     size_t size = align - (output_buffer_pos % align);
+-- 
+2.12.2
+

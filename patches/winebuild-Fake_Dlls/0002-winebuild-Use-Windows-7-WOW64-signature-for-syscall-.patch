@@ -1,0 +1,90 @@
+From a4aa8b13ef33ed01128652be1feaf6a98920372b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 12 May 2017 04:05:24 +0200
+Subject: winebuild: Use Windows 7 WOW64 signature for syscall thunks.
+
+---
+ dlls/ntdll/signal_i386.c |  2 ++
+ tools/winebuild/spec32.c | 32 ++++++++++++++++++++++++++------
+ 2 files changed, 28 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index ac98ed0dba0..115f48d3dd1 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -481,6 +481,7 @@ static wine_signal_handler handlers[256];
+ static BOOL fpux_support;  /* whether the CPU supports extended fpu context */
+ 
+ extern void DECLSPEC_NORETURN __wine_restore_regs( const CONTEXT *context );
++extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
+ 
+ enum i386_trap_code
+ {
+@@ -2396,6 +2397,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+         *teb = addr;
+         (*teb)->Tib.Self = &(*teb)->Tib;
+         (*teb)->Tib.ExceptionList = (void *)~0UL;
++        (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
+         thread_data = (struct ntdll_thread_data *)(*teb)->SpareBytes1;
+         if (!(thread_data->fs = wine_ldt_alloc_fs()))
+         {
+diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
+index 541c01f2006..7e08b756df4 100644
+--- a/tools/winebuild/spec32.c
++++ b/tools/winebuild/spec32.c
+@@ -298,26 +298,46 @@ static void output_syscall_thunks( DLLSPEC *spec )
+         output( "\t%s\n", func_declaration(name) );
+         output( "%s\n", asm_globl(name) );
+         output_cfi( ".cfi_startproc" );
+-        output( "\tmovl $%s, %%eax\n", asm_name(odp->impl_name) );
+-        output( "\tmovl $__wine_syscall_dispatcher, %%edx\n" );
+-        output( "\tcall *%%edx\n" );
+-        output( "\tret $%d\n", get_args_size(odp) );
++        output( "\t.byte 0xb8\n" );                               /* mov eax, SYSCALL */
++        output( "\t.long %d\n", i );
++        output( "\t.byte 0x33,0xc9\n" );                          /* xor ecx, ecx */
++        output( "\t.byte 0x8d,0x54,0x24,0x04\n" );                /* lea edx, [esp + 4] */
++        output( "\t.byte 0x64,0xff,0x15,0xc0,0x00,0x00,0x00\n" ); /* call dword ptr fs:[0C0h] */
++        output( "\t.byte 0x83,0xc4,0x04\n" );                     /* add esp, 4 */
++        output( "\t.byte 0xc2\n" );                               /* ret X */
++        output( "\t.short %d\n", get_args_size(odp) );
+         output_cfi( ".cfi_endproc" );
+         output_function_size( name );
+ 
+         free( name );
+     }
+ 
++    output( "\n/* syscall table */\n\n" );
++    output( "\t.data\n" );
++    output( "%s\n", asm_globl("__wine_syscall_table") );
++    for (i = 0; i < spec->nb_syscalls; i++)
++    {
++        ORDDEF *odp = spec->syscalls[i];
++        output ("\t%s %s\n", get_asm_ptr_keyword(), asm_name(odp->impl_name) );
++    }
++
++    output( "\n/* syscall dispatcher */\n\n" );
++    output( "\t.text\n" );
+     output( "\t.align %d\n", get_alignment(16) );
+     output( "\t%s\n", func_declaration("__wine_syscall_dispatcher") );
+     output( "%s\n", asm_globl("__wine_syscall_dispatcher") );
+     output_cfi( ".cfi_startproc" );
+     output( "\tadd $4, %%esp\n" );
+-    output( "\tjmp *%%eax\n" );
++    if (UsePIC)
++    {
++        output( "\tcall 1f\n" );
++        output( "1:\tpopl %%ecx\n" );
++        output( "\tjmpl *(%s-1b)(%%ecx,%%eax,%d)\n", asm_name("__wine_syscall_table"), get_ptr_size() );
++    }
++    else output( "\tjmpl *%s(,%%eax,4)\n", asm_name("__wine_syscall_table") );
+     output( "\tret\n" );
+     output_cfi( ".cfi_endproc" );
+     output_function_size( "__wine_syscall_dispatcher" );
+-    output( "\t.previous\n" );
+ }
+ 
+ /*******************************************************************
+-- 
+2.12.2
+

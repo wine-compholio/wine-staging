@@ -1,4 +1,4 @@
-From 8350a72d2ef7ff70d6e9a7769a3f61b25d687e16 Mon Sep 17 00:00:00 2001
+From 93a459d285bde2b97a7c333a76e6a2e788a52a5e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: winebuild: Generate syscall thunks for ntdll exports.
@@ -9,9 +9,9 @@ Based on a patch by Erich E. Hoover.
  tools/winebuild/import.c | 10 ++++----
  tools/winebuild/parser.c | 59 ++++++++++++++++++++++++++++++++++++++++++++++++
  tools/winebuild/spec16.c | 22 +-----------------
- tools/winebuild/spec32.c | 48 +++++++++++++++++++++++++++++++++++++++
+ tools/winebuild/spec32.c | 45 ++++++++++++++++++++++++++++++++++++
  tools/winebuild/utils.c  | 21 +++++++++++++++++
- 6 files changed, 141 insertions(+), 25 deletions(-)
+ 6 files changed, 138 insertions(+), 25 deletions(-)
 
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
 index 398d54200c7..e338c9c8024 100644
@@ -230,10 +230,10 @@ index 85bcf099999..54aad5d95b4 100644
          entry_point->u.func.nb_args = 0;
          assert( !spec->ordinals[0] );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index f3feb0f3300..541c01f2006 100644
+index f3feb0f3300..fbde7ce6937 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -274,6 +274,53 @@ static void output_relay_debug( DLLSPEC *spec )
+@@ -274,6 +274,50 @@ static void output_relay_debug( DLLSPEC *spec )
  }
  
  /*******************************************************************
@@ -243,7 +243,6 @@ index f3feb0f3300..541c01f2006 100644
 + */
 +static void output_syscall_thunks( DLLSPEC *spec )
 +{
-+    char *name;
 +    int i;
 +
 +    if (!spec->nb_syscalls)
@@ -255,7 +254,7 @@ index f3feb0f3300..541c01f2006 100644
 +    for (i = 0; i < spec->nb_syscalls; i++)
 +    {
 +        ORDDEF *odp = spec->syscalls[i];
-+        name = xstrdup(asm_name(odp->link_name));
++        const char *name = odp->link_name;
 +
 +        output( "\t.align %d\n", get_alignment(16) );
 +        output( "\t%s\n", func_declaration(name) );
@@ -267,8 +266,6 @@ index f3feb0f3300..541c01f2006 100644
 +        output( "\tret $%d\n", get_args_size(odp) );
 +        output_cfi( ".cfi_endproc" );
 +        output_function_size( name );
-+
-+        free( name );
 +    }
 +
 +    output( "\t.align %d\n", get_alignment(16) );
@@ -287,7 +284,7 @@ index f3feb0f3300..541c01f2006 100644
   *         output_exports
   *
   * Output the export table for a Win32 module.
-@@ -624,6 +671,7 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -624,6 +668,7 @@ void BuildSpec32File( DLLSPEC *spec )
      output_standard_file_header();
      output_module( spec );
      output_stubs( spec );

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3f01ab4c39ffa50e26916a5f33d82dec1a2e42dc"
+	echo "b8a8e1bde9382897927945ec0b58b8a2fcfcfe59"
 }
 
 # Show version information
@@ -8868,9 +8868,8 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/resource.c, dlls/wined3d/surface.c,
-# | 	dlls/wined3d/swapchain.c, dlls/wined3d/texture.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c,
-# | 	dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c,
+# | 	dlls/wined3d/texture.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
@@ -8878,8 +8877,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Introduce a separate priority queue.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for maps/unmaps.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';

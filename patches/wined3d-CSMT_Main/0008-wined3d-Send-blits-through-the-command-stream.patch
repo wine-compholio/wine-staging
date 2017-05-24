@@ -1,4 +1,4 @@
-From ee2d4cc10c524a813e4eefcf3935c63479bb84be Mon Sep 17 00:00:00 2001
+From 443951f5ef3359b18334b50d72724f99ce77f72e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Stefan=20D=C3=B6singer?= <stefan@codeweavers.com>
 Date: Mon, 29 Apr 2013 18:49:53 +0200
 Subject: wined3d: Send blits through the command stream.
@@ -11,10 +11,10 @@ between surface_blt and surface_blt_ugly isn't particularly nice.
  2 files changed, 18 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index cbb0406dccf..613df2077a5 100644
+index cf446c7cd17..b3fea23c821 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4199,16 +4199,17 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4241,16 +4241,17 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
              return WINED3DERR_INVALIDCALL;
          }
  
@@ -31,7 +31,7 @@ index cbb0406dccf..613df2077a5 100644
 -            WARN("Source sub-resource %u is mapped.\n", src_sub_resource_idx);
 -            return WINED3DERR_INVALIDCALL;
 +            struct wined3d_device *device = dst_texture->resource.device;
-+            device->cs->ops->finish(device->cs);
++            device->cs->ops->finish(device->cs, WINED3D_CS_QUEUE_DEFAULT);
 +            if (dst_texture->sub_resources[dst_sub_resource_idx].map_count ||
 +                src_texture->sub_resources[src_sub_resource_idx].map_count)
 +            {
@@ -42,7 +42,7 @@ index cbb0406dccf..613df2077a5 100644
  
          if (!src_box)
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index ebc317bd43d..d43ee068a30 100644
+index a77c9835bbb..55cc49be5e0 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
 @@ -3231,8 +3231,14 @@ HRESULT CDECL wined3d_texture_blt(struct wined3d_texture *dst_texture, unsigned
@@ -52,7 +52,7 @@ index ebc317bd43d..d43ee068a30 100644
 -        WARN("Sub-resource is busy, returning WINEDDERR_SURFACEBUSY.\n");
 -        return WINEDDERR_SURFACEBUSY;
 +        struct wined3d_device *device = dst_texture->resource.device;
-+        device->cs->ops->finish(device->cs);
++        device->cs->ops->finish(device->cs, WINED3D_CS_QUEUE_DEFAULT);
 +        if (dst_texture->sub_resources[dst_sub_resource_idx].map_count
 +                || (src_texture && src_texture->sub_resources[src_sub_resource_idx].map_count))
 +        {

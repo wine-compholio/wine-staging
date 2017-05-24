@@ -1,31 +1,44 @@
-From 9316955f860efa52c6b58edb4998c120bd43c377 Mon Sep 17 00:00:00 2001
+From 606dbb843b9fc141ba8c904798d542696d82af32 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 12 Feb 2017 00:08:28 +0100
 Subject: wined3d: Use priority queue for update_sub_resource.
 
 ---
- dlls/wined3d/cs.c     | 2 +-
+ dlls/wined3d/cs.c     | 6 +++---
  dlls/wined3d/device.c | 2 ++
- 2 files changed, 3 insertions(+), 1 deletion(-)
+ 2 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index f146cbe4633..8dea530b413 100644
+index 6bd6f3ed056..b20008d55e7 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -2143,7 +2143,7 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+@@ -2139,7 +2139,7 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
  {
      struct wined3d_cs_update_sub_resource *op;
  
--    op = cs->ops->require_space(cs, sizeof(*op), 0);
-+    op = cs->ops->require_space(cs, sizeof(*op), 1);
+-    op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_DEFAULT);
++    op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_MAP);
      op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
      op->resource = resource;
      op->sub_resource_idx = sub_resource_idx;
+@@ -2150,10 +2150,10 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+ 
+     wined3d_resource_acquire(resource);
+ 
+-    cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
++    cs->ops->submit(cs, WINED3D_CS_QUEUE_MAP);
+     /* The data pointer may go away, so we need to wait until it is read.
+      * Copying the data may be faster if it's small. */
+-    cs->ops->finish(cs, WINED3D_CS_QUEUE_DEFAULT);
++    cs->ops->finish(cs, WINED3D_CS_QUEUE_MAP);
+ }
+ 
+ static void wined3d_cs_exec_add_dirty_texture_region(struct wined3d_cs *cs, const void *data)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 07d5970e4b3..56d52952a10 100644
+index d3b9a1b55b1..24bc2ba54b2 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4286,6 +4286,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4297,6 +4297,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
      TRACE("device %p, resource %p, sub_resource_idx %u, box %s, data %p, row_pitch %u, depth_pitch %u.\n",
              device, resource, sub_resource_idx, debug_box(box), data, row_pitch, depth_pitch);
  

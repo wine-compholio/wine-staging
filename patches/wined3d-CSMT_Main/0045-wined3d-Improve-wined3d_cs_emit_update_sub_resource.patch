@@ -1,19 +1,19 @@
-From 6c606d8f44420417fc8cbb248f57556a26125d0b Mon Sep 17 00:00:00 2001
+From cd32330bc6d35331524eb1deef302fa8f5f6d4de Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 20 Feb 2017 00:27:25 +0100
 Subject: wined3d: Improve wined3d_cs_emit_update_sub_resource.
 
 ---
- dlls/wined3d/cs.c              | 68 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/cs.c              | 74 ++++++++++++++++++++++++++++++++++++++++--
  dlls/wined3d/device.c          |  2 --
  dlls/wined3d/wined3d_private.h |  1 +
- 3 files changed, 69 insertions(+), 2 deletions(-)
+ 3 files changed, 73 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 8dea530b413..fc67672fff2 100644
+index b20008d55e7..aa83a546e87 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -401,6 +401,7 @@ struct wined3d_cs_update_sub_resource
+@@ -402,6 +402,7 @@ struct wined3d_cs_update_sub_resource
      unsigned int sub_resource_idx;
      struct wined3d_box box;
      struct wined3d_sub_resource_data data;
@@ -21,7 +21,7 @@ index 8dea530b413..fc67672fff2 100644
  };
  
  struct wined3d_cs_add_dirty_texture_region
-@@ -2142,6 +2143,49 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+@@ -2138,6 +2139,49 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
          unsigned int slice_pitch)
  {
      struct wined3d_cs_update_sub_resource *op;
@@ -48,10 +48,10 @@ index 8dea530b413..fc67672fff2 100644
 +    }
 +
 +    size = FIELD_OFFSET(struct wined3d_cs_update_sub_resource, copy_data[data_size]);
-+    if (!cs->ops->check_space(cs, size, 0))
++    if (!cs->ops->check_space(cs, size, WINED3D_CS_QUEUE_DEFAULT))
 +        goto no_async;
 +
-+    op = cs->ops->require_space(cs, size, 0);
++    op = cs->ops->require_space(cs, size, WINED3D_CS_QUEUE_DEFAULT);
 +    op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
 +    op->resource = resource;
 +    op->sub_resource_idx = sub_resource_idx;
@@ -63,27 +63,36 @@ index 8dea530b413..fc67672fff2 100644
 +
 +    wined3d_resource_acquire(resource);
 +
-+    cs->ops->submit(cs);
++    cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
 +    return;
 +
 +no_async:
 +    wined3d_resource_wait_idle(resource);
  
-     op = cs->ops->require_space(cs, sizeof(*op), 1);
+     op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_MAP);
      op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
-@@ -2282,6 +2326,11 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2151,8 +2195,6 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+     wined3d_resource_acquire(resource);
+ 
+     cs->ops->submit(cs, WINED3D_CS_QUEUE_MAP);
+-    /* The data pointer may go away, so we need to wait until it is read.
+-     * Copying the data may be faster if it's small. */
+     cs->ops->finish(cs, WINED3D_CS_QUEUE_MAP);
+ }
+ 
+@@ -2279,6 +2321,11 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW */ wined3d_cs_exec_clear_unordered_access_view,
  };
  
-+static BOOL wined3d_cs_st_check_space(struct wined3d_cs *cs, size_t size, int priority)
++static BOOL wined3d_cs_st_check_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
 +{
 +    return TRUE;
 +}
 +
- static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, int priority)
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
  {
      if (size > (cs->data_size - cs->end))
-@@ -2335,6 +2384,7 @@ static void wined3d_cs_st_finish(struct wined3d_cs *cs)
+@@ -2332,6 +2379,7 @@ static void wined3d_cs_st_finish(struct wined3d_cs *cs, enum wined3d_cs_queue_id
  
  static const struct wined3d_cs_ops wined3d_cs_st_ops =
  {
@@ -91,18 +100,14 @@ index 8dea530b413..fc67672fff2 100644
      wined3d_cs_st_require_space,
      wined3d_cs_st_submit,
      wined3d_cs_st_finish,
-@@ -2363,6 +2413,23 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs)
-         SetEvent(cs->event);
+@@ -2364,6 +2412,19 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, enum wined3d_cs_queue_id
+     wined3d_cs_queue_submit(&cs->queue[queue_id], cs);
  }
  
-+static BOOL wined3d_cs_mt_check_space(struct wined3d_cs *cs, size_t size, int priority)
++static BOOL wined3d_cs_queue_check_space(struct wined3d_cs_queue *queue, size_t size)
 +{
-+    struct wined3d_cs_queue *queue = priority ? &cs->prio_queue : &cs->norm_queue;
 +    size_t queue_size = ARRAY_SIZE(queue->data);
 +    size_t header_size, packet_size, remaining;
-+
-+    if (cs->thread_id == GetCurrentThreadId())
-+        return wined3d_cs_st_check_space(cs, size, priority);
 +
 +    header_size = FIELD_OFFSET(struct wined3d_cs_packet, data[0]);
 +    size = (size + header_size - 1) & ~(header_size - 1);
@@ -112,10 +117,25 @@ index 8dea530b413..fc67672fff2 100644
 +    return (remaining >= packet_size);
 +}
 +
- static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, int priority)
+ static void *wined3d_cs_queue_require_space(struct wined3d_cs_queue *queue, size_t size, struct wined3d_cs *cs)
  {
-     struct wined3d_cs_queue *queue = priority ? &cs->prio_queue : &cs->norm_queue;
-@@ -2444,6 +2511,7 @@ static void wined3d_cs_mt_finish(struct wined3d_cs *cs)
+     size_t queue_size = ARRAY_SIZE(queue->data);
+@@ -2425,6 +2486,14 @@ static void *wined3d_cs_queue_require_space(struct wined3d_cs_queue *queue, size
+     return packet->data;
+ }
+ 
++static BOOL wined3d_cs_mt_check_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
++{
++    if (cs->thread_id == GetCurrentThreadId())
++        return wined3d_cs_st_check_space(cs, size, queue_id);
++
++    return wined3d_cs_queue_check_space(&cs->queue[queue_id], size);
++}
++
+ static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
+ {
+     if (cs->thread_id == GetCurrentThreadId())
+@@ -2444,6 +2513,7 @@ static void wined3d_cs_mt_finish(struct wined3d_cs *cs, enum wined3d_cs_queue_id
  
  static const struct wined3d_cs_ops wined3d_cs_mt_ops =
  {
@@ -124,10 +144,10 @@ index 8dea530b413..fc67672fff2 100644
      wined3d_cs_mt_submit,
      wined3d_cs_mt_finish,
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 1e17106cddc..adf6ded131f 100644
+index fa01f8a15e0..0a638ecf19a 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4287,8 +4287,6 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4298,8 +4298,6 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
      TRACE("device %p, resource %p, sub_resource_idx %u, box %s, data %p, row_pitch %u, depth_pitch %u.\n",
              device, resource, sub_resource_idx, debug_box(box), data, row_pitch, depth_pitch);
  
@@ -137,17 +157,17 @@ index 1e17106cddc..adf6ded131f 100644
      {
          if (sub_resource_idx > 0)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b647f4e23b4..093f33eee77 100644
+index 6920b29329f..b6f0dd3a90c 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3267,6 +3267,7 @@ struct wined3d_cs_queue
+@@ -3318,6 +3318,7 @@ struct wined3d_cs_queue
  
  struct wined3d_cs_ops
  {
-+    BOOL (*check_space)(struct wined3d_cs *cs, size_t size, int priority);
-     void *(*require_space)(struct wined3d_cs *cs, size_t size, int priority);
-     void (*submit)(struct wined3d_cs *cs);
-     void (*finish)(struct wined3d_cs *cs);
++    BOOL (*check_space)(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id);
+     void *(*require_space)(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id);
+     void (*submit)(struct wined3d_cs *cs, enum wined3d_cs_queue_id queue_id);
+     void (*finish)(struct wined3d_cs *cs, enum wined3d_cs_queue_id queue_id);
 -- 
 2.12.2
 

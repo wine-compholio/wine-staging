@@ -1,4 +1,4 @@
-From a905d238bf7bdfa11ba1a78cea673bd7c835ee19 Mon Sep 17 00:00:00 2001
+From cb2fdb23a11f80c0468e04507b8393eaef5b1bb6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 12 May 2017 04:05:24 +0200
 Subject: winebuild: Use Windows 7 WOW64 signature for syscall thunks.
@@ -6,11 +6,11 @@ Subject: winebuild: Use Windows 7 WOW64 signature for syscall thunks.
 ---
  dlls/ntdll/signal_i386.c |  2 ++
  include/winternl.h       |  2 +-
- tools/winebuild/spec32.c | 32 ++++++++++++++++++++++++++------
- 3 files changed, 29 insertions(+), 7 deletions(-)
+ tools/winebuild/spec32.c | 37 ++++++++++++++++++++++++++++++-------
+ 3 files changed, 33 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index f071ea3b79b..602688820a1 100644
+index d0f25ed3ce4..cd7d0dff493 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -481,6 +481,7 @@ static wine_signal_handler handlers[256];
@@ -21,7 +21,7 @@ index f071ea3b79b..602688820a1 100644
  
  enum i386_trap_code
  {
-@@ -2376,6 +2377,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -2363,6 +2364,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          *teb = addr;
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
@@ -43,10 +43,15 @@ index ae3163daeac..6b0624290fa 100644
      ULONG                        FpSoftwareStatusRegister;          /* 0c8/010c */
      PVOID                        SystemReserved1[54];               /* 0cc/0110 used for krnl386.exe16 private data in Wine */
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index fbde7ce6937..452e26fa949 100644
+index fbde7ce6937..76dcc94bfa1 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -297,24 +297,44 @@ static void output_syscall_thunks( DLLSPEC *spec )
+@@ -293,28 +293,51 @@ static void output_syscall_thunks( DLLSPEC *spec )
+         ORDDEF *odp = spec->syscalls[i];
+         const char *name = odp->link_name;
+ 
+-        output( "\t.align %d\n", get_alignment(16) );
++        output( "\t.balign %d, 0\n", get_alignment(16) );
          output( "\t%s\n", func_declaration(name) );
          output( "%s\n", asm_globl(name) );
          output_cfi( ".cfi_startproc" );
@@ -66,6 +71,9 @@ index fbde7ce6937..452e26fa949 100644
          output_function_size( name );
      }
  
++    for (i = 0; i < 0x20; i++)
++        output( "\t.byte 0\n" );
++
 +    output( "\n/* syscall table */\n\n" );
 +    output( "\t.data\n" );
 +    output( "%s\n", asm_globl("__wine_syscall_table") );

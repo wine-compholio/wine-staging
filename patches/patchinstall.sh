@@ -8633,6 +8633,7 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
 	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
 	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
@@ -8640,6 +8641,7 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
 	) >> "$patchlist"
 fi
 

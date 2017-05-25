@@ -1,50 +1,136 @@
-From d9cb75b157dd6929d99c5a7b0b37639d87cfa0dd Mon Sep 17 00:00:00 2001
+From 3cb1a8e8983c58da032185ca1d76bc4d3a2a15e1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 16:27:56 +0200
 Subject: winebuild: Add stub functions in fake dlls.
 
 ---
- dlls/ntdll/signal_i386.c |  17 +++++++
- tools/winebuild/build.h  |   1 +
- tools/winebuild/spec32.c | 117 ++++++++++++++++++++++++++++++++++++++++++++++-
- tools/winebuild/utils.c  |  10 +++-
- 4 files changed, 141 insertions(+), 4 deletions(-)
+ dlls/kernel32/tests/loader.c |   8 +-
+ dlls/ntdll/signal_i386.c     |  40 +++++++++
+ include/winternl.h           |   2 +-
+ tools/winebuild/build.h      |   1 +
+ tools/winebuild/spec32.c     | 209 +++++++++++++++++++++++++++++++++++++++++--
+ tools/winebuild/utils.c      |  10 ++-
+ 6 files changed, 255 insertions(+), 15 deletions(-)
 
+diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
+index 44c632bdbcf..cfbee0851b5 100644
+--- a/dlls/kernel32/tests/loader.c
++++ b/dlls/kernel32/tests/loader.c
+@@ -856,9 +856,7 @@ static void test_FakeDLL(void)
+     ok(ptr != NULL, "MapViewOfFile failed with error %u\n", GetLastError());
+ 
+     dir = RtlImageDirectoryEntryToData(ptr, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &size);
+-todo_wine
+     ok(dir != NULL, "RtlImageDirectoryEntryToData failed\n");
+-    if (dir == NULL) goto done;
+ 
+     names    = RVAToAddr(dir->AddressOfNames, ptr);
+     ordinals = RVAToAddr(dir->AddressOfNameOrdinals, ptr);
+@@ -887,17 +885,20 @@ todo_wine
+         /* check position in memory */
+         dll_rva = (DWORD_PTR)dll_func - (DWORD_PTR)module;
+         map_rva = funcs[ordinals[i]];
++    todo_wine
+         ok(map_rva == dll_rva, "%s: Rva of mapped function (0x%x) does not match dll (0x%x)\n",
+            func_name, dll_rva, map_rva);
+ 
+         /* check position in file */
+         map_offset = (DWORD_PTR)RtlImageRvaToVa(RtlImageNtHeader(ptr),    ptr,    map_rva, NULL) - (DWORD_PTR)ptr;
+         dll_offset = (DWORD_PTR)RtlImageRvaToVa(RtlImageNtHeader(module), module, dll_rva, NULL) - (DWORD_PTR)module;
++    todo_wine
+         ok(map_offset == dll_offset, "%s: File offset of mapped function (0x%x) does not match dll (0x%x)\n",
+            func_name, map_offset, dll_offset);
+ 
+         /* check function content */
+         map_func = RVAToAddr(map_rva, ptr);
++    todo_wine
+         ok(!memcmp(map_func, dll_func, 0x20), "%s: Function content does not match!\n", func_name);
+ 
+         if (!strcmp(func_name, "NtSetEvent"))
+@@ -911,10 +912,11 @@ todo_wine
+         ok(event != NULL, "CreateEvent failed with error %u\n", GetLastError());
+         pNtSetEvent(event, 0);
+         ok(WaitForSingleObject(event, 0) == WAIT_OBJECT_0, "Event was not signaled\n");
++        pNtSetEvent(event, 0);
++        ok(WaitForSingleObject(event, 0) == WAIT_OBJECT_0, "Event was not signaled\n");
+         CloseHandle(event);
+     }
+ 
+-done:
+     UnmapViewOfFile(ptr);
+     CloseHandle(map);
+     CloseHandle(file);
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 115f48d3dd1..3730afd38e0 100644
+index cd7d0dff493..b1ec20e8723 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -1904,6 +1904,20 @@ static inline DWORD get_fpu_code( const CONTEXT *context )
-     return EXCEPTION_FLT_INVALID_OPERATION;  /* generic error */
- }
+@@ -483,6 +483,45 @@ static BOOL fpux_support;  /* whether the CPU supports extended fpu context */
+ extern void DECLSPEC_NORETURN __wine_restore_regs( const CONTEXT *context );
+ extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
  
-+static void fakedll_stub ( CONTEXT *context )
++/* convert from straight ASCII to Unicode without depending on the current codepage */
++static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
 +{
-+    EXCEPTION_RECORD record;
-+
-+    record.ExceptionCode    = EXCEPTION_WINE_STUB;
-+    record.ExceptionFlags   = EH_NONCONTINUABLE;
-+    record.ExceptionRecord  = NULL;
-+    record.ExceptionAddress = (void*)context->Eip;
-+    record.NumberParameters = 2;
-+    record.ExceptionInformation[0] = (ULONG_PTR)context->Ecx;
-+    record.ExceptionInformation[1] = (ULONG_PTR)context->Edx;
-+
-+    for (;;) NtRaiseException( &record, context, TRUE );
++    while (len--) *dst++ = (unsigned char)*src++;
 +}
- 
- /**********************************************************************
-  *		raise_segv_exception
-@@ -1963,6 +1977,9 @@ static void WINAPI raise_segv_exception( EXCEPTION_RECORD *rec, CONTEXT *context
-         }
-         break;
-     case EXCEPTION_WINE_SYSCALL:
-+        if (rec->ExceptionInformation[0] == 0xdeadc0de)
-+            fakedll_stub( context );
 +
-         FIXME("unimplemented syscall handler for 0x%lx, stack 0x%lx\n",
-               rec->ExceptionInformation[0], rec->ExceptionInformation[1]);
-         context->Eax = STATUS_INVALID_SYSTEM_SERVICE;
++static void* WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
++{
++    UNICODE_STRING name;
++    NTSTATUS status;
++    HMODULE base;
++    WCHAR *moduleW;
++    void *proc = NULL;
++    DWORD len = strlen(module);
++
++    TRACE( "(%s, %u)\n", debugstr_a(module), ord );
++
++    if (!(moduleW = RtlAllocateHeap( GetProcessHeap(), 0, (len + 1) * sizeof(WCHAR) )))
++        return NULL;
++
++    ascii_to_unicode( moduleW, module, len );
++    moduleW[ len ] = 0;
++    RtlInitUnicodeString( &name, moduleW );
++
++    status = LdrGetDllHandle( NULL, 0, &name, &base );
++    if (status == STATUS_DLL_NOT_FOUND)
++        status = LdrLoadDll( NULL, 0, &name, &base );
++    if (status == STATUS_SUCCESS)
++        status = LdrAddRefDll( LDR_ADDREF_DLL_PIN, base );
++    if (status == STATUS_SUCCESS)
++        status = LdrGetProcedureAddress( base, NULL, ord, &proc );
++
++    if (status)
++        FIXME( "No procedure address found for %s.#%u, status %x\n", debugstr_a(module), ord, status );
++
++    RtlFreeHeap( GetProcessHeap(), 0, moduleW );
++    return proc;
++}
++
+ enum i386_trap_code
+ {
+     TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
+@@ -2365,6 +2404,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+         (*teb)->Tib.Self = &(*teb)->Tib;
+         (*teb)->Tib.ExceptionList = (void *)~0UL;
+         (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
++        (*teb)->Spare3 = __wine_fakedll_dispatcher;
+         thread_data = (struct ntdll_thread_data *)(*teb)->SpareBytes1;
+         if (!(thread_data->fs = wine_ldt_alloc_fs()))
+         {
+diff --git a/include/winternl.h b/include/winternl.h
+index 6b0624290fa..8b87f37c65c 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -362,7 +362,7 @@ typedef struct _TEB
+     PVOID                        WinSockData;                       /* f6c/1738 */
+     ULONG                        GdiBatchCount;                     /* f70/1740 */
+     ULONG                        Spare2;                            /* f74/1744 */
+-    PVOID                        Spare3;                            /* f78/1748 */
++    PVOID                        Spare3;                            /* f78/1748 used for fakedll thunks */
+     PVOID                        Spare4;                            /* f7c/1750 */
+     PVOID                        ReservedForOle;                    /* f80/1758 */
+     ULONG                        WaitingOnLoaderLock;               /* f84/1760 */
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
 index 3434cfe9c90..e76800bb5da 100644
 --- a/tools/winebuild/build.h
@@ -58,66 +144,106 @@ index 3434cfe9c90..e76800bb5da 100644
  extern void align_output_rva( unsigned int file_align, unsigned int rva_align );
  extern size_t label_pos( const char *name );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index bc47cd7b32e..e2f7dcf43e0 100644
+index c01ff6d7746..4367b03b0d2 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -701,6 +701,113 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -701,6 +701,163 @@ void BuildSpec32File( DLLSPEC *spec )
  }
  
  
-+static void create_stub_exports_x86( DLLSPEC *spec )
++static int needs_stub_exports( DLLSPEC *spec )
 +{
-+    static const unsigned char dll_main[] = { 0xb8, 0x01, 0x00, 0x00, 0x00, /* mov eax, 0x1 */
-+                                              0xc2, 0x0c, 0x00 };           /* ret 12 */
++    if (target_cpu != CPU_x86)
++        return 0;
++    if (!(spec->characteristics & IMAGE_FILE_DLL))
++        return 0;
++    if (!spec->nb_entry_points)
++        return 0;
++    return 1;
++}
++
++
++static void create_stub_exports_text( DLLSPEC *spec )
++{
 +    int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
-+
-+    /* entry function */
-+    put_data( dll_main, sizeof(dll_main) );
-+
-+    if (!nr_exports) return;
-+
-+    /* pic thunk function */
-+    align_output_rva( 16, 16 );
-+    put_label( "_thunk_eax" );
-+    put_byte( 0x8b ); put_byte( 0x04 ); put_byte( 0x24 ); /* mov eax, dword[esp] */
-+    put_byte( 0xc3 );                                     /* ret */
++    size_t rva, thunk;
 +
 +    /* output stub code for exports */
 +    for (i = 0; i < spec->nb_entry_points; i++)
 +    {
 +        ORDDEF *odp = &spec->entry_points[i];
 +        const char *name = get_stub_name( odp, spec );
-+        size_t rva;
 +
 +        align_output_rva( 16, 16 );
 +        put_label( name );
-+
 +        put_byte( 0x8b ); put_byte( 0xff );                           /* mov edi, edi */
 +        put_byte( 0x55 );                                             /* push ebp */
 +        put_byte( 0x8b ); put_byte( 0xec );                           /* mov ebp, esp */
++        put_byte( 0x68 ); put_dword( 0 );                             /* push dword 0 */
++        put_byte( 0x68 ); put_dword( odp->ordinal );                  /* push ORDINAL */
 +        rva = output_buffer_rva + 5;
-+        put_byte( 0xe8 ); put_dword( label_rva("_thunk_eax") - rva ); /* call _thunk_eax */
-+        put_byte( 0x8d ); put_byte( 0x88 );                           /* lea ecx, [eax + dll_name] */
-+        put_dword( label_rva("dll_fake_name") - rva );
-+        if (!odp->name || (odp->flags & FLAG_NONAME))
++        put_byte( 0xe8 ); put_dword( label_rva("_forward") - rva );   /* call _forward */
++        put_byte( 0x89 ); put_byte( 0xec );                           /* mov esp, ebp */
++        put_byte( 0x5d );                                             /* pop ebp */
++        if (odp->type == TYPE_STDCALL || odp->type == TYPE_THISCALL)
 +        {
-+            put_byte( 0xba ); put_dword( odp->ordinal );              /* mov edx, ordinal */
++            put_byte( 0xc2 ); put_word( get_args_size(odp) );         /* ret X */
 +        }
 +        else
 +        {
-+            put_byte( 0x8d ); put_byte( 0x90 );                       /* lea edx, [eax + func_name] */
-+            put_dword( label_rva(strmake("str_%s", name)) - rva );
++            put_byte( 0xc3 );                                         /* ret */
 +        }
-+        put_byte( 0xb8 ); put_dword( 0xdeadc0de );                    /* mov eax, 0xdeadc0de */
-+        put_byte( 0xcd ); put_byte( 0x2e );                           /* int 0x2e */
-+        put_byte( 0x5d );                                             /* pop ebp */
-+        put_byte( 0xc3 );                                             /* ret */
 +    }
 +
-+    /* name to show in stub message */
++    /* output entry point */
 +    align_output_rva( 16, 16 );
-+    put_label( "dll_fake_name" );
-+    put_str( strmake("(fake) %s", spec->file_name) );
++    put_label( "entrypoint" );
++    put_byte( 0xb8 ); put_dword( 1 );                                 /* mov eax, 1 */
++    put_byte( 0xc2 ); put_word( 12 );                                 /* ret 12 */
++
++    /* output forward function */
++    align_output_rva( 16, 16 );
++    put_label( "_forward" );
++    put_byte( 0x8b ); put_byte( 0x6d ); put_byte( 0x00 );             /* mov ebp, dword[ebp] */
++    put_byte( 0x89 ); put_byte( 0x44 );                               /* mov dword[esp+8], eax */
++    put_byte( 0x24 ); put_byte( 0x08 );
++    put_byte( 0x89 ); put_byte( 0x14 ); put_byte( 0x24 );             /* mov dword[esp], edx */
++    put_byte( 0x8b ); put_byte( 0x54 );                               /* mov edx, dword[esp+4] */
++    put_byte( 0x24 ); put_byte( 0x04 );
++    put_byte( 0x89 ); put_byte( 0x4c );                               /* mov dword[esp+4], ecx */
++    put_byte( 0x24 ); put_byte( 0x04 );
++    put_byte( 0xe8 ); put_dword( 0 );                                 /* call 1f */
++    thunk = output_buffer_rva;
++    put_byte( 0x59 );                                                 /* pop ecx */
++    put_byte( 0x8b ); put_byte( 0x84 ); put_byte( 0x91 );             /* mov eax, dword[_functions + 4 * (edx - BASE)] */
++    put_dword( label_rva("_functions") - thunk - 4 * spec->base );
++    put_byte( 0x09 ); put_byte( 0xc0 );                               /* or eax, eax */
++    rva = output_buffer_rva + 2;
++    put_byte( 0x74 ); put_byte( label_rva("_forward_load") - rva );   /* je _forward_load */
++
++    put_label( "_forward_done" );
++    put_byte( 0x89 ); put_byte( 0x44 );                               /* mov dword[esp+12], eax */
++    put_byte( 0x24 ); put_byte( 0x0c );
++    put_byte( 0x5a );                                                 /* pop edx */
++    put_byte( 0x59 );                                                 /* pop ecx */
++    put_byte( 0x58 );                                                 /* pop eax */
++    put_byte( 0xc3 );                                                 /* ret */
++
++    align_output_rva( 16, 16 );
++    put_label( "_forward_load" );
++    put_byte( 0x8d ); put_byte( 0x84 ); put_byte( 0x91 );             /* lea eax, [_functions + 4 * (edx - BASE)] */
++    put_dword( label_rva("_functions") - thunk - 4 * spec->base );
++    put_byte( 0x50 );                                                 /* push eax */
++    put_byte( 0x52 );                                                 /* push edx */
++    put_byte( 0x8d ); put_byte( 0x81 );                               /* lea eax, [dll_name] */
++    put_dword( label_rva("dll_name") - thunk );
++    put_byte( 0x50 );                                                 /* push eax */
++    put_byte( 0x64 ); put_byte( 0xff );                               /* call dword ptr fs:[0F78h] */
++    put_byte( 0x15 ); put_dword( 0xf78 );
++    put_byte( 0x5a );                                                 /* pop edx */
++    put_byte( 0x89 ); put_byte( 0x02 );                               /* mov dword[edx], eax */
++    rva = output_buffer_rva + 2;
++    put_byte( 0xeb ); put_byte( label_rva("_forward_done") - rva );   /* jmp _forward_done */
 +
 +    /* export directory */
 +    align_output_rva( 16, 16 );
@@ -172,10 +298,38 @@ index bc47cd7b32e..e2f7dcf43e0 100644
 +}
 +
 +
++static void create_stub_exports_data( DLLSPEC *spec )
++{
++    int i;
++
++    put_label( "_functions" );
++    for (i = spec->base; i <= spec->limit; i++)
++        put_dword( 0 );
++}
++
++
  /*******************************************************************
   *         output_fake_module_pass
   *
-@@ -799,7 +906,8 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -719,7 +876,7 @@ static void output_fake_module_pass( DLLSPEC *spec )
+     const unsigned int section_align = page_size;
+     const unsigned int file_align = 0x200;
+     const unsigned int lfanew = (0x40 + sizeof(fakedll_signature) + 15) & ~15;
+-    const unsigned int nb_sections = 2 + (spec->nb_resources != 0);
++    const unsigned int nb_sections = 2 + (needs_stub_exports( spec ) != 0) + (spec->nb_resources != 0);
+ 
+     put_word( 0x5a4d );       /* e_magic */
+     put_word( 0x40 );         /* e_cblp */
+@@ -776,7 +933,7 @@ static void output_fake_module_pass( DLLSPEC *spec )
+     put_dword( 0 );                                  /* SizeOfUninitializedData */
+     put_dword( label_rva("entrypoint") );            /* AddressOfEntryPoint */
+     put_dword( label_rva("text_start") );            /* BaseOfCode */
+-    if (get_ptr_size() == 4) put_dword( 0 );         /* BaseOfData */
++    if (get_ptr_size() == 4) put_dword( label_rva("data_start") ); /* BaseOfData */
+     put_pword( 0x10000000 );                         /* ImageBase */
+     put_dword( section_align );                      /* SectionAlignment */
+     put_dword( file_align );                         /* FileAlignment */
+@@ -799,7 +956,8 @@ static void output_fake_module_pass( DLLSPEC *spec )
      put_dword( 0 );                                  /* LoaderFlags */
      put_dword( 16 );                                 /* NumberOfRvaAndSizes */
  
@@ -185,22 +339,68 @@ index bc47cd7b32e..e2f7dcf43e0 100644
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] */
      if (spec->nb_resources)           /* DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE] */
      {
-@@ -873,7 +981,12 @@ static void output_fake_module_pass( DLLSPEC *spec )
-     align_output_rva( file_align, section_align );
-     put_label( "text_start" );
-     if (spec->characteristics & IMAGE_FILE_DLL)
--        put_data( dll_code_section, sizeof(dll_code_section) );
+@@ -839,6 +997,21 @@ static void output_fake_module_pass( DLLSPEC *spec )
+     put_word( 0 );                                                        /* NumberOfLinenumbers */
+     put_dword( 0x60000020 /* CNT_CODE|MEM_EXECUTE|MEM_READ */ );          /* Characteristics  */
+ 
++    /* .data section */
++    if (needs_stub_exports( spec ))
 +    {
-+        if (target_cpu == CPU_x86)
-+            create_stub_exports_x86( spec );
-+        else
-+            put_data( dll_code_section, sizeof(dll_code_section) );
++        put_data( ".data\0\0", 8 );                                       /* Name */
++        put_dword( label_rva_align("data_end") - label_rva("data_start") ); /* VirtualSize */
++        put_dword( label_rva("data_start") );                             /* VirtualAddress */
++        put_dword( label_pos("data_end") - label_pos("data_start") );     /* SizeOfRawData */
++        put_dword( label_pos("data_start") );                             /* PointerToRawData */
++        put_dword( 0 );                                                   /* PointerToRelocations */
++        put_dword( 0 );                                                   /* PointerToLinenumbers */
++        put_word( 0 );                                                    /* NumberOfRelocations */
++        put_word( 0 );                                                    /* NumberOfLinenumbers */
++        put_dword( 0xc0000040 /* CNT_INITIALIZED_DATA|MEM_READ|MEM_WRITE */ ); /* Characteristics  */
++    }
++
+     /* .reloc section */
+     put_data( ".reloc\0", 8 );                                            /* Name */
+     put_dword( label_rva_align("reloc_end") - label_rva("reloc_start") ); /* VirtualSize */
+@@ -871,13 +1044,31 @@ static void output_fake_module_pass( DLLSPEC *spec )
+ 
+     /* .text contents */
+     align_output_rva( file_align, section_align );
+-    put_label( "text_start" );
+-    put_label( "entrypoint" );
+-    if (spec->characteristics & IMAGE_FILE_DLL)
+-        put_data( dll_code_section, sizeof(dll_code_section) );
++    if (needs_stub_exports( spec ))
++    {
++        put_label( "text_start" );
++        create_stub_exports_text( spec );
++        put_label( "text_end" );
 +    }
      else
-         put_data( exe_code_section, sizeof(exe_code_section) );
-     put_label( "text_end" );
+-        put_data( exe_code_section, sizeof(exe_code_section) );
+-    put_label( "text_end" );
++    {
++        put_label( "text_start" );
++        put_label( "entrypoint" );
++        if (spec->characteristics & IMAGE_FILE_DLL)
++            put_data( dll_code_section, sizeof(dll_code_section) );
++        else
++            put_data( exe_code_section, sizeof(exe_code_section) );
++        put_label( "text_end" );
++    }
++
++    /* .data contents */
++    align_output_rva( file_align, section_align );
++    if (needs_stub_exports( spec ))
++    {
++        put_label( "data_start" );
++        create_stub_exports_data( spec );
++        put_label( "data_end" );
++    }
+ 
+     /* .reloc contents */
+     align_output_rva( file_align, section_align );
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index eada46604ec..b37ce9dc16f 100644
+index eada46604ec..eee5419285a 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
 @@ -525,7 +525,7 @@ size_t output_buffer_size;
@@ -235,7 +435,7 @@ index eada46604ec..b37ce9dc16f 100644
  
 +void put_str( const char *str )
 +{
-+    put_data( str, strlen(str)+1 );
++    put_data( str, strlen(str) + 1 );
 +}
 +
  void align_output( unsigned int align )

@@ -1,0 +1,104 @@
+From c0531d2c7497a915a66919d0c4ef53be24e17909 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 25 May 2017 21:46:27 +0200
+Subject: winebuild: Try to make sure RVA matches between fake and builtin
+ DLLs.
+
+---
+ dlls/kernel32/tests/loader.c |  1 -
+ libs/wine/loader.c           | 13 +++++++++++--
+ tools/winebuild/spec32.c     | 22 +++++++++++++++++++---
+ 3 files changed, 30 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
+index a8f9e1f12d3..09ba7d435b0 100644
+--- a/dlls/kernel32/tests/loader.c
++++ b/dlls/kernel32/tests/loader.c
+@@ -885,7 +885,6 @@ static void test_FakeDLL(void)
+         /* check position in memory */
+         dll_rva = (DWORD_PTR)dll_func - (DWORD_PTR)module;
+         map_rva = funcs[ordinals[i]];
+-    todo_wine
+         ok(map_rva == dll_rva, "%s: Rva of mapped function (0x%x) does not match dll (0x%x)\n",
+            func_name, dll_rva, map_rva);
+ 
+diff --git a/libs/wine/loader.c b/libs/wine/loader.c
+index 89ae93503d3..8ace917d91d 100644
+--- a/libs/wine/loader.c
++++ b/libs/wine/loader.c
+@@ -395,8 +395,12 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
+     assert( size <= page_size );
+ 
+     /* module address must be aligned on 64K boundary */
+-    addr = (BYTE *)((nt_descr->OptionalHeader.ImageBase + 0xffff) & ~0xffff);
+-    if (wine_anon_mmap( addr, page_size, PROT_READ|PROT_WRITE, MAP_FIXED ) != addr) return NULL;
++    addr = *(BYTE **)&nt_descr->OptionalHeader.DataDirectory[15];
++    if (!addr || ((ULONG_PTR)addr & 0xffff) || mprotect( addr, page_size, PROT_READ | PROT_WRITE ))
++    {
++        addr = (BYTE *)((nt_descr->OptionalHeader.ImageBase + 0xffff) & ~0xffff);
++        if (wine_anon_mmap( addr, page_size, PROT_READ|PROT_WRITE, MAP_FIXED ) != addr) return NULL;
++    }
+ 
+     dos    = (IMAGE_DOS_HEADER *)addr;
+     nt     = (IMAGE_NT_HEADERS *)(dos + 1);
+@@ -435,6 +439,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
+     nt->OptionalHeader.SizeOfImage                 = data_end;
+     nt->OptionalHeader.ImageBase                   = (ULONG_PTR)addr;
+ 
++    /* Clear DataDirectory[15] */
++
++    nt->OptionalHeader.DataDirectory[15].VirtualAddress = 0;
++    nt->OptionalHeader.DataDirectory[15].Size = 0;
++
+     /* Build the code section */
+ 
+     memcpy( sec->Name, ".text", sizeof(".text") );
+diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
+index 4dda31c349b..1e4e481e72c 100644
+--- a/tools/winebuild/spec32.c
++++ b/tools/winebuild/spec32.c
+@@ -280,14 +280,23 @@ static void output_relay_debug( DLLSPEC *spec )
+  */
+ static void output_syscall_thunks( DLLSPEC *spec )
+ {
++    const unsigned int page_size = get_page_size();
+     int i;
+ 
+     if (!spec->nb_syscalls)
+         return;
+ 
+-    output( "\n/* syscall thunks */\n\n" );
+-    output( "\t.text\n" );
++    /* Reserve space for PE header directly before syscalls. */
++    if (target_platform == PLATFORM_APPLE)
++        output( "\t.text\n" );
++    else
++        output( "\n\t.section \".text.startup\"\n" );
++
++    output( "\t.align %d\n", get_alignment(65536) );
++    output( "__wine_spec_pe_header_syscalls:\n" );
++    output( "\t.fill %d\n", page_size );
+ 
++    output( "\n/* syscall thunks */\n\n" );
+     for (i = 0; i < spec->nb_syscalls; i++)
+     {
+         ORDDEF *odp = spec->syscalls[i];
+@@ -666,7 +675,14 @@ void output_module( DLLSPEC *spec )
+     output( "\t.long 0,0\n" );  /* DataDirectory[12] */
+     output( "\t.long 0,0\n" );  /* DataDirectory[13] */
+     output( "\t.long 0,0\n" );  /* DataDirectory[14] */
+-    output( "\t.long 0,0\n" );  /* DataDirectory[15] */
++
++    if (spec->nb_syscalls)   /* DataDirectory[15] */
++    {
++        output( "\t%s __wine_spec_pe_header_syscalls\n", get_asm_ptr_keyword() );
++        if (get_ptr_size() == 4) output( "\t.long 0\n" );
++    }
++    else
++        output( "\t.long 0,0\n" );
+ 
+     output( "\n\t%s\n", get_asm_string_section() );
+     output( "%s\n", asm_globl("__wine_spec_file_name") );
+-- 
+2.12.2
+

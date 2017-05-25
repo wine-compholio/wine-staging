@@ -8635,29 +8635,34 @@ fi
 # |   *	[#42741] Various improvements for fake dlls
 # |
 # | Modified files:
-# |   *	dlls/dbghelp/cpu_i386.c, dlls/krnl386.exe16/kernel.c, dlls/krnl386.exe16/kernel16_private.h,
-# | 	dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c, dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c,
-# | 	dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c,
-# | 	dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h,
-# | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
-# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
+# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
+# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c,
+# | 	dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h, tools/winebuild/import.c,
+# | 	tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c,
+# | 	tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	patch_apply winebuild-Fake_Dlls/0001-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
+	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
 	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
-	patch_apply winebuild-Fake_Dlls/0003-winebuild-Use-Windows-7-WOW64-signature-for-syscall-.patch
+	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
 	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
 	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
 	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
 	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
+	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
+	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Use Windows 7 WOW64 signature for syscall thunks.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
 	) >> "$patchlist"
 fi
 

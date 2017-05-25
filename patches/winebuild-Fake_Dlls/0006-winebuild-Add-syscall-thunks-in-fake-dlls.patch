@@ -1,35 +1,32 @@
-From 905baa4b802d589ea8a3f52c5566187c4e2dc1d9 Mon Sep 17 00:00:00 2001
+From b58ac41eb56c6e1e0eef8ecfa0d3faeede91ea11 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 17:56:48 +0200
 Subject: winebuild: Add syscall thunks in fake dlls.
 
 ---
- tools/winebuild/spec32.c | 32 ++++++++++++++++++++++++++++++--
- 1 file changed, 30 insertions(+), 2 deletions(-)
+ dlls/kernel32/tests/loader.c |  1 -
+ tools/winebuild/spec32.c     | 31 +++++++++++++++++++++++++++++--
+ 2 files changed, 29 insertions(+), 3 deletions(-)
 
+diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
+index cfbee0851b5..a8f9e1f12d3 100644
+--- a/dlls/kernel32/tests/loader.c
++++ b/dlls/kernel32/tests/loader.c
+@@ -898,7 +898,6 @@ static void test_FakeDLL(void)
+ 
+         /* check function content */
+         map_func = RVAToAddr(map_rva, ptr);
+-    todo_wine
+         ok(!memcmp(map_func, dll_func, 0x20), "%s: Function content does not match!\n", func_name);
+ 
+         if (!strcmp(func_name, "NtSetEvent"))
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 2d6117df691..d1bd1683334 100644
+index 4367b03b0d2..5a245b5ae81 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -722,10 +722,14 @@ static void create_stub_exports_x86( DLLSPEC *spec )
-     for (i = 0; i < spec->nb_entry_points; i++)
-     {
-         ORDDEF *odp = &spec->entry_points[i];
--        const char *name = get_stub_name( odp, spec );
-+        const char *name;
-         size_t rva;
- 
-+        if (odp->flags & FLAG_SYSCALL)
-+            continue;
-+
-         align_output_rva( 16, 16 );
-+        name = get_stub_name( odp, spec );
-         put_label( name );
- 
-         put_byte( 0x8b ); put_byte( 0xff );                           /* mov edi, edi */
-@@ -750,6 +754,30 @@ static void create_stub_exports_x86( DLLSPEC *spec )
-         put_byte( 0xc3 );                                             /* ret */
-     }
+@@ -718,13 +718,40 @@ static void create_stub_exports_text( DLLSPEC *spec )
+     int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
+     size_t rva, thunk;
  
 +    /* output syscalls */
 +    for (i = 0; i < spec->nb_syscalls; i++)
@@ -38,7 +35,6 @@ index 2d6117df691..d1bd1683334 100644
 +
 +        align_output_rva( 16, 16 );
 +        put_label( odp->link_name );
-+
 +        put_byte( 0xb8 ); put_dword( i );                     /* mov eax, SYSCALL */
 +        put_byte( 0x33 ); put_byte( 0xc9 );                   /* xor ecx, ecx */
 +        put_byte( 0x8d ); put_byte( 0x54 );                   /* lea edx, [esp + 4] */
@@ -55,10 +51,22 @@ index 2d6117df691..d1bd1683334 100644
 +            put_byte( 0 );
 +    }
 +
-     /* name to show in stub message */
-     align_output_rva( 16, 16 );
-     put_label( "dll_fake_name" );
-@@ -775,7 +803,7 @@ static void create_stub_exports_x86( DLLSPEC *spec )
+     /* output stub code for exports */
+     for (i = 0; i < spec->nb_entry_points; i++)
+     {
+         ORDDEF *odp = &spec->entry_points[i];
+-        const char *name = get_stub_name( odp, spec );
++        const char *name;
++
++        if (odp->flags & FLAG_SYSCALL)
++            continue;
+ 
+         align_output_rva( 16, 16 );
++        name = get_stub_name( odp, spec );
+         put_label( name );
+         put_byte( 0x8b ); put_byte( 0xff );                           /* mov edi, edi */
+         put_byte( 0x55 );                                             /* push ebp */
+@@ -815,7 +842,7 @@ static void create_stub_exports_text( DLLSPEC *spec )
          ORDDEF *odp = spec->ordinals[i];
          if (odp)
          {

@@ -1,4 +1,4 @@
-From dd66c26e64f14e3b72716449147a656a87232482 Mon Sep 17 00:00:00 2001
+From 135039777d3d6a79580661221cf4f394d390d5fb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 02:05:49 +0200
 Subject: winebuild: Use multipass label system to generate fake dlls.
@@ -6,9 +6,9 @@ Subject: winebuild: Use multipass label system to generate fake dlls.
 ---
  tools/winebuild/build.h  |   6 ++
  tools/winebuild/res32.c  |   1 -
- tools/winebuild/spec32.c | 144 ++++++++++++++++++++++++++---------------------
+ tools/winebuild/spec32.c | 145 +++++++++++++++++++++++++++--------------------
  tools/winebuild/utils.c  |  92 ++++++++++++++++++++++++++++++
- 4 files changed, 179 insertions(+), 64 deletions(-)
+ 4 files changed, 180 insertions(+), 64 deletions(-)
 
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
 index e338c9c8024..3434cfe9c90 100644
@@ -47,7 +47,7 @@ index 1686f567185..8db3213fbbd 100644
      /* output the resource directories */
  
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 7e08b756df4..bc47cd7b32e 100644
+index dde1bd0704d..c01ff6d7746 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -702,11 +702,11 @@ void BuildSpec32File( DLLSPEC *spec )
@@ -107,7 +107,7 @@ index 7e08b756df4..bc47cd7b32e 100644
      put_dword( 0 );                                  /* SizeOfUninitializedData */
 -    put_dword( section_align );                      /* AddressOfEntryPoint */
 -    put_dword( section_align );                      /* BaseOfCode */
-+    put_dword( label_rva("text_start") );            /* AddressOfEntryPoint */
++    put_dword( label_rva("entrypoint") );            /* AddressOfEntryPoint */
 +    put_dword( label_rva("text_start") );            /* BaseOfCode */
      if (get_ptr_size() == 4) put_dword( 0 );         /* BaseOfData */
      put_pword( 0x10000000 );                         /* ImageBase */
@@ -148,7 +148,7 @@ index 7e08b756df4..bc47cd7b32e 100644
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG] */
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_COPYRIGHT] */
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_GLOBALPTR] */
-@@ -842,62 +828,94 @@ void output_fake_module( DLLSPEC *spec )
+@@ -842,62 +828,95 @@ void output_fake_module( DLLSPEC *spec )
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[15] */
  
      /* .text section */
@@ -227,6 +227,7 @@ index 7e08b756df4..bc47cd7b32e 100644
 -    align_output( file_align );
 +    align_output_rva( file_align, section_align );
 +    put_label( "text_start" );
++    put_label( "entrypoint" );
      if (spec->characteristics & IMAGE_FILE_DLL)
          put_data( dll_code_section, sizeof(dll_code_section) );
      else

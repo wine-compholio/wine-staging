@@ -1,15 +1,15 @@
-From caf89ae3ed2f1ff8e2fb16cc1c80f101a2897722 Mon Sep 17 00:00:00 2001
+From 5fc643183617eae4c5975f4d32058cd512ffdf00 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Feb 2017 16:20:37 +0100
 Subject: kernel32: Implement some processor group functions.
 
 ---
  .../api-ms-win-core-kernel32-legacy-l1-1-0.spec    |  2 +-
- dlls/kernel32/cpu.c                                | 55 ++++++++++++++++++++++
- dlls/kernel32/kernel32.spec                        |  8 ++--
- dlls/kernel32/tests/process.c                      | 23 +++++++++
+ dlls/kernel32/cpu.c                                | 45 ++++++++++++++++++----
+ dlls/kernel32/kernel32.spec                        |  4 +-
+ dlls/kernel32/tests/process.c                      | 23 +++++++++++
  include/winnt.h                                    |  2 +
- 5 files changed, 85 insertions(+), 5 deletions(-)
+ 5 files changed, 66 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec b/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec
 index 7c196c932fd..4aa415bbf62 100644
@@ -25,41 +25,26 @@ index 7c196c932fd..4aa415bbf62 100644
  @ stub GetNamedPipeServerProcessId
  @ stdcall GetShortPathNameA(str ptr long) kernel32.GetShortPathNameA
 diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 756d8f94ab2..5fb806746a0 100644
+index 2e0e79f8e8d..5bba2ed26c3 100644
 --- a/dlls/kernel32/cpu.c
 +++ b/dlls/kernel32/cpu.c
-@@ -303,3 +303,58 @@ SIZE_T WINAPI GetLargePageMinimum(void)
-     FIXME("Not implemented on your platform/architecture.\n");
-     return 0;
+@@ -309,7 +309,9 @@ SIZE_T WINAPI GetLargePageMinimum(void)
+  */
+ WORD WINAPI GetActiveProcessorGroupCount(void)
+ {
+-    FIXME("semi-stub, always returning 1\n");
++    TRACE("()\n");
++
++    /* systems with less than 64 logical processors only have group 0 */
+     return 1;
  }
-+
-+/***********************************************************************
-+ *           GetActiveProcessorGroupCount (KERNEL32.@)
-+ */
-+WORD WINAPI GetActiveProcessorGroupCount(void)
-+{
-+    TRACE("()\n");
-+
-+    /* systems with less than 64 logical processors only have group 0 */
-+    return 1;
-+}
-+
-+/***********************************************************************
-+ *           GetMaximumProcessorGroupCount (KERNEL32.@)
-+ */
-+WORD WINAPI GetMaximumProcessorGroupCount(void)
-+{
-+    TRACE("()\n");
-+
-+    /* systems with less than 64 logical processors only have group 0 */
-+    return 1;
-+}
-+
-+/***********************************************************************
-+ *           GetActiveProcessorCount (KERNEL32.@)
-+ */
-+DWORD WINAPI GetActiveProcessorCount(WORD group)
-+{
+ 
+@@ -318,12 +320,41 @@ WORD WINAPI GetActiveProcessorGroupCount(void)
+  */
+ DWORD WINAPI GetActiveProcessorCount(WORD group)
+ {
+-    SYSTEM_INFO si;
+-    DWORD cpus;
 +    TRACE("(%u)\n", group);
 +
 +    if (group && group != ALL_PROCESSOR_GROUPS)
@@ -69,6 +54,19 @@ index 756d8f94ab2..5fb806746a0 100644
 +    }
 +
 +    return system_info.NumberOfProcessors;
++}
++
++/***********************************************************************
++ *           GetMaximumProcessorGroupCount (KERNEL32.@)
++ */
++WORD WINAPI GetMaximumProcessorGroupCount(void)
++{
++    TRACE("()\n");
+ 
+-    GetSystemInfo( &si );
+-    cpus = si.dwNumberOfProcessors;
++    /* systems with less than 64 logical processors only have group 0 */
++    return 1;
 +}
 +
 +/***********************************************************************
@@ -83,25 +81,16 @@ index 756d8f94ab2..5fb806746a0 100644
 +        SetLastError(ERROR_INVALID_PARAMETER);
 +        return 0;
 +    }
-+
+ 
+-    FIXME("semi-stub, returning %u\n", cpus);
+-    return cpus;
 +    /* Wine only counts active processors so far */
 +    return system_info.NumberOfProcessors;
-+}
+ }
 diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
-index 2668386bf84..e6081aeb04a 100644
+index 1a11af579f4..567442ef138 100644
 --- a/dlls/kernel32/kernel32.spec
 +++ b/dlls/kernel32/kernel32.spec
-@@ -540,8 +540,8 @@
- @ stdcall GenerateConsoleCtrlEvent(long long)
- @ stdcall -i386 -private Get16DLLAddress(long str) krnl386.exe16.Get16DLLAddress
- @ stdcall GetACP()
--# @ stub GetActiveProcessorCount
--# @ stub GetActiveProcessorGroupCount
-+@ stdcall GetActiveProcessorCount(long)
-+@ stdcall GetActiveProcessorGroupCount()
- # @ stub GetApplicationRecoveryCallback
- # @ stub GetApplicationRestartSettings
- @ stdcall GetAtomNameA(long ptr long)
 @@ -716,8 +716,8 @@
  # @ stub GetLongPathNameTransactedW
  @ stdcall GetLongPathNameW (wstr long long)
@@ -114,7 +103,7 @@ index 2668386bf84..e6081aeb04a 100644
  @ stdcall GetModuleFileNameW(long ptr long)
  @ stdcall GetModuleHandleA(str)
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
-index 68d6b648252..5e5346af749 100644
+index c480a278c98..e95473bfa08 100644
 --- a/dlls/kernel32/tests/process.c
 +++ b/dlls/kernel32/tests/process.c
 @@ -91,6 +91,7 @@ static SIZE_T (WINAPI *pGetLargePageMinimum)(void);
@@ -133,7 +122,7 @@ index 68d6b648252..5e5346af749 100644
  
      return TRUE;
  }
-@@ -3351,6 +3353,26 @@ static void test_ProcThreadAttributeList(void)
+@@ -3357,6 +3359,26 @@ static void test_ProcThreadAttributeList(void)
      pDeleteProcThreadAttributeList(&list);
  }
  
@@ -160,7 +149,7 @@ index 68d6b648252..5e5346af749 100644
  START_TEST(process)
  {
      HANDLE job;
-@@ -3425,6 +3447,7 @@ START_TEST(process)
+@@ -3431,6 +3453,7 @@ START_TEST(process)
      test_GetNumaProcessorNode();
      test_session_info();
      test_GetLogicalProcessorInformationEx();
@@ -169,7 +158,7 @@ index 68d6b648252..5e5346af749 100644
      test_ProcThreadAttributeList();
  
 diff --git a/include/winnt.h b/include/winnt.h
-index 5bd1b1b4a83..2fc4a190e48 100644
+index 450499c1299..a615e4a6022 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
 @@ -5855,6 +5855,8 @@ typedef struct _GROUP_AFFINITY
@@ -182,5 +171,5 @@ index 5bd1b1b4a83..2fc4a190e48 100644
  {
      WORD Group;
 -- 
-2.11.0
+2.12.2
 

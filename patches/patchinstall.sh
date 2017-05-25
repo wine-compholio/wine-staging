@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ef267f115f76a3041e0da4a0f0dbd7ffb4a022e1"
+	echo "8967e87c8a890aed7a81051c2d372f065e825bb2"
 }
 
 # Show version information
@@ -445,6 +445,7 @@ patch_enable_all ()
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
+	enable_winex11_XFixes="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhlp32_Flex_Workaround="$1"
@@ -1567,6 +1568,9 @@ patch_enable ()
 			;;
 		winex11-XEMBED)
 			enable_winex11_XEMBED="$2"
+			;;
+		winex11-XFixes)
+			enable_winex11_XFixes="$2"
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
@@ -4823,10 +4827,8 @@ fi
 # |   *	combase-RoApi, kernel32-UmsStubs, api-ms-win-Stub_DLLs
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
-# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
-# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernel32/tests/process.c,
-# | 	dlls/kernel32/thread.c, dlls/kernelbase/kernelbase.spec, include/winnt.h
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/cpu.c,
+# | 	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/process.c, dlls/kernel32/thread.c, include/winnt.h
 # |
 if test "$enable_kernel32_Processor_Group" -eq 1; then
 	patch_apply kernel32-Processor_Group/0001-kernel32-Implement-some-processor-group-functions.patch
@@ -8737,22 +8739,18 @@ fi
 # |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
-	patch_apply wined3d-Silence_FIXMEs/0001-wined3d-Silence-repeated-Unhandled-blend-factor-0-me.patch
 	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
 	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
 	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
-	patch_apply wined3d-Silence_FIXMEs/0007-wined3d-Display-FIXME-only-once-when-blen-op-is-0.patch
 	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated '\''Unhandled blend factor 0'\'' messages.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME only once when blen op is 0.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
 	) >> "$patchlist"
 fi
@@ -9119,6 +9117,18 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-XFixes
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/clipboard.c
+# |
+if test "$enable_winex11_XFixes" -eq 1; then
+	patch_apply winex11-XFixes/0001-winex11.drv-Fix-compilation-without-XFixes.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "winex11.drv: Fix compilation without XFixes.", 1 },';
 	) >> "$patchlist"
 fi
 

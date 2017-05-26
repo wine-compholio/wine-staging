@@ -2100,13 +2100,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_Silence_FIXMEs=1
 fi
 
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_Interrupt_0x2e" -gt 1; then
-		abort "Patchset ntdll-Interrupt-0x2e disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_Interrupt_0x2e=1
-fi
-
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	if test "$enable_wineboot_DriveSerial" -gt 1; then
 		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
@@ -8627,9 +8620,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 fi
 
 # Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Interrupt-0x2e
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42741] Various improvements for fake dlls

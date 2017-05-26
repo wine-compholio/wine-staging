@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8967e87c8a890aed7a81051c2d372f065e825bb2"
+	echo "799230c78ab102fa0034cb4477ce1be78c456a87"
 }
 
 # Show version information
@@ -8729,8 +8729,7 @@ fi
 # |   *	[#20776] Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/device.c, dlls/wined3d/query.c,
-# | 	include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
@@ -8767,14 +8766,12 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
 	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
-	patch_apply wined3d-Silence_FIXMEs/0008-wined3d-Silence-noisy-fixme-Unrecognized-stencil-op-.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Silence noisy fixme Unrecognized stencil op 0.", 1 },';
 	) >> "$patchlist"
 fi
 

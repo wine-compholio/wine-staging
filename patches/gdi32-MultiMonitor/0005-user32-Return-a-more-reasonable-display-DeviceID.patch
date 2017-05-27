@@ -1,0 +1,76 @@
+From 99f4a556a733ff6036edbcde171beef389449d6f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 27 May 2017 04:15:55 +0200
+Subject: user32: Return a more reasonable display DeviceID.
+
+---
+ dlls/user32/misc.c          |  7 ++++++-
+ dlls/user32/tests/monitor.c | 16 +++++++++++++---
+ 2 files changed, 19 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/user32/misc.c b/dlls/user32/misc.c
+index 1898ce1b696..03114650348 100644
+--- a/dlls/user32/misc.c
++++ b/dlls/user32/misc.c
+@@ -249,7 +249,12 @@ static const WCHAR adapter_device_deviceid[] = {'P','C','I','\\','V','E','N','_'
+                                                 'D','E','V','_','0','0','0','0',0};
+ static const WCHAR display_device_name[] = {'%','s','\\','M','o','n','i','t','o','r','0',0};
+ static const WCHAR display_device_string[] = {'W','i','n','e',' ','D','i','s','p','l','a','y',0};
+-static const WCHAR display_device_deviceid[] = {'M','O','N','I','T','O','R','\\','W','I','N','E','%','0','4','d',0};
++static const WCHAR display_device_deviceid[] = {'M','O','N','I','T','O','R','\\',
++                                                'D','e','f','a','u','l','t','_','M','o','n','i','t','o','r','\\',
++                                                '{','4','D','3','6','E','9','6','E','-','E','3','2','5','-',
++                                                '1','1','C','E','-','B','F','C','1','-',
++                                                '0','8','0','0','2','B','E','1','0','3','1','8','}','\\',
++                                                '%','0','4','d',0};
+ 
+ struct display_devices_enum_info
+ {
+diff --git a/dlls/user32/tests/monitor.c b/dlls/user32/tests/monitor.c
+index dfdca49e792..886d63ccfe2 100644
+--- a/dlls/user32/tests/monitor.c
++++ b/dlls/user32/tests/monitor.c
+@@ -89,12 +89,12 @@ static void test_enumdisplaydevices(void)
+     }
+ 
+     dd.cb = sizeof(dd);
+-    while(1)
++    for (num = 0;; num++)
+     {
+-        BOOL ret;
+         HDC dc;
+         ret = pEnumDisplayDevicesA(NULL, num, &dd, 0);
+         if(!ret) break;
++
+         if(dd.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE)
+         {
+             strcpy(primary_device_name, dd.DeviceName);
+@@ -107,7 +107,6 @@ static void test_enumdisplaydevices(void)
+             ok(dc != NULL, "Failed to CreateDC(\"%s\") err=%d\n", dd.DeviceName, GetLastError());
+             DeleteDC(dc);
+         }
+-        num++;
+     }
+ 
+     if (primary_num == -1 || !pEnumDisplayMonitors || !pGetMonitorInfoA)
+@@ -122,6 +121,17 @@ static void test_enumdisplaydevices(void)
+     ok(!strcmp(primary_monitor_device_name, primary_device_name),
+        "monitor device name %s, device name %s\n", primary_monitor_device_name,
+        primary_device_name);
++
++    dd.cb = sizeof(dd);
++    for (num = 0;; num++)
++    {
++        ret = pEnumDisplayDevicesA(primary_device_name, num, &dd, 0);
++        if (!ret) break;
++
++        dd.DeviceID[63] = 0;
++        ok(!strcasecmp(dd.DeviceID, "Monitor\\Default_Monitor\\{4D36E96E-E325-11CE-BFC1-08002BE10318}\\"),
++           "DeviceID \"%s\" does not start with \"Monitor\\Default_Monitor\\...\" prefix\n", dd.DeviceID);
++    }
+ }
+ 
+ struct vid_mode
+-- 
+2.12.2
+

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "799230c78ab102fa0034cb4477ce1be78c456a87"
+	echo "7d2ce5cbe7c84dd193e982d4cfe882265867f998"
 }
 
 # Show version information
@@ -431,6 +431,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_check_format_support="$1"
+	enable_wined3d_glsl_ffp_vertex_lighting="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
@@ -1527,6 +1528,9 @@ patch_enable ()
 			;;
 		wined3d-check_format_support)
 			enable_wined3d_check_format_support="$2"
+			;;
+		wined3d-glsl_ffp_vertex_lighting)
+			enable_wined3d_glsl_ffp_vertex_lighting="$2"
 			;;
 		winedbg-Process_Arguments)
 			enable_winedbg_Process_Arguments="$2"
@@ -8844,6 +8848,21 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D10Device_CheckFormatSupport.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-glsl_ffp_vertex_lighting
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43053] Pass correct index to shader_glsl_ffp_vertex_lighting_footer
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_glsl_ffp_vertex_lighting" -eq 1; then
+	patch_apply wined3d-glsl_ffp_vertex_lighting/0001-wined3d-Pass-correct-index-to-shader_glsl_ffp_vertex.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Pass correct index to shader_glsl_ffp_vertex_lighting_footer.", 1 },';
 	) >> "$patchlist"
 fi
 

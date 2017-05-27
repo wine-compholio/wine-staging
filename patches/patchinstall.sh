@@ -6213,9 +6213,6 @@ fi
 
 # Patchset ntoskrnl-Stubs
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32186] Add stub for ntoskrnl.KeWaitForMultipleObjects
-# |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
 # |

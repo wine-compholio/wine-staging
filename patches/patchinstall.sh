@@ -244,6 +244,7 @@ patch_enable_all ()
 	enable_ntdll_NtAllocateUuids="$1"
 	enable_ntdll_NtContinue="$1"
 	enable_ntdll_NtCreateThreadEx="$1"
+	enable_ntdll_NtDevicePath="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
@@ -968,6 +969,9 @@ patch_enable ()
 			;;
 		ntdll-NtCreateThreadEx)
 			enable_ntdll_NtCreateThreadEx="$2"
+			;;
+		ntdll-NtDevicePath)
+			enable_ntdll_NtDevicePath="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -2367,6 +2371,13 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
 	fi
 	enable_kernel32_K32GetPerformanceInfo=1
+fi
+
+if test "$enable_ntdll_NtDevicePath" -eq 1; then
+	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
+		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
+	fi
+	enable_ntdll_Pipe_SpecialCharacters=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -5694,6 +5705,39 @@ if test "$enable_ntdll_NtCreateThreadEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Pipe_SpecialCharacters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28995] Allow special characters in pipe names
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
+# |
+if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
+	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtDevicePath
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Pipe_SpecialCharacters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37487] Resolve \\SystemRoot\\ prefix when opening files
+# |
+# | Modified files:
+# |   *	dlls/ntdll/directory.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_NtDevicePath" -eq 1; then
+	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtQuerySection
 # |
 # | Modified files:
@@ -5770,21 +5814,6 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Pipe_SpecialCharacters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28995] Allow special characters in pipe names
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
-# |
-if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
-	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
 	) >> "$patchlist"
 fi
 

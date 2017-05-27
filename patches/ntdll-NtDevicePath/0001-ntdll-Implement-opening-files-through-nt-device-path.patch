@@ -1,0 +1,220 @@
+From 02109af7e131fe02a3d7d467210a0ea6f64a334a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 26 May 2017 05:17:17 +0200
+Subject: ntdll: Implement opening files through nt device paths.
+
+---
+ dlls/ntdll/directory.c  | 134 ++++++++++++++++++++++++++++++++++++++++++++----
+ dlls/ntdll/tests/file.c |  25 ++++++++-
+ 2 files changed, 149 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
+index 5f3c2dfc31a..fc2b1f63752 100644
+--- a/dlls/ntdll/directory.c
++++ b/dlls/ntdll/directory.c
+@@ -2806,16 +2806,10 @@ NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_STRING *
+ 
+ 
+ /******************************************************************************
+- *           wine_nt_to_unix_file_name  (NTDLL.@) Not a Windows API
+- *
+- * Convert a file name from NT namespace to Unix namespace.
+- *
+- * If disposition is not FILE_OPEN or FILE_OVERWRITE, the last path
+- * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
+- * returned, but the unix name is still filled in properly.
++ *           nt_to_unix_file_name_internal
+  */
+-NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
+-                                          UINT disposition, BOOLEAN check_case )
++static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
++                                               UINT disposition, BOOLEAN check_case )
+ {
+     static const WCHAR unixW[] = {'u','n','i','x'};
+     static const WCHAR pipeW[] = {'p','i','p','e'};
+@@ -2932,6 +2926,128 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRI
+     return status;
+ }
+ 
++/* read the contents of an NT symlink object */
++static NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length )
++{
++    OBJECT_ATTRIBUTES attr;
++    UNICODE_STRING targetW;
++    NTSTATUS status;
++    HANDLE handle;
++
++    attr.Length = sizeof(attr);
++    attr.RootDirectory = root;
++    attr.Attributes = OBJ_CASE_INSENSITIVE;
++    attr.ObjectName = name;
++    attr.SecurityDescriptor = NULL;
++    attr.SecurityQualityOfService = NULL;
++
++    if (!(status = NtOpenSymbolicLinkObject( &handle, SYMBOLIC_LINK_QUERY, &attr )))
++    {
++        targetW.Buffer = target;
++        targetW.MaximumLength = (length - 1) * sizeof(WCHAR);
++        status = NtQuerySymbolicLinkObject( handle, &targetW, NULL );
++        NtClose( handle );
++    }
++
++    return status;
++}
++
++/* try to find dos device based on nt device name */
++static NTSTATUS nt_to_dos_device( WCHAR *name, size_t length, WCHAR *device_ret )
++{
++    static const WCHAR dosdevicesW[] = {'\\','D','o','s','D','e','v','i','c','e','s',0};
++    UNICODE_STRING dosdevW;
++    WCHAR symlinkW[MAX_PATH];
++    OBJECT_ATTRIBUTES attr;
++    NTSTATUS status;
++    char data[1024];
++    HANDLE handle;
++    ULONG ctx = 0;
++
++    DIRECTORY_BASIC_INFORMATION *info = (DIRECTORY_BASIC_INFORMATION *)data;
++
++    attr.Length = sizeof(attr);
++    attr.RootDirectory = 0;
++    attr.ObjectName = &dosdevW;
++    attr.Attributes = OBJ_CASE_INSENSITIVE;
++    attr.SecurityDescriptor = NULL;
++    attr.SecurityQualityOfService = NULL;
++
++    RtlInitUnicodeString( &dosdevW, dosdevicesW );
++    status = NtOpenDirectoryObject( &handle, FILE_LIST_DIRECTORY, &attr );
++    if (status) return STATUS_BAD_DEVICE_TYPE;
++
++    while (!NtQueryDirectoryObject( handle, info, sizeof(data), TRUE, FALSE, &ctx, NULL ))
++    {
++        if (read_nt_symlink( handle, &info->ObjectName, symlinkW, MAX_PATH )) continue;
++        if (strlenW( symlinkW ) != length || memicmpW( symlinkW, name, length )) continue;
++        if (info->ObjectName.Length != 2 * sizeof(WCHAR) || info->ObjectName.Buffer[1] != ':') continue;
++
++        *device_ret = info->ObjectName.Buffer[0];
++        NtClose( handle );
++        return STATUS_SUCCESS;
++    }
++
++    NtClose( handle );
++    return STATUS_BAD_DEVICE_TYPE;
++}
++
++/******************************************************************************
++ *           wine_nt_to_unix_file_name  (NTDLL.@) Not a Windows API
++ *
++ * Convert a file name from NT namespace to Unix namespace.
++ *
++ * If disposition is not FILE_OPEN or FILE_OVERWRITE, the last path
++ * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
++ * returned, but the unix name is still filled in properly.
++ */
++NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
++                                          UINT disposition, BOOLEAN check_case )
++{
++    static const WCHAR systemrootW[] = {'\\','S','y','s','t','e','m','R','o','o','t','\\'};
++    static const WCHAR dosprefixW[] = {'\\','?','?','\\'};
++    static const WCHAR deviceW[] = {'\\','D','e','v','i','c','e','\\'};
++    WCHAR *name, *ptr, *prefix, buffer[3] = {'c',':',0};
++    UNICODE_STRING dospathW;
++    size_t offset, name_len;
++    NTSTATUS status;
++
++    if (nameW->Length >= sizeof(deviceW) &&
++        !memicmpW( nameW->Buffer, deviceW, sizeof(deviceW) / sizeof(WCHAR) ))
++    {
++        offset = sizeof(deviceW) / sizeof(WCHAR);
++        while (offset * sizeof(WCHAR) < nameW->Length && nameW->Buffer[ offset ] != '\\') offset++;
++        if ((status = nt_to_dos_device( nameW->Buffer, offset, buffer ))) return status;
++        prefix = buffer;
++    }
++    else if (nameW->Length >= sizeof(systemrootW) &&
++             !memicmpW( nameW->Buffer, systemrootW, sizeof(systemrootW) / sizeof(WCHAR) ))
++    {
++        offset = (sizeof(systemrootW) - 1) / sizeof(WCHAR);
++        prefix = user_shared_data->NtSystemRoot;
++    }
++    else
++        return nt_to_unix_file_name_internal( nameW, unix_name_ret, disposition, check_case );
++
++    name_len = sizeof(dosprefixW) + strlenW(prefix) * sizeof(WCHAR) +
++               nameW->Length - offset * sizeof(WCHAR) + sizeof(WCHAR);
++    if (!(name = RtlAllocateHeap( GetProcessHeap(), 0, name_len )))
++        return STATUS_NO_MEMORY;
++
++    ptr = name;
++    memcpy( ptr, dosprefixW, sizeof(dosprefixW) );
++    ptr += sizeof(dosprefixW) / sizeof(WCHAR);
++    strcpyW( ptr, prefix );
++    ptr += strlenW(ptr);
++    memcpy( ptr, nameW->Buffer + offset, nameW->Length - offset * sizeof(WCHAR) );
++    ptr[ nameW->Length / sizeof(WCHAR) - offset ] = 0;
++
++    RtlInitUnicodeString( &dospathW, name );
++    status = nt_to_unix_file_name_internal( &dospathW, unix_name_ret, disposition, check_case );
++
++    RtlFreeHeap( GetProcessHeap(), 0, name );
++    return status;
++}
+ 
+ /******************************************************************
+  *		RtlWow64EnableFsRedirection   (NTDLL.@)
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 53504286366..43f56a7a40f 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -161,18 +161,22 @@ static void WINAPI apc( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved )
+ 
+ static void create_file_test(void)
+ {
++    static const WCHAR notepadW[] = {'n','o','t','e','p','a','d','.','e','x','e',0};
+     static const WCHAR systemrootW[] = {'\\','S','y','s','t','e','m','R','o','o','t',
+                                         '\\','f','a','i','l','i','n','g',0};
++    static const WCHAR systemrootExplorerW[] = {'\\','S','y','s','t','e','m','R','o','o','t',
++                                               '\\','e','x','p','l','o','r','e','r','.','e','x','e',0};
+     static const WCHAR questionmarkInvalidNameW[] = {'a','f','i','l','e','?',0};
+     static const WCHAR pipeInvalidNameW[]  = {'a','|','b',0};
+     static const WCHAR pathInvalidNtW[] = {'\\','\\','?','\\',0};
+     static const WCHAR pathInvalidNt2W[] = {'\\','?','?','\\',0};
+     static const WCHAR pathInvalidDosW[] = {'\\','D','o','s','D','e','v','i','c','e','s','\\',0};
+     static const char testdata[] = "Hello World";
++    static const WCHAR sepW[] = {'\\',0};
+     FILE_NETWORK_OPEN_INFORMATION info;
+     NTSTATUS status;
+     HANDLE dir, file;
+-    WCHAR path[MAX_PATH];
++    WCHAR path[MAX_PATH], temp[MAX_PATH];
+     OBJECT_ATTRIBUTES attr;
+     IO_STATUS_BLOCK io;
+     UNICODE_STRING nameW;
+@@ -352,6 +356,25 @@ static void create_file_test(void)
+     status = pNtQueryFullAttributesFile( &attr, &info );
+     ok( status == STATUS_OBJECT_NAME_INVALID,
+         "query %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );
++
++    GetWindowsDirectoryW( path, MAX_PATH );
++    path[2] = 0;
++    ok( QueryDosDeviceW( path, temp, MAX_PATH ),
++        "QueryDosDeviceW failed with error %u\n", GetLastError() );
++    lstrcatW( temp, sepW );
++    lstrcatW( temp, path+3 );
++    lstrcatW( temp, sepW );
++    lstrcatW( temp, notepadW );
++
++    pRtlInitUnicodeString( &nameW, temp );
++    status = pNtQueryFullAttributesFile( &attr, &info );
++    ok( status == STATUS_SUCCESS,
++        "query %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );
++
++    pRtlInitUnicodeString( &nameW, systemrootExplorerW );
++    status = pNtQueryFullAttributesFile( &attr, &info );
++    ok( status == STATUS_SUCCESS,
++        "query %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );
+ }
+ 
+ static void open_file_test(void)
+-- 
+2.12.2
+

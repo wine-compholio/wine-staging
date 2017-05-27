@@ -326,6 +326,7 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_server_device_manager_destroy="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -1213,6 +1214,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		server-device_manager_destroy)
+			enable_server_device_manager_destroy="$2"
 			;;
 		setupapi-DelReg)
 			enable_setupapi_DelReg="$2"
@@ -7002,6 +7006,18 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-device_manager_destroy
+# |
+# | Modified files:
+# |   *	server/device.c
+# |
+if test "$enable_server_device_manager_destroy" -eq 1; then
+	patch_apply server-device_manager_destroy/0001-server-Fix-crash-when-a-device-driver-segfaults-duri.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "server: Fix crash when a device driver segfaults during an open file request.", 1 },';
 	) >> "$patchlist"
 fi
 

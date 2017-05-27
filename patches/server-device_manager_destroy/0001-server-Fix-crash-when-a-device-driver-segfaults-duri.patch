@@ -1,0 +1,39 @@
+From 7947b082f3d34c30f2c69e236db6723985faf35f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 27 May 2017 15:52:32 +0200
+Subject: server: Fix crash when a device driver segfaults during an open file
+ request.
+
+---
+ server/device.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/server/device.c b/server/device.c
+index 42f3e797ab9..a5928f520a9 100644
+--- a/server/device.c
++++ b/server/device.c
+@@ -623,7 +623,11 @@ static void delete_device( struct device *device )
+     if (!device->manager) return;  /* already deleted */
+ 
+     LIST_FOR_EACH_ENTRY_SAFE( file, next, &device->files, struct device_file, entry )
++    {
++        grab_object( &file->obj );
+         delete_file( file );
++        release_object( &file->obj );
++    }
+ 
+     unlink_named_object( &device->obj );
+     list_remove( &device->entry );
+@@ -651,7 +655,9 @@ static void device_manager_destroy( struct object *obj )
+     while ((ptr = list_head( &manager->devices )))
+     {
+         struct device *device = LIST_ENTRY( ptr, struct device, entry );
++        grab_object( &device->obj );
+         delete_device( device );
++        release_object( &device->obj );
+     }
+ }
+ 
+-- 
+2.12.2
+

@@ -113,6 +113,7 @@ patch_enable_all ()
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d11_ResolveSubresource="$1"
+	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
@@ -576,6 +577,9 @@ patch_enable ()
 			;;
 		d3d11-ResolveSubresource)
 			enable_d3d11_ResolveSubresource="$2"
+			;;
+		d3d11-Silence_FIXMEs)
+			enable_d3d11_Silence_FIXMEs="$2"
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
@@ -3523,6 +3527,20 @@ if test "$enable_d3d11_ResolveSubresource" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ResolveSubresource by copying sub resource (there is no multisample texture support yet).", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_device_ResolveSubresource in the same way as for d3d11.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c
+# |
+if test "$enable_d3d11_Silence_FIXMEs" -eq 1; then
+	patch_apply d3d11-Silence_FIXMEs/0001-d3d11-Silence-ID3D11Device_GetDeviceRemovedReason.patch
+	patch_apply d3d11-Silence_FIXMEs/0002-d3d11-Silence-depth-bias-warning-in-ID3D11DeviceCont.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Silence ID3D11Device_GetDeviceRemovedReason.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Silence depth bias warning in ID3D11DeviceContext_RSSetState.", 1 },';
 	) >> "$patchlist"
 fi
 

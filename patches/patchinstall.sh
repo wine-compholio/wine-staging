@@ -5800,6 +5800,7 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0009-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0010-ntdll-Skip-get_dll_info-wineserver-call-if-address-d.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Store full path for ntdll/kernel32 dll.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
@@ -5810,6 +5811,7 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Skip get_dll_info wineserver call if address does not have VPROT_IMAGE permissions.", 1 },';
 	) >> "$patchlist"
 fi
 

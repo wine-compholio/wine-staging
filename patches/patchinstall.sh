@@ -2373,6 +2373,13 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 	enable_kernel32_K32GetPerformanceInfo=1
 fi
 
+if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
+	if test "$enable_ntdll_NtDevicePath" -gt 1; then
+		abort "Patchset ntdll-NtDevicePath disabled, but ntdll-NtQueryVirtualMemory depends on that."
+	fi
+	enable_ntdll_NtDevicePath=1
+fi
+
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
@@ -5754,19 +5761,36 @@ fi
 
 # Patchset ntdll-NtQueryVirtualMemory
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Pipe_SpecialCharacters, ntdll-NtDevicePath
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
 # |
 # | Modified files:
-# |   *	dlls/kernel32/virtual.c, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c
+# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
+# | 	dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c, server/process.c, server/protocol.def,
+# | 	server/thread.c
 # |
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	patch_apply ntdll-NtQueryVirtualMemory/0001-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0002-kernel32-Implement-K32GetMappedFileName.-v2.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0001-server-Store-full-path-for-ntdll-kernel32-dll.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0002-ntdll-Split-logic-for-MemoryBasicInformation-into-a-.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0004-ntdll-tests-Add-tests-for-NtQueryVirtualMemory-Memor.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0005-ntdll-tests-Add-test-to-ensure-section-name-is-full-.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0009-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Store full path for ntdll/kernel32 dll.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add test to ensure section name is full path.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';
 	) >> "$patchlist"
 fi

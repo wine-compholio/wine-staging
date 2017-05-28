@@ -1,4 +1,4 @@
-From 02109af7e131fe02a3d7d467210a0ea6f64a334a Mon Sep 17 00:00:00 2001
+From ed78d7dd56fe29c5a310dc228576ce683730727a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 26 May 2017 05:17:17 +0200
 Subject: ntdll: Implement opening files through nt device paths.
@@ -9,10 +9,10 @@ Subject: ntdll: Implement opening files through nt device paths.
  2 files changed, 149 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 5f3c2dfc31a..fc2b1f63752 100644
+index 32699fe3cc4..97b42398bb0 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -2806,16 +2806,10 @@ NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_STRING *
+@@ -2811,16 +2811,10 @@ NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_STRING *
  
  
  /******************************************************************************
@@ -32,7 +32,7 @@ index 5f3c2dfc31a..fc2b1f63752 100644
  {
      static const WCHAR unixW[] = {'u','n','i','x'};
      static const WCHAR pipeW[] = {'p','i','p','e'};
-@@ -2932,6 +2926,128 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRI
+@@ -2937,6 +2931,128 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRI
      return status;
  }
  
@@ -67,7 +67,7 @@ index 5f3c2dfc31a..fc2b1f63752 100644
 +{
 +    static const WCHAR dosdevicesW[] = {'\\','D','o','s','D','e','v','i','c','e','s',0};
 +    UNICODE_STRING dosdevW;
-+    WCHAR symlinkW[MAX_PATH];
++    WCHAR symlinkW[MAX_DIR_ENTRY_LEN];
 +    OBJECT_ATTRIBUTES attr;
 +    NTSTATUS status;
 +    char data[1024];
@@ -89,7 +89,7 @@ index 5f3c2dfc31a..fc2b1f63752 100644
 +
 +    while (!NtQueryDirectoryObject( handle, info, sizeof(data), TRUE, FALSE, &ctx, NULL ))
 +    {
-+        if (read_nt_symlink( handle, &info->ObjectName, symlinkW, MAX_PATH )) continue;
++        if (read_nt_symlink( handle, &info->ObjectName, symlinkW, MAX_DIR_ENTRY_LEN )) continue;
 +        if (strlenW( symlinkW ) != length || memicmpW( symlinkW, name, length )) continue;
 +        if (info->ObjectName.Length != 2 * sizeof(WCHAR) || info->ObjectName.Buffer[1] != ':') continue;
 +
@@ -162,10 +162,10 @@ index 5f3c2dfc31a..fc2b1f63752 100644
  /******************************************************************
   *		RtlWow64EnableFsRedirection   (NTDLL.@)
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 53504286366..43f56a7a40f 100644
+index 9de9009b10e..1751865a682 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -161,18 +161,22 @@ static void WINAPI apc( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved )
+@@ -159,18 +159,22 @@ static void WINAPI apc( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved )
  
  static void create_file_test(void)
  {
@@ -189,7 +189,7 @@ index 53504286366..43f56a7a40f 100644
      OBJECT_ATTRIBUTES attr;
      IO_STATUS_BLOCK io;
      UNICODE_STRING nameW;
-@@ -352,6 +356,25 @@ static void create_file_test(void)
+@@ -351,6 +355,25 @@ static void create_file_test(void)
      status = pNtQueryFullAttributesFile( &attr, &info );
      ok( status == STATUS_OBJECT_NAME_INVALID,
          "query %s failed %x\n", wine_dbgstr_w(nameW.Buffer), status );

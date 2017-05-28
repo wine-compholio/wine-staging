@@ -1,12 +1,12 @@
-From 2cd035059cfc7c77ca63c3e46fc85dde1a2a7ccc Mon Sep 17 00:00:00 2001
+From d0f1010e925785febb306d0fd22b70165585b0a2 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 16 Mar 2016 20:23:28 +0800
 Subject: kernel32: Implement K32GetMappedFileName. (v2)
 
 ---
  dlls/kernel32/virtual.c       | 67 +++++++++++++++++++++++++++++++++++--------
- dlls/psapi/tests/psapi_main.c | 21 +++-----------
- 2 files changed, 59 insertions(+), 29 deletions(-)
+ dlls/psapi/tests/psapi_main.c | 25 ++++------------
+ 2 files changed, 60 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/kernel32/virtual.c b/dlls/kernel32/virtual.c
 index 5733a42bbf5..efdddfafc97 100644
@@ -98,10 +98,10 @@ index 5733a42bbf5..efdddfafc97 100644
  
  /***********************************************************************
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index ebb4e453e61..375bffb9c4a 100644
+index 23025eedab3..0751bb24fb8 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -362,18 +362,15 @@ static void test_GetMappedFileName(void)
+@@ -364,27 +364,22 @@ static void test_GetMappedFileName(void)
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(NULL, hMod, szMapPath, sizeof(szMapPath));
      ok(!ret, "GetMappedFileName should fail\n");
@@ -120,15 +120,16 @@ index ebb4e453e61..375bffb9c4a 100644
      ok( ret || broken(GetLastError() == ERROR_UNEXP_NET_ERR), /* win2k */
          "GetMappedFileNameA failed with error %u\n", GetLastError() );
      if (ret)
-@@ -382,7 +379,6 @@ todo_wine
-         todo_wine
+     {
+         ok(ret == strlen(szMapPath), "szMapPath=\"%s\" ret=%d\n", szMapPath, ret);
+-        todo_wine
          ok(szMapPath[0] == '\\', "szMapPath=\"%s\"\n", szMapPath);
          szMapBaseName = strrchr(szMapPath, '\\'); /* That's close enough for us */
 -        todo_wine
          ok(szMapBaseName && *szMapBaseName, "szMapPath=\"%s\"\n", szMapPath);
          if (szMapBaseName)
          {
-@@ -420,36 +416,31 @@ todo_wine
+@@ -422,36 +417,31 @@ todo_wine
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(GetCurrentProcess(), base, map_name, 0);
      ok(!ret, "GetMappedFileName should fail\n");
@@ -167,7 +168,19 @@ index ebb4e453e61..375bffb9c4a 100644
      if (nt_get_mapped_file_name(GetCurrentProcess(), base, nt_map_name, sizeof(nt_map_name)/sizeof(nt_map_name[0])))
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
-@@ -460,16 +451,14 @@ todo_wine
+@@ -462,10 +452,9 @@ todo_wine
+ 
+     SetLastError(0xdeadbeef);
+     ret = pGetMappedFileNameW(current_process, base, map_nameW, sizeof(map_nameW)/sizeof(map_nameW[0]));
+-todo_wine {
+     ok(ret, "GetMappedFileNameW error %d\n", GetLastError());
+     ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
+-}
++
+     if (nt_get_mapped_file_name(current_process, base, nt_map_name, sizeof(nt_map_name)/sizeof(nt_map_name[0])))
+     {
+         ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
+@@ -476,16 +465,14 @@ todo_wine
  
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
@@ -185,7 +198,7 @@ index ebb4e453e61..375bffb9c4a 100644
      ok(GetLastError() == ERROR_UNEXP_NET_ERR, "expected ERROR_UNEXP_NET_ERR, got %d\n", GetLastError());
  
      SetLastError(0xdeadbeef);
-@@ -481,7 +470,6 @@ todo_wine
+@@ -497,7 +484,6 @@ todo_wine
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(0, base, map_name, sizeof(map_name));
      ok(!ret, "GetMappedFileName should fail\n");
@@ -193,15 +206,15 @@ index ebb4e453e61..375bffb9c4a 100644
      ok(GetLastError() == ERROR_INVALID_HANDLE, "expected ERROR_INVALID_HANDLE, got %d\n", GetLastError());
  
      UnmapViewOfFile(base);
-@@ -500,7 +488,6 @@ todo_wine
+@@ -516,7 +502,6 @@ todo_wine
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
      ok(!ret, "GetMappedFileName should fail\n");
 -todo_wine
      ok(GetLastError() == ERROR_FILE_INVALID, "expected ERROR_FILE_INVALID, got %d\n", GetLastError());
  
-     UnmapViewOfFile(base);
-@@ -549,7 +536,7 @@ static void test_GetProcessImageFileName(void)
+     CloseHandle(current_process);
+@@ -566,7 +551,7 @@ static void test_GetProcessImageFileName(void)
      if(ret && ret1)
      {
          /* Windows returns 2*strlen-1 */
@@ -211,5 +224,5 @@ index ebb4e453e61..375bffb9c4a 100644
      }
  
 -- 
-2.11.0
+2.12.2
 

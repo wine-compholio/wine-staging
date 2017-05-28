@@ -1,0 +1,65 @@
+From f16058fd2551d42166df18a9d2dd784f57b35144 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Sun, 28 May 2017 10:30:43 +0200
+Subject: ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).
+
+---
+ dlls/ntdll/tests/info.c | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index f1de20698a5..1b54bd41320 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -1751,6 +1751,8 @@ static void test_queryvirtualmemory(void)
+     MEMORY_BASIC_INFORMATION mbi;
+     char stackbuf[42];
+     HMODULE module;
++    char buffer_name[sizeof(MEMORY_SECTION_NAME) + MAX_PATH * sizeof(WCHAR)];
++    MEMORY_SECTION_NAME *msn = (MEMORY_SECTION_NAME *)buffer_name;
+ 
+     module = GetModuleHandleA( "ntdll.dll" );
+     trace("Check flags of the PE header of NTDLL.DLL at %p\n", module);
+@@ -1824,6 +1826,39 @@ static void test_queryvirtualmemory(void)
+             "mbi.Protect is 0x%x\n", mbi.Protect);
+     }
+     else skip( "bss is outside of module\n" );  /* this can happen on Mac OS */
++
++    trace("Check section name of NTDLL.DLL with invalid size\n");
++    module = GetModuleHandleA( "ntdll.dll" );
++    memset(msn, 0, sizeof(*msn));
++    readcount = 0;
++    status = pNtQueryVirtualMemory(NtCurrentProcess(), module, MemorySectionName, msn, sizeof(*msn), &readcount);
++    ok( status == STATUS_BUFFER_OVERFLOW, "Expected STATUS_BUFFER_OVERFLOW, got %08x\n", status);
++    ok( readcount > 0, "Expected readcount to be > 0\n");
++
++    trace("Check section name of NTDLL.DLL with invalid size\n");
++    module = GetModuleHandleA( "ntdll.dll" );
++    memset(msn, 0, sizeof(*msn));
++    readcount = 0;
++    status = pNtQueryVirtualMemory(NtCurrentProcess(), module, MemorySectionName, msn, sizeof(*msn) - 1, &readcount);
++    ok( status == STATUS_INFO_LENGTH_MISMATCH, "Expected STATUS_INFO_LENGTH_MISMATCH, got %08x\n", status);
++    ok( readcount > 0, "Expected readcount to be > 0\n");
++
++    trace("Check section name of NTDLL.DLL\n");
++    module = GetModuleHandleA( "ntdll.dll" );
++    memset(msn, 0x55, sizeof(*msn));
++    memset(buffer_name, 0x77, sizeof(buffer_name));
++    readcount = 0;
++    status = pNtQueryVirtualMemory(NtCurrentProcess(), module, MemorySectionName, msn, sizeof(buffer_name), &readcount);
++    ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status);
++    ok( readcount > 0, "Expected readcount to be > 0\n");
++    trace ("Section Name: %s\n", wine_dbgstr_w(msn->SectionFileName.Buffer));
++
++    trace("Check section name of non mapped memory\n");
++    memset(msn, 0, sizeof(*msn));
++    readcount = 0;
++    status = pNtQueryVirtualMemory(NtCurrentProcess(), &buffer_name, MemorySectionName, msn, sizeof(buffer_name), &readcount);
++    ok( status == STATUS_INVALID_ADDRESS, "Expected STATUS_INVALID_ADDRESS, got %08x\n", status);
++    ok( readcount == 0 || broken(readcount != 0) /* wow64 */, "Expected readcount to be 0\n");
+ }
+ 
+ static void test_affinity(void)
+-- 
+2.12.2
+

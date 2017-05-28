@@ -1,0 +1,163 @@
+From 2ea8d5c16d9ab714f8cecde6cd6b2ff51738535a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 28 May 2017 11:17:26 +0200
+Subject: ntdll: Resolve drive symlinks before returning section name.
+
+---
+ dlls/ntdll/directory.c        |  2 +-
+ dlls/ntdll/ntdll_misc.h       |  1 +
+ dlls/ntdll/virtual.c          | 38 ++++++++++++++++++++++++++++++++------
+ dlls/psapi/tests/psapi_main.c |  6 +-----
+ 4 files changed, 35 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
+index 97b42398bb0..c0b2a1ea83e 100644
+--- a/dlls/ntdll/directory.c
++++ b/dlls/ntdll/directory.c
+@@ -2932,7 +2932,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+ }
+ 
+ /* read the contents of an NT symlink object */
+-static NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length )
++NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length )
+ {
+     OBJECT_ATTRIBUTES attr;
+     UNICODE_STRING targetW;
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 0e7749af4c3..e56a781fc29 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -161,6 +161,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
+                                            UINT disposition ) DECLSPEC_HIDDEN;
+ 
+ /* virtual memory */
++extern NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length ) DECLSPEC_HIDDEN;
+ extern NTSTATUS virtual_get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping ) DECLSPEC_HIDDEN;
+ extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info ) DECLSPEC_HIDDEN;
+ extern NTSTATUS virtual_create_builtin_view( void *base ) DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 80700437a45..1f3be783fb3 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -53,6 +53,7 @@
+ #include "wine/library.h"
+ #include "wine/server.h"
+ #include "wine/exception.h"
++#include "wine/unicode.h"
+ #include "wine/list.h"
+ #include "wine/debug.h"
+ #include "ntdll_misc.h"
+@@ -146,6 +147,8 @@ static const BOOL is_win64 = (sizeof(void *) > sizeof(int));
+ 
+ #define VIRTUAL_HEAP_SIZE (sizeof(void*)*1024*1024)
+ 
++#define MAX_DIR_ENTRY_LEN 255  /* max length of a directory entry in chars */
++
+ static HANDLE virtual_heap;
+ static void *preload_reserve_start;
+ static void *preload_reserve_end;
+@@ -2409,12 +2412,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+                                   MEMORY_SECTION_NAME *info,
+                                   SIZE_T len, SIZE_T *res_len )
+ {
++    static const WCHAR dosprefixW[] = {'\\','?','?','\\'};
++    WCHAR symlinkW[MAX_DIR_ENTRY_LEN] = {0};
+     UNICODE_STRING nt_name;
+     ANSI_STRING unix_name;
+     data_size_t size = 1024;
+-    WCHAR *name = NULL;
++    WCHAR *ptr, *name = NULL;
+     NTSTATUS status;
+     HANDLE mapping;
++    size_t offset = 0;
+ 
+     if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
+ 
+@@ -2464,14 +2470,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+     }
+ 
+ found:
+-    *res_len = sizeof(MEMORY_SECTION_NAME) + nt_name.Length + sizeof(WCHAR);
++    if (nt_name.Length >= sizeof(dosprefixW) &&
++        !memcmp( nt_name.Buffer, dosprefixW, sizeof(dosprefixW) ))
++    {
++        UNICODE_STRING device_name = nt_name;
++        offset = sizeof(dosprefixW) / sizeof(WCHAR);
++        while (offset * sizeof(WCHAR) < nt_name.Length && nt_name.Buffer[ offset ] != '\\') offset++;
++        device_name.Length = offset * sizeof(WCHAR);
++        if (read_nt_symlink( NULL, &device_name, symlinkW, MAX_DIR_ENTRY_LEN ))
++        {
++            symlinkW[0] = 0;
++            offset = 0;
++        }
++    }
++
++    *res_len = sizeof(MEMORY_SECTION_NAME) + strlenW(symlinkW) * sizeof(WCHAR) +
++               nt_name.Length - offset * sizeof(WCHAR) + sizeof(WCHAR);
+     if (len >= *res_len)
+     {
+-        info->SectionFileName.Length = nt_name.Length;
+-        info->SectionFileName.MaximumLength = nt_name.Length + sizeof(WCHAR);
++        info->SectionFileName.Length = strlenW(symlinkW) * sizeof(WCHAR) +
++                                       nt_name.Length - offset * sizeof(WCHAR);
++        info->SectionFileName.MaximumLength = info->SectionFileName.Length + sizeof(WCHAR);
+         info->SectionFileName.Buffer = (WCHAR *)(info + 1);
+-        memcpy(info->SectionFileName.Buffer, nt_name.Buffer, nt_name.Length);
+-        info->SectionFileName.Buffer[ nt_name.Length / sizeof(WCHAR) ] = 0;
++
++        ptr = (WCHAR *)(info + 1);
++        strcpyW( ptr, symlinkW );
++        ptr += strlenW(symlinkW);
++        memcpy( ptr, nt_name.Buffer + offset, nt_name.Length - offset * sizeof(WCHAR) );
++        ptr[ nt_name.Length / sizeof(WCHAR) - offset ] = 0;
+     }
+     else
+         status = (len < sizeof(MEMORY_SECTION_NAME)) ? STATUS_INFO_LENGTH_MISMATCH : STATUS_BUFFER_OVERFLOW;
+diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
+index 0751bb24fb8..dd592a9ab21 100644
+--- a/dlls/psapi/tests/psapi_main.c
++++ b/dlls/psapi/tests/psapi_main.c
+@@ -434,7 +434,6 @@ static void test_GetMappedFileName(void)
+     ret = pGetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
+     ok(ret, "GetMappedFileName error %d\n", GetLastError());
+     ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
+-todo_wine
+     ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
+ 
+     SetLastError(0xdeadbeef);
+@@ -446,7 +445,6 @@ todo_wine
+     {
+         ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
+         WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
+-todo_wine
+         ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
+     }
+ 
+@@ -459,7 +457,6 @@ todo_wine
+     {
+         ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
+         WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
+-todo_wine
+         ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
+     }
+ 
+@@ -467,7 +464,6 @@ todo_wine
+     ret = pGetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
+     ok(ret, "GetMappedFileName error %d\n", GetLastError());
+     ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
+-todo_wine
+     ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
+ 
+     SetLastError(0xdeadbeef);
+@@ -552,7 +548,7 @@ static void test_GetProcessImageFileName(void)
+     {
+         /* Windows returns 2*strlen-1 */
+         ok(ret >= strlen(szImgPath), "szImgPath=\"%s\" ret=%d\n", szImgPath, ret);
+-        todo_wine ok(!strcmp(szImgPath, szMapPath), "szImgPath=\"%s\" szMapPath=\"%s\"\n", szImgPath, szMapPath);
++        ok(!strcmp(szImgPath, szMapPath), "szImgPath=\"%s\" szMapPath=\"%s\"\n", szImgPath, szMapPath);
+     }
+ 
+     SetLastError(0xdeadbeef);
+-- 
+2.12.2
+

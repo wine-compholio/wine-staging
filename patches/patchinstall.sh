@@ -435,6 +435,7 @@ patch_enable_all ()
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_check_format_support="$1"
 	enable_wined3d_glsl_ffp_vertex_lighting="$1"
+	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
@@ -1543,6 +1544,9 @@ patch_enable ()
 			;;
 		wined3d-glsl_ffp_vertex_lighting)
 			enable_wined3d_glsl_ffp_vertex_lighting="$2"
+			;;
+		wined3d-wined3d_guess_gl_vendor)
+			enable_wined3d_wined3d_guess_gl_vendor="$2"
 			;;
 		winedbg-Process_Arguments)
 			enable_winedbg_Process_Arguments="$2"
@@ -8962,6 +8966,21 @@ if test "$enable_wined3d_glsl_ffp_vertex_lighting" -eq 1; then
 	patch_apply wined3d-glsl_ffp_vertex_lighting/0001-wined3d-Pass-correct-index-to-shader_glsl_ffp_vertex.patch
 	(
 		printf '%s\n' '+    { "Józef Kucia", "wined3d: Pass correct index to shader_glsl_ffp_vertex_lighting_footer.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_guess_gl_vendor
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42538] Add check for GL_VENDOR = "Brian Paul" to detect Mesa
+# |
+# | Modified files:
+# |   *	dlls/wined3d/directx.c
+# |
+if test "$enable_wined3d_wined3d_guess_gl_vendor" -eq 1; then
+	patch_apply wined3d-wined3d_guess_gl_vendor/0001-wined3d-Also-check-for-Brian-Paul-to-detect-Mesa-gl_.patch
+	(
+		printf '%s\n' '+    { "Jarkko Korpi", "wined3d: Also check for '\''Brian Paul'\'' to detect Mesa gl_vendor.", 1 },';
 	) >> "$patchlist"
 fi
 

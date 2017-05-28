@@ -8795,14 +8795,21 @@ fi
 # |   *	[#20776] Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c, include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/query.c, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
 	patch_apply wined3d-QUERY_Stubs/0002-d3d11-Add-dummy-support-for-D3D11_QUERY_PIPELINE_STA.patch
+	patch_apply wined3d-QUERY_Stubs/0003-wined3d-Don-t-leak-free_so_statistics_queries-on-dev.patch
+	patch_apply wined3d-QUERY_Stubs/0004-wined3d-Implement-WINED3D_QUERY_TYPE_PIPELINE_STATIS.patch
+	patch_apply wined3d-QUERY_Stubs/0005-d3d11-tests-Add-basic-test-for-D3D11_QUERY_PIPELINE_.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add dummy support for D3D11_QUERY_PIPELINE_STATISTICS query.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Don'\''t leak free_so_statistics_queries on device destruction.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement WINED3D_QUERY_TYPE_PIPELINE_STATISTICS.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for D3D11_QUERY_PIPELINE_STATISTICS.", 1 },';
 	) >> "$patchlist"
 fi
 

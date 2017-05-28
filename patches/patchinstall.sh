@@ -150,6 +150,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
+	enable_dxdiag_dontskip="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -689,6 +690,9 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
+			;;
+		dxdiag-dontskip)
+			enable_dxdiag_dontskip="$2"
 			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
@@ -4174,6 +4178,18 @@ if test "$enable_dsound_EAX" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxdiag-dontskip
+# |
+# | Modified files:
+# |   *	programs/dxdiag/main.c
+# |
+if test "$enable_dxdiag_dontskip" -eq 1; then
+	patch_apply dxdiag-dontskip/0001-programs-dxdiag-Handle-dontskip-parameter.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "programs/dxdiag: Handle /dontskip parameter.", 1 },';
 	) >> "$patchlist"
 fi
 

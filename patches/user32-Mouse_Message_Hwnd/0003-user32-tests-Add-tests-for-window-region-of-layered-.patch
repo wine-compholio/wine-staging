@@ -1,0 +1,149 @@
+From c5c370cded7281e5b24545123e2ce5f310f651e5 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 29 May 2017 06:04:18 +0200
+Subject: user32/tests: Add tests for window region of layered windows.
+
+---
+ dlls/user32/tests/input.c | 70 +++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 70 insertions(+)
+
+diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
+index 47c5fa8c932..08c4c5435c6 100644
+--- a/dlls/user32/tests/input.c
++++ b/dlls/user32/tests/input.c
+@@ -80,6 +80,7 @@ static struct {
+ static UINT (WINAPI *pSendInput) (UINT, INPUT*, size_t);
+ static int (WINAPI *pGetMouseMovePointsEx) (UINT, LPMOUSEMOVEPOINT, LPMOUSEMOVEPOINT, int, DWORD);
+ static UINT (WINAPI *pGetRawInputDeviceList) (PRAWINPUTDEVICELIST, PUINT, UINT);
++static int  (WINAPI *pGetWindowRgnBox)(HWND, LPRECT);
+ 
+ #define MAXKEYEVENTS 12
+ #define MAXKEYMESSAGES MAXKEYEVENTS /* assuming a key event generates one
+@@ -164,6 +165,7 @@ static void init_function_pointers(void)
+     GET_PROC(SendInput)
+     GET_PROC(GetMouseMovePointsEx)
+     GET_PROC(GetRawInputDeviceList)
++    GET_PROC(GetWindowRgnBox)
+ 
+ #undef GET_PROC
+ }
+@@ -1930,6 +1932,9 @@ static void test_Input_mouse(void)
+     DWORD thread_id;
+     WNDCLASSA wclass;
+     POINT pt, pt_org;
++    int region_type;
++    HRGN hregion;
++    RECT region;
+     BOOL ret;
+     MSG msg;
+ 
+@@ -2159,6 +2164,12 @@ static void test_Input_mouse(void)
+     while (wait_for_message(&msg)) DispatchMessageA(&msg);
+     Sleep(100);
+ 
++    if (pGetWindowRgnBox)
++    {
++        region_type = pGetWindowRgnBox(hwnd, &region);
++        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
++    }
++
+     got_button_down = got_button_up = FALSE;
+     simulate_click(TRUE, 150, 150);
+     while (wait_for_message(&msg))
+@@ -2185,6 +2196,12 @@ static void test_Input_mouse(void)
+     while (wait_for_message(&msg)) DispatchMessageA(&msg);
+     Sleep(100);
+ 
++    if (pGetWindowRgnBox)
++    {
++        region_type = pGetWindowRgnBox(hwnd, &region);
++        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
++    }
++
+     got_button_down = got_button_up = FALSE;
+     simulate_click(TRUE, 150, 150);
+     while (wait_for_message(&msg))
+@@ -2213,6 +2230,12 @@ static void test_Input_mouse(void)
+     while (wait_for_message(&msg)) DispatchMessageA(&msg);
+     Sleep(100);
+ 
++    if (pGetWindowRgnBox)
++    {
++        region_type = pGetWindowRgnBox(hwnd, &region);
++        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
++    }
++
+     got_button_down = got_button_up = FALSE;
+     simulate_click(TRUE, 150, 150);
+     while (wait_for_message(&msg))
+@@ -2239,6 +2262,12 @@ static void test_Input_mouse(void)
+     while (wait_for_message(&msg)) DispatchMessageA(&msg);
+     Sleep(100);
+ 
++    if (pGetWindowRgnBox)
++    {
++        region_type = pGetWindowRgnBox(hwnd, &region);
++        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
++    }
++
+     got_button_down = got_button_up = FALSE;
+     simulate_click(TRUE, 150, 150);
+     while (wait_for_message(&msg))
+@@ -2266,6 +2295,12 @@ static void test_Input_mouse(void)
+     while (wait_for_message(&msg)) DispatchMessageA(&msg);
+     Sleep(100);
+ 
++    if (pGetWindowRgnBox)
++    {
++        region_type = pGetWindowRgnBox(hwnd, &region);
++        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
++    }
++
+     got_button_down = got_button_up = FALSE;
+     simulate_click(TRUE, 150, 150);
+     while (wait_for_message(&msg))
+@@ -2287,6 +2322,41 @@ static void test_Input_mouse(void)
+     ok(got_button_down, "expected WM_LBUTTONDOWN message\n");
+     ok(got_button_up, "expected WM_LBUTTONUP message\n");
+ 
++    hregion = CreateRectRgn(0, 0, 10, 10);
++    ok(hregion != NULL, "CreateRectRgn failed\n");
++    ret = SetWindowRgn(hwnd, hregion, TRUE);
++    ok(ret, "SetWindowRgn failed\n");
++    DeleteObject(hregion);
++    while (wait_for_message(&msg)) DispatchMessageA(&msg);
++    Sleep(1000);
++
++    if (pGetWindowRgnBox)
++    {
++        region_type = pGetWindowRgnBox(hwnd, &region);
++        ok(region_type == SIMPLEREGION, "expected SIMPLEREGION, got %d\n", region_type);
++    }
++
++    got_button_down = got_button_up = FALSE;
++    simulate_click(TRUE, 150, 150);
++    while (wait_for_message(&msg))
++    {
++        DispatchMessageA(&msg);
++
++        if (msg.message == WM_LBUTTONDOWN)
++        {
++            ok(msg.hwnd == button_win, "msg.hwnd = %p\n", msg.hwnd);
++            got_button_down = TRUE;
++        }
++        else if (msg.message == WM_LBUTTONUP)
++        {
++            ok(msg.hwnd == button_win, "msg.hwnd = %p\n", msg.hwnd);
++            got_button_up = TRUE;
++            break;
++        }
++    }
++    ok(got_button_down, "expected WM_LBUTTONDOWN message\n");
++    ok(got_button_up, "expected WM_LBUTTONUP message\n");
++
+     DestroyWindow(hwnd);
+     SetCursorPos(pt_org.x, pt_org.y);
+ 
+-- 
+2.12.2
+

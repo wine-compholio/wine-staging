@@ -8633,12 +8633,16 @@ fi
 # |   *	[#33661] Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2
 # |
 # | Modified files:
-# |   *	loader/wine.inf.in
+# |   *	dlls/advapi32/tests/registry.c, loader/wine.inf.in
 # |
 if test "$enable_wine_inf_Performance" -eq 1; then
 	patch_apply wine.inf-Performance/0001-wine.inf-Add-registry-keys-for-Windows-Performance-L.patch
+	patch_apply wine.inf-Performance/0002-wine.inf-Add-Counters-to-the-perflib-key-as-an-alias.patch
+	patch_apply wine.inf-Performance/0003-advapi32-tests-Add-test-for-perflib-registry-key.patch
 	(
 		printf '%s\n' '+    { "Daniel Jelinski", "wine.inf: Add registry keys for Windows Performance Library.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "wine.inf: Add '\''Counters'\'' to the perflib key as an alias for '\''Counter'\''.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Add test for perflib registry key.", 1 },';
 	) >> "$patchlist"
 fi
 

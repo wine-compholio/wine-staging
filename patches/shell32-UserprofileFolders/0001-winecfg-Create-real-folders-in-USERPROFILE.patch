@@ -1,0 +1,81 @@
+From dd641de0235e3f457f83878541c516f6d960a9b1 Mon Sep 17 00:00:00 2001
+From: Christoph Korn <c_korn@gmx.de>
+Date: Wed, 1 Jan 2014 20:06:09 +0100
+Subject: [PATCH] Create real folders in %USERPROFILE%
+
+In case a user does not want symlinks outside the wineprefix at all.
+---
+ dlls/shell32/shellpath.c | 28 +++++++++++++++++++++++-----
+ 1 file changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
+index 1a4528f..1523a00 100644
+--- a/dlls/shell32/shellpath.c
++++ b/dlls/shell32/shellpath.c
+@@ -4262,6 +4262,7 @@ static void _SHCreateSymbolicLinks(void)
+     HRESULT hr;
+     char ** xdg_results;
+     char * xdg_desktop_dir;
++    const char * pszFolders;
+ 
+     /* Create all necessary profile sub-dirs up to 'My Documents' and get the unix path. */
+     hr = SHGetFolderPathW(NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE, NULL,
+@@ -4273,6 +4274,9 @@ static void _SHCreateSymbolicLinks(void)
+     hr = XDG_UserDirLookup(xdg_dirs, num, &xdg_results);
+     if (FAILED(hr)) xdg_results = NULL;
+ 
++    /* maybe the user does not want symlinks at all */
++    pszFolders = getenv("WINEPROFILEFOLDER");
++
+     pszHome = getenv("HOME");
+     if (pszHome && !stat(pszHome, &statFolder) && S_ISDIR(statFolder.st_mode))
+     {
+@@ -4319,7 +4323,10 @@ static void _SHCreateSymbolicLinks(void)
+ 
+         /* Replace 'My Documents' directory with a symlink or fail silently if not empty. */
+         rmdir(pszPersonal);
+-        symlink(szPersonalTarget, pszPersonal);
++        if(!pszFolders)
++            symlink(szPersonalTarget, pszPersonal);
++        else
++            mkdir(pszPersonal, 0777);
+     }
+     else
+     {
+@@ -4375,7 +4382,11 @@ static void _SHCreateSymbolicLinks(void)
+             break;
+         }
+         rmdir(pszMyStuff);
+-        symlink(szMyStuffTarget, pszMyStuff);
++        if(!pszFolders)
++            symlink(szMyStuffTarget, pszMyStuff);
++        else
++            mkdir(pszMyStuff, 0777);
++        
+         HeapFree(GetProcessHeap(), 0, pszMyStuff);
+     }
+ 
+@@ -4396,10 +4407,17 @@ static void _SHCreateSymbolicLinks(void)
+         if (SUCCEEDED(hr) && (pszDesktop = wine_get_unix_file_name(wszTempPath))) 
+         {
+             rmdir(pszDesktop);
+-            if (xdg_desktop_dir)
+-                symlink(xdg_desktop_dir, pszDesktop);
++            if(!pszFolders)
++            {
++                if (xdg_desktop_dir)
++                    symlink(xdg_desktop_dir, pszDesktop);
++                else
++                    symlink(szDesktopTarget, pszDesktop);
++            }
+             else
+-                symlink(szDesktopTarget, pszDesktop);
++            {
++                mkdir(pszDesktop, 0777);
++            }
+             HeapFree(GetProcessHeap(), 0, pszDesktop);
+         }
+     }
+-- 
+2.1.4
+

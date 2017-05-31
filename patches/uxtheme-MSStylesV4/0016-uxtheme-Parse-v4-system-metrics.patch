@@ -1,0 +1,210 @@
+From f3dac5599adc4ae7215a14c805a1f9c19868375a Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 23:48:23 +0100
+Subject: [PATCH 16/19] uxtheme: Parse v4 system metrics.
+
+---
+ dlls/uxtheme/msstyles.c | 173 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 173 insertions(+)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index eae4a74..a9fa2ac 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -1306,6 +1306,165 @@ static void parse_apply_nonclient (struct PARSENONCLIENTSTATE* state)
+     }
+ }
+ 
++static void parse_handle_colour_property_v4(struct PARSECOLORSTATE* state, PTHEME_PROPERTY prop)
++{
++    int i = state->colorCount;
++
++    state->colorElements[i] = prop->iPropertyId - TMT_FIRSTCOLOR;
++    state->colorRgb[i] = prop->u.colour;
++
++    state->colorCount++;
++
++    switch (prop->iPropertyId)
++    {
++        case TMT_ACTIVECAPTION:
++            state->captionColors |= 0x1;
++        break;
++
++        case TMT_INACTIVECAPTION:
++            state->captionColors |= 0x2;
++        break;
++
++        case TMT_GRADIENTACTIVECAPTION:
++            state->captionColors |= 0x4;
++        break;
++
++        case TMT_GRADIENTINACTIVECAPTION:
++            state->captionColors |= 0x8;
++        break;
++    }
++}
++
++static void parse_handle_nonclient_font_v4 (struct PARSENONCLIENTSTATE* state, PTHEME_PROPERTY prop)
++{
++    switch (prop->iPropertyId)
++    {
++        case TMT_CAPTIONFONT:
++            state->metrics.lfCaptionFont = prop->u.font;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_SMALLCAPTIONFONT:
++            state->metrics.lfSmCaptionFont = prop->u.font;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_MENUFONT:
++            state->metrics.lfMenuFont = prop->u.font;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_STATUSFONT:
++            state->metrics.lfStatusFont = prop->u.font;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_MSGBOXFONT:
++            state->metrics.lfMessageFont = prop->u.font;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_ICONTITLEFONT:
++            state->iconTitleFont = prop->u.font;
++            state->metricsDirty = TRUE;
++        break;
++    }
++}
++
++static BOOL parse_handle_nonclient_size_v4 (struct PARSENONCLIENTSTATE* state, PTHEME_PROPERTY prop)
++{
++    switch (prop->iPropertyId)
++    {
++        case TMT_SIZINGBORDERWIDTH:
++            state->metrics.iBorderWidth = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_SCROLLBARWIDTH:
++            state->metrics.iScrollWidth = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_SCROLLBARHEIGHT:
++            state->metrics.iScrollHeight = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_CAPTIONBARWIDTH:
++            state->metrics.iCaptionWidth = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_CAPTIONBARHEIGHT:
++            state->metrics.iCaptionHeight = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_SMCAPTIONBARWIDTH:
++            state->metrics.iSmCaptionWidth = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_SMCAPTIONBARHEIGHT:
++            state->metrics.iSmCaptionHeight = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_MENUBARWIDTH:
++            state->metrics.iMenuWidth = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_MENUBARHEIGHT:
++            state->metrics.iMenuHeight = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        case TMT_PADDEDBORDERWIDTH:
++            state->metrics.iPaddedBorderWidth = prop->u.size.cx;
++            state->metricsDirty = TRUE;
++        break;
++
++        default:
++            return FALSE;
++    }
++
++    return TRUE;
++}
++
++static void MSSTYLES_SetMetricsV4(PTHEME_CLASS cls)
++{
++    struct PARSECOLORSTATE colourstate;
++    struct PARSENONCLIENTSTATE nonclientstate;
++    PTHEME_PARTSTATE ps;
++    PTHEME_PROPERTY prop;
++
++    parse_init_color(&colourstate);
++    parse_init_nonclient (&nonclientstate);
++
++    ps = cls->partstate;
++    while (ps) {
++        if (ps->iPartId == 0 && ps->iStateId == 0) {
++            prop = ps->properties;
++            while (prop) {
++                if (prop->iPrimitiveType == TMT_COLOR) {
++                    parse_handle_colour_property_v4(&colourstate, prop);
++                } else if (prop->iPrimitiveType == TMT_FONT) {
++                    parse_handle_nonclient_font_v4(&nonclientstate, prop);
++                } else if (prop->iPrimitiveType == TMT_SIZE) {
++                    parse_handle_nonclient_size_v4(&nonclientstate, prop);
++                }
++                prop = prop->next;
++            }
++            break;
++        }
++        ps = ps->next;
++    }
++
++    parse_apply_nonclient(&nonclientstate);
++    parse_apply_color(&colourstate);
++}
++
+ static BOOL MSSTYLES_GetVariantName(PTHEME_FILE tf, WCHAR* variant_name)
+ {
+     if (!strcmpiW(tf->pszSelectedSize, tf->vmap.size) && !strcmpiW(tf->pszSelectedColor, tf->vmap.colour)) {
+@@ -1319,6 +1478,8 @@ static void MSSTYLES_ParseV4Theme(PTHEME_FILE tf, BOOL setMetrics)
+ {
+     WCHAR variant_name[255];
+ 
++    static const WCHAR sysmetrics[] = {'s','y','s','m','e','t','r','i','c','s',0};
++
+     if (!MSSTYLES_GetVariantName(tf, variant_name)) {
+         WARN("Could not get variant name for selected size and colour\n");
+         return;
+@@ -1327,6 +1488,18 @@ static void MSSTYLES_ParseV4Theme(PTHEME_FILE tf, BOOL setMetrics)
+     MSSTYLES_ParseV4ClassMap(tf);
+     MSSTYLES_ParseV4Properties(tf, variant_name);
+     MSSTYLES_ParseV4InheritanceMap(tf);
++
++    if (setMetrics) {
++        PTHEME_CLASS cls = tf->classes;
++
++        while (cls) {
++            if (!strcmpiW(cls->szClassName, sysmetrics) && cls->szAppName[0] == 0) {
++                MSSTYLES_SetMetricsV4(cls);
++                break;
++            }
++            cls = cls->next;
++        }
++    }
+ }
+ 
+ /***********************************************************************
+-- 
+2.0.5
+

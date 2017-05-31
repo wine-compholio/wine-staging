@@ -1,0 +1,145 @@
+From 607f8141080fd5e5d81e5aca01b9f1dc3e699510 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 22:02:59 +0100
+Subject: [PATCH 07/19] uxtheme: Implement v4 EnumThemeColors and
+ EnumThemeSizes.
+
+---
+ dlls/uxtheme/system.c | 92 +++++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 75 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/uxtheme/system.c b/dlls/uxtheme/system.c
+index 6ded6b3..33d9a04 100644
+--- a/dlls/uxtheme/system.c
++++ b/dlls/uxtheme/system.c
+@@ -1104,6 +1104,9 @@ HRESULT WINAPI EnumThemeColors(LPWSTR pszThemeFileName, LPWSTR pszSizeName,
+     HRESULT hr;
+     LPWSTR tmp;
+     UINT resourceId = dwColorNum + 1000;
++
++    static const WCHAR prefixW[] = {'c','o','l','o','r','v','a','r','i','a','n','t','.',0};
++
+     TRACE("(%s,%s,%d)\n", debugstr_w(pszThemeFileName),
+           debugstr_w(pszSizeName), dwColorNum);
+ 
+@@ -1117,13 +1120,39 @@ HRESULT WINAPI EnumThemeColors(LPWSTR pszThemeFileName, LPWSTR pszSizeName,
+     }
+     if(!dwColorNum && *tmp) {
+         TRACE("%s\n", debugstr_w(tmp));
+-        lstrcpyW(pszColorNames->szName, tmp);
+-        LoadStringW (pt->hTheme, resourceId,
+-            pszColorNames->szDisplayName,
+-            sizeof (pszColorNames->szDisplayName) / sizeof (WCHAR));
+-        LoadStringW (pt->hTheme, resourceId+1000,
+-            pszColorNames->szTooltip,
+-            sizeof (pszColorNames->szTooltip) / sizeof (WCHAR));
++        if (pt->version == 4) {
++            WCHAR classname[1024];
++            PTHEME_CLASS ptc;
++
++            MSSTYLES_ParseV4ClassMap(pt);
++            MSSTYLES_ParseV4Properties(pt, NULL);
++
++            strcpyW(classname, prefixW);
++            strcatW(classname, tmp);
++            ptc = MSSTYLES_FindClass(pt, NULL, classname);
++
++            lstrcpyW(pszColorNames->szName, tmp);
++            if (ptc) {
++                if (FAILED(GetThemeString(ptc, 0, 0, TMT_DISPLAYNAME, pszColorNames->szDisplayName,
++                sizeof (pszColorNames->szDisplayName) / sizeof (WCHAR))))
++                    strcpyW(pszColorNames->szDisplayName, tmp);
++
++                if (FAILED(GetThemeString(ptc, 0, 0, TMT_TOOLTIP, pszColorNames->szTooltip,
++                sizeof (pszColorNames->szTooltip) / sizeof (WCHAR))))
++                    pszColorNames->szTooltip[0] = 0;
++            } else {
++                strcpyW(pszColorNames->szDisplayName, tmp);
++                pszColorNames->szTooltip[0] = 0;
++            }
++        } else {
++            lstrcpyW(pszColorNames->szName, tmp);
++            LoadStringW (pt->hTheme, resourceId,
++                pszColorNames->szDisplayName,
++                sizeof (pszColorNames->szDisplayName) / sizeof (WCHAR));
++            LoadStringW (pt->hTheme, resourceId+1000,
++                pszColorNames->szTooltip,
++                sizeof (pszColorNames->szTooltip) / sizeof (WCHAR));
++        }
+     }
+     else
+         hr = E_PROP_ID_UNSUPPORTED;
+@@ -1157,17 +1186,20 @@ HRESULT WINAPI EnumThemeColors(LPWSTR pszThemeFileName, LPWSTR pszSizeName,
+  * this is undocumented and almost never called..
+  * (and this is how windows works too)
+  */
+-HRESULT WINAPI EnumThemeSizes(LPWSTR pszThemeFileName, LPWSTR pszColorName,
++HRESULT WINAPI EnumThemeSizes(LPWSTR pszThemeFileName, LPWSTR pszSizeName,
+                               DWORD dwSizeNum, PTHEMENAMES pszSizeNames)
+ {
+     PTHEME_FILE pt;
+     HRESULT hr;
+     LPWSTR tmp;
+     UINT resourceId = dwSizeNum + 3000;
++
++    static const WCHAR prefixW[] = {'s','i','z','e','v','a','r','i','a','n','t','.',0};
++
+     TRACE("(%s,%s,%d)\n", debugstr_w(pszThemeFileName),
+-          debugstr_w(pszColorName), dwSizeNum);
++          debugstr_w(pszSizeName), dwSizeNum);
+ 
+-    hr = MSSTYLES_OpenThemeFile(pszThemeFileName, pszColorName, NULL, &pt);
++    hr = MSSTYLES_OpenThemeFile(pszThemeFileName, pszSizeName, NULL, &pt);
+     if(FAILED(hr)) return hr;
+ 
+     tmp = pt->pszAvailSizes;
+@@ -1177,13 +1209,39 @@ HRESULT WINAPI EnumThemeSizes(LPWSTR pszThemeFileName, LPWSTR pszColorName,
+     }
+     if(!dwSizeNum && *tmp) {
+         TRACE("%s\n", debugstr_w(tmp));
+-        lstrcpyW(pszSizeNames->szName, tmp);
+-        LoadStringW (pt->hTheme, resourceId,
+-            pszSizeNames->szDisplayName,
+-            sizeof (pszSizeNames->szDisplayName) / sizeof (WCHAR));
+-        LoadStringW (pt->hTheme, resourceId+1000,
+-            pszSizeNames->szTooltip,
+-            sizeof (pszSizeNames->szTooltip) / sizeof (WCHAR));
++        if (pt->version == 4) {
++            WCHAR classname[1024];
++            PTHEME_CLASS ptc;
++
++            MSSTYLES_ParseV4ClassMap(pt);
++            MSSTYLES_ParseV4Properties(pt, NULL);
++
++            strcpyW(classname, prefixW);
++            strcatW(classname, tmp);
++            ptc = MSSTYLES_FindClass(pt, NULL, classname);
++
++            lstrcpyW(pszSizeNames->szName, tmp);
++            if (ptc) {
++                if (FAILED(GetThemeString(ptc, 0, 0, TMT_DISPLAYNAME, pszSizeNames->szDisplayName,
++                sizeof (pszSizeNames->szDisplayName) / sizeof (WCHAR))))
++                    strcpyW(pszSizeNames->szDisplayName, tmp);
++
++                if (FAILED(GetThemeString(ptc, 0, 0, TMT_TOOLTIP, pszSizeNames->szTooltip,
++                sizeof (pszSizeNames->szTooltip) / sizeof (WCHAR))))
++                    pszSizeNames->szTooltip[0] = 0;
++            } else {
++                strcpyW(pszSizeNames->szDisplayName, tmp);
++                pszSizeNames->szTooltip[0] = 0;
++            }
++        } else {
++            lstrcpyW(pszSizeNames->szName, tmp);
++            LoadStringW (pt->hTheme, resourceId,
++                pszSizeNames->szDisplayName,
++                sizeof (pszSizeNames->szDisplayName) / sizeof (WCHAR));
++            LoadStringW (pt->hTheme, resourceId+1000,
++                pszSizeNames->szTooltip,
++                sizeof (pszSizeNames->szTooltip) / sizeof (WCHAR));
++        }
+     }
+     else
+         hr = E_PROP_ID_UNSUPPORTED;
+-- 
+2.0.5
+

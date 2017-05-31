@@ -1,0 +1,317 @@
+From 1787ac687ed9d04e9607aa1fd5c6dd37fe71d72f Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 22:35:55 +0100
+Subject: [PATCH 09/19] uxtheme: Draw v4 images.
+
+---
+ dlls/uxtheme/Makefile.in |   2 +-
+ dlls/uxtheme/draw.c      |  30 +++++---
+ dlls/uxtheme/msstyles.c  | 178 ++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/uxtheme/msstyles.h  |   2 +
+ 4 files changed, 202 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/uxtheme/Makefile.in b/dlls/uxtheme/Makefile.in
+index c3fff30..3d2a0c0 100644
+--- a/dlls/uxtheme/Makefile.in
++++ b/dlls/uxtheme/Makefile.in
+@@ -1,6 +1,6 @@
+ MODULE    = uxtheme.dll
+ IMPORTLIB = uxtheme
+-IMPORTS   = user32 gdi32 advapi32
++IMPORTS   = user32 gdi32 advapi32 ole32 windowscodecs
+ DELAYIMPORTS = msimg32
+ 
+ C_SRCS = \
+diff --git a/dlls/uxtheme/draw.c b/dlls/uxtheme/draw.c
+index 8a9397d..aa9f339 100644
+--- a/dlls/uxtheme/draw.c
++++ b/dlls/uxtheme/draw.c
+@@ -198,9 +198,13 @@ static PTHEME_PROPERTY UXTHEME_SelectImage(HTHEME hTheme, HDC hdc, int iPartId,
+                 HBITMAP hBmp;
+                 BOOL hasAlpha;
+ 
+-                lstrcpynW(szPath, fileProp->lpValue, 
+-                    min(fileProp->dwValueLen+1, sizeof(szPath)/sizeof(szPath[0])));
+-                hBmp = MSSTYLES_LoadBitmap(hTheme, szPath, &hasAlpha);
++                if (fileProp->lpValue) {
++                    lstrcpynW(szPath, fileProp->lpValue,
++                        min(fileProp->dwValueLen+1, sizeof(szPath)/sizeof(szPath[0])));
++                    hBmp = MSSTYLES_LoadBitmap(hTheme, szPath, &hasAlpha);
++                } else {
++                    hBmp = MSSTYLES_LoadBitmapInt(hTheme, fileProp->u.integer, &hasAlpha);
++                }
+                 if(!hBmp) continue;
+ 
+                 GetThemeEnumValue(hTheme, iPartId, iStateId, TMT_IMAGELAYOUT, &imagelayout);
+@@ -240,16 +244,26 @@ static HRESULT UXTHEME_LoadImage(HTHEME hTheme, HDC hdc, int iPartId, int iState
+     int imagenum;
+     BITMAP bmp;
+     WCHAR szPath[MAX_PATH];
++
+     PTHEME_PROPERTY tp = UXTHEME_SelectImage(hTheme, hdc, iPartId, iStateId, pRect, glyph);
+     if(!tp) {
+         FIXME("Couldn't determine image for part/state %d/%d, invalid theme?\n", iPartId, iStateId);
+         return E_PROP_ID_UNSUPPORTED;
+     }
+-    lstrcpynW(szPath, tp->lpValue, min(tp->dwValueLen+1, sizeof(szPath)/sizeof(szPath[0])));
+-    *hBmp = MSSTYLES_LoadBitmap(hTheme, szPath, hasImageAlpha);
+-    if(!*hBmp) {
+-        TRACE("Failed to load bitmap %s\n", debugstr_w(szPath));
+-        return HRESULT_FROM_WIN32(GetLastError());
++
++    if (!tp->lpValue) { /* v4 property using integer resource reference */
++        *hBmp = MSSTYLES_LoadBitmapInt(hTheme, tp->u.integer, hasImageAlpha);
++        if(!*hBmp) {
++            TRACE("Failed to load bitmap %li\n", tp->u.integer);
++            return HRESULT_FROM_WIN32(GetLastError());
++        }
++    } else {
++        lstrcpynW(szPath, tp->lpValue, min(tp->dwValueLen+1, sizeof(szPath)/sizeof(szPath[0])));
++        *hBmp = MSSTYLES_LoadBitmap(hTheme, szPath, hasImageAlpha);
++        if(!*hBmp) {
++            TRACE("Failed to load bitmap %s\n", debugstr_w(szPath));
++            return HRESULT_FROM_WIN32(GetLastError());
++        }
+     }
+     
+     GetThemeEnumValue(hTheme, iPartId, iStateId, TMT_IMAGELAYOUT, &imagelayout);
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index 4d23a02..0c11a83 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -20,6 +20,8 @@
+ 
+ #include "config.h"
+ 
++#define COBJMACROS
++
+ #include <stdarg.h>
+ #include <stdlib.h>
+ 
+@@ -30,7 +32,10 @@
+ #include "winnls.h"
+ #include "vfwmsgs.h"
+ #include "uxtheme.h"
+-#include "tmschema.h"
++#include "vssym32.h"
++
++#include "initguid.h"
++#include "wincodec.h"
+ 
+ #include "msstyles.h"
+ 
+@@ -1004,6 +1009,11 @@ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+                     prop->dwValueLen = (ph->datalen - 1) / sizeof(WCHAR);
+                 break;
+ 
++                case TMT_FILENAME:
++                case TMT_DISKSTREAM:
++                    prop->u.integer = ph->resref;
++                break;
++
+                 default:
+                     FIXME("Unprocessed resource property type %u\n", ph->type);
+                 break;
+@@ -1504,6 +1514,7 @@ HBITMAP MSSTYLES_LoadBitmap (PTHEME_CLASS tc, LPCWSTR lpFilename, BOOL* hasAlpha
+     img->image = LoadImageW(tc->hTheme, szFile, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+     prepare_alpha (img->image, hasAlpha);
+     img->hasAlpha = *hasAlpha;
++    img->resref = -1;
+     /* ...and stow away for later reuse. */
+     lstrcpyW (img->name, szFile);
+     img->next = tc->tf->images;
+@@ -1512,6 +1523,171 @@ HBITMAP MSSTYLES_LoadBitmap (PTHEME_CLASS tc, LPCWSTR lpFilename, BOOL* hasAlpha
+     return img->image;
+ }
+ 
++static HBITMAP PNGtoBitmap(BYTE* buf, DWORD size)
++{
++    HGLOBAL hmem;
++    BYTE* data;
++    IStream* stream;
++    IWICImagingFactory* factory;
++    IWICBitmapDecoder* decoder;
++    IWICBitmapFrameDecode* frame;
++    IWICBitmapSource* bitmap;
++    unsigned int width, height;
++    BITMAPINFO bmpinfo;
++    HDC dc;
++    void* bmpdata;
++    HBITMAP hbitmap = NULL;
++
++    hmem = GlobalAlloc(0, size);
++    data = GlobalLock(hmem);
++    memcpy(data, buf, size);
++    GlobalUnlock(hmem);
++
++    if (FAILED(CreateStreamOnHGlobal(hmem, TRUE, &stream))) {
++        WARN("CreateStreamOnHGlobal failed\n");
++        return NULL;
++    }
++
++    CoInitialize(NULL);
++
++    if (FAILED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
++                          &IID_IWICImagingFactory, (void **)&factory)))
++    {
++        WARN("CoCreateInstance failed\n");
++        IStream_Release(stream);
++        CoUninitialize();
++        return NULL;
++    }
++
++    if (FAILED(IWICImagingFactory_CreateDecoderFromStream(factory, stream, NULL, 0, &decoder)))
++    {
++        WARN("IWICImagingFactory_CreateDecoderFromStream failed\n");
++        IWICImagingFactory_Release(factory);
++        IStream_Release(stream);
++        CoUninitialize();
++        return NULL;
++    }
++
++    if (FAILED(IWICBitmapDecoder_GetFrame(decoder, 0, &frame)))
++    {
++        WARN("IWICBitmapDecoder_GetFrame failed\n");
++        IWICBitmapDecoder_Release(decoder);
++        IWICImagingFactory_Release(factory);
++        IStream_Release(stream);
++        CoUninitialize();
++        return NULL;
++    }
++
++    if (FAILED(WICConvertBitmapSource(&GUID_WICPixelFormat32bppBGRA, (IWICBitmapSource*)frame, &bitmap)))
++    {
++        WARN("WICConvertBitmapSource failed\n");
++        IWICBitmapFrameDecode_Release(frame);
++        IWICBitmapDecoder_Release(decoder);
++        IWICImagingFactory_Release(factory);
++        IStream_Release(stream);
++        CoUninitialize();
++        return NULL;
++    }
++
++    IWICBitmapFrameDecode_Release(frame);
++
++    if (FAILED(IWICBitmapSource_GetSize(bitmap, &width, &height)))
++    {
++        WARN("IWICBitmapSource_GetSize failed\n");
++        goto end;
++    }
++
++    bmpinfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
++    bmpinfo.bmiHeader.biWidth = width;
++    bmpinfo.bmiHeader.biHeight = -height;
++    bmpinfo.bmiHeader.biPlanes = 1;
++    bmpinfo.bmiHeader.biBitCount = 32;
++    bmpinfo.bmiHeader.biCompression = BI_RGB;
++
++    dc = GetDC(NULL);
++    hbitmap = CreateDIBSection(dc, &bmpinfo, DIB_RGB_COLORS, &bmpdata, NULL, 0);
++    ReleaseDC(NULL, dc);
++    if (!hbitmap)
++    {
++        WARN("CreateDIBSection failed\n");
++        goto end;
++    }
++
++    if (FAILED(IWICBitmapSource_CopyPixels(bitmap, NULL, width*4, width*height*4, bmpdata)))
++    {
++        WARN("IWICBitmapSource_CopyPixels failed\n");
++        DeleteObject(hbitmap); hbitmap = NULL;
++        goto end;
++    }
++
++end:
++    IWICBitmapSource_Release(bitmap);
++    IWICBitmapDecoder_Release(decoder);
++    IWICImagingFactory_Release(factory);
++    IStream_Release(stream);
++    CoUninitialize();
++
++    return hbitmap;
++}
++
++HBITMAP MSSTYLES_LoadBitmapInt(PTHEME_CLASS tc, int resref, BOOL* hasAlpha)
++{
++    PTHEME_IMAGE img;
++    DWORD size;
++    HRSRC hrsc;
++    BYTE* buf;
++    HBITMAP bmp;
++
++    static const WCHAR imageW[] = {'I','M','A','G','E',0};
++
++    img = tc->tf->images;
++    while (img)
++    {
++        if (img->resref == resref)
++        {
++            TRACE ("found %p %u: %p\n", img, resref, img->image);
++            *hasAlpha = img->hasAlpha;
++            return img->image;
++        }
++        img = img->next;
++    }
++
++    if (!(hrsc = FindResourceW(tc->tf->hTheme, MAKEINTRESOURCEW(resref), imageW))) {
++        WARN("No image resource found\n");
++        return NULL;
++    }
++
++    size = SizeofResource(tc->tf->hTheme, hrsc);
++
++    buf = (BYTE*)LoadResource(tc->tf->hTheme, hrsc);
++    if (!buf) {
++        WARN("Could not open image resource\n");
++        return NULL;
++    }
++
++    bmp = PNGtoBitmap(buf, size);
++    if (!bmp) {
++        WARN("Error reading image file\n");
++        return NULL;
++    }
++
++    img = HeapAlloc(GetProcessHeap(), 0, sizeof (THEME_IMAGE));
++
++    img->name[0] = 0;
++    img->resref = resref;
++    img->hasAlpha = TRUE;
++    img->image = bmp;
++
++    img->next = tc->tf->images;
++    tc->tf->images = img;
++
++    *hasAlpha = img->hasAlpha;
++
++    TRACE ("new %p %u: %p\n", img, resref, img->image);
++
++    return img->image;
++}
++
+ static BOOL MSSTYLES_GetNextInteger(LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LPCWSTR *lpValEnd, int *value)
+ {
+     LPCWSTR cur = lpStringStart;
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 8faa7ce..f512073 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -67,6 +67,7 @@ typedef struct _THEME_CLASS {
+ 
+ typedef struct _THEME_IMAGE {
+     WCHAR name[MAX_PATH];
++    int resref;
+     HBITMAP image;
+     BOOL hasAlpha;
+     
+@@ -115,6 +116,7 @@ PTHEME_PARTSTATE MSSTYLES_FindPartState(PTHEME_CLASS tc, int iPartId, int iState
+ PTHEME_PROPERTY MSSTYLES_FindProperty(PTHEME_CLASS tc, int iPartId, int iStateId, int iPropertyPrimitive, int iPropertyId) DECLSPEC_HIDDEN;
+ PTHEME_PROPERTY MSSTYLES_FindMetric(int iPropertyPrimitive, int iPropertyId) DECLSPEC_HIDDEN;
+ HBITMAP MSSTYLES_LoadBitmap(PTHEME_CLASS tc, LPCWSTR lpFilename, BOOL* hasAlpha) DECLSPEC_HIDDEN;
++HBITMAP MSSTYLES_LoadBitmapInt(PTHEME_CLASS tc, int resref, BOOL* hasAlpha) DECLSPEC_HIDDEN;
+ 
+ HRESULT MSSTYLES_GetPropertyBool(PTHEME_PROPERTY tp, BOOL *pfVal) DECLSPEC_HIDDEN;
+ HRESULT MSSTYLES_GetPropertyColor(PTHEME_PROPERTY tp, COLORREF *pColor) DECLSPEC_HIDDEN;
+-- 
+2.0.5
+

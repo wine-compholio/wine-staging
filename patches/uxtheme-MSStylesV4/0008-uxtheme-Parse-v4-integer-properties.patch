@@ -1,0 +1,100 @@
+From f53c24d8146d12741668b9ee484984d494e01555 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 22:11:44 +0100
+Subject: [PATCH 08/19] uxtheme: Parse v4 integer properties.
+
+---
+ dlls/uxtheme/msstyles.c | 23 +++++++++++++++++++----
+ dlls/uxtheme/msstyles.h |  4 ++++
+ dlls/uxtheme/property.c |  4 ++--
+ 3 files changed, 25 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index bad9682..4d23a02 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -972,6 +972,12 @@ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+ 
+         if (ph->resref == 0) {
+             switch (ph->type) {
++                case TMT_ENUM:
++                case TMT_INT:
++                case TMT_BOOL:
++                    memcpy(&prop->u.integer, &buf[i], min(sizeof(signed long), ph->datalen));
++                break;
++
+                 case TMT_STRING:
+                     prop->lpValue = (LPCWSTR)&buf[i];
+                     prop->dwValueLen = ph->datalen / sizeof(WCHAR);
+@@ -983,7 +989,16 @@ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+             }
+             i += ph->datalen;
+         } else {
++            WCHAR s[1024];
++
+             switch (ph->type) {
++                case TMT_ENUM:
++                case TMT_INT:
++                case TMT_BOOL:
++                    LoadStringW(tf->hMUIFile, ph->resref, s, sizeof(s)/sizeof(*s));
++                    prop->u.integer = atoiW(s);
++                break;
++
+                 case TMT_STRING:
+                     LoadStringW(tf->hMUIFile, ph->resref, (LPWSTR)&prop->lpValue, 0);
+                     prop->dwValueLen = (ph->datalen - 1) / sizeof(WCHAR);
+@@ -1549,8 +1564,8 @@ static BOOL MSSTYLES_GetNextToken(LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LP
+ HRESULT MSSTYLES_GetPropertyBool(PTHEME_PROPERTY tp, BOOL *pfVal)
+ {
+     if (tp->version == 4) {
+-        FIXME("Not yet supported for v4 themes\n");
+-        return E_NOTIMPL;
++        *pfVal = tp->u.integer ? TRUE : FALSE;
++        return S_OK;
+     }
+ 
+     *pfVal = FALSE;
+@@ -1659,8 +1674,8 @@ HRESULT MSSTYLES_GetPropertyFont(PTHEME_PROPERTY tp, HDC hdc, LOGFONTW *pFont)
+ HRESULT MSSTYLES_GetPropertyInt(PTHEME_PROPERTY tp, int *piVal)
+ {
+     if (tp->version == 4) {
+-        FIXME("Not yet supported for v4 themes\n");
+-        return E_NOTIMPL;
++        *piVal = tp->u.integer;
++        return S_OK;
+     }
+ 
+     if(!MSSTYLES_GetNextInteger(tp->lpValue, (tp->lpValue + tp->dwValueLen), NULL, piVal)) {
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 6bf7454..8faa7ce 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -36,6 +36,10 @@ typedef struct _THEME_PROPERTY {
+     LPCWSTR lpValue;
+     DWORD dwValueLen;
+ 
++    union {
++        signed long integer;
++    } u;
++
+     struct _THEME_PROPERTY *next;
+ } THEME_PROPERTY, *PTHEME_PROPERTY;
+ 
+diff --git a/dlls/uxtheme/property.c b/dlls/uxtheme/property.c
+index 3b59fb6..aace3d5 100644
+--- a/dlls/uxtheme/property.c
++++ b/dlls/uxtheme/property.c
+@@ -88,8 +88,8 @@ HRESULT WINAPI GetThemeEnumValue(HTHEME hTheme, int iPartId, int iStateId,
+         return E_PROP_ID_UNSUPPORTED;
+ 
+     if (tp->version == 4) {
+-        FIXME("Not yet supported for v4 themes\n");
+-        return E_NOTIMPL;
++        *piVal = tp->u.integer;
++        return S_OK;
+     }
+ 
+     hr = MSSTYLES_GetPropertyString(tp, val, sizeof(val)/sizeof(val[0]));
+-- 
+2.0.5
+

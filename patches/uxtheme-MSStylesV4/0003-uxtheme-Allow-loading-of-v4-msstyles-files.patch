@@ -1,0 +1,257 @@
+From f4c83581641a0c0c3c6ecc34428cb6e0bf303e6a Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 21:12:23 +0100
+Subject: [PATCH 03/19] uxtheme: Allow loading of v4 msstyles files.
+
+---
+ dlls/uxtheme/msstyles.c | 152 +++++++++++++++++++++++++++++++++---------------
+ dlls/uxtheme/msstyles.h |   9 +++
+ 2 files changed, 115 insertions(+), 46 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index b022edc..76c069b 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -52,8 +52,6 @@ INT WINAPI GetSystemDefaultLocaleName(LPWSTR localename, INT len);
+ 
+ extern int alphaBlendMode;
+ 
+-#define MSSTYLES_VERSION 0x0003
+-
+ static const WCHAR szThemesIniResource[] = {
+     't','h','e','m','e','s','_','i','n','i','\0'
+ };
+@@ -178,6 +176,9 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+     static const WCHAR szSizeNamesResource[] = {
+         'S','I','Z','E','N','A','M','E','S','\0'
+     };
++    static const WCHAR szVMAPResource[] = {
++        'V','M','A','P','\0'
++    };
+ 
+     WORD version;
+     DWORD versize;
+@@ -186,6 +187,7 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+     LPWSTR pszSizes;
+     LPWSTR pszSelectedSize = NULL;
+     LPWSTR tmp;
++    variant_map vmap;
+ 
+     TRACE("Opening %s\n", debugstr_w(lpThemeFile));
+ 
+@@ -211,60 +213,111 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+     hMUIFile = load_mui_file(lpThemeFile);
+ 
+     version = *(WORD*)LoadResource(hTheme, hrsc);
+-    if(version != MSSTYLES_VERSION)
++    if(version != 3 && version != 4)
+     {
+         TRACE("Version of theme file is unsupported: 0x%04x\n", version);
+         hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
+         goto invalid_theme;
+     }
+ 
+-    if(!(hrsc = FindResourceW(hTheme, MAKEINTRESOURCEW(1), szColorNamesResource))) {
+-        TRACE("Color names resource not found\n");
+-        hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
+-        goto invalid_theme;
+-    }
+-    pszColors = LoadResource(hTheme, hrsc);
++    if (version == 3) {
++        if(!(hrsc = FindResourceW(hTheme, MAKEINTRESOURCEW(1), szColorNamesResource))) {
++            TRACE("Color names resource not found\n");
++            hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
++            goto invalid_theme;
++        }
++        pszColors = LoadResource(hTheme, hrsc);
+ 
+-    if(!(hrsc = FindResourceW(hTheme, MAKEINTRESOURCEW(1), szSizeNamesResource))) {
+-        TRACE("Size names resource not found\n");
+-        hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
+-        goto invalid_theme;
+-    }
+-    pszSizes = LoadResource(hTheme, hrsc);
+-
+-    /* Validate requested color against what's available from the theme */
+-    if(pszColorName) {
+-        tmp = pszColors;
+-        while(*tmp) {
+-            if(!lstrcmpiW(pszColorName, tmp)) {
+-                pszSelectedColor = tmp;
+-                break;
++        if(!(hrsc = FindResourceW(hTheme, MAKEINTRESOURCEW(1), szSizeNamesResource))) {
++            TRACE("Size names resource not found\n");
++            hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
++            goto invalid_theme;
++        }
++        pszSizes = LoadResource(hTheme, hrsc);
++
++        /* Validate requested color against what's available from the theme */
++        if(pszColorName) {
++            tmp = pszColors;
++            while(*tmp) {
++                if(!lstrcmpiW(pszColorName, tmp)) {
++                    pszSelectedColor = tmp;
++                    break;
++                }
++                tmp += lstrlenW(tmp)+1;
+             }
+-            tmp += lstrlenW(tmp)+1;
+         }
+-    }
+-    else
+-        pszSelectedColor = pszColors; /* Use the default color */
+-
+-    /* Validate requested size against what's available from the theme */
+-    if(pszSizeName) {
+-        tmp = pszSizes;
+-        while(*tmp) {
+-            if(!lstrcmpiW(pszSizeName, tmp)) {
+-                pszSelectedSize = tmp;
+-                break;
++        else
++            pszSelectedColor = pszColors; /* Use the default color */
++
++        /* Validate requested size against what's available from the theme */
++        if(pszSizeName) {
++            tmp = pszSizes;
++            while(*tmp) {
++                if(!lstrcmpiW(pszSizeName, tmp)) {
++                    pszSelectedSize = tmp;
++                    break;
++                }
++                tmp += lstrlenW(tmp)+1;
+             }
+-            tmp += lstrlenW(tmp)+1;
+         }
+-    }
+-    else
+-        pszSelectedSize = pszSizes; /* Use the default size */
++        else
++            pszSelectedSize = pszSizes; /* Use the default size */
++
++        if(!pszSelectedColor || !pszSelectedSize) {
++            TRACE("Requested color/size (%s/%s) not found in theme\n",
++                debugstr_w(pszColorName), debugstr_w(pszSizeName));
++            hr = E_PROP_ID_UNSUPPORTED;
++            goto invalid_theme;
++        }
++    } else {
++        const BYTE* vmapdata;
++        int i;
++        DWORD len;
++
++        if(!(hrsc = FindResourceW(hTheme, szVMAPResource, szVMAPResource))) {
++            TRACE("VMAP resource not found\n");
++            hr = HRESULT_FROM_WIN32(ERROR_BAD_FORMAT);
++            goto invalid_theme;
++        }
+ 
+-    if(!pszSelectedColor || !pszSelectedSize) {
+-        TRACE("Requested color/size (%s/%s) not found in theme\n",
+-              debugstr_w(pszColorName), debugstr_w(pszSizeName));
+-        hr = E_PROP_ID_UNSUPPORTED;
+-        goto invalid_theme;
++        vmapdata = LoadResource(hTheme, hrsc);
++
++        i = 0;
++
++        memcpy(&len, &vmapdata[i], sizeof(DWORD));
++        i += sizeof(DWORD);
++        vmap.name = (LPCWSTR)&vmapdata[i];
++        i += len * sizeof(WCHAR);
++        if (i%4 != 0) { i += 4-(i%4); }
++
++        memcpy(&len, &vmapdata[i], sizeof(DWORD));
++        i += sizeof(DWORD);
++        vmap.size = (LPCWSTR)&vmapdata[i];
++        i += len * sizeof(WCHAR);
++        if (i%4 != 0) { i += 4-(i%4); }
++
++        if (pszSizeName && strcmpiW(pszSizeName, vmap.size)) {
++            WARN("Requested size %s not found in theme (%s)\n", debugstr_w(pszSizeName), debugstr_w(vmap.size));
++            hr = E_PROP_ID_UNSUPPORTED;
++            goto invalid_theme;
++        } else
++            pszSelectedSize = (LPWSTR)vmap.size;
++
++        memcpy(&len, &vmapdata[i], sizeof(DWORD));
++        i += sizeof(DWORD);
++        vmap.colour = (LPCWSTR)&vmapdata[i];
++        i += len * sizeof(WCHAR);
++        if (i%4 != 0) { i += 4-(i%4); }
++
++        if (pszColorName && strcmpiW(pszColorName, vmap.colour)) {
++            WARN("Requested colour %s not found in theme\n", debugstr_w(pszColorName));
++            hr = E_PROP_ID_UNSUPPORTED;
++            goto invalid_theme;
++        } else
++            pszSelectedColor = (LPWSTR)vmap.colour;
++
++        pszColors = pszSelectedColor;
++        pszSizes = pszSelectedSize;
+     }
+ 
+     *tf = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(THEME_FILE));
+@@ -278,6 +331,11 @@ HRESULT MSSTYLES_OpenThemeFile(LPCWSTR lpThemeFile, LPCWSTR pszColorName, LPCWST
+     (*tf)->pszSelectedColor = pszSelectedColor;
+     (*tf)->pszSelectedSize = pszSelectedSize;
+     (*tf)->dwRefCount = 1;
++    (*tf)->version = version;
++
++    if (version == 4)
++        memcpy(&(*tf)->vmap, &vmap, sizeof(vmap));
++
+     return S_OK;
+ 
+ invalid_theme:
+@@ -342,8 +400,10 @@ HRESULT MSSTYLES_SetActiveTheme(PTHEME_FILE tf, BOOL setMetrics)
+     if (tfActiveTheme)
+     {
+ 	tfActiveTheme->dwRefCount++;
+-	if(!tfActiveTheme->classes)
+-	    MSSTYLES_ParseThemeIni(tfActiveTheme, setMetrics);
++        if (tfActiveTheme->version != 4) {
++            if(!tfActiveTheme->classes)
++                MSSTYLES_ParseThemeIni(tfActiveTheme, setMetrics);
++        }
+     }
+     return S_OK;
+ }
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 6dab7f8..c72ac8d 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -67,6 +67,12 @@ typedef struct _THEME_IMAGE {
+     struct _THEME_IMAGE *next;
+ } THEME_IMAGE, *PTHEME_IMAGE;
+ 
++typedef struct {
++    LPCWSTR name;
++    LPCWSTR size;
++    LPCWSTR colour;
++} variant_map;
++
+ typedef struct _THEME_FILE {
+     DWORD dwRefCount;
+     HMODULE hTheme;
+@@ -74,6 +80,7 @@ typedef struct _THEME_FILE {
+     WCHAR szThemeFile[MAX_PATH];
+     LPWSTR pszAvailColors;
+     LPWSTR pszAvailSizes;
++    DWORD version;
+ 
+     LPWSTR pszSelectedColor;
+     LPWSTR pszSelectedSize;
+@@ -81,6 +88,8 @@ typedef struct _THEME_FILE {
+     PTHEME_CLASS classes;
+     PTHEME_PROPERTY metrics;
+     PTHEME_IMAGE images;
++
++    variant_map vmap;
+ } THEME_FILE, *PTHEME_FILE;
+ 
+ typedef struct _UXINI_FILE *PUXINI_FILE;
+-- 
+2.0.5
+

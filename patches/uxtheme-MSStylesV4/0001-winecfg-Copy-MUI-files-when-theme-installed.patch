@@ -1,0 +1,133 @@
+From 6e95ee7afa4ac109eb06181719e32c1df36c3fc9 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 19:09:37 +0100
+Subject: [PATCH 01/19] winecfg: Copy MUI files when theme installed.
+
+---
+ programs/winecfg/theme.c | 81 +++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 74 insertions(+), 7 deletions(-)
+
+diff --git a/programs/winecfg/theme.c b/programs/winecfg/theme.c
+index 8ffc9bb..1a25643 100644
+--- a/programs/winecfg/theme.c
++++ b/programs/winecfg/theme.c
+@@ -661,8 +661,14 @@ static void on_theme_install(HWND dialog)
+   {
+       static const WCHAR themesSubdir[] = { '\\','T','h','e','m','e','s',0 };
+       static const WCHAR backslash[] = { '\\',0 };
+-      WCHAR themeFilePath[MAX_PATH];
++      static const WCHAR wildcard[] = { '\\','*',0 };
++      static const WCHAR mui_ext[] = { '.','m','u','i',0 };
++      WCHAR themeFilePath[MAX_PATH], searchpath[MAX_PATH], muipath[MAX_PATH], muidest[MAX_PATH], origfiletitle[MAX_PATH];
++      WCHAR *srclist, *destlist;
++      unsigned int muipathlen, muidestlen, srclistlen, destlistlen;
+       SHFILEOPSTRUCTW shfop;
++      HANDLE fff;
++      WIN32_FIND_DATAW finddata;
+ 
+       if (FAILED (SHGetFolderPathW (NULL, CSIDL_RESOURCES|CSIDL_FLAG_CREATE, NULL, 
+           SHGFP_TYPE_CURRENT, themeFilePath))) return;
+@@ -674,6 +680,16 @@ static void on_theme_install(HWND dialog)
+           return;
+       }
+ 
++      strcpyW(searchpath, file);
++      PathRemoveFileSpecW(searchpath);
++
++      strcpyW(muipath, searchpath);
++      strcatW(muipath, backslash);
++      muipathlen = strlenW(muipath);
++
++      strcatW(searchpath, wildcard);
++
++      strcpyW(origfiletitle, filetitle);
+       PathRemoveExtensionW (filetitle);
+ 
+       /* Construct path into which the theme file goes */
+@@ -686,19 +702,67 @@ static void on_theme_install(HWND dialog)
+ 
+       /* Append theme file name itself */
+       lstrcatW (themeFilePath, backslash);
++
++      strcpyW (muidest, themeFilePath);
++      muidestlen = strlenW(muidest);
++
+       lstrcatW (themeFilePath, PathFindFileNameW (file));
+-      /* SHFileOperation() takes lists as input, so double-nullterminate */
+-      themeFilePath[lstrlenW (themeFilePath)+1] = 0;
+-      file[lstrlenW (file)+1] = 0;
++
++      srclistlen = strlenW(file) + 1;
++      srclist = HeapAlloc(GetProcessHeap(), 0, (srclistlen + 1) * sizeof(WCHAR));
++      memcpy(srclist, file, srclistlen * sizeof(WCHAR));
++      srclist[srclistlen] = 0;
++
++      destlistlen = strlenW(themeFilePath) + 1;
++      destlist = HeapAlloc(GetProcessHeap(), 0, (destlistlen + 1) * sizeof(WCHAR));
++      memcpy(destlist, themeFilePath, destlistlen * sizeof(WCHAR));
++      destlist[destlistlen] = 0;
++
++      fff = FindFirstFileW(searchpath, &finddata);
++      do {
++          if (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && finddata.cFileName[0] != '.')
++          {
++              muipath[muipathlen] = 0;
++              strcatW(muipath, finddata.cFileName);
++              strcatW(muipath, backslash);
++              strcatW(muipath, origfiletitle);
++              strcatW(muipath, mui_ext);
++
++              if (GetFileAttributesW(muipath) != INVALID_FILE_ATTRIBUTES)
++              {
++                  unsigned int srclen = strlenW(muipath) + 1, destlen;
++
++                  muidest[muidestlen] = 0;
++                  strcatW(muidest, finddata.cFileName);
++                  SHCreateDirectoryExW (dialog, muidest, NULL);
++
++                  strcatW(muidest, backslash);
++                  strcatW(muidest, origfiletitle);
++                  strcatW(muidest, mui_ext);
++                  destlen = strlenW(muidest) + 1;
++
++                  srclist = HeapReAlloc(GetProcessHeap(), 0, srclist, (srclistlen + srclen + 1) * sizeof(WCHAR));
++                  memcpy(&srclist[srclistlen], muipath, srclen * sizeof(WCHAR));
++                  srclistlen += srclen;
++                  srclist[srclistlen] = 0;
++
++                  destlist = HeapReAlloc(GetProcessHeap(), 0, destlist, (destlistlen + destlen + 1) * sizeof(WCHAR));
++                  memcpy(&destlist[destlistlen], muidest, destlen * sizeof(WCHAR));
++                  destlistlen += destlen;
++                  destlist[destlistlen] = 0;
++              }
++          }
++      } while (FindNextFileW(fff, &finddata));
++      FindClose(fff);
+ 
+       /* Do the copying */
+       WINE_TRACE("copying: %s -> %s\n", wine_dbgstr_w (file), 
+           wine_dbgstr_w (themeFilePath));
+       shfop.hwnd = dialog;
+       shfop.wFunc = FO_COPY;
+-      shfop.pFrom = file;
+-      shfop.pTo = themeFilePath;
+-      shfop.fFlags = FOF_NOCONFIRMMKDIR;
++      shfop.pFrom = srclist;
++      shfop.pTo = destlist;
++      shfop.fFlags = FOF_NOCONFIRMMKDIR | FOF_MULTIDESTFILES;
+       if (SHFileOperationW (&shfop) == 0)
+       {
+           scan_theme_files();
+@@ -717,6 +781,9 @@ static void on_theme_install(HWND dialog)
+       }
+       else
+           WINE_TRACE("copy operation failed\n");
++
++      HeapFree(GetProcessHeap(), 0, srclist);
++      HeapFree(GetProcessHeap(), 0, destlist);
+   }
+   else WINE_TRACE("user cancelled\n");
+ }
+-- 
+2.0.5
+

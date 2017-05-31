@@ -1,0 +1,73 @@
+From 818755b4df53bc1956e517946c4ae0757a82cb2c Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 23:33:37 +0100
+Subject: [PATCH 14/19] uxtheme: Parse v4 rect properties.
+
+---
+ dlls/uxtheme/msstyles.c | 23 +++++++++++++++++++++--
+ dlls/uxtheme/msstyles.h |  1 +
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index 2903889..09d1d3e 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -1058,6 +1058,10 @@ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+                     memcpy(&prop->u.size, &buf[i], min(sizeof(SIZE), ph->datalen));
+                 break;
+ 
++                case TMT_RECT:
++                    memcpy(&prop->u.rect, &buf[i], min(sizeof(RECT), ph->datalen));
++                break;
++
+                 default:
+                     FIXME("Unprocessed non-resource property type %u\n", ph->type);
+                 break;
+@@ -1084,6 +1088,21 @@ void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
+                     prop->u.integer = ph->resref;
+                 break;
+ 
++                case TMT_RECT:
++                {
++                    WCHAR *lpCur = s, *lpEnd;
++
++                    LoadStringW(tf->hMUIFile, ph->resref, s, sizeof(s)/sizeof(*s));
++
++                    lpEnd = s + strlenW(s);
++
++                    MSSTYLES_GetNextInteger(lpCur, lpEnd, (LPCWSTR*)&lpCur, &prop->u.rect.left);
++                    MSSTYLES_GetNextInteger(lpCur, lpEnd, (LPCWSTR*)&lpCur, &prop->u.rect.top);
++                    MSSTYLES_GetNextInteger(lpCur, lpEnd, (LPCWSTR*)&lpCur, &prop->u.rect.right);
++                    MSSTYLES_GetNextInteger(lpCur, lpEnd, (LPCWSTR*)&lpCur, &prop->u.rect.bottom);
++                    break;
++                }
++
+                 default:
+                     FIXME("Unprocessed resource property type %u\n", ph->type);
+                 break;
+@@ -2019,8 +2038,8 @@ HRESULT MSSTYLES_GetPropertyRect(PTHEME_PROPERTY tp, RECT *pRect)
+     LPCWSTR lpEnd = tp->lpValue + tp->dwValueLen;
+ 
+     if (tp->version == 4) {
+-        FIXME("Not yet supported for v4 themes\n");
+-        return E_NOTIMPL;
++        memcpy(pRect, &tp->u.rect, sizeof(RECT));
++        return S_OK;
+     }
+ 
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pRect->left);
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index 8a9ad79..27e085f 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -41,6 +41,7 @@ typedef struct _THEME_PROPERTY {
+         COLORREF colour;
+         MARGINS margins;
+         SIZE size;
++        RECT rect;
+     } u;
+ 
+     struct _THEME_PROPERTY *next;
+-- 
+2.0.5
+

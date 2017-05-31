@@ -1,0 +1,385 @@
+From 9557e99cf9d9b6e1c294c80a09969e052bf7deed Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sat, 11 Apr 2015 21:50:02 +0100
+Subject: [PATCH 05/19] uxtheme: Parse v4 string properties.
+
+---
+ dlls/uxtheme/msstyles.c | 174 +++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/uxtheme/msstyles.h |   2 +
+ dlls/uxtheme/property.c |  61 +++++++++++------
+ 3 files changed, 214 insertions(+), 23 deletions(-)
+
+diff --git a/dlls/uxtheme/msstyles.c b/dlls/uxtheme/msstyles.c
+index 40a0d4c..a65e94f 100644
+--- a/dlls/uxtheme/msstyles.c
++++ b/dlls/uxtheme/msstyles.c
+@@ -59,6 +59,17 @@ static const WCHAR szThemesIniResource[] = {
+ 
+ static PTHEME_FILE tfActiveTheme;
+ 
++typedef struct {
++    DWORD property;
++    DWORD type;
++    DWORD classnum;
++    DWORD part;
++    DWORD state;
++    DWORD resref;
++    DWORD unk2;
++    DWORD datalen;
++} property_header;
++
+ /***********************************************************************/
+ 
+ static HMODULE try_opening_mui_file(LPCWSTR locale, LPCWSTR path, LPCWSTR filename)
+@@ -886,6 +897,109 @@ void MSSTYLES_ParseV4ClassMap(PTHEME_FILE tf)
+     }
+ }
+ 
++void MSSTYLES_ParseV4Properties(PTHEME_FILE tf, const WCHAR* variant_name)
++{
++    HRSRC hrsc;
++    DWORD size;
++    BYTE* buf;
++    property_header* ph;
++    int i;
++    PTHEME_CLASS cls;
++    PTHEME_PARTSTATE ps;
++    BOOL globals;
++
++    static const WCHAR VariantResource[] = {
++        'V','A','R','I','A','N','T',0
++    };
++
++    static const WCHAR RMAPResource[] = {
++        'R','M','A','P',0
++    };
++
++    static const WCHAR globalsW[] = { 'g','l','o','b','a','l','s',0 };
++
++    if(!(hrsc = FindResourceW(tf->hTheme, variant_name ? variant_name : RMAPResource, variant_name ? VariantResource : RMAPResource))) {
++        WARN("Variant resource not found\n");
++        return;
++    }
++
++    size = SizeofResource(tf->hTheme, hrsc);
++
++    buf = (BYTE*)LoadResource(tf->hTheme, hrsc);
++    if (!buf) {
++        WARN("Could not open variant resource\n");
++        return;
++    }
++
++    i = 0;
++    cls = NULL;
++    while (i < size) {
++        PTHEME_PROPERTY prop;
++
++        ph = (property_header*)&buf[i];
++        i += sizeof(property_header);
++
++        if (cls == NULL || ph->classnum != cls->classv4) {
++            WCHAR szAppName[255], szClassName[255];
++            WCHAR* colon;
++
++            colon = strchrW(tf->classesv4[ph->classnum], ':');
++
++            if (colon) {
++                memcpy(szAppName, tf->classesv4[ph->classnum], (colon - tf->classesv4[ph->classnum]) * sizeof(WCHAR));
++                szAppName[(colon - tf->classesv4[ph->classnum])] = 0;
++
++                colon++;
++                if (colon[0] == ':')
++                    colon++;
++
++                strcpyW(szClassName, colon);
++            } else {
++                szAppName[0] = 0;
++                strcpyW(szClassName, tf->classesv4[ph->classnum]);
++            }
++
++            globals = !strcmpiW(tf->classesv4[ph->classnum], globalsW);
++
++            cls = MSSTYLES_AddClass(tf, szAppName, szClassName);
++            ps = MSSTYLES_AddPartState(cls, ph->part, ph->state);
++            cls->classv4 = ph->classnum;
++        } else if (ph->part != ps->iPartId || ph->state != ps->iStateId)
++            ps = MSSTYLES_AddPartState(cls, ph->part, ph->state);
++
++        prop = MSSTYLES_AddProperty(ps, ph->type, ph->property, NULL, 0, globals);
++        prop->version = tf->version;
++
++        if (ph->resref == 0) {
++            switch (ph->type) {
++                case TMT_STRING:
++                    prop->lpValue = (LPCWSTR)&buf[i];
++                    prop->dwValueLen = ph->datalen / sizeof(WCHAR);
++                break;
++
++                default:
++                    FIXME("Unprocessed non-resource property type %u\n", ph->type);
++                break;
++            }
++            i += ph->datalen;
++        } else {
++            switch (ph->type) {
++                case TMT_STRING:
++                    LoadStringW(tf->hMUIFile, ph->resref, (LPWSTR)&prop->lpValue, 0);
++                    prop->dwValueLen = (ph->datalen - 1) / sizeof(WCHAR);
++                break;
++
++                default:
++                    FIXME("Unprocessed resource property type %u\n", ph->type);
++                break;
++            }
++        }
++
++        if (i % 8 != 0)
++            i += 8 - (i%8);
++    }
++}
++
+ /* Color-related state for theme ini parsing */
+ struct PARSECOLORSTATE
+ {
+@@ -1065,9 +1179,26 @@ static void parse_apply_nonclient (struct PARSENONCLIENTSTATE* state)
+     }
+ }
+ 
++static BOOL MSSTYLES_GetVariantName(PTHEME_FILE tf, WCHAR* variant_name)
++{
++    if (!strcmpiW(tf->pszSelectedSize, tf->vmap.size) && !strcmpiW(tf->pszSelectedColor, tf->vmap.colour)) {
++        strcpyW(variant_name, tf->vmap.name);
++        return TRUE;
++    } else
++        return FALSE;
++}
++
+ static void MSSTYLES_ParseV4Theme(PTHEME_FILE tf, BOOL setMetrics)
+ {
++    WCHAR variant_name[255];
++
++    if (!MSSTYLES_GetVariantName(tf, variant_name)) {
++        WARN("Could not get variant name for selected size and colour\n");
++        return;
++    }
++
+     MSSTYLES_ParseV4ClassMap(tf);
++    MSSTYLES_ParseV4Properties(tf, variant_name);
+ }
+ 
+ /***********************************************************************
+@@ -1162,7 +1293,8 @@ static void MSSTYLES_ParseThemeIni(PTHEME_FILE tf, BOOL setMetrics)
+             while((lpName=UXINI_GetNextValue(ini, &dwLen, &lpValue, &dwValueLen))) {
+                 lstrcpynW(szPropertyName, lpName, min(dwLen+1, sizeof(szPropertyName)/sizeof(szPropertyName[0])));
+                 if(MSSTYLES_LookupProperty(szPropertyName, &iPropertyPrimitive, &iPropertyId)) {
+-                    MSSTYLES_AddProperty(ps, iPropertyPrimitive, iPropertyId, lpValue, dwValueLen, isGlobal);
++                    PTHEME_PROPERTY prop = MSSTYLES_AddProperty(ps, iPropertyPrimitive, iPropertyId, lpValue, dwValueLen, isGlobal);
++                    prop->version = tf->version;
+                 }
+                 else {
+                     TRACE("Unknown property %s\n", debugstr_w(szPropertyName));
+@@ -1416,6 +1548,11 @@ static BOOL MSSTYLES_GetNextToken(LPCWSTR lpStringStart, LPCWSTR lpStringEnd, LP
+  */
+ HRESULT MSSTYLES_GetPropertyBool(PTHEME_PROPERTY tp, BOOL *pfVal)
+ {
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     *pfVal = FALSE;
+     if(*tp->lpValue == 't' || *tp->lpValue == 'T')
+         *pfVal = TRUE;
+@@ -1433,6 +1570,11 @@ HRESULT MSSTYLES_GetPropertyColor(PTHEME_PROPERTY tp, COLORREF *pColor)
+     LPCWSTR lpCur;
+     int red, green, blue;
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     lpCur = tp->lpValue;
+     lpEnd = tp->lpValue + tp->dwValueLen;
+ 
+@@ -1496,6 +1638,11 @@ HRESULT MSSTYLES_GetPropertyFont(PTHEME_PROPERTY tp, HDC hdc, LOGFONTW *pFont)
+     LPCWSTR lpEnd = tp->lpValue + tp->dwValueLen;
+     HRESULT hr; 
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     ZeroMemory(pFont, sizeof(LOGFONTW));
+     hr = MSSTYLES_GetFont (lpCur, lpEnd, &lpCur, pFont);
+     if (SUCCEEDED (hr))
+@@ -1511,6 +1658,11 @@ HRESULT MSSTYLES_GetPropertyFont(PTHEME_PROPERTY tp, HDC hdc, LOGFONTW *pFont)
+  */
+ HRESULT MSSTYLES_GetPropertyInt(PTHEME_PROPERTY tp, int *piVal)
+ {
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     if(!MSSTYLES_GetNextInteger(tp->lpValue, (tp->lpValue + tp->dwValueLen), NULL, piVal)) {
+         TRACE("Could not parse int property\n");
+         return E_PROP_ID_UNSUPPORTED;
+@@ -1529,6 +1681,11 @@ HRESULT MSSTYLES_GetPropertyIntList(PTHEME_PROPERTY tp, INTLIST *pIntList)
+     LPCWSTR lpCur = tp->lpValue;
+     LPCWSTR lpEnd = tp->lpValue + tp->dwValueLen;
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     for(i=0; i < MAX_INTLIST_COUNT; i++) {
+         if(!MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pIntList->iValues[i]))
+             break;
+@@ -1548,6 +1705,11 @@ HRESULT MSSTYLES_GetPropertyPosition(PTHEME_PROPERTY tp, POINT *pPoint)
+     LPCWSTR lpCur = tp->lpValue;
+     LPCWSTR lpEnd = tp->lpValue + tp->dwValueLen;
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     if(!MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &x)) {
+         TRACE("Could not parse position property\n");
+         return E_PROP_ID_UNSUPPORTED;
+@@ -1582,6 +1744,11 @@ HRESULT MSSTYLES_GetPropertyRect(PTHEME_PROPERTY tp, RECT *pRect)
+     LPCWSTR lpCur = tp->lpValue;
+     LPCWSTR lpEnd = tp->lpValue + tp->dwValueLen;
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pRect->left);
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pRect->top);
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pRect->right);
+@@ -1602,6 +1769,11 @@ HRESULT MSSTYLES_GetPropertyMargins(PTHEME_PROPERTY tp, RECT *prc, MARGINS *pMar
+     LPCWSTR lpCur = tp->lpValue;
+     LPCWSTR lpEnd = tp->lpValue + tp->dwValueLen;
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pMargins->cxLeftWidth);
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pMargins->cxRightWidth);
+     MSSTYLES_GetNextInteger(lpCur, lpEnd, &lpCur, &pMargins->cyTopHeight);
+diff --git a/dlls/uxtheme/msstyles.h b/dlls/uxtheme/msstyles.h
+index cc6deea..b1a5666 100644
+--- a/dlls/uxtheme/msstyles.h
++++ b/dlls/uxtheme/msstyles.h
+@@ -31,6 +31,7 @@ typedef struct _THEME_PROPERTY {
+     int iPrimitiveType;
+     int iPropertyId;
+     PROPERTYORIGIN origin;
++    int version;
+ 
+     LPCWSTR lpValue;
+     DWORD dwValueLen;
+@@ -55,6 +56,7 @@ typedef struct _THEME_CLASS {
+     WCHAR szClassName[MAX_THEME_CLASS_NAME];
+     PTHEME_PARTSTATE partstate;
+     struct _THEME_CLASS *overrides;
++    int classv4;
+ 
+     struct _THEME_CLASS *next;
+ } THEME_CLASS, *PTHEME_CLASS;
+diff --git a/dlls/uxtheme/property.c b/dlls/uxtheme/property.c
+index 9dffbdd..3b59fb6 100644
+--- a/dlls/uxtheme/property.c
++++ b/dlls/uxtheme/property.c
+@@ -87,6 +87,11 @@ HRESULT WINAPI GetThemeEnumValue(HTHEME hTheme, int iPartId, int iStateId,
+     if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_ENUM, iPropId)))
+         return E_PROP_ID_UNSUPPORTED;
+ 
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     hr = MSSTYLES_GetPropertyString(tp, val, sizeof(val)/sizeof(val[0]));
+     if(FAILED(hr))
+         return hr;
+@@ -110,6 +115,12 @@ HRESULT WINAPI GetThemeFilename(HTHEME hTheme, int iPartId, int iStateId,
+ 
+     if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_FILENAME, iPropId)))
+         return E_PROP_ID_UNSUPPORTED;
++
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    }
++
+     return MSSTYLES_GetPropertyString(tp, pszThemeFilename, cchMaxBuffChars);
+ }
+ 
+@@ -250,28 +261,34 @@ HRESULT WINAPI GetThemeMetric(HTHEME hTheme, HDC hdc, int iPartId,
+ 
+     if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, 0, iPropId)))
+         return E_PROP_ID_UNSUPPORTED;
+-    switch(tp->iPrimitiveType) {
+-        case TMT_POSITION: /* Only the X coord is retrieved */
+-        case TMT_MARGINS: /* Only the cxLeftWidth member is retrieved */
+-        case TMT_INTLIST: /* Only the first int is retrieved */
+-        case TMT_SIZE:
+-        case TMT_INT:
+-            return MSSTYLES_GetPropertyInt(tp, piVal);
+-        case TMT_BOOL:
+-            return MSSTYLES_GetPropertyBool(tp, piVal);
+-        case TMT_COLOR:
+-            return MSSTYLES_GetPropertyColor(tp, (COLORREF*)piVal);
+-        case TMT_ENUM:
+-            hr = MSSTYLES_GetPropertyString(tp, val, sizeof(val)/sizeof(val[0]));
+-            if(FAILED(hr))
+-                return hr;
+-            if(!MSSTYLES_LookupEnum(val, iPropId, piVal))
+-                return E_PROP_ID_UNSUPPORTED;
+-            return S_OK;
+-         case TMT_FILENAME:
+-             /* Windows does return a value for this, but its value doesn't make sense */
+-             FIXME("Filename\n");
+-             break;
++
++    if (tp->version == 4) {
++        FIXME("Not yet supported for v4 themes\n");
++        return E_NOTIMPL;
++    } else {
++        switch(tp->iPrimitiveType) {
++            case TMT_POSITION: /* Only the X coord is retrieved */
++            case TMT_MARGINS: /* Only the cxLeftWidth member is retrieved */
++            case TMT_INTLIST: /* Only the first int is retrieved */
++            case TMT_SIZE:
++            case TMT_INT:
++                return MSSTYLES_GetPropertyInt(tp, piVal);
++            case TMT_BOOL:
++                return MSSTYLES_GetPropertyBool(tp, piVal);
++            case TMT_COLOR:
++                return MSSTYLES_GetPropertyColor(tp, (COLORREF*)piVal);
++            case TMT_ENUM:
++                hr = MSSTYLES_GetPropertyString(tp, val, sizeof(val)/sizeof(val[0]));
++                if(FAILED(hr))
++                    return hr;
++                if(!MSSTYLES_LookupEnum(val, iPropId, piVal))
++                    return E_PROP_ID_UNSUPPORTED;
++                return S_OK;
++            case TMT_FILENAME:
++                /* Windows does return a value for this, but its value doesn't make sense */
++                FIXME("Filename\n");
++                break;
++        }
+     }
+     return E_PROP_ID_UNSUPPORTED;
+ }
+-- 
+2.0.5
+

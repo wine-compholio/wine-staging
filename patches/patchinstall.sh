@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7d2ce5cbe7c84dd193e982d4cfe882265867f998"
+	echo "06eceb3af2d56f158dab2db5a7bc768cc2b1c391"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.9"
+	echo "Wine Staging 2.10 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -435,7 +435,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_check_format_support="$1"
-	enable_wined3d_glsl_ffp_vertex_lighting="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -452,7 +451,6 @@ patch_enable_all ()
 	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
-	enable_winex11_XFixes="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhlp32_Flex_Workaround="$1"
@@ -1546,9 +1544,6 @@ patch_enable ()
 		wined3d-check_format_support)
 			enable_wined3d_check_format_support="$2"
 			;;
-		wined3d-glsl_ffp_vertex_lighting)
-			enable_wined3d_glsl_ffp_vertex_lighting="$2"
-			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
 			;;
@@ -1596,9 +1591,6 @@ patch_enable ()
 			;;
 		winex11-XEMBED)
 			enable_winex11_XEMBED="$2"
-			;;
-		winex11-XFixes)
-			enable_winex11_XFixes="$2"
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
@@ -5098,19 +5090,16 @@ fi
 # |   *	[#39367] Return stub interface from mf.MFCreateMediaSession
 # |
 # | Modified files:
-# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, dlls/mfplat/main.c,
-# | 	dlls/mfplat/mfplat.spec, include/mfidl.idl, include/rpcndr.h
+# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, include/rpcndr.h
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
 	patch_apply mfplat-MFTRegister/0007-include-rpcndr.h-Fix-definition-of-EXTERN_GUID.patch
 	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
-	patch_apply mfplat-MFTRegister/0009-mfplat-Add-stub-for-MFCreateSourceResolver.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "mfplat: Add stub for MFCreateSourceResolver.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8851,13 +8840,11 @@ fi
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
 	patch_apply wined3d-QUERY_Stubs/0002-d3d11-Add-dummy-support-for-D3D11_QUERY_PIPELINE_STA.patch
-	patch_apply wined3d-QUERY_Stubs/0003-wined3d-Don-t-leak-free_so_statistics_queries-on-dev.patch
 	patch_apply wined3d-QUERY_Stubs/0004-wined3d-Implement-WINED3D_QUERY_TYPE_PIPELINE_STATIS.patch
 	patch_apply wined3d-QUERY_Stubs/0005-d3d11-tests-Add-basic-test-for-D3D11_QUERY_PIPELINE_.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add dummy support for D3D11_QUERY_PIPELINE_STATISTICS query.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Don'\''t leak free_so_statistics_queries on device destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement WINED3D_QUERY_TYPE_PIPELINE_STATISTICS.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for D3D11_QUERY_PIPELINE_STATISTICS.", 1 },';
 	) >> "$patchlist"
@@ -8977,21 +8964,6 @@ if test "$enable_wined3d_check_format_support" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D10Device_CheckFormatSupport.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-glsl_ffp_vertex_lighting
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43053] Pass correct index to shader_glsl_ffp_vertex_lighting_footer
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_glsl_ffp_vertex_lighting" -eq 1; then
-	patch_apply wined3d-glsl_ffp_vertex_lighting/0001-wined3d-Pass-correct-index-to-shader_glsl_ffp_vertex.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Pass correct index to shader_glsl_ffp_vertex_lighting_footer.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9290,18 +9262,6 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-XFixes
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/clipboard.c
-# |
-if test "$enable_winex11_XFixes" -eq 1; then
-	patch_apply winex11-XFixes/0001-winex11.drv-Fix-compilation-without-XFixes.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winex11.drv: Fix compilation without XFixes.", 1 },';
 	) >> "$patchlist"
 fi
 

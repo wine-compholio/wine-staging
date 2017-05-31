@@ -1,4 +1,4 @@
-From f38e263c61ba7273b01fa0f9e82680e08f089d35 Mon Sep 17 00:00:00 2001
+From a36cd6cf41376b8dae38c289d353da26ecf53ee3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 28 May 2017 04:49:57 +0200
 Subject: wined3d: Implement WINED3D_QUERY_TYPE_PIPELINE_STATISTICS.
@@ -6,16 +6,16 @@ Subject: wined3d: Implement WINED3D_QUERY_TYPE_PIPELINE_STATISTICS.
 ---
  dlls/wined3d/context.c         |  58 ++++++++++++
  dlls/wined3d/directx.c         |   1 +
- dlls/wined3d/query.c           | 196 +++++++++++++++++++++++++++++++++++++++--
+ dlls/wined3d/query.c           | 197 +++++++++++++++++++++++++++++++++++++++--
  dlls/wined3d/wined3d_gl.h      |   1 +
  dlls/wined3d/wined3d_private.h |  39 ++++++++
- 5 files changed, 286 insertions(+), 9 deletions(-)
+ 5 files changed, 287 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 8d674c1cf88..68c173344b0 100644
+index 8ab0e10d815..b03287f5029 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -940,6 +940,43 @@ void context_free_so_statistics_query(struct wined3d_so_statistics_query *query)
+@@ -933,6 +933,43 @@ void context_free_so_statistics_query(struct wined3d_so_statistics_query *query)
      context->free_so_statistics_queries[context->free_so_statistics_query_count++] = query->u;
  }
  
@@ -59,7 +59,7 @@ index 8d674c1cf88..68c173344b0 100644
  typedef void (context_fbo_entry_func_t)(struct wined3d_context *context, struct fbo_entry *entry);
  
  static void context_enum_fbo_entries(const struct wined3d_device *device,
-@@ -1232,6 +1269,7 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
+@@ -1225,6 +1262,7 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
  {
      const struct wined3d_gl_info *gl_info = context->gl_info;
      struct wined3d_so_statistics_query *so_statistics_query;
@@ -67,7 +67,7 @@ index 8d674c1cf88..68c173344b0 100644
      struct wined3d_timestamp_query *timestamp_query;
      struct wined3d_occlusion_query *occlusion_query;
      struct wined3d_event_query *event_query;
-@@ -1256,6 +1294,14 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
+@@ -1249,6 +1287,14 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
          so_statistics_query->context = NULL;
      }
  
@@ -82,7 +82,7 @@ index 8d674c1cf88..68c173344b0 100644
      LIST_FOR_EACH_ENTRY(timestamp_query, &context->timestamp_queries, struct wined3d_timestamp_query, entry)
      {
          if (context->valid)
-@@ -1312,6 +1358,15 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
+@@ -1305,6 +1351,15 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
              }
          }
  
@@ -98,7 +98,7 @@ index 8d674c1cf88..68c173344b0 100644
          if (gl_info->supported[ARB_TIMER_QUERY])
              GL_EXTCALL(glDeleteQueries(context->free_timestamp_query_count, context->free_timestamp_queries));
  
-@@ -1344,6 +1399,7 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
+@@ -1337,6 +1392,7 @@ static void context_destroy_gl_resources(struct wined3d_context *context)
      }
  
      HeapFree(GetProcessHeap(), 0, context->free_so_statistics_queries);
@@ -106,7 +106,7 @@ index 8d674c1cf88..68c173344b0 100644
      HeapFree(GetProcessHeap(), 0, context->free_timestamp_queries);
      HeapFree(GetProcessHeap(), 0, context->free_occlusion_queries);
      HeapFree(GetProcessHeap(), 0, context->free_event_queries);
-@@ -1812,6 +1868,8 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
+@@ -1801,6 +1857,8 @@ struct wined3d_context *context_create(struct wined3d_swapchain *swapchain,
  
      list_init(&ret->so_statistics_queries);
  
@@ -116,7 +116,7 @@ index 8d674c1cf88..68c173344b0 100644
      list_init(&ret->fbo_destroy_list);
  
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index 7a7fbe0578a..ee43cfac449 100644
+index e6cefbd2cf2..ec53192b76f 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
 @@ -144,6 +144,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
@@ -128,7 +128,7 @@ index 7a7fbe0578a..ee43cfac449 100644
      {"GL_ARB_point_parameters",             ARB_POINT_PARAMETERS          },
      {"GL_ARB_point_sprite",                 ARB_POINT_SPRITE              },
 diff --git a/dlls/wined3d/query.c b/dlls/wined3d/query.c
-index db747362ab5..bbeab020c27 100644
+index 1da1b3ea7ae..3bac4e1d28f 100644
 --- a/dlls/wined3d/query.c
 +++ b/dlls/wined3d/query.c
 @@ -61,6 +61,11 @@ static struct wined3d_so_statistics_query *wined3d_so_statistics_query_from_quer
@@ -143,17 +143,7 @@ index db747362ab5..bbeab020c27 100644
  BOOL wined3d_event_query_supported(const struct wined3d_gl_info *gl_info)
  {
      return gl_info->supported[ARB_SYNC] || gl_info->supported[NV_FENCE] || gl_info->supported[APPLE_FENCE];
-@@ -319,6 +324,9 @@ static void wined3d_query_destroy_object(void *object)
-     }
-     else if (query->type == WINED3D_QUERY_TYPE_PIPELINE_STATISTICS)
-     {
-+        struct wined3d_pipeline_statistics_query *pq = wined3d_pipeline_statistics_query_from_query(query);
-+        if (pq->context)
-+            context_free_pipeline_statistics_query(pq);
-         HeapFree(GetProcessHeap(), 0, query);
-     }
-     else
-@@ -815,16 +823,179 @@ static BOOL wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD
+@@ -759,16 +764,179 @@ static BOOL wined3d_overflow_query_ops_issue(struct wined3d_query *query, DWORD
  
  static BOOL wined3d_pipeline_query_ops_poll(struct wined3d_query *query, DWORD flags)
  {
@@ -335,8 +325,19 @@ index db747362ab5..bbeab020c27 100644
 +    return poll;
  }
  
- static const struct wined3d_query_ops event_query_ops =
-@@ -1097,19 +1268,26 @@ static HRESULT wined3d_pipeline_query_create(struct wined3d_device *device,
+ static void wined3d_event_query_ops_destroy(struct wined3d_query *query)
+@@ -1091,6 +1259,10 @@ static HRESULT wined3d_overflow_query_create(struct wined3d_device *device,
+ 
+ static void wined3d_pipeline_query_ops_destroy(struct wined3d_query *query)
+ {
++    struct wined3d_pipeline_statistics_query *pq = wined3d_pipeline_statistics_query_from_query(query);
++
++    if (pq->context)
++        context_free_pipeline_statistics_query(pq);
+     HeapFree(GetProcessHeap(), 0, query);
+ }
+ 
+@@ -1105,19 +1277,26 @@ static HRESULT wined3d_pipeline_query_create(struct wined3d_device *device,
          enum wined3d_query_type type, void *parent, const struct wined3d_parent_ops *parent_ops,
          struct wined3d_query **query)
  {
@@ -370,7 +371,7 @@ index db747362ab5..bbeab020c27 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
-index fc4c1bb11f8..80fc6809238 100644
+index 3806869fd42..8b25220cd4b 100644
 --- a/dlls/wined3d/wined3d_gl.h
 +++ b/dlls/wined3d/wined3d_gl.h
 @@ -78,6 +78,7 @@ enum wined3d_gl_extension
@@ -382,7 +383,7 @@ index fc4c1bb11f8..80fc6809238 100644
      ARB_POINT_PARAMETERS,
      ARB_POINT_SPRITE,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 183c856e07c..315e89d098b 100644
+index 18109850157..1025c98f180 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -1721,6 +1721,40 @@ void context_alloc_so_statistics_query(struct wined3d_context *context,

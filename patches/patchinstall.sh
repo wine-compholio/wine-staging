@@ -281,6 +281,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
+	enable_ntdll_set_context_reg="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -1080,6 +1081,9 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
+			;;
+		ntdll-set_context_reg)
+			enable_ntdll_set_context_reg="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -6288,6 +6292,21 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-set_context_reg
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43127] Avoid conversion from unaligned pointer to M128A
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_set_context_reg" -eq 1; then
+	patch_apply ntdll-set_context_reg/0001-ntdll-Do-not-cast-unaligned-pointer-to-M128A-in-set_.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not cast unaligned pointer to M128A in set_context_reg.", 1 },';
 	) >> "$patchlist"
 fi
 

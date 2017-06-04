@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "06eceb3af2d56f158dab2db5a7bc768cc2b1c391"
+	echo "1fbb661ed1745bdfdcd1287c730f63503ee3f13f"
 }
 
 # Show version information
@@ -434,7 +434,6 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
-	enable_wined3d_check_format_support="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Fix_Relocation="$1"
@@ -1541,9 +1540,6 @@ patch_enable ()
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
 			;;
-		wined3d-check_format_support)
-			enable_wined3d_check_format_support="$2"
-			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
 			;;
@@ -2621,14 +2617,24 @@ fi
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
-# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
-# | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
-# | 	dlls/dwrite/layout.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c,
-# | 	dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
+# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/device.c, dlls/d3d11/view.c,
+# | 	dlls/d3d8/texture.c, dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c,
+# | 	dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c,
+# | 	dlls/kernel32/oldconfig.c, dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
+# | 	dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c,
+# | 	dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c,
 # | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
+	patch_apply Compiler_Warnings/0002-d3d11-Remove-duplicate-const.patch
+	patch_apply Compiler_Warnings/0003-shell32-Fix-length-parameter-for-ZeroMemory.patch
+	patch_apply Compiler_Warnings/0004-fusion-Fix-length-parameter-for-ZeroMemory.patch
+	patch_apply Compiler_Warnings/0005-fusion-tests-Avoid-compiler-warnings-with-GCC-7.patch
+	patch_apply Compiler_Warnings/0006-kernel32-tests-Avoid-compiler-warnings-with-GCC-7.patch
+	patch_apply Compiler_Warnings/0007-rsaenh-tests-Avoid-compiler-warnings-with-GCC-7.patch
+	patch_apply Compiler_Warnings/0008-kernel32-Avoid-compiler-warnings-with-GCC-7.patch
+	patch_apply Compiler_Warnings/0009-ws2_32-tests-Work-around-an-incorrect-detection-in-G.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2645,6 +2651,14 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Remove duplicate const.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "shell32: Fix length parameter for ZeroMemory.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "fusion: Fix length parameter for ZeroMemory.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "fusion/tests: Avoid compiler warnings with GCC 7.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Avoid compiler warnings with GCC 7.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "rsaenh/tests: Avoid compiler warnings with GCC 7.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Avoid compiler warnings with GCC 7.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
@@ -3418,7 +3432,8 @@ fi
 # Patchset wined3d-1DTextures
 # |
 # | Modified files:
-# |   *	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c,
+# | 	dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
 # | 	dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h,
 # | 	include/wine/wined3d.h
 # |
@@ -3438,6 +3453,7 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 	patch_apply wined3d-1DTextures/0013-wined3d-Add-support-for-1d-textures-in-context_attac.patch
 	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
 	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
+	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
@@ -3454,6 +3470,7 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve ID3D11Device_CheckFormatSupport.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8868,16 +8885,14 @@ fi
 # |   *	[#42140] Silence noisy FIXME in gl_stencil_op
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/state.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
-	patch_apply wined3d-Silence_FIXMEs/0002-wined3d-Display-FIXME-for-cmp-function-0-only-once.patch
 	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
 	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
 	(
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Display FIXME for cmp function 0 only once.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
@@ -8947,23 +8962,6 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-check_format_support
-# |
-# | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/device.c,
-# | 	dlls/wined3d/wined3d.spec, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_check_format_support" -eq 1; then
-	patch_apply wined3d-check_format_support/0001-wined3d-Add-wined3d_check_device_format_support.patch
-	patch_apply wined3d-check_format_support/0002-d3d11-Implement-ID3D11Device_CheckFormatSupport.patch
-	patch_apply wined3d-check_format_support/0003-d3d11-Implement-ID3D10Device_CheckFormatSupport.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_check_device_format_support.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D11Device_CheckFormatSupport.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ID3D10Device_CheckFormatSupport.", 1 },';
 	) >> "$patchlist"
 fi
 

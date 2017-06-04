@@ -1,0 +1,187 @@
+From e2452eb12f42fa733647dca9980ac6e4efad1327 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 4 Jun 2017 22:04:39 +0200
+Subject: d3d11: Improve ID3D11Device_CheckFormatSupport.
+
+---
+ dlls/d3d10core/tests/device.c |  2 +-
+ dlls/d3d11/device.c           | 26 +++++++++++++++++++-------
+ dlls/d3d11/tests/d3d11.c      | 33 ++++++++++++++++++++++++++++++++-
+ dlls/wined3d/directx.c        | 21 ++++++++++++++++++++-
+ 4 files changed, 72 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/d3d10core/tests/device.c b/dlls/d3d10core/tests/device.c
+index 364a2abfe7f..78ae08b8c6c 100644
+--- a/dlls/d3d10core/tests/device.c
++++ b/dlls/d3d10core/tests/device.c
+@@ -10565,7 +10565,7 @@ static void test_required_format_support(void)
+     for (format = DXGI_FORMAT_UNKNOWN; format <= DXGI_FORMAT_B4G4R4A4_UNORM; ++format)
+     {
+         hr = ID3D10Device_CheckFormatSupport(device, format, &format_support[format]);
+-        todo_wine ok(hr == S_OK || (hr == E_FAIL && !format_support[format]),
++        ok(hr == S_OK || (hr == E_FAIL && !format_support[format]),
+                 "Got unexpected result for format %#x: hr %#x, format_support %#x.\n",
+                 format, hr, format_support[format]);
+     }
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index e84c3655e08..4e7d988075e 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -3332,17 +3332,24 @@ static HRESULT STDMETHODCALLTYPE d3d11_device_CheckFormatSupport(ID3D11Device *i
+     }
+     flag_mapping[] =
+     {
+-        {WINED3D_RTYPE_TEXTURE_2D, WINED3DUSAGE_TEXTURE,      D3D11_FORMAT_SUPPORT_TEXTURE2D},
+-        {WINED3D_RTYPE_TEXTURE_3D, WINED3DUSAGE_TEXTURE,      D3D11_FORMAT_SUPPORT_TEXTURE3D},
+-        {WINED3D_RTYPE_NONE,       WINED3DUSAGE_RENDERTARGET, D3D11_FORMAT_SUPPORT_RENDER_TARGET},
+-        {WINED3D_RTYPE_NONE,       WINED3DUSAGE_DEPTHSTENCIL, D3D11_FORMAT_SUPPORT_DEPTH_STENCIL},
++        {WINED3D_RTYPE_TEXTURE_1D, WINED3DUSAGE_TEXTURE,             D3D11_FORMAT_SUPPORT_TEXTURE1D | D3D11_FORMAT_SUPPORT_MIP},
++        {WINED3D_RTYPE_TEXTURE_2D, WINED3DUSAGE_TEXTURE,             D3D11_FORMAT_SUPPORT_TEXTURE2D | D3D11_FORMAT_SUPPORT_MIP},
++        {WINED3D_RTYPE_TEXTURE_3D, WINED3DUSAGE_TEXTURE,             D3D11_FORMAT_SUPPORT_TEXTURE3D | D3D11_FORMAT_SUPPORT_MIP},
++        {WINED3D_RTYPE_NONE,       WINED3DUSAGE_RENDERTARGET,        D3D11_FORMAT_SUPPORT_RENDER_TARGET | D3D11_FORMAT_SUPPORT_DISPLAY},
++        {WINED3D_RTYPE_NONE,       WINED3DUSAGE_DEPTHSTENCIL,        D3D11_FORMAT_SUPPORT_DEPTH_STENCIL},
++        {WINED3D_RTYPE_BUFFER,     WINED3DUSAGE_QUERY_VERTEXTEXTURE, D3D11_FORMAT_SUPPORT_BUFFER |
++            D3D11_FORMAT_SUPPORT_IA_VERTEX_BUFFER | D3D11_FORMAT_SUPPORT_IA_INDEX_BUFFER | D3D11_FORMAT_SUPPORT_SO_BUFFER
++        },
++        {WINED3D_RTYPE_TEXTURE_2D, WINED3DUSAGE_TEXTURE | WINED3DUSAGE_LEGACY_CUBEMAP, D3D11_FORMAT_SUPPORT_TEXTURECUBE},
++        {WINED3D_RTYPE_TEXTURE_2D, WINED3DUSAGE_TEXTURE | WINED3DUSAGE_AUTOGENMIPMAP,  D3D11_FORMAT_SUPPORT_MIP_AUTOGEN},
++        {WINED3D_RTYPE_TEXTURE_2D, WINED3DUSAGE_TEXTURE | WINED3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING, D3D11_FORMAT_SUPPORT_BLENDABLE},
+     };
+     HRESULT hr;
+ 
+     FIXME("iface %p, format %u, format_support %p partial-stub!\n", iface, format, format_support);
+ 
+     wined3d_format = wined3dformat_from_dxgi_format(format);
+-    if (format && !wined3d_format)
++    if ((format && !wined3d_format) || wined3d_format == WINED3DFMT_UNKNOWN)
+     {
+         WARN("Invalid format %#x.\n", format);
+         *format_support = 0;
+@@ -5550,10 +5557,15 @@ static HRESULT STDMETHODCALLTYPE d3d10_device_CreateCounter(ID3D10Device1 *iface
+ static HRESULT STDMETHODCALLTYPE d3d10_device_CheckFormatSupport(ID3D10Device1 *iface,
+         DXGI_FORMAT format, UINT *format_support)
+ {
+-    FIXME("iface %p, format %s, format_support %p stub!\n",
++    struct d3d_device *device = impl_from_ID3D10Device(iface);
++    HRESULT hr;
++
++    TRACE("iface %p, format %s, format_support %p.\n",
+             iface, debug_dxgi_format(format), format_support);
+ 
+-    return E_NOTIMPL;
++    hr = d3d11_device_CheckFormatSupport(&device->ID3D11Device_iface, format, format_support);
++    if (SUCCEEDED(hr)) *format_support &= 0x8ffffff;
++    return hr;
+ }
+ 
+ static HRESULT STDMETHODCALLTYPE d3d10_device_CheckMultisampleQualityLevels(ID3D10Device1 *iface,
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index 84ffe4e31a2..d64d8ef7acc 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -14046,7 +14046,8 @@ static void check_format_support(const unsigned int *format_support, D3D_FEATURE
+ 
+         if (formats[i].fl_required <= feature_level)
+         {
+-            todo_wine ok(supported, "Format %#x - %s not supported, feature_level %#x, format support %#x.\n",
++            todo_wine_if(formats[i].format == DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM)
++            ok(supported, "Format %#x - %s not supported, feature_level %#x, format support %#x.\n",
+                     format, feature_name, feature_level, format_support[format]);
+             continue;
+         }
+@@ -14059,6 +14060,9 @@ static void check_format_support(const unsigned int *format_support, D3D_FEATURE
+             continue;
+         }
+ 
++        todo_wine_if(formats[i].format == DXGI_FORMAT_R16G16B16A16_FLOAT ||
++                formats[i].format == DXGI_FORMAT_R10G10B10A2_UNORM ||
++                formats[i].format == DXGI_FORMAT_R32_UINT)
+         ok(!supported, "Format %#x - %s supported, feature level %#x, format support %#x.\n",
+                 format, feature_name, feature_level, format_support[format]);
+     }
+@@ -14066,6 +14070,15 @@ static void check_format_support(const unsigned int *format_support, D3D_FEATURE
+ 
+ static void test_required_format_support(const D3D_FEATURE_LEVEL feature_level)
+ {
++    static const UINT expected = D3D11_FORMAT_SUPPORT_IA_VERTEX_BUFFER |
++            D3D11_FORMAT_SUPPORT_TEXTURE1D | D3D11_FORMAT_SUPPORT_TEXTURE2D |
++            D3D11_FORMAT_SUPPORT_TEXTURE3D | D3D11_FORMAT_SUPPORT_TEXTURECUBE |
++            D3D11_FORMAT_SUPPORT_MIP | D3D11_FORMAT_SUPPORT_MIP_AUTOGEN |
++            D3D11_FORMAT_SUPPORT_RENDER_TARGET | D3D11_FORMAT_SUPPORT_BLENDABLE |
++            D3D11_FORMAT_SUPPORT_DISPLAY /* | D3D11_FORMAT_SUPPORT_SHADER_LOAD
++            D3D11_FORMAT_SUPPORT_SHADER_SAMPLE | D3D11_FORMAT_SUPPORT_CPU_LOCKABLE |
++            D3D11_FORMAT_SUPPORT_MULTISAMPLE_RESOLVE | D3D11_FORMAT_SUPPORT_BACK_BUFFER_CAST
++            D3D11_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET */;
+     unsigned int format_support[DXGI_FORMAT_B4G4R4A4_UNORM + 1];
+     struct device_desc device_desc;
+     ID3D11Device *device;
+@@ -14093,6 +14106,24 @@ static void test_required_format_support(const D3D_FEATURE_LEVEL feature_level)
+     ok(hr == E_FAIL, "Got unexpected hr %#x.\n", hr);
+     ok(!support, "Got unexpected format support %#x.\n", support);
+ 
++    /* crashes on Windows, even though MSDN states the function returns E_INVALIDARG */
++    if (0)
++    {
++        hr = ID3D11Device_CheckFormatSupport(device, DXGI_FORMAT_R8G8B8A8_UNORM, NULL);
++        ok(hr == E_INVALIDARG, "Expected E_INVALIDARG, got %#x.\n", hr);
++    }
++
++    hr = ID3D11Device_CheckFormatSupport(device, DXGI_FORMAT_UNKNOWN, &support);
++    ok(hr == E_FAIL, "Expected E_FAIL, got %#x.\n", hr);
++
++    hr = ID3D11Device_CheckFormatSupport(device, 0xdeadbeef, &support);
++    ok(hr == E_FAIL, "Expected E_FAIL, got %#x.\n", hr);
++
++    hr = ID3D11Device_CheckFormatSupport(device, DXGI_FORMAT_R8G8B8A8_UNORM, &support);
++    ok(hr == S_OK, "Expected S_OK, got %#x.\n", hr);
++    ok((support & expected) == expected, "Expected the following features to be supported: %#x.\n",
++       (support ^ expected) & expected);
++
+     memset(format_support, 0, sizeof(format_support));
+     for (format = DXGI_FORMAT_UNKNOWN; format <= DXGI_FORMAT_B4G4R4A4_UNORM; ++format)
+     {
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index 9614e16d9dc..6fe22003489 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -5254,10 +5254,23 @@ HRESULT CDECL wined3d_check_device_format(const struct wined3d *wined3d, UINT ad
+         case WINED3D_RTYPE_NONE:
+             allowed_usage = WINED3DUSAGE_DEPTHSTENCIL
+                     | WINED3DUSAGE_RENDERTARGET;
+-            gl_type = WINED3D_GL_RES_TYPE_TEX_2D;
++            gl_type = WINED3D_GL_RES_TYPE_TEX_1D;
+             gl_type_end = WINED3D_GL_RES_TYPE_TEX_3D;
+             break;
+ 
++        case WINED3D_RTYPE_TEXTURE_1D:
++            allowed_usage = WINED3DUSAGE_DYNAMIC
++                    | WINED3DUSAGE_SOFTWAREPROCESSING
++                    | WINED3DUSAGE_TEXTURE
++                    | WINED3DUSAGE_QUERY_FILTER
++                    | WINED3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING
++                    | WINED3DUSAGE_QUERY_SRGBREAD
++                    | WINED3DUSAGE_QUERY_SRGBWRITE
++                    | WINED3DUSAGE_QUERY_VERTEXTEXTURE
++                    | WINED3DUSAGE_QUERY_WRAPANDMIP;
++            gl_type = gl_type_end = WINED3D_GL_RES_TYPE_TEX_1D;
++            break;
++
+         case WINED3D_RTYPE_TEXTURE_2D:
+             allowed_usage = WINED3DUSAGE_DEPTHSTENCIL
+                     | WINED3DUSAGE_RENDERTARGET
+@@ -5314,6 +5327,12 @@ HRESULT CDECL wined3d_check_device_format(const struct wined3d *wined3d, UINT ad
+             gl_type = gl_type_end = WINED3D_GL_RES_TYPE_TEX_3D;
+             break;
+ 
++        case WINED3D_RTYPE_BUFFER:
++            allowed_usage = WINED3DUSAGE_DYNAMIC
++                    | WINED3DUSAGE_QUERY_VERTEXTEXTURE;
++            gl_type = gl_type_end = WINED3D_GL_RES_TYPE_BUFFER;
++            break;
++
+         default:
+             FIXME("Unhandled resource type %s.\n", debug_d3dresourcetype(resource_type));
+             return WINED3DERR_NOTAVAILABLE;
+-- 
+2.13.0
+

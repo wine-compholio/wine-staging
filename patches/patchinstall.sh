@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6c752aaf8da225365b2bdbbf3c43d41afd4d1344"
+	echo "e5733e7cd40b41bb4d8c0409e9ed5be8fe6d5618"
 }
 
 # Show version information
@@ -5111,16 +5111,13 @@ fi
 # |   *	[#39367] Return stub interface from mf.MFCreateMediaSession
 # |
 # | Modified files:
-# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, dlls/mf/topology.c,
-# | 	include/rpcndr.h
+# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, dlls/mf/topology.c
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
-	patch_apply mfplat-MFTRegister/0007-include-rpcndr.h-Fix-definition-of-EXTERN_GUID.patch
 	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include/rpcndr.h: Fix definition of EXTERN_GUID.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
 	) >> "$patchlist"
 fi

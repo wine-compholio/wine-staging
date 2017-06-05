@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1fbb661ed1745bdfdcd1287c730f63503ee3f13f"
+	echo "6c752aaf8da225365b2bdbbf3c43d41afd4d1344"
 }
 
 # Show version information
@@ -5111,7 +5111,8 @@ fi
 # |   *	[#39367] Return stub interface from mf.MFCreateMediaSession
 # |
 # | Modified files:
-# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, include/rpcndr.h
+# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, dlls/mf/topology.c,
+# | 	include/rpcndr.h
 # |
 if test "$enable_mfplat_MFTRegister" -eq 1; then
 	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e5733e7cd40b41bb4d8c0409e9ed5be8fe6d5618"
+	echo "e4c9a2ec81b8029876d588e09587db40ab65ee69"
 }
 
 # Show version information
@@ -204,7 +204,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_makedep_PARENTSPEC="$1"
-	enable_mfplat_MFTRegister="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
@@ -281,7 +280,6 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
-	enable_ntdll_set_context_reg="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -851,9 +849,6 @@ patch_enable ()
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
 			;;
-		mfplat-MFTRegister)
-			enable_mfplat_MFTRegister="$2"
-			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
 			;;
@@ -1081,9 +1076,6 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
-			;;
-		ntdll-set_context_reg)
-			enable_ntdll_set_context_reg="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -2621,17 +2613,16 @@ fi
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
-# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/device.c, dlls/d3d11/view.c,
-# | 	dlls/d3d8/texture.c, dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c,
-# | 	dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c,
-# | 	dlls/kernel32/oldconfig.c, dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
-# | 	dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c,
-# | 	dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
+# | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
+# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
+# | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
+# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c,
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, include/wine/list.h,
+# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
-	patch_apply Compiler_Warnings/0002-d3d11-Remove-duplicate-const.patch
 	patch_apply Compiler_Warnings/0003-shell32-Fix-length-parameter-for-ZeroMemory.patch
 	patch_apply Compiler_Warnings/0004-fusion-Fix-length-parameter-for-ZeroMemory.patch
 	patch_apply Compiler_Warnings/0005-fusion-tests-Avoid-compiler-warnings-with-GCC-7.patch
@@ -2655,7 +2646,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Remove duplicate const.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shell32: Fix length parameter for ZeroMemory.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion: Fix length parameter for ZeroMemory.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion/tests: Avoid compiler warnings with GCC 7.", 1 },';
@@ -5105,23 +5095,6 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mfplat-MFTRegister
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39367] Return stub interface from mf.MFCreateMediaSession
-# |
-# | Modified files:
-# |   *	dlls/mf/Makefile.in, dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/mf_private.h, dlls/mf/session.c, dlls/mf/topology.c
-# |
-if test "$enable_mfplat_MFTRegister" -eq 1; then
-	patch_apply mfplat-MFTRegister/0006-mf-Add-stub-for-MFCreateMediaSession.patch
-	patch_apply mfplat-MFTRegister/0008-mf-Implement-IMFMediaSession-stub-interface.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "mf: Add stub for MFCreateMediaSession.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "mf: Implement IMFMediaSession stub interface.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mmsystem.dll16-MIDIHDR_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6290,21 +6263,6 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-set_context_reg
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43127] Avoid conversion from unaligned pointer to M128A
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_set_context_reg" -eq 1; then
-	patch_apply ntdll-set_context_reg/0001-ntdll-Do-not-cast-unaligned-pointer-to-M128A-in-set_.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not cast unaligned pointer to M128A in set_context_reg.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8868,19 +8826,12 @@ fi
 # |   *	[#20776] Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c,
-# | 	dlls/wined3d/query.c, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c
 # |
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
-	patch_apply wined3d-QUERY_Stubs/0002-d3d11-Add-dummy-support-for-D3D11_QUERY_PIPELINE_STA.patch
-	patch_apply wined3d-QUERY_Stubs/0004-wined3d-Implement-WINED3D_QUERY_TYPE_PIPELINE_STATIS.patch
-	patch_apply wined3d-QUERY_Stubs/0005-d3d11-tests-Add-basic-test-for-D3D11_QUERY_PIPELINE_.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add dummy support for D3D11_QUERY_PIPELINE_STATISTICS query.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement WINED3D_QUERY_TYPE_PIPELINE_STATISTICS.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for D3D11_QUERY_PIPELINE_STATISTICS.", 1 },';
 	) >> "$patchlist"
 fi
 

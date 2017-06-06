@@ -4443,7 +4443,6 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33117] Improve detection of symbol charset for old truetype fonts
-# |   *	[#12377] Fix font loading in Capella
 # |
 # | Modified files:
 # |   *	dlls/gdi32/freetype.c

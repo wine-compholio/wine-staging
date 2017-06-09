@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e4c9a2ec81b8029876d588e09587db40ab65ee69"
+	echo "e0e4f9bbcda1243b9317dbfbeeff84a18b4e855c"
 }
 
 # Show version information
@@ -292,7 +292,6 @@ patch_enable_all ()
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_DispCallFunc="$1"
 	enable_oleaut32_ITypeInfo_fnInvoke="$1"
-	enable_oleaut32_LoadTypeLibEx="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
@@ -1112,9 +1111,6 @@ patch_enable ()
 			;;
 		oleaut32-ITypeInfo_fnInvoke)
 			enable_oleaut32_ITypeInfo_fnInvoke="$2"
-			;;
-		oleaut32-LoadTypeLibEx)
-			enable_oleaut32_LoadTypeLibEx="$2"
 			;;
 		oleaut32-Load_Save_EMF)
 			enable_oleaut32_Load_Save_EMF="$2"
@@ -6537,21 +6533,6 @@ if test "$enable_oleaut32_ITypeInfo_fnInvoke" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset oleaut32-LoadTypeLibEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38328] Add arguments check to LoadTypeLibEx
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/typelib.c
-# |
-if test "$enable_oleaut32_LoadTypeLibEx" -eq 1; then
-	patch_apply oleaut32-LoadTypeLibEx/0001-oleaut32-Add-an-arguments-check-to-LoadTypeLibEx.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Add an arguments check to LoadTypeLibEx.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset oleaut32-Load_Save_EMF
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8968,7 +8949,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Use priority queue for update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Discard buffer during upload when replacing complete content.", 1 },';

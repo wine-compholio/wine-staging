@@ -47,14 +47,11 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
  };
  
  struct wined3d_cs_add_dirty_texture_region
-@@ -2138,22 +2141,80 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+@@ -2138,6 +2141,53 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
          unsigned int slice_pitch)
  {
      struct wined3d_cs_update_sub_resource *op;
-+#if !defined(STAGING_CSMT)
- 
-     op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_DEFAULT);
-+#else  /* STAGING_CSMT */
++#if defined(STAGING_CSMT)
 +    size_t data_size, size;
 +
 +    if (resource->type != WINED3D_RTYPE_BUFFER && resource->format_flags & WINED3DFMT_FLAG_BLOCKS)
@@ -84,51 +81,38 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
 +        goto no_async;
 +
 +    op = cs->ops->require_space(cs, size, WINED3D_CS_QUEUE_DEFAULT);
-+#endif /* STAGING_CSMT */
-     op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
-     op->resource = resource;
-     op->sub_resource_idx = sub_resource_idx;
-     op->box = *box;
-     op->data.row_pitch = row_pitch;
-     op->data.slice_pitch = slice_pitch;
-+#if !defined(STAGING_CSMT)
-     op->data.data = data;
-+#else  /* STAGING_CSMT */
-+    op->data.data = op->copy_data;
-+    memcpy(op->copy_data, data, data_size);
-+#endif /* STAGING_CSMT */
- 
-     wined3d_resource_acquire(resource);
- 
-     cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
-+#if !defined(STAGING_CSMT)
-     /* The data pointer may go away, so we need to wait until it is read.
-      * Copying the data may be faster if it's small. */
-     cs->ops->finish(cs, WINED3D_CS_QUEUE_DEFAULT);
-+#else  /* STAGING_CSMT */
-+    return;
-+
-+no_async:
-+    wined3d_resource_wait_idle(resource);
-+
-+    op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_MAP);
 +    op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
 +    op->resource = resource;
 +    op->sub_resource_idx = sub_resource_idx;
 +    op->box = *box;
 +    op->data.row_pitch = row_pitch;
 +    op->data.slice_pitch = slice_pitch;
-+    op->data.data = data;
++    op->data.data = op->copy_data;
++    memcpy(op->copy_data, data, data_size);
 +
 +    wined3d_resource_acquire(resource);
 +
-+    cs->ops->submit(cs, WINED3D_CS_QUEUE_MAP);
-+    cs->ops->finish(cs, WINED3D_CS_QUEUE_MAP);
++    cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
++    return;
++
++no_async:
++    wined3d_resource_wait_idle(resource);
 +#endif /* STAGING_CSMT */
+ 
+     op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_MAP);
+     op->opcode = WINED3D_CS_OP_UPDATE_SUB_RESOURCE;
+@@ -2151,8 +2201,10 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+     wined3d_resource_acquire(resource);
+ 
+     cs->ops->submit(cs, WINED3D_CS_QUEUE_MAP);
++#if !defined(STAGING_CSMT)
+     /* The data pointer may go away, so we need to wait until it is read.
+      * Copying the data may be faster if it's small. */
++#endif /* STAGING_CSMT */
+     cs->ops->finish(cs, WINED3D_CS_QUEUE_MAP);
  }
  
- static void wined3d_cs_exec_add_dirty_texture_region(struct wined3d_cs *cs, const void *data)
-@@ -2279,6 +2340,13 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2279,6 +2331,13 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW */ wined3d_cs_exec_clear_unordered_access_view,
  };
  
@@ -142,7 +126,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
  {
      if (size > (cs->data_size - cs->end))
-@@ -2332,6 +2400,9 @@ static void wined3d_cs_st_finish(struct wined3d_cs *cs, enum wined3d_cs_queue_id
+@@ -2332,6 +2391,9 @@ static void wined3d_cs_st_finish(struct wined3d_cs *cs, enum wined3d_cs_queue_id
  
  static const struct wined3d_cs_ops wined3d_cs_st_ops =
  {
@@ -152,7 +136,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
      wined3d_cs_st_require_space,
      wined3d_cs_st_submit,
      wined3d_cs_st_finish,
-@@ -2364,6 +2435,21 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, enum wined3d_cs_queue_id
+@@ -2364,6 +2426,21 @@ static void wined3d_cs_mt_submit(struct wined3d_cs *cs, enum wined3d_cs_queue_id
      wined3d_cs_queue_submit(&cs->queue[queue_id], cs);
  }
  
@@ -174,7 +158,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
  static void *wined3d_cs_queue_require_space(struct wined3d_cs_queue *queue, size_t size, struct wined3d_cs *cs)
  {
      size_t queue_size = ARRAY_SIZE(queue->data);
-@@ -2425,6 +2511,16 @@ static void *wined3d_cs_queue_require_space(struct wined3d_cs_queue *queue, size
+@@ -2425,6 +2502,16 @@ static void *wined3d_cs_queue_require_space(struct wined3d_cs_queue *queue, size
      return packet->data;
  }
  
@@ -191,7 +175,7 @@ diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
  static void *wined3d_cs_mt_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
  {
      if (cs->thread_id == GetCurrentThreadId())
-@@ -2444,6 +2540,9 @@ static void wined3d_cs_mt_finish(struct wined3d_cs *cs, enum wined3d_cs_queue_id
+@@ -2444,6 +2531,9 @@ static void wined3d_cs_mt_finish(struct wined3d_cs *cs, enum wined3d_cs_queue_id
  
  static const struct wined3d_cs_ops wined3d_cs_mt_ops =
  {
@@ -242,7 +226,18 @@ diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
          }
  
          if (!src_box)
-@@ -5216,3 +5233,58 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
+@@ -4268,8 +4285,10 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+         return;
+     }
+ 
++#if !defined(STAGING_CSMT)
+     wined3d_resource_wait_idle(resource);
+ 
++#endif /* STAGING_CSMT */
+     wined3d_cs_emit_update_sub_resource(device->cs, resource, sub_resource_idx, box, data, row_pitch, depth_pitch);
+ }
+ 
+@@ -5218,3 +5237,58 @@ LRESULT device_process_message(struct wined3d_device *device, HWND window, BOOL
      else
          return CallWindowProcA(proc, window, message, wparam, lparam);
  }

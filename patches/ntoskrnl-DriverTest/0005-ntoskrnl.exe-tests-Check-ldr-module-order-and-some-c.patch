@@ -1,0 +1,194 @@
+From 276f9cb5ec799bb0919d8ae06609260daddc52cd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 8 Jun 2017 23:54:59 +0200
+Subject: ntoskrnl.exe/tests: Check ldr module order and some common kernel
+ drivers.
+
+---
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.c | 60 +++++++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.h |  1 +
+ dlls/ntoskrnl.exe/tests/driver.sys/util.h   | 18 +++++++++
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c          |  7 ++++
+ include/ddk/ntddk.h                         |  1 +
+ 5 files changed, 87 insertions(+)
+
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
+index 39c2fb2aa50..c512f3c3f31 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
+@@ -31,6 +31,7 @@
+ #include "winbase.h"
+ #include "winternl.h"
+ #include "winioctl.h"
++#include "ddk/ntddk.h"
+ #include "ddk/wdm.h"
+ 
+ #define WINE_KERNEL
+@@ -45,6 +46,8 @@ const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
+ const WCHAR driver_link[] = {'\\','D','o','s','D','e','v','i','c','e','s',
+                              '\\','W','i','n','e','T','e','s','t','D','r','i','v','e','r',0};
+ 
++static LDR_MODULE *ldr_module;
++
+ static void *get_system_routine(const char *name)
+ {
+     UNICODE_STRING name_u;
+@@ -128,6 +131,60 @@ KERNEL_TESTCASE(ExInitializeNPagedLookasideList)
+     return STATUS_SUCCESS;
+ }
+ 
++static BOOL equal_string(ANSI_STRING *str1, const char *str2)
++{
++    if (str1->Length != kernel_strlen(str2)) return FALSE;
++    return !kernel_strncmp(str1->Buffer, str2, str1->Length);
++}
++
++KERNEL_TESTCASE(LdrModules)
++{
++    BOOL win32k = FALSE, dxgkrnl = FALSE, dxgmms1 = FALSE;
++    LIST_ENTRY *start, *entry;
++    ANSI_STRING name_a;
++    LDR_MODULE *mod;
++    NTSTATUS status;
++
++    /* Try to find start of the InLoadOrderModuleList list */
++    for (start = ldr_module->InLoadOrderModuleList.Flink; ; start = start->Flink)
++    {
++        mod = CONTAINING_RECORD(start, LDR_MODULE, InLoadOrderModuleList);
++
++        if (!MmIsAddressValid(&mod->BaseAddress) || !mod->BaseAddress) break;
++        if (!MmIsAddressValid(&mod->LoadCount) || !mod->LoadCount) break;
++        if (!MmIsAddressValid(&mod->SizeOfImage) || !mod->SizeOfImage) break;
++        if (!MmIsAddressValid(&mod->EntryPoint) || mod->EntryPoint < mod->BaseAddress ||
++            (DWORD_PTR)mod->EntryPoint > (DWORD_PTR)mod->BaseAddress + mod->SizeOfImage) break;
++    }
++
++    for (entry = start->Flink; entry != start; entry = entry->Flink)
++    {
++        mod = CONTAINING_RECORD(entry, LDR_MODULE, InLoadOrderModuleList);
++
++        status = RtlUnicodeStringToAnsiString(&name_a, &mod->BaseDllName, TRUE);
++        ok(!status, "RtlUnicodeStringToAnsiString failed with %08x\n", status);
++        if (status) continue;
++
++        if (entry == start->Flink)
++        {
++            ok(equal_string(&name_a, "ntoskrnl.exe"),
++               "Expected ntoskrnl.exe, got %.*s\n", name_a.Length, name_a.Buffer);
++        }
++
++        if (equal_string(&name_a, "win32k.sys"))  win32k  = TRUE;
++        if (equal_string(&name_a, "dxgkrnl.sys")) dxgkrnl = TRUE;
++        if (equal_string(&name_a, "dxgmms1.sys")) dxgmms1 = TRUE;
++
++        RtlFreeAnsiString(&name_a);
++    }
++
++    ok(win32k,  "Failed to find win32k.sys\n");
++    ok(dxgkrnl, "Failed to find dxgkrnl.sys\n");
++    ok(dxgmms1, "Failed to find dxgmms1.sys\n");
++
++    return STATUS_SUCCESS;
++}
++
+ static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
+ {
+     irp->IoStatus.u.Status = STATUS_SUCCESS;
+@@ -167,6 +224,7 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+         DECLARE_TEST(PsGetCurrentThread);
+         DECLARE_TEST(NtBuildNumber);
+         DECLARE_TEST(ExInitializeNPagedLookasideList);
++        DECLARE_TEST(LdrModules);
+ 
+         default:
+             break;
+@@ -211,6 +269,8 @@ NTSTATUS WINAPI DriverEntry(DRIVER_OBJECT *driver, PUNICODE_STRING registry)
+ 
+     DbgPrint("loading driver\n");
+ 
++    ldr_module = (LDR_MODULE*)driver->DriverSection;
++
+     /* Allow unloading of the driver */
+     driver->DriverUnload = driver_Unload;
+ 
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
+index b5b3ef4e027..7442aa55286 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
+@@ -26,6 +26,7 @@
+ #define WINE_IOCTL_PsGetCurrentThread              WINE_TEST_IOCTL(1)
+ #define WINE_IOCTL_NtBuildNumber                   WINE_TEST_IOCTL(2)
+ #define WINE_IOCTL_ExInitializeNPagedLookasideList WINE_TEST_IOCTL(3)
++#define WINE_IOCTL_LdrModules                      WINE_TEST_IOCTL(4)
+ 
+ struct test_PsGetCurrentProcessId
+ {
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/util.h b/dlls/ntoskrnl.exe/tests/driver.sys/util.h
+index 881a4a2952f..07c04da40fe 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/util.h
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/util.h
+@@ -31,6 +31,24 @@ static inline const char* kernel_strrchr(const char *str, int character)
+     return ret;
+ }
+ 
++static inline size_t kernel_strlen(const char *str)
++{
++    const char *ptr = str;
++    while (*ptr) ptr++;
++    return ptr - str;
++}
++
++static inline int kernel_strncmp(const char *str1, const char *str2, size_t len)
++{
++    if (!len) return 0;
++    while (--len && *str1 && *str1 == *str2)
++    {
++        str1++;
++        str2++;
++    }
++    return *str1 - *str2;
++}
++
+ static inline void* kernel_memcpy(void *destination, const void *source, size_t num)
+ {
+     const char *src = source;
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 40e62053150..abd62520b95 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -214,6 +214,12 @@ static void test_ExInitializeNPagedLookasideList(void)
+     wine_run_kernel_test(device_path, WINE_IOCTL_ExInitializeNPagedLookasideList, NULL);
+ }
+ 
++static void test_LdrModules(void)
++{
++    trace("Running tests for LdrModules\n");
++    wine_run_kernel_test(device_path, WINE_IOCTL_LdrModules, NULL);
++}
++
+ START_TEST(ntoskrnl)
+ {
+     char filename[MAX_PATH];
+@@ -229,6 +235,7 @@ START_TEST(ntoskrnl)
+     test_PsGetCurrentThread();
+     test_NtBuildNumber();
+     test_ExInitializeNPagedLookasideList();
++    test_LdrModules();
+ 
+     unload_driver(service, filename);
+ }
+diff --git a/include/ddk/ntddk.h b/include/ddk/ntddk.h
+index 6aae257770d..7a565aae105 100644
+--- a/include/ddk/ntddk.h
++++ b/include/ddk/ntddk.h
+@@ -196,6 +196,7 @@ NTSTATUS  WINAPI IoQueryDeviceDescription(PINTERFACE_TYPE,PULONG,PCONFIGURATION_
+                                   PCONFIGURATION_TYPE,PULONG,PIO_QUERY_DEVICE_ROUTINE,PVOID);
+ void      WINAPI IoRegisterDriverReinitialization(PDRIVER_OBJECT,PDRIVER_REINITIALIZE,PVOID);
+ NTSTATUS  WINAPI IoRegisterShutdownNotification(PDEVICE_OBJECT);
++BOOLEAN   WINAPI MmIsAddressValid(void *);
+ NTSTATUS  WINAPI PsSetLoadImageNotifyRoutine(PLOAD_IMAGE_NOTIFY_ROUTINE);
+ void      WINAPI RtlInitializeGenericTableAvl(PRTL_AVL_TABLE,PRTL_AVL_COMPARE_ROUTINE,PRTL_AVL_ALLOCATE_ROUTINE, PRTL_AVL_FREE_ROUTINE,void *);
+ void      WINAPI RtlInsertElementGenericTableAvl(PRTL_AVL_TABLE,void *,ULONG,BOOL*);
+-- 
+2.13.1
+

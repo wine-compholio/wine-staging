@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e0e4f9bbcda1243b9317dbfbeeff84a18b4e855c"
+	echo "74d93d9bc0acadacc97c3dc803ede6ed4b8becb1"
 }
 
 # Show version information
@@ -2307,6 +2307,24 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
 	fi
 	enable_nvcuda_CUDA_Support=1
+fi
+
+if test "$enable_ntoskrnl_DriverTest" -eq 1; then
+	if test "$enable_ntoskrnl_Stubs" -gt 1; then
+		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-DriverTest depends on that."
+	fi
+	enable_ntoskrnl_Stubs=1
+fi
+
+if test "$enable_ntoskrnl_Stubs" -eq 1; then
+	if test "$enable_Compiler_Warnings" -gt 1; then
+		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
+	fi
+	if test "$enable_ntdll_NtAllocateUuids" -gt 1; then
+		abort "Patchset ntdll-NtAllocateUuids disabled, but ntoskrnl-Stubs depends on that."
+	fi
+	enable_Compiler_Warnings=1
+	enable_ntdll_NtAllocateUuids=1
 fi
 
 if test "$enable_ntdll_WriteWatches" -eq 1; then
@@ -6261,29 +6279,13 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl-DriverTest
-# |
-# | Modified files:
-# |   *	aclocal.m4, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/Makefile.in,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in, dlls/ntoskrnl.exe/tests/driver.sys/driver.c,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/driver.h, dlls/ntoskrnl.exe/tests/driver.sys/driver.sys.spec,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/test.c, dlls/ntoskrnl.exe/tests/driver.sys/test.h,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/util.h, dlls/ntoskrnl.exe/tests/ntoskrnl.c, include/wine/test.h,
-# | 	tools/make_makefiles, tools/makedep.c
-# |
-if test "$enable_ntoskrnl_DriverTest" -eq 1; then
-	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
-	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntoskrnl-Stubs
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids
+# |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
@@ -6296,6 +6298,8 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
 	patch_apply ntoskrnl-Stubs/0012-ntoskrnl-Implement-ExInterlockedPopEntrySList.patch
+	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
+	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
 	(
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
@@ -6307,6 +6311,34 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-DriverTest
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs
+# |
+# | Modified files:
+# |   *	aclocal.m4, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/Makefile.in,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in, dlls/ntoskrnl.exe/tests/driver.sys/driver.c,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/driver.h, dlls/ntoskrnl.exe/tests/driver.sys/driver.sys.spec,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/test.c, dlls/ntoskrnl.exe/tests/driver.sys/test.h,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/util.h, dlls/ntoskrnl.exe/tests/ntoskrnl.c, include/wine/test.h,
+# | 	tools/make_makefiles, tools/makedep.c
+# |
+if test "$enable_ntoskrnl_DriverTest" -eq 1; then
+	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
+	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
+	patch_apply ntoskrnl-DriverTest/0003-ntoskrnl.exe-tests-Add-tests-for-NtBuildNumber.patch
+	patch_apply ntoskrnl-DriverTest/0004-ntoskrnl.exe-tests-Add-tests-for-ExInitializeNPagedL.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for NtBuildNumber.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for ExInitializeNPagedLookasideList.", 1 },';
 	) >> "$patchlist"
 fi
 

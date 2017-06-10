@@ -1,4 +1,4 @@
-From f928d6182289fb703fff3bd549b9df9b6a6558c6 Mon Sep 17 00:00:00 2001
+From 8c09da5559b124f97fd5f24540c25b28009562f5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 20 Jan 2015 18:39:36 +0100
 Subject: ntoskrnl.exe/tests: Add kernel compliant test functions.
@@ -6,23 +6,23 @@ Subject: ntoskrnl.exe/tests: Add kernel compliant test functions.
 ---
  dlls/ntoskrnl.exe/ntoskrnl.exe.spec            |   2 +-
  dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in |   3 +-
- dlls/ntoskrnl.exe/tests/driver.sys/driver.c    |  38 ++---
- dlls/ntoskrnl.exe/tests/driver.sys/driver.h    |  18 ++-
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.c    |  65 ++++++---
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.h    |  11 +-
  dlls/ntoskrnl.exe/tests/driver.sys/test.c      | 195 +++++++++++++++++++++++++
- dlls/ntoskrnl.exe/tests/driver.sys/test.h      | 181 +++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/test.h      | 158 ++++++++++++++++++++
  dlls/ntoskrnl.exe/tests/driver.sys/util.h      |  47 ++++++
- dlls/ntoskrnl.exe/tests/ntoskrnl.c             |  53 +++++--
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c             |  36 ++---
  include/wine/test.h                            |  39 ++++-
- 9 files changed, 535 insertions(+), 41 deletions(-)
+ 9 files changed, 509 insertions(+), 47 deletions(-)
  create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/test.c
  create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/test.h
  create mode 100644 dlls/ntoskrnl.exe/tests/driver.sys/util.h
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-index 1319ada..06794ba 100644
+index 25649c9b3b6..99c5749c6cf 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-@@ -1423,7 +1423,7 @@
+@@ -1427,7 +1427,7 @@
  @ cdecl -private _strrev(str) msvcrt._strrev
  @ cdecl -private _strset(str long) msvcrt._strset
  @ cdecl -private _strupr(str) msvcrt._strupr
@@ -32,7 +32,7 @@ index 1319ada..06794ba 100644
  @ cdecl -private _wcsicmp(wstr wstr) msvcrt._wcsicmp
  @ cdecl -private _wcslwr(wstr) msvcrt._wcslwr
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in b/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in
-index bc040e4..b3a6839 100644
+index 1c49b2bd5cd..b200eec7e95 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in
 @@ -8,4 +8,5 @@ CROSSFLAGS = -nostartfiles -nostdlib -nodefaultlibs \
@@ -43,7 +43,7 @@ index bc040e4..b3a6839 100644
 +	driver.c \
 +	test.c
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
-index 35f78d1..f39aa37 100644
+index 35f78d1ab2f..78fb55a961c 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
 @@ -30,6 +30,9 @@
@@ -56,11 +56,17 @@ index 35f78d1..f39aa37 100644
  #include "driver.h"
  
  const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
-@@ -37,24 +40,17 @@ const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
+@@ -37,24 +40,25 @@ const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
  const WCHAR driver_link[] = {'\\','D','o','s','D','e','v','i','c','e','s',
                               '\\','W','i','n','e','T','e','s','t','D','r','i','v','e','r',0};
  
--
++/* In each kernel testcase the following variables are available:
++ *
++ *   device     - DEVICE_OBJECT used for ioctl
++ *   irp        - IRP pointer passed to ioctl
++ *   __state    - used internally for test macros
++ */
+ 
 -static NTSTATUS test_basic_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
 +KERNEL_TESTCASE(PsGetCurrentProcessId)
  {
@@ -77,8 +83,9 @@ index 35f78d1..f39aa37 100644
 -
 -    for (i = 0; i < sizeof(str)-1; i++)
 -        buffer[i] = str[i];
-+    test->processid = (DWORD)(ULONG_PTR)PsGetCurrentProcessId();
-+    ok(test->processid, "Expected processid to be non zero\n");
++    struct test_PsGetCurrentProcessId *test = (void *)&__state->userdata;
++    test->pid = (DWORD)(ULONG_PTR)PsGetCurrentProcessId();
++    ok(test->pid, "Expected processid to be non zero\n");
 +    return STATUS_SUCCESS;
 +}
  
@@ -90,12 +97,32 @@ index 35f78d1..f39aa37 100644
      return STATUS_SUCCESS;
  }
  
-@@ -72,16 +68,20 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+@@ -69,19 +73,44 @@ static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
+ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+ {
+     IO_STACK_LOCATION *stack = IoGetCurrentIrpStackLocation(irp);
++    struct kernel_test_state *state = irp->AssociatedIrp.SystemBuffer;
      NTSTATUS status = STATUS_NOT_SUPPORTED;
      ULONG_PTR information = 0;
  
++    if (!state)
++    {
++        status = STATUS_ACCESS_VIOLATION;
++        goto done;
++    }
++
++    if (stack->Parameters.DeviceIoControl.InputBufferLength < sizeof(*state) ||
++        stack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(*state))
++    {
++        status = STATUS_BUFFER_TOO_SMALL;
++        goto done;
++    }
++
++    kernel_memset(&state->temp, 0, sizeof(state->temp));
++    kernel_memset(&state->output, 0, sizeof(state->output));
++
 +#define DECLARE_TEST(name) \
-+    case WINE_IOCTL_##name: status = RUN_TESTCASE(name, irp, stack, &information); break;
++    case WINE_IOCTL_##name: status = test_##name(device, irp, state); break;
 +
      switch (stack->Parameters.DeviceIoControl.IoControlCode)
      {
@@ -111,14 +138,18 @@ index 35f78d1..f39aa37 100644
  
 +#undef DECLARE_TEST
 +
++    kernel_memset(&state->temp, 0, sizeof(state->temp));
++    if (status == STATUS_SUCCESS) information = sizeof(*state);
++
++done:
      irp->IoStatus.Status = status;
      irp->IoStatus.Information = information;
      IoCompleteRequest(irp, IO_NO_INCREMENT);
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
-index 372e908..e48bbdd 100644
+index 372e9080896..1af2dcec249 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
-@@ -20,9 +20,19 @@
+@@ -20,9 +20,12 @@
   * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
   */
  
@@ -129,22 +160,15 @@ index 372e908..e48bbdd 100644
 - */
 +#define WINE_IOCTL_PsGetCurrentProcessId WINE_TEST_IOCTL(0)
 +#define WINE_IOCTL_PsGetCurrentThread    WINE_TEST_IOCTL(1)
-+
-+struct test_PsGetCurrentProcessId_state
-+{
-+    struct kernel_test_state __state;
-+    DWORD processid; /* output */
-+};
-+
-+struct test_PsGetCurrentThread_state
-+{
-+    struct kernel_test_state __state;
-+};
  
 -#define IOCTL_WINETEST_BASIC_IOCTL 			CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
++struct test_PsGetCurrentProcessId
++{
++    DWORD pid;
++};
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/test.c b/dlls/ntoskrnl.exe/tests/driver.sys/test.c
 new file mode 100644
-index 0000000..01adf60
+index 00000000000..01adf609371
 --- /dev/null
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/test.c
 @@ -0,0 +1,195 @@
@@ -345,10 +369,10 @@ index 0000000..01adf60
 +}
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/test.h b/dlls/ntoskrnl.exe/tests/driver.sys/test.h
 new file mode 100644
-index 0000000..6f1df76
+index 00000000000..65d08c0d645
 --- /dev/null
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/test.h
-@@ -0,0 +1,181 @@
+@@ -0,0 +1,158 @@
 +/*
 + * ntoskrnl.exe testing framework
 + *
@@ -374,6 +398,7 @@ index 0000000..6f1df76
 +
 +struct kernel_test_state
 +{
++    char userdata[1024];
 +    struct
 +    {
 +        int debug_level;
@@ -443,66 +468,42 @@ index 0000000..6f1df76
 +                           winetest_end_todo(__state, windows))
 +#define todo_wine      todo(0)
 +
-+#define KERNEL_TESTCASE(name)                                                                   \
-+    static NTSTATUS test_##name(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info,            \
-+                                struct test_##name##_state *test, struct kernel_test_state *__state); \
-+                                                                                                \
-+    static NTSTATUS __test_##name(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)          \
-+    {                                                                                           \
-+        ULONG input_length  = stack->Parameters.DeviceIoControl.InputBufferLength;              \
-+        ULONG output_length = stack->Parameters.DeviceIoControl.OutputBufferLength;             \
-+        struct kernel_test_state *state = irp->AssociatedIrp.SystemBuffer;                      \
-+        NTSTATUS status;                                                                        \
-+                                                                                                \
-+        if (!state)                                                                             \
-+            return STATUS_ACCESS_VIOLATION;                                                     \
-+                                                                                                \
-+        if (input_length < sizeof(struct test_##name##_state) ||                                \
-+            output_length < sizeof(struct test_##name##_state))                                 \
-+            return STATUS_BUFFER_TOO_SMALL;                                                     \
-+                                                                                                \
-+        kernel_memset(&state->temp,   0, sizeof(state->temp));                                  \
-+        kernel_memset(&state->output, 0, sizeof(state->output));                                \
-+        status = test_##name(irp, stack, info, irp->AssociatedIrp.SystemBuffer, state);         \
-+                                                                                                \
-+        kernel_memset(&state->temp, 0, sizeof(state->temp));                                    \
-+        *info = sizeof(struct test_##name##_state);                                             \
-+        return status;                                                                          \
-+    }                                                                                           \
-+                                                                                                \
-+    static NTSTATUS test_##name(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info,            \
-+                                struct test_##name##_state *test, struct kernel_test_state *__state)
-+
-+#define RUN_TESTCASE(name, irp, stack, info) \
-+    __test_##name(irp, stack, info)
++#define KERNEL_TESTCASE(name)                                       \
++    static NTSTATUS test_##name(DEVICE_OBJECT *device, IRP *irp,    \
++                                struct kernel_test_state *__state)
 +
 +#else
 +
 +#include <stdio.h>
 +
-+#define wine_run_kernel_test(device, ioctl, state, size, returned) \
-+    __wine_run_kernel_test(__FILE__, __LINE__, device, ioctl, state, size, returned)
++#define wine_run_kernel_test(device_path, ioctl, state) \
++    __wine_run_kernel_test(__FILE__, __LINE__, device_path, ioctl, state)
 +
-+static BOOL __wine_run_kernel_test(const char* file, int line, HANDLE device, DWORD ioctl,
-+                                   void *data, DWORD size, DWORD *returned)
++static void __wine_run_kernel_test(const char *file, int line, const char *device_path,
++                                   DWORD ioctl, struct kernel_test_state *state)
 +{
-+    struct kernel_test_state *state = data;
-+    DWORD bytes_returned;
-+    BOOL res;
++    struct kernel_test_state temp_state;
++    DWORD returned;
++    HANDLE device;
++    BOOL ret;
 +
-+    if (!returned)
-+        returned = &bytes_returned;
++    device = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
++    ok_(file, line)(device != INVALID_HANDLE_VALUE, "CreateFileA failed with error %u\n", GetLastError());
++    if (device == INVALID_HANDLE_VALUE) return;
 +
-+    memset(state, 0, sizeof(*state));
++    if (!state)
++    {
++        state = &temp_state;
++        memset(state, 0, sizeof(*state));
++    }
++
 +    state->input.debug_level    = winetest_get_debug();
 +    state->input.report_success = winetest_get_report_success();
 +    state->input.windows        = !strcmp(winetest_platform, "windows");
 +
-+    res = DeviceIoControl(device, ioctl, data, size, data, size, returned, NULL);
-+
-+    if (returned == &bytes_returned)
-+        ok_(file, line)(bytes_returned == size,
-+            "DeviceIoControl returned %u bytes, expected %u bytes\n", bytes_returned, size);
++    ret = DeviceIoControl(device, ioctl, state, sizeof(*state), state, sizeof(*state), &returned, NULL);
++    ok_(file, line)(ret, "DeviceIoControl failed with error %u\n", GetLastError());
++    ok_(file, line)(returned == sizeof(*state), "DeviceIoControl returned %u bytes\n", returned);
 +
 +    if (state->output.offset >= sizeof(state->output.debug))
 +        state->output.offset = sizeof(state->output.debug) - 1;
@@ -524,7 +525,7 @@ index 0000000..6f1df76
 +    winetest_add_todo_successes(state->output.todo_successes);
 +    winetest_add_skipped(state->output.skipped);
 +
-+    return res;
++    CloseHandle(device);
 +}
 +
 +#endif
@@ -532,7 +533,7 @@ index 0000000..6f1df76
 +#endif /* _WINE_KERNEL_TEST_ */
 diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/util.h b/dlls/ntoskrnl.exe/tests/driver.sys/util.h
 new file mode 100644
-index 0000000..881a4a2
+index 00000000000..881a4a2952f
 --- /dev/null
 +++ b/dlls/ntoskrnl.exe/tests/driver.sys/util.h
 @@ -0,0 +1,47 @@
@@ -584,7 +585,7 @@ index 0000000..881a4a2
 +    return ptr;
 +}
 diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
-index 9b8a6a7..64e9d97 100644
+index 9b8a6a7c5b0..6f020101b4c 100644
 --- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
 @@ -25,6 +25,7 @@
@@ -595,7 +596,7 @@ index 9b8a6a7..64e9d97 100644
  #include "driver.sys/driver.h"
  
  static const char driver_name[] = "WineTestDriver";
-@@ -184,29 +185,52 @@ err:
+@@ -184,29 +185,21 @@ err:
      return NULL;
  }
  
@@ -606,62 +607,38 @@ index 9b8a6a7..64e9d97 100644
 -    DWORD bytes_returned;
 -    char buf[32];
 -    HANDLE file;
-+    struct test_PsGetCurrentProcessId_state state;
-+    DWORD processid;
-+    HANDLE device;
-     BOOL res;
+-    BOOL res;
++    struct kernel_test_state state;
++    struct test_PsGetCurrentProcessId *test = (void *)&state.userdata;
  
 -    file = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE,
 -                       0, NULL, OPEN_EXISTING, 0, NULL);
 -    if (file == INVALID_HANDLE_VALUE)
-+    trace("Running tests for PsGetCurrentProcessId\n");
-+
-+    device = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE,
-+                         0, NULL, OPEN_EXISTING, 0, NULL);
-+    if (device == INVALID_HANDLE_VALUE)
-     {
-         ok(0, "Connecting to driver failed with %x\n", GetLastError());
-         return;
-     }
- 
+-    {
+-        ok(0, "Connecting to driver failed with %x\n", GetLastError());
+-        return;
+-    }
+-
 -    res = DeviceIoControl(file, IOCTL_WINETEST_BASIC_IOCTL, NULL, 0, buf,
 -                          sizeof(buf), &bytes_returned, NULL);
-+    res = wine_run_kernel_test(device, WINE_IOCTL_PsGetCurrentProcessId, &state, sizeof(state), NULL);
-     ok(res, "DeviceIoControl failed with %x\n", GetLastError());
+-    ok(res, "DeviceIoControl failed with %x\n", GetLastError());
 -    ok(bytes_returned == sizeof(str)-1, "Unexpected number of bytes\n");
 -    ok(!memcmp(buf, str, sizeof(str)-1), "Unexpected response data\n");
++    memset(&state, 0, sizeof(state));
++    trace("Running tests for PsGetCurrentProcessId\n");
++    wine_run_kernel_test(device_path, WINE_IOCTL_PsGetCurrentProcessId, &state);
++    ok(test->pid == GetCurrentProcessId(), "Expected pid %u, got %u\n", GetCurrentProcessId(), test->pid);
++}
  
 -    CloseHandle(file);
-+    processid = GetCurrentProcessId();
-+    ok(state.processid == processid, "Expected processid %u, got %u\n", processid, state.processid);
-+
-+    CloseHandle(device);
-+}
-+
 +static void test_PsGetCurrentThread(void)
 +{
-+    struct test_PsGetCurrentThread_state state;
-+    HANDLE device;
-+    BOOL res;
-+
 +    trace("Running tests for PsGetCurrentThread\n");
-+
-+    device = CreateFileA(device_path, GENERIC_READ | GENERIC_WRITE,
-+                         0, NULL, OPEN_EXISTING, 0, NULL);
-+    if (device == INVALID_HANDLE_VALUE)
-+    {
-+        ok(0, "Connecting to driver failed with %x\n", GetLastError());
-+        return;
-+    }
-+
-+    res = wine_run_kernel_test(device, WINE_IOCTL_PsGetCurrentThread, &state, sizeof(state), NULL);
-+    ok(res, "DeviceIoControl failed with %x\n", GetLastError());
-+
-+    CloseHandle(device);
++    wine_run_kernel_test(device_path, WINE_IOCTL_PsGetCurrentThread, NULL);
  }
  
  START_TEST(ntoskrnl)
-@@ -220,7 +244,8 @@ START_TEST(ntoskrnl)
+@@ -220,7 +213,8 @@ START_TEST(ntoskrnl)
          return;
      }
  
@@ -672,7 +649,7 @@ index 9b8a6a7..64e9d97 100644
      unload_driver(service, filename);
  }
 diff --git a/include/wine/test.h b/include/wine/test.h
-index 0d81a24..63e2cfa 100644
+index af602c0fac0..e7d7961f2a9 100644
 --- a/include/wine/test.h
 +++ b/include/wine/test.h
 @@ -61,7 +61,13 @@ extern int winetest_loop_todo(void);
@@ -689,7 +666,7 @@ index 0d81a24..63e2cfa 100644
  extern void winetest_wait_child_process( HANDLE process );
  
  extern const char *wine_dbgstr_wn( const WCHAR *str, int n );
-@@ -428,10 +434,39 @@ LONG winetest_get_failures(void)
+@@ -429,10 +435,39 @@ LONG winetest_get_failures(void)
      return failures;
  }
  
@@ -732,5 +709,5 @@ index 0d81a24..63e2cfa 100644
  
  void winetest_wait_child_process( HANDLE process )
 -- 
-2.7.0
+2.13.1
 

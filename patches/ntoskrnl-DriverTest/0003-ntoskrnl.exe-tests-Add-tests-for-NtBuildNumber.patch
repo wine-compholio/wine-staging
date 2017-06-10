@@ -1,0 +1,115 @@
+From 823f783bfa8b733abed5ec67d3119c2bbccf3d14 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 10 Jun 2017 15:45:03 +0200
+Subject: ntoskrnl.exe/tests: Add tests for NtBuildNumber.
+
+---
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.c | 34 +++++++++++++++++++++++++++++
+ dlls/ntoskrnl.exe/tests/driver.sys/driver.h |  1 +
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c          |  7 ++++++
+ 3 files changed, 42 insertions(+)
+
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
+index 78fb55a961c..28fbaf1747f 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.c
+@@ -35,11 +35,29 @@
+ #include "test.h"
+ #include "driver.h"
+ 
++extern PVOID WINAPI MmGetSystemRoutineAddress(PUNICODE_STRING);
++
+ const WCHAR driver_device[] = {'\\','D','e','v','i','c','e',
+                                '\\','W','i','n','e','T','e','s','t','D','r','i','v','e','r',0};
+ const WCHAR driver_link[] = {'\\','D','o','s','D','e','v','i','c','e','s',
+                              '\\','W','i','n','e','T','e','s','t','D','r','i','v','e','r',0};
+ 
++static void *get_system_routine(const char *name)
++{
++    UNICODE_STRING name_u;
++    ANSI_STRING name_a;
++    NTSTATUS status;
++    void *ret;
++
++    RtlInitAnsiString(&name_a, name);
++    status = RtlAnsiStringToUnicodeString(&name_u, &name_a, TRUE);
++    if (status) return NULL;
++
++    ret = MmGetSystemRoutineAddress(&name_u);
++    RtlFreeUnicodeString(&name_u);
++    return ret;
++}
++
+ /* In each kernel testcase the following variables are available:
+  *
+  *   device     - DEVICE_OBJECT used for ioctl
+@@ -62,6 +80,21 @@ KERNEL_TESTCASE(PsGetCurrentThread)
+     return STATUS_SUCCESS;
+ }
+ 
++KERNEL_TESTCASE(NtBuildNumber)
++{
++    USHORT *pNtBuildNumber;
++    ULONG build;
++
++    if (!(pNtBuildNumber = get_system_routine("NtBuildNumber")))
++    {
++        win_skip("Could not get pointer to NtBuildNumber\n");
++        return STATUS_SUCCESS;
++    }
++
++    PsGetVersion(NULL, NULL, &build, NULL);
++    ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
++    return STATUS_SUCCESS;
++}
+ 
+ static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
+ {
+@@ -100,6 +133,7 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+     {
+         DECLARE_TEST(PsGetCurrentProcessId);
+         DECLARE_TEST(PsGetCurrentThread);
++        DECLARE_TEST(NtBuildNumber);
+ 
+         default:
+             break;
+diff --git a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
+index 1af2dcec249..c3440cb65c2 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
++++ b/dlls/ntoskrnl.exe/tests/driver.sys/driver.h
+@@ -24,6 +24,7 @@
+ 
+ #define WINE_IOCTL_PsGetCurrentProcessId WINE_TEST_IOCTL(0)
+ #define WINE_IOCTL_PsGetCurrentThread    WINE_TEST_IOCTL(1)
++#define WINE_IOCTL_NtBuildNumber         WINE_TEST_IOCTL(2)
+ 
+ struct test_PsGetCurrentProcessId
+ {
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 6f020101b4c..c9799ec5a3c 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -202,6 +202,12 @@ static void test_PsGetCurrentThread(void)
+     wine_run_kernel_test(device_path, WINE_IOCTL_PsGetCurrentThread, NULL);
+ }
+ 
++static void test_NtBuildNumber(void)
++{
++    trace("Running tests for NtBuildNumber\n");
++    wine_run_kernel_test(device_path, WINE_IOCTL_NtBuildNumber, NULL);
++}
++
+ START_TEST(ntoskrnl)
+ {
+     char filename[MAX_PATH];
+@@ -215,6 +221,7 @@ START_TEST(ntoskrnl)
+ 
+     test_PsGetCurrentProcessId();
+     test_PsGetCurrentThread();
++    test_NtBuildNumber();
+ 
+     unload_driver(service, filename);
+ }
+-- 
+2.13.1
+

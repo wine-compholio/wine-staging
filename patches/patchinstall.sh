@@ -2644,11 +2644,11 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
-# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
-# | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
-# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, include/wine/list.h,
-# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/gdiplus/image.c,
+# | 	dlls/kernel32/oldconfig.c, dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
+# | 	dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/oleaut32/typelib.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c,
+# | 	dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/ws2_32/tests/sock.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
@@ -2659,6 +2659,8 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0007-rsaenh-tests-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0008-kernel32-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0009-ws2_32-tests-Work-around-an-incorrect-detection-in-G.patch
+	patch_apply Compiler_Warnings/0010-oleaut32-typelib.c-fix-cursor2-having-the-wrong-type.patch
+	patch_apply Compiler_Warnings/0011-gdiplus-Initialize-containers-list-in-GdipCloneImage.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2682,6 +2684,8 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "rsaenh/tests: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
+		printf '%s\n' '+    { "Nils Kuhnhenn", "oleaut32: Use variable with the correct type in LIST_FOR_EACH_ENTRY_SAFE macro.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "gdiplus: Initialize containers list in GdipCloneImage.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';

@@ -203,6 +203,7 @@ patch_enable_all ()
 	enable_krnl386_exe16__lclose16="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
+	enable_loader_OSX_Preloader="$1"
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -845,6 +846,9 @@ patch_enable ()
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
+			;;
+		loader-OSX_Preloader)
+			enable_loader_OSX_Preloader="$2"
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
@@ -2475,6 +2479,17 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
 	fi
 	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_loader_OSX_Preloader" -eq 1; then
+	if test "$enable_Staging" -gt 1; then
+		abort "Patchset Staging disabled, but loader-OSX_Preloader depends on that."
+	fi
+	if test "$enable_configure_Absolute_RPATH" -gt 1; then
+		abort "Patchset configure-Absolute_RPATH disabled, but loader-OSX_Preloader depends on that."
+	fi
+	enable_Staging=1
+	enable_configure_Absolute_RPATH=1
 fi
 
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
@@ -5112,6 +5127,27 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset loader-OSX_Preloader
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, configure-Absolute_RPATH
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33159] Implement preloader for Mac OS
+# |
+# | Modified files:
+# |   *	Makefile.in, configure.ac, dlls/ntdll/virtual.c, libs/wine/config.c, libs/wine/loader.c, loader/Makefile.in,
+# | 	loader/main.c, loader/preloader.c
+# |
+if test "$enable_loader_OSX_Preloader" -eq 1; then
+	patch_apply loader-OSX_Preloader/0001-libs-wine-Do-not-restrict-base-address-of-main-threa.patch
+	patch_apply loader-OSX_Preloader/0002-loader-Implement-preloader-for-Mac-OS.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "libs/wine: Do not restrict base address of main thread on 64 bit mac os.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
 	) >> "$patchlist"
 fi
 

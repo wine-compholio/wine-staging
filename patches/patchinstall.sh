@@ -210,6 +210,7 @@ patch_enable_all ()
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
@@ -867,6 +868,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msi-MsiGetDatabaseState)
+			enable_msi_MsiGetDatabaseState="$2"
 			;;
 		msi-msi_vcl_get_cost)
 			enable_msi_msi_vcl_get_cost="$2"
@@ -2317,35 +2321,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
-if test "$enable_ntoskrnl_DriverTest" -eq 1; then
-	if test "$enable_ntoskrnl_Stubs" -gt 1; then
-		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-DriverTest depends on that."
-	fi
-	if test "$enable_winedevice_Default_Drivers" -gt 1; then
-		abort "Patchset winedevice-Default_Drivers disabled, but ntoskrnl-DriverTest depends on that."
-	fi
-	enable_ntoskrnl_Stubs=1
-	enable_winedevice_Default_Drivers=1
-fi
-
-if test "$enable_winedevice_Default_Drivers" -eq 1; then
-	if test "$enable_dxva2_Video_Decoder" -gt 1; then
-		abort "Patchset dxva2-Video_Decoder disabled, but winedevice-Default_Drivers depends on that."
-	fi
-	enable_dxva2_Video_Decoder=1
-fi
-
-if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	if test "$enable_Compiler_Warnings" -gt 1; then
-		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
-	fi
-	if test "$enable_ntdll_NtAllocateUuids" -gt 1; then
-		abort "Patchset ntdll-NtAllocateUuids disabled, but ntoskrnl-Stubs depends on that."
-	fi
-	enable_Compiler_Warnings=1
-	enable_ntdll_NtAllocateUuids=1
-fi
-
 if test "$enable_ntdll_WriteWatches" -eq 1; then
 	if test "$enable_ws2_32_WriteWatches" -gt 1; then
 		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WriteWatches depends on that."
@@ -2479,6 +2454,42 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
 	fi
 	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_msi_MsiGetDatabaseState" -eq 1; then
+	if test "$enable_ntoskrnl_DriverTest" -gt 1; then
+		abort "Patchset ntoskrnl-DriverTest disabled, but msi-MsiGetDatabaseState depends on that."
+	fi
+	enable_ntoskrnl_DriverTest=1
+fi
+
+if test "$enable_ntoskrnl_DriverTest" -eq 1; then
+	if test "$enable_ntoskrnl_Stubs" -gt 1; then
+		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-DriverTest depends on that."
+	fi
+	if test "$enable_winedevice_Default_Drivers" -gt 1; then
+		abort "Patchset winedevice-Default_Drivers disabled, but ntoskrnl-DriverTest depends on that."
+	fi
+	enable_ntoskrnl_Stubs=1
+	enable_winedevice_Default_Drivers=1
+fi
+
+if test "$enable_winedevice_Default_Drivers" -eq 1; then
+	if test "$enable_dxva2_Video_Decoder" -gt 1; then
+		abort "Patchset dxva2-Video_Decoder disabled, but winedevice-Default_Drivers depends on that."
+	fi
+	enable_dxva2_Video_Decoder=1
+fi
+
+if test "$enable_ntoskrnl_Stubs" -eq 1; then
+	if test "$enable_Compiler_Warnings" -gt 1; then
+		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
+	fi
+	if test "$enable_ntdll_NtAllocateUuids" -gt 1; then
+		abort "Patchset ntdll-NtAllocateUuids disabled, but ntoskrnl-Stubs depends on that."
+	fi
+	enable_Compiler_Warnings=1
+	enable_ntdll_NtAllocateUuids=1
 fi
 
 if test "$enable_loader_OSX_Preloader" -eq 1; then
@@ -5240,6 +5251,132 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-NtAllocateUuids
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35910] Fix API signature of ntdll.NtAllocateUuids
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/om.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winternl.h
+# |
+if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
+	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-Stubs
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
+# |
+if test "$enable_ntoskrnl_Stubs" -eq 1; then
+	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
+	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
+	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
+	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
+	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
+	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
+	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
+	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
+	patch_apply ntoskrnl-Stubs/0012-ntoskrnl-Implement-ExInterlockedPopEntrySList.patch
+	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
+	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
+	(
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
+		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winedevice-Default_Drivers
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	dxva2-Video_Decoder
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
+# | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c, dlls/win32k.sys/Makefile.in,
+# | 	dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec, loader/wine.inf.in, programs/winedevice/device.c,
+# | 	tools/make_specfiles
+# |
+if test "$enable_winedevice_Default_Drivers" -eq 1; then
+	patch_apply winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch
+	patch_apply winedevice-Default_Drivers/0002-dxgkrnl.sys-Add-stub-driver.patch
+	patch_apply winedevice-Default_Drivers/0003-dxgmms1.sys-Add-stub-driver.patch
+	patch_apply winedevice-Default_Drivers/0004-programs-winedevice-Load-some-common-drivers-and-fix.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "win32k.sys: Add stub driver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxgkrnl.sys: Add stub driver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxgmms1.sys: Add stub driver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "programs/winedevice: Load some common drivers and fix ldr order.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-DriverTest
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs, dxva2-Video_Decoder, winedevice-Default_Drivers
+# |
+# | Modified files:
+# |   *	aclocal.m4, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/Makefile.in,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in, dlls/ntoskrnl.exe/tests/driver.sys/driver.c,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/driver.h, dlls/ntoskrnl.exe/tests/driver.sys/driver.sys.spec,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/test.c, dlls/ntoskrnl.exe/tests/driver.sys/test.h,
+# | 	dlls/ntoskrnl.exe/tests/driver.sys/util.h, dlls/ntoskrnl.exe/tests/ntoskrnl.c, include/ddk/ntddk.h, include/wine/test.h,
+# | 	tools/make_makefiles, tools/makedep.c
+# |
+if test "$enable_ntoskrnl_DriverTest" -eq 1; then
+	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
+	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
+	patch_apply ntoskrnl-DriverTest/0003-ntoskrnl.exe-tests-Add-tests-for-NtBuildNumber.patch
+	patch_apply ntoskrnl-DriverTest/0004-ntoskrnl.exe-tests-Add-tests-for-ExInitializeNPagedL.patch
+	patch_apply ntoskrnl-DriverTest/0005-ntoskrnl.exe-tests-Check-ldr-module-order-and-some-c.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for NtBuildNumber.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for ExInitializeNPagedLookasideList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Check ldr module order and some common kernel drivers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msi-MsiGetDatabaseState
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs, dxva2-Video_Decoder, winedevice-Default_Drivers, ntoskrnl-
+# | 	DriverTest
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43093] Return MSIDBSTATE_ERROR when MsiGetDatabaseState is called from a custom action
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/msi/database.c, dlls/msi/tests/Makefile.in, dlls/msi/tests/custom.dll/Makefile.in,
+# | 	dlls/msi/tests/custom.dll/custom.spec, dlls/msi/tests/custom.dll/main.c, dlls/msi/tests/install.c
+# |
+if test "$enable_msi_MsiGetDatabaseState" -eq 1; then
+	patch_apply msi-MsiGetDatabaseState/0001-msi-Always-return-MSIDBSTATE_ERROR-when-MsiGetDataba.patch
+	patch_apply msi-MsiGetDatabaseState/0002-msi-tests-Add-custom-action-test-framework-and-check.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "msi: Always return MSIDBSTATE_ERROR when MsiGetDatabaseState is called from a custom action.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "msi/tests: Add custom action test framework and check MsiGetDatabaseState return value.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset msi-msi_vcl_get_cost
 # |
 # | Modified files:
@@ -5757,21 +5894,6 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	patch_apply ntdll-NtAccessCheck/0001-ntdll-Improve-invalid-paramater-handling-in-NtAccess.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Improve invalid paramater handling in NtAccessCheck.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtAllocateUuids
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35910] Fix API signature of ntdll.NtAllocateUuids
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/om.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winternl.h
-# |
-if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
-	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6331,95 +6453,6 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-Stubs
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings, ntdll-NtAllocateUuids
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
-# |
-if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
-	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
-	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
-	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
-	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
-	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
-	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
-	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl-Implement-ExInterlockedPopEntrySList.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
-	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
-	(
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
-		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winedevice-Default_Drivers
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
-# | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c, dlls/win32k.sys/Makefile.in,
-# | 	dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec, loader/wine.inf.in, programs/winedevice/device.c,
-# | 	tools/make_specfiles
-# |
-if test "$enable_winedevice_Default_Drivers" -eq 1; then
-	patch_apply winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch
-	patch_apply winedevice-Default_Drivers/0002-dxgkrnl.sys-Add-stub-driver.patch
-	patch_apply winedevice-Default_Drivers/0003-dxgmms1.sys-Add-stub-driver.patch
-	patch_apply winedevice-Default_Drivers/0004-programs-winedevice-Load-some-common-drivers-and-fix.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "win32k.sys: Add stub driver.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxgkrnl.sys: Add stub driver.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxgmms1.sys: Add stub driver.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "programs/winedevice: Load some common drivers and fix ldr order.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-DriverTest
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs, dxva2-Video_Decoder, winedevice-Default_Drivers
-# |
-# | Modified files:
-# |   *	aclocal.m4, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/Makefile.in,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in, dlls/ntoskrnl.exe/tests/driver.sys/driver.c,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/driver.h, dlls/ntoskrnl.exe/tests/driver.sys/driver.sys.spec,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/test.c, dlls/ntoskrnl.exe/tests/driver.sys/test.h,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/util.h, dlls/ntoskrnl.exe/tests/ntoskrnl.c, include/ddk/ntddk.h, include/wine/test.h,
-# | 	tools/make_makefiles, tools/makedep.c
-# |
-if test "$enable_ntoskrnl_DriverTest" -eq 1; then
-	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
-	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
-	patch_apply ntoskrnl-DriverTest/0003-ntoskrnl.exe-tests-Add-tests-for-NtBuildNumber.patch
-	patch_apply ntoskrnl-DriverTest/0004-ntoskrnl.exe-tests-Add-tests-for-ExInitializeNPagedL.patch
-	patch_apply ntoskrnl-DriverTest/0005-ntoskrnl.exe-tests-Check-ldr-module-order-and-some-c.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for NtBuildNumber.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for ExInitializeNPagedLookasideList.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Check ldr module order and some common kernel drivers.", 1 },';
 	) >> "$patchlist"
 fi
 

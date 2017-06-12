@@ -1,0 +1,414 @@
+From b75ee56387ae6b9f65041dc7583d4a59bed5e152 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Wed, 31 May 2017 03:55:24 +0200
+Subject: msi/tests: Add custom action test framework and check
+ MsiGetDatabaseState return value.
+
+---
+ configure.ac                          |   1 +
+ dlls/msi/tests/Makefile.in            |   3 +
+ dlls/msi/tests/custom.dll/Makefile.in |   5 +
+ dlls/msi/tests/custom.dll/custom.spec |   1 +
+ dlls/msi/tests/custom.dll/main.c      | 100 ++++++++++++++++
+ dlls/msi/tests/install.c              | 214 ++++++++++++++++++++++++++++++++++
+ 6 files changed, 324 insertions(+)
+ create mode 100644 dlls/msi/tests/custom.dll/Makefile.in
+ create mode 100644 dlls/msi/tests/custom.dll/custom.spec
+ create mode 100644 dlls/msi/tests/custom.dll/main.c
+
+diff --git a/configure.ac b/configure.ac
+index 5aaa20c22b6..f44d20c2e69 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3326,6 +3326,7 @@ WINE_CONFIG_DLL(mshtml,,[clean,implib])
+ WINE_CONFIG_TEST(dlls/mshtml/tests,[clean])
+ WINE_CONFIG_DLL(msi,,[clean,implib])
+ WINE_CONFIG_TEST(dlls/msi/tests)
++WINE_CONFIG_RESOURCE(dlls/msi/tests/custom.dll)
+ WINE_CONFIG_DLL(msident,,[clean])
+ WINE_CONFIG_DLL(msimg32,,[implib])
+ WINE_CONFIG_DLL(msimsg)
+diff --git a/dlls/msi/tests/Makefile.in b/dlls/msi/tests/Makefile.in
+index 66f8abb0c1f..fd3d9bd8e46 100644
+--- a/dlls/msi/tests/Makefile.in
++++ b/dlls/msi/tests/Makefile.in
+@@ -13,3 +13,6 @@ C_SRCS = \
+ 	record.c \
+ 	source.c \
+ 	suminfo.c
++
++RC_DLLS = \
++	custom.dll
+diff --git a/dlls/msi/tests/custom.dll/Makefile.in b/dlls/msi/tests/custom.dll/Makefile.in
+new file mode 100644
+index 00000000000..4565fc627f4
+--- /dev/null
++++ b/dlls/msi/tests/custom.dll/Makefile.in
+@@ -0,0 +1,5 @@
++RESOURCE   = custom.dll
++IMPORTS    = msi kernel32
++
++C_SRCS = \
++	main.c
+diff --git a/dlls/msi/tests/custom.dll/custom.spec b/dlls/msi/tests/custom.dll/custom.spec
+new file mode 100644
+index 00000000000..fae6950d2d4
+--- /dev/null
++++ b/dlls/msi/tests/custom.dll/custom.spec
+@@ -0,0 +1 @@
++@ stdcall testfunc1 (ptr)
+diff --git a/dlls/msi/tests/custom.dll/main.c b/dlls/msi/tests/custom.dll/main.c
+new file mode 100644
+index 00000000000..91ee2d77b5b
+--- /dev/null
++++ b/dlls/msi/tests/custom.dll/main.c
+@@ -0,0 +1,100 @@
++/*
++ * Copyright (C) 2017 Michael Müller
++ *
++ * Dll for testing custom msi actions.
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#define _WIN32_MSI 300
++#include <stdio.h>
++#include <stdlib.h>
++
++#include <windows.h>
++#include <msiquery.h>
++#include <msidefs.h>
++#include <msi.h>
++
++static const char *pipename = "\\\\.\\pipe\\wine_custom_action";
++HANDLE pipe_handle;
++
++static void send_msg(const char *type, const char *file, int line, const char *msg)
++{
++    DWORD written = 0;
++    char buf[512];
++
++    sprintf(buf, "%s:%s:%d:%s", type, file, line, msg);
++    WriteFile(pipe_handle, buf, strlen(buf)+1, &written, NULL);
++}
++
++static inline void pipe_trace(const char *file, int line, const char *msg, ...)
++{
++    va_list valist;
++    char buf[512];
++
++    va_start(valist, msg);
++    vsprintf(buf, msg, valist);
++    va_end(valist);
++
++    send_msg("TRACE", file, line, buf);
++}
++
++static void pipe_ok(int cnd, const char *file, int line, const char *msg, ...)
++{
++   va_list valist;
++   char buf[512];
++
++    va_start(valist, msg);
++    vsprintf(buf, msg, valist);
++    va_end(valist);
++
++    send_msg(cnd ? "OK" : "FAIL", file, line, buf);
++}
++
++#define trace(msg, ...) pipe_trace((cnd), __FILE__, __LINE__, msg, __VA_ARGS__)
++#define ok(cnd, msg, ...) pipe_ok((cnd), __FILE__, __LINE__, msg, __VA_ARGS__)
++
++static UINT connect_named_pipe(void)
++{
++    BOOL res;
++
++    res = WaitNamedPipeA(pipename, NMPWAIT_USE_DEFAULT_WAIT);
++    if(!res) return ERROR_BROKEN_PIPE;
++
++    pipe_handle = CreateFileA(pipename, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
++    if (pipe_handle == INVALID_HANDLE_VALUE) return ERROR_BROKEN_PIPE;
++
++    return ERROR_SUCCESS;
++}
++
++UINT WINAPI testfunc1(MSIHANDLE handle)
++{
++    MSIDBSTATE state;
++    UINT res;
++
++    res = connect_named_pipe();
++    if (res) return res;
++
++    state = MsiGetDatabaseState(handle);
++    ok(state == MSIDBSTATE_ERROR, "Expected MSIDBSTATE_ERROR, got %d\n", state);
++
++    CloseHandle(pipe_handle);
++    return ERROR_SUCCESS;
++}
++
++BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
++{
++    return TRUE;
++}
+diff --git a/dlls/msi/tests/install.c b/dlls/msi/tests/install.c
+index 9d4fecc3eeb..23c1ce6d28c 100644
+--- a/dlls/msi/tests/install.c
++++ b/dlls/msi/tests/install.c
+@@ -1031,6 +1031,26 @@ static const CHAR uc_install_exec_seq_dat[] = "Action\tCondition\tSequence\n"
+                                               "PublishProduct\t\t1200\n"
+                                               "InstallFinalize\t\t1300\n";
+ 
++static const CHAR ca_install_exec_seq_dat[] = "Action\tCondition\tSequence\n"
++                                              "s72\tS255\tI2\n"
++                                              "InstallExecuteSequence\tAction\n"
++                                              "LaunchConditions\t\t100\n"
++                                              "CostInitialize\t\t200\n"
++                                              "FileCost\t\t300\n"
++                                              "CostFinalize\t\t400\n"
++                                              "InstallInitialize\t\t500\n"
++                                              "ProcessComponents\t\t600\n"
++                                              "MyCustomAction\tNOT Installed\t650\n"
++                                              "InstallValidate\t\t700\n"
++                                              "RemoveFiles\t\t800\n"
++                                              "InstallFiles\t\t900\n"
++                                              "InstallFinalize\t\t1300\n";
++
++static const CHAR ca_custom_action_dat[] = "Action\tType\tSource\tTarget\n"
++                                           "s72\ti2\tS64\tS255\n"
++                                           "CustomAction\tAction\n"
++                                           "MyCustomAction\t1\tcustom.dll\ttestfunc1\n";
++
+ static const char mixed_feature_dat[] =
+     "Feature\tFeature_Parent\tTitle\tDescription\tDisplay\tLevel\tDirectory_\tAttributes\n"
+     "s38\tS38\tL64\tL255\tI2\ti2\tS72\ti2\n"
+@@ -1939,6 +1959,19 @@ static const msi_table ft_tables[] =
+     ADD_TABLE(property)
+ };
+ 
++static const msi_table ca_tables[] =
++{
++    ADD_TABLE(media),
++    ADD_TABLE(directory),
++    ADD_TABLE(component),
++    ADD_TABLE(feature),
++    ADD_TABLE(feature_comp),
++    ADD_TABLE(file),
++    ADD_TABLE(ca_install_exec_seq),
++    ADD_TABLE(property),
++    ADD_TABLE(ca_custom_action)
++};
++
+ /* cabinet definitions */
+ 
+ /* make the max size large so there is only one cab file */
+@@ -6045,6 +6078,186 @@ static void test_feature_tree(void)
+     DeleteFileA( msifile );
+ }
+ 
++/* extracts a file from a resource to the specified filename */
++static BOOL extract_resource(const char *name, const char *filename)
++{
++    DWORD size, written = 0;
++    HGLOBAL reshandle;
++    HRSRC resinfo;
++    HANDLE file;
++    char *data;
++
++    resinfo = FindResourceA(NULL, name, (LPCSTR)RT_RCDATA);
++    if (!resinfo)
++        return FALSE;
++
++    reshandle = LoadResource(NULL, resinfo);
++    if (!reshandle)
++        return FALSE;
++
++    data = LockResource(reshandle);
++    if (!data)
++        return FALSE;
++
++    size = SizeofResource(NULL, resinfo);
++    if (!size)
++        return FALSE;
++
++    file = CreateFileA(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
++    if (file == INVALID_HANDLE_VALUE)
++        return FALSE;
++
++    while (size)
++    {
++        if (!WriteFile(file, data, size, &written, NULL))
++        {
++            CloseHandle(file);
++            return FALSE;
++        }
++
++        data += written;
++        size -= written;
++    }
++
++    CloseHandle(file);
++    return TRUE;
++}
++
++static DWORD WINAPI pipe_thread(void *arg)
++{
++    char *file, *line, *message;
++    char buf[512], *ptr;
++    HANDLE pipe = arg;
++    DWORD read;
++    BOOL res;
++
++    res = ConnectNamedPipe(pipe, NULL);
++    ok(res || GetLastError() == ERROR_PIPE_CONNECTED, "ConnectNamedPipe failed: %u\n", GetLastError());
++
++    while (1)
++    {
++        res = ReadFile(pipe, buf, sizeof(buf), &read, NULL);
++        if (!res)
++        {
++            ok(GetLastError() == ERROR_BROKEN_PIPE || GetLastError() == ERROR_INVALID_HANDLE,
++               "ReadFile failed: %u\n", GetLastError());
++            break;
++        }
++
++        for (ptr = buf; ptr < buf + read; ptr = message + strlen(message) + 1)
++        {
++            if ((file = strstr(ptr, ":"))) *file++ = '\0'; else break;
++            if ((line = strstr(file + 1, ":"))) *line++ = '\0'; else break;
++            if ((message = strstr(line + 1, ":"))) *message++ = '\0'; else break;
++
++            if (!strcmp(ptr, "TRACE")) trace_(file, atoi(line))("custom action: %s", message);
++            else if (!strcmp(ptr, "OK")) ok_(file, atoi(line))(1, "custom action: %s", message);
++            else if (!strcmp(ptr, "FAIL")) ok_(file, atoi(line))(0, "custom action: %s", message);
++            else break;
++        }
++
++        if (ptr < buf + read)
++            ok(0, "malformed custom action message: %s\n", ptr);
++    }
++
++    DisconnectNamedPipe(pipe);
++    trace("pipe disconnected\n");
++    return 0;
++}
++
++static void test_custom_action(void)
++{
++    char filename[MAX_PATH];
++    MSIHANDLE hdb = 0, rec;
++    HANDLE thread, pipe;
++    const char *query;
++    UINT r;
++
++    if (is_process_limited())
++    {
++        skip("process is limited\n");
++        return;
++    }
++
++    create_test_files();
++    create_database(msifile, ca_tables, sizeof(ca_tables) / sizeof(ca_tables[0]));
++
++    r = MsiOpenDatabaseA(msifile, (char *)MSIDBOPEN_TRANSACT, &hdb );
++    ok(r == ERROR_SUCCESS, "Failed to open database\n");
++
++    query = "CREATE TABLE `Binary` ( `Name` CHAR(72) NOT NULL, `Data` OBJECT PRIMARY KEY `Name` )";
++    r = run_query(hdb, 0, query);
++    ok(r == ERROR_SUCCESS, "Cannot create Binary table: %u\n", r);
++
++    GetTempFileNameA(".", "cus", 0, filename);
++    r = extract_resource("custom.dll", filename);
++    ok(r, "Failed to extract resource\n");
++
++    rec = MsiCreateRecord(1);
++    r = MsiRecordSetStreamA(rec, 1, filename);
++    ok(r == ERROR_SUCCESS, "Failed to add stream data to the record: %u\n", r);
++
++    query = "INSERT INTO `Binary` ( `Name`, `Data` ) VALUES ( 'custom.dll', ? )";
++    r = run_query(hdb, rec, query);
++    ok(r == ERROR_SUCCESS, "Insert into Binary table failed: %u\n", r);
++
++    r = MsiCloseHandle(rec);
++    ok(r == ERROR_SUCCESS, "Failed to close record handle\n");
++    r = MsiDatabaseCommit(hdb);
++    ok(r == ERROR_SUCCESS, "Failed to commit database\n");
++    r = MsiCloseHandle(hdb);
++    ok(r == ERROR_SUCCESS, "Failed to close database\n");
++
++    pipe = CreateNamedPipeA("\\\\.\\pipe\\wine_custom_action", PIPE_ACCESS_INBOUND,
++                             PIPE_TYPE_BYTE|PIPE_READMODE_BYTE|PIPE_WAIT, 10, 2048, 2048, 10000, NULL);
++    ok(pipe != INVALID_HANDLE_VALUE, "CreateNamedPipe failed: %u\n", GetLastError());
++    if (pipe == INVALID_HANDLE_VALUE)
++        goto error;
++
++    thread = CreateThread(NULL, 0, pipe_thread, pipe, 0, NULL);
++    if (!thread)
++    {
++        ok(0, "CreateThread failed: %u\n", GetLastError());
++        CloseHandle(pipe);
++        goto error;
++    }
++
++    r = MsiInstallProductA(msifile, NULL);
++
++    /* just in case */
++    TerminateThread(thread, 0);
++    CloseHandle(thread);
++    CloseHandle(pipe);
++
++    if (r == ERROR_INSTALL_PACKAGE_REJECTED)
++    {
++        skip("Not enough rights to perform tests\n");
++        goto error;
++    }
++    ok(r == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %u\n", r);
++
++    ok(delete_pf("msitest\\cabout\\new\\five.txt", TRUE), "File not installed\n");
++    ok(delete_pf("msitest\\cabout\\new", FALSE), "Directory not created\n");
++    ok(delete_pf("msitest\\cabout\\four.txt", TRUE), "File not installed\n");
++    ok(delete_pf("msitest\\cabout", FALSE), "Directory not created\n");
++    ok(delete_pf("msitest\\changed\\three.txt", TRUE), "File not installed\n");
++    ok(delete_pf("msitest\\changed", FALSE), "Directory not created\n");
++    ok(delete_pf("msitest\\first\\two.txt", TRUE), "File not installed\n");
++    ok(delete_pf("msitest\\first", FALSE), "Directory not created\n");
++    ok(delete_pf("msitest\\one.txt", TRUE), "File not installed\n");
++    ok(delete_pf("msitest\\filename", TRUE), "File not installed\n");
++    ok(delete_pf("msitest\\service.exe", TRUE), "File not installed\n");
++    ok(delete_pf("msitest", FALSE), "Directory not created\n");
++
++    delete_key(HKEY_CURRENT_USER, "SOFTWARE\\Wine\\msitest", KEY_ALL_ACCESS);
++
++error:
++    delete_test_files();
++    RemoveDirectoryA("msitest");
++    DeleteFileA(msifile);
++    DeleteFileA(filename);
++}
++
+ START_TEST(install)
+ {
+     DWORD len;
+@@ -6133,6 +6346,7 @@ START_TEST(install)
+     test_shared_component();
+     test_remove_upgrade_code();
+     test_feature_tree();
++    test_custom_action();
+ 
+     DeleteFileA(log_file);
+ 
+-- 
+2.13.1
+

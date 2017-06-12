@@ -369,6 +369,7 @@ patch_enable_all ()
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_Auto_Radio_Button="$1"
+	enable_user32_Clip_Cursor="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DialogBoxParam="$1"
@@ -1348,6 +1349,9 @@ patch_enable ()
 			;;
 		user32-Auto_Radio_Button)
 			enable_user32_Auto_Radio_Button="$2"
+			;;
+		user32-Clip_Cursor)
+			enable_user32_Clip_Cursor="$2"
 			;;
 		user32-Combobox_WM_SIZE)
 			enable_user32_Combobox_WM_SIZE="$2"
@@ -7926,6 +7930,21 @@ if test "$enable_user32_Auto_Radio_Button" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Clip_Cursor
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38791] Fix handling of cursor position clipping
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/input.c, server/queue.c
+# |
+if test "$enable_user32_Clip_Cursor" -eq 1; then
+	patch_apply user32-Clip_Cursor/0001-server-Fix-handling-of-cursor-position-clipping.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of cursor position clipping.", 1 },';
 	) >> "$patchlist"
 fi
 

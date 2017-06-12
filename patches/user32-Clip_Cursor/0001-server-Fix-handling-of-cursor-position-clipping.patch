@@ -1,0 +1,115 @@
+From 62d856626fc8b291bf3590df21d92a15d904598a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Mon, 12 Jun 2017 18:47:54 +0200
+Subject: server: Fix handling of cursor position clipping.
+
+---
+ dlls/user32/tests/input.c | 66 +++++++++++++++++++++++++++++++++++++++++++++++
+ server/queue.c            |  7 +++--
+ 2 files changed, 71 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
+index 87c491657a9..d301fc2b3d2 100644
+--- a/dlls/user32/tests/input.c
++++ b/dlls/user32/tests/input.c
+@@ -1278,6 +1278,19 @@ static LRESULT CALLBACK hook_proc2( int code, WPARAM wparam, LPARAM lparam )
+     return CallNextHookEx( 0, code, wparam, lparam );
+ }
+ 
++static LRESULT CALLBACK hook_proc3( int code, WPARAM wparam, LPARAM lparam )
++{
++    POINT pt;
++
++    if (code == HC_ACTION)
++    {
++        /* MSLLHOOKSTRUCT does not seem to be reliable and contains different data on each run. */
++        GetCursorPos(&pt);
++        ok(pt.x == pt_old.x && pt.y == pt_old.y, "GetCursorPos: (%d,%d)\n", pt.x, pt.y);
++    }
++    return CallNextHookEx( 0, code, wparam, lparam );
++}
++
+ static void test_mouse_ll_hook(void)
+ {
+     HWND hwnd;
+@@ -1351,6 +1364,59 @@ static void test_mouse_ll_hook(void)
+     ok(pt.x == pt_new.x && pt.y == pt_new.y, "Position changed: (%d,%d)\n", pt.x, pt.y);
+ 
+     UnhookWindowsHookEx(hook2);
++    hook1 = SetWindowsHookExA(WH_MOUSE_LL, hook_proc3, GetModuleHandleA(0), 0);
++
++    SetRect(&rc, 150, 150, 150, 150);
++    ClipCursor(&rc);
++    clipped = TRUE;
++
++    SetCursorPos(140, 140);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 150 && pt_old.y == 150, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    SetCursorPos(160, 160);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 149 && pt_old.y == 149, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    mouse_event(MOUSEEVENTF_MOVE, -STEP, -STEP, 0, 0);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 150 && pt_old.y == 150, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    mouse_event(MOUSEEVENTF_MOVE, +STEP, +STEP, 0, 0);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 149 && pt_old.y == 149, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 150 && pt_old.y == 150, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 149 && pt_old.y == 149, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++
++    clipped = FALSE;
++    ClipCursor(NULL);
++
++    SetCursorPos(140, 140);
++    SetRect(&rc, 150, 150, 150, 150);
++    ClipCursor(&rc);
++    GetCursorPos(&pt_old);
++    ok(pt_old.x == 150 && pt_old.y == 150, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    ClipCursor(NULL);
++
++    SetCursorPos(160, 160);
++    SetRect(&rc, 150, 150, 150, 150);
++    ClipCursor(&rc);
++    GetCursorPos(&pt_old);
++    todo_wine
++    ok(pt_old.x == 149 && pt_old.y == 149, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    ClipCursor(NULL);
++
++    SetCursorPos(150, 150);
++    SetRect(&rc, 150, 150, 150, 150);
++    ClipCursor(&rc);
++    GetCursorPos(&pt_old);
++    todo_wine
++    ok(pt_old.x == 149 && pt_old.y == 149, "Wrong new pos: (%d,%d)\n", pt_old.x, pt_old.y);
++    ClipCursor(NULL);
++
++    UnhookWindowsHookEx(hook1);
++
+ done:
+     DestroyWindow(hwnd);
+     SetCursorPos(pt_org.x, pt_org.y);
+diff --git a/server/queue.c b/server/queue.c
+index 58803fa2c9f..c5921b2d21b 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1605,8 +1605,11 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
+     {
+         if (msg->msg == WM_MOUSEMOVE)
+         {
+-            int x = min( max( msg->x, desktop->cursor.clip.left ), desktop->cursor.clip.right-1 );
+-            int y = min( max( msg->y, desktop->cursor.clip.top ), desktop->cursor.clip.bottom-1 );
++            int x = msg->x, y = msg->y;
++            if (x < desktop->cursor.clip.left) x = desktop->cursor.clip.left;
++            else if (x >= desktop->cursor.clip.right) x = desktop->cursor.clip.right - 1;
++            if (y < desktop->cursor.clip.top) y = desktop->cursor.clip.top;
++            else if (y >= desktop->cursor.clip.bottom) y = desktop->cursor.clip.bottom - 1;
+             if (desktop->cursor.x != x || desktop->cursor.y != y) always_queue = 1;
+             desktop->cursor.x = x;
+             desktop->cursor.y = y;
+-- 
+2.13.1
+

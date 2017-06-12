@@ -102,6 +102,7 @@ patch_enable_all ()
 	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
+	enable_comctl32_Tests="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
@@ -545,6 +546,9 @@ patch_enable ()
 			;;
 		comctl32-TTM_ADDTOOLW)
 			enable_comctl32_TTM_ADDTOOLW="$2"
+			;;
+		comctl32-Tests)
+			enable_comctl32_Tests="$2"
 			;;
 		comdlg32-lpstrFileTitle)
 			enable_comdlg32_lpstrFileTitle="$2"
@@ -3340,6 +3344,18 @@ if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
 	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-Tests
+# |
+# | Modified files:
+# |   *	dlls/comctl32/tests/imagelist.c
+# |
+if test "$enable_comctl32_Tests" -eq 1; then
+	patch_apply comctl32-Tests/0001-comctl32-tests-Prevent-a-possible-nullpointer-derefe.patch
+	(
+		printf '%s\n' '+    { "Mark Jansen", "comctl32/tests: Prevent a possible nullpointer dereference.", 1 },';
 	) >> "$patchlist"
 fi
 

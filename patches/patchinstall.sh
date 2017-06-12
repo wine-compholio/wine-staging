@@ -4290,6 +4290,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34686] Return additional properties for display devices in dxdiagn
+# |   *	[#42599] Application crashes because of missing properties in dxdiagn
 # |
 # | Modified files:
 # |   *	dlls/dxdiagn/provider.c, dlls/dxdiagn/tests/container.c

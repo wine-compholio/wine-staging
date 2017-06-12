@@ -1,4 +1,4 @@
-From 6e415626efa744b40bca0befe8a22494f14298e7 Mon Sep 17 00:00:00 2001
+From 51f9291677535a3246a7727c1563fe62e9a5756e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: ntdll: Create thread to update user_shared_data time values when
@@ -9,11 +9,11 @@ Subject: ntdll: Create thread to update user_shared_data time values when
  dlls/ntdll/loader.c     | 32 ++++++++++++++++++++++
  dlls/ntdll/ntdll_misc.h |  3 +++
  dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++-----
- dlls/ntdll/virtual.c    | 16 +++++++++++
- 5 files changed, 116 insertions(+), 9 deletions(-)
+ dlls/ntdll/virtual.c    | 17 ++++++++++++
+ 5 files changed, 117 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 756d8f94ab..03173be68b 100644
+index 2e0e79f8e8d..d53488c7652 100644
 --- a/dlls/kernel32/cpu.c
 +++ b/dlls/kernel32/cpu.c
 @@ -46,7 +46,7 @@
@@ -35,7 +35,7 @@ index 756d8f94ab..03173be68b 100644
      return FALSE;
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index f4e002a060..ac1ab2d209 100644
+index f4e002a0609..ac1ab2d2099 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3191,6 +3191,37 @@ static void start_process( void *arg )
@@ -85,7 +85,7 @@ index f4e002a060..ac1ab2d209 100644
  
      LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 6e51612380..9d066d637c 100644
+index 6e516123806..9d066d637c7 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -176,6 +176,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
@@ -99,7 +99,7 @@ index 6e51612380..9d066d637c 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 9399fbcb5c..cc65f3b48d 100644
+index 9399fbcb5c6..cc65f3b48d6 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -43,6 +43,7 @@
@@ -208,10 +208,10 @@ index 9399fbcb5c..cc65f3b48d 100644
      /* allocate and initialize the PEB */
  
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index e826fa03c0..e8053897cb 100644
+index ee9c8d0195d..387379a5882 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1496,6 +1496,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1497,6 +1497,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
      struct file_view *view;
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
      sigset_t sigset;
@@ -219,7 +219,7 @@ index e826fa03c0..e8053897cb 100644
  
      server_enter_uninterrupted_section( &csVirtual, &sigset );
      if ((view = VIRTUAL_FindView( addr, 0 )))
-@@ -1512,6 +1513,17 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1513,6 +1514,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
              /* ignore fault if page is writable now */
              if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
@@ -233,11 +233,12 @@ index e826fa03c0..e8053897cb 100644
 +            }
 +            /* ignore fault if page is readable now */
 +            if (VIRTUAL_GetUnixProt( *vprot ) & PROT_READ) ret = STATUS_SUCCESS;
++            else update_shared_data = FALSE;
 +        }
          if (!on_signal_stack && (*vprot & VPROT_GUARD))
          {
              VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
-@@ -1519,6 +1531,10 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1520,6 +1533,10 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
          }
      }
      server_leave_uninterrupted_section( &csVirtual, &sigset );
@@ -249,5 +250,5 @@ index e826fa03c0..e8053897cb 100644
  }
  
 -- 
-2.12.2
+2.13.1
 

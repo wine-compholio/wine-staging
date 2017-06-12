@@ -147,6 +147,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Initialize="$1"
+	enable_dinput_Revert_Joystick_Hack="$1"
 	enable_dmloader_Tests="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -683,6 +684,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dinput-Revert_Joystick_Hack)
+			enable_dinput_Revert_Joystick_Hack="$2"
 			;;
 		dmloader-Tests)
 			enable_dmloader_Tests="$2"
@@ -4178,6 +4182,21 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-Revert_Joystick_Hack
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43120] Revert patch to assume a 1-to-1 axes mapping when no axes match
+# |
+# | Modified files:
+# |   *	dlls/dinput/joystick_linux.c
+# |
+if test "$enable_dinput_Revert_Joystick_Hack" -eq 1; then
+	patch_apply dinput-Revert_Joystick_Hack/0001-Revert-dinput-Assume-a-1-to-1-axes-map-when-no-axes-.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"dinput: Assume a 1-to-1 axes map when no axes match.\".", 1 },';
 	) >> "$patchlist"
 fi
 

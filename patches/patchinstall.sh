@@ -223,6 +223,7 @@ patch_enable_all ()
 	enable_ntdll_ApiSetMap="$1"
 	enable_ntdll_ApiSetQueryApiSetPresence="$1"
 	enable_ntdll_Attach_Process_DLLs="$1"
+	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
@@ -909,6 +910,9 @@ patch_enable ()
 			;;
 		ntdll-Attach_Process_DLLs)
 			enable_ntdll_Attach_Process_DLLs="$2"
+			;;
+		ntdll-Builtin_Prot)
+			enable_ntdll_Builtin_Prot="$2"
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
@@ -2343,13 +2347,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ws2_32_WriteWatches=1
 fi
 
-if test "$enable_ntdll_User_Shared_Data" -eq 1; then
-	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
-		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
-	fi
-	enable_ntdll_Hide_Wine_Exports=1
-fi
-
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -2413,17 +2410,6 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 	enable_kernel32_SetFileCompletionNotificationModes=1
 fi
 
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	if test "$enable_ntdll_Attach_Process_DLLs" -gt 1; then
-		abort "Patchset ntdll-Attach_Process_DLLs disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
-	enable_ntdll_Attach_Process_DLLs=1
-	enable_ntdll_ThreadTime=1
-fi
-
 if test "$enable_ntdll_HashLinks" -eq 1; then
 	if test "$enable_ntdll_CLI_Images" -gt 1; then
 		abort "Patchset ntdll-CLI_Images disabled, but ntdll-HashLinks depends on that."
@@ -2455,6 +2441,31 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
 	enable_mscoree_CorValidateImage=1
+fi
+
+if test "$enable_ntdll_Builtin_Prot" -eq 1; then
+	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but ntdll-Builtin_Prot depends on that."
+	fi
+	enable_ntdll_User_Shared_Data=1
+fi
+
+if test "$enable_ntdll_User_Shared_Data" -eq 1; then
+	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
+		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
+	fi
+	enable_ntdll_Hide_Wine_Exports=1
+fi
+
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	if test "$enable_ntdll_Attach_Process_DLLs" -gt 1; then
+		abort "Patchset ntdll-Attach_Process_DLLs disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
+	enable_ntdll_Attach_Process_DLLs=1
+	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_ntdll_ApiSetMap" -eq 1; then
@@ -5606,6 +5617,64 @@ if test "$enable_ntdll_Attach_Process_DLLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Hide_Wine_Exports
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38656] Add support for hiding wine version information from applications
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
+# |
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-User_Shared_Data
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29168] Update user shared data at realtime
+# |
+# | Modified files:
+# |   *	dlls/kernel32/cpu.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c,
+# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
+# |
+if test "$enable_ntdll_User_Shared_Data" -eq 1; then
+	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
+	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
+	patch_apply ntdll-User_Shared_Data/0003-ntdll-Create-thread-to-update-user_shared_data-time-.patch
+	patch_apply ntdll-User_Shared_Data/0004-ntdll-tests-Test-updating-TickCount-in-user_shared_d.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Create thread to update user_shared_data time values when necessary.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll/tests: Test updating TickCount in user_shared_data.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Builtin_Prot
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c
+# |
+if test "$enable_ntdll_Builtin_Prot" -eq 1; then
+	patch_apply ntdll-Builtin_Prot/0001-ntdll-Fix-holes-in-ELF-mappings.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix holes in ELF mappings.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-CLI_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -5811,24 +5880,6 @@ if test "$enable_ntdll_Heap_FreeLists" -eq 1; then
 	patch_apply ntdll-Heap_FreeLists/0001-ntdll-Improve-heap-allocation-performance-by-using-m.patch
 	(
 		printf '%s\n' '+    { "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Hide_Wine_Exports
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38656] Add support for hiding wine version information from applications
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
-# |
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6334,31 +6385,6 @@ if test "$enable_ntdll_TokenLogonSid" -eq 1; then
 	patch_apply ntdll-TokenLogonSid/0001-ntdll-TokenLogonSid-stub-in-NtQueryInformationToken.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenLogonSid stub in NtQueryInformationToken.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-User_Shared_Data
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29168] Update user shared data at realtime
-# |
-# | Modified files:
-# |   *	dlls/kernel32/cpu.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c,
-# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
-# |
-if test "$enable_ntdll_User_Shared_Data" -eq 1; then
-	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
-	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
-	patch_apply ntdll-User_Shared_Data/0003-ntdll-Create-thread-to-update-user_shared_data-time-.patch
-	patch_apply ntdll-User_Shared_Data/0004-ntdll-tests-Test-updating-TickCount-in-user_shared_d.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Create thread to update user_shared_data time values when necessary.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll/tests: Test updating TickCount in user_shared_data.", 1 },';
 	) >> "$patchlist"
 fi
 

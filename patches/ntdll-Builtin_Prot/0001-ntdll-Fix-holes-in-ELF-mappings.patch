@@ -1,0 +1,66 @@
+From e0fb74b49f8004fb6d6f027c09f4adb4212c5644 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 1 Jun 2017 06:04:53 +0200
+Subject: ntdll: Fix holes in ELF mappings.
+
+Based on a patch by Andrew Wesie.
+---
+ dlls/ntdll/virtual.c          |  6 ++++++
+ dlls/psapi/tests/psapi_main.c | 14 +++++++++++++-
+ 2 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 3a280a4b0d8..bd1c53247b9 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -1598,6 +1598,12 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+             /* ignore fault if page is readable now */
+             if (VIRTUAL_GetUnixProt( *vprot ) & PROT_READ) ret = STATUS_SUCCESS;
+         }
++        else if ((view->protect & VPROT_SYSTEM) && (VIRTUAL_GetUnixProt( *vprot ) & PROT_READ))
++        {
++            /* ignore fault if page can be made readable */
++            if (VIRTUAL_SetProt( view, page, page_size, *vprot )) ret = STATUS_SUCCESS;
++            else *vprot &= ~VPROT_READ; /* don't bother to call VIRTUAL_SetProt again */
++        }
+         if (!on_signal_stack && (*vprot & VPROT_GUARD))
+         {
+             VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
+diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
+index dd592a9ab21..8704123642e 100644
+--- a/dlls/psapi/tests/psapi_main.c
++++ b/dlls/psapi/tests/psapi_main.c
+@@ -152,6 +152,7 @@ static void test_EnumProcessModules(void)
+ static void test_GetModuleInformation(void)
+ {
+     HMODULE hMod = GetModuleHandleA(NULL);
++    DWORD *tmp, counter = 0;
+     MODULEINFO info;
+     DWORD ret;
+ 
+@@ -171,10 +172,21 @@ static void test_GetModuleInformation(void)
+     pGetModuleInformation(hpQV, hMod, &info, sizeof(info)-1);
+     ok(GetLastError() == ERROR_INSUFFICIENT_BUFFER, "expected error=ERROR_INSUFFICIENT_BUFFER but got %d\n", GetLastError());
+ 
+-    SetLastError(0xdeadbeef);
+     ret = pGetModuleInformation(hpQV, hMod, &info, sizeof(info));
+     ok(ret == 1, "failed with %d\n", GetLastError());
+     ok(info.lpBaseOfDll == hMod, "lpBaseOfDll=%p hMod=%p\n", info.lpBaseOfDll, hMod);
++
++    hMod = LoadLibraryA("shell32.dll");
++    ok(hMod != NULL, "Failed to load shell32.dll, error: %u\n", GetLastError());
++
++    ret = pGetModuleInformation(hpQV, hMod, &info, sizeof(info));
++    ok(ret == 1, "failed with %d\n", GetLastError());
++    info.SizeOfImage /= sizeof(DWORD);
++    for (tmp = (DWORD *)hMod; info.SizeOfImage; info.SizeOfImage--)
++        counter ^= *tmp++;
++    trace("xor of shell32: %08x\n", counter);
++
++    FreeLibrary(hMod);
+ }
+ 
+ static BOOL check_with_margin(SIZE_T perf, SIZE_T sysperf, int margin)
+-- 
+2.13.1
+

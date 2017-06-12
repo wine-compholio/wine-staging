@@ -352,6 +352,7 @@ patch_enable_all ()
 	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHCreateSessionKey="$1"
+	enable_shell32_SHELL_execute="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
@@ -1294,6 +1295,9 @@ patch_enable ()
 			;;
 		shell32-SHCreateSessionKey)
 			enable_shell32_SHCreateSessionKey="$2"
+			;;
+		shell32-SHELL_execute)
+			enable_shell32_SHELL_execute="$2"
 			;;
 		shell32-SHFileOperation_Move)
 			enable_shell32_SHFileOperation_Move="$2"
@@ -7600,6 +7604,18 @@ if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
 	patch_apply shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-SHELL_execute
+# |
+# | Modified files:
+# |   *	dlls/shell32/shlexec.c, dlls/shell32/tests/shlexec.c
+# |
+if test "$enable_shell32_SHELL_execute" -eq 1; then
+	patch_apply shell32-SHELL_execute/0001-shell32-Properly-fail-when-a-data-object-cannot-be-i.patch
+	(
+		printf '%s\n' '+    { "Mark Jansen", "shell32: Properly fail when a data object cannot be instantiated and expand environment strings in ShellExecute.", 1 },';
 	) >> "$patchlist"
 fi
 

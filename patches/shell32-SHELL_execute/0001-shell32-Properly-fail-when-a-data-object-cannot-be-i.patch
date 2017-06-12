@@ -1,0 +1,145 @@
+From e2c2ef9325bede76a46a6bc557ba7bddce9ceab8 Mon Sep 17 00:00:00 2001
+From: Mark Jansen <learn0more+wine@gmail.com>
+Date: Sun, 4 Jun 2017 22:12:20 +0200
+Subject: shell32: Properly fail when a data object cannot be instantiated and
+ expand environment strings in ShellExecute
+
+---
+ dlls/shell32/shlexec.c       | 47 +++++++++++++++++++++++++++++++++++++++++++-
+ dlls/shell32/tests/shlexec.c | 14 ++++++-------
+ 2 files changed, 53 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/shell32/shlexec.c b/dlls/shell32/shlexec.c
+index c0ef53ab8e7..0cf112b6373 100644
+--- a/dlls/shell32/shlexec.c
++++ b/dlls/shell32/shlexec.c
+@@ -1299,6 +1299,7 @@ static HRESULT shellex_load_object_and_run( HKEY hkey, LPCGUID guid, LPSHELLEXEC
+     if ( !dataobj )
+     {
+         ERR("failed to get data object\n");
++        r = E_FAIL;
+         goto end;
+     }
+ 
+@@ -1557,6 +1558,26 @@ static void do_error_dialog( UINT_PTR retval, HWND hwnd )
+     MessageBoxW(hwnd, msg, NULL, MB_ICONERROR);
+ }
+ 
++static WCHAR *expand_environment( const WCHAR *str )
++{
++    WCHAR *buf;
++    DWORD len;
++
++    len = ExpandEnvironmentStringsW(str, NULL, 0);
++    if (!len) return NULL;
++
++    buf = HeapAlloc(GetProcessHeap(), 0, len * sizeof(WCHAR));
++    if (!buf) return NULL;
++
++    len = ExpandEnvironmentStringsW(str, buf, len);
++    if (!len)
++    {
++        HeapFree(GetProcessHeap(), 0, buf);
++        return NULL;
++    }
++    return buf;
++}
++
+ /*************************************************************************
+  *	SHELL_execute [Internal]
+  */
+@@ -1570,7 +1591,7 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
+         SEE_MASK_UNICODE       | SEE_MASK_ASYNCOK      | SEE_MASK_HMONITOR;
+ 
+     WCHAR parametersBuffer[1024], dirBuffer[MAX_PATH], wcmdBuffer[1024];
+-    WCHAR *wszApplicationName, *wszParameters, *wszDir, *wcmd;
++    WCHAR *wszApplicationName, *wszParameters, *wszDir, *wcmd = NULL;
+     DWORD dwApplicationNameLen = MAX_PATH+2;
+     DWORD parametersLen = sizeof(parametersBuffer) / sizeof(WCHAR);
+     DWORD wcmdLen = sizeof(wcmdBuffer) / sizeof(WCHAR);
+@@ -1676,6 +1697,29 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
+         TRACE("-- idlist=%p (%s)\n", sei_tmp.lpIDList, debugstr_w(wszApplicationName));
+     }
+ 
++    if (sei_tmp.fMask & SEE_MASK_DOENVSUBST)
++    {
++        WCHAR *tmp;
++
++        tmp = expand_environment(sei_tmp.lpFile);
++        if (!tmp)
++        {
++            retval = SE_ERR_OOM;
++            goto end;
++        }
++        HeapFree(GetProcessHeap(), 0, wszApplicationName);
++        sei_tmp.lpFile = wszApplicationName = tmp;
++
++        tmp = expand_environment(sei_tmp.lpDirectory);
++        if (!tmp)
++        {
++            retval = SE_ERR_OOM;
++            goto end;
++        }
++        if (wszDir != dirBuffer) HeapFree(GetProcessHeap(), 0, wszDir);
++        sei_tmp.lpDirectory = wszDir = tmp;
++    }
++
+     if ( ERROR_SUCCESS == ShellExecute_FromContextMenu( &sei_tmp ) )
+     {
+         sei->hInstApp = (HINSTANCE) 33;
+@@ -1846,6 +1890,7 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
+         retval = (UINT_PTR)ShellExecuteW(sei_tmp.hwnd, sei_tmp.lpVerb, lpstrTmpFile, NULL, NULL, 0);
+     }
+ 
++end:
+     TRACE("retval %lu\n", retval);
+ 
+     HeapFree(GetProcessHeap(), 0, wszApplicationName);
+diff --git a/dlls/shell32/tests/shlexec.c b/dlls/shell32/tests/shlexec.c
+index 9db12ce42a8..f0f51f54568 100644
+--- a/dlls/shell32/tests/shlexec.c
++++ b/dlls/shell32/tests/shlexec.c
+@@ -1827,7 +1827,7 @@ static fileurl_tests_t fileurl_tests[]=
+     {"file:///", "%%TMPDIR%%\\test file.shlexec", 0, 0},
+ 
+     /* Test shortcuts vs. URLs */
+-    {"file://///", "%s\\test_shortcut_shlexec.lnk", 0, 0x1d},
++    {"file://///", "%s\\test_shortcut_shlexec.lnk", 0, 0x1c},
+ 
+     /* Confuse things by mixing protocols */
+     {"file://", "shlproto://foo/bar", USE_COLON, 0},
+@@ -1973,11 +1973,11 @@ static void test_urls(void)
+     }
+ 
+     /* A .lnk ending does not turn a URL into a shortcut */
+-    todo_wait rc = shell_execute(NULL, "shlproto://foo/bar.lnk", NULL, NULL);
++    rc = shell_execute(NULL, "shlproto://foo/bar.lnk", NULL, NULL);
+     ok(rc > 32, "%s failed: rc=%lu\n", shell_call, rc);
+     okChildInt("argcA", 5);
+-    todo_wine okChildString("argvA3", "URL");
+-    todo_wine okChildString("argvA4", "shlproto://foo/bar.lnk");
++    okChildString("argvA3", "URL");
++    okChildString("argvA4", "shlproto://foo/bar.lnk");
+ 
+     /* Neither does a .exe extension */
+     rc = shell_execute(NULL, "shlproto://foo/bar.exe", NULL, NULL);
+@@ -2180,13 +2180,13 @@ static void test_lnks(void)
+         get_long_path_name(params, filename, sizeof(filename));
+         okChildPath("argvA4", filename);
+ 
+-        todo_wait rc=shell_execute_ex(SEE_MASK_NOZONECHECKS|SEE_MASK_DOENVSUBST, NULL, "%TMPDIR%\\test_shortcut_shlexec.lnk", NULL, NULL, NULL);
++        rc=shell_execute_ex(SEE_MASK_NOZONECHECKS|SEE_MASK_DOENVSUBST, NULL, "%TMPDIR%\\test_shortcut_shlexec.lnk", NULL, NULL, NULL);
+         okShell(rc > 32, "failed: rc=%lu err=%u\n", rc, GetLastError());
+         okChildInt("argcA", 5);
+-        todo_wine okChildString("argvA3", "Open");
++        okChildString("argvA3", "Open");
+         sprintf(params, "%s\\test file.shlexec", tmpdir);
+         get_long_path_name(params, filename, sizeof(filename));
+-        todo_wine okChildPath("argvA4", filename);
++        okChildPath("argvA4", filename);
+     }
+ 
+     /* Should just run our executable */
+-- 
+2.13.1
+

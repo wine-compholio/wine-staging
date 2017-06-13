@@ -90,6 +90,7 @@ patch_enable_all ()
 	enable_advapi32_BuildSecurityDescriptor="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
+	enable_advapi32_Performance_Counters="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
@@ -513,6 +514,9 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
+			;;
+		advapi32-Performance_Counters)
+			enable_advapi32_Performance_Counters="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -3044,6 +3048,34 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		printf '%s\n' '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-Performance_Counters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33037] Add support for querying performance counters data
+# |
+# | Modified files:
+# |   *	dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c, dlls/winspool.drv/info.c, dlls/winspool.drv/winspool.drv.spec,
+# | 	include/winperf.h, include/winreg.h, loader/wine.inf.in
+# |
+if test "$enable_advapi32_Performance_Counters" -eq 1; then
+	patch_apply advapi32-Performance_Counters/0001-advapi32-tests-Add-more-tests-for-performance-counte.patch
+	patch_apply advapi32-Performance_Counters/0002-include-Add-more-definitions-for-performance-counter.patch
+	patch_apply advapi32-Performance_Counters/0003-advapi32-Add-initial-support-for-querying-performanc.patch
+	patch_apply advapi32-Performance_Counters/0004-winspool.drv-Add-performance-counters-service-stubs.patch
+	patch_apply advapi32-Performance_Counters/0005-advapi32-Performance-providers-Open-expects-to-see-t.patch
+	patch_apply advapi32-Performance_Counters/0006-advapi32-If-the-query-is-not-specified-the-default-q.patch
+	patch_apply advapi32-Performance_Counters/0007-advapi32-Read-the-configured-object-list-for-the-per.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32/tests: Add more tests for performance counters.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Add more definitions for performance counters.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Add initial support for querying performance counters data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "winspool.drv: Add performance counters service stubs.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Performance providers'\'' Open() expects to see the configured name as its parameter.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: If the query is not specified the default query is \"Global\".", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Read the configured object list for the performance provider.", 1 },';
 	) >> "$patchlist"
 fi
 

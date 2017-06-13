@@ -3071,7 +3071,7 @@ if test "$enable_advapi32_Performance_Counters" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32/tests: Add more tests for performance counters.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Add more definitions for performance counters.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Add initial support for querying performance counters data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Add initial support for querying performance counters data.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "winspool.drv: Add performance counters service stubs.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Performance providers'\'' Open() expects to see the configured name as its parameter.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: If the query is not specified the default query is \"Global\".", 1 },';

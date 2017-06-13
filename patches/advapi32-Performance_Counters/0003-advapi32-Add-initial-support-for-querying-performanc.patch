@@ -1,15 +1,16 @@
-From cba7fd4c248a70be8ce180f66809f1802328514f Mon Sep 17 00:00:00 2001
+From 4fc763b4564cf0dc7e9e27826d785255133c8187 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 12 Apr 2017 13:59:20 +0800
 Subject: advapi32: Add initial support for querying performance counters data.
+ (v2)
 
 ---
- dlls/advapi32/registry.c       | 241 ++++++++++++++++++++++++++++++++++++++++-
+ dlls/advapi32/registry.c       | 244 ++++++++++++++++++++++++++++++++++++++++-
  dlls/advapi32/tests/registry.c |  17 +--
- 2 files changed, 246 insertions(+), 12 deletions(-)
+ 2 files changed, 249 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/advapi32/registry.c b/dlls/advapi32/registry.c
-index 7a26fffc55e..a6e5c7903cf 100644
+index 7a26fffc55e..4dd29d3ba72 100644
 --- a/dlls/advapi32/registry.c
 +++ b/dlls/advapi32/registry.c
 @@ -2,6 +2,7 @@
@@ -28,7 +29,7 @@ index 7a26fffc55e..a6e5c7903cf 100644
  #include "winuser.h"
  #include "sddl.h"
  #include "advapi32_misc.h"
-@@ -1482,6 +1484,231 @@ LONG WINAPI RegSetKeyValueA( HKEY hkey, LPCSTR subkey, LPCSTR name, DWORD type,
+@@ -1482,6 +1484,234 @@ LONG WINAPI RegSetKeyValueA( HKEY hkey, LPCSTR subkey, LPCSTR name, DWORD type,
      return ret;
  }
  
@@ -99,7 +100,10 @@ index 7a26fffc55e..a6e5c7903cf 100644
 +    provider->pClose = get_provider_entry(perf, provider->perflib, "Close");
 +    provider->pCollect = get_provider_entry(perf, provider->perflib, "Collect");
 +    if (provider->pOpen && provider->pClose && provider->pCollect)
++    {
++        RegCloseKey(perf);
 +        return TRUE;
++    }
 +
 +    TRACE("Provider is missing required exports\n");
 +    FreeLibrary(provider->perflib);
@@ -260,7 +264,7 @@ index 7a26fffc55e..a6e5c7903cf 100644
  /******************************************************************************
   * RegQueryValueExW   [ADVAPI32.@]
   *
-@@ -1502,6 +1729,10 @@ LSTATUS WINAPI RegQueryValueExW( HKEY hkey, LPCWSTR name, LPDWORD reserved, LPDW
+@@ -1502,6 +1732,10 @@ LSTATUS WINAPI RegQueryValueExW( HKEY hkey, LPCWSTR name, LPDWORD reserved, LPDW
            (count && data) ? *count : 0 );
  
      if ((data && !count) || reserved) return ERROR_INVALID_PARAMETER;
@@ -271,7 +275,7 @@ index 7a26fffc55e..a6e5c7903cf 100644
      if (!(hkey = get_special_root_hkey( hkey, 0 ))) return ERROR_INVALID_HANDLE;
  
      RtlInitUnicodeString( &name_str, name );
-@@ -1592,7 +1823,8 @@ LSTATUS WINAPI DECLSPEC_HOTPATCH RegQueryValueExA( HKEY hkey, LPCSTR name, LPDWO
+@@ -1592,7 +1826,8 @@ LSTATUS WINAPI DECLSPEC_HOTPATCH RegQueryValueExA( HKEY hkey, LPCSTR name, LPDWO
            hkey, debugstr_a(name), reserved, type, data, count, count ? *count : 0 );
  
      if ((data && !count) || reserved) return ERROR_INVALID_PARAMETER;
@@ -281,7 +285,7 @@ index 7a26fffc55e..a6e5c7903cf 100644
  
      if (count) datalen = *count;
      if (!data && count) *count = 0;
-@@ -1604,6 +1836,13 @@ LSTATUS WINAPI DECLSPEC_HOTPATCH RegQueryValueExA( HKEY hkey, LPCSTR name, LPDWO
+@@ -1604,6 +1839,13 @@ LSTATUS WINAPI DECLSPEC_HOTPATCH RegQueryValueExA( HKEY hkey, LPCSTR name, LPDWO
      if ((status = RtlAnsiStringToUnicodeString( &nameW, &nameA, TRUE )))
          return RtlNtStatusToDosError(status);
  
@@ -296,10 +300,10 @@ index 7a26fffc55e..a6e5c7903cf 100644
                                buffer, sizeof(buffer), &total_size );
      if (status && status != STATUS_BUFFER_OVERFLOW) goto done;
 diff --git a/dlls/advapi32/tests/registry.c b/dlls/advapi32/tests/registry.c
-index d850f6a3aa7..d7a25eb8c6b 100644
+index 43599359ac6..9706478a135 100644
 --- a/dlls/advapi32/tests/registry.c
 +++ b/dlls/advapi32/tests/registry.c
-@@ -3559,10 +3559,10 @@ static void test_RegQueryValueExPerformanceData(void)
+@@ -3520,10 +3520,10 @@ static void test_RegQueryValueExPerformanceData(void)
  
      /* Test with data == NULL */
      dwret = RegQueryValueExA( HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, NULL, &cbData );
@@ -312,7 +316,7 @@ index d850f6a3aa7..d7a25eb8c6b 100644
  
      /* Test ERROR_MORE_DATA, start with small buffer */
      len = 10;
-@@ -3570,8 +3570,7 @@ static void test_RegQueryValueExPerformanceData(void)
+@@ -3531,8 +3531,7 @@ static void test_RegQueryValueExPerformanceData(void)
      cbData = len;
      type = 0xdeadbeef;
      dwret = RegQueryValueExA( HKEY_PERFORMANCE_DATA, "Global", NULL, &type, value, &cbData );
@@ -322,7 +326,7 @@ index d850f6a3aa7..d7a25eb8c6b 100644
      ok(type == REG_BINARY, "got %u\n", type);
      while( dwret == ERROR_MORE_DATA && limit)
      {
-@@ -3584,14 +3583,13 @@ todo_wine
+@@ -3545,14 +3544,13 @@ todo_wine
      }
      ok(limit > 0, "too many times ERROR_MORE_DATA returned\n");
  
@@ -339,7 +343,7 @@ index d850f6a3aa7..d7a25eb8c6b 100644
          if (len >= sizeof(PERF_DATA_BLOCK)) {
              pdb = (PERF_DATA_BLOCK*) value;
              ok(pdb->Signature[0] == 'P', "expected Signature[0] = 'P', got 0x%x\n", pdb->Signature[0]);
-@@ -3608,13 +3606,11 @@ todo_wine
+@@ -3569,13 +3567,11 @@ todo_wine
      {
          cbData = 0xdeadbeef;
          dwret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, names[i], NULL, NULL, NULL, &cbData);
@@ -353,7 +357,7 @@ index d850f6a3aa7..d7a25eb8c6b 100644
          ok(dwret == ERROR_MORE_DATA, "%u/%s: got %u\n", i, names[i], dwret);
          ok(cbData == 0, "got %u\n", cbData);
  
-@@ -3647,9 +3643,7 @@ todo_wine
+@@ -3608,9 +3604,7 @@ todo_wine
      type = 0xdeadbeef;
      cbData = sizeof(buf);
      dwret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, "invalid counter name", NULL, &type, buf, &cbData);
@@ -363,7 +367,7 @@ index d850f6a3aa7..d7a25eb8c6b 100644
      ok(type == REG_BINARY, "got %u\n", type);
      if (dwret == ERROR_SUCCESS)
      {
-@@ -3679,6 +3673,7 @@ todo_wine
+@@ -3640,6 +3634,7 @@ todo_wine
          ok(pdb->TotalByteLength == len, "got %u vs %u\n", pdb->TotalByteLength, len);
          ok(pdb->HeaderLength == pdb->TotalByteLength, "got %u\n", pdb->HeaderLength);
          ok(pdb->NumObjectTypes == 0, "got %u\n", pdb->NumObjectTypes);

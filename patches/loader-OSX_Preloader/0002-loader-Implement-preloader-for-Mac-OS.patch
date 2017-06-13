@@ -1,4 +1,4 @@
-From e3a9a59d25e11351bf8ff6ed0578c5defbad84ae Mon Sep 17 00:00:00 2001
+From c216ca6977f3b2b32aadc0155f30f5bcf27364b3 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 00:16:08 +0200
 Subject: loader: Implement preloader for Mac OS.
@@ -10,8 +10,8 @@ Subject: loader: Implement preloader for Mac OS.
  libs/wine/config.c   |   2 +-
  loader/Makefile.in   |   4 +-
  loader/main.c        |  44 ++----
- loader/preloader.c   | 386 +++++++++++++++++++++++++++++++++++++++++++++++++--
- 7 files changed, 420 insertions(+), 51 deletions(-)
+ loader/preloader.c   | 399 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 7 files changed, 433 insertions(+), 51 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
 index 22b2ae72305..29b6cbdd535 100644
@@ -98,10 +98,10 @@ index 5aaa20c22b6..433e7fa959c 100644
  
  dnl **** Check for functions ****
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 0d3fa1e5715..3a280a4b0d8 100644
+index ee9c8d0195d..f115576e1db 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1941,11 +1941,9 @@ void virtual_release_address_space(void)
+@@ -1840,11 +1840,9 @@ void virtual_release_address_space(void)
      }
      else
      {
@@ -114,10 +114,10 @@ index 0d3fa1e5715..3a280a4b0d8 100644
  
      server_leave_uninterrupted_section( &csVirtual, &sigset );
 diff --git a/libs/wine/config.c b/libs/wine/config.c
-index 7daf38a07b5..7223ecd89cf 100644
+index be9f401d9e7..bccb36a6c12 100644
 --- a/libs/wine/config.c
 +++ b/libs/wine/config.c
-@@ -1709,7 +1709,7 @@ void wine_exec_wine_binary( const char *name, char **argv, const char *env_var )
+@@ -654,7 +654,7 @@ void wine_exec_wine_binary( const char *name, char **argv, const char *env_var )
  
      if (!name) name = argv0_name;  /* no name means default loader */
  
@@ -224,7 +224,7 @@ index 13740c7b3c5..5212e3f0798 100644
  
      wine_init( argc, argv, error, sizeof(error) );
 diff --git a/loader/preloader.c b/loader/preloader.c
-index 5e6add7830f..b3e80527309 100644
+index 5e6add7830f..a18313d495c 100644
 --- a/loader/preloader.c
 +++ b/loader/preloader.c
 @@ -4,6 +4,8 @@
@@ -257,7 +257,7 @@ index 5e6add7830f..b3e80527309 100644
  #ifndef MAP_COPY
  #define MAP_COPY MAP_PRIVATE
  #endif
-@@ -117,12 +118,25 @@ static struct wine_preload_info preload_info[] =
+@@ -117,12 +118,38 @@ static struct wine_preload_info preload_info[] =
      { (void *)0x000000010000, 0x00100000 },  /* DOS area */
      { (void *)0x000000110000, 0x67ef0000 },  /* low memory area */
      { (void *)0x00007ff00000, 0x000f0000 },  /* shared user data */
@@ -272,7 +272,20 @@ index 5e6add7830f..b3e80527309 100644
      { 0, 0 }                             /* end of list */
  };
  
-+#ifndef __APPLE__
++#ifdef __APPLE__
++
++#ifndef LC_MAIN
++#define LC_MAIN 0x80000028
++struct entry_point_command
++{
++    uint32_t cmd;
++    uint32_t cmdsize;
++    uint64_t entryoff;
++    uint64_t stacksize;
++};
++#endif
++
++#else  /* __APPLE__ */
 +
 +/* ELF definitions */
 +#define ELF_PREFERRED_ADDRESS(loader, maplength, mapstartpref) (mapstartpref)
@@ -283,16 +296,16 @@ index 5e6add7830f..b3e80527309 100644
  /* debugging */
  #undef DUMP_SEGMENTS
  #undef DUMP_AUX_INFO
-@@ -168,6 +182,8 @@ struct wld_auxv
+@@ -168,6 +195,8 @@ struct wld_auxv
      } a_un;
  };
  
-+#endif /* !__APPLE__ */
++#endif /* __APPLE__ */
 +
  /*
   * The __bb_init_func is an empty function only called when file is
   * compiled with gcc flags "-fprofile-arcs -ftest-coverage".  This
-@@ -182,6 +198,196 @@ void *__stack_chk_guard = 0;
+@@ -182,6 +211,196 @@ void *__stack_chk_guard = 0;
  void __stack_chk_fail_local(void) { return; }
  void __stack_chk_fail(void) { return; }
  
@@ -489,7 +502,7 @@ index 5e6add7830f..b3e80527309 100644
  #ifdef __i386__
  
  /* data for setting up the glibc-style thread-local storage in %gs */
-@@ -458,16 +664,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
+@@ -458,16 +677,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
  #else
  #error preloader not implemented for this CPU
  #endif
@@ -509,7 +522,7 @@ index 5e6add7830f..b3e80527309 100644
  {
      if (len <= 0) return 0;
      while ((--len > 0) && *str1 && (*str1 == *str2)) { str1++; str2++; }
-@@ -560,6 +767,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
+@@ -560,6 +780,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
      wld_exit(1);
  }
  
@@ -518,7 +531,7 @@ index 5e6add7830f..b3e80527309 100644
  #ifdef DUMP_AUX_INFO
  /*
   *  Dump interesting bits of the ELF auxv_t structure that is passed
-@@ -1039,6 +1248,8 @@ found:
+@@ -1039,6 +1261,8 @@ found:
      return (void *)(symtab[idx].st_value + map->l_addr);
  }
  
@@ -527,7 +540,7 @@ index 5e6add7830f..b3e80527309 100644
  /*
   *  preload_reserve
   *
-@@ -1070,6 +1281,7 @@ static void preload_reserve( const char *str )
+@@ -1070,6 +1294,7 @@ static void preload_reserve( const char *str )
  
      /* sanity checks */
      if (end <= start) start = end = NULL;
@@ -535,7 +548,7 @@ index 5e6add7830f..b3e80527309 100644
      else if ((char *)end > preloader_start &&
               (char *)start <= preloader_end)
      {
-@@ -1077,6 +1289,7 @@ static void preload_reserve( const char *str )
+@@ -1077,6 +1302,7 @@ static void preload_reserve( const char *str )
                       start, end, preloader_start, preloader_end );
          start = end = NULL;
      }
@@ -543,7 +556,7 @@ index 5e6add7830f..b3e80527309 100644
  
      /* check for overlap with low memory areas */
      for (i = 0; preload_info[i].size; i++)
-@@ -1101,7 +1314,7 @@ error:
+@@ -1101,7 +1327,7 @@ error:
  }
  
  /* check if address is in one of the reserved ranges */
@@ -552,7 +565,7 @@ index 5e6add7830f..b3e80527309 100644
  {
      int i;
  
-@@ -1125,6 +1338,159 @@ static void remove_preload_range( int i )
+@@ -1125,6 +1351,159 @@ static void remove_preload_range( int i )
      }
  }
  
@@ -712,7 +725,7 @@ index 5e6add7830f..b3e80527309 100644
  /*
   *  is_in_preload_range
   *
-@@ -1293,3 +1659,5 @@ void* wld_start( void **stack )
+@@ -1293,3 +1672,5 @@ void* wld_start( void **stack )
  
      return (void *)ld_so_map.l_entry;
  }

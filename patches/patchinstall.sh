@@ -9107,9 +9107,6 @@ fi
 
 # Patchset wined3d-Silence_FIXMEs
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42140] Silence noisy FIXME in gl_stencil_op
-# |
 # | Modified files:
 # |   *	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
 # |

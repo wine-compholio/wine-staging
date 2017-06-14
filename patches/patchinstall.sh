@@ -5088,8 +5088,8 @@ fi
 # |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ntdll/tests/pipe.c, dlls/ws2_32/tests/sock.c,
-# | 	server/async.c, server/fd.c, server/file.h, server/protocol.def
+# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ntdll/tests/pipe.c, dlls/ws2_32/socket.c,
+# | 	dlls/ws2_32/tests/sock.c, server/async.c, server/fd.c, server/file.h, server/protocol.def
 # |
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
@@ -5098,6 +5098,7 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0004-ntdll-tests-Add-more-tests-for-FileIoCompletionNotif.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0005-ntdll-Do-not-require-unix-fd-for-FileIoCompletionNot.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0006-server-Skip-async-completion-when-possible.patch
+	patch_apply kernel32-SetFileCompletionNotificationModes/0007-ws2_32-Don-t-skip-completion-in-AcceptEx.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query file IO completion notification mode.", 1 },';
@@ -5105,6 +5106,7 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add more tests for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
 	) >> "$patchlist"
 fi
 

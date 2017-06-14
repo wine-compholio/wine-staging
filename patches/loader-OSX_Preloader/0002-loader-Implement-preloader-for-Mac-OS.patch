@@ -1,17 +1,17 @@
-From c216ca6977f3b2b32aadc0155f30f5bcf27364b3 Mon Sep 17 00:00:00 2001
+From 121236d997013c4f7c52ad9384bdf727396d1c55 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 00:16:08 +0200
 Subject: loader: Implement preloader for Mac OS.
 
 ---
  Makefile.in          |   1 +
- configure.ac         |  32 ++++-
+ configure.ac         |  30 +++-
  dlls/ntdll/virtual.c |   2 -
  libs/wine/config.c   |   2 +-
  loader/Makefile.in   |   4 +-
  loader/main.c        |  44 ++----
- loader/preloader.c   | 399 +++++++++++++++++++++++++++++++++++++++++++++++++--
- 7 files changed, 433 insertions(+), 51 deletions(-)
+ loader/preloader.c   | 402 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 7 files changed, 433 insertions(+), 52 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
 index 22b2ae72305..29b6cbdd535 100644
@@ -26,10 +26,10 @@ index 22b2ae72305..29b6cbdd535 100644
  LIBWINE_IMPORTLIB   = @LIBWINE_IMPORTLIB@
  LIBWINE_INSTALL_LIB = @LIBWINE_INSTALL_LIB@
 diff --git a/configure.ac b/configure.ac
-index 5aaa20c22b6..433e7fa959c 100644
+index 0f2221963dc..86c3276d28e 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -709,6 +709,7 @@ AC_SUBST(LDRPATH_INSTALL,"")
+@@ -683,6 +683,7 @@ AC_SUBST(LDRPATH_INSTALL,"")
  AC_SUBST(LDRPATH_LOCAL,"")
  AC_SUBST(LDEXECFLAGS,"")
  AC_SUBST(WINELOADER_LDFLAGS,"")
@@ -37,13 +37,13 @@ index 5aaa20c22b6..433e7fa959c 100644
  LIBEXT="so"
  DLLEXT=".so"
  IMPLIBEXT="def"
-@@ -767,9 +768,26 @@ case $host_os in
+@@ -741,9 +742,24 @@ case $host_os in
      AC_SUBST(APPLICATIONSERVICES_LIBS,"-framework ApplicationServices")
      AC_SUBST(CORESERVICES_LIBS,"-framework CoreServices")
      AC_SUBST(APPKIT_LIBS,"-framework AppKit")
 -    WINELOADER_LDFLAGS="-image_base 0x7bf00000 -Wl,-pagezero_size,0x1000,-segaddr,WINE_DOS,0x00001000,-segaddr,WINE_SHAREDHEAP,0x7f000000,-sectcreate,__TEXT,__info_plist,wine_info.plist"
 +
-+    WINELOADER_LDFLAGS="-Wl,-image_base,0x7bf00000,-pie,-sectcreate,__TEXT,__info_plist,wine_info.plist"
++    WINELOADER_LDFLAGS="-Wl,-pie,-pagezero_size,0x1000,-sectcreate,__TEXT,__info_plist,wine_info.plist"
 +    WINE_TRY_CFLAGS([-fPIC -Wl,--export-dynamic],
 +                    [WINELOADER_LDFLAGS="-Wl,--export-dynamic $WINELOADER_LDFLAGS"])
 +
@@ -56,17 +56,15 @@ index 5aaa20c22b6..433e7fa959c 100644
 +
 +    case $host_cpu in
 +      *i[[3456789]]86*)
-+        WINELOADER_LDFLAGS="-Wl,-pagezero_size,0x0 $WINELOADER_LDFLAGS"
 +        WINEPRELOADER_LDFLAGS="-Wl,-pagezero_size,0x0 $WINEPRELOADER_LDFLAGS" ;;
 +      *x86_64*)
-+        WINELOADER_LDFLAGS="-Wl,-pagezero_size,0x1000 $WINELOADER_LDFLAGS"
 +        WINEPRELOADER_LDFLAGS="-Wl,-pagezero_size,0x1000 $WINEPRELOADER_LDFLAGS" ;;
 +    esac
 +
      if test "$ac_cv_header_DiskArbitration_DiskArbitration_h" = "yes"
      then
          dnl DiskArbitration API is not public on Darwin < 8.0, use it only if header found
-@@ -882,6 +900,7 @@ case $host_os in
+@@ -856,6 +872,7 @@ case $host_os in
      enable_wineandroid_drv=${enable_wineandroid_drv:-yes}
      WINE_TRY_CFLAGS([-fPIC -Wl,--export-dynamic],
                      [WINELOADER_LDFLAGS="-Wl,--export-dynamic"])
@@ -74,7 +72,7 @@ index 5aaa20c22b6..433e7fa959c 100644
      WINE_TRY_CFLAGS([-fPIC -Wl,--rpath,\$ORIGIN/../lib],
                      [LDRPATH_INSTALL="-Wl,--rpath,\\\$\$ORIGIN/\`\$(MAKEDEP) -R \${bindir} \${libdir}\`"
                       LDRPATH_LOCAL="-Wl,--rpath,\\\$\$ORIGIN/\$(top_builddir)/libs/wine"],
-@@ -926,6 +945,7 @@ case $host_os in
+@@ -900,6 +917,7 @@ case $host_os in
  
        WINE_TRY_CFLAGS([-fPIC -Wl,--export-dynamic],
                        [WINELOADER_LDFLAGS="-Wl,--export-dynamic"])
@@ -82,7 +80,7 @@ index 5aaa20c22b6..433e7fa959c 100644
  
        WINE_TRY_CFLAGS([-fPIC -Wl,--rpath,\$ORIGIN/../lib],
                        [LDRPATH_INSTALL="-Wl,--rpath,\\\$\$ORIGIN/\`\$(MAKEDEP) -R \${bindir} \${libdir}\`:\$(DESTDIR)\${libdir}"
-@@ -2085,6 +2105,14 @@ case $host_os in
+@@ -2009,6 +2027,14 @@ case $host_os in
          ;;
      esac
      ;;
@@ -224,7 +222,7 @@ index 13740c7b3c5..5212e3f0798 100644
  
      wine_init( argc, argv, error, sizeof(error) );
 diff --git a/loader/preloader.c b/loader/preloader.c
-index 5e6add7830f..a18313d495c 100644
+index 5e6add7830f..2149d55f0d7 100644
 --- a/loader/preloader.c
 +++ b/loader/preloader.c
 @@ -4,6 +4,8 @@
@@ -257,12 +255,22 @@ index 5e6add7830f..a18313d495c 100644
  #ifndef MAP_COPY
  #define MAP_COPY MAP_PRIVATE
  #endif
-@@ -117,12 +118,38 @@ static struct wine_preload_info preload_info[] =
+@@ -109,7 +110,8 @@
+ static struct wine_preload_info preload_info[] =
+ {
+ #ifdef __i386__
+-    { (void *)0x00000000, 0x00010000 },  /* low 64k */
++    { (void *)0x00000000, 0x00001000 },  /* first page */
++    { (void *)0x00001000, 0x0000f000 },  /* low 64k */
+     { (void *)0x00010000, 0x00100000 },  /* DOS area */
+     { (void *)0x00110000, 0x67ef0000 },  /* low memory area */
+     { (void *)0x7f000000, 0x03000000 },  /* top-down allocations + shared heap + virtual heap */
+@@ -117,12 +119,38 @@ static struct wine_preload_info preload_info[] =
      { (void *)0x000000010000, 0x00100000 },  /* DOS area */
      { (void *)0x000000110000, 0x67ef0000 },  /* low memory area */
      { (void *)0x00007ff00000, 0x000f0000 },  /* shared user data */
 +#ifdef __APPLE__
-+    /* address below exceeds maximum allowed user space address in mac os */
++    /* address below exceeds maximum allowed user space address in macOS */
 +    { (void *)0x7fff40000000, 0x01ff0000 },  /* top-down allocations + virtual heap */
 +#else
      { (void *)0x7ffffe000000, 0x01ff0000 },  /* top-down allocations + virtual heap */
@@ -296,7 +304,7 @@ index 5e6add7830f..a18313d495c 100644
  /* debugging */
  #undef DUMP_SEGMENTS
  #undef DUMP_AUX_INFO
-@@ -168,6 +195,8 @@ struct wld_auxv
+@@ -168,6 +196,8 @@ struct wld_auxv
      } a_un;
  };
  
@@ -305,7 +313,7 @@ index 5e6add7830f..a18313d495c 100644
  /*
   * The __bb_init_func is an empty function only called when file is
   * compiled with gcc flags "-fprofile-arcs -ftest-coverage".  This
-@@ -182,6 +211,196 @@ void *__stack_chk_guard = 0;
+@@ -182,6 +212,196 @@ void *__stack_chk_guard = 0;
  void __stack_chk_fail_local(void) { return; }
  void __stack_chk_fail(void) { return; }
  
@@ -502,7 +510,7 @@ index 5e6add7830f..a18313d495c 100644
  #ifdef __i386__
  
  /* data for setting up the glibc-style thread-local storage in %gs */
-@@ -458,16 +677,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
+@@ -458,16 +678,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
  #else
  #error preloader not implemented for this CPU
  #endif
@@ -522,7 +530,7 @@ index 5e6add7830f..a18313d495c 100644
  {
      if (len <= 0) return 0;
      while ((--len > 0) && *str1 && (*str1 == *str2)) { str1++; str2++; }
-@@ -560,6 +780,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
+@@ -560,6 +781,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
      wld_exit(1);
  }
  
@@ -531,7 +539,7 @@ index 5e6add7830f..a18313d495c 100644
  #ifdef DUMP_AUX_INFO
  /*
   *  Dump interesting bits of the ELF auxv_t structure that is passed
-@@ -1039,6 +1261,8 @@ found:
+@@ -1039,6 +1262,8 @@ found:
      return (void *)(symtab[idx].st_value + map->l_addr);
  }
  
@@ -540,7 +548,7 @@ index 5e6add7830f..a18313d495c 100644
  /*
   *  preload_reserve
   *
-@@ -1070,6 +1294,7 @@ static void preload_reserve( const char *str )
+@@ -1070,6 +1295,7 @@ static void preload_reserve( const char *str )
  
      /* sanity checks */
      if (end <= start) start = end = NULL;
@@ -548,7 +556,7 @@ index 5e6add7830f..a18313d495c 100644
      else if ((char *)end > preloader_start &&
               (char *)start <= preloader_end)
      {
-@@ -1077,6 +1302,7 @@ static void preload_reserve( const char *str )
+@@ -1077,6 +1303,7 @@ static void preload_reserve( const char *str )
                       start, end, preloader_start, preloader_end );
          start = end = NULL;
      }
@@ -556,7 +564,7 @@ index 5e6add7830f..a18313d495c 100644
  
      /* check for overlap with low memory areas */
      for (i = 0; preload_info[i].size; i++)
-@@ -1101,7 +1327,7 @@ error:
+@@ -1101,7 +1328,7 @@ error:
  }
  
  /* check if address is in one of the reserved ranges */
@@ -565,7 +573,7 @@ index 5e6add7830f..a18313d495c 100644
  {
      int i;
  
-@@ -1125,6 +1351,159 @@ static void remove_preload_range( int i )
+@@ -1125,6 +1352,159 @@ static void remove_preload_range( int i )
      }
  }
  
@@ -725,7 +733,7 @@ index 5e6add7830f..a18313d495c 100644
  /*
   *  is_in_preload_range
   *
-@@ -1293,3 +1672,5 @@ void* wld_start( void **stack )
+@@ -1293,3 +1673,5 @@ void* wld_start( void **stack )
  
      return (void *)ld_so_map.l_entry;
  }

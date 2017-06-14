@@ -1,4 +1,4 @@
-From 121236d997013c4f7c52ad9384bdf727396d1c55 Mon Sep 17 00:00:00 2001
+From 51f2a4b350eae8e4bc279398ae7f559d2aa23d21 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 00:16:08 +0200
 Subject: loader: Implement preloader for Mac OS.
@@ -10,8 +10,8 @@ Subject: loader: Implement preloader for Mac OS.
  libs/wine/config.c   |   2 +-
  loader/Makefile.in   |   4 +-
  loader/main.c        |  44 ++----
- loader/preloader.c   | 402 +++++++++++++++++++++++++++++++++++++++++++++++++--
- 7 files changed, 433 insertions(+), 52 deletions(-)
+ loader/preloader.c   | 410 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 7 files changed, 441 insertions(+), 52 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
 index 22b2ae72305..29b6cbdd535 100644
@@ -222,7 +222,7 @@ index 13740c7b3c5..5212e3f0798 100644
  
      wine_init( argc, argv, error, sizeof(error) );
 diff --git a/loader/preloader.c b/loader/preloader.c
-index 5e6add7830f..2149d55f0d7 100644
+index 5e6add7830f..9c92c758eb1 100644
 --- a/loader/preloader.c
 +++ b/loader/preloader.c
 @@ -4,6 +4,8 @@
@@ -573,7 +573,7 @@ index 5e6add7830f..2149d55f0d7 100644
  {
      int i;
  
-@@ -1125,6 +1352,159 @@ static void remove_preload_range( int i )
+@@ -1125,6 +1352,167 @@ static void remove_preload_range( int i )
      }
  }
  
@@ -646,6 +646,21 @@ index 5e6add7830f..2149d55f0d7 100644
 +    return NULL;
 +};
 +
++static int map_region( struct wine_preload_info *info )
++{
++    int flags = MAP_PRIVATE | MAP_ANON;
++    void *ret;
++
++    if (!info->addr) flags |= MAP_FIXED;
++    ret = wld_mmap( info->addr, info->size, PROT_NONE, flags, -1, 0 );
++    if (ret == info->addr) return 1;
++    if (ret != (void *)-1) wld_munmap( ret, info->size );
++
++    wld_printf( "preloader: Warning: failed to reserve range %p-%p\n",
++                info->addr, (char *)info->addr + info->size );
++    return 0;
++}
++
 +static inline void get_dyld_func( const char *name, void **func )
 +{
 +    _dyld_func_lookup( name, func );
@@ -657,6 +672,7 @@ index 5e6add7830f..2149d55f0d7 100644
 +
 +void *wld_start( void *stack, int *is_unix_thread )
 +{
++    struct wine_preload_info builtin_dlls = { (void *)0x7a000000, 0x02000000 };
 +    struct wine_preload_info **wine_main_preload_info;
 +    char **argv, **p, *reserve = NULL;
 +    struct target_mach_header *mh;
@@ -683,26 +699,15 @@ index 5e6add7830f..2149d55f0d7 100644
 +    if (reserve) preload_reserve( reserve );
 +    for (i = 0; preload_info[i].size; i++)
 +    {
-+        int flags = MAP_PRIVATE | MAP_ANON;
-+        void *ret;
-+
-+        if (!preload_info[i].addr)
-+            flags |= MAP_FIXED;
-+
-+        ret = wld_mmap( preload_info[i].addr, preload_info[i].size, PROT_NONE, flags, -1, 0 );
-+        if (ret != (void *)-1 && ret != preload_info[i].addr)
++        if (!map_region( &preload_info[i] ))
 +        {
-+            wld_munmap(ret, preload_info[i].size);
-+            ret = (void *)-1;
-+        }
-+        if (ret == (void *)-1)
-+        {
-+            wld_printf( "preloader: Warning: failed to reserve range %p-%p\n",
-+                        preload_info[i].addr, (char *)preload_info[i].addr + preload_info[i].size );
 +            remove_preload_range( i );
 +            i--;
 +        }
 +    }
++
++    if (!map_region( &builtin_dlls ))
++        builtin_dlls.size = 0;
 +
 +    LOAD_POSIX_DYLD_FUNC( dlopen );
 +    LOAD_POSIX_DYLD_FUNC( dlsym );
@@ -713,6 +718,9 @@ index 5e6add7830f..2149d55f0d7 100644
 +    /* load the main binary */
 +    if (!(mod = pdlopen( argv[1], RTLD_NOW )))
 +        fatal_error( "%s: could not load binary\n", argv[1] );
++
++    if (builtin_dlls.size)
++        wld_munmap( builtin_dlls.addr, builtin_dlls.size );
 +
 +    /* store pointer to the preload info into the appropriate main binary variable */
 +    wine_main_preload_info = pdlsym( mod, "wine_main_preload_info" );
@@ -733,7 +741,7 @@ index 5e6add7830f..2149d55f0d7 100644
  /*
   *  is_in_preload_range
   *
-@@ -1293,3 +1673,5 @@ void* wld_start( void **stack )
+@@ -1293,3 +1681,5 @@ void* wld_start( void **stack )
  
      return (void *)ld_so_map.l_entry;
  }

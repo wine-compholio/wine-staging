@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d7eb469d5992f9901b0dd355e5e61709aed31d2b"
+	echo "538e46adea88a3d6bdadd7f762eb620cd11cbeef"
 }
 
 # Show version information
@@ -432,6 +432,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
+	enable_wined3d_GDI_Rendering="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
@@ -1539,6 +1540,9 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
+			;;
+		wined3d-GDI_Rendering)
+			enable_wined3d_GDI_Rendering="$2"
 			;;
 		wined3d-GTX_560M)
 			enable_wined3d_GTX_560M="$2"
@@ -9121,6 +9125,25 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-GDI_Rendering
+# |
+# | Modified files:
+# |   *	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_GDI_Rendering" -eq 1; then
+	patch_apply wined3d-GDI_Rendering/0001-wined3d-Avoid-NULL-pointer-dereference-when-using-GD.patch
+	patch_apply wined3d-GDI_Rendering/0002-wined3d-Create-CPU-blitter-also-for-GDI-render.patch
+	patch_apply wined3d-GDI_Rendering/0003-wined3d-Fix-memory-leaks-in-blitter_destroy-callback.patch
+	patch_apply wined3d-GDI_Rendering/0004-wined3d-Trigger-frontbuffer-update-in-surface_cpu_bl.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Avoid NULL pointer dereference when using GDI renderer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Create CPU blitter also for GDI render.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Fix memory leaks in blitter_destroy callbacks.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Trigger frontbuffer update in surface_cpu_blt.", 1 },';
 	) >> "$patchlist"
 fi
 

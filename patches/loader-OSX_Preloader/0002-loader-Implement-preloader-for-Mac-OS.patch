@@ -1,4 +1,4 @@
-From 51f2a4b350eae8e4bc279398ae7f559d2aa23d21 Mon Sep 17 00:00:00 2001
+From 79d2d9e8f181ce3d5f4ba05ae31c4c5ebf4721ed Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 00:16:08 +0200
 Subject: loader: Implement preloader for Mac OS.
@@ -9,9 +9,9 @@ Subject: loader: Implement preloader for Mac OS.
  dlls/ntdll/virtual.c |   2 -
  libs/wine/config.c   |   2 +-
  loader/Makefile.in   |   4 +-
- loader/main.c        |  44 ++----
- loader/preloader.c   | 410 +++++++++++++++++++++++++++++++++++++++++++++++++--
- 7 files changed, 441 insertions(+), 52 deletions(-)
+ loader/main.c        |  44 ++---
+ loader/preloader.c   | 449 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 7 files changed, 480 insertions(+), 52 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
 index 22b2ae72305..29b6cbdd535 100644
@@ -222,7 +222,7 @@ index 13740c7b3c5..5212e3f0798 100644
  
      wine_init( argc, argv, error, sizeof(error) );
 diff --git a/loader/preloader.c b/loader/preloader.c
-index 5e6add7830f..9c92c758eb1 100644
+index 5e6add7830f..63cf9eccb12 100644
 --- a/loader/preloader.c
 +++ b/loader/preloader.c
 @@ -4,6 +4,8 @@
@@ -313,13 +313,14 @@ index 5e6add7830f..9c92c758eb1 100644
  /*
   * The __bb_init_func is an empty function only called when file is
   * compiled with gcc flags "-fprofile-arcs -ftest-coverage".  This
-@@ -182,6 +212,196 @@ void *__stack_chk_guard = 0;
+@@ -182,6 +212,201 @@ void *__stack_chk_guard = 0;
  void __stack_chk_fail_local(void) { return; }
  void __stack_chk_fail(void) { return; }
  
 +#ifdef __APPLE__
 +#ifdef __i386__
 +
++static const size_t page_size = 0x1000;
 +static const size_t page_mask = 0xfff;
 +#define TARGET_CPU_TYPE         CPU_TYPE_X86
 +#define TARGET_MH_MAGIC         MH_MAGIC
@@ -409,6 +410,7 @@ index 5e6add7830f..9c92c758eb1 100644
 +
 +#elif defined(__x86_64__)
 +
++static const size_t page_size = 0x1000;
 +static const size_t page_mask = 0xfff;
 +#define TARGET_CPU_TYPE         CPU_TYPE_X86_64
 +#define TARGET_MH_MAGIC         MH_MAGIC_64
@@ -506,11 +508,14 @@ index 5e6add7830f..9c92c758eb1 100644
 +void *wld_munmap( void *start, size_t len );
 +SYSCALL_FUNC( wld_munmap, 73 /* SYS_munmap */ );
 +
++int wld_mincore( void *addr, size_t length, unsigned char *vec );
++SYSCALL_FUNC( wld_mincore, 78 /* SYS_mincore */ );
++
 +#else  /* __APPLE__ */
  #ifdef __i386__
  
  /* data for setting up the glibc-style thread-local storage in %gs */
-@@ -458,16 +678,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
+@@ -458,16 +683,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
  #else
  #error preloader not implemented for this CPU
  #endif
@@ -530,7 +535,7 @@ index 5e6add7830f..9c92c758eb1 100644
  {
      if (len <= 0) return 0;
      while ((--len > 0) && *str1 && (*str1 == *str2)) { str1++; str2++; }
-@@ -560,6 +781,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
+@@ -560,6 +786,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
      wld_exit(1);
  }
  
@@ -539,7 +544,7 @@ index 5e6add7830f..9c92c758eb1 100644
  #ifdef DUMP_AUX_INFO
  /*
   *  Dump interesting bits of the ELF auxv_t structure that is passed
-@@ -1039,6 +1262,8 @@ found:
+@@ -1039,6 +1267,8 @@ found:
      return (void *)(symtab[idx].st_value + map->l_addr);
  }
  
@@ -548,7 +553,7 @@ index 5e6add7830f..9c92c758eb1 100644
  /*
   *  preload_reserve
   *
-@@ -1070,6 +1295,7 @@ static void preload_reserve( const char *str )
+@@ -1070,6 +1300,7 @@ static void preload_reserve( const char *str )
  
      /* sanity checks */
      if (end <= start) start = end = NULL;
@@ -556,7 +561,7 @@ index 5e6add7830f..9c92c758eb1 100644
      else if ((char *)end > preloader_start &&
               (char *)start <= preloader_end)
      {
-@@ -1077,6 +1303,7 @@ static void preload_reserve( const char *str )
+@@ -1077,6 +1308,7 @@ static void preload_reserve( const char *str )
                       start, end, preloader_start, preloader_end );
          start = end = NULL;
      }
@@ -564,7 +569,7 @@ index 5e6add7830f..9c92c758eb1 100644
  
      /* check for overlap with low memory areas */
      for (i = 0; preload_info[i].size; i++)
-@@ -1101,7 +1328,7 @@ error:
+@@ -1101,7 +1333,7 @@ error:
  }
  
  /* check if address is in one of the reserved ranges */
@@ -573,7 +578,7 @@ index 5e6add7830f..9c92c758eb1 100644
  {
      int i;
  
-@@ -1125,6 +1352,167 @@ static void remove_preload_range( int i )
+@@ -1125,6 +1357,201 @@ static void remove_preload_range( int i )
      }
  }
  
@@ -646,15 +651,49 @@ index 5e6add7830f..9c92c758eb1 100644
 +    return NULL;
 +};
 +
++static int is_region_empty( struct wine_preload_info *info )
++{
++    unsigned char vec[1024];
++    size_t pos, size, block = 1024 * page_size;
++    int i;
++
++    for (pos = 0; pos < info->size; pos += size)
++    {
++        size = (pos + block <= info->size) ? block : (info->size - pos);
++        if (wld_mincore( (char *)info->addr + pos, size, vec ) == -1)
++        {
++            if (size <= page_size) continue;
++            block = page_size; size = 0;  /* retry with smaller block size */
++        }
++        else
++        {
++            for (i = 0; i < size / page_size; i++)
++                if (vec[i] & 1) return 0;
++        }
++    }
++
++    return 1;
++}
++
 +static int map_region( struct wine_preload_info *info )
 +{
 +    int flags = MAP_PRIVATE | MAP_ANON;
 +    void *ret;
 +
 +    if (!info->addr) flags |= MAP_FIXED;
-+    ret = wld_mmap( info->addr, info->size, PROT_NONE, flags, -1, 0 );
-+    if (ret == info->addr) return 1;
-+    if (ret != (void *)-1) wld_munmap( ret, info->size );
++
++    for (;;)
++    {
++        ret = wld_mmap( info->addr, info->size, PROT_NONE, flags, -1, 0 );
++        if (ret == info->addr) return 1;
++        if (ret != (void *)-1) wld_munmap( ret, info->size );
++        if (flags & MAP_FIXED) break;
++
++        /* Some versions of macOS ignore the address hint passed to mmap -
++         * use mincore() to check if its empty and then use MAP_FIXED */
++        if (!is_region_empty( info )) break;
++        flags |= MAP_FIXED;
++    }
 +
 +    wld_printf( "preloader: Warning: failed to reserve range %p-%p\n",
 +                info->addr, (char *)info->addr + info->size );
@@ -741,7 +780,7 @@ index 5e6add7830f..9c92c758eb1 100644
  /*
   *  is_in_preload_range
   *
-@@ -1293,3 +1681,5 @@ void* wld_start( void **stack )
+@@ -1293,3 +1720,5 @@ void* wld_start( void **stack )
  
      return (void *)ld_so_map.l_entry;
  }

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "538e46adea88a3d6bdadd7f762eb620cd11cbeef"
+	echo "c7f0777fc55229d910461a7a38e21f1e17c8913a"
 }
 
 # Show version information
@@ -2962,25 +2962,16 @@ fi
 # |   *	[#42014] Implement support for LABEL_SECURITY_INFORMATION
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/sec.c, include/winnt.h, server/handle.c, server/object.c,
-# | 	server/process.c, server/protocol.def, server/security.h, server/token.c
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
 # |
 if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
-	patch_apply server-LABEL_SECURITY_INFORMATION/0001-server-Implement-querying-the-security-label-of-a-se.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0002-server-Implement-changing-the-label-of-a-security-de.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0003-server-Do-not-set-SE_-D-S-ACL_PRESENT-if-no-D-S-ACL-.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0004-server-Implement-setting-a-security-descriptor-when-.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0005-advapi32-tests-Add-basic-tests-for-token-security-de.patch
+	patch_apply server-LABEL_SECURITY_INFORMATION/0001-advapi32-tests-Add-back-a-dropped-test.patch
 	patch_apply server-LABEL_SECURITY_INFORMATION/0006-advapi32-tests-Show-that-tokens-do-not-inherit-secur.patch
 	patch_apply server-LABEL_SECURITY_INFORMATION/0007-advapi32-tests-Show-that-tokens-do-not-inherit-dacls.patch
 	patch_apply server-LABEL_SECURITY_INFORMATION/0008-advapi32-tests-Show-that-tokens-do-not-inherit-sacls.patch
 	patch_apply server-LABEL_SECURITY_INFORMATION/0009-server-Assign-a-default-label-high-to-all-tokens.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "server: Implement querying the security label of a security descriptor.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement changing the label of a security descriptor.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Do not set SE_{D,S}ACL_PRESENT if no {D,S}ACL was set.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement setting a security descriptor when duplicating tokens.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Add basic tests for token security descriptors.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add back a dropped test.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit security descriptors during duplication.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit dacls while creating child processes.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit sacls / mandatory labels while creating child processes.", 1 },';

@@ -1,4 +1,4 @@
-From f7d7038841ba9db93e50fee369e3e8c2b595c74b Mon Sep 17 00:00:00 2001
+From c58ae1d5ffa3fa25798833d84edfc56ae0394753 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 12 Jan 2017 05:58:02 +0100
 Subject: server: Assign a default label (high) to all tokens.
@@ -11,20 +11,20 @@ Subject: server: Assign a default label (high) to all tokens.
  4 files changed, 103 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 579b444a560..d6ea3a19fad 100644
+index 0ed683103a..bc33a623cb 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -6487,6 +6487,8 @@ static void test_AddMandatoryAce(void)
+@@ -6386,6 +6386,8 @@ static void test_AddMandatoryAce(void)
                              {SECURITY_MANDATORY_LOW_RID}};
      static SID medium_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
                                 {SECURITY_MANDATORY_MEDIUM_RID}};
 +    static SID high_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
 +                             {SECURITY_MANDATORY_HIGH_RID}};
-     SYSTEM_MANDATORY_LABEL_ACE *ace;
+     static SID_IDENTIFIER_AUTHORITY sia_world = {SECURITY_WORLD_SID_AUTHORITY};
      char buffer_sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
      SECURITY_DESCRIPTOR *sd2, *sd = (SECURITY_DESCRIPTOR *)&buffer_sd;
-@@ -6708,6 +6710,45 @@ static void test_AddMandatoryAce(void)
- 
+@@ -6641,6 +6643,45 @@ static void test_AddMandatoryAce(void)
+     FreeSid(everyone);
      HeapFree(GetProcessHeap(), 0, sd2);
      CloseHandle(handle);
 +
@@ -39,19 +39,19 @@ index 579b444a560..d6ea3a19fad 100644
 +    ret = GetKernelObjectSecurity(handle, LABEL_SECURITY_INFORMATION, sd2, size, &size);
 +    ok(ret, "GetKernelObjectSecurity failed %u\n", GetLastError());
 +
-+    sAcl = (void *)0xdeadbeef;
++    sacl = (void *)0xdeadbeef;
 +    present = FALSE;
 +    defaulted = TRUE;
-+    ret = GetSecurityDescriptorSacl(sd2, &present, &sAcl, &defaulted);
++    ret = GetSecurityDescriptorSacl(sd2, &present, &sacl, &defaulted);
 +    ok(ret, "GetSecurityDescriptorSacl failed with %u\n", GetLastError());
-+    ok(present, "sAcl not present\n");
-+    ok(sAcl != (void *)0xdeadbeef, "sAcl not set\n");
-+    ok(sAcl->AceCount == 1, "Expected 1 ACEs, got %d\n", sAcl->AceCount);
-+    ok(!defaulted, "sAcl defaulted\n");
++    ok(present, "sacl not present\n");
++    ok(sacl != (void *)0xdeadbeef, "sacl not set\n");
++    ok(sacl->AceCount == 1, "Expected 1 ACEs, got %d\n", sacl->AceCount);
++    ok(!defaulted, "sacl defaulted\n");
 +
 +    index = 0;
 +    found = FALSE;
-+    while (pGetAce( sAcl, index++, (void **)&ace ))
++    while (pGetAce( sacl, index++, (void **)&ace ))
 +    {
 +        if (ace->Header.AceType == SYSTEM_MANDATORY_LABEL_ACE_TYPE &&
 +            (EqualSid(&ace->SidStart, &medium_level) || EqualSid(&ace->SidStart, &high_level)))
@@ -69,19 +69,19 @@ index 579b444a560..d6ea3a19fad 100644
  }
  
  static void test_system_security_access(void)
-@@ -7282,7 +7323,6 @@ static void test_token_security_descriptor(void)
+@@ -7072,7 +7113,6 @@ static void test_token_security_descriptor(void)
      defaulted = TRUE;
-     ret = GetSecurityDescriptorDacl(sd2, &present, &pAcl2, &defaulted);
+     ret = GetSecurityDescriptorDacl(sd2, &present, &acl2, &defaulted);
      ok(ret, "GetSecurityDescriptorDacl failed with %u\n", GetLastError());
 -    todo_wine
-     ok(present, "pAcl2 not present\n");
-     ok(pAcl2 != (void *)0xdeadbeef, "pAcl2 not set\n");
-     ok(!defaulted, "pAcl2 defaulted\n");
+     ok(present, "acl2 not present\n");
+     ok(acl2 != (void *)0xdeadbeef, "acl2 not set\n");
+     ok(!defaulted, "acl2 defaulted\n");
 diff --git a/server/process.c b/server/process.c
-index f476cfaf0fe..eaf61eaea99 100644
+index 5b1860df14..98dcb21f1a 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -574,6 +574,13 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+@@ -571,6 +571,13 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
      }
      if (!process->handles || !process->token) goto error;
  
@@ -96,7 +96,7 @@ index f476cfaf0fe..eaf61eaea99 100644
      if (pipe( request_pipe ) == -1)
      {
 diff --git a/server/security.h b/server/security.h
-index 0342f643187..ee927f91a3d 100644
+index 4d9db9ae41..606dbb2ab2 100644
 --- a/server/security.h
 +++ b/server/security.h
 @@ -48,11 +48,13 @@ extern const PSID security_local_system_sid;
@@ -114,7 +114,7 @@ index 0342f643187..ee927f91a3d 100644
                                        int impersonation_level, const struct security_descriptor *sd );
  extern int token_check_privileges( struct token *token, int all_required,
 diff --git a/server/token.c b/server/token.c
-index 85e931b2876..3b5c498147d 100644
+index dc3887967c..a1c615eec3 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -70,6 +70,7 @@ static const SID interactive_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY },
@@ -133,7 +133,7 @@ index 85e931b2876..3b5c498147d 100644
  
  static luid_t prev_luid_value = { 1000, 0 };
  
-@@ -631,6 +633,57 @@ struct sid_data
+@@ -734,6 +736,57 @@ struct sid_data
      unsigned int subauth[MAX_SUBAUTH_COUNT];
  };
  
@@ -192,5 +192,5 @@ index 85e931b2876..3b5c498147d 100644
  {
      struct token *token = NULL;
 -- 
-2.11.0
+2.13.1
 

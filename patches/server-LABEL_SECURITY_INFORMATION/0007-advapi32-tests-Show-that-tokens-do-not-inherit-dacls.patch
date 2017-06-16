@@ -1,37 +1,38 @@
-From e47cea1eefd5287c7bf08b86419e43a7f54c718e Mon Sep 17 00:00:00 2001
+From 21b2087eb06737076d603559bc7ba9059f8414d0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 12 Jan 2017 05:37:42 +0100
 Subject: advapi32/tests: Show that tokens do not inherit dacls while creating
  child processes.
 
 ---
- dlls/advapi32/tests/security.c | 133 +++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 129 insertions(+), 4 deletions(-)
+ dlls/advapi32/tests/security.c | 135 +++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 130 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 027bef76b00..d0fc463d008 100644
+index f4f2519a04..8316de84d7 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -7046,12 +7046,15 @@ static void test_token_security_descriptor(void)
-     ACCESS_ALLOWED_ACE *ace;
+@@ -6942,13 +6942,16 @@ static void test_token_security_descriptor(void)
+ {
      char buffer_sd[SECURITY_DESCRIPTOR_MIN_LENGTH];
      SECURITY_DESCRIPTOR *sd = (SECURITY_DESCRIPTOR *)&buffer_sd, *sd2;
 -    char buffer_acl[256];
--    ACL *pAcl = (ACL *)&buffer_acl, *pAcl2;
+-    ACL *acl = (ACL *)&buffer_acl, *acl2;
 +    char buffer_acl[256], buffer[MAX_PATH];
-+    ACL *pAcl = (ACL *)&buffer_acl, *pAcl2, *pAclChild;
-     BOOL defaulted, present, ret, found;
++    ACL *acl = (ACL *)&buffer_acl, *acl2, *acl_child;
+     BOOL defaulted, present, ret;
+     ACCESS_ALLOWED_ACE *ace;
+     SECURITY_ATTRIBUTES sa;
      HANDLE token, token2, token3;
+-    DWORD size, index;
 +    EXPLICIT_ACCESSW exp_access;
 +    PROCESS_INFORMATION info;
-     SECURITY_ATTRIBUTES sa;
--    DWORD size, index;
-+    DWORD size, index, retd;
 +    STARTUPINFOA startup;
++    DWORD size, index, retd;
+     BOOL found;
      PSID psid;
  
-     if (!pDuplicateTokenEx || !pConvertStringSidToSidA || !pAddAccessAllowedAceEx || !pGetAce || !pSetEntriesInAclW)
-@@ -7158,6 +7161,76 @@ static void test_token_security_descriptor(void)
+@@ -7051,6 +7054,76 @@ static void test_token_security_descriptor(void)
  
      HeapFree(GetProcessHeap(), 0, sd2);
  
@@ -46,22 +47,22 @@ index 027bef76b00..d0fc463d008 100644
 +    ret = GetKernelObjectSecurity(token, DACL_SECURITY_INFORMATION, sd2, size, &size);
 +    ok(ret, "GetKernelObjectSecurity failed %u\n", GetLastError());
 +
-+    pAcl2 = (void *)0xdeadbeef;
++    acl2 = (void *)0xdeadbeef;
 +    present = FALSE;
 +    defaulted = TRUE;
-+    ret = GetSecurityDescriptorDacl(sd2, &present, &pAcl2, &defaulted);
++    ret = GetSecurityDescriptorDacl(sd2, &present, &acl2, &defaulted);
 +    ok(ret, "GetSecurityDescriptorDacl failed with %u\n", GetLastError());
 +    todo_wine
-+    ok(present, "pAcl2 not present\n");
-+    ok(pAcl2 != (void *)0xdeadbeef, "pAcl2 not set\n");
-+    ok(!defaulted, "pAcl2 defaulted\n");
++    ok(present, "acl2 not present\n");
++    ok(acl2 != (void *)0xdeadbeef, "acl2 not set\n");
++    ok(!defaulted, "acl2 defaulted\n");
 +
 +    /* check that the ace we add for testing does not already exist! */
-+    if (pAcl2)
++    if (acl2)
 +    {
 +        index = 0;
 +        found = FALSE;
-+        while (pGetAce( pAcl2, index++, (void **)&ace ))
++        while (pGetAce( acl2, index++, (void **)&ace ))
 +        {
 +            if (ace->Header.AceType == ACCESS_ALLOWED_ACE_TYPE && EqualSid(&ace->SidStart, psid))
 +                found = TRUE;
@@ -78,14 +79,14 @@ index 027bef76b00..d0fc463d008 100644
 +    exp_access.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
 +    exp_access.Trustee.ptstrName = (void*)psid;
 +
-+    retd = pSetEntriesInAclW(1, &exp_access, pAcl2, &pAclChild);
++    retd = pSetEntriesInAclW(1, &exp_access, acl2, &acl_child);
 +    ok(retd == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %u\n", retd);
 +
 +    memset(sd, 0, sizeof(buffer_sd));
 +    ret = InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION);
 +    ok(ret, "InitializeSecurityDescriptor failed with %u\n", GetLastError());
 +
-+    ret = SetSecurityDescriptorDacl(sd, TRUE, pAclChild, FALSE);
++    ret = SetSecurityDescriptorDacl(sd, TRUE, acl_child, FALSE);
 +    ok(ret, "SetSecurityDescriptorDacl failed with %u\n", GetLastError());
 +
 +    ret = SetKernelObjectSecurity(token, DACL_SECURITY_INFORMATION, sd);
@@ -104,12 +105,12 @@ index 027bef76b00..d0fc463d008 100644
 +    CloseHandle(info.hProcess);
 +    CloseHandle(info.hThread);
 +
-+    LocalFree(pAclChild);
++    LocalFree(acl_child);
      LocalFree(psid);
  
      CloseHandle(token3);
-@@ -7165,6 +7238,53 @@ static void test_token_security_descriptor(void)
-     CloseHandle(token);
+@@ -7197,6 +7270,53 @@ static void test_GetExplicitEntriesFromAclW(void)
+     HeapFree(GetProcessHeap(), 0, old_acl);
  }
  
 +static void test_child_token_sd(void)
@@ -162,7 +163,7 @@ index 027bef76b00..d0fc463d008 100644
  START_TEST(security)
  {
      init();
-@@ -7172,7 +7292,10 @@ START_TEST(security)
+@@ -7204,7 +7324,10 @@ START_TEST(security)
  
      if (myARGC >= 3)
      {
@@ -174,14 +175,16 @@ index 027bef76b00..d0fc463d008 100644
          return;
      }
      test_kernel_objects_security();
-@@ -7215,5 +7338,7 @@ START_TEST(security)
+@@ -7246,6 +7369,8 @@ START_TEST(security)
+     test_GetSidIdentifierAuthority();
      test_pseudo_tokens();
      test_maximum_allowed();
+-    test_token_security_descriptor();
      test_GetExplicitEntriesFromAclW();
 +
 +    /* must be the last test, modifies process token */
-     test_token_security_descriptor();
++    test_token_security_descriptor();
  }
 -- 
-2.11.0
+2.13.1
 

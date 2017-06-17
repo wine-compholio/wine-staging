@@ -1,4 +1,4 @@
-From 9d3cd3764ad26ae8f190524943ce63a771f6b992 Mon Sep 17 00:00:00 2001
+From 3f11f4c46bc1242c96fd0779f6594eadfc5ab5ff Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 00:16:08 +0200
 Subject: loader: Implement preloader for Mac OS.
@@ -10,8 +10,8 @@ Subject: loader: Implement preloader for Mac OS.
  libs/wine/config.c   |   2 +-
  loader/Makefile.in   |   4 +-
  loader/main.c        |  44 +----
- loader/preloader.c   | 451 +++++++++++++++++++++++++++++++++++++++++++++++++--
- 7 files changed, 475 insertions(+), 52 deletions(-)
+ loader/preloader.c   | 468 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 7 files changed, 491 insertions(+), 53 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
 index 22b2ae7230..29b6cbdd53 100644
@@ -215,7 +215,7 @@ index 13740c7b3c..5212e3f079 100644
  
      wine_init( argc, argv, error, sizeof(error) );
 diff --git a/loader/preloader.c b/loader/preloader.c
-index 5e6add7830..5b09b79cf3 100644
+index 5e6add7830..90ab6764fa 100644
 --- a/loader/preloader.c
 +++ b/loader/preloader.c
 @@ -4,6 +4,8 @@
@@ -248,27 +248,44 @@ index 5e6add7830..5b09b79cf3 100644
  #ifndef MAP_COPY
  #define MAP_COPY MAP_PRIVATE
  #endif
-@@ -109,7 +110,8 @@
+@@ -108,21 +109,63 @@
+ 
  static struct wine_preload_info preload_info[] =
  {
- #ifdef __i386__
--    { (void *)0x00000000, 0x00010000 },  /* low 64k */
++/* On macOS, we allocate the low 64k area in two steps because PAGEZERO
++ * might not always be available. Also, the top-down allocations area
++ * on x86_64 is moved because the address on Linux exceeds the maximum
++ * allowed user space limit. Please note that on Linux, it is better to
++ * allocate the low 64k as a single chunk to avoid SELinux warnings on
++ * systems with CONFIG_DEFAULT_MMAP_MIN_ADDR < CONFIG_LSM_MMAP_MIN_ADDR. */
++#ifdef __APPLE__
++#ifdef __i386__
 +    { (void *)0x00000000, 0x00001000 },  /* first page */
 +    { (void *)0x00001000, 0x0000f000 },  /* low 64k */
++    { (void *)0x00010000, 0x00100000 },  /* DOS area */
++    { (void *)0x00110000, 0x67ef0000 },  /* low memory area */
++    { (void *)0x7f000000, 0x03000000 },  /* top-down allocations + shared heap + virtual heap */
++#else  /* __i386__ */
++    { (void *)0x000000010000, 0x00100000 },  /* DOS area */
++    { (void *)0x000000110000, 0x67ef0000 },  /* low memory area */
++    { (void *)0x00007ff00000, 0x000f0000 },  /* shared user data */
++    { (void *)0x7fff40000000, 0x01ff0000 },  /* top-down allocations + virtual heap */
++#endif /* __i386__ */
++#else  /* __APPLE__ */
+ #ifdef __i386__
+     { (void *)0x00000000, 0x00010000 },  /* low 64k */
      { (void *)0x00010000, 0x00100000 },  /* DOS area */
      { (void *)0x00110000, 0x67ef0000 },  /* low memory area */
      { (void *)0x7f000000, 0x03000000 },  /* top-down allocations + shared heap + virtual heap */
-@@ -117,12 +119,38 @@ static struct wine_preload_info preload_info[] =
+-#else
++#else  /* __i386__ */
      { (void *)0x000000010000, 0x00100000 },  /* DOS area */
      { (void *)0x000000110000, 0x67ef0000 },  /* low memory area */
      { (void *)0x00007ff00000, 0x000f0000 },  /* shared user data */
-+#ifdef __APPLE__
-+    /* address below exceeds maximum allowed user space address in macOS */
-+    { (void *)0x7fff40000000, 0x01ff0000 },  /* top-down allocations + virtual heap */
-+#else
      { (void *)0x7ffffe000000, 0x01ff0000 },  /* top-down allocations + virtual heap */
- #endif
-+#endif
+-#endif
++#endif /* __i386__ */
++#endif /* __APPLE__ */
      { 0, 0 },                            /* PE exe range set with WINEPRELOADRESERVE */
      { 0, 0 }                             /* end of list */
  };
@@ -297,7 +314,7 @@ index 5e6add7830..5b09b79cf3 100644
  /* debugging */
  #undef DUMP_SEGMENTS
  #undef DUMP_AUX_INFO
-@@ -168,6 +196,8 @@ struct wld_auxv
+@@ -168,6 +211,8 @@ struct wld_auxv
      } a_un;
  };
  
@@ -306,7 +323,7 @@ index 5e6add7830..5b09b79cf3 100644
  /*
   * The __bb_init_func is an empty function only called when file is
   * compiled with gcc flags "-fprofile-arcs -ftest-coverage".  This
-@@ -182,6 +212,201 @@ void *__stack_chk_guard = 0;
+@@ -182,6 +227,201 @@ void *__stack_chk_guard = 0;
  void __stack_chk_fail_local(void) { return; }
  void __stack_chk_fail(void) { return; }
  
@@ -508,7 +525,7 @@ index 5e6add7830..5b09b79cf3 100644
  #ifdef __i386__
  
  /* data for setting up the glibc-style thread-local storage in %gs */
-@@ -458,16 +683,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
+@@ -458,16 +698,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
  #else
  #error preloader not implemented for this CPU
  #endif
@@ -528,7 +545,7 @@ index 5e6add7830..5b09b79cf3 100644
  {
      if (len <= 0) return 0;
      while ((--len > 0) && *str1 && (*str1 == *str2)) { str1++; str2++; }
-@@ -560,6 +786,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
+@@ -560,6 +801,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
      wld_exit(1);
  }
  
@@ -537,7 +554,7 @@ index 5e6add7830..5b09b79cf3 100644
  #ifdef DUMP_AUX_INFO
  /*
   *  Dump interesting bits of the ELF auxv_t structure that is passed
-@@ -1039,6 +1267,8 @@ found:
+@@ -1039,6 +1282,8 @@ found:
      return (void *)(symtab[idx].st_value + map->l_addr);
  }
  
@@ -546,7 +563,7 @@ index 5e6add7830..5b09b79cf3 100644
  /*
   *  preload_reserve
   *
-@@ -1070,6 +1300,7 @@ static void preload_reserve( const char *str )
+@@ -1070,6 +1315,7 @@ static void preload_reserve( const char *str )
  
      /* sanity checks */
      if (end <= start) start = end = NULL;
@@ -554,7 +571,7 @@ index 5e6add7830..5b09b79cf3 100644
      else if ((char *)end > preloader_start &&
               (char *)start <= preloader_end)
      {
-@@ -1077,6 +1308,7 @@ static void preload_reserve( const char *str )
+@@ -1077,6 +1323,7 @@ static void preload_reserve( const char *str )
                       start, end, preloader_start, preloader_end );
          start = end = NULL;
      }
@@ -562,7 +579,7 @@ index 5e6add7830..5b09b79cf3 100644
  
      /* check for overlap with low memory areas */
      for (i = 0; preload_info[i].size; i++)
-@@ -1101,7 +1333,7 @@ error:
+@@ -1101,7 +1348,7 @@ error:
  }
  
  /* check if address is in one of the reserved ranges */
@@ -571,7 +588,7 @@ index 5e6add7830..5b09b79cf3 100644
  {
      int i;
  
-@@ -1125,6 +1357,203 @@ static void remove_preload_range( int i )
+@@ -1125,6 +1372,203 @@ static void remove_preload_range( int i )
      }
  }
  
@@ -775,7 +792,7 @@ index 5e6add7830..5b09b79cf3 100644
  /*
   *  is_in_preload_range
   *
-@@ -1293,3 +1722,5 @@ void* wld_start( void **stack )
+@@ -1293,3 +1737,5 @@ void* wld_start( void **stack )
  
      return (void *)ld_so_map.l_entry;
  }

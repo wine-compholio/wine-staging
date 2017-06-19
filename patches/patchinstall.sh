@@ -285,6 +285,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
+	enable_ntdll_x86_64_ExceptionInformation="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -1099,6 +1100,9 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
+			;;
+		ntdll-x86_64_ExceptionInformation)
+			enable_ntdll_x86_64_ExceptionInformation="$2"
 			;;
 		ntoskrnl-DriverTest)
 			enable_ntoskrnl_DriverTest="$2"
@@ -2459,14 +2463,22 @@ if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntdll-Builtin_Prot depends on that."
 	fi
+	if test "$enable_ntdll_x86_64_ExceptionInformation" -gt 1; then
+		abort "Patchset ntdll-x86_64_ExceptionInformation disabled, but ntdll-Builtin_Prot depends on that."
+	fi
 	enable_ntdll_User_Shared_Data=1
+	enable_ntdll_x86_64_ExceptionInformation=1
 fi
 
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
 		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
 	fi
+	if test "$enable_ntdll_x86_64_ExceptionInformation" -gt 1; then
+		abort "Patchset ntdll-x86_64_ExceptionInformation disabled, but ntdll-User_Shared_Data depends on that."
+	fi
 	enable_ntdll_Hide_Wine_Exports=1
+	enable_ntdll_x86_64_ExceptionInformation=1
 fi
 
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
@@ -5668,10 +5680,22 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-x86_64_ExceptionInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_x86_64_ExceptionInformation" -eq 1; then
+	patch_apply ntdll-x86_64_ExceptionInformation/0001-ntdll-Set-proper-ExceptionInformation-0-for-x86_64-e.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set proper ExceptionInformation[0] for x86_64 exceptions.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-User_Shared_Data
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29168] Update user shared data at realtime
@@ -5696,7 +5720,8 @@ fi
 # Patchset ntdll-Builtin_Prot
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-
+# | 	User_Shared_Data
 # |
 # | Modified files:
 # |   *	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c

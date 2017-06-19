@@ -1,4 +1,4 @@
-From 51f9291677535a3246a7727c1563fe62e9a5756e Mon Sep 17 00:00:00 2001
+From e313cf4b443d63f2934062336472454224373e81 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: ntdll: Create thread to update user_shared_data time values when
@@ -13,7 +13,7 @@ Subject: ntdll: Create thread to update user_shared_data time values when
  5 files changed, 117 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 2e0e79f8e8d..d53488c7652 100644
+index 2e0e79f8e8..d53488c765 100644
 --- a/dlls/kernel32/cpu.c
 +++ b/dlls/kernel32/cpu.c
 @@ -46,7 +46,7 @@
@@ -35,7 +35,7 @@ index 2e0e79f8e8d..d53488c7652 100644
      return FALSE;
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index f4e002a0609..ac1ab2d2099 100644
+index f4e002a060..ac1ab2d209 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3191,6 +3191,37 @@ static void start_process( void *arg )
@@ -85,7 +85,7 @@ index f4e002a0609..ac1ab2d2099 100644
  
      LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 6e516123806..9d066d637c7 100644
+index 6e51612380..9d066d637c 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -176,6 +176,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
@@ -99,7 +99,7 @@ index 6e516123806..9d066d637c7 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 9399fbcb5c6..cc65f3b48d6 100644
+index 9399fbcb5c..cc65f3b48d 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -43,6 +43,7 @@
@@ -208,7 +208,7 @@ index 9399fbcb5c6..cc65f3b48d6 100644
      /* allocate and initialize the PEB */
  
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index ee9c8d0195d..387379a5882 100644
+index ee9c8d0195..2889e8babc 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -1497,6 +1497,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
@@ -223,7 +223,7 @@ index ee9c8d0195d..387379a5882 100644
              /* ignore fault if page is writable now */
              if (VIRTUAL_GetUnixProt( *vprot ) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
-+        else if (page == user_shared_data_external)
++        else if (!err && page == user_shared_data_external)
 +        {
 +            if (!(*vprot & VPROT_READ))
 +            {

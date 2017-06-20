@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "abaddc871842ba4ec0156f4bfed9939b44052ee4"
+	echo "3f6b7c34dbf76fdbf7561a3fe5019713b10d1c9e"
 }
 
 # Show version information
@@ -6859,18 +6859,8 @@ fi
 # |   *	dlls/propsys/propvar.c, dlls/propsys/tests/propsys.c
 # |
 if test "$enable_propsys_Improvements" -eq 1; then
-	patch_apply propsys-Improvements/0001-propsys-Add-support-for-VT_I1-and-VT_UI1-to-PropVari.patch
-	patch_apply propsys-Improvements/0002-propsys-Add-support-for-VT_LPWSTR-and-VT_BSTR-to-Pro.patch
-	patch_apply propsys-Improvements/0003-propsys-Add-support-for-VT_BSTR-to-PropVariantChange.patch
-	patch_apply propsys-Improvements/0004-propsys-Make-VT_FILETIME-handling-by-PropVariantChan.patch
-	patch_apply propsys-Improvements/0005-propsys-Add-support-for-VT_LPSTR-to-PropVariantChang.patch
 	patch_apply propsys-Improvements/0006-propsys-Add-support-for-VT_LPSTR-and-VT_LPWSTR-to-Pr.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Add support for VT_I1 and VT_UI1 to PropVariantChangeType.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Add support for VT_LPWSTR and VT_BSTR to PropVariantToStringAlloc.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Add support for VT_BSTR to PropVariantChangeType.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Make VT_FILETIME handling by PropVariantChangeType more implicit.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Add support for VT_LPSTR to PropVariantChangeType.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Add support for VT_LPSTR and VT_LPWSTR to PropVariantCompareEx.", 2 },';
 	) >> "$patchlist"
 fi

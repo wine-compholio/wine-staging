@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "95a49bdce6cd5a35d5035456e576ab81239fb081"
+	echo "abaddc871842ba4ec0156f4bfed9939b44052ee4"
 }
 
 # Show version information
@@ -321,7 +321,6 @@ patch_enable_all ()
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
-	enable_server_LABEL_SECURITY_INFORMATION="$1"
 	enable_server_Map_EXDEV_Error="$1"
 	enable_server_Misc_ACL="$1"
 	enable_server_Object_Types="$1"
@@ -433,7 +432,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_GDI_Rendering="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
@@ -1209,9 +1207,6 @@ patch_enable ()
 		server-Key_State)
 			enable_server_Key_State="$2"
 			;;
-		server-LABEL_SECURITY_INFORMATION)
-			enable_server_LABEL_SECURITY_INFORMATION="$2"
-			;;
 		server-Map_EXDEV_Error)
 			enable_server_Map_EXDEV_Error="$2"
 			;;
@@ -1544,9 +1539,6 @@ patch_enable ()
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
-			;;
-		wined3d-GDI_Rendering)
-			enable_wined3d_GDI_Rendering="$2"
 			;;
 		wined3d-GTX_560M)
 			enable_wined3d_GTX_560M="$2"
@@ -2321,6 +2313,17 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 	enable_server_Stored_ACLs=1
 fi
 
+if test "$enable_server_Stored_ACLs" -eq 1; then
+	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
+		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
+	fi
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
+	fi
+	enable_ntdll_DOS_Attributes=1
+	enable_server_File_Permissions=1
+fi
+
 if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
 	if test "$enable_oleaut32_Load_Save_EMF" -gt 1; then
 		abort "Patchset oleaut32-Load_Save_EMF disabled, but oleaut32-OLEPictureImpl_SaveAsFile depends on that."
@@ -2661,36 +2664,10 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 fi
 
 if test "$enable_advapi32_BuildSecurityDescriptor" -eq 1; then
-	if test "$enable_server_LABEL_SECURITY_INFORMATION" -gt 1; then
-		abort "Patchset server-LABEL_SECURITY_INFORMATION disabled, but advapi32-BuildSecurityDescriptor depends on that."
-	fi
-	enable_server_LABEL_SECURITY_INFORMATION=1
-fi
-
-if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
 	if test "$enable_advapi32_GetExplicitEntriesFromAclW" -gt 1; then
-		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
-	fi
-	if test "$enable_server_Misc_ACL" -gt 1; then
-		abort "Patchset server-Misc_ACL disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
-	fi
-	if test "$enable_server_Stored_ACLs" -gt 1; then
-		abort "Patchset server-Stored_ACLs disabled, but server-LABEL_SECURITY_INFORMATION depends on that."
+		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but advapi32-BuildSecurityDescriptor depends on that."
 	fi
 	enable_advapi32_GetExplicitEntriesFromAclW=1
-	enable_server_Misc_ACL=1
-	enable_server_Stored_ACLs=1
-fi
-
-if test "$enable_server_Stored_ACLs" -eq 1; then
-	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
-		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
-	fi
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
-	fi
-	enable_ntdll_DOS_Attributes=1
-	enable_server_File_Permissions=1
 fi
 
 
@@ -2714,11 +2691,11 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
-# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/gdiplus/image.c,
-# | 	dlls/kernel32/oldconfig.c, dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
-# | 	dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c,
-# | 	dlls/vbscript/vbdisp.c, dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
+# | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
+# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c,
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, include/wine/list.h,
+# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
@@ -2729,7 +2706,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0007-rsaenh-tests-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0008-kernel32-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0009-ws2_32-tests-Work-around-an-incorrect-detection-in-G.patch
-	patch_apply Compiler_Warnings/0011-gdiplus-Initialize-containers-list-in-GdipCloneImage.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0019-dsound-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2753,7 +2729,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "rsaenh/tests: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "gdiplus: Initialize containers list in GdipCloneImage.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
@@ -2856,144 +2831,10 @@ if test "$enable_advapi32_GetExplicitEntriesFromAclW" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-DOS_Attributes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#9158] Support for DOS hidden/system file attributes
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
-# | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
-# |
-if test "$enable_ntdll_DOS_Attributes" -eq 1; then
-	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
-	patch_apply ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
-	patch_apply ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch
-	patch_apply ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch
-	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
-	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
-	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
-	patch_apply ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-File_Permissions
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38970] Improve mapping of DACL to file permissions
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c
-# |
-if test "$enable_server_File_Permissions" -eq 1; then
-	patch_apply server-File_Permissions/0001-server-Improve-STATUS_CANNOT_DELETE-checks-for-direc.patch
-	patch_apply server-File_Permissions/0002-server-Allow-to-open-files-without-any-permission-bi.patch
-	patch_apply server-File_Permissions/0003-server-When-creating-new-directories-temporarily-giv.patch
-	patch_apply server-File_Permissions/0004-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
-	patch_apply server-File_Permissions/0005-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
-	patch_apply server-File_Permissions/0006-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
-	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
-	patch_apply server-File_Permissions/0008-server-Improve-mapping-of-DACL-to-file-permissions.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
-		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Stored_ACLs
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33576] Support for stored file ACLs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
-# | 	server/object.h
-# |
-if test "$enable_server_Stored_ACLs" -eq 1; then
-	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
-	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
-	patch_apply server-Stored_ACLs/0003-server-Add-a-helper-function-set_sd_from_token_inter.patch
-	patch_apply server-Stored_ACLs/0004-server-Temporarily-store-the-full-security-descripto.patch
-	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
-	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
-	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-LABEL_SECURITY_INFORMATION
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	advapi32-GetExplicitEntriesFromAclW, server-Misc_ACL, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42014] Implement support for LABEL_SECURITY_INFORMATION
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_LABEL_SECURITY_INFORMATION" -eq 1; then
-	patch_apply server-LABEL_SECURITY_INFORMATION/0001-advapi32-tests-Add-back-a-dropped-test.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0006-advapi32-tests-Show-that-tokens-do-not-inherit-secur.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0007-advapi32-tests-Show-that-tokens-do-not-inherit-dacls.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0008-advapi32-tests-Show-that-tokens-do-not-inherit-sacls.patch
-	patch_apply server-LABEL_SECURITY_INFORMATION/0009-server-Assign-a-default-label-high-to-all-tokens.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add back a dropped test.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit security descriptors during duplication.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit dacls while creating child processes.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Show that tokens do not inherit sacls / mandatory labels while creating child processes.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Assign a default label (high) to all tokens.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-BuildSecurityDescriptor
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	advapi32-GetExplicitEntriesFromAclW, server-Misc_ACL, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs,
-# | 	server-LABEL_SECURITY_INFORMATION
+# |   *	advapi32-GetExplicitEntriesFromAclW
 # |
 # | Modified files:
 # |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
@@ -3023,6 +2864,23 @@ if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
 		printf '%s\n' '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
+# |
+if test "$enable_server_Misc_ACL" -eq 1; then
+	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
+	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4808,6 +4666,35 @@ if test "$enable_kernel32_COMSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-File_Permissions
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38970] Improve mapping of DACL to file permissions
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c
+# |
+if test "$enable_server_File_Permissions" -eq 1; then
+	patch_apply server-File_Permissions/0001-server-Improve-STATUS_CANNOT_DELETE-checks-for-direc.patch
+	patch_apply server-File_Permissions/0002-server-Allow-to-open-files-without-any-permission-bi.patch
+	patch_apply server-File_Permissions/0003-server-When-creating-new-directories-temporarily-giv.patch
+	patch_apply server-File_Permissions/0004-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
+	patch_apply server-File_Permissions/0005-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
+	patch_apply server-File_Permissions/0006-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
+	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
+	patch_apply server-File_Permissions/0008-server-Improve-mapping-of-DACL-to-file-permissions.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -5748,6 +5635,36 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-DOS_Attributes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#9158] Support for DOS hidden/system file attributes
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
+# | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
+# |
+if test "$enable_ntdll_DOS_Attributes" -eq 1; then
+	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
+	patch_apply ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
+	patch_apply ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch
+	patch_apply ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch
+	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
+	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
+	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
+	patch_apply ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7112,6 +7029,37 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Stored_ACLs
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, server-File_Permissions
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33576] Support for stored file ACLs
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
+# | 	server/object.h
+# |
+if test "$enable_server_Stored_ACLs" -eq 1; then
+	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
+	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
+	patch_apply server-Stored_ACLs/0003-server-Add-a-helper-function-set_sd_from_token_inter.patch
+	patch_apply server-Stored_ACLs/0004-server-Temporarily-store-the-full-security-descripto.patch
+	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
+	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
+	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
 	) >> "$patchlist"
 fi
 
@@ -9139,25 +9087,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-GDI_Rendering
-# |
-# | Modified files:
-# |   *	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_GDI_Rendering" -eq 1; then
-	patch_apply wined3d-GDI_Rendering/0001-wined3d-Avoid-NULL-pointer-dereference-when-using-GD.patch
-	patch_apply wined3d-GDI_Rendering/0002-wined3d-Create-CPU-blitter-also-for-GDI-render.patch
-	patch_apply wined3d-GDI_Rendering/0003-wined3d-Fix-memory-leaks-in-blitter_destroy-callback.patch
-	patch_apply wined3d-GDI_Rendering/0004-wined3d-Trigger-frontbuffer-update-in-surface_cpu_bl.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Avoid NULL pointer dereference when using GDI renderer.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Create CPU blitter also for GDI render.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Fix memory leaks in blitter_destroy callbacks.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Trigger frontbuffer update in surface_cpu_blt.", 1 },';
 	) >> "$patchlist"
 fi
 

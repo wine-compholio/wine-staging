@@ -1,33 +1,37 @@
-From 06d43d3d4ee46e7e6f70b43cca3b10cf09a474a6 Mon Sep 17 00:00:00 2001
+From 67ecb071f690c5188777b495dbd3d77916be1ee4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 1 Jun 2017 06:04:53 +0200
-Subject: ntdll: Fix holes in ELF mappings.
+Subject: ntdll: Fix holes in ELF mappings. (v2)
 
 Based on a patch by Andrew Wesie.
 ---
- dlls/ntdll/virtual.c          |  6 ++++++
+ dlls/ntdll/virtual.c          | 10 ++++++++++
  dlls/psapi/tests/psapi_main.c | 14 +++++++++++++-
- 2 files changed, 19 insertions(+), 1 deletion(-)
+ 2 files changed, 23 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 2889e8babc..a6c4ac480f 100644
+index 2889e8babc3..c73d2998703 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1526,6 +1526,12 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1526,6 +1526,16 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
              if (VIRTUAL_GetUnixProt( *vprot ) & PROT_READ) ret = STATUS_SUCCESS;
              else update_shared_data = FALSE;
          }
 +        else if (!err && (view->protect & VPROT_SYSTEM) && (VIRTUAL_GetUnixProt( *vprot ) & PROT_READ))
 +        {
-+            /* ignore fault if page can be made readable */
-+            if (VIRTUAL_SetProt( view, page, page_size, *vprot )) ret = STATUS_SUCCESS;
-+            else *vprot &= ~VPROT_READ; /* don't bother to call VIRTUAL_SetProt again */
++            int unix_prot = VIRTUAL_GetUnixProt( *vprot );
++            unsigned char vec;
++
++            if (!VIRTUAL_SetProt( view, page, page_size, *vprot )) *vprot &= ~(VPROT_READ | VPROT_EXEC);
++            else if (!mincore( page, page_size, &vec ) && (vec & 1)) ret = STATUS_SUCCESS;
++            else if (wine_anon_mmap( page, page_size, unix_prot, MAP_FIXED ) != page) *vprot &= ~(VPROT_READ | VPROT_EXEC);
++            else ret = STATUS_SUCCESS;
 +        }
          if (!on_signal_stack && (*vprot & VPROT_GUARD))
          {
              VIRTUAL_SetProt( view, page, page_size, *vprot & ~VPROT_GUARD );
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index e35a7b694c..e7af5bc61c 100644
+index e35a7b694cb..e7af5bc61cc 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
 @@ -152,6 +152,7 @@ static void test_EnumProcessModules(void)

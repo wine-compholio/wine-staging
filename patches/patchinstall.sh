@@ -5616,7 +5616,7 @@ fi
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	patch_apply ntdll-Builtin_Prot/0001-ntdll-Fix-holes-in-ELF-mappings.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix holes in ELF mappings.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix holes in ELF mappings.", 2 },';
 	) >> "$patchlist"
 fi
 

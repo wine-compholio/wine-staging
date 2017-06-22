@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3f6b7c34dbf76fdbf7561a3fe5019713b10d1c9e"
+	echo "5cbc84e51eca1a8ce35916ddeebe79b4ccbd761d"
 }
 
 # Show version information
@@ -293,7 +293,6 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
-	enable_ole32_OleGetIconOfFile="$1"
 	enable_ole32_STGPROP="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_DispCallFunc="$1"
@@ -1122,9 +1121,6 @@ patch_enable ()
 			;;
 		ole32-HGLOBALStream)
 			enable_ole32_HGLOBALStream="$2"
-			;;
-		ole32-OleGetIconOfFile)
-			enable_ole32_OleGetIconOfFile="$2"
 			;;
 		ole32-STGPROP)
 			enable_ole32_STGPROP="$2"
@@ -6624,18 +6620,6 @@ if test "$enable_ole32_HGLOBALStream" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ole32-OleGetIconOfFile
-# |
-# | Modified files:
-# |   *	dlls/ole32/ole2stubs.c, dlls/ole32/ole32.spec
-# |
-if test "$enable_ole32_OleGetIconOfFile" -eq 1; then
-	patch_apply ole32-OleGetIconOfFile/0001-ole32-Add-stub-for-OleGetIconOfFile.patch
-	(
-		printf '%s\n' '+    { "Zhenbo Li", "ole32: Add stub for OleGetIconOfFile.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ole32-STGPROP
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8766,21 +8750,11 @@ fi
 # | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support, windowscodecs-WICCreateBitmapFromSection
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/Makefile.in, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/metadataquery.c,
-# | 	dlls/windowscodecs/tests/metadata.c, dlls/windowscodecs/windowscodecs.spec, include/wincodec.idl,
-# | 	include/wincodecsdk.idl
+# |   *	dlls/windowscodecs/Makefile.in, dlls/windowscodecs/metadatahandler.c
 # |
 if test "$enable_windowscodecs_MetadataQueryParser" -eq 1; then
-	patch_apply windowscodecs-MetadataQueryParser/0001-windowscodecs-Implement-WICMapGuidToShortName.patch
-	patch_apply windowscodecs-MetadataQueryParser/0002-windowscodecs-Implement-WICMapShortNameToGuid.patch
-	patch_apply windowscodecs-MetadataQueryParser/0003-windowscodecs-Implement-WICMapSchemaToName.patch
-	patch_apply windowscodecs-MetadataQueryParser/0004-windowscodecs-Implement-IWICMetadataQueryReader-GetC.patch
 	patch_apply windowscodecs-MetadataQueryParser/0006-windowscodecs-Simplify-a-bit-comparison-of-two-PROPV.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapGuidToShortName.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapShortNameToGuid.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICMapSchemaToName.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICMetadataQueryReader::GetContainerFormat.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Simplify a bit comparison of two PROPVARIANTs.", 1 },';
 	) >> "$patchlist"
 fi

@@ -438,6 +438,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
+	enable_wined3d_buffer_sync_apple="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1556,6 +1557,9 @@ patch_enable ()
 			;;
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
+			;;
+		wined3d-buffer_sync_apple)
+			enable_wined3d_buffer_sync_apple="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -9099,6 +9103,22 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-buffer_sync_apple
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43196] Fix regression related to buffer_sync_apple handling
+# |
+# | Modified files:
+# |   *	dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/drawprim.c, dlls/wined3d/query.c,
+# | 	dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_buffer_sync_apple" -eq 1; then
+	patch_apply wined3d-buffer_sync_apple/0001-wined3d-Fix-buffer_sync_apple-handling.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Fix regression related to buffer_sync_apple handling.", 1 },';
 	) >> "$patchlist"
 fi
 

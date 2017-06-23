@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5cbc84e51eca1a8ce35916ddeebe79b4ccbd761d"
+	echo "f2bb2064bfdf0e7b369f22c34d680dec6c12493c"
 }
 
 # Show version information
@@ -306,7 +306,6 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
-	enable_propsys_Improvements="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
@@ -1161,9 +1160,6 @@ patch_enable ()
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
-			;;
-		propsys-Improvements)
-			enable_propsys_Improvements="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -6838,18 +6834,6 @@ if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset propsys-Improvements
-# |
-# | Modified files:
-# |   *	dlls/propsys/propvar.c, dlls/propsys/tests/propsys.c
-# |
-if test "$enable_propsys_Improvements" -eq 1; then
-	patch_apply propsys-Improvements/0006-propsys-Add-support-for-VT_LPSTR-and-VT_LPWSTR-to-Pr.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "propsys: Add support for VT_LPSTR and VT_LPWSTR to PropVariantCompareEx.", 2 },';
 	) >> "$patchlist"
 fi
 

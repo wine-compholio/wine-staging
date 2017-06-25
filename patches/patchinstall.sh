@@ -483,6 +483,7 @@ patch_enable_all ()
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
+	enable_xaudio2_get_al_format="$1"
 	enable_xinput9_1_0_Parentsrc="$1"
 }
 
@@ -1692,6 +1693,9 @@ patch_enable ()
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
+			;;
+		xaudio2-get_al_format)
+			enable_xaudio2_get_al_format="$2"
 			;;
 		xinput9_1_0-Parentsrc)
 			enable_xinput9_1_0_Parentsrc="$2"
@@ -9799,6 +9803,21 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xaudio2-get_al_format
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42414] Add support for xaudio2 float formats with more than 2 channels
+# |
+# | Modified files:
+# |   *	dlls/xaudio2_7/xaudio_dll.c
+# |
+if test "$enable_xaudio2_get_al_format" -eq 1; then
+	patch_apply xaudio2-get_al_format/0001-xaudio2-Add-support-for-float-formats-with-more-than.patch
+	(
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "xaudio2: Add support for float formats with more than 2 channels.", 1 },';
 	) >> "$patchlist"
 fi
 

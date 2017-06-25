@@ -7907,7 +7907,7 @@ fi
 if test "$enable_user32_Clip_Cursor" -eq 1; then
 	patch_apply user32-Clip_Cursor/0001-server-Fix-handling-of-cursor-position-clipping.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of cursor position clipping.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve handling of cursor position clipping for empty rectangle.", 2 },';
 	) >> "$patchlist"
 fi
 

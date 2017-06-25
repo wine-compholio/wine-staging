@@ -368,7 +368,6 @@ patch_enable_all ()
 	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_Auto_Radio_Button="$1"
-	enable_user32_Clip_Cursor="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DialogBoxParam="$1"
@@ -447,6 +446,7 @@ patch_enable_all ()
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
+	enable_winex11_ClipCursor="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_SC_KEYMENU="$1"
@@ -1347,9 +1347,6 @@ patch_enable ()
 		user32-Auto_Radio_Button)
 			enable_user32_Auto_Radio_Button="$2"
 			;;
-		user32-Clip_Cursor)
-			enable_user32_Clip_Cursor="$2"
-			;;
 		user32-Combobox_WM_SIZE)
 			enable_user32_Combobox_WM_SIZE="$2"
 			;;
@@ -1583,6 +1580,9 @@ patch_enable ()
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
+			;;
+		winex11-ClipCursor)
+			enable_winex11_ClipCursor="$2"
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
@@ -6929,15 +6929,15 @@ fi
 # Patchset server-ClipCursor
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38087] Fix multithreading issues with fullscreen clipping
+# |   *	[#38791] Fix handling of cursor position clipping
 # |
 # | Modified files:
-# |   *	dlls/winex11.drv/mouse.c
+# |   *	dlls/user32/tests/input.c, server/queue.c
 # |
 if test "$enable_server_ClipCursor" -eq 1; then
-	patch_apply server-ClipCursor/0001-winex11-Forward-all-clipping-requests-to-the-right-t.patch
+	patch_apply server-ClipCursor/0001-server-Fix-handling-of-cursor-position-clipping.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve handling of cursor position clipping for empty rectangle.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -7893,21 +7893,6 @@ if test "$enable_user32_Auto_Radio_Button" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Clip_Cursor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38791] Fix handling of cursor position clipping
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/input.c, server/queue.c
-# |
-if test "$enable_user32_Clip_Cursor" -eq 1; then
-	patch_apply user32-Clip_Cursor/0001-server-Fix-handling-of-cursor-position-clipping.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve handling of cursor position clipping for empty rectangle.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -9263,6 +9248,21 @@ if test "$enable_winex11_CandidateWindowPos" -eq 1; then
 	patch_apply winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch
 	(
 		printf '%s\n' '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-ClipCursor
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38087] Fix multithreading issues with fullscreen clipping
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c
+# |
+if test "$enable_winex11_ClipCursor" -eq 1; then
+	patch_apply winex11-ClipCursor/0001-winex11-Forward-all-clipping-requests-to-the-right-t.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -189,6 +189,7 @@ patch_enable_all ()
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
+	enable_kernel32_MODULE_get_binary_info="$1"
 	enable_kernel32_Misalign_Workaround="$1"
 	enable_kernel32_MoveFile="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -811,6 +812,9 @@ patch_enable ()
 			;;
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
+			;;
+		kernel32-MODULE_get_binary_info)
+			enable_kernel32_MODULE_get_binary_info="$2"
 			;;
 		kernel32-Misalign_Workaround)
 			enable_kernel32_Misalign_Workaround="$2"
@@ -4821,6 +4825,21 @@ if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	patch_apply kernel32-LocaleNameToLCID/0001-kernel32-Silence-repeated-LocaleNameToLCID-unsupport.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "kernel32: Silence repeated LocaleNameToLCID unsupported flags message.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-MODULE_get_binary_info
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43217] Implement detection for position-independent executables
+# |
+# | Modified files:
+# |   *	dlls/kernel32/module.c
+# |
+if test "$enable_kernel32_MODULE_get_binary_info" -eq 1; then
+	patch_apply kernel32-MODULE_get_binary_info/0001-kernel32-Add-detection-for-position-independent-exec.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Add detection for position independent executables.", 1 },';
 	) >> "$patchlist"
 fi
 

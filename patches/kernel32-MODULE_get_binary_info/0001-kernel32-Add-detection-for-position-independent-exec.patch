@@ -1,0 +1,102 @@
+From 07f489ad42fce6f8baa1bc06733c106946857123 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 25 Jun 2017 14:58:23 +0200
+Subject: kernel32: Add detection for position independent executables.
+
+---
+ dlls/kernel32/module.c | 61 ++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 59 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/kernel32/module.c b/dlls/kernel32/module.c
+index badfe1d175b..d5314309926 100644
+--- a/dlls/kernel32/module.c
++++ b/dlls/kernel32/module.c
+@@ -238,13 +238,29 @@ void MODULE_get_binary_info( HANDLE hfile, struct binary_info *info )
+             unsigned char magic[4];
+             unsigned char class;
+             unsigned char data;
+-            unsigned char version;
+-            unsigned char ignored[9];
++            unsigned char ignored1[10];
+             unsigned short type;
+             unsigned short machine;
++            unsigned char ignored2[8];
++            unsigned int phoff;
++            unsigned char ignored3[12];
++            unsigned short phnum;
+         } elf;
+         struct
+         {
++            unsigned char magic[4];
++            unsigned char class;
++            unsigned char data;
++            unsigned char ignored1[10];
++            unsigned short type;
++            unsigned short machine;
++            unsigned char ignored2[12];
++            unsigned long long phoff;
++            unsigned char ignored3[16];
++            unsigned short phnum;
++        } elf64;
++        struct
++        {
+             unsigned int magic;
+             unsigned int cputype;
+             unsigned int cpusubtype;
+@@ -272,12 +288,53 @@ void MODULE_get_binary_info( HANDLE hfile, struct binary_info *info )
+         {
+             header.elf.type = RtlUshortByteSwap( header.elf.type );
+             header.elf.machine = RtlUshortByteSwap( header.elf.machine );
++            if (header.elf.class == 2)
++            {
++                header.elf64.phoff = RtlUlonglongByteSwap( header.elf64.phoff );
++                header.elf64.phnum = RtlUshortByteSwap( header.elf64.phnum );
++            }
++            else
++            {
++                header.elf.phoff = RtlUlongByteSwap( header.elf.phoff );
++                header.elf.phnum = RtlUshortByteSwap( header.elf.phnum );
++            }
+         }
+         switch(header.elf.type)
+         {
+         case 2: info->type = BINARY_UNIX_EXE; break;
+         case 3: info->type = BINARY_UNIX_LIB; break;
+         }
++        if (header.elf.type == 3)
++        {
++            unsigned long long phoff;
++            unsigned short phnum;
++            unsigned int type;
++            if (header.elf.class == 2)
++            {
++                phoff = header.elf64.phoff;
++                phnum = header.elf64.phnum;
++            }
++            else
++            {
++                phoff = header.elf.phoff;
++                phnum = header.elf.phnum;
++            }
++            while (phnum--)
++            {
++                if (SetFilePointer( hfile, phoff, NULL, SEEK_SET ) == -1) return;
++                if (!ReadFile( hfile, &type, sizeof(type), &len, NULL ) || len < sizeof(type)) return;
++#ifdef WORDS_BIGENDIAN
++                if (header.elf.data == 1)
++#else
++                if (header.elf.data == 2)
++#endif
++                {
++                    type = RtlUlongByteSwap( type );
++                }
++                if (type == 3) info->type = BINARY_UNIX_EXE;
++                phoff += (header.elf.class == 2) ? 56 : 32;
++            }
++        }
+         switch(header.elf.machine)
+         {
+         case 3:   info->arch = IMAGE_FILE_MACHINE_I386; break;
+-- 
+2.13.1
+

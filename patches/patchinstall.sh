@@ -213,6 +213,7 @@ patch_enable_all ()
 	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msi_Dummy_Thread="$1"
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
@@ -884,6 +885,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msi-Dummy_Thread)
+			enable_msi_Dummy_Thread="$2"
 			;;
 		msi-MsiGetDatabaseState)
 			enable_msi_MsiGetDatabaseState="$2"
@@ -5234,6 +5238,21 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		printf '%s\n' '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msi-Dummy_Thread
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18070] Workaround COM/MTA issues due to lack of separate msi custom action process
+# |
+# | Modified files:
+# |   *	dlls/msi/action.c
+# |
+if test "$enable_msi_Dummy_Thread" -eq 1; then
+	patch_apply msi-Dummy_Thread/0001-msi-Create-dummy-thread-to-initialize-COM-for-custom.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "msi: Create dummy thread to initialize COM for custom actions.", 1 },';
 	) >> "$patchlist"
 fi
 

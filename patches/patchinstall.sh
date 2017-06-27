@@ -333,6 +333,7 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
+	enable_server_send_hardware_message="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -1245,6 +1246,9 @@ patch_enable ()
 			;;
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
+			;;
+		server-send_hardware_message)
+			enable_server_send_hardware_message="$2"
 			;;
 		setupapi-DelReg)
 			enable_setupapi_DelReg="$2"
@@ -7286,6 +7290,21 @@ if test "$enable_server_device_manager_destroy" -eq 1; then
 	patch_apply server-device_manager_destroy/0001-server-Fix-crash-when-a-device-driver-segfaults-duri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Fix crash when a device driver segfaults during an open file request.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-send_hardware_message
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43102] Improve handling of hooks for normal (non-injected) hardware messages
+# |
+# | Modified files:
+# |   *	server/queue.c
+# |
+if test "$enable_server_send_hardware_message" -eq 1; then
+	patch_apply server-send_hardware_message/0001-server-Improve-handling-of-hooks-for-normal-non-inje.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "server: Improve handling of hooks for normal (non-injected) hardware messages.", 1 },';
 	) >> "$patchlist"
 fi
 

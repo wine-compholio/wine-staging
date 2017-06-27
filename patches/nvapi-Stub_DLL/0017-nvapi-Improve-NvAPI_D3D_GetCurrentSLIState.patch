@@ -1,0 +1,75 @@
+From 4f86b6cc532f3381aafcd1e3b24206e2a3611f86 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Tue, 27 Jun 2017 00:24:24 +0200
+Subject: nvapi: Improve NvAPI_D3D_GetCurrentSLIState.
+
+---
+ dlls/nvapi/nvapi.c | 17 +++++++++++++++--
+ include/nvapi.h    | 20 ++++++++++++++++++--
+ 2 files changed, 33 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/nvapi/nvapi.c b/dlls/nvapi/nvapi.c
+index 545bb5aa47f..ad17354c140 100644
+--- a/dlls/nvapi/nvapi.c
++++ b/dlls/nvapi/nvapi.c
+@@ -544,10 +544,23 @@ static NvAPI_Status CDECL NvAPI_D3D_GetCurrentSLIState(IUnknown *pDevice, NV_GET
+     if (!pDevice || !pSliState)
+         return NVAPI_INVALID_ARGUMENT;
+ 
+-    if (pSliState->version != NV_GET_CURRENT_SLI_STATE_VER)
++    if (pSliState->version != NV_GET_CURRENT_SLI_STATE_VER1 &&
++        pSliState->version != NV_GET_CURRENT_SLI_STATE_VER2)
+         return NVAPI_INCOMPATIBLE_STRUCT_VERSION;
+ 
+-    return NVAPI_NO_ACTIVE_SLI_TOPOLOGY;
++    /* Simulate single GPU */
++    pSliState->maxNumAFRGroups = 1;
++    pSliState->numAFRGroups = 1;
++    pSliState->currentAFRIndex = 0;
++    pSliState->nextFrameAFRIndex = 0;
++    pSliState->previousFrameAFRIndex = 0;
++    pSliState->bIsCurAFRGroupNew = FALSE;
++
++    /* No VR SLI */
++    if (pSliState->version == NV_GET_CURRENT_SLI_STATE_VER2)
++        pSliState->numVRSLIGpus = 0;
++
++    return NVAPI_OK;
+ }
+ 
+ static NvAPI_Status CDECL NvAPI_GetLogicalGPUFromDisplay(NvDisplayHandle hNvDisp, NvLogicalGpuHandle *pLogicalGPU)
+diff --git a/include/nvapi.h b/include/nvapi.h
+index ca95a1ac5ee..2cb4ed31f2b 100644
+--- a/include/nvapi.h
++++ b/include/nvapi.h
+@@ -77,9 +77,25 @@ typedef struct
+     NvU32 nextFrameAFRIndex;
+     NvU32 previousFrameAFRIndex;
+     NvU32 bIsCurAFRGroupNew;
+-} NV_GET_CURRENT_SLI_STATE;
++} NV_GET_CURRENT_SLI_STATE_V1;
+ 
+-#define NV_GET_CURRENT_SLI_STATE_VER  MAKE_NVAPI_VERSION(NV_GET_CURRENT_SLI_STATE, 1)
++typedef struct
++{
++    NvU32 version;
++    NvU32 maxNumAFRGroups;
++    NvU32 numAFRGroups;
++    NvU32 currentAFRIndex;
++    NvU32 nextFrameAFRIndex;
++    NvU32 previousFrameAFRIndex;
++    NvU32 bIsCurAFRGroupNew;
++    NvU32 numVRSLIGpus;
++} NV_GET_CURRENT_SLI_STATE_V2;
++
++#define NV_GET_CURRENT_SLI_STATE_VER1 MAKE_NVAPI_VERSION(NV_GET_CURRENT_SLI_STATE_V1, 1)
++#define NV_GET_CURRENT_SLI_STATE_VER2 MAKE_NVAPI_VERSION(NV_GET_CURRENT_SLI_STATE_V2, 1)
++
++#define NV_GET_CURRENT_SLI_STATE_VER NV_GET_CURRENT_SLI_STATE_VER2
++#define NV_GET_CURRENT_SLI_STATE     NV_GET_CURRENT_SLI_STATE_V2
+ 
+ /* undocumented stuff */
+ typedef struct
+-- 
+2.13.1
+

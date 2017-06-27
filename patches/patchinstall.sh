@@ -6583,6 +6583,9 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
 	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
 	patch_apply nvapi-Stub_DLL/0016-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
+	patch_apply nvapi-Stub_DLL/0017-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
+	patch_apply nvapi-Stub_DLL/0018-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
+	patch_apply nvapi-Stub_DLL/0019-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
@@ -6600,6 +6603,9 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D9_RegisterResource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Improve NvAPI_D3D_GetCurrentSLIState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_GPU_Get{Physical,Virtual}FrameBufferSize.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GPU_GetGpuCoreCount.", 1 },';
 	) >> "$patchlist"
 fi
 

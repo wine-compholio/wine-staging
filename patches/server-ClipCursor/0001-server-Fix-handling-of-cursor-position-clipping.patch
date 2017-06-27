@@ -1,4 +1,4 @@
-From da292f2fdfca600a7352cc813f4c1b4428a65869 Mon Sep 17 00:00:00 2001
+From 15bbbf3491c067e224fc96c44ea144f86b5ef70e Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 18:47:54 +0200
 Subject: server: Improve handling of cursor position clipping for empty
@@ -11,8 +11,8 @@ the unusual Windows cursor clipping in winex11/winemac. For now it is better
 to keep wineserver and backends synchronized to avoid cursor drift.
 ---
  dlls/user32/tests/input.c | 69 +++++++++++++++++++++++++++++++++++++++++++++++
- server/queue.c            |  9 +++----
- 2 files changed, 73 insertions(+), 5 deletions(-)
+ server/queue.c            |  8 +++---
+ 2 files changed, 73 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
 index a8a8c6c2fe5..5f70c4c1a64 100644
@@ -102,7 +102,7 @@ index a8a8c6c2fe5..5f70c4c1a64 100644
      DestroyWindow(hwnd);
      SetCursorPos(pt_org.x, pt_org.y);
 diff --git a/server/queue.c b/server/queue.c
-index 58803fa2c9f..941fcb6a307 100644
+index 752ab49e8d5..fb8a2e55bba 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -445,8 +445,8 @@ static void set_clip_rectangle( struct desktop *desktop, const rectangle_t *rect
@@ -116,18 +116,17 @@ index 58803fa2c9f..941fcb6a307 100644
      if (x != desktop->cursor.x || y != desktop->cursor.y) set_cursor_pos( desktop, x, y );
  }
  
-@@ -1605,9 +1605,8 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
+@@ -1605,8 +1605,8 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
      {
          if (msg->msg == WM_MOUSEMOVE)
          {
 -            int x = min( max( msg->x, desktop->cursor.clip.left ), desktop->cursor.clip.right-1 );
 -            int y = min( max( msg->y, desktop->cursor.clip.top ), desktop->cursor.clip.bottom-1 );
--            if (desktop->cursor.x != x || desktop->cursor.y != y) always_queue = 1;
 +            int x = max( min( msg->x, desktop->cursor.clip.right-1 ), desktop->cursor.clip.left );
 +            int y = max( min( msg->y, desktop->cursor.clip.bottom-1 ), desktop->cursor.clip.top );
+             if (desktop->cursor.x != x || desktop->cursor.y != y) always_queue = 1;
              desktop->cursor.x = x;
              desktop->cursor.y = y;
-             desktop->cursor.last_change = get_tick_count();
 -- 
 2.13.1
 

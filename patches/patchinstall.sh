@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4005e6e659107c29f93e7a35a3bb933b22416598"
+	echo "73af2479c7107f6157cabdd24dc1e0fe47fbbb1e"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.11"
+	echo "Wine Staging 2.12 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -410,7 +410,6 @@ patch_enable_all ()
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
-	enable_windowscodecs_MetadataQueryParser="$1"
 	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
@@ -1478,9 +1477,6 @@ patch_enable ()
 		windowscodecs-IWICPalette_InitializeFromBitmap)
 			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
 			;;
-		windowscodecs-MetadataQueryParser)
-			enable_windowscodecs_MetadataQueryParser="$2"
-			;;
 		windowscodecs-Palette_Images)
 			enable_windowscodecs_Palette_Images="$2"
 			;;
@@ -2163,17 +2159,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	enable_wineboot_drivers_etc_Stubs=1
 fi
 
-if test "$enable_windowscodecs_MetadataQueryParser" -eq 1; then
-	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
-		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-MetadataQueryParser depends on that."
-	fi
-	if test "$enable_windowscodecs_WICCreateBitmapFromSection" -gt 1; then
-		abort "Patchset windowscodecs-WICCreateBitmapFromSection disabled, but windowscodecs-MetadataQueryParser depends on that."
-	fi
-	enable_windowscodecs_TIFF_Support=1
-	enable_windowscodecs_WICCreateBitmapFromSection=1
-fi
-
 if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
 	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
 		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-32bppPRGBA depends on that."
@@ -2710,8 +2695,8 @@ fi
 # | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
 # | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
 # | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, include/wine/list.h,
-# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c,
+# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
@@ -2736,6 +2721,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0029-rpcrt4-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
+	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shell32: Fix length parameter for ZeroMemory.", 1 },';
@@ -2759,6 +2745,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "rpcrt4: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wsdapi: Avoid implicit cast of interface pointer.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8787,22 +8774,6 @@ if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-MetadataQueryParser
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
-# | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support, windowscodecs-WICCreateBitmapFromSection
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/Makefile.in, dlls/windowscodecs/metadatahandler.c
-# |
-if test "$enable_windowscodecs_MetadataQueryParser" -eq 1; then
-	patch_apply windowscodecs-MetadataQueryParser/0006-windowscodecs-Simplify-a-bit-comparison-of-two-PROPV.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Simplify a bit comparison of two PROPVARIANTs.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wine.inf-Directory_ContextMenuHandlers
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9632,7 +9603,7 @@ fi
 # |   *	[#41398] Return failure when handling http redirect without hostname
 # |
 # | Modified files:
-# |   *	dlls/wininet/http.c, dlls/wininet/tests/http.c
+# |   *	dlls/wininet/tests/http.c
 # |
 if test "$enable_wininet_Redirect" -eq 1; then
 	patch_apply wininet-Redirect/0001-wininet-Return-failure-when-handling-http-redirect-w.patch

@@ -1,4 +1,4 @@
-From 616d2000a5dd5f9e68fe873a368e72dda49d6953 Mon Sep 17 00:00:00 2001
+From 9eb1c0e197164120ed601bd64e9339c0f5ea8acd Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 15 Oct 2016 19:50:46 +0200
 Subject: ntdll: Implement FileIoCompletionNotificationInformation info class.
@@ -43,10 +43,10 @@ index 3e93b0dfd78..f4e63bcaae6 100644
  }
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index fd7f3dd955a..00131f11cf7 100644
+index a82f081ee23..3c5d4e96876 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -2802,6 +2802,23 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -2857,6 +2857,23 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
              io->u.Status = STATUS_INVALID_PARAMETER_3;
          break;
  
@@ -71,10 +71,10 @@ index fd7f3dd955a..00131f11cf7 100644
          io->u.Status = STATUS_INVALID_INFO_CLASS;
          break;
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 5053eb123d1..bf45cbfa522 100644
+index c0f4efc6c3c..08ac313c1a3 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -3277,12 +3277,11 @@ static void test_file_completion_information(void)
+@@ -3082,12 +3082,11 @@ static void test_file_completion_information(void)
      if (!(h = create_temp_file(0))) return;
  
      status = pNtSetInformationFile(h, &io, &info, sizeof(info) - 1, FileIoCompletionNotificationInformation);
@@ -89,34 +89,34 @@ index 5053eb123d1..bf45cbfa522 100644
          return;
      }
 diff --git a/server/fd.c b/server/fd.c
-index 732a5b798f3..8ff5f9801ad 100644
+index 9322e2c1c15..4cb46058b64 100644
 --- a/server/fd.c
 +++ b/server/fd.c
 @@ -194,6 +194,7 @@ struct fd
-     struct async_queue  *wait_q;      /* other async waiters of this fd */
+     struct async_queue   wait_q;      /* other async waiters of this fd */
      struct completion   *completion;  /* completion object attached to this fd */
      apc_param_t          comp_key;    /* completion key to set in completion events */
 +    unsigned int         comp_flags;  /* completion flags */
  };
  
  static void fd_dump( struct object *obj, int verbose );
-@@ -1607,6 +1608,7 @@ static struct fd *alloc_fd_object(void)
-     fd->write_q    = NULL;
-     fd->wait_q     = NULL;
+@@ -1604,6 +1605,7 @@ static struct fd *alloc_fd_object(void)
+     fd->fs_locks   = 1;
+     fd->poll_index = -1;
      fd->completion = NULL;
 +    fd->comp_flags = 0;
-     list_init( &fd->inode_entry );
-     list_init( &fd->locks );
- 
-@@ -1642,6 +1644,7 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
-     fd->write_q    = NULL;
-     fd->wait_q     = NULL;
+     init_async_queue( &fd->read_q );
+     init_async_queue( &fd->write_q );
+     init_async_queue( &fd->wait_q );
+@@ -1639,6 +1641,7 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
+     fd->fs_locks   = 0;
+     fd->poll_index = -1;
      fd->completion = NULL;
 +    fd->comp_flags = 0;
      fd->no_fd_status = STATUS_BAD_DEVICE_TYPE;
-     list_init( &fd->inode_entry );
-     list_init( &fd->locks );
-@@ -2369,6 +2372,7 @@ void fd_copy_completion( struct fd *src, struct fd *dst )
+     init_async_queue( &fd->read_q );
+     init_async_queue( &fd->write_q );
+@@ -2360,6 +2363,7 @@ void fd_copy_completion( struct fd *src, struct fd *dst )
  {
      assert( !dst->completion );
      dst->completion = fd_get_completion( src, &dst->comp_key );
@@ -124,7 +124,7 @@ index 732a5b798f3..8ff5f9801ad 100644
  }
  
  /* flush a file buffers */
-@@ -2539,12 +2543,29 @@ DECL_HANDLER(add_fd_completion)
+@@ -2543,12 +2547,29 @@ DECL_HANDLER(add_fd_completion)
      struct fd *fd = get_handle_fd_obj( current->process, req->handle, 0 );
      if (fd)
      {
@@ -156,10 +156,10 @@ index 732a5b798f3..8ff5f9801ad 100644
  DECL_HANDLER(set_fd_disp_info)
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 60865a6ffc2..73fef6fade6 100644
+index 1f88c6a5c86..3646b9a4349 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3657,6 +3657,14 @@ struct handle_info
+@@ -3651,6 +3651,14 @@ struct handle_info
  @END
  
  
@@ -175,5 +175,5 @@ index 60865a6ffc2..73fef6fade6 100644
  @REQ(set_fd_disp_info)
      obj_handle_t handle;          /* handle to a file or directory */
 -- 
-2.11.0
+2.13.1
 

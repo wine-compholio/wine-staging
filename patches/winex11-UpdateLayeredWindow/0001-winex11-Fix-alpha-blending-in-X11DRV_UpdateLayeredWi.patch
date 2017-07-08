@@ -1,15 +1,15 @@
-From a2c2f2fdd214dcc58263687c930cf70b08d214e5 Mon Sep 17 00:00:00 2001
+From ae27ea7329561c939058579f45154e7905042478 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 24 Jan 2017 12:37:46 +0100
 Subject: winex11: Fix alpha blending in X11DRV_UpdateLayeredWindow.
 
 Based on a patch by Dmitry Timoshkov.
 ---
- dlls/winex11.drv/window.c | 36 +++++++++++++++++-------------------
- 1 file changed, 17 insertions(+), 19 deletions(-)
+ dlls/winex11.drv/window.c | 31 +++++++++++++++----------------
+ 1 file changed, 15 insertions(+), 16 deletions(-)
 
 diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
-index ea4933f00e..7cb55e7061 100644
+index eaf6dcfa3ed..5dec74acae7 100644
 --- a/dlls/winex11.drv/window.c
 +++ b/dlls/winex11.drv/window.c
 @@ -410,14 +410,11 @@ static void sync_window_region( struct x11drv_win_data *data, HRGN win_region )
@@ -85,27 +85,27 @@ index ea4933f00e..7cb55e7061 100644
      if (surface) window_surface_add_ref( surface );
      release_win_data( data );
  
-@@ -2629,14 +2629,12 @@ BOOL CDECL X11DRV_UpdateLayeredWindow( HWND hwnd, const UPDATELAYEREDWINDOWINFO
+@@ -2629,16 +2629,15 @@ BOOL CDECL X11DRV_UpdateLayeredWindow( HWND hwnd, const UPDATELAYEREDWINDOWINFO
      {
          IntersectRect( &rect, &rect, info->prcDirty );
          memcpy( src_bits, dst_bits, bmi->bmiHeader.biSizeImage );
 -        PatBlt( hdc, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, BLACKNESS );
--    }
+     }
+     src_rect = rect;
+     if (info->pptSrc) OffsetRect( &src_rect, info->pptSrc->x, info->pptSrc->y );
+     DPtoLP( info->hdcSrc, (POINT *)&src_rect, 2 );
+ 
 -    ret = GdiAlphaBlend( hdc, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
--                         info->hdcSrc,
--                         rect.left + (info->pptSrc ? info->pptSrc->x : 0),
--                         rect.top + (info->pptSrc ? info->pptSrc->y : 0),
--                         rect.right - rect.left, rect.bottom - rect.top,
+-                         info->hdcSrc, src_rect.left, src_rect.top,
+-                         src_rect.right - src_rect.left, src_rect.bottom - src_rect.top,
 -                         (info->dwFlags & ULW_ALPHA) ? *info->pblend : blend );
-+    }
-+    ret = BitBlt( hdc, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
-+                  info->hdcSrc,
-+                  rect.left + (info->pptSrc ? info->pptSrc->x : 0),
-+                  rect.top + (info->pptSrc ? info->pptSrc->y : 0),
-+                  SRCCOPY );
++    ret = StretchBlt( hdc, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
++                      info->hdcSrc, src_rect.left, src_rect.top,
++                      src_rect.right - src_rect.left, src_rect.bottom - src_rect.top,
++                      SRCCOPY );
      if (ret)
      {
          memcpy( dst_bits, src_bits, bmi->bmiHeader.biSizeImage );
 -- 
-2.12.2
+2.13.1
 

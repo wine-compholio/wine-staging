@@ -1,0 +1,51 @@
+From 1706e3e86b8a58ff9060ab9d16bfef351971f3e2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 7 Jul 2017 04:06:01 +0200
+Subject: d3d11/tests: Don't use draw_quad in test_cb_relative_addressing.
+
+---
+ dlls/d3d11/tests/d3d11.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index 241320d0a74..83ae6413f99 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -12101,6 +12101,7 @@ static void test_cb_relative_addressing(void)
+     ID3D11Buffer *colors_cb, *index_cb;
+     unsigned int i, index[4] = {0};
+     ID3D11DeviceContext *context;
++    unsigned int stride, offset;
+     ID3D11PixelShader *ps;
+     ID3D11Device *device;
+     HRESULT hr;
+@@ -12241,10 +12242,17 @@ float4 main(const ps_in v) : SV_TARGET
+     hr = ID3D11Device_CreatePixelShader(device, ps_code, sizeof(ps_code), NULL, &ps);
+     ok(SUCCEEDED(hr), "Failed to create pixel shader, hr %#x.\n", hr);
+ 
++    ID3D11DeviceContext_VSSetShader(context, test_context.vs, NULL, 0);
+     ID3D11DeviceContext_VSSetConstantBuffers(context, 0, 1, &index_cb);
+     ID3D11DeviceContext_VSSetConstantBuffers(context, 1, 1, &colors_cb);
+     ID3D11DeviceContext_PSSetShader(context, ps, NULL, 0);
+ 
++    stride = sizeof(*quad);
++    offset = 0;
++    ID3D11DeviceContext_IASetInputLayout(context, test_context.input_layout);
++    ID3D11DeviceContext_IASetPrimitiveTopology(context, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
++    ID3D11DeviceContext_IASetVertexBuffers(context, 0, 1, &test_context.vb, &stride, &offset);
++
+     for (i = 0; i < ARRAY_SIZE(test_data); ++i)
+     {
+         ID3D11DeviceContext_ClearRenderTargetView(context, test_context.backbuffer_rtv, white_color);
+@@ -12252,7 +12260,7 @@ float4 main(const ps_in v) : SV_TARGET
+         index[0] = test_data[i].index;
+         ID3D11DeviceContext_UpdateSubresource(context, (ID3D11Resource *)index_cb, 0, NULL, &index, 0, 0);
+ 
+-        draw_quad(&test_context);
++        ID3D11DeviceContext_Draw(context, 4, 0);
+         check_texture_color(test_context.backbuffer, test_data[i].expected, 1);
+     }
+ 
+-- 
+2.13.1
+

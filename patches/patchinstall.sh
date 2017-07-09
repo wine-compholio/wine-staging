@@ -113,6 +113,7 @@ patch_enable_all ()
 	enable_crypt32_SHA_OIDs="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
+	enable_d3d11_Depth_Bias="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d11_ResolveSubresource="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
@@ -588,6 +589,9 @@ patch_enable ()
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
+			;;
+		d3d11-Depth_Bias)
+			enable_d3d11_Depth_Bias="$2"
 			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
@@ -3450,6 +3454,25 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3d11-Depth_Bias
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/dxgi/factory.c, dlls/wined3d/directx.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
+# |
+if test "$enable_d3d11_Depth_Bias" -eq 1; then
+	patch_apply d3d11-Depth_Bias/0001-d3d11-tests-Don-t-use-draw_quad-in-test_cb_relative_.patch
+	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
+	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
+	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Don'\''t use draw_quad in test_cb_relative_addressing.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-1DTextures
 # |
 # | Modified files:
@@ -3475,6 +3498,7 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
 	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
 	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
+	patch_apply wined3d-1DTextures/0017-d3d11-Allow-DXGI_FORMAT_UNKNOWN-in-CheckFormatSuppor.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
@@ -3492,6 +3516,7 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve ID3D11Device_CheckFormatSupport.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Allow DXGI_FORMAT_UNKNOWN in CheckFormatSupport and improve tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3575,10 +3600,8 @@ fi
 # |
 if test "$enable_d3d11_Silence_FIXMEs" -eq 1; then
 	patch_apply d3d11-Silence_FIXMEs/0001-d3d11-Silence-ID3D11Device_GetDeviceRemovedReason.patch
-	patch_apply d3d11-Silence_FIXMEs/0002-d3d11-Silence-depth-bias-warning-in-ID3D11DeviceCont.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Silence ID3D11Device_GetDeviceRemovedReason.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Silence depth bias warning in ID3D11DeviceContext_RSSetState.", 1 },';
 	) >> "$patchlist"
 fi
 

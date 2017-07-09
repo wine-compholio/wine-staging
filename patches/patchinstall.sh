@@ -447,6 +447,7 @@ patch_enable_all ()
 	enable_winedevice_Fix_Relocation="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
+	enable_winemp3_acm_Revert_MPEG_Encode="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
@@ -1588,6 +1589,9 @@ patch_enable ()
 			;;
 		winemp3.acm-MPEG3_StreamOpen)
 			enable_winemp3_acm_MPEG3_StreamOpen="$2"
+			;;
+		winemp3.acm-Revert_MPEG_Encode)
+			enable_winemp3_acm_Revert_MPEG_Encode="$2"
 			;;
 		wineps.drv-PostScript_Fixes)
 			enable_wineps_drv_PostScript_Fixes="$2"
@@ -9252,6 +9256,21 @@ if test "$enable_winemp3_acm_MPEG3_StreamOpen" -eq 1; then
 	patch_apply winemp3.acm-MPEG3_StreamOpen/0001-winemp3.acm-Check-input-format-in-MPEG3_StreamOpen.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winemp3.acm: Check input format in MPEG3_StreamOpen.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winemp3.acm-Revert_MPEG_Encode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43236] Revert patch which broke in-game audio in multiple games
+# |
+# | Modified files:
+# |   *	dlls/winemp3.acm/mpegl3.c
+# |
+if test "$enable_winemp3_acm_Revert_MPEG_Encode" -eq 1; then
+	patch_apply winemp3.acm-Revert_MPEG_Encode/0001-Revert-winemp3.acm-Disallow-operations-encoding-to-M.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"winemp3.acm: Disallow operations encoding to MPEG.\".", 1 },';
 	) >> "$patchlist"
 fi
 

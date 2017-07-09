@@ -6584,8 +6584,9 @@ fi
 # |   *	[#35062] Fix graphical corruption in FarCry 3 with NVIDIA drivers
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec, dlls/nvapi/tests/Makefile.in,
-# | 	dlls/nvapi/tests/nvapi.c, dlls/nvapi64/Makefile.in, dlls/nvapi64/nvapi64.spec, include/Makefile.in, include/nvapi.h
+# |   *	configure.ac, dlls/d3d11/device.c, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec,
+# | 	dlls/nvapi/tests/Makefile.in, dlls/nvapi/tests/nvapi.c, dlls/nvapi64/Makefile.in, dlls/nvapi64/nvapi64.spec,
+# | 	include/Makefile.in, include/nvapi.h, include/wine/wined3d.h
 # |
 if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
@@ -6607,6 +6608,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0017-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
 	patch_apply nvapi-Stub_DLL/0018-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
 	patch_apply nvapi-Stub_DLL/0019-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
+	patch_apply nvapi-Stub_DLL/0020-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
@@ -6627,6 +6629,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Improve NvAPI_D3D_GetCurrentSLIState.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_GPU_Get{Physical,Virtual}FrameBufferSize.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GPU_GetGpuCoreCount.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_SetDepthBoundsTest.", 1 },';
 	) >> "$patchlist"
 fi
 

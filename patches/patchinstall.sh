@@ -3410,6 +3410,17 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0008-d3d11-Implement-ClearRenderTargetView-for-deferred-c.patch
 	patch_apply d3d11-Deferred_Context/0009-d3d11-Implement-Draw-for-deferred-contexts.patch
 	patch_apply d3d11-Deferred_Context/0010-d3d11-Implement-ClearDepthStencilView-for-deferred-c.patch
+	patch_apply d3d11-Deferred_Context/0011-d3d11-Implement-GSSetShader-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0012-d3d11-Implement-GSSetConstantBuffers-for-deferred-co.patch
+	patch_apply d3d11-Deferred_Context/0013-d3d11-Implement-CSSetShaderResources-for-deferred-co.patch
+	patch_apply d3d11-Deferred_Context/0014-d3d11-Implement-GSSetShaderResources-for-deferred-co.patch
+	patch_apply d3d11-Deferred_Context/0015-d3d11-Implement-HSSetShaderResources-for-deferred-co.patch
+	patch_apply d3d11-Deferred_Context/0016-d3d11-Implement-VSSetShaderResources-for-deferred-co.patch
+	patch_apply d3d11-Deferred_Context/0017-d3d11-Implement-CSSetSamplers-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0018-d3d11-Implement-GSSetSamplers-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0019-d3d11-Implement-HSSetSamplers-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0020-d3d11-Implement-VSSetSamplers-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0021-d3d11-Implement-Begin-and-End-for-deferred-contexts.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
@@ -3421,6 +3432,17 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ClearRenderTargetView for deferred contexts.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement Draw for deferred contexts.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ClearDepthStencilView for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement GSSetShader for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement GSSetConstantBuffers for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement CSSetShaderResources for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement GSSetShaderResources for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement HSSetShaderResources for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement VSSetShaderResources for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement CSSetSamplers for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement GSSetSamplers for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement HSSetSamplers for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement VSSetSamplers for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement Begin and End for deferred contexts.", 1 },';
 	) >> "$patchlist"
 fi
 

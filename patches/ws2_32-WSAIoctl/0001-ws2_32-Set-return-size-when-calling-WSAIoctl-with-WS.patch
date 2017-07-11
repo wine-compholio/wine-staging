@@ -1,0 +1,47 @@
+From bc57f2c994179bbb3d0e8e2048b7b6011a84e3ab Mon Sep 17 00:00:00 2001
+From: Kimmo Myllyvirta <kimmo.myllyvirta@gmail.com>
+Date: Tue, 11 Jul 2017 11:42:06 +0200
+Subject: ws2_32: Set return size when calling WSAIoctl with
+ WS_SIO_GET_EXTENSION_FUNCTION_POINTER.
+
+---
+ dlls/ws2_32/socket.c     | 1 +
+ dlls/ws2_32/tests/sock.c | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index 48d8f61553d..fac47d78527 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -4985,6 +4985,7 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+         {
+             TRACE("-> got %s\n", guid_funcs[i].name);
+             *(void **)out_buff = guid_funcs[i].func_ptr;
++            total = sizeof(void *);
+             break;
+         }
+ 
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index c66d0d9ccd9..91f2525c174 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -7704,6 +7704,7 @@ static void test_ConnectEx(void)
+         goto end;
+     }
+ 
++    bytesReturned = 0xdeadbeef;
+     iret = WSAIoctl(connector, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectExGuid, sizeof(connectExGuid),
+         &pConnectEx, sizeof(pConnectEx), &bytesReturned, NULL, NULL);
+     if (iret) {
+@@ -7711,6 +7712,8 @@ static void test_ConnectEx(void)
+         goto end;
+     }
+ 
++    ok(bytesReturned == sizeof(pConnectEx), "expected sizeof(pConnectEx), got %u\n", bytesReturned);
++
+     bret = pConnectEx(INVALID_SOCKET, (struct sockaddr*)&address, addrlen, NULL, 0, &bytesReturned, &overlapped);
+     ok(bret == FALSE && WSAGetLastError() == WSAENOTSOCK, "ConnectEx on invalid socket "
+         "returned %d + errno %d\n", bret, WSAGetLastError());
+-- 
+2.13.1
+

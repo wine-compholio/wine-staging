@@ -483,6 +483,7 @@ patch_enable_all ()
 	enable_ws2_32_Tests="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
+	enable_ws2_32_WSAIoctl="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -1699,6 +1700,9 @@ patch_enable ()
 			;;
 		ws2_32-WSACleanup)
 			enable_ws2_32_WSACleanup="$2"
+			;;
+		ws2_32-WSAIoctl)
+			enable_ws2_32_WSAIoctl="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -9850,6 +9854,21 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WSAIoctl
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43315] Set return size when calling WSAIoctl with WS_SIO_GET_EXTENSION_FUNCTION_POINTER
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
+# |
+if test "$enable_ws2_32_WSAIoctl" -eq 1; then
+	patch_apply ws2_32-WSAIoctl/0001-ws2_32-Set-return-size-when-calling-WSAIoctl-with-WS.patch
+	(
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "ws2_32: Set return size when calling WSAIoctl with WS_SIO_GET_EXTENSION_FUNCTION_POINTER.", 1 },';
 	) >> "$patchlist"
 fi
 

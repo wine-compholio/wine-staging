@@ -1,0 +1,180 @@
+From 2e62577012d1fae93b3fabf6c4e1ef932b097aa8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 9 Jul 2017 00:58:50 +0200
+Subject: d3d11/tests: Add more advanced CopySubresourceRegion tests.
+
+---
+ dlls/d3d11/tests/d3d11.c | 123 ++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 121 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index f15d4873ab1..5a6bd46b905 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -10446,6 +10446,7 @@ static void test_copy_subresource_region(void)
+     struct d3d11_test_context test_context;
+     ID3D11Buffer *dst_buffer, *src_buffer;
+     D3D11_SUBRESOURCE_DATA resource_data;
++    D3D11_MAPPED_SUBRESOURCE map_desc;
+     D3D11_TEXTURE2D_DESC texture_desc;
+     ID3D11SamplerState *sampler_state;
+     ID3D11ShaderResourceView *ps_srv;
+@@ -10455,7 +10456,7 @@ static void test_copy_subresource_region(void)
+     struct resource_readback rb;
+     ID3D11PixelShader *ps;
+     ID3D11Device *device;
+-    unsigned int i, j;
++    unsigned int i, j, k;
+     D3D11_BOX box;
+     DWORD color;
+     HRESULT hr;
+@@ -10512,13 +10513,19 @@ static void test_copy_subresource_region(void)
+         0x0010000a, 0x00000000, 0x0100003e,
+     };
+     static const float red[] = {1.0f, 0.0f, 0.0f, 0.5f};
+-    static const DWORD initial_data[16] = {0};
++    static const DWORD initial_data[32] = {0};
+     static const DWORD bitmap_data[] =
+     {
++        /* 1. layer */
+         0xff0000ff, 0xff00ffff, 0xff00ff00, 0xffffff00,
+         0xffff0000, 0xffff00ff, 0xff000000, 0xff7f7f7f,
+         0xffffffff, 0xffffffff, 0xffffffff, 0xff000000,
+         0xffffffff, 0xff000000, 0xff000000, 0xff000000,
++        /* second layer / mip map level / ... */
++        0xffff44ff, 0xff00edd0, 0xfff22fff, 0xff0ccc00,
++        0xff8f8f8f, 0xff00ffff, 0xff000120, 0xffff1234,
++        0xff0560ff, 0xffff34ff, 0xff12ff00, 0xffffff00,
++        0xffff2222, 0xfff1111f, 0xff031200, 0x0ff02200,
+     };
+     static const DWORD expected_colors[] =
+     {
+@@ -10527,6 +10534,34 @@ static void test_copy_subresource_region(void)
+         0xff7f7f7f, 0xffff0000, 0xffff00ff, 0xff7f7f7f,
+         0xffffffff, 0xffffffff, 0xff000000, 0x00000000,
+     };
++    struct
++    {
++        DXGI_FORMAT src_format;
++        DXGI_FORMAT dst_format;
++        UINT width;
++        UINT height;
++        UINT levels;
++        UINT layers;
++        UINT src_sub_index;
++        UINT dst_sub_index;
++    }
++    compatible_formats[] =
++    {
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     4, 4, 1, 1, 0, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_SNORM,    4, 4, 1, 1, 0, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_SINT,     4, 4, 1, 1, 0, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_TYPELESS, 4, 4, 1, 1, 0, 0},
++        {DXGI_FORMAT_R8G8B8A8_TYPELESS, DXGI_FORMAT_R8G8B8A8_UNORM,    4, 4, 1, 1, 0, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     4, 4, 1, 2, 1, 1},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     4, 4, 1, 2, 0, 1},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 0, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 0, 1},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 0, 2},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 0, 3},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 1, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 2, 0},
++        {DXGI_FORMAT_R8G8B8A8_UNORM,    DXGI_FORMAT_R8G8B8A8_UINT,     2, 2, 2, 2, 3, 0},
++    };
+ 
+     if (!init_test_context(&test_context, NULL))
+         return;
+@@ -10652,6 +10687,90 @@ static void test_copy_subresource_region(void)
+     ID3D11Texture2D_Release(dst_texture);
+     ID3D11Texture2D_Release(src_texture);
+ 
++    /* test copy between compatible formats */
++    texture_desc.SampleDesc.Count = 1;
++    texture_desc.SampleDesc.Quality = 0;
++    texture_desc.MiscFlags = 0;
++
++    for (k = 0; k < sizeof(compatible_formats) / sizeof(compatible_formats[0]); k++)
++    {
++        UINT level_src, level_src_width, level_src_height;
++        UINT level_dst, level_dst_width, level_dst_height;
++        D3D11_SUBRESOURCE_DATA src_data[4], dst_data[4];
++        const DWORD *c_result, *c_expected;
++        DWORD offset = 0;
++
++        texture_desc.Width = compatible_formats[k].width;
++        texture_desc.Height = compatible_formats[k].height;
++        texture_desc.MipLevels = compatible_formats[k].levels;
++        texture_desc.ArraySize = compatible_formats[k].layers;
++
++        texture_desc.Usage = D3D11_USAGE_IMMUTABLE;
++        texture_desc.Format = compatible_formats[k].src_format;
++        texture_desc.CPUAccessFlags = 0;
++        texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
++
++        for (i = 0; i < texture_desc.MipLevels * texture_desc.ArraySize; i++)
++        {
++            level_src = i % texture_desc.ArraySize;
++            level_src_width  = (texture_desc.Width  >> level_src);
++            level_src_height = (texture_desc.Height >> level_src);
++
++            src_data[i].pSysMem = bitmap_data + offset;
++            src_data[i].SysMemPitch = level_src_width * sizeof(*bitmap_data);
++            src_data[i].SysMemSlicePitch = 0;
++
++            dst_data[i].pSysMem = initial_data + offset;
++            dst_data[i].SysMemPitch = level_src_width * sizeof(*initial_data);
++            dst_data[i].SysMemSlicePitch = 0;
++
++            offset += level_src_width * level_src_height;
++        }
++
++        hr = ID3D11Device_CreateTexture2D(device, &texture_desc, src_data, &src_texture);
++        ok(SUCCEEDED(hr), "Failed to create 2d texture for format %#x for test %d, hr %#x.\n", compatible_formats[k].src_format, k, hr);
++
++        texture_desc.Usage = D3D11_USAGE_STAGING;
++        texture_desc.Format = compatible_formats[k].dst_format;
++        texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
++        texture_desc.BindFlags = 0;
++
++        hr = ID3D11Device_CreateTexture2D(device, &texture_desc, dst_data, &dst_texture);
++        ok(SUCCEEDED(hr), "Failed to create 2d texture for format %#x, hr %#x.\n", compatible_formats[k].dst_format, hr);
++
++        level_src = compatible_formats[k].src_sub_index % texture_desc.ArraySize;
++        level_src_width  = (texture_desc.Width  >> level_src);
++        level_src_height = (texture_desc.Height >> level_src);
++
++        level_dst = compatible_formats[k].dst_sub_index % texture_desc.ArraySize;
++        level_dst_width  = (texture_desc.Width  >> level_dst);
++        level_dst_height = (texture_desc.Height >> level_dst);
++
++        set_box(&box, 0, 0, 0, min(level_src_width, level_dst_width), min(level_src_height, level_dst_height), 1);
++        ID3D11DeviceContext_CopySubresourceRegion(context, (ID3D11Resource *)dst_texture, compatible_formats[k].dst_sub_index,
++                0, 0, 0, (ID3D11Resource *)src_texture, compatible_formats[k].src_sub_index, &box);
++
++        hr = ID3D11DeviceContext_Map(context, (ID3D11Resource *)dst_texture, compatible_formats[k].dst_sub_index, D3D11_MAP_READ, 0, &map_desc);
++        ok(SUCCEEDED(hr), "Failed to map 2d texture for test %d, hr %#x.\n", k, hr);
++
++        c_expected = src_data[compatible_formats[k].src_sub_index].pSysMem;
++        for (i = 0; i < min(level_src_width, level_dst_width); i++)
++        {
++            for (j = 0; j < min(level_src_height, level_dst_height); j++)
++            {
++                c_result = (DWORD*)((char*)map_desc.pData + j * map_desc.RowPitch);
++                todo_wine ok(c_result[i] == c_expected[j * level_src_width + i],
++                   "Got unexpected color 0x%08x at (%u, %u), expected 0x%08x for test %u.\n",
++                   c_result[i], i, j, c_expected[j * level_src_width + i], k);
++            }
++        }
++
++        ID3D11DeviceContext_Unmap(context, (ID3D11Resource *)dst_texture, 0);
++
++        ID3D11Texture2D_Release(dst_texture);
++        ID3D11Texture2D_Release(src_texture);
++    }
++
+     ID3D11DeviceContext_PSSetShaderResources(context, 0, 1, &ps_srv);
+     ID3D11DeviceContext_PSSetSamplers(context, 0, 1, &sampler_state);
+     ID3D11DeviceContext_PSSetShader(context, ps, NULL, 0);
+-- 
+2.13.1
+

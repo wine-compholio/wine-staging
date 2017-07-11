@@ -1,0 +1,49 @@
+From 064e00bdc54c94a29c5c55a5adf9c70565f50d7a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 9 Jul 2017 04:05:54 +0200
+Subject: wined3d: Use wined3d_cs_emit_copy_sub_resource also for
+ wined3d_device_copy_resource.
+
+---
+ dlls/wined3d/device.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 0515317d4f0..42749c7c87a 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4046,7 +4046,10 @@ void CDECL wined3d_device_copy_resource(struct wined3d_device *device,
+         return;
+     }
+ 
+-    if (src_resource->format->id != dst_resource->format->id)
++    if (src_resource->format->id != dst_resource->format->id &&
++            (src_resource->format->typeless_id != dst_resource->format->typeless_id ||
++            src_resource->format->gl_view_class != dst_resource->format->gl_view_class ||
++            !src_resource->format->typeless_id))
+     {
+         WARN("Resource formats (%s / %s) don't match.\n",
+                 debug_d3dformat(dst_resource->format->id),
+@@ -4057,8 +4060,7 @@ void CDECL wined3d_device_copy_resource(struct wined3d_device *device,
+     if (dst_resource->type == WINED3D_RTYPE_BUFFER)
+     {
+         wined3d_box_set(&box, 0, 0, src_resource->size, 1, 0, 1);
+-        wined3d_cs_emit_blt_sub_resource(device->cs, dst_resource, 0, &box,
+-                src_resource, 0, &box, 0, NULL, WINED3D_TEXF_POINT);
++        wined3d_cs_emit_copy_sub_resource(device->cs, dst_resource, 0, &box, src_resource, 0, &box);
+         return;
+     }
+ 
+@@ -4084,8 +4086,7 @@ void CDECL wined3d_device_copy_resource(struct wined3d_device *device,
+         {
+             unsigned int idx = j * dst_texture->level_count + i;
+ 
+-            wined3d_cs_emit_blt_sub_resource(device->cs, dst_resource, idx, &box,
+-                    src_resource, idx, &box, 0, NULL, WINED3D_TEXF_POINT);
++            wined3d_cs_emit_copy_sub_resource(device->cs, dst_resource, idx, &box, src_resource, idx, &box);
+         }
+     }
+ }
+-- 
+2.13.1
+

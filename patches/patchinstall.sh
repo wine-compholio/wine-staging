@@ -433,6 +433,7 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
+	enable_wined3d_Copy_Resource_Typeless="$1"
 	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
@@ -1552,6 +1553,9 @@ patch_enable ()
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
 			;;
+		wined3d-Copy_Resource_Typeless)
+			enable_wined3d_Copy_Resource_Typeless="$2"
+			;;
 		wined3d-Core_Context)
 			enable_wined3d_Core_Context="$2"
 			;;
@@ -2155,6 +2159,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_Accounting" -gt 1; then
 		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_Copy_Resource_Typeless" -gt 1; then
+		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2173,10 +2180,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_1DTextures=1
 	enable_wined3d_Accounting=1
+	enable_wined3d_Copy_Resource_Typeless=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Buffer_Upload=1
 	enable_wined3d_Silence_FIXMEs=1
+fi
+
+if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
+	if test "$enable_d3d11_Depth_Bias" -gt 1; then
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Copy_Resource_Typeless depends on that."
+	fi
+	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_wineboot_ProxySettings" -eq 1; then
@@ -9107,6 +9122,28 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Copy_Resource_Typeless
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/utils.c,
+# | 	dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
+	patch_apply wined3d-Copy_Resource_Typeless/0001-d3d11-tests-Add-more-advanced-CopySubresourceRegion-.patch
+	patch_apply wined3d-Copy_Resource_Typeless/0002-wined3d-Add-WINED3DFMT_R8G8B8A8_SNORM-to-WINED3DFMT_.patch
+	patch_apply wined3d-Copy_Resource_Typeless/0003-wined3d-Implement-copying-sub-resources-between-comp.patch
+	patch_apply wined3d-Copy_Resource_Typeless/0004-wined3d-Use-wined3d_cs_emit_copy_sub_resource-also-f.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add more advanced CopySubresourceRegion tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add WINED3DFMT_R8G8B8A8_SNORM to WINED3DFMT_R8G8B8A8_TYPELESS group.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement copying sub resources between compatible formats.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Use wined3d_cs_emit_copy_sub_resource also for wined3d_device_copy_resource.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-QUERY_Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9156,8 +9193,8 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9282,8 +9319,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, wined3d-DXTn, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-CSMT_Helper
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
+# | 	wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

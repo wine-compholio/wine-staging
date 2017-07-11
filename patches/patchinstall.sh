@@ -433,6 +433,7 @@ patch_enable_all ()
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
+	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
@@ -1551,6 +1552,9 @@ patch_enable ()
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
 			;;
+		wined3d-Core_Context)
+			enable_wined3d_Core_Context="$2"
+			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
@@ -2123,6 +2127,13 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_wined3d_CSMT_Helper=1
+fi
+
+if test "$enable_wined3d_Core_Context" -eq 1; then
+	if test "$enable_d3d11_Depth_Bias" -gt 1; then
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Core_Context depends on that."
+	fi
+	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -9152,6 +9163,21 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Core_Context
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
+# | Modified files:
+# |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_Core_Context" -eq 1; then
+	patch_apply wined3d-Core_Context/0001-wined3d-Use-OpenGL-core-context-for-D3D10-11-when-ne.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Use OpenGL core context for D3D10/11 when necessary.", 1 },';
 	) >> "$patchlist"
 fi
 

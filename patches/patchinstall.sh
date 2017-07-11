@@ -9295,8 +9295,10 @@ fi
 # |
 if test "$enable_wined3d_sample_c_lz" -eq 1; then
 	patch_apply wined3d-sample_c_lz/0001-wined3d-Emulate-sample_c_lz-using-textureGradOffset-.patch
+	patch_apply wined3d-sample_c_lz/0002-wined3d-Emulate-textureLod-samplerCubeShadow-.-using.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate sample_c_lz using textureGradOffset for sampler2DArrayShadow.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate textureLod(samplerCubeShadow, ...) using shadowCubeGrad.", 1 },';
 	) >> "$patchlist"
 fi
 

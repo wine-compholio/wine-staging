@@ -2836,6 +2836,9 @@ fi
 
 # Patchset advapi-LsaLookupPrivilegeName
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43316] Add LsaLookupPrivilege[Display]Name stubs
+# |
 # | Modified files:
 # |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/advapi32_misc.h, dlls/advapi32/lsa.c, dlls/advapi32/security.c,
 # | 	dlls/advapi32/tests/lsa.c, include/ntsecapi.h

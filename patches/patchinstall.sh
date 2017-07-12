@@ -9162,6 +9162,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Depth_Bias
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43264] Implement copying resources between compatible formats
+# |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/utils.c,
 # | 	dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h

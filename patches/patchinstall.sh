@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "437c6674b06663908472d31ed68fcab6e2fdd5f7"
+	echo "989a9dc91778c94d0cf0c769709f10dcc92a5ead"
 }
 
 # Show version information
@@ -313,7 +313,6 @@ patch_enable_all ()
 	enable_opengl32_glDebugMessageCallback="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
-	enable_reg_Tests="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
@@ -407,7 +406,6 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
 	enable_wbemprox_Win32_VideoController="$1"
-	enable_webservices_Dead_Code="$1"
 	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
@@ -487,7 +485,6 @@ patch_enable_all ()
 	enable_ws2_32_Tests="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
-	enable_ws2_32_WSAIoctl="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -1195,9 +1192,6 @@ patch_enable ()
 		quartz-Silence_FIXMEs)
 			enable_quartz_Silence_FIXMEs="$2"
 			;;
-		reg-Tests)
-			enable_reg_Tests="$2"
-			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
 			;;
@@ -1477,9 +1471,6 @@ patch_enable ()
 		wbemprox-Win32_VideoController)
 			enable_wbemprox_Win32_VideoController="$2"
 			;;
-		webservices-Dead_Code)
-			enable_webservices_Dead_Code="$2"
-			;;
 		wevtapi-EvtNext)
 			enable_wevtapi_EvtNext="$2"
 			;;
@@ -1716,9 +1707,6 @@ patch_enable ()
 			;;
 		ws2_32-WSACleanup)
 			enable_ws2_32_WSACleanup="$2"
-			;;
-		ws2_32-WSAIoctl)
-			enable_ws2_32_WSAIoctl="$2"
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
@@ -7040,18 +7028,6 @@ if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset reg-Tests
-# |
-# | Modified files:
-# |   *	programs/reg/tests/reg.c
-# |
-if test "$enable_reg_Tests" -eq 1; then
-	patch_apply reg-Tests/0001-reg-tests-Don-t-call-RegCloseKey-on-uninitialized-me.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "reg/tests: Don'\''t call RegCloseKey on uninitialized memory.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset riched20-Class_Tests
 # |
 # | Modified files:
@@ -8630,18 +8606,6 @@ if test "$enable_wbemprox_Win32_VideoController" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset webservices-Dead_Code
-# |
-# | Modified files:
-# |   *	dlls/webservices/reader.c
-# |
-if test "$enable_webservices_Dead_Code" -eq 1; then
-	patch_apply webservices-Dead_Code/0001-webservices-Remove-dead-code-in-read_attribute_value.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "webservices: Remove dead code in read_attribute_value_bin.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wevtapi-EvtNext
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9957,21 +9921,6 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WSAIoctl
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43315] Set return size when calling WSAIoctl with WS_SIO_GET_EXTENSION_FUNCTION_POINTER
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_WSAIoctl" -eq 1; then
-	patch_apply ws2_32-WSAIoctl/0001-ws2_32-Set-return-size-when-calling-WSAIoctl-with-WS.patch
-	(
-		printf '%s\n' '+    { "Kimmo Myllyvirta", "ws2_32: Set return size when calling WSAIoctl with WS_SIO_GET_EXTENSION_FUNCTION_POINTER.", 1 },';
 	) >> "$patchlist"
 fi
 

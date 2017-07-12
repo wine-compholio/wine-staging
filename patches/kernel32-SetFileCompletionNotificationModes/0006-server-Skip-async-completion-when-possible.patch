@@ -1,4 +1,4 @@
-From fcc8dc4d71db746ccc4b974eae02edd222d23313 Mon Sep 17 00:00:00 2001
+From af4b00a0e6afd5a6512386e821a000411ca41b39 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 9 Apr 2017 03:13:25 +0200
 Subject: server: Skip async completion when possible.
@@ -25,7 +25,7 @@ index bda9a144ade..aa240edea21 100644
  
      CloseHandle(ov.hEvent);
 diff --git a/server/async.c b/server/async.c
-index 020580728de..08daa9a2304 100644
+index 1cb020f7d42..210617c0014 100644
 --- a/server/async.c
 +++ b/server/async.c
 @@ -53,6 +53,7 @@ struct async
@@ -39,12 +39,12 @@ index 020580728de..08daa9a2304 100644
 @@ -237,6 +238,7 @@ struct async *create_async( struct fd *fd, struct thread *thread, const async_da
      async->wait_handle   = 0;
      async->direct_result = 0;
-     async->completion    = NULL;
+     async->completion    = fd_get_completion( fd, &async->comp_key );
 +    async->comp_flags    = 0;
  
      if (iosb) async->iosb = (struct iosb *)grab_object( iosb );
      else async->iosb = NULL;
-@@ -249,7 +251,7 @@ struct async *create_async( struct fd *fd, struct thread *thread, const async_da
+@@ -256,7 +258,7 @@ struct async *create_async( struct fd *fd, struct thread *thread, const async_da
  
  /* create an async associated with iosb for async-based requests
   * returned async must be passed to async_handoff */
@@ -53,7 +53,7 @@ index 020580728de..08daa9a2304 100644
  {
      struct async *async;
      struct iosb *iosb;
-@@ -267,6 +269,7 @@ struct async *create_request_async( struct fd *fd, const async_data_t *data )
+@@ -274,6 +276,7 @@ struct async *create_request_async( struct fd *fd, const async_data_t *data )
              return NULL;
          }
          async->direct_result = 1;
@@ -61,7 +61,7 @@ index 020580728de..08daa9a2304 100644
      }
      return async;
  }
-@@ -368,8 +371,11 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
+@@ -375,8 +378,11 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
              data.user.args[2] = 0;
              thread_queue_apc( async->thread, NULL, &data );
          }
@@ -75,10 +75,10 @@ index 020580728de..08daa9a2304 100644
          if (async->event) set_event( async->event );
          else if (async->fd) set_fd_signaled( async->fd, 1 );
 diff --git a/server/fd.c b/server/fd.c
-index 18b1e04d448..d8f066c7219 100644
+index 51f4eac0cd5..d13068c8468 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2374,7 +2374,7 @@ DECL_HANDLER(flush)
+@@ -2422,7 +2422,7 @@ DECL_HANDLER(flush)
  
      if (!fd) return;
  
@@ -87,7 +87,7 @@ index 18b1e04d448..d8f066c7219 100644
      {
          reply->event = async_handoff( async, fd->fd_ops->flush( fd, async ), NULL );
          release_object( async );
-@@ -2449,7 +2449,7 @@ DECL_HANDLER(read)
+@@ -2497,7 +2497,7 @@ DECL_HANDLER(read)
  
      if (!fd) return;
  
@@ -96,7 +96,7 @@ index 18b1e04d448..d8f066c7219 100644
      {
          reply->wait    = async_handoff( async, fd->fd_ops->read( fd, async, req->pos ), NULL );
          reply->options = fd->options;
-@@ -2466,7 +2466,7 @@ DECL_HANDLER(write)
+@@ -2514,7 +2514,7 @@ DECL_HANDLER(write)
  
      if (!fd) return;
  
@@ -105,7 +105,7 @@ index 18b1e04d448..d8f066c7219 100644
      {
          reply->wait    = async_handoff( async, fd->fd_ops->write( fd, async, req->pos ), &reply->size );
          reply->options = fd->options;
-@@ -2484,7 +2484,7 @@ DECL_HANDLER(ioctl)
+@@ -2532,7 +2532,7 @@ DECL_HANDLER(ioctl)
  
      if (!fd) return;
  

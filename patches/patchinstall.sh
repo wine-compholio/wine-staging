@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a94938819280aa52fbc545911ca70a6c3a83ab49"
+	echo "35f82ba444930b770684f0bd623c505d52c7b58f"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.12"
+	echo "Wine Staging 2.13 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -407,6 +407,7 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
 	enable_wbemprox_Win32_VideoController="$1"
+	enable_webservices_Dead_Code="$1"
 	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppGrayFloat="$1"
@@ -444,8 +445,8 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
-	enable_wined3d_buffer_sync_apple="$1"
 	enable_wined3d_sample_c_lz="$1"
+	enable_wined3d_wined3d_event_query_create="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1476,6 +1477,9 @@ patch_enable ()
 		wbemprox-Win32_VideoController)
 			enable_wbemprox_Win32_VideoController="$2"
 			;;
+		webservices-Dead_Code)
+			enable_webservices_Dead_Code="$2"
+			;;
 		wevtapi-EvtNext)
 			enable_wevtapi_EvtNext="$2"
 			;;
@@ -1587,11 +1591,11 @@ patch_enable ()
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
 			;;
-		wined3d-buffer_sync_apple)
-			enable_wined3d_buffer_sync_apple="$2"
-			;;
 		wined3d-sample_c_lz)
 			enable_wined3d_sample_c_lz="$2"
+			;;
+		wined3d-wined3d_event_query_create)
+			enable_wined3d_wined3d_event_query_create="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -8623,6 +8627,18 @@ if test "$enable_wbemprox_Win32_VideoController" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset webservices-Dead_Code
+# |
+# | Modified files:
+# |   *	dlls/webservices/reader.c
+# |
+if test "$enable_webservices_Dead_Code" -eq 1; then
+	patch_apply webservices-Dead_Code/0001-webservices-Remove-dead-code-in-read_attribute_value.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "webservices: Remove dead code in read_attribute_value_bin.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wevtapi-EvtNext
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9285,22 +9301,6 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-buffer_sync_apple
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43196] Fix regression related to buffer_sync_apple handling
-# |
-# | Modified files:
-# |   *	dlls/wined3d/buffer.c, dlls/wined3d/context.c, dlls/wined3d/drawprim.c, dlls/wined3d/query.c,
-# | 	dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_buffer_sync_apple" -eq 1; then
-	patch_apply wined3d-buffer_sync_apple/0001-wined3d-Fix-buffer_sync_apple-handling.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Fix regression related to buffer_sync_apple handling.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-sample_c_lz
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9315,6 +9315,18 @@ if test "$enable_wined3d_sample_c_lz" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate sample_c_lz using textureGradOffset for sampler2DArrayShadow.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate textureLod(samplerCubeShadow, ...) using shadowCubeGrad.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-wined3d_event_query_create
+# |
+# | Modified files:
+# |   *	dlls/wined3d/query.c
+# |
+if test "$enable_wined3d_wined3d_event_query_create" -eq 1; then
+	patch_apply wined3d-wined3d_event_query_create/0001-wined3d-Return-hr-result-in-wined3d_event_query_crea.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Return hr result in wined3d_event_query_create.", 1 },';
 	) >> "$patchlist"
 fi
 

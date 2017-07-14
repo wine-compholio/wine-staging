@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "989a9dc91778c94d0cf0c769709f10dcc92a5ead"
+	echo "ab313dd3beb7e495b36f8320ffc2354b9c854d51"
 }
 
 # Show version information
@@ -444,7 +444,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_sample_c_lz="$1"
-	enable_wined3d_wined3d_event_query_create="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1584,9 +1583,6 @@ patch_enable ()
 			;;
 		wined3d-sample_c_lz)
 			enable_wined3d_sample_c_lz="$2"
-			;;
-		wined3d-wined3d_event_query_create)
-			enable_wined3d_wined3d_event_query_create="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -9285,18 +9281,6 @@ if test "$enable_wined3d_sample_c_lz" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate sample_c_lz using textureGradOffset for sampler2DArrayShadow.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate textureLod(samplerCubeShadow, ...) using shadowCubeGrad.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-wined3d_event_query_create
-# |
-# | Modified files:
-# |   *	dlls/wined3d/query.c
-# |
-if test "$enable_wined3d_wined3d_event_query_create" -eq 1; then
-	patch_apply wined3d-wined3d_event_query_create/0001-wined3d-Return-hr-result-in-wined3d_event_query_crea.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Return hr result in wined3d_event_query_create.", 1 },';
 	) >> "$patchlist"
 fi
 

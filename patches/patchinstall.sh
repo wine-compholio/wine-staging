@@ -6688,6 +6688,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0018-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
 	patch_apply nvapi-Stub_DLL/0019-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
 	patch_apply nvapi-Stub_DLL/0020-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
+	patch_apply nvapi-Stub_DLL/0021-nvapi-Implement-NvAPI_D3D11_CreateDevice-and-NvAPI_D.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
@@ -6709,6 +6710,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_GPU_Get{Physical,Virtual}FrameBufferSize.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GPU_GetGpuCoreCount.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_SetDepthBoundsTest.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_CreateDevice and NvAPI_D3D11_CreateDeviceAndSwapChain.", 1 },';
 	) >> "$patchlist"
 fi
 

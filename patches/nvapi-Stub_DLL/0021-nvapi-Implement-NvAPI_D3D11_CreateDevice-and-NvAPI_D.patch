@@ -1,0 +1,244 @@
+From 5850953278f92568bc88418d322609bc593b115e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 14 Jul 2017 09:37:11 +0200
+Subject: nvapi: Implement NvAPI_D3D11_CreateDevice and
+ NvAPI_D3D11_CreateDeviceAndSwapChain.
+
+---
+ dlls/nvapi/Makefile.in   |  2 +-
+ dlls/nvapi/nvapi.c       | 55 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/nvapi/tests/nvapi.c | 58 ++++++++++++++++++++++++++++++++++++++++++++++--
+ dlls/nvapi64/Makefile.in |  2 +-
+ include/nvapi.h          |  9 ++++++++
+ 5 files changed, 122 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/nvapi/Makefile.in b/dlls/nvapi/Makefile.in
+index 6341254d9f6..0ef540b2f7d 100644
+--- a/dlls/nvapi/Makefile.in
++++ b/dlls/nvapi/Makefile.in
+@@ -1,5 +1,5 @@
+ MODULE    = nvapi.dll
+-IMPORTS   = wined3d
++IMPORTS   = wined3d d3d11
+ 
+ C_SRCS = \
+ 	nvapi.c
+diff --git a/dlls/nvapi/nvapi.c b/dlls/nvapi/nvapi.c
+index 70f7b3e9f34..4640c681851 100644
+--- a/dlls/nvapi/nvapi.c
++++ b/dlls/nvapi/nvapi.c
+@@ -30,6 +30,7 @@
+ #include "wine/list.h"
+ #include "nvapi.h"
+ #include "d3d9.h"
++#include "d3d11.h"
+ 
+ #include "wine/wined3d.h"
+ 
+@@ -706,6 +707,58 @@ static NvAPI_Status CDECL NvAPI_D3D11_SetDepthBoundsTest(IUnknown *pDeviceOrCont
+     return NVAPI_OK;
+ }
+ 
++static NVAPI_DEVICE_FEATURE_LEVEL translate_feature_level(D3D_FEATURE_LEVEL level_d3d)
++{
++    switch (level_d3d)
++    {
++        case D3D_FEATURE_LEVEL_9_1:
++        case D3D_FEATURE_LEVEL_9_2:
++        case D3D_FEATURE_LEVEL_9_3:
++            return NVAPI_DEVICE_FEATURE_LEVEL_NULL;
++        case D3D_FEATURE_LEVEL_10_0:
++            return NVAPI_DEVICE_FEATURE_LEVEL_10_0;
++        case D3D_FEATURE_LEVEL_10_1:
++            return NVAPI_DEVICE_FEATURE_LEVEL_10_1;
++        case D3D_FEATURE_LEVEL_11_0:
++        default:
++            return NVAPI_DEVICE_FEATURE_LEVEL_11_0;
++    }
++}
++
++static NvAPI_Status CDECL NvAPI_D3D11_CreateDevice(IDXGIAdapter *adapter, D3D_DRIVER_TYPE driver_type, HMODULE swrast, UINT flags,
++                                                   const D3D_FEATURE_LEVEL *feature_levels, UINT levels, UINT sdk_version,
++                                                   ID3D11Device **device_out, D3D_FEATURE_LEVEL *obtained_feature_level,
++                                                   ID3D11DeviceContext **immediate_context, NVAPI_DEVICE_FEATURE_LEVEL *supported)
++{
++    D3D_FEATURE_LEVEL level;
++    HRESULT hr;
++
++    hr = D3D11CreateDevice(adapter, driver_type, swrast, flags, feature_levels, levels, sdk_version, device_out, &level, immediate_context);
++    if (FAILED(hr)) return NVAPI_ERROR;
++    if (obtained_feature_level) *obtained_feature_level = level;
++    if (supported) *supported = translate_feature_level(level);
++
++    return NVAPI_OK;
++}
++
++static NvAPI_Status CDECL NvAPI_D3D11_CreateDeviceAndSwapChain(IDXGIAdapter *adapter, D3D_DRIVER_TYPE driver_type,HMODULE swrast, UINT flags,
++                                                               const D3D_FEATURE_LEVEL *feature_levels, UINT levels, UINT sdk_version,
++                                                               const DXGI_SWAP_CHAIN_DESC *swapchain_desc, IDXGISwapChain **swapchain,
++                                                               ID3D11Device **device_out, D3D_FEATURE_LEVEL *obtained_feature_level,
++                                                               ID3D11DeviceContext **immediate_context, NVAPI_DEVICE_FEATURE_LEVEL *supported)
++{
++    D3D_FEATURE_LEVEL level;
++    HRESULT hr;
++
++    hr = D3D11CreateDeviceAndSwapChain(adapter, driver_type, swrast, flags, feature_levels, levels, sdk_version, swapchain_desc, swapchain,
++                                       device_out, &level, immediate_context);
++    if (FAILED(hr)) return NVAPI_ERROR;
++    if (obtained_feature_level) *obtained_feature_level = level;
++    if (supported) *supported = translate_feature_level(level);
++
++    return NVAPI_OK;
++}
++
+ void* CDECL nvapi_QueryInterface(unsigned int offset)
+ {
+     static const struct
+@@ -752,6 +805,8 @@ void* CDECL nvapi_QueryInterface(unsigned int offset)
+         {0x5a04b644, NvAPI_GPU_GetVirtualFrameBufferSize},
+         {0xc7026a87, NvAPI_GPU_GetGpuCoreCount},
+         {0x7aaf7a04, NvAPI_D3D11_SetDepthBoundsTest},
++        {0x6a16d3a0, NvAPI_D3D11_CreateDevice},
++        {0xbb939ee5, NvAPI_D3D11_CreateDeviceAndSwapChain},
+     };
+     unsigned int i;
+     TRACE("(%x)\n", offset);
+diff --git a/dlls/nvapi/tests/nvapi.c b/dlls/nvapi/tests/nvapi.c
+index 52ca1d89fca..f08f84b7958 100644
+--- a/dlls/nvapi/tests/nvapi.c
++++ b/dlls/nvapi/tests/nvapi.c
+@@ -18,6 +18,7 @@
+ 
+ #include <stdarg.h>
+ 
++#define COBJMACROS
+ #include "windef.h"
+ #include "winbase.h"
+ #include "wingdi.h"
+@@ -25,7 +26,8 @@
+ #include "shlwapi.h"
+ #include "winerror.h"
+ #include "nvapi.h"
+-#include <d3d9.h>
++#include "d3d9.h"
++#include "d3d11.h"
+ 
+ #include "wine/test.h"
+ 
+@@ -45,6 +47,8 @@ static NvAPI_Status (CDECL* pNvAPI_EnumNvidiaDisplayHandle)(NvU32 thisEnum, NvDi
+ static NvAPI_Status (CDECL* pNvAPI_SYS_GetDriverAndBranchVersion)(NvU32* pDriverVersion, NvAPI_ShortString szBuildBranchString);
+ static NvAPI_Status (CDECL* pNvAPI_D3D_GetCurrentSLIState)(IUnknown *pDevice, NV_GET_CURRENT_SLI_STATE *pSliState);
+ static NvAPI_Status (CDECL* pNvAPI_GetLogicalGPUFromDisplay)(NvDisplayHandle hNvDisp, NvLogicalGpuHandle *pLogicalGPU);
++static NvAPI_Status (CDECL* pNvAPI_D3D11_CreateDevice)(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, const D3D_FEATURE_LEVEL*, UINT, UINT,
++                                                       ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext**, NVAPI_DEVICE_FEATURE_LEVEL*);
+ 
+ static const struct
+ {
+@@ -67,7 +71,8 @@ function_list[] =
+     {0x9abdd40d, (void**) &pNvAPI_EnumNvidiaDisplayHandle},
+     {0x2926aaad, (void**) &pNvAPI_SYS_GetDriverAndBranchVersion},
+     {0x4b708b54, (void**) &pNvAPI_D3D_GetCurrentSLIState},
+-    {0xee1370cf, (void**) &pNvAPI_GetLogicalGPUFromDisplay}
++    {0xee1370cf, (void**) &pNvAPI_GetLogicalGPUFromDisplay},
++    {0x6a16d3a0, (void**) &pNvAPI_D3D11_CreateDevice},
+ };
+ 
+ static BOOL init(void)
+@@ -705,6 +710,54 @@ cleanup:
+     if (window) DestroyWindow(window);
+ }
+ 
++static void test_NvAPI_D3D11_CreateDevice(void)
++{
++    NVAPI_DEVICE_FEATURE_LEVEL level_nvapi;
++    D3D_FEATURE_LEVEL level_d3d;
++    ID3D11Device *device;
++    HRESULT hr;
++
++    if (!pNvAPI_D3D11_CreateDevice)
++    {
++        win_skip("NvAPI_D3D11_CreateDevice export not found.\n");
++        return;
++    }
++
++    hr = pNvAPI_D3D11_CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, NULL, 0, D3D11_SDK_VERSION, &device, &level_d3d, NULL, &level_nvapi);
++    ok(hr == S_OK, "Failed to create device: %#08x\n", hr);
++
++    switch (level_d3d)
++    {
++        case D3D_FEATURE_LEVEL_9_1:
++        case D3D_FEATURE_LEVEL_9_2:
++        case D3D_FEATURE_LEVEL_9_3:
++            ok(level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_NULL, "Expected level NVAPI_DEVICE_FEATURE_LEVEL_NULL, got %d\n", level_nvapi);
++            break;
++        case D3D_FEATURE_LEVEL_10_0:
++            ok(level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_10_0 || level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_10_0_PLUS,
++               "Expected level NVAPI_DEVICE_FEATURE_LEVEL_10_0(_PLUS), got %d\n", level_nvapi);
++            break;
++        case D3D_FEATURE_LEVEL_10_1:
++            ok(level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_10_1, "Expected level NVAPI_DEVICE_FEATURE_LEVEL_10_1, got %d\n", level_nvapi);
++            break;
++        case D3D_FEATURE_LEVEL_11_0:
++        default:
++            ok(level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_11_0, "Expected level NVAPI_DEVICE_FEATURE_LEVEL_11_0, got %d\n", level_nvapi);
++            break;
++    }
++
++    if (SUCCEEDED(hr))
++        ID3D11Device_Release(device);
++
++    level_d3d = D3D_FEATURE_LEVEL_9_1;
++    hr = pNvAPI_D3D11_CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &level_d3d, 1, D3D11_SDK_VERSION, &device, NULL, NULL, &level_nvapi);
++    ok(hr == S_OK, "Failed to create device: %#08x\n", hr);
++    ok(level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_NULL, "Expected level NVAPI_DEVICE_FEATURE_LEVEL_NULL, got %d\n", level_nvapi);
++
++    if (SUCCEEDED(hr))
++        ID3D11Device_Release(device);
++}
++
+ START_TEST( nvapi )
+ {
+     WNDCLASSA wc = {0};
+@@ -724,6 +777,7 @@ START_TEST( nvapi )
+     test_NvAPI_EnumNvidiaDisplayHandle();
+     test_NvAPI_SYS_GetDriverAndBranchVersion();
+     test_NvAPI_GetLogicalGPUFromDisplay();
++    test_NvAPI_D3D11_CreateDevice();
+ 
+     /* d3d9 tests */
+     wc.lpfnWndProc = DefWindowProcA;
+diff --git a/dlls/nvapi64/Makefile.in b/dlls/nvapi64/Makefile.in
+index 04bd0cf1c46..8988e53d056 100644
+--- a/dlls/nvapi64/Makefile.in
++++ b/dlls/nvapi64/Makefile.in
+@@ -1,6 +1,6 @@
+ MODULE    = nvapi64.dll
+ PARENTSRC = ../nvapi
+-IMPORTS   = wined3d
++IMPORTS   = wined3d d3d11
+ 
+ C_SRCS = \
+ 	nvapi.c
+diff --git a/include/nvapi.h b/include/nvapi.h
+index 2cb4ed31f2b..5dea1a1a0bd 100644
+--- a/include/nvapi.h
++++ b/include/nvapi.h
+@@ -57,6 +57,15 @@ typedef void *NvDisplayHandle;
+ typedef void *StereoHandle;
+ typedef void *NVDX_ObjectHandle;
+ 
++typedef enum
++{
++    NVAPI_DEVICE_FEATURE_LEVEL_NULL      = -1,
++    NVAPI_DEVICE_FEATURE_LEVEL_10_0      = 0,
++    NVAPI_DEVICE_FEATURE_LEVEL_10_0_PLUS = 1,
++    NVAPI_DEVICE_FEATURE_LEVEL_10_1      = 2,
++    NVAPI_DEVICE_FEATURE_LEVEL_11_0      = 3,
++} NVAPI_DEVICE_FEATURE_LEVEL;
++
+ typedef struct
+ {
+     NvU32              version;
+-- 
+2.13.1
+

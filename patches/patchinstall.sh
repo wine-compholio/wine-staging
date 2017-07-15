@@ -406,6 +406,7 @@ patch_enable_all ()
 	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
+	enable_wbemprox_Win32_OperatingSystem="$1"
 	enable_wbemprox_Win32_VideoController="$1"
 	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
@@ -1470,6 +1471,9 @@ patch_enable ()
 			;;
 		wbemprox-Printer)
 			enable_wbemprox_Printer="$2"
+			;;
+		wbemprox-Win32_OperatingSystem)
+			enable_wbemprox_Win32_OperatingSystem="$2"
 			;;
 		wbemprox-Win32_VideoController)
 			enable_wbemprox_Win32_VideoController="$2"
@@ -8600,6 +8604,21 @@ if test "$enable_wbemprox_Printer" -eq 1; then
 	patch_apply wbemprox-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wbemprox-Win32_OperatingSystem
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43357] Add FreePhysicalMemory to Win32_OperatingSystem
+# |
+# | Modified files:
+# |   *	dlls/wbemprox/builtin.c
+# |
+if test "$enable_wbemprox_Win32_OperatingSystem" -eq 1; then
+	patch_apply wbemprox-Win32_OperatingSystem/0001-wbemprox-Add-FreePhysicalMemory-to-Win32_OperatingSy.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add FreePhysicalMemory to Win32_OperatingSystem.", 1 },';
 	) >> "$patchlist"
 fi
 

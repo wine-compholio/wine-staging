@@ -1,0 +1,78 @@
+From 0f3d6b8b305ee7ae0260d5fc2b1a72e11237d67a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 15 Jul 2017 01:41:07 +0200
+Subject: dinput: Avoid possible deadlock when CS are acquired in different
+ order.
+
+---
+ dlls/dinput/device.c         | 8 ++++----
+ dlls/dinput/dinput_main.c    | 4 ++--
+ dlls/dinput/dinput_private.h | 2 +-
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
+index 7b83a39d4b3..bb2a6417191 100644
+--- a/dlls/dinput/device.c
++++ b/dlls/dinput/device.c
+@@ -990,9 +990,9 @@ HRESULT WINAPI IDirectInputDevice2WImpl_Acquire(LPDIRECTINPUTDEVICE8W iface)
+     EnterCriticalSection(&This->crit);
+     res = This->acquired ? S_FALSE : DI_OK;
+     This->acquired = 1;
+-    if (res == DI_OK)
+-        check_dinput_hooks(iface);
+     LeaveCriticalSection(&This->crit);
++    if (res == DI_OK)
++        check_dinput_hooks(iface, TRUE);
+ 
+     return res;
+ }
+@@ -1018,9 +1018,9 @@ HRESULT WINAPI IDirectInputDevice2WImpl_Unacquire(LPDIRECTINPUTDEVICE8W iface)
+     EnterCriticalSection(&This->crit);
+     res = !This->acquired ? DI_NOEFFECT : DI_OK;
+     This->acquired = 0;
+-    if (res == DI_OK)
+-        check_dinput_hooks(iface);
+     LeaveCriticalSection(&This->crit);
++    if (res == DI_OK)
++        check_dinput_hooks(iface, FALSE);
+ 
+     return res;
+ }
+diff --git a/dlls/dinput/dinput_main.c b/dlls/dinput/dinput_main.c
+index 95d24876c8e..bbdfe28d385 100644
+--- a/dlls/dinput/dinput_main.c
++++ b/dlls/dinput/dinput_main.c
+@@ -1773,7 +1773,7 @@ static BOOL check_hook_thread(void)
+     return hook_thread_id != 0;
+ }
+ 
+-void check_dinput_hooks(LPDIRECTINPUTDEVICE8W iface)
++void check_dinput_hooks(LPDIRECTINPUTDEVICE8W iface, BOOL acquired)
+ {
+     static HHOOK callwndproc_hook;
+     static ULONG foreground_cnt;
+@@ -1783,7 +1783,7 @@ void check_dinput_hooks(LPDIRECTINPUTDEVICE8W iface)
+ 
+     if (dev->dwCoopLevel & DISCL_FOREGROUND)
+     {
+-        if (dev->acquired)
++        if (acquired)
+             foreground_cnt++;
+         else
+             foreground_cnt--;
+diff --git a/dlls/dinput/dinput_private.h b/dlls/dinput/dinput_private.h
+index 6c93e16e9ee..3ed68f2264a 100644
+--- a/dlls/dinput/dinput_private.h
++++ b/dlls/dinput/dinput_private.h
+@@ -69,7 +69,7 @@ extern const struct dinput_device joystick_linux_device DECLSPEC_HIDDEN;
+ extern const struct dinput_device joystick_linuxinput_device DECLSPEC_HIDDEN;
+ extern const struct dinput_device joystick_osx_device DECLSPEC_HIDDEN;
+ 
+-extern void check_dinput_hooks(LPDIRECTINPUTDEVICE8W) DECLSPEC_HIDDEN;
++extern void check_dinput_hooks(LPDIRECTINPUTDEVICE8W, BOOL) DECLSPEC_HIDDEN;
+ extern void check_dinput_events(void) DECLSPEC_HIDDEN;
+ typedef int (*DI_EVENT_PROC)(LPDIRECTINPUTDEVICE8A, WPARAM, LPARAM);
+ 
+-- 
+2.13.1
+

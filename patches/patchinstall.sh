@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ab313dd3beb7e495b36f8320ffc2354b9c854d51"
+	echo "c2f464decb8c44fbbc08e7f694c89d6aa758a754"
 }
 
 # Show version information
@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_devenum_AudioCompressorCategory="$1"
+	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
 	enable_dmloader_Tests="$1"
 	enable_dsound_EAX="$1"
@@ -698,6 +699,9 @@ patch_enable ()
 			;;
 		devenum-AudioCompressorCategory)
 			enable_devenum_AudioCompressorCategory="$2"
+			;;
+		dinput-Deadlock)
+			enable_dinput_Deadlock="$2"
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
@@ -4156,6 +4160,21 @@ if test "$enable_devenum_AudioCompressorCategory" -eq 1; then
 	patch_apply devenum-AudioCompressorCategory/0001-devenum-Populate-AudioCompressorCategory.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "devenum: Populate AudioCompressorCategory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-Deadlock
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43356] Avoid possible deadlock in dinput when CS are acquired in different order
+# |
+# | Modified files:
+# |   *	dlls/dinput/device.c, dlls/dinput/dinput_main.c, dlls/dinput/dinput_private.h
+# |
+if test "$enable_dinput_Deadlock" -eq 1; then
+	patch_apply dinput-Deadlock/0001-dinput-Avoid-possible-deadlock-when-CS-are-acquired-.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Avoid possible deadlock when CS are acquired in different order.", 1 },';
 	) >> "$patchlist"
 fi
 

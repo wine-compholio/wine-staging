@@ -493,6 +493,7 @@ patch_enable_all ()
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 	enable_xaudio2_get_al_format="$1"
+	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
 	enable_xinput9_1_0_Parentsrc="$1"
 }
 
@@ -1732,6 +1733,9 @@ patch_enable ()
 			;;
 		xaudio2-get_al_format)
 			enable_xaudio2_get_al_format="$2"
+			;;
+		xaudio2_7-OnVoiceProcessingPassStart)
+			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
 			;;
 		xinput9_1_0-Parentsrc)
 			enable_xinput9_1_0_Parentsrc="$2"
@@ -10047,6 +10051,21 @@ if test "$enable_xaudio2_get_al_format" -eq 1; then
 	patch_apply xaudio2-get_al_format/0001-xaudio2-Add-support-for-float-formats-with-more-than.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "xaudio2: Add support for float formats with more than 2 channels.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xaudio2_7-OnVoiceProcessingPassStart
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43358] Use assembly wrapper to call OnVoiceProcessingPassStart callback
+# |
+# | Modified files:
+# |   *	dlls/xaudio2_7/xaudio_dll.c
+# |
+if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -eq 1; then
+	patch_apply xaudio2_7-OnVoiceProcessingPassStart/0001-xaudio2_7-Use-assembly-wrapper-to-call-OnVoiceProces.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "xaudio2_7: Use assembly wrapper to call OnVoiceProcessingPassStart callback.", 1 },';
 	) >> "$patchlist"
 fi
 

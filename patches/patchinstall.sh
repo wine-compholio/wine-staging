@@ -3059,6 +3059,9 @@ fi
 
 # Patchset kernel32-UmsStubs
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43351] Add semi-stub implementation for CreateRemoteThreadEx
+# |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
 # | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-

@@ -363,6 +363,7 @@ patch_enable_all ()
 	enable_shell32_SHELL_execute="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
+	enable_shell32_SHGetFileInfoW="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
@@ -1343,6 +1344,9 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation_Win9x)
 			enable_shell32_SHFileOperation_Win9x="$2"
+			;;
+		shell32-SHGetFileInfoW)
+			enable_shell32_SHGetFileInfoW="$2"
 			;;
 		shell32-Toolbar_Bitmaps)
 			enable_shell32_Toolbar_Bitmaps="$2"
@@ -7850,6 +7854,18 @@ if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	patch_apply shell32-SHFileOperation_Win9x/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-SHGetFileInfoW
+# |
+# | Modified files:
+# |   *	dlls/shell32/shell32_main.c
+# |
+if test "$enable_shell32_SHGetFileInfoW" -eq 1; then
+	patch_apply shell32-SHGetFileInfoW/0001-shell32-Prevent-a-possible-nullptr-dereference-in-SH.patch
+	(
+		printf '%s\n' '+    { "Mark Jansen", "shell32: Prevent a possible nullptr dereference in SHGetFileInfoW.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,116 @@
+From deba3b50b155a71af0a8cd449d953317ff691c13 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 19 Jul 2017 01:21:24 +0200
+Subject: winhttp: Rename host_t to hostdata_t.
+
+---
+ dlls/winhttp/net.c             |  2 +-
+ dlls/winhttp/request.c         | 10 +++++-----
+ dlls/winhttp/winhttp_private.h |  8 ++++----
+ 3 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/winhttp/net.c b/dlls/winhttp/net.c
+index 8c603291b20..c9aa6d48b27 100644
+--- a/dlls/winhttp/net.c
++++ b/dlls/winhttp/net.c
+@@ -299,7 +299,7 @@ void netconn_unload( void )
+ #endif
+ }
+ 
+-netconn_t *netconn_create( host_t *host, const struct sockaddr_storage *sockaddr, int timeout )
++netconn_t *netconn_create( hostdata_t *host, const struct sockaddr_storage *sockaddr, int timeout )
+ {
+     netconn_t *conn;
+     unsigned int addr_len;
+diff --git a/dlls/winhttp/request.c b/dlls/winhttp/request.c
+index aaa6a5e7905..2ec7511146f 100644
+--- a/dlls/winhttp/request.c
++++ b/dlls/winhttp/request.c
+@@ -1004,7 +1004,7 @@ static CRITICAL_SECTION connection_pool_cs = { &connection_pool_debug, -1, 0, 0,
+ 
+ static struct list connection_pool = LIST_INIT( connection_pool );
+ 
+-void release_host( host_t *host )
++void release_host( hostdata_t *host )
+ {
+     LONG ref;
+ 
+@@ -1024,7 +1024,7 @@ static DWORD WINAPI connection_collector(void *arg)
+ {
+     unsigned int remaining_connections;
+     netconn_t *netconn, *next_netconn;
+-    host_t *host, *next_host;
++    hostdata_t *host, *next_host;
+     ULONGLONG now;
+ 
+     do
+@@ -1036,7 +1036,7 @@ static DWORD WINAPI connection_collector(void *arg)
+ 
+         EnterCriticalSection(&connection_pool_cs);
+ 
+-        LIST_FOR_EACH_ENTRY_SAFE(host, next_host, &connection_pool, host_t, entry)
++        LIST_FOR_EACH_ENTRY_SAFE(host, next_host, &connection_pool, hostdata_t, entry)
+         {
+             LIST_FOR_EACH_ENTRY_SAFE(netconn, next_netconn, &host->connections, netconn_t, entry)
+             {
+@@ -1095,7 +1095,7 @@ static void cache_connection( netconn_t *netconn )
+ static BOOL open_connection( request_t *request )
+ {
+     BOOL is_secure = request->hdr.flags & WINHTTP_FLAG_SECURE;
+-    host_t *host = NULL, *iter;
++    hostdata_t *host = NULL, *iter;
+     netconn_t *netconn = NULL;
+     connect_t *connect;
+     WCHAR *addressW = NULL;
+@@ -1109,7 +1109,7 @@ static BOOL open_connection( request_t *request )
+ 
+     EnterCriticalSection( &connection_pool_cs );
+ 
+-    LIST_FOR_EACH_ENTRY( iter, &connection_pool, host_t, entry )
++    LIST_FOR_EACH_ENTRY( iter, &connection_pool, hostdata_t, entry )
+     {
+         if (iter->port == port && !strcmpW( connect->servername, iter->hostname ) && !is_secure == !iter->secure)
+         {
+diff --git a/dlls/winhttp/winhttp_private.h b/dlls/winhttp/winhttp_private.h
+index 180b1c4ba74..bda7b060585 100644
+--- a/dlls/winhttp/winhttp_private.h
++++ b/dlls/winhttp/winhttp_private.h
+@@ -103,7 +103,7 @@ typedef struct {
+     INTERNET_PORT port;
+     BOOL secure;
+     struct list connections;
+-} host_t;
++} hostdata_t;
+ 
+ typedef struct
+ {
+@@ -142,7 +142,7 @@ typedef struct
+     int socket;
+     struct sockaddr_storage sockaddr;
+     BOOL secure; /* SSL active on connection? */
+-    host_t *host;
++    hostdata_t *host;
+     ULONGLONG keep_until;
+     CtxtHandle ssl_ctx;
+     SecPkgContext_StreamSizes ssl_sizes;
+@@ -293,7 +293,7 @@ void send_callback( object_header_t *, DWORD, LPVOID, DWORD ) DECLSPEC_HIDDEN;
+ void close_connection( request_t * ) DECLSPEC_HIDDEN;
+ 
+ BOOL netconn_close( netconn_t * ) DECLSPEC_HIDDEN;
+-netconn_t *netconn_create( host_t *, const struct sockaddr_storage *, int ) DECLSPEC_HIDDEN;
++netconn_t *netconn_create( hostdata_t *, const struct sockaddr_storage *, int ) DECLSPEC_HIDDEN;
+ void netconn_unload( void ) DECLSPEC_HIDDEN;
+ ULONG netconn_query_data_available( netconn_t * ) DECLSPEC_HIDDEN;
+ BOOL netconn_recv( netconn_t *, void *, size_t, int, int * ) DECLSPEC_HIDDEN;
+@@ -312,7 +312,7 @@ void delete_domain( domain_t * ) DECLSPEC_HIDDEN;
+ BOOL set_server_for_hostname( connect_t *, LPCWSTR, INTERNET_PORT ) DECLSPEC_HIDDEN;
+ void destroy_authinfo( struct authinfo * ) DECLSPEC_HIDDEN;
+ 
+-void release_host( host_t *host ) DECLSPEC_HIDDEN;
++void release_host( hostdata_t *host ) DECLSPEC_HIDDEN;
+ 
+ BOOL process_header( request_t *request, LPCWSTR field, LPCWSTR value, DWORD flags, BOOL request_only ) DECLSPEC_HIDDEN;
+ 
+-- 
+2.13.1
+

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a8b5fdda3214e4fd52682aefaa093cd45766580e"
+	echo "9118512135a1aac6969bf575a0656855ba84ef11"
 }
 
 # Show version information
@@ -269,6 +269,7 @@ patch_enable_all ()
 	enable_ntdll_ProcessPriorityClass="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
+	enable_ntdll_RtlCaptureContext="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
@@ -472,6 +473,7 @@ patch_enable_all ()
 	enable_winhlp32_Flex_Workaround="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
+	enable_winhttp_host_t="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
 	enable_wininet_InternetCrackUrlW="$1"
@@ -1064,6 +1066,9 @@ patch_enable ()
 			;;
 		ntdll-Purist_Mode)
 			enable_ntdll_Purist_Mode="$2"
+			;;
+		ntdll-RtlCaptureContext)
+			enable_ntdll_RtlCaptureContext="$2"
 			;;
 		ntdll-RtlCaptureStackBackTrace)
 			enable_ntdll_RtlCaptureStackBackTrace="$2"
@@ -1674,6 +1679,9 @@ patch_enable ()
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
 			;;
+		winhttp-host_t)
+			enable_winhttp_host_t="$2"
+			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
 			;;
@@ -2133,6 +2141,13 @@ if test "$enable_wininet_Redirect" -eq 1; then
 		abort "Patchset wininet-Cleanup disabled, but wininet-Redirect depends on that."
 	fi
 	enable_wininet_Cleanup=1
+fi
+
+if test "$enable_winhttp_host_t" -eq 1; then
+	if test "$enable_winhttp_Accept_Headers" -gt 1; then
+		abort "Patchset winhttp-Accept_Headers disabled, but winhttp-host_t depends on that."
+	fi
+	enable_winhttp_Accept_Headers=1
 fi
 
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
@@ -2757,8 +2772,8 @@ fi
 # | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
 # | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
 # | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/winealsa.drv/mmdevdrv.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c, include/wine/list.h,
+# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
@@ -6350,6 +6365,18 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-RtlCaptureContext
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c
+# |
+if test "$enable_ntdll_RtlCaptureContext" -eq 1; then
+	patch_apply ntdll-RtlCaptureContext/0001-ntdll-Clear-upper-WORD-of-segment-registers-in-RtlCa.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Clear upper WORD of segment registers in RtlCaptureContext.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-RtlCaptureStackBackTrace
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7163,7 +7190,7 @@ fi
 # |   *	[#38322] Reset debug registers when creating threads
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, server/thread.c
+# |   *	dlls/ntdll/tests/exception.c, server/thread.c
 # |
 if test "$enable_server_Debug_Registers" -eq 1; then
 	patch_apply server-Debug_Registers/0001-server-Reset-debug-registers-when-creating-threads.patch
@@ -9752,6 +9779,21 @@ if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
 	patch_apply winhttp-System_Proxy_Autoconfig/0002-wininet-Silence-wininet-no-support-on-this-platform-.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "wininet: Silence wininet no support on this platform message.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winhttp-host_t
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	winhttp-Accept_Headers
+# |
+# | Modified files:
+# |   *	dlls/winhttp/net.c, dlls/winhttp/request.c, dlls/winhttp/winhttp_private.h
+# |
+if test "$enable_winhttp_host_t" -eq 1; then
+	patch_apply winhttp-host_t/0001-winhttp-Rename-host_t-to-hostdata_t.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "winhttp: Rename host_t to hostdata_t.", 1 },';
 	) >> "$patchlist"
 fi
 

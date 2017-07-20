@@ -446,6 +446,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
+	enable_wined3d_draw_primitive_arrays="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -1593,6 +1594,9 @@ patch_enable ()
 			;;
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
+			;;
+		wined3d-draw_primitive_arrays)
+			enable_wined3d_draw_primitive_arrays="$2"
 			;;
 		wined3d-sample_c_lz)
 			enable_wined3d_sample_c_lz="$2"
@@ -9331,6 +9335,20 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-draw_primitive_arrays
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c, dlls/wined3d/wined3d_gl.h
+# |
+if test "$enable_wined3d_draw_primitive_arrays" -eq 1; then
+	patch_apply wined3d-draw_primitive_arrays/0001-d3d11-tests-Add-basic-instance-offset-drawing-test.patch
+	patch_apply wined3d-draw_primitive_arrays/0002-wined3d-Add-support-for-start-instance-in-draw_primi.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic instance offset drawing test.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for start instance in draw_primitive_arrays.", 1 },';
 	) >> "$patchlist"
 fi
 

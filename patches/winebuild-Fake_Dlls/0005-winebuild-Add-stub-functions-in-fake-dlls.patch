@@ -1,4 +1,4 @@
-From 3cb1a8e8983c58da032185ca1d76bc4d3a2a15e1 Mon Sep 17 00:00:00 2001
+From 47c26e73121327980c26501ecb20cc6d6b08f3f3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 16:27:56 +0200
 Subject: winebuild: Add stub functions in fake dlls.
@@ -13,7 +13,7 @@ Subject: winebuild: Add stub functions in fake dlls.
  6 files changed, 255 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 44c632bdbcf..cfbee0851b5 100644
+index f8d45d829fc..77bac0861f7 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
 @@ -856,9 +856,7 @@ static void test_FakeDLL(void)
@@ -61,7 +61,7 @@ index 44c632bdbcf..cfbee0851b5 100644
      CloseHandle(map);
      CloseHandle(file);
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index cd7d0dff493..b1ec20e8723 100644
+index f2657045c94..c2375d6f0e8 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -483,6 +483,45 @@ static BOOL fpux_support;  /* whether the CPU supports extended fpu context */
@@ -110,16 +110,16 @@ index cd7d0dff493..b1ec20e8723 100644
  enum i386_trap_code
  {
      TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
-@@ -2365,6 +2404,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -2436,6 +2475,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
          (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
 +        (*teb)->Spare3 = __wine_fakedll_dispatcher;
-         thread_data = (struct ntdll_thread_data *)(*teb)->SpareBytes1;
+         thread_data = (struct x86_thread_data *)(*teb)->SystemReserved2;
          if (!(thread_data->fs = wine_ldt_alloc_fs()))
          {
 diff --git a/include/winternl.h b/include/winternl.h
-index 6b0624290fa..8b87f37c65c 100644
+index 80b7b91f906..4780aca43a3 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -362,7 +362,7 @@ typedef struct _TEB
@@ -144,10 +144,10 @@ index 3434cfe9c90..e76800bb5da 100644
  extern void align_output_rva( unsigned int file_align, unsigned int rva_align );
  extern size_t label_pos( const char *name );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index c01ff6d7746..4367b03b0d2 100644
+index 623d3f2d553..c6e2fec99a6 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -701,6 +701,163 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -738,6 +738,163 @@ void BuildSpec32File( DLLSPEC *spec )
  }
  
  
@@ -311,7 +311,7 @@ index c01ff6d7746..4367b03b0d2 100644
  /*******************************************************************
   *         output_fake_module_pass
   *
-@@ -719,7 +876,7 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -756,7 +913,7 @@ static void output_fake_module_pass( DLLSPEC *spec )
      const unsigned int section_align = page_size;
      const unsigned int file_align = 0x200;
      const unsigned int lfanew = (0x40 + sizeof(fakedll_signature) + 15) & ~15;
@@ -320,7 +320,7 @@ index c01ff6d7746..4367b03b0d2 100644
  
      put_word( 0x5a4d );       /* e_magic */
      put_word( 0x40 );         /* e_cblp */
-@@ -776,7 +933,7 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -813,7 +970,7 @@ static void output_fake_module_pass( DLLSPEC *spec )
      put_dword( 0 );                                  /* SizeOfUninitializedData */
      put_dword( label_rva("entrypoint") );            /* AddressOfEntryPoint */
      put_dword( label_rva("text_start") );            /* BaseOfCode */
@@ -329,7 +329,7 @@ index c01ff6d7746..4367b03b0d2 100644
      put_pword( 0x10000000 );                         /* ImageBase */
      put_dword( section_align );                      /* SectionAlignment */
      put_dword( file_align );                         /* FileAlignment */
-@@ -799,7 +956,8 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -836,7 +993,8 @@ static void output_fake_module_pass( DLLSPEC *spec )
      put_dword( 0 );                                  /* LoaderFlags */
      put_dword( 16 );                                 /* NumberOfRvaAndSizes */
  
@@ -339,7 +339,7 @@ index c01ff6d7746..4367b03b0d2 100644
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] */
      if (spec->nb_resources)           /* DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE] */
      {
-@@ -839,6 +997,21 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -876,6 +1034,21 @@ static void output_fake_module_pass( DLLSPEC *spec )
      put_word( 0 );                                                        /* NumberOfLinenumbers */
      put_dword( 0x60000020 /* CNT_CODE|MEM_EXECUTE|MEM_READ */ );          /* Characteristics  */
  
@@ -361,7 +361,7 @@ index c01ff6d7746..4367b03b0d2 100644
      /* .reloc section */
      put_data( ".reloc\0", 8 );                                            /* Name */
      put_dword( label_rva_align("reloc_end") - label_rva("reloc_start") ); /* VirtualSize */
-@@ -871,13 +1044,31 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -908,13 +1081,31 @@ static void output_fake_module_pass( DLLSPEC *spec )
  
      /* .text contents */
      align_output_rva( file_align, section_align );
@@ -442,5 +442,5 @@ index eada46604ec..eee5419285a 100644
  {
      size_t size = align - (output_buffer_pos % align);
 -- 
-2.12.2
+2.13.1
 

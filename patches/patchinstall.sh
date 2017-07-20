@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9118512135a1aac6969bf575a0656855ba84ef11"
+	echo "5a61913e90e3725d08c0e1fd06ccfe936434cbcc"
 }
 
 # Show version information
@@ -152,7 +152,6 @@ patch_enable_all ()
 	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
-	enable_dmloader_Tests="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -365,7 +364,6 @@ patch_enable_all ()
 	enable_shell32_SHELL_execute="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
-	enable_shell32_SHGetFileInfoW="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
@@ -473,7 +471,6 @@ patch_enable_all ()
 	enable_winhlp32_Flex_Workaround="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
-	enable_winhttp_host_t="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
 	enable_wininet_InternetCrackUrlW="$1"
@@ -492,7 +489,6 @@ patch_enable_all ()
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getsockopt="$1"
-	enable_ws2_32_if_nameindex="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
@@ -715,9 +711,6 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
-			;;
-		dmloader-Tests)
-			enable_dmloader_Tests="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -1355,9 +1348,6 @@ patch_enable ()
 		shell32-SHFileOperation_Win9x)
 			enable_shell32_SHFileOperation_Win9x="$2"
 			;;
-		shell32-SHGetFileInfoW)
-			enable_shell32_SHGetFileInfoW="$2"
-			;;
 		shell32-Toolbar_Bitmaps)
 			enable_shell32_Toolbar_Bitmaps="$2"
 			;;
@@ -1679,9 +1669,6 @@ patch_enable ()
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
 			;;
-		winhttp-host_t)
-			enable_winhttp_host_t="$2"
-			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
 			;;
@@ -1735,9 +1722,6 @@ patch_enable ()
 			;;
 		ws2_32-getsockopt)
 			enable_ws2_32_getsockopt="$2"
-			;;
-		ws2_32-if_nameindex)
-			enable_ws2_32_if_nameindex="$2"
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
@@ -2141,13 +2125,6 @@ if test "$enable_wininet_Redirect" -eq 1; then
 		abort "Patchset wininet-Cleanup disabled, but wininet-Redirect depends on that."
 	fi
 	enable_wininet_Cleanup=1
-fi
-
-if test "$enable_winhttp_host_t" -eq 1; then
-	if test "$enable_winhttp_Accept_Headers" -gt 1; then
-		abort "Patchset winhttp-Accept_Headers disabled, but winhttp-host_t depends on that."
-	fi
-	enable_winhttp_Accept_Headers=1
 fi
 
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
@@ -4248,18 +4225,6 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dmloader-Tests
-# |
-# | Modified files:
-# |   *	dlls/dmloader/tests/loader.c
-# |
-if test "$enable_dmloader_Tests" -eq 1; then
-	patch_apply dmloader-Tests/0001-dmloader-tests-Fix-test-failures.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "dmloader/tests: Fix test failures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5887,8 +5852,7 @@ fi
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
@@ -7909,18 +7873,6 @@ if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shell32-SHGetFileInfoW
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32_main.c
-# |
-if test "$enable_shell32_SHGetFileInfoW" -eq 1; then
-	patch_apply shell32-SHGetFileInfoW/0001-shell32-Prevent-a-possible-nullptr-dereference-in-SH.patch
-	(
-		printf '%s\n' '+    { "Mark Jansen", "shell32: Prevent a possible nullptr dereference in SHGetFileInfoW.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shell32-Toolbar_Bitmaps
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9782,21 +9734,6 @@ if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winhttp-host_t
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	winhttp-Accept_Headers
-# |
-# | Modified files:
-# |   *	dlls/winhttp/net.c, dlls/winhttp/request.c, dlls/winhttp/winhttp_private.h
-# |
-if test "$enable_winhttp_host_t" -eq 1; then
-	patch_apply winhttp-host_t/0001-winhttp-Rename-host_t-to-hostdata_t.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winhttp: Rename host_t to hostdata_t.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wininet-Cleanup
 # |
 # | Modified files:
@@ -10050,18 +9987,6 @@ if test "$enable_ws2_32_getsockopt" -eq 1; then
 	patch_apply ws2_32-getsockopt/0001-ws2_32-Divide-values-returned-by-SO_RCVBUF-and-SO_SN.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-if_nameindex
-# |
-# | Modified files:
-# |   *	configure.ac
-# |
-if test "$enable_ws2_32_if_nameindex" -eq 1; then
-	patch_apply ws2_32-if_nameindex/0001-configure.ac-Improve-check-for-if_nameindex.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "configure.ac: Improve check for if_nameindex.", 1 },';
 	) >> "$patchlist"
 fi
 

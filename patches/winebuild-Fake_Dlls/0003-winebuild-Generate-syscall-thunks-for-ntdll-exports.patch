@@ -1,4 +1,4 @@
-From 5cdd660ebd413914330fa49e9d7014c9056662c2 Mon Sep 17 00:00:00 2001
+From 32bb8b671dd0c6df8d3cf295447b3c8f7d3b7457 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: winebuild: Generate syscall thunks for ntdll exports.
@@ -16,7 +16,7 @@ Based on a patch by Erich E. Hoover.
  8 files changed, 164 insertions(+), 26 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index d0f25ed3ce4..cd7d0dff493 100644
+index d3da84c7be9..f2657045c94 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -481,6 +481,7 @@ static wine_signal_handler handlers[256];
@@ -27,16 +27,16 @@ index d0f25ed3ce4..cd7d0dff493 100644
  
  enum i386_trap_code
  {
-@@ -2363,6 +2364,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -2434,6 +2435,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          *teb = addr;
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
 +        (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
-         thread_data = (struct ntdll_thread_data *)(*teb)->SpareBytes1;
+         thread_data = (struct x86_thread_data *)(*teb)->SystemReserved2;
          if (!(thread_data->fs = wine_ldt_alloc_fs()))
          {
 diff --git a/include/winternl.h b/include/winternl.h
-index ae3163daeac..6b0624290fa 100644
+index c11df3e53f6..80b7b91f906 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -322,7 +322,7 @@ typedef struct _TEB
@@ -265,10 +265,10 @@ index 85bcf099999..54aad5d95b4 100644
          entry_point->u.func.nb_args = 0;
          assert( !spec->ordinals[0] );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index f3feb0f3300..dde1bd0704d 100644
+index 39733b2b0b5..b1e71ef99be 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -274,6 +274,73 @@ static void output_relay_debug( DLLSPEC *spec )
+@@ -311,6 +311,73 @@ static void output_relay_debug( DLLSPEC *spec )
  }
  
  /*******************************************************************
@@ -342,7 +342,7 @@ index f3feb0f3300..dde1bd0704d 100644
   *         output_exports
   *
   * Output the export table for a Win32 module.
-@@ -623,6 +690,7 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -660,6 +727,7 @@ void BuildSpec32File( DLLSPEC *spec )
      resolve_imports( spec );
      output_standard_file_header();
      output_module( spec );
@@ -394,5 +394,5 @@ index 6e01f1a5268..925054b8bb7 100644
 +    return j + 1;
 +}
 -- 
-2.12.2
+2.13.1
 

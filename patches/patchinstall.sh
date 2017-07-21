@@ -317,6 +317,7 @@ patch_enable_all ()
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_rpcrt4_Race_Condition="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -1207,6 +1208,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		rpcrt4-Race_Condition)
+			enable_rpcrt4_Race_Condition="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -7123,6 +7127,18 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset rpcrt4-Race_Condition
+# |
+# | Modified files:
+# |   *	dlls/rpcrt4/rpc_server.c
+# |
+if test "$enable_rpcrt4_Race_Condition" -eq 1; then
+	patch_apply rpcrt4-Race_Condition/0001-rpcrt4-Hold-CS-while-iterating-through-protseqs-list.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "rpcrt4: Hold CS while iterating through protseqs list.", 1 },';
 	) >> "$patchlist"
 fi
 

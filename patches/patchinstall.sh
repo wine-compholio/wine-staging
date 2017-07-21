@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "addd8e69ff09e8620aa3c9c2120d2161df478ac2"
+	echo "7d3c068c3beeac8691cfa96f0dce6b5583072eaa"
 }
 
 # Show version information
@@ -117,7 +117,6 @@ patch_enable_all ()
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d11_ResolveSubresource="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
-	enable_d3d11_State_Init="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
@@ -609,9 +608,6 @@ patch_enable ()
 			;;
 		d3d11-Silence_FIXMEs)
 			enable_d3d11_Silence_FIXMEs="$2"
-			;;
-		d3d11-State_Init)
-			enable_d3d11_State_Init="$2"
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
@@ -3665,18 +3661,6 @@ if test "$enable_d3d11_Silence_FIXMEs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d11-State_Init
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c
-# |
-if test "$enable_d3d11_State_Init" -eq 1; then
-	patch_apply d3d11-State_Init/0001-d3d11-Prevent-race-condition-when-creating-samplers.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Prevent race condition when creating samplers.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d8-ValidateShader
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5559,7 +5543,6 @@ fi
 # |
 if test "$enable_msidb_Implementation" -eq 1; then
 	patch_apply msidb-Implementation/0001-msidb-Add-stub-tool-for-manipulating-MSI-databases.patch
-	patch_apply msidb-Implementation/0002-msi-Return-an-error-when-MsiDatabaseImport-is-passed.patch
 	patch_apply msidb-Implementation/0003-msidb-Add-support-for-importing-database-tables.patch
 	patch_apply msidb-Implementation/0004-msidb-Add-support-for-adding-stream-cabinet-files-to.patch
 	patch_apply msidb-Implementation/0005-msi-Add-support-for-deleting-streams-from-an-MSI-dat.patch
@@ -5573,7 +5556,6 @@ if test "$enable_msidb_Implementation" -eq 1; then
 	patch_apply msidb-Implementation/0013-msidb-Add-support-for-wildcard-full-database-export.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add stub tool for manipulating MSI databases.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msi: Return an error when MsiDatabaseImport is passed an invalid pathname.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for importing database tables.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for adding stream/cabinet files to MSI databases.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for deleting streams from an MSI database.", 1 },';

@@ -444,6 +444,7 @@ patch_enable_all ()
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
+	enable_wined3d_SM4_OP_NOP="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
@@ -1589,6 +1590,9 @@ patch_enable ()
 			;;
 		wined3d-Revert_Buffer_Upload)
 			enable_wined3d_Revert_Buffer_Upload="$2"
+			;;
+		wined3d-SM4_OP_NOP)
+			enable_wined3d_SM4_OP_NOP="$2"
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
@@ -9331,6 +9335,18 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-SM4_OP_NOP
+# |
+# | Modified files:
+# |   *	dlls/wined3d/shader_sm4.c
+# |
+if test "$enable_wined3d_SM4_OP_NOP" -eq 1; then
+	patch_apply wined3d-SM4_OP_NOP/0001-wined3d-Recognize-SM4-nop-opcode.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize SM4 nop opcode.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5a61913e90e3725d08c0e1fd06ccfe936434cbcc"
+	echo "addd8e69ff09e8620aa3c9c2120d2161df478ac2"
 }
 
 # Show version information
@@ -2203,7 +2203,11 @@ if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
 	if test "$enable_d3d11_Depth_Bias" -gt 1; then
 		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Copy_Resource_Typeless depends on that."
 	fi
+	if test "$enable_wined3d_1DTextures" -gt 1; then
+		abort "Patchset wined3d-1DTextures disabled, but wined3d-Copy_Resource_Typeless depends on that."
+	fi
 	enable_d3d11_Depth_Bias=1
+	enable_wined3d_1DTextures=1
 fi
 
 if test "$enable_wineboot_ProxySettings" -eq 1; then
@@ -9191,7 +9195,7 @@ fi
 # Patchset wined3d-Copy_Resource_Typeless
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
+# |   *	d3d11-Depth_Bias, wined3d-1DTextures
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#43264] Implement copying resources between compatible formats

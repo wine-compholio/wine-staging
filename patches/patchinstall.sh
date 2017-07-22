@@ -492,6 +492,7 @@ patch_enable_all ()
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getsockopt="$1"
+	enable_ws2_32_setsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
@@ -1734,6 +1735,9 @@ patch_enable ()
 			;;
 		ws2_32-getsockopt)
 			enable_ws2_32_getsockopt="$2"
+			;;
+		ws2_32-setsockopt)
+			enable_ws2_32_setsockopt="$2"
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
@@ -10060,6 +10064,18 @@ if test "$enable_ws2_32_getsockopt" -eq 1; then
 	patch_apply ws2_32-getsockopt/0001-ws2_32-Divide-values-returned-by-SO_RCVBUF-and-SO_SN.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-setsockopt
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c, include/winsock.h
+# |
+if test "$enable_ws2_32_setsockopt" -eq 1; then
+	patch_apply ws2_32-setsockopt/0001-w2_32-Ignore-setting-several-port-assignment-related.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "w2_32: Ignore setting several port assignment related socket options.", 1 },';
 	) >> "$patchlist"
 fi
 

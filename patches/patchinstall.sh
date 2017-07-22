@@ -244,7 +244,7 @@ patch_enable_all ()
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_Grow_Virtual_Heap="$1"
 	enable_ntdll_HashLinks="$1"
-	enable_ntdll_Heap_FreeLists="$1"
+	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
@@ -993,8 +993,8 @@ patch_enable ()
 		ntdll-HashLinks)
 			enable_ntdll_HashLinks="$2"
 			;;
-		ntdll-Heap_FreeLists)
-			enable_ntdll_Heap_FreeLists="$2"
+		ntdll-Heap_Improvements)
+			enable_ntdll_Heap_Improvements="$2"
 			;;
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
@@ -2528,6 +2528,13 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 		abort "Patchset kernel32-SetFileCompletionNotificationModes disabled, but ntdll-NtQueryEaFile depends on that."
 	fi
 	enable_kernel32_SetFileCompletionNotificationModes=1
+fi
+
+if test "$enable_ntdll_Heap_Improvements" -eq 1; then
+	if test "$enable_ntdll_Grow_Virtual_Heap" -gt 1; then
+		abort "Patchset ntdll-Grow_Virtual_Heap disabled, but ntdll-Heap_Improvements depends on that."
+	fi
+	enable_ntdll_Grow_Virtual_Heap=1
 fi
 
 if test "$enable_ntdll_HashLinks" -eq 1; then
@@ -6060,15 +6067,23 @@ if test "$enable_ntdll_HashLinks" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Heap_FreeLists
+# Patchset ntdll-Heap_Improvements
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Grow_Virtual_Heap
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43224] Improvement for heap allocation performance
 # |
 # | Modified files:
-# |   *	dlls/ntdll/heap.c
+# |   *	configure.ac, dlls/ntdll/heap.c
 # |
-if test "$enable_ntdll_Heap_FreeLists" -eq 1; then
-	patch_apply ntdll-Heap_FreeLists/0001-ntdll-Improve-heap-allocation-performance-by-using-m.patch
+if test "$enable_ntdll_Heap_Improvements" -eq 1; then
+	patch_apply ntdll-Heap_Improvements/0001-ntdll-Add-helper-function-to-delete-free-blocks.patch
+	patch_apply ntdll-Heap_Improvements/0002-ntdll-Improve-heap-allocation-performance.patch
 	(
-		printf '%s\n' '+    { "Steaphan Greene", "ntdll: Improve heap allocation performance by using more fine-grained free lists.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add helper function to delete free blocks.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve heap allocation performance.", 2 },';
 	) >> "$patchlist"
 fi
 

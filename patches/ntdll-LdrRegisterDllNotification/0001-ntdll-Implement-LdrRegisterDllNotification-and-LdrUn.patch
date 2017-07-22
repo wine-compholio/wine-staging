@@ -1,0 +1,533 @@
+From 69d9fedb1a587fbc8706daa3a29293637238573f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 22 Jul 2017 03:56:26 +0200
+Subject: ntdll: Implement LdrRegisterDllNotification and
+ LdrUnregisterDllNotification.
+
+---
+ dlls/ntdll/loader.c    | 100 ++++++++++++++++++++
+ dlls/ntdll/ntdll.spec  |   2 +
+ dlls/ntdll/tests/rtl.c | 250 +++++++++++++++++++++++++++++++++++++++++++++++++
+ include/winternl.h     |  29 ++++++
+ 4 files changed, 381 insertions(+)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 15ed31452e1..de2800c260a 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -40,6 +40,7 @@
+ #include "wine/library.h"
+ #include "wine/unicode.h"
+ #include "wine/debug.h"
++#include "wine/list.h"
+ #include "wine/server.h"
+ #include "ntdll_misc.h"
+ #include "ddk/wdm.h"
+@@ -64,6 +65,15 @@ WINE_DECLARE_DEBUG_CHANNEL(pid);
+ typedef DWORD (CALLBACK *DLLENTRYPROC)(HMODULE,DWORD,LPVOID);
+ typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
+ 
++struct ldr_notification
++{
++    struct list                    entry;
++    PLDR_DLL_NOTIFICATION_FUNCTION callback;
++    void                           *context;
++};
++
++static struct list ldr_notifications = LIST_INIT( ldr_notifications );
++
+ #define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
+ 
+ static BOOL process_attaching = TRUE;   /* set on process attach to avoid calling callbacks too early */
+@@ -355,6 +365,39 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
+ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { return 0xdeadbeef; }
+ #endif  /* __i386__ */
+ 
++/* call ldr notifications */
++static void call_ldr_notifications( ULONG reason, LDR_MODULE *module )
++{
++    struct ldr_notification *notify, *notify_next;
++    LDR_DLL_NOTIFICATION_DATA data;
++
++    data.Loaded.Flags       = 0;
++    data.Loaded.FullDllName = &module->FullDllName;
++    data.Loaded.BaseDllName = &module->BaseDllName;
++    data.Loaded.DllBase     = module->BaseAddress;
++    data.Loaded.SizeOfImage = module->SizeOfImage;
++
++    LIST_FOR_EACH_ENTRY_SAFE( notify, notify_next, &ldr_notifications, struct ldr_notification, entry )
++    {
++        if (TRACE_ON( relay ))
++        {
++            if (TRACE_ON( pid ))
++                DPRINTF( "%04x:", GetCurrentProcessId() );
++            DPRINTF( "%04x:Call LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
++                     GetCurrentThreadId(), notify->callback, reason, &data, notify->context );
++        }
++
++        notify->callback(reason, &data, notify->context);
++
++        if (TRACE_ON( relay ))
++        {
++            if (TRACE_ON( pid ))
++                DPRINTF( "%04x:", GetCurrentProcessId() );
++            DPRINTF( "%04x:Ret  LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
++                     GetCurrentThreadId(), notify->callback, reason, &data, notify->context );
++        }
++    }
++}
+ 
+ /*************************************************************************
+  *      is_cli_only_image
+@@ -1408,16 +1451,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
+     {
+         WINE_MODREF *prev = current_modref;
+         current_modref = wm;
++
++        call_ldr_notifications( LDR_DLL_NOTIFICATION_REASON_LOADED, &wm->ldr );
+         status = MODULE_InitDLL( wm, DLL_PROCESS_ATTACH, lpReserved );
+         if (status == STATUS_SUCCESS)
++        {
+             wm->ldr.Flags |= LDR_PROCESS_ATTACHED;
++        }
+         else
+         {
+             MODULE_InitDLL( wm, DLL_PROCESS_DETACH, lpReserved );
++            call_ldr_notifications( LDR_DLL_NOTIFICATION_REASON_UNLOADED, &wm->ldr );
++
+             /* point to the name so LdrInitializeThunk can print it */
+             last_failed_modref = wm;
+             WARN("Initialization of %s failed\n", debugstr_w(wm->ldr.BaseDllName.Buffer));
+         }
++
+         current_modref = prev;
+     }
+ 
+@@ -1486,6 +1536,7 @@ static void process_detach(void)
+             mod->Flags &= ~LDR_PROCESS_ATTACHED;
+             MODULE_InitDLL( CONTAINING_RECORD(mod, WINE_MODREF, ldr), 
+                             DLL_PROCESS_DETACH, ULongToPtr(process_detaching) );
++            call_ldr_notifications( LDR_DLL_NOTIFICATION_REASON_UNLOADED, mod );
+ 
+             /* Restart at head of WINE_MODREF list, as entries might have
+                been added and/or removed while performing the call ... */
+@@ -1612,6 +1663,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
+ }
+ 
+ /******************************************************************
++ *              LdrRegisterDllNotification (NTDLL.@)
++ */
++NTSTATUS WINAPI LdrRegisterDllNotification(ULONG flags, PLDR_DLL_NOTIFICATION_FUNCTION callback,
++                                           void *context, void **cookie)
++{
++    struct ldr_notification *notify;
++
++    TRACE( "(%x, %p, %p, %p)\n", flags, callback, context, cookie );
++
++    if (!callback || !cookie)
++        return STATUS_INVALID_PARAMETER;
++
++    if (flags)
++        FIXME( "ignoring flags %x\n", flags );
++
++    notify = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*notify) );
++    if (!notify) return STATUS_NO_MEMORY;
++    notify->callback = callback;
++    notify->context = context;
++
++    RtlEnterCriticalSection( &loader_section );
++    list_add_tail( &ldr_notifications, &notify->entry );
++    RtlLeaveCriticalSection( &loader_section );
++
++    *cookie = notify;
++    return STATUS_SUCCESS;
++}
++
++/******************************************************************
++ *              LdrUnregisterDllNotification (NTDLL.@)
++ */
++NTSTATUS WINAPI LdrUnregisterDllNotification(void *cookie)
++{
++    struct ldr_notification *notify = cookie;
++
++    TRACE( "(%p)\n", cookie );
++
++    if (!notify) return STATUS_INVALID_PARAMETER;
++
++    RtlEnterCriticalSection( &loader_section );
++    list_remove( &notify->entry );
++    RtlLeaveCriticalSection( &loader_section );
++
++    RtlFreeHeap( GetProcessHeap(), 0, notify );
++    return STATUS_SUCCESS;
++}
++
++/******************************************************************
+  *		LdrLockLoaderLock  (NTDLL.@)
+  *
+  * Note: some flags are not implemented.
+@@ -2171,6 +2270,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, LPCWSTR fakemo
+     TRACE_(loaddll)( "Loaded %s at %p: native\n", debugstr_w(wm->ldr.FullDllName.Buffer), module );
+ 
+     wm->ldr.LoadCount = 1;
++
+     *pwm = wm;
+     status = STATUS_SUCCESS;
+ done:
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 4511e8efd26..42f26298dce 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -84,6 +84,7 @@
+ @ stdcall LdrProcessRelocationBlock(ptr long ptr long)
+ @ stdcall LdrQueryImageFileExecutionOptions(ptr wstr long ptr long ptr)
+ @ stdcall LdrQueryProcessModuleInformation(ptr long ptr)
++@ stdcall LdrRegisterDllNotification(long ptr long ptr)
+ @ stdcall LdrResolveDelayLoadedAPI(ptr ptr ptr ptr ptr long)
+ @ stub LdrSetAppCompatDllRedirectionCallback
+ @ stub LdrSetDllManifestProber
+@@ -92,6 +93,7 @@
+ @ stub LdrUnloadAlternateResourceModule
+ @ stdcall LdrUnloadDll(ptr)
+ @ stdcall LdrUnlockLoaderLock(long long)
++@ stdcall LdrUnregisterDllNotification(ptr)
+ @ stub LdrVerifyImageMatchesChecksum
+ @ extern NlsAnsiCodePage
+ @ extern NlsMbCodePageTag
+diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
+index 4700f4ac54a..93415ee5da0 100644
+--- a/dlls/ntdll/tests/rtl.c
++++ b/dlls/ntdll/tests/rtl.c
+@@ -112,6 +112,8 @@ static BOOL      (WINAPI *pRtlIsCriticalSectionLockedByThread)(CRITICAL_SECTION
+ static NTSTATUS  (WINAPI *pRtlInitializeCriticalSectionEx)(CRITICAL_SECTION *, ULONG, ULONG);
+ static NTSTATUS  (WINAPI *pLdrEnumerateLoadedModules)(void *, void *, void *);
+ static NTSTATUS  (WINAPI *pRtlQueryPackageIdentity)(HANDLE, WCHAR*, SIZE_T*, WCHAR*, SIZE_T*, BOOLEAN*);
++static NTSTATUS  (WINAPI *pLdrRegisterDllNotification)(ULONG, PLDR_DLL_NOTIFICATION_FUNCTION, void *, void **);
++static NTSTATUS  (WINAPI *pLdrUnregisterDllNotification)(void *);
+ 
+ static HMODULE hkernel32 = 0;
+ static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
+@@ -119,6 +121,9 @@ static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
+ 
+ #define LEN 16
+ static const char* src_src = "This is a test!"; /* 16 bytes long, incl NUL */
++static WCHAR ws2_32dllW[] = {'w','s','2','_','3','2','.','d','l','l',0};
++static WCHAR wintrustdllW[] = {'w','i','n','t','r','u','s','t','.','d','l','l',0};
++static WCHAR crypt32dllW[] = {'c','r','y','p','t','3','2','.','d','l','l',0};
+ static ULONG src_aligned_block[4];
+ static ULONG dest_aligned_block[32];
+ static const char *src = (const char*)src_aligned_block;
+@@ -175,6 +180,8 @@ static void InitFunctionPtrs(void)
+         pRtlInitializeCriticalSectionEx = (void *)GetProcAddress(hntdll, "RtlInitializeCriticalSectionEx");
+         pLdrEnumerateLoadedModules = (void *)GetProcAddress(hntdll, "LdrEnumerateLoadedModules");
+         pRtlQueryPackageIdentity = (void *)GetProcAddress(hntdll, "RtlQueryPackageIdentity");
++        pLdrRegisterDllNotification = (void *)GetProcAddress(hntdll, "LdrRegisterDllNotification");
++        pLdrUnregisterDllNotification = (void *)GetProcAddress(hntdll, "LdrUnregisterDllNotification");
+     }
+     hkernel32 = LoadLibraryA("kernel32.dll");
+     ok(hkernel32 != 0, "LoadLibrary failed\n");
+@@ -3345,6 +3352,248 @@ done:
+     CoUninitialize();
+ }
+ 
++static DWORD (CALLBACK *orig_entry)(HMODULE,DWORD,LPVOID);
++static DWORD *dll_main_data;
++
++static inline void *get_rva( HMODULE module, DWORD va )
++{
++    return (void *)((char *)module + va);
++}
++
++static void CALLBACK ldr_notify_callback1(ULONG reason, LDR_DLL_NOTIFICATION_DATA *data, void *context)
++{
++    const IMAGE_IMPORT_DESCRIPTOR *imports;
++    const IMAGE_THUNK_DATA *import_list;
++    IMAGE_THUNK_DATA *thunk_list;
++    DWORD *calls = context;
++    LIST_ENTRY *mark;
++    LDR_MODULE *mod;
++    ULONG size;
++    int i, j;
++
++    *calls <<= 4;
++    *calls |= reason;
++
++    ok(data->Loaded.Flags == 0, "Expected flags 0, got %x\n", data->Loaded.Flags);
++    ok(!lstrcmpiW(data->Loaded.BaseDllName->Buffer, ws2_32dllW), "Expected ws2_32.dll, got %s\n",
++       wine_dbgstr_w(data->Loaded.BaseDllName->Buffer));
++    ok(!!data->Loaded.DllBase, "Expected non zero base address\n");
++    ok(data->Loaded.SizeOfImage, "Expected non zero image size\n");
++
++    /* expect module to be last module listed in LdrData load order list */
++    mark = &NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList;
++    mod = CONTAINING_RECORD(mark->Blink, LDR_MODULE, InMemoryOrderModuleList);
++    ok(mod->BaseAddress == data->Loaded.DllBase, "Expected base address %p, got %p\n",
++       data->Loaded.DllBase, mod->BaseAddress);
++    ok(!lstrcmpiW(mod->BaseDllName.Buffer, ws2_32dllW), "Expected ws2_32.dll, got %s\n",
++       wine_dbgstr_w(mod->BaseDllName.Buffer));
++
++    /* show that imports have already been resolved */
++    imports = RtlImageDirectoryEntryToData(data->Loaded.DllBase, TRUE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size);
++    ok(!!imports, "Expected dll to have imports\n");
++
++    for (i = 0; imports[i].Name; i++)
++    {
++        thunk_list = get_rva(data->Loaded.DllBase, (DWORD)imports[i].FirstThunk);
++        if (imports[i].OriginalFirstThunk)
++            import_list = get_rva(data->Loaded.DllBase, (DWORD)imports[i].OriginalFirstThunk);
++        else
++            import_list = thunk_list;
++
++        for (j = 0; import_list[j].u1.Ordinal; j++)
++        {
++            ok(thunk_list[j].u1.AddressOfData > data->Loaded.SizeOfImage,
++               "Import has not been resolved: %p\n", (void*)thunk_list[j].u1.Function);
++        }
++    }
++}
++
++static void CALLBACK ldr_notify_callback2(ULONG reason, LDR_DLL_NOTIFICATION_DATA *data, void *context)
++{
++    DWORD *calls = context;
++    *calls <<= 4;
++    *calls |= reason + 2;
++}
++
++static BOOL WINAPI fake_dll_main(HINSTANCE instance, DWORD reason, void* reserved)
++{
++    if (reason == DLL_PROCESS_ATTACH)
++    {
++        *dll_main_data <<= 4;
++        *dll_main_data |= 3;
++    }
++    else if (reason == DLL_PROCESS_DETACH)
++    {
++        *dll_main_data <<= 4;
++        *dll_main_data |= 4;
++    }
++    return orig_entry(instance, reason, reserved);
++}
++
++static void CALLBACK ldr_notify_callback_dll_main(ULONG reason, LDR_DLL_NOTIFICATION_DATA *data, void *context)
++{
++    DWORD *calls = context;
++    LIST_ENTRY *mark;
++    LDR_MODULE *mod;
++
++    *calls <<= 4;
++    *calls |= reason;
++
++    if (reason != LDR_DLL_NOTIFICATION_REASON_LOADED)
++        return;
++
++    mark = &NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList;
++    mod = CONTAINING_RECORD(mark->Blink, LDR_MODULE, InMemoryOrderModuleList);
++    ok(mod->BaseAddress == data->Loaded.DllBase, "Expected base address %p, got %p\n",
++       data->Loaded.DllBase, mod->BaseAddress);
++    if (mod->BaseAddress != data->Loaded.DllBase)
++       return;
++
++    orig_entry = mod->EntryPoint;
++    mod->EntryPoint = fake_dll_main;
++    dll_main_data = calls;
++}
++
++static BOOL WINAPI fake_dll_main_fail(HINSTANCE instance, DWORD reason, void* reserved)
++{
++    if (reason == DLL_PROCESS_ATTACH)
++    {
++        *dll_main_data <<= 4;
++        *dll_main_data |= 3;
++    }
++    else if (reason == DLL_PROCESS_DETACH)
++    {
++        *dll_main_data <<= 4;
++        *dll_main_data |= 4;
++    }
++    return FALSE;
++}
++
++static void CALLBACK ldr_notify_callback_fail(ULONG reason, LDR_DLL_NOTIFICATION_DATA *data, void *context)
++{
++    DWORD *calls = context;
++    LIST_ENTRY *mark;
++    LDR_MODULE *mod;
++
++    *calls <<= 4;
++    *calls |= reason;
++
++    if (reason != LDR_DLL_NOTIFICATION_REASON_LOADED)
++        return;
++
++    mark = &NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList;
++    mod = CONTAINING_RECORD(mark->Blink, LDR_MODULE, InMemoryOrderModuleList);
++    ok(mod->BaseAddress == data->Loaded.DllBase, "Expected base address %p, got %p\n",
++       data->Loaded.DllBase, mod->BaseAddress);
++    if (mod->BaseAddress != data->Loaded.DllBase)
++       return;
++
++    orig_entry = mod->EntryPoint;
++    mod->EntryPoint = fake_dll_main_fail;
++    dll_main_data = calls;
++}
++
++static void CALLBACK ldr_notify_callback_imports(ULONG reason, LDR_DLL_NOTIFICATION_DATA *data, void *context)
++{
++    DWORD *calls = context;
++
++    if (reason != LDR_DLL_NOTIFICATION_REASON_LOADED)
++        return;
++
++    if (!lstrcmpiW(data->Loaded.BaseDllName->Buffer, crypt32dllW))
++    {
++        *calls <<= 4;
++        *calls |= 1;
++    }
++
++    if (!lstrcmpiW(data->Loaded.BaseDllName->Buffer, wintrustdllW))
++    {
++        *calls <<= 4;
++        *calls |= 2;
++    }
++}
++
++static void test_LdrRegisterDllNotification(void)
++{
++    void *cookie, *cookie2;
++    NTSTATUS status;
++    HMODULE mod;
++    DWORD calls;
++
++    if (!pLdrRegisterDllNotification || !pLdrUnregisterDllNotification)
++    {
++        win_skip("Ldr(Un)RegisterDllNotification not available\n");
++        return;
++    }
++
++    /* generic test */
++    status = pLdrRegisterDllNotification(0, ldr_notify_callback1, &calls, &cookie);
++    ok(!status, "Expected STATUS_SUCCESS, got %08x\n", status);
++
++    calls = 0;
++    mod = LoadLibraryW(ws2_32dllW);
++    ok(!!mod, "Failed to load library: %d\n", GetLastError());
++    ok(calls == LDR_DLL_NOTIFICATION_REASON_LOADED, "Expected LDR_DLL_NOTIFICATION_REASON_LOADED, got %x\n", calls);
++
++    calls = 0;
++    FreeLibrary(mod);
++    ok(calls == LDR_DLL_NOTIFICATION_REASON_UNLOADED, "Expected LDR_DLL_NOTIFICATION_REASON_UNLOADED, got %x\n", calls);
++
++    /* test order of callbacks */
++    status = pLdrRegisterDllNotification(0, ldr_notify_callback2, &calls, &cookie2);
++    ok(!status, "Expected STATUS_SUCCESS, got %08x\n", status);
++
++    calls = 0;
++    mod = LoadLibraryW(ws2_32dllW);
++    ok(!!mod, "Failed to load library: %d\n", GetLastError());
++    ok(calls == 0x13, "Expected order 0x13, got %x\n", calls);
++
++    calls = 0;
++    FreeLibrary(mod);
++    ok(calls == 0x24, "Expected order 0x24, got %x\n", calls);
++
++    pLdrUnregisterDllNotification(cookie2);
++    pLdrUnregisterDllNotification(cookie);
++
++    /* test dll main order */
++    status = pLdrRegisterDllNotification(0, ldr_notify_callback_dll_main, &calls, &cookie);
++    ok(!status, "Expected STATUS_SUCCESS, got %08x\n", status);
++
++    calls = 0;
++    mod = LoadLibraryW(ws2_32dllW);
++    ok(!!mod, "Failed to load library: %d\n", GetLastError());
++    ok(calls == 0x13, "Expected order 0x13, got %x\n", calls);
++
++    calls = 0;
++    FreeLibrary(mod);
++    ok(calls == 0x42, "Expected order 0x42, got %x\n", calls);
++
++    pLdrUnregisterDllNotification(cookie);
++
++    /* test dll main order */
++    status = pLdrRegisterDllNotification(0, ldr_notify_callback_fail, &calls, &cookie);
++    ok(!status, "Expected STATUS_SUCCESS, got %08x\n", status);
++
++    calls = 0;
++    mod = LoadLibraryW(ws2_32dllW);
++    ok(!mod, "Expected library to fail loading\n");
++    ok(calls == 0x1342, "Expected order 0x1342, got %x\n", calls);
++
++    pLdrUnregisterDllNotification(cookie);
++
++    /* test dll with dependencies */
++    status = pLdrRegisterDllNotification(0, ldr_notify_callback_imports, &calls, &cookie);
++    ok(!status, "Expected STATUS_SUCCESS, got %08x\n", status);
++
++    calls = 0;
++    mod = LoadLibraryW(wintrustdllW);
++    ok(!!mod, "Failed to load library: %d\n", GetLastError());
++    ok(calls == 0x12, "Expected order 0x12, got %x\n", calls);
++
++    FreeLibrary(mod);
++    pLdrUnregisterDllNotification(cookie);
++}
++
+ START_TEST(rtl)
+ {
+     InitFunctionPtrs();
+@@ -3384,4 +3633,5 @@ START_TEST(rtl)
+     test_RtlLeaveCriticalSection();
+     test_LdrEnumerateLoadedModules();
+     test_RtlQueryPackageIdentity();
++    test_LdrRegisterDllNotification();
+ }
+diff --git a/include/winternl.h b/include/winternl.h
+index 133653adfca..140669b0105 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2186,6 +2186,32 @@ typedef struct _LDR_MODULE
+     HANDLE              SectionHandle;
+ } LDR_MODULE, *PLDR_MODULE;
+ 
++typedef struct _LDR_DLL_LOADED_NOTIFICATION_DATA
++{
++    ULONG Flags;
++    PCUNICODE_STRING FullDllName;
++    PCUNICODE_STRING BaseDllName;
++    PVOID DllBase;
++    ULONG SizeOfImage;
++} LDR_DLL_LOADED_NOTIFICATION_DATA, *PLDR_DLL_LOADED_NOTIFICATION_DATA;
++
++typedef struct _LDR_DLL_UNLOADED_NOTIFICATION_DATA
++{
++    ULONG Flags;
++    PCUNICODE_STRING FullDllName;
++    PCUNICODE_STRING BaseDllName;
++    PVOID DllBase;
++    ULONG SizeOfImage;
++} LDR_DLL_UNLOADED_NOTIFICATION_DATA, *PLDR_DLL_UNLOADED_NOTIFICATION_DATA;
++
++typedef union _LDR_DLL_NOTIFICATION_DATA
++{
++    LDR_DLL_LOADED_NOTIFICATION_DATA Loaded;
++    LDR_DLL_UNLOADED_NOTIFICATION_DATA Unloaded;
++} LDR_DLL_NOTIFICATION_DATA, *PLDR_DLL_NOTIFICATION_DATA;
++
++typedef void (CALLBACK *PLDR_DLL_NOTIFICATION_FUNCTION)(ULONG, LDR_DLL_NOTIFICATION_DATA*, void*);
++
+ /* those defines are (some of the) regular LDR_MODULE.Flags values */
+ #define LDR_IMAGE_IS_DLL                0x00000004
+ #define LDR_LOAD_IN_PROGRESS            0x00001000
+@@ -2204,6 +2230,9 @@ typedef struct _LDR_MODULE
+ /* FIXME: to be checked */
+ #define MAXIMUM_FILENAME_LENGTH 256
+ 
++#define LDR_DLL_NOTIFICATION_REASON_LOADED   1
++#define LDR_DLL_NOTIFICATION_REASON_UNLOADED 2
++
+ typedef struct _SYSTEM_MODULE
+ {
+     PVOID               Reserved1;                      /* 00/00 */
+-- 
+2.13.1
+

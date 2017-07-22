@@ -448,6 +448,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_buffer_create="$1"
+	enable_wined3d_convervative_depth="$1"
 	enable_wined3d_draw_primitive_arrays="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1604,6 +1605,9 @@ patch_enable ()
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
 			;;
+		wined3d-convervative_depth)
+			enable_wined3d_convervative_depth="$2"
+			;;
 		wined3d-draw_primitive_arrays)
 			enable_wined3d_draw_primitive_arrays="$2"
 			;;
@@ -2155,6 +2159,13 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_wined3d_CSMT_Helper=1
+fi
+
+if test "$enable_wined3d_convervative_depth" -eq 1; then
+	if test "$enable_wined3d_Copy_Resource_Typeless" -gt 1; then
+		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-convervative_depth depends on that."
+	fi
+	enable_wined3d_Copy_Resource_Typeless=1
 fi
 
 if test "$enable_wined3d_Core_Context" -eq 1; then
@@ -9394,6 +9405,24 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-convervative_depth
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless
+# |
+# | Modified files:
+# |   *	dlls/wined3d/arb_program_shader.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
+# | 	dlls/wined3d/shader_sm4.c, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_convervative_depth" -eq 1; then
+	patch_apply wined3d-convervative_depth/0001-wined3d-Recognize-conservative-depth-output-register.patch
+	patch_apply wined3d-convervative_depth/0002-wined3d-Add-conservative-depth-access-information-to.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize conservative depth output registers in sm4.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add conservative depth access information to glsl pixel shaders.", 1 },';
 	) >> "$patchlist"
 fi
 

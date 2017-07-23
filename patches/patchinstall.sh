@@ -448,6 +448,7 @@ patch_enable_all ()
 	enable_wined3d_SM4_OP_NOP="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
+	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_convervative_depth="$1"
 	enable_wined3d_draw_primitive_arrays="$1"
@@ -1606,6 +1607,9 @@ patch_enable ()
 		wined3d-WINED3DFMT_R32G32_UINT)
 			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
 			;;
+		wined3d-WINED3D_RS_COLORWRITEENABLE)
+			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
+			;;
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
 			;;
@@ -2170,6 +2174,13 @@ if test "$enable_wined3d_convervative_depth" -eq 1; then
 		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-convervative_depth depends on that."
 	fi
 	enable_wined3d_Copy_Resource_Typeless=1
+fi
+
+if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
+	if test "$enable_d3d11_Depth_Bias" -gt 1; then
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
+	fi
+	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_wined3d_Core_Context" -eq 1; then
@@ -9425,6 +9436,23 @@ if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
+# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c,
+# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
+	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement all 8 d3d11 color write masks.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -159,6 +159,7 @@ patch_enable_all ()
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
+	enable_dxgi_DXGI_PRESENT_TEST="$1"
 	enable_dxgi_GammaRamp="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -737,6 +738,9 @@ patch_enable ()
 			;;
 		dxdiagn-GetChildContainer_Leaf_Nodes)
 			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
+			;;
+		dxgi-DXGI_PRESENT_TEST)
+			enable_dxgi_DXGI_PRESENT_TEST="$2"
 			;;
 		dxgi-GammaRamp)
 			enable_dxgi_GammaRamp="$2"
@@ -4426,6 +4430,18 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxgi-DXGI_PRESENT_TEST
+# |
+# | Modified files:
+# |   *	dlls/dxgi/swapchain.c
+# |
+if test "$enable_dxgi_DXGI_PRESENT_TEST" -eq 1; then
+	patch_apply dxgi-DXGI_PRESENT_TEST/0001-dxgi-Add-stub-implementation-for-DXGI_PRESENT_TEST.patch
+	(
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "dxgi: Add stub implementation for DXGI_PRESENT_TEST.", 1 },';
 	) >> "$patchlist"
 fi
 

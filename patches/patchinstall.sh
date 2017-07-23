@@ -9268,6 +9268,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#43264] Implement copying resources between compatible formats
+# |   *	[#42099] Implement copying resources between compatible formats
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/utils.c,

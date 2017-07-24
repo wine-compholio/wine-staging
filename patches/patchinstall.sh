@@ -379,6 +379,7 @@ patch_enable_all ()
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
+	enable_user32_Cursor_Size="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Focus="$1"
@@ -1402,6 +1403,9 @@ patch_enable ()
 			;;
 		user32-Combobox_WM_SIZE)
 			enable_user32_Combobox_WM_SIZE="$2"
+			;;
+		user32-Cursor_Size)
+			enable_user32_Cursor_Size="$2"
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
@@ -8268,6 +8272,18 @@ if test "$enable_user32_Combobox_WM_SIZE" -eq 1; then
 	patch_apply user32-Combobox_WM_SIZE/0001-user32-Don-t-force-a-combobox-repaint-on-WM_SIZE.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Don'\''t force a combobox repaint on WM_SIZE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Cursor_Size
+# |
+# | Modified files:
+# |   *	dlls/user32/cursoricon.c
+# |
+if test "$enable_user32_Cursor_Size" -eq 1; then
+	patch_apply user32-Cursor_Size/0001-user32-Reduce-the-cursor-height-if-it-also-includes-.patch
+	(
+		printf '%s\n' '+    { "Alexandre Julliard", "user32: Reduce the cursor height if it also includes the mask.", 1 },';
 	) >> "$patchlist"
 fi
 

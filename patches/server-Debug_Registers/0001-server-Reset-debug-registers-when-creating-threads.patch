@@ -1,18 +1,18 @@
-From d825f3bc955097179df614a4fc7f1aa2c41902d7 Mon Sep 17 00:00:00 2001
+From cd7620bf0752a46d6f29d24e7dc173a87bb6aa01 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 6 May 2017 00:10:01 +0200
 Subject: server: Reset debug registers when creating threads.
 
 ---
  dlls/ntdll/tests/exception.c | 29 ++++++++++++++++++++++++-----
- server/thread.c              |  5 +++++
- 2 files changed, 29 insertions(+), 5 deletions(-)
+ server/thread.c              |  6 ++++++
+ 2 files changed, 30 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index 27eac2748cb..04f3ac5ee20 100644
+index ab4b3e42941..cf3b235b2f3 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
-@@ -1991,8 +1991,23 @@ static void test___C_specific_handler(void)
+@@ -2002,8 +2002,23 @@ static void test___C_specific_handler(void)
  
  #if defined(__i386__) || defined(__x86_64__)
  
@@ -37,7 +37,7 @@ index 27eac2748cb..04f3ac5ee20 100644
      return 0;
  }
  
-@@ -2049,8 +2064,10 @@ static void test_debug_registers(void)
+@@ -2060,8 +2075,10 @@ static void test_debug_registers(void)
      ctx.Dr7 = 0x00000400;
      status = pNtSetContextThread(GetCurrentThread(), &ctx);
      ok(status == STATUS_SUCCESS, "NtSetContextThread failed with %x\n", status);
@@ -49,7 +49,7 @@ index 27eac2748cb..04f3ac5ee20 100644
      ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
      status = pNtGetContextThread(thread, &ctx);
      ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
-@@ -2058,9 +2075,11 @@ static void test_debug_registers(void)
+@@ -2069,9 +2086,11 @@ static void test_debug_registers(void)
      ok(!ctx.Dr1, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr1);
      ok(!ctx.Dr2, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr2);
      ok(!ctx.Dr3, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr3);
@@ -65,10 +65,10 @@ index 27eac2748cb..04f3ac5ee20 100644
  }
  
 diff --git a/server/thread.c b/server/thread.c
-index 70f5f28739e..a61c542a9cf 100644
+index 211d0050b09..933eb35e07c 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -1259,6 +1259,7 @@ DECL_HANDLER(new_thread)
+@@ -1299,6 +1299,7 @@ DECL_HANDLER(new_thread)
  /* initialize a new thread */
  DECL_HANDLER(init_thread)
  {
@@ -76,13 +76,14 @@ index 70f5f28739e..a61c542a9cf 100644
      struct process *process = current->process;
      int wait_fd, reply_fd;
  
-@@ -1317,6 +1318,10 @@ DECL_HANDLER(init_thread)
+@@ -1357,6 +1358,11 @@ DECL_HANDLER(init_thread)
          }
          if (process->unix_pid != current->unix_pid)
              process->unix_pid = -1;  /* can happen with linuxthreads */
 +
 +        /* Linux preserves dr6/dr7 and FreeBSD all debug registers (unlike windows) */
 +        set_thread_context( current, &zero_context, SERVER_CTX_DEBUG_REGISTERS );
++        clear_error();  /* ignore error */
 +
          stop_thread_if_suspended( current );
          generate_debug_event( current, CREATE_THREAD_DEBUG_EVENT, &req->entry );

@@ -447,6 +447,7 @@ patch_enable_all ()
 	enable_wined3d_Revert_Buffer_Upload="$1"
 	enable_wined3d_SM4_OP_NOP="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
+	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
@@ -1604,6 +1605,9 @@ patch_enable ()
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
 			;;
+		wined3d-UAV_Counters)
+			enable_wined3d_UAV_Counters="$2"
+			;;
 		wined3d-WINED3DFMT_R32G32_UINT)
 			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
 			;;
@@ -2224,6 +2228,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_UAV_Counters" -gt 1; then
+		abort "Patchset wined3d-UAV_Counters disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	enable_d3d11_Deferred_Context=1
 	enable_d3d9_Tests=1
 	enable_makedep_PARENTSPEC=1
@@ -2235,6 +2242,18 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Buffer_Upload=1
 	enable_wined3d_Silence_FIXMEs=1
+	enable_wined3d_UAV_Counters=1
+fi
+
+if test "$enable_wined3d_UAV_Counters" -eq 1; then
+	if test "$enable_wined3d_Copy_Resource_Typeless" -gt 1; then
+		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-UAV_Counters depends on that."
+	fi
+	if test "$enable_wined3d_Revert_Buffer_Upload" -gt 1; then
+		abort "Patchset wined3d-Revert_Buffer_Upload disabled, but wined3d-UAV_Counters depends on that."
+	fi
+	enable_wined3d_Copy_Resource_Typeless=1
+	enable_wined3d_Revert_Buffer_Upload=1
 fi
 
 if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
@@ -9359,12 +9378,36 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-UAV_Counters
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless, wined3d-Revert_Buffer_Upload
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43405] Implement copying structure count of UAV
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/device.c,
+# | 	dlls/wined3d/view.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_UAV_Counters" -eq 1; then
+	patch_apply wined3d-UAV_Counters/0001-wined3d-Implement-support-for-setting-uav-counters.patch
+	patch_apply wined3d-UAV_Counters/0002-wined3d-Create-atomic-counter-when-uav-is-initialize.patch
+	patch_apply wined3d-UAV_Counters/0003-wined3d-Implement-copying-structure-count-of-uav.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement support for setting uav counters.", 1 },';
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Create atomic counter when uav is initialized with WINED3D_VIEW_BUFFER_APPEND.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement copying structure count of uav.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
-# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
+# | 	wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9538,7 +9581,7 @@ fi
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
 # | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
-# | 	wined3d-CSMT_Helper
+# | 	wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

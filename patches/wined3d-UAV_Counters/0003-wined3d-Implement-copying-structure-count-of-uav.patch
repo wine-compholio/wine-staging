@@ -1,0 +1,297 @@
+From f7b7f46dd1865c7d71a2c5f7226f17b567d6c49e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 23 Jul 2017 22:41:09 +0200
+Subject: wined3d: Implement copying structure count of uav.
+
+---
+ dlls/d3d11/device.c            | 16 +++++++++++-
+ dlls/d3d11/tests/d3d11.c       |  8 +++---
+ dlls/wined3d/buffer.c          | 55 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/cs.c              | 41 +++++++++++++++++++++++++++++++
+ dlls/wined3d/device.c          | 16 ++++++++++++
+ dlls/wined3d/wined3d.spec      |  1 +
+ dlls/wined3d/wined3d_private.h |  4 +++
+ include/wine/wined3d.h         |  2 ++
+ 8 files changed, 138 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index 5662fc23a0c..b7be1194930 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -1973,8 +1973,22 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_UpdateSubresource(ID3D11De
+ static void STDMETHODCALLTYPE d3d11_immediate_context_CopyStructureCount(ID3D11DeviceContext *iface,
+         ID3D11Buffer *dst_buffer, UINT dst_offset, ID3D11UnorderedAccessView *src_view)
+ {
+-    FIXME("iface %p, dst_buffer %p, dst_offset %u, src_view %p stub!\n",
++    struct d3d_device *device = device_from_immediate_ID3D11DeviceContext(iface);
++    struct d3d11_unordered_access_view *view;
++    struct d3d_buffer *buffer;
++
++    TRACE("iface %p, dst_buffer %p, dst_offset %u, src_view %p.\n",
+             iface, dst_buffer, dst_offset, src_view);
++
++    if (!dst_buffer || !src_view)
++        return;
++
++    buffer = unsafe_impl_from_ID3D11Buffer(dst_buffer);
++    view = unsafe_impl_from_ID3D11UnorderedAccessView(src_view);
++
++    wined3d_mutex_lock();
++    wined3d_device_copy_structure_count(device->wined3d_device, buffer->wined3d_buffer, dst_offset, view->wined3d_view);
++    wined3d_mutex_unlock();
+ }
+ 
+ static void STDMETHODCALLTYPE d3d11_immediate_context_ClearRenderTargetView(ID3D11DeviceContext *iface,
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index d2671643016..1e569fe4b9e 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -18982,7 +18982,7 @@ static void test_uav_counters(void)
+     data = 8;
+     ID3D11DeviceContext_CSSetUnorderedAccessViews(context, 0, 1, &uav, &data);
+     data = read_uav_counter(context, staging_buffer, uav);
+-    todo_wine ok(data == 8, "Got unexpected value %u.\n", data);
++    ok(data == 8, "Got unexpected value %u.\n", data);
+ 
+     ID3D11DeviceContext_CSSetShader(context, cs_producer, NULL, 0);
+     data = 0;
+@@ -18994,7 +18994,7 @@ static void test_uav_counters(void)
+     /* produce */
+     ID3D11DeviceContext_Dispatch(context, 16, 1, 1);
+     data = read_uav_counter(context, staging_buffer, uav);
+-    todo_wine ok(data == 64, "Got unexpected value %u.\n", data);
++    ok(data == 64, "Got unexpected value %u.\n", data);
+     get_buffer_readback(buffer, &rb);
+     memcpy(id, rb.map_desc.pData, 64 * sizeof(*id));
+     release_resource_readback(&rb);
+@@ -19030,12 +19030,12 @@ static void test_uav_counters(void)
+     data = 8;
+     ID3D11DeviceContext_CSSetUnorderedAccessViews(context, 0, 1, &uav, &data);
+     data = read_uav_counter(context, staging_buffer, uav);
+-    todo_wine ok(data == 8, "Got unexpected value %u.\n", data);
++    ok(data == 8, "Got unexpected value %u.\n", data);
+ 
+     /* consume */
+     ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
+     data = read_uav_counter(context, staging_buffer, uav);
+-    todo_wine ok(data == 4, "Got unexpected value %u.\n", data);
++    ok(data == 4, "Got unexpected value %u.\n", data);
+     ID3D11DeviceContext_Dispatch(context, 1, 1, 1);
+     data = read_uav_counter(context, staging_buffer, uav);
+     ok(!data, "Got unexpected value %u.\n", data);
+diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
+index 040e56625d3..ad0b677f7fa 100644
+--- a/dlls/wined3d/buffer.c
++++ b/dlls/wined3d/buffer.c
+@@ -1259,6 +1259,61 @@ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_
+     return WINED3D_OK;
+ }
+ 
++/* caller is responsible for tracking state of gl buffer binding */
++HRESULT wined3d_buffer_copy_from_gl_buffer(struct wined3d_buffer *dst_buffer, unsigned int dst_offset,
++        GLuint src_buffer, GLenum src_target, unsigned int src_offset, unsigned int size)
++{
++    const struct wined3d_gl_info *gl_info;
++    struct wined3d_bo_address dst;
++    struct wined3d_context *context;
++    struct wined3d_device *device;
++    DWORD dst_location;
++    BYTE *dst_ptr;
++
++    buffer_mark_used(dst_buffer);
++
++    device = dst_buffer->resource.device;
++
++    context = context_acquire(device, NULL, 0);
++    gl_info = context->gl_info;
++
++    dst_location = wined3d_buffer_get_memory(dst_buffer, &dst, dst_buffer->locations);
++    dst.addr += dst_offset;
++
++    if (dst.buffer_object)
++    {
++        if (gl_info->supported[ARB_COPY_BUFFER])
++        {
++            GL_EXTCALL(glBindBuffer(GL_COPY_READ_BUFFER, src_buffer));
++            GL_EXTCALL(glBindBuffer(GL_COPY_WRITE_BUFFER, dst.buffer_object));
++            GL_EXTCALL(glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
++                    src_offset, dst_offset, size));
++            checkGLcall("direct buffer copy");
++        }
++        else
++        {
++            dst_ptr = context_map_bo_address(context, &dst, size, dst_buffer->buffer_type_hint, 0);
++
++            GL_EXTCALL(glBindBuffer(src_target, src_buffer));
++            GL_EXTCALL(glGetBufferSubData(src_target, src_offset, size, dst_ptr));
++            checkGLcall("buffer download");
++
++            context_unmap_bo_address(context, &dst, dst_buffer->buffer_type_hint);
++        }
++    }
++    else
++    {
++        GL_EXTCALL(glBindBuffer(src_target, src_buffer));
++        GL_EXTCALL(glGetBufferSubData(src_target, src_offset, size, dst.addr));
++        checkGLcall("buffer download");
++    }
++
++    wined3d_buffer_invalidate_range(dst_buffer, ~dst_location, dst_offset, size);
++
++    context_release(context);
++    return WINED3D_OK;
++}
++
+ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+         const struct wined3d_box *box, const void *data)
+ {
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 2d6544143e4..4314a4807a8 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -71,6 +71,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION,
+     WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW,
+     WINED3D_CS_OP_COPY_SUB_RESOURCE,
++    WINED3D_CS_OP_COPY_STRUCTURE_COUNT,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -431,6 +432,14 @@ struct wined3d_cs_copy_sub_resource
+     struct wined3d_box src_box;
+ };
+ 
++struct wined3d_cs_copy_structure_count
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_buffer *dst_buffer;
++    unsigned int offset;
++    struct wined3d_unordered_access_view *src_view;
++};
++
+ struct wined3d_cs_stop
+ {
+     enum wined3d_cs_op opcode;
+@@ -2380,6 +2389,37 @@ void wined3d_cs_emit_copy_sub_resource(struct wined3d_cs *cs, struct wined3d_res
+     cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
+ }
+ 
++static void wined3d_cs_exec_copy_structure_count(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_copy_structure_count *op = data;
++
++    if (op->src_view->counter_bo)
++    {
++        wined3d_buffer_copy_from_gl_buffer(op->dst_buffer, op->offset,
++                op->src_view->counter_bo, GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint));
++    }
++
++    wined3d_resource_release(&op->dst_buffer->resource);
++    wined3d_resource_release(op->src_view->resource);
++}
++
++void wined3d_cs_emit_copy_structure_count(struct wined3d_cs *cs, struct wined3d_buffer *dst_buffer,
++        unsigned int offset, struct wined3d_unordered_access_view *src_view)
++{
++    struct wined3d_cs_copy_structure_count *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_DEFAULT);
++    op->opcode = WINED3D_CS_OP_COPY_STRUCTURE_COUNT;
++    op->dst_buffer = dst_buffer;
++    op->offset = offset;
++    op->src_view = src_view;
++
++    wined3d_resource_acquire(&dst_buffer->resource);
++    wined3d_resource_acquire(src_view->resource);
++
++    cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
++}
++
+ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
+ {
+     struct wined3d_cs_stop *op;
+@@ -2438,6 +2478,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION    */ wined3d_cs_exec_add_dirty_texture_region,
+     /* WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW */ wined3d_cs_exec_clear_unordered_access_view,
+     /* WINED3D_CS_OP_COPY_SUB_RESOURCE           */ wined3d_cs_exec_copy_sub_resource,
++    /* WINED3D_CS_OP_COPY_STRUCTURE_COUNT        */ wined3d_cs_exec_copy_structure_count,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 223885272f2..7cf3e0319d4 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4289,6 +4289,22 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+     wined3d_cs_emit_update_sub_resource(device->cs, resource, sub_resource_idx, box, data, row_pitch, depth_pitch);
+ }
+ 
++HRESULT CDECL wined3d_device_copy_structure_count(struct wined3d_device *device, struct wined3d_buffer *dst_buffer,
++    unsigned int offset, struct wined3d_unordered_access_view *src_view)
++{
++    TRACE("device %p, dst_buffer %p, offset %u, src_view %p.\n",
++            device, dst_buffer, offset, src_view);
++
++    if (offset + sizeof(GLuint) > dst_buffer->resource.size)
++    {
++        WARN("Offset %u too large.\n", offset);
++        return WINED3DERR_INVALIDCALL;
++    }
++
++    wined3d_cs_emit_copy_structure_count(device->cs, dst_buffer, offset, src_view);
++    return WINED3D_OK;
++}
++
+ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
+         struct wined3d_rendertarget_view *view, const RECT *rect, DWORD flags,
+         const struct wined3d_color *color, float depth, DWORD stencil)
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index 631418bdaa9..f0f6871a8a2 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -37,6 +37,7 @@
+ @ cdecl wined3d_device_clear_rendertarget_view(ptr ptr ptr long ptr float long)
+ @ cdecl wined3d_device_clear_unordered_access_view_uint(ptr ptr ptr)
+ @ cdecl wined3d_device_copy_resource(ptr ptr ptr)
++@ cdecl wined3d_device_copy_structure_count(ptr ptr long ptr)
+ @ cdecl wined3d_device_copy_sub_resource_region(ptr ptr long long long long ptr long ptr)
+ @ cdecl wined3d_device_create(ptr long long ptr long long ptr ptr)
+ @ cdecl wined3d_device_decref(ptr)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 50321f37c3a..548a9679f3f 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3488,6 +3488,8 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
+ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
+         unsigned int sub_resource_idx, const struct wined3d_box *box, const void *data, unsigned int row_pitch,
+         unsigned int slice_pitch) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_copy_structure_count(struct wined3d_cs *cs, struct wined3d_buffer *dst_buffer,
++        unsigned int offset, struct wined3d_unordered_access_view *src_view) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_copy_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *dst_resource,
+         unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box, struct wined3d_resource *src_resource,
+         unsigned int src_sub_resource_idx, const struct wined3d_box *src_box) DECLSPEC_HIDDEN;
+@@ -3571,6 +3573,8 @@ BOOL wined3d_buffer_load_location(struct wined3d_buffer *buffer,
+ BYTE *wined3d_buffer_load_sysmem(struct wined3d_buffer *buffer, struct wined3d_context *context) DECLSPEC_HIDDEN;
+ HRESULT wined3d_buffer_copy(struct wined3d_buffer *dst_buffer, unsigned int dst_offset,
+         struct wined3d_buffer *src_buffer, unsigned int src_offset, unsigned int size) DECLSPEC_HIDDEN;
++HRESULT wined3d_buffer_copy_from_gl_buffer(struct wined3d_buffer *dst_buffer, unsigned int dst_offset,
++        GLuint src_buffer, GLenum src_target, unsigned int src_offset, unsigned int size) DECLSPEC_HIDDEN;
+ HRESULT wined3d_buffer_upload_data(struct wined3d_buffer *buffer,
+         const struct wined3d_box *box, const void *data) DECLSPEC_HIDDEN;
+ 
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index bf182c68813..a0a5a1debcf 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -2456,6 +2456,8 @@ void __cdecl wined3d_device_update_sub_resource(struct wined3d_device *device, s
+ HRESULT __cdecl wined3d_device_update_texture(struct wined3d_device *device,
+         struct wined3d_texture *src_texture, struct wined3d_texture *dst_texture);
+ HRESULT __cdecl wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes);
++HRESULT __cdecl wined3d_device_copy_structure_count(struct wined3d_device *device, struct wined3d_buffer *dst_buffer,
++    unsigned int offset, struct wined3d_unordered_access_view *src_view);
+ 
+ HRESULT __cdecl wined3d_palette_create(struct wined3d_device *device, DWORD flags,
+         unsigned int entry_count, const PALETTEENTRY *entries, struct wined3d_palette **palette);
+-- 
+2.13.1
+

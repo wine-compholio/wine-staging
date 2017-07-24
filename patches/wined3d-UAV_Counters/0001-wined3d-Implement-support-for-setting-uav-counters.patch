@@ -1,0 +1,270 @@
+From ff6b6ee44f1e98b9f74ddddd1d7ada999283b135 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=B3zef=20Kucia?= <jkucia@codeweavers.com>
+Date: Sun, 23 Jul 2017 22:00:30 +0200
+Subject: wined3d: Implement support for setting uav counters.
+
+---
+ dlls/d3d11/device.c            | 13 +++++++------
+ dlls/d3d11/tests/d3d11.c       |  2 +-
+ dlls/wined3d/cs.c              |  7 ++++++-
+ dlls/wined3d/device.c          | 15 ++++++++-------
+ dlls/wined3d/view.c            | 18 ++++++++++++++++++
+ dlls/wined3d/wined3d.spec      |  4 ++--
+ dlls/wined3d/wined3d_private.h |  4 +++-
+ include/wine/wined3d.h         |  4 ++--
+ 8 files changed, 47 insertions(+), 20 deletions(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index 93938f98f0d..c7e19ed1313 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -1601,7 +1601,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetRenderTargetsAndUnord
+         wined3d_mutex_lock();
+         for (i = 0; i < unordered_access_view_start_slot; ++i)
+         {
+-            wined3d_device_set_unordered_access_view(device->wined3d_device, i, NULL);
++            wined3d_device_set_unordered_access_view(device->wined3d_device, i, NULL, ~0u);
+         }
+         for (i = 0; i < unordered_access_view_count; ++i)
+         {
+@@ -1616,12 +1616,13 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetRenderTargetsAndUnord
+ 
+             wined3d_device_set_unordered_access_view(device->wined3d_device,
+                     unordered_access_view_start_slot + i,
+-                    view ? view->wined3d_view : NULL);
++                    view ? view->wined3d_view : NULL,
++                    initial_counts ? initial_counts[i] : ~0u);
+         }
+         for (; unordered_access_view_start_slot + i < D3D11_PS_CS_UAV_REGISTER_COUNT; ++i)
+         {
+             wined3d_device_set_unordered_access_view(device->wined3d_device,
+-                    unordered_access_view_start_slot + i, NULL);
++                    unordered_access_view_start_slot + i, NULL, ~0u);
+         }
+         wined3d_mutex_unlock();
+     }
+@@ -2296,7 +2297,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_CSSetUnorderedAccessViews(
+             FIXME("Ignoring initial count %u for slot %u.\n", initial_counts[i], start_slot + i);
+ 
+         wined3d_device_set_cs_uav(device->wined3d_device, start_slot + i,
+-                view ? view->wined3d_view : NULL);
++                view ? view->wined3d_view : NULL, initial_counts ? initial_counts[i] : ~0u);
+     }
+     wined3d_mutex_unlock();
+ }
+@@ -3438,8 +3439,8 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_ClearState(ID3D11DeviceCon
+     wined3d_device_set_depth_stencil_view(device->wined3d_device, NULL);
+     for (i = 0; i < D3D11_PS_CS_UAV_REGISTER_COUNT; ++i)
+     {
+-        wined3d_device_set_unordered_access_view(device->wined3d_device, i, NULL);
+-        wined3d_device_set_cs_uav(device->wined3d_device, i, NULL);
++        wined3d_device_set_unordered_access_view(device->wined3d_device, i, NULL, ~0u);
++        wined3d_device_set_cs_uav(device->wined3d_device, i, NULL, ~0u);
+     }
+     ID3D11DeviceContext_OMSetDepthStencilState(iface, NULL, 0);
+     ID3D11DeviceContext_OMSetBlendState(iface, NULL, blend_factor, D3D11_DEFAULT_SAMPLE_MASK);
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index 2cfc9ce812d..7a851d924a0 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -19067,7 +19067,7 @@ static void test_uav_counters(void)
+     for (i = 0; i < 8; ++i)
+     {
+         data = get_readback_color(&rb, i, 0);
+-        todo_wine ok(data == 0xdeadbeef, "Got data %u at %u.\n", data, i);
++        ok(data == 0xdeadbeef, "Got data %u at %u.\n", data, i);
+     }
+     release_resource_readback(&rb);
+ 
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 92da18576e3..66876b6d172 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -244,6 +244,7 @@ struct wined3d_cs_set_unordered_access_view
+     enum wined3d_pipeline pipeline;
+     unsigned int view_idx;
+     struct wined3d_unordered_access_view *view;
++    unsigned int initial_count;
+ };
+ 
+ struct wined3d_cs_set_sampler
+@@ -1298,10 +1299,13 @@ static void wined3d_cs_exec_set_unordered_access_view(struct wined3d_cs *cs, con
+         InterlockedDecrement(&prev->resource->bind_count);
+ 
+     device_invalidate_state(cs->device, STATE_UNORDERED_ACCESS_VIEW_BINDING(op->pipeline));
++
++    if (op->view && op->initial_count != ~0u)
++        wined3d_unordered_access_view_set_counter(op->view, op->initial_count);
+ }
+ 
+ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined3d_pipeline pipeline,
+-        unsigned int view_idx, struct wined3d_unordered_access_view *view)
++        unsigned int view_idx, struct wined3d_unordered_access_view *view, unsigned int initial_count)
+ {
+     struct wined3d_cs_set_unordered_access_view *op;
+ 
+@@ -1310,6 +1314,7 @@ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined
+     op->pipeline = pipeline;
+     op->view_idx = view_idx;
+     op->view = view;
++    op->initial_count = initial_count;
+ 
+     cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
+ }
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index a9c0a9ccc09..9841b5fd461 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3002,7 +3002,8 @@ struct wined3d_sampler * CDECL wined3d_device_get_cs_sampler(const struct wined3
+ }
+ 
+ static void wined3d_device_set_pipeline_unordered_access_view(struct wined3d_device *device,
+-        enum wined3d_pipeline pipeline, unsigned int idx, struct wined3d_unordered_access_view *uav)
++        enum wined3d_pipeline pipeline, unsigned int idx, struct wined3d_unordered_access_view *uav,
++        unsigned int initial_count)
+ {
+     struct wined3d_unordered_access_view *prev;
+ 
+@@ -3013,14 +3014,14 @@ static void wined3d_device_set_pipeline_unordered_access_view(struct wined3d_dev
+     }
+ 
+     prev = device->update_state->unordered_access_view[pipeline][idx];
+-    if (uav == prev)
++    if (uav == prev && initial_count == ~0u)
+         return;
+ 
+     if (uav)
+         wined3d_unordered_access_view_incref(uav);
+     device->update_state->unordered_access_view[pipeline][idx] = uav;
+     if (!device->recording)
+-        wined3d_cs_emit_set_unordered_access_view(device->cs, pipeline, idx, uav);
++        wined3d_cs_emit_set_unordered_access_view(device->cs, pipeline, idx, uav, initial_count);
+     if (prev)
+         wined3d_unordered_access_view_decref(prev);
+ }
+@@ -3038,11 +3039,11 @@ static struct wined3d_unordered_access_view *wined3d_device_get_pipeline_unorder
+ }
+ 
+ void CDECL wined3d_device_set_cs_uav(struct wined3d_device *device, unsigned int idx,
+-        struct wined3d_unordered_access_view *uav)
++        struct wined3d_unordered_access_view *uav, unsigned int initial_count)
+ {
+     TRACE("device %p, idx %u, uav %p.\n", device, idx, uav);
+ 
+-    wined3d_device_set_pipeline_unordered_access_view(device, WINED3D_PIPELINE_COMPUTE, idx, uav);
++    wined3d_device_set_pipeline_unordered_access_view(device, WINED3D_PIPELINE_COMPUTE, idx, uav, initial_count);
+ }
+ 
+ struct wined3d_unordered_access_view * CDECL wined3d_device_get_cs_uav(const struct wined3d_device *device,
+@@ -3054,11 +3055,11 @@ struct wined3d_unordered_access_view * CDECL wined3d_device_get_cs_uav(const str
+ }
+ 
+ void CDECL wined3d_device_set_unordered_access_view(struct wined3d_device *device,
+-        unsigned int idx, struct wined3d_unordered_access_view *uav)
++        unsigned int idx, struct wined3d_unordered_access_view *uav, unsigned int initial_count)
+ {
+     TRACE("device %p, idx %u, uav %p.\n", device, idx, uav);
+ 
+-    wined3d_device_set_pipeline_unordered_access_view(device, WINED3D_PIPELINE_GRAPHICS, idx, uav);
++    wined3d_device_set_pipeline_unordered_access_view(device, WINED3D_PIPELINE_GRAPHICS, idx, uav, initial_count);
+ }
+ 
+ struct wined3d_unordered_access_view * CDECL wined3d_device_get_unordered_access_view(
+diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
+index 788946b81c2..260002eea12 100644
+--- a/dlls/wined3d/view.c
++++ b/dlls/wined3d/view.c
+@@ -909,6 +909,24 @@ void wined3d_unordered_access_view_clear_uint(struct wined3d_unordered_access_vi
+     checkGLcall("clear unordered access view");
+ }
+ 
++void wined3d_unordered_access_view_set_counter(struct wined3d_unordered_access_view *view,
++        unsigned int initial_count)
++{
++    const struct wined3d_gl_info *gl_info;
++    struct wined3d_context *context;
++    GLuint value = initial_count;
++
++    if (!view->counter_bo)
++        return;
++
++    context = context_acquire(view->resource->device, NULL, 0);
++    gl_info = context->gl_info;
++    GL_EXTCALL(glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, view->counter_bo));
++    GL_EXTCALL(glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(value), &value));
++    checkGLcall("set atomic counter");
++    context_release(context);
++}
++
+ static void wined3d_unordered_access_view_cs_init(void *object)
+ {
+     struct wined3d_unordered_access_view *view = object;
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index 5de3ef730eb..631418bdaa9 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -129,7 +129,7 @@
+ @ cdecl wined3d_device_set_cs_cb(ptr long ptr)
+ @ cdecl wined3d_device_set_cs_resource_view(ptr long ptr)
+ @ cdecl wined3d_device_set_cs_sampler(ptr long ptr)
+-@ cdecl wined3d_device_set_cs_uav(ptr long ptr)
++@ cdecl wined3d_device_set_cs_uav(ptr long ptr long)
+ @ cdecl wined3d_device_set_cursor_position(ptr long long long)
+ @ cdecl wined3d_device_set_cursor_properties(ptr long long ptr long)
+ @ cdecl wined3d_device_set_depth_stencil_view(ptr ptr)
+@@ -174,7 +174,7 @@
+ @ cdecl wined3d_device_set_texture(ptr long ptr)
+ @ cdecl wined3d_device_set_texture_stage_state(ptr long long long)
+ @ cdecl wined3d_device_set_transform(ptr long ptr)
+-@ cdecl wined3d_device_set_unordered_access_view(ptr long ptr)
++@ cdecl wined3d_device_set_unordered_access_view(ptr long ptr long)
+ @ cdecl wined3d_device_set_vertex_declaration(ptr ptr)
+ @ cdecl wined3d_device_set_vertex_shader(ptr ptr)
+ @ cdecl wined3d_device_set_viewport(ptr ptr)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index e95911ed0d5..ca477b3a270 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3506,7 +3506,7 @@ void wined3d_cs_emit_set_texture_state(struct wined3d_cs *cs, UINT stage,
+ void wined3d_cs_emit_set_transform(struct wined3d_cs *cs, enum wined3d_transform_state state,
+         const struct wined3d_matrix *matrix) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_unordered_access_view(struct wined3d_cs *cs, enum wined3d_pipeline pipeline,
+-        unsigned int view_idx, struct wined3d_unordered_access_view *view) DECLSPEC_HIDDEN;
++        unsigned int view_idx, struct wined3d_unordered_access_view *view, unsigned int initial_count) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_vertex_declaration(struct wined3d_cs *cs,
+         struct wined3d_vertex_declaration *declaration) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_set_viewport(struct wined3d_cs *cs, const struct wined3d_viewport *viewport) DECLSPEC_HIDDEN;
+@@ -3680,6 +3680,8 @@ void wined3d_unordered_access_view_clear_uint(struct wined3d_unordered_access_vi
+         const struct wined3d_uvec4 *clear_value, struct wined3d_context *context) DECLSPEC_HIDDEN;
+ void wined3d_unordered_access_view_invalidate_location(struct wined3d_unordered_access_view *view,
+         DWORD location) DECLSPEC_HIDDEN;
++void wined3d_unordered_access_view_set_counter(struct wined3d_unordered_access_view *view,
++        unsigned int initial_count) DECLSPEC_HIDDEN;
+ 
+ struct wined3d_swapchain_ops
+ {
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 6c5c5df83ff..22d49435caf 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -2372,7 +2372,7 @@ void __cdecl wined3d_device_set_cs_resource_view(struct wined3d_device *device,
+ void __cdecl wined3d_device_set_cs_sampler(struct wined3d_device *device,
+         unsigned int idx, struct wined3d_sampler *sampler);
+ void __cdecl wined3d_device_set_cs_uav(struct wined3d_device *device, unsigned int idx,
+-        struct wined3d_unordered_access_view *uav);
++        struct wined3d_unordered_access_view *uav, unsigned int initial_count);
+ void __cdecl wined3d_device_set_cursor_position(struct wined3d_device *device,
+         int x_screen_space, int y_screen_space, DWORD flags);
+ HRESULT __cdecl wined3d_device_set_cursor_properties(struct wined3d_device *device,
+@@ -2443,7 +2443,7 @@ void __cdecl wined3d_device_set_texture_stage_state(struct wined3d_device *devic
+ void __cdecl wined3d_device_set_transform(struct wined3d_device *device,
+         enum wined3d_transform_state state, const struct wined3d_matrix *matrix);
+ void __cdecl wined3d_device_set_unordered_access_view(struct wined3d_device *device,
+-        unsigned int idx, struct wined3d_unordered_access_view *uav);
++        unsigned int idx, struct wined3d_unordered_access_view *uav, unsigned int initial_count);
+ void __cdecl wined3d_device_set_vertex_declaration(struct wined3d_device *device,
+         struct wined3d_vertex_declaration *declaration);
+ void __cdecl wined3d_device_set_vertex_shader(struct wined3d_device *device, struct wined3d_shader *shader);
+-- 
+2.13.1
+

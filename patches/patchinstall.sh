@@ -442,6 +442,7 @@ patch_enable_all ()
 	enable_wined3d_Copy_Resource_Typeless="$1"
 	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
+	enable_wined3d_DrawIndirect="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
@@ -1591,6 +1592,9 @@ patch_enable ()
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
+		wined3d-DrawIndirect)
+			enable_wined3d_DrawIndirect="$2"
+			;;
 		wined3d-GTX_560M)
 			enable_wined3d_GTX_560M="$2"
 			;;
@@ -2189,6 +2193,13 @@ if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
 	fi
 	enable_d3d11_Depth_Bias=1
+fi
+
+if test "$enable_wined3d_DrawIndirect" -eq 1; then
+	if test "$enable_wined3d_draw_primitive_arrays" -gt 1; then
+		abort "Patchset wined3d-draw_primitive_arrays disabled, but wined3d-DrawIndirect depends on that."
+	fi
+	enable_wined3d_draw_primitive_arrays=1
 fi
 
 if test "$enable_wined3d_Core_Context" -eq 1; then
@@ -9450,6 +9461,48 @@ if test "$enable_wined3d_Core_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-draw_primitive_arrays
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c, dlls/wined3d/wined3d_gl.h
+# |
+if test "$enable_wined3d_draw_primitive_arrays" -eq 1; then
+	patch_apply wined3d-draw_primitive_arrays/0001-d3d11-tests-Add-basic-instance-offset-drawing-test.patch
+	patch_apply wined3d-draw_primitive_arrays/0002-wined3d-Add-support-for-start-instance-in-draw_primi.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic instance offset drawing test.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for start instance in draw_primitive_arrays.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-DrawIndirect
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-draw_primitive_arrays
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43405] Implement support for indirect drawing / compute shader dispatching
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/drawprim.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_DrawIndirect" -eq 1; then
+	patch_apply wined3d-DrawIndirect/0001-wined3d-Implement-indirect-compute-dispatch.patch
+	patch_apply wined3d-DrawIndirect/0002-d3d11-tests-Add-a-basic-test-for-DispatchIndirect.patch
+	patch_apply wined3d-DrawIndirect/0003-wined3d-Implement-indirect-drawing.patch
+	patch_apply wined3d-DrawIndirect/0004-wined3d-Implement-DrawInstancedIndirect.patch
+	patch_apply wined3d-DrawIndirect/0005-d3d11-tests-Add-a-basic-test-for-DrawInstancedIndire.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement indirect compute dispatch.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Add a basic test for DispatchIndirect.", 1 },';
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement indirect drawing.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Implement DrawInstancedIndirect.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Add a basic test for DrawInstancedIndirect.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-GTX_560M
 # |
 # | Modified files:
@@ -9542,20 +9595,6 @@ if test "$enable_wined3d_convervative_depth" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize conservative depth output registers in sm4.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add conservative depth access information to glsl pixel shaders.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-draw_primitive_arrays
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c, dlls/wined3d/wined3d_gl.h
-# |
-if test "$enable_wined3d_draw_primitive_arrays" -eq 1; then
-	patch_apply wined3d-draw_primitive_arrays/0001-d3d11-tests-Add-basic-instance-offset-drawing-test.patch
-	patch_apply wined3d-draw_primitive_arrays/0002-wined3d-Add-support-for-start-instance-in-draw_primi.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic instance offset drawing test.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for start instance in draw_primitive_arrays.", 1 },';
 	) >> "$patchlist"
 fi
 

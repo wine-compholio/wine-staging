@@ -1,0 +1,235 @@
+From ed7b6749de73056ab073634b6f561f2138e24f00 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=B3zef=20Kucia?= <jkucia@codeweavers.com>
+Date: Sun, 23 Jul 2017 23:19:51 +0200
+Subject: wined3d: Implement indirect compute dispatch.
+
+---
+ dlls/d3d11/device.c            | 12 +++++++++++-
+ dlls/wined3d/cs.c              | 38 ++++++++++++++++++++++++++++++--------
+ dlls/wined3d/device.c          |  8 ++++++++
+ dlls/wined3d/drawprim.c        | 20 +++++++++++++++++---
+ dlls/wined3d/wined3d.spec      |  1 +
+ dlls/wined3d/wined3d_private.h | 27 ++++++++++++++++++++++++++-
+ include/wine/wined3d.h         |  2 ++
+ 7 files changed, 95 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index f25ff8b3700..9cffa8a9961 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -1812,7 +1812,17 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_Dispatch(ID3D11DeviceConte
+ static void STDMETHODCALLTYPE d3d11_immediate_context_DispatchIndirect(ID3D11DeviceContext *iface,
+         ID3D11Buffer *buffer, UINT offset)
+ {
+-    FIXME("iface %p, buffer %p, offset %u stub!\n", iface, buffer, offset);
++    struct d3d_device *device = device_from_immediate_ID3D11DeviceContext(iface);
++    struct d3d_buffer *d3d_buffer;
++
++    TRACE("iface %p, buffer %p, offset %u.\n", iface, buffer, offset);
++
++    d3d_buffer = unsafe_impl_from_ID3D11Buffer(buffer);
++
++    wined3d_mutex_lock();
++    wined3d_device_dispatch_compute_indirect(device->wined3d_device,
++            d3d_buffer->wined3d_buffer, offset);
++    wined3d_mutex_unlock();
+ }
+ 
+ static void STDMETHODCALLTYPE d3d11_immediate_context_RSSetState(ID3D11DeviceContext *iface,
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 4314a4807a8..171287dc99c 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -113,9 +113,7 @@ struct wined3d_cs_clear
+ struct wined3d_cs_dispatch
+ {
+     enum wined3d_cs_op opcode;
+-    unsigned int group_count_x;
+-    unsigned int group_count_y;
+-    unsigned int group_count_z;
++    struct wined3d_dispatch_parameters parameters;
+ };
+ 
+ struct wined3d_cs_draw
+@@ -717,8 +715,10 @@ static void wined3d_cs_exec_dispatch(struct wined3d_cs *cs, const void *data)
+     const struct wined3d_cs_dispatch *op = data;
+     struct wined3d_state *state = &cs->state;
+ 
+-    dispatch_compute(cs->device, state,
+-            op->group_count_x, op->group_count_y, op->group_count_z);
++    dispatch_compute(cs->device, state, &op->parameters);
++
++    if (op->parameters.indirect)
++        wined3d_resource_release(&op->parameters.u.indirect.buffer->resource);
+ 
+     release_shader_resources(state, 1u << WINED3D_SHADER_TYPE_COMPUTE);
+     release_unordered_access_resources(state->shader[WINED3D_SHADER_TYPE_COMPUTE],
+@@ -733,9 +733,31 @@ void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
+ 
+     op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_DEFAULT);
+     op->opcode = WINED3D_CS_OP_DISPATCH;
+-    op->group_count_x = group_count_x;
+-    op->group_count_y = group_count_y;
+-    op->group_count_z = group_count_z;
++    op->parameters.indirect = FALSE;
++    op->parameters.u.direct.group_count_x = group_count_x;
++    op->parameters.u.direct.group_count_y = group_count_y;
++    op->parameters.u.direct.group_count_z = group_count_z;
++
++    acquire_shader_resources(state, 1u << WINED3D_SHADER_TYPE_COMPUTE);
++    acquire_unordered_access_resources(state->shader[WINED3D_SHADER_TYPE_COMPUTE],
++            state->unordered_access_view[WINED3D_PIPELINE_COMPUTE]);
++
++    cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
++}
++
++void wined3d_cs_emit_dispatch_indirect(struct wined3d_cs *cs,
++        struct wined3d_buffer *buffer, unsigned int offset)
++{
++    const struct wined3d_state *state = &cs->device->state;
++    struct wined3d_cs_dispatch *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_DEFAULT);
++    op->opcode = WINED3D_CS_OP_DISPATCH;
++    op->parameters.indirect = TRUE;
++    op->parameters.u.indirect.buffer = buffer;
++    op->parameters.u.indirect.offset = offset;
++
++    wined3d_resource_acquire(&buffer->resource);
+ 
+     acquire_shader_resources(state, 1u << WINED3D_SHADER_TYPE_COMPUTE);
+     acquire_unordered_access_resources(state->shader[WINED3D_SHADER_TYPE_COMPUTE],
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 4839f09aee3..54a058ae1ed 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3701,6 +3701,14 @@ void CDECL wined3d_device_dispatch_compute(struct wined3d_device *device,
+     wined3d_cs_emit_dispatch(device->cs, group_count_x, group_count_y, group_count_z);
+ }
+ 
++void CDECL wined3d_device_dispatch_compute_indirect(struct wined3d_device *device,
++        struct wined3d_buffer *buffer, unsigned int offset)
++{
++    TRACE("device %p, buffer %p, offset %u.\n", device, buffer, offset);
++
++    wined3d_cs_emit_dispatch_indirect(device->cs, buffer, offset);
++}
++
+ void CDECL wined3d_device_set_primitive_type(struct wined3d_device *device,
+         enum wined3d_primitive_type primitive_type, unsigned int patch_vertex_count)
+ {
+diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
+index 353e9aac5f9..6de0d613d2d 100644
+--- a/dlls/wined3d/drawprim.c
++++ b/dlls/wined3d/drawprim.c
+@@ -683,7 +683,7 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
+ }
+ 
+ void dispatch_compute(struct wined3d_device *device, const struct wined3d_state *state,
+-        unsigned int group_count_x, unsigned int group_count_y, unsigned int group_count_z)
++        const struct wined3d_dispatch_parameters *parameters)
+ {
+     const struct wined3d_gl_info *gl_info;
+     struct wined3d_context *context;
+@@ -713,8 +713,22 @@ void dispatch_compute(struct wined3d_device *device, const struct wined3d_state
+         return;
+     }
+ 
+-    GL_EXTCALL(glDispatchCompute(group_count_x, group_count_y, group_count_z));
+-    checkGLcall("glDispatchCompute");
++    if (!parameters->indirect)
++    {
++        GL_EXTCALL(glDispatchCompute(parameters->u.direct.group_count_x,
++                parameters->u.direct.group_count_y, parameters->u.direct.group_count_z));
++        checkGLcall("dispatch compute");
++    }
++    else
++    {
++        struct wined3d_buffer *buffer = parameters->u.indirect.buffer;
++
++        wined3d_buffer_load(buffer, context, state);
++        GL_EXTCALL(glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, buffer->buffer_object));
++        GL_EXTCALL(glDispatchComputeIndirect((GLintptr)0 + parameters->u.indirect.offset));
++        GL_EXTCALL(glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0));
++        checkGLcall("dispatch compute indirect");
++    }
+ 
+     GL_EXTCALL(glMemoryBarrier(GL_ALL_BARRIER_BITS));
+     checkGLcall("glMemoryBarrier");
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index f0f6871a8a2..122e39ba8ee 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -42,6 +42,7 @@
+ @ cdecl wined3d_device_create(ptr long long ptr long long ptr ptr)
+ @ cdecl wined3d_device_decref(ptr)
+ @ cdecl wined3d_device_dispatch_compute(ptr long long long)
++@ cdecl wined3d_device_dispatch_compute_indirect(ptr ptr long)
+ @ cdecl wined3d_device_draw_indexed_primitive(ptr long long)
+ @ cdecl wined3d_device_draw_indexed_primitive_instanced(ptr long long long long)
+ @ cdecl wined3d_device_draw_primitive(ptr long long)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 3eeb3aef55e..e2461100a5a 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -1481,11 +1481,34 @@ void wined3d_stream_info_from_declaration(struct wined3d_stream_info *stream_inf
+         const struct wined3d_state *state, const struct wined3d_gl_info *gl_info,
+         const struct wined3d_d3d_info *d3d_info) DECLSPEC_HIDDEN;
+ 
++struct wined3d_direct_dispatch_parameters
++{
++    unsigned int group_count_x;
++    unsigned int group_count_y;
++    unsigned int group_count_z;
++};
++
++struct wined3d_indirect_dispatch_parameters
++{
++    struct wined3d_buffer *buffer;
++    unsigned int offset;
++};
++
++struct wined3d_dispatch_parameters
++{
++    BOOL indirect;
++    union
++    {
++        struct wined3d_direct_dispatch_parameters direct;
++        struct wined3d_indirect_dispatch_parameters indirect;
++    } u;
++};
++
+ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *state,
+         int base_vertex_idx, unsigned int start_idx, unsigned int index_count,
+         unsigned int start_instance, unsigned int instance_count, BOOL indexed) DECLSPEC_HIDDEN;
+ void dispatch_compute(struct wined3d_device *device, const struct wined3d_state *state,
+-        unsigned int group_count_x, unsigned int group_count_y, unsigned int group_count_z) DECLSPEC_HIDDEN;
++        const struct wined3d_dispatch_parameters *dispatch_parameters) DECLSPEC_HIDDEN;
+ DWORD get_flexible_vertex_size(DWORD d3dvtVertexType) DECLSPEC_HIDDEN;
+ 
+ #define eps 1e-8f
+@@ -3432,6 +3455,8 @@ void wined3d_cs_emit_clear_unordered_access_view_uint(struct wined3d_cs *cs,
+         struct wined3d_unordered_access_view *view, const struct wined3d_uvec4 *clear_value) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_dispatch(struct wined3d_cs *cs,
+         unsigned int group_count_x, unsigned int group_count_y, unsigned int group_count_z) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_dispatch_indirect(struct wined3d_cs *cs,
++        struct wined3d_buffer *buffer, unsigned int offset) DECLSPEC_HIDDEN;
+ void wined3d_cs_emit_draw(struct wined3d_cs *cs, GLenum primitive_type, unsigned int patch_vertex_count,
+         int base_vertex_idx, unsigned int start_idx, unsigned int index_count,
+         unsigned int start_instance, unsigned int instance_count, BOOL indexed) DECLSPEC_HIDDEN;
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 4a85aac2cae..a99dbf64686 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -2240,6 +2240,8 @@ HRESULT __cdecl wined3d_device_create(struct wined3d *wined3d, UINT adapter_idx,
+ ULONG __cdecl wined3d_device_decref(struct wined3d_device *device);
+ void __cdecl wined3d_device_dispatch_compute(struct wined3d_device *device,
+         unsigned int group_count_x, unsigned int group_count_y, unsigned int group_count_z);
++void __cdecl wined3d_device_dispatch_compute_indirect(struct wined3d_device *device,
++        struct wined3d_buffer *buffer, unsigned int offset);
+ HRESULT __cdecl wined3d_device_draw_indexed_primitive(struct wined3d_device *device, UINT start_idx, UINT index_count);
+ void __cdecl wined3d_device_draw_indexed_primitive_instanced(struct wined3d_device *device,
+         UINT start_idx, UINT index_count, UINT start_instance, UINT instance_count);
+-- 
+2.13.1
+

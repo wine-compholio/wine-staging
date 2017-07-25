@@ -1,33 +1,44 @@
-From 32bb8b671dd0c6df8d3cf295447b3c8f7d3b7457 Mon Sep 17 00:00:00 2001
+From fce736fd0ec3a9d497cbbe4cd7ac7a6ca146f544 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: winebuild: Generate syscall thunks for ntdll exports.
 
 Based on a patch by Erich E. Hoover.
 ---
- dlls/ntdll/signal_i386.c |  2 ++
- include/winternl.h       |  2 +-
- tools/winebuild/build.h  |  6 +++++
- tools/winebuild/import.c | 10 ++++---
- tools/winebuild/parser.c | 59 +++++++++++++++++++++++++++++++++++++++++
- tools/winebuild/spec16.c | 22 +---------------
- tools/winebuild/spec32.c | 68 ++++++++++++++++++++++++++++++++++++++++++++++++
- tools/winebuild/utils.c  | 21 +++++++++++++++
- 8 files changed, 164 insertions(+), 26 deletions(-)
+ dlls/ntdll/signal_i386.c     |  5 +++-
+ dlls/ntdll/tests/exception.c |  2 ++
+ include/winternl.h           |  2 +-
+ tools/winebuild/build.h      |  6 ++++
+ tools/winebuild/import.c     | 10 ++++---
+ tools/winebuild/parser.c     | 59 ++++++++++++++++++++++++++++++++++++++
+ tools/winebuild/spec16.c     | 22 +-------------
+ tools/winebuild/spec32.c     | 68 ++++++++++++++++++++++++++++++++++++++++++++
+ tools/winebuild/utils.c      | 21 ++++++++++++++
+ 9 files changed, 168 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index d3da84c7be9..f2657045c94 100644
+index ef45e37c5fd..d015c4ea831 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -481,6 +481,7 @@ static wine_signal_handler handlers[256];
+@@ -481,6 +481,8 @@ static wine_signal_handler handlers[256];
  static BOOL fpux_support;  /* whether the CPU supports extended fpu context */
  
  extern void DECLSPEC_NORETURN __wine_restore_regs( const CONTEXT *context );
 +extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
++extern NTSTATUS WINAPI __syscall_NtGetContextThread( HANDLE handle, CONTEXT *context );
  
  enum i386_trap_code
  {
-@@ -2434,6 +2435,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -1499,7 +1501,7 @@ NTSTATUS CDECL __regs_NtGetContextThread( DWORD edi, DWORD esi, DWORD ebx, DWORD
+         {
+             context->Ebp    = ebp;
+             context->Esp    = (DWORD)&retaddr;
+-            context->Eip    = *(&edi - 1);
++            context->Eip    = (DWORD)__syscall_NtGetContextThread + 18;
+             context->SegCs  = wine_get_cs();
+             context->SegSs  = wine_get_ss();
+             context->EFlags = eflags;
+@@ -2469,6 +2471,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          *teb = addr;
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
@@ -35,11 +46,24 @@ index d3da84c7be9..f2657045c94 100644
          thread_data = (struct x86_thread_data *)(*teb)->SystemReserved2;
          if (!(thread_data->fs = wine_ldt_alloc_fs()))
          {
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index 90490871f36..f614ef0edb8 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -1544,6 +1544,8 @@ static void test_thread_context(void)
+     ok( (char *)context.Eip >= (char *)pNtGetContextThread - 0x10000 &&
+         (char *)context.Eip <= (char *)pNtGetContextThread + 0x10000,
+         "wrong Eip %08x/%08x\n", context.Eip, (DWORD)pNtGetContextThread );
++    ok( *(WORD *)context.Eip == 0xc483 || *(WORD *)context.Eip == 0x08c2 || *(WORD *)context.Eip == 0x8dc3,
++        "expected 0xc483 or 0x08c2 or 0x8dc3, got %04x\n", *(WORD *)context.Eip );
+     /* segment registers clear the high word */
+     ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
+     ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/include/winternl.h b/include/winternl.h
-index c11df3e53f6..80b7b91f906 100644
+index 404730ddbb6..b1871e689fa 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -322,7 +322,7 @@ typedef struct _TEB
+@@ -323,7 +323,7 @@ typedef struct _TEB
      PVOID                        CsrClientThread;                   /* 03c/0070 */
      PVOID                        Win32ThreadInfo;                   /* 040/0078 */
      ULONG                        Win32ClientInfo[31];               /* 044/0080 used for user32 private data in Wine */
@@ -134,7 +158,7 @@ index e7bad72c37b..cc8c422a33c 100644
              }
          }
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index 2762a8cd10e..d8dceaead28 100644
+index 2762a8cd10e..402c0d60368 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -507,6 +507,24 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
@@ -145,7 +169,7 @@ index 2762a8cd10e..d8dceaead28 100644
 +{
 +    if (target_cpu != CPU_x86)
 +        return 0;
-+    if (odp->flags & (FLAG_FORWARD | FLAG_NORELAY | FLAG_REGISTER))
++    if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
 +        return 0;
 +    if (odp->type != TYPE_STDCALL)
 +        return 0;

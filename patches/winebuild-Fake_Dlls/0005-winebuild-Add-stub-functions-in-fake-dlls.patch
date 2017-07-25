@@ -1,4 +1,4 @@
-From 47c26e73121327980c26501ecb20cc6d6b08f3f3 Mon Sep 17 00:00:00 2001
+From c3d774f0b6613aac336b3a2ed28452fbb6a5f9c1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 16:27:56 +0200
 Subject: winebuild: Add stub functions in fake dlls.
@@ -13,10 +13,10 @@ Subject: winebuild: Add stub functions in fake dlls.
  6 files changed, 255 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index f8d45d829fc..77bac0861f7 100644
+index e9b05013875..6be54321d50 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -856,9 +856,7 @@ static void test_FakeDLL(void)
+@@ -892,9 +892,7 @@ static void test_FakeDLL(void)
      ok(ptr != NULL, "MapViewOfFile failed with error %u\n", GetLastError());
  
      dir = RtlImageDirectoryEntryToData(ptr, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &size);
@@ -26,7 +26,7 @@ index f8d45d829fc..77bac0861f7 100644
  
      names    = RVAToAddr(dir->AddressOfNames, ptr);
      ordinals = RVAToAddr(dir->AddressOfNameOrdinals, ptr);
-@@ -887,17 +885,20 @@ todo_wine
+@@ -923,17 +921,20 @@ todo_wine
          /* check position in memory */
          dll_rva = (DWORD_PTR)dll_func - (DWORD_PTR)module;
          map_rva = funcs[ordinals[i]];
@@ -47,7 +47,7 @@ index f8d45d829fc..77bac0861f7 100644
          ok(!memcmp(map_func, dll_func, 0x20), "%s: Function content does not match!\n", func_name);
  
          if (!strcmp(func_name, "NtSetEvent"))
-@@ -911,10 +912,11 @@ todo_wine
+@@ -947,10 +948,11 @@ todo_wine
          ok(event != NULL, "CreateEvent failed with error %u\n", GetLastError());
          pNtSetEvent(event, 0);
          ok(WaitForSingleObject(event, 0) == WAIT_OBJECT_0, "Event was not signaled\n");
@@ -61,12 +61,12 @@ index f8d45d829fc..77bac0861f7 100644
      CloseHandle(map);
      CloseHandle(file);
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index f2657045c94..c2375d6f0e8 100644
+index d015c4ea831..3818e696c49 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -483,6 +483,45 @@ static BOOL fpux_support;  /* whether the CPU supports extended fpu context */
- extern void DECLSPEC_NORETURN __wine_restore_regs( const CONTEXT *context );
+@@ -484,6 +484,45 @@ extern void DECLSPEC_NORETURN __wine_restore_regs( const CONTEXT *context );
  extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
+ extern NTSTATUS WINAPI __syscall_NtGetContextThread( HANDLE handle, CONTEXT *context );
  
 +/* convert from straight ASCII to Unicode without depending on the current codepage */
 +static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
@@ -110,7 +110,7 @@ index f2657045c94..c2375d6f0e8 100644
  enum i386_trap_code
  {
      TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
-@@ -2436,6 +2475,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -2472,6 +2511,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
          (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
@@ -119,10 +119,10 @@ index f2657045c94..c2375d6f0e8 100644
          if (!(thread_data->fs = wine_ldt_alloc_fs()))
          {
 diff --git a/include/winternl.h b/include/winternl.h
-index 80b7b91f906..4780aca43a3 100644
+index b1871e689fa..140669b0105 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -362,7 +362,7 @@ typedef struct _TEB
+@@ -363,7 +363,7 @@ typedef struct _TEB
      PVOID                        WinSockData;                       /* f6c/1738 */
      ULONG                        GdiBatchCount;                     /* f70/1740 */
      ULONG                        Spare2;                            /* f74/1744 */

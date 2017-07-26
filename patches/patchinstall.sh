@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4a70f67ffcc57e82c22cc349da01d3aa5db84c71"
+	echo "976c2aa649a526188afd9c0647869ccc82068341"
 }
 
 # Show version information
@@ -292,6 +292,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
+	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_ExceptionInformation="$1"
 	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
@@ -1140,6 +1141,9 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
+			;;
+		ntdll-set_full_cpu_context)
+			enable_ntdll_set_full_cpu_context="$2"
 			;;
 		ntdll-x86_64_ExceptionInformation)
 			enable_ntdll_x86_64_ExceptionInformation="$2"
@@ -6776,6 +6780,18 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-set_full_cpu_context
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_i386.c
+# |
+if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
+	patch_apply ntdll-set_full_cpu_context/0001-ntdll-Add-back-SS-segment-prefixes-in-set_full_cpu_c.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add back SS segment prefixes in set_full_cpu_context.", 1 },';
 	) >> "$patchlist"
 fi
 

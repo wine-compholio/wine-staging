@@ -1,69 +1,48 @@
-From cd7620bf0752a46d6f29d24e7dc173a87bb6aa01 Mon Sep 17 00:00:00 2001
+From 6e095ddd83997fe8e1389d1b29471d20526f56f4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 6 May 2017 00:10:01 +0200
 Subject: server: Reset debug registers when creating threads.
 
 ---
- dlls/ntdll/tests/exception.c | 29 ++++++++++++++++++++++++-----
+ dlls/ntdll/tests/exception.c | 10 +++++-----
  server/thread.c              |  6 ++++++
- 2 files changed, 30 insertions(+), 5 deletions(-)
+ 2 files changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index ab4b3e42941..cf3b235b2f3 100644
+index e24bd54f00c..ab193267528 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
-@@ -2002,8 +2002,23 @@ static void test___C_specific_handler(void)
- 
- #if defined(__i386__) || defined(__x86_64__)
- 
--static DWORD WINAPI dummy_thread(void *arg)
-+static DWORD WINAPI register_check_thread(void *arg)
- {
-+    NTSTATUS status;
-+    CONTEXT ctx;
-+
-+    memset(&ctx, 0, sizeof(ctx));
-+    ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-+
-+    status = pNtGetContextThread(GetCurrentThread(), &ctx);
-+    ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
-+    ok(!ctx.Dr0, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr0);
-+    ok(!ctx.Dr1, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr1);
-+    ok(!ctx.Dr2, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr2);
-+    ok(!ctx.Dr3, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr3);
-+    ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
-+    ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
-+
-     return 0;
- }
- 
-@@ -2060,8 +2075,10 @@ static void test_debug_registers(void)
-     ctx.Dr7 = 0x00000400;
-     status = pNtSetContextThread(GetCurrentThread(), &ctx);
-     ok(status == STATUS_SUCCESS, "NtSetContextThread failed with %x\n", status);
--    thread = CreateThread(NULL, 0, dummy_thread, NULL, CREATE_SUSPENDED, NULL);
-+
-+    thread = CreateThread(NULL, 0, register_check_thread, NULL, CREATE_SUSPENDED, NULL);
-     ok(thread != INVALID_HANDLE_VALUE, "CreateThread failed with %d\n", GetLastError());
-+
-     ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-     status = pNtGetContextThread(thread, &ctx);
-     ok(status == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", status);
-@@ -2069,9 +2086,11 @@ static void test_debug_registers(void)
+@@ -905,7 +905,7 @@ static void test_exceptions(void)
+     res = pNtGetContextThread( h, &ctx );
+     ok( res == STATUS_SUCCESS, "NtGetContextThread failed with %x\n", res );
+     ok( ctx.Dr0 == 0, "dr0 %x\n", ctx.Dr0 );
+-    todo_wine ok( ctx.Dr7 == 0, "dr7 %x\n", ctx.Dr7 );
++    ok( ctx.Dr7 == 0, "dr7 %x\n", ctx.Dr7 );
+     ctx.Dr0 = (DWORD)code_mem;
+     ctx.Dr7 = 3;
+     res = pNtSetContextThread( h, &ctx );
+@@ -2181,8 +2181,8 @@ static DWORD WINAPI register_check_thread(void *arg)
      ok(!ctx.Dr1, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr1);
      ok(!ctx.Dr2, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr2);
      ok(!ctx.Dr3, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr3);
 -    todo_wine ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
 -    todo_wine ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
--    TerminateThread(thread, 0);
 +    ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
 +    ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
-+
-+    ResumeThread(thread);
-+    WaitForSingleObject(thread, INFINITE);
-     CloseHandle(thread);
- }
  
+     return 0;
+ }
+@@ -2251,8 +2251,8 @@ static void test_debug_registers(void)
+     ok(!ctx.Dr1, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr1);
+     ok(!ctx.Dr2, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr2);
+     ok(!ctx.Dr3, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr3);
+-    todo_wine ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
+-    todo_wine ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
++    ok(!ctx.Dr6, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr6);
++    ok(!ctx.Dr7, "expected 0, got %lx\n", (DWORD_PTR)ctx.Dr7);
+ 
+     ResumeThread(thread);
+     WaitForSingleObject(thread, 10000);
 diff --git a/server/thread.c b/server/thread.c
 index 211d0050b09..933eb35e07c 100644
 --- a/server/thread.c

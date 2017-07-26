@@ -1,98 +1,115 @@
-From 4a1a9adcee0e4c3bf81437ebd0a1361ac2b8ce3d Mon Sep 17 00:00:00 2001
+From 24730a3c3015b70bbf0685653c44dcbd768f4fd5 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 10 Apr 2015 07:51:16 +0200
 Subject: msvcrt: Calculate sinh/cosh/exp/pow with higher precision. (v2)
 
 Based on a patch by Zheng Chen.
 ---
- dlls/msvcrt/math.c | 44 ++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 44 insertions(+)
+ dlls/msvcrt/math.c | 63 ++++++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 59 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/msvcrt/math.c b/dlls/msvcrt/math.c
-index 7c971d3..0e62215 100644
+index 079446d04ed..924e3432881 100644
 --- a/dlls/msvcrt/math.c
 +++ b/dlls/msvcrt/math.c
-@@ -393,8 +393,19 @@ double CDECL MSVCRT_cos( double x )
-  */
+@@ -59,6 +59,61 @@ static MSVCRT_matherr_func MSVCRT_default_matherr_func = NULL;
+ static BOOL sse2_supported;
+ static BOOL sse2_enabled;
+ 
++#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
++
++static inline double precise_cosh( double x )
++{
++    WORD precise_cw = 0x37f, pre_cw;
++    double z;
++    __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++    __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++    z = cosh( x );
++    __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++    return z;
++}
++
++static inline double precise_exp( double x )
++{
++    WORD precise_cw = 0x37f, pre_cw;
++    double z;
++    __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++    __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++    z = exp( x );
++    __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++    return z;
++}
++
++static inline double precise_pow( double x, double y )
++{
++    WORD precise_cw = 0x37f, pre_cw;
++    double z;
++    __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++    __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++    z = pow( x, y );
++    __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++    return z;
++}
++
++static inline double precise_sinh( double x )
++{
++    WORD precise_cw = 0x37f, pre_cw;
++    double z;
++    __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
++    __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
++    z = sinh( x );
++    __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
++    return z;
++}
++
++#else
++
++#define precise_cosh cosh
++#define precise_exp  exp
++#define precise_pow  pow
++#define precise_sinh sinh
++
++#endif
++
+ void msvcrt_init_math(void)
+ {
+     sse2_supported = sse2_enabled = IsProcessorFeaturePresent( PF_XMMI64_INSTRUCTIONS_AVAILABLE );
+@@ -398,7 +453,7 @@ double CDECL MSVCRT_cos( double x )
  double CDECL MSVCRT_cosh( double x )
  {
-+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-+  WORD precise_cw = 0x37f, pre_cw;
-+  double z;
-+  if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
-+  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
-+  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
-+  z = cosh(x);
-+  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
-+  return z;
-+#else
    if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
-   return cosh(x);
-+#endif
+-  return cosh(x);
++  return precise_cosh(x);
  }
  
  /*********************************************************************
-@@ -402,8 +413,19 @@ double CDECL MSVCRT_cosh( double x )
+@@ -406,7 +461,7 @@ double CDECL MSVCRT_cosh( double x )
   */
  double CDECL MSVCRT_exp( double x )
  {
-+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-+  WORD precise_cw = 0x37f, pre_cw;
-+  double z;
-+  if (isnan(x)) *MSVCRT__errno() = MSVCRT_EDOM;
-+  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
-+  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
-+  z = exp(x);
-+  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
-+  return z;
-+#else
+-  double ret = exp(x);
++  double ret = precise_exp(x);
    if (isnan(x)) *MSVCRT__errno() = MSVCRT_EDOM;
-   return exp(x);
-+#endif
- }
- 
- /*********************************************************************
-@@ -441,9 +463,20 @@ double CDECL MSVCRT_log10( double x )
+   else if (isfinite(x) && !isfinite(ret)) *MSVCRT__errno() = MSVCRT_ERANGE;
+   return ret;
+@@ -447,7 +502,7 @@ double CDECL MSVCRT_log10( double x )
  double CDECL MSVCRT_pow( double x, double y )
  {
    /* FIXME: If x < 0 and y is not integral, set EDOM */
-+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-+  WORD precise_cw = 0x37f, pre_cw;
-+  double z;
-+  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
-+  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
-+  z = pow(x,y);
-+  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
-+  if (!isfinite(z)) *MSVCRT__errno() = MSVCRT_EDOM;
-+  return z;
-+#else
-   double z = pow(x,y);
+-  double z = pow(x,y);
++  double z = precise_pow(x, y);
    if (!isfinite(z)) *MSVCRT__errno() = MSVCRT_EDOM;
    return z;
-+#endif
  }
- 
- /*********************************************************************
-@@ -460,8 +493,19 @@ double CDECL MSVCRT_sin( double x )
-  */
+@@ -467,7 +522,7 @@ double CDECL MSVCRT_sin( double x )
  double CDECL MSVCRT_sinh( double x )
  {
-+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-+  WORD precise_cw = 0x37f, pre_cw;
-+  double z;
-+  if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
-+  __asm__ __volatile__( "fnstcw %0" : "=m" (pre_cw) );
-+  __asm__ __volatile__( "fldcw %0" : : "m" (precise_cw) );
-+  z = sinh(x);
-+  __asm__ __volatile__( "fldcw %0" : : "m" (pre_cw) );
-+  return z;
-+#else
    if (!isfinite(x)) *MSVCRT__errno() = MSVCRT_EDOM;
-   return sinh(x);
-+#endif
+-  return sinh(x);
++  return precise_sinh(x);
  }
  
  /*********************************************************************
 -- 
-2.3.7
+2.13.1
 

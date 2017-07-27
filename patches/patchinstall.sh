@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "976c2aa649a526188afd9c0647869ccc82068341"
+	echo "1744277bee3c3c77ae657f42d8fac466cfac7924"
 }
 
 # Show version information
@@ -322,7 +322,6 @@ patch_enable_all ()
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
-	enable_server_Debug_Registers="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -1231,9 +1230,6 @@ patch_enable ()
 			;;
 		server-CreateProcess_ACLs)
 			enable_server_CreateProcess_ACLs="$2"
-			;;
-		server-Debug_Registers)
-			enable_server_Debug_Registers="$2"
 			;;
 		server-Desktop_Refcount)
 			enable_server_Desktop_Refcount="$2"
@@ -7283,21 +7279,6 @@ if test "$enable_server_ClipCursor" -eq 1; then
 	patch_apply server-ClipCursor/0001-server-Fix-handling-of-cursor-position-clipping.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve handling of cursor position clipping for empty rectangle.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Debug_Registers
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38322] Reset debug registers when creating threads
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/exception.c, server/thread.c
-# |
-if test "$enable_server_Debug_Registers" -eq 1; then
-	patch_apply server-Debug_Registers/0001-server-Reset-debug-registers-when-creating-threads.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "server: Reset debug registers when creating threads.", 1 },';
 	) >> "$patchlist"
 fi
 

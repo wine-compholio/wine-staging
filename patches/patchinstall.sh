@@ -339,6 +339,7 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
+	enable_server_free_async_queue="$1"
 	enable_server_send_hardware_message="$1"
 	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
@@ -1281,6 +1282,9 @@ patch_enable ()
 			;;
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
+			;;
+		server-free_async_queue)
+			enable_server_free_async_queue="$2"
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
@@ -7560,6 +7564,18 @@ if test "$enable_server_device_manager_destroy" -eq 1; then
 	patch_apply server-device_manager_destroy/0001-server-Fix-crash-when-a-device-driver-segfaults-duri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Fix crash when a device driver segfaults during an open file request.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-free_async_queue
+# |
+# | Modified files:
+# |   *	server/async.c
+# |
+if test "$enable_server_free_async_queue" -eq 1; then
+	patch_apply server-free_async_queue/0001-server-Avoid-crash-when-async_terminate-destroys-asy.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Avoid crash when async_terminate destroys async object in free_async_queue.", 1 },';
 	) >> "$patchlist"
 fi
 

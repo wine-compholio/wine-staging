@@ -1,4 +1,4 @@
-From 5850953278f92568bc88418d322609bc593b115e Mon Sep 17 00:00:00 2001
+From 8d3a3d87d3b5d19662f85b1914d3e848f5bc9be3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 14 Jul 2017 09:37:11 +0200
 Subject: nvapi: Implement NvAPI_D3D11_CreateDevice and
@@ -7,10 +7,10 @@ Subject: nvapi: Implement NvAPI_D3D11_CreateDevice and
 ---
  dlls/nvapi/Makefile.in   |  2 +-
  dlls/nvapi/nvapi.c       | 55 +++++++++++++++++++++++++++++++++++++++++++++
- dlls/nvapi/tests/nvapi.c | 58 ++++++++++++++++++++++++++++++++++++++++++++++--
+ dlls/nvapi/tests/nvapi.c | 58 +++++++++++++++++++++++++++++++++++++++++++++++-
  dlls/nvapi64/Makefile.in |  2 +-
  include/nvapi.h          |  9 ++++++++
- 5 files changed, 122 insertions(+), 4 deletions(-)
+ 5 files changed, 123 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/nvapi/Makefile.in b/dlls/nvapi/Makefile.in
 index 6341254d9f6..0ef540b2f7d 100644
@@ -104,7 +104,7 @@ index 70f7b3e9f34..4640c681851 100644
      unsigned int i;
      TRACE("(%x)\n", offset);
 diff --git a/dlls/nvapi/tests/nvapi.c b/dlls/nvapi/tests/nvapi.c
-index 52ca1d89fca..f08f84b7958 100644
+index c8b66ac2fa3..143e767950b 100644
 --- a/dlls/nvapi/tests/nvapi.c
 +++ b/dlls/nvapi/tests/nvapi.c
 @@ -18,6 +18,7 @@
@@ -134,17 +134,15 @@ index 52ca1d89fca..f08f84b7958 100644
  
  static const struct
  {
-@@ -67,7 +71,8 @@ function_list[] =
-     {0x9abdd40d, (void**) &pNvAPI_EnumNvidiaDisplayHandle},
+@@ -68,6 +72,7 @@ function_list[] =
      {0x2926aaad, (void**) &pNvAPI_SYS_GetDriverAndBranchVersion},
      {0x4b708b54, (void**) &pNvAPI_D3D_GetCurrentSLIState},
--    {0xee1370cf, (void**) &pNvAPI_GetLogicalGPUFromDisplay}
-+    {0xee1370cf, (void**) &pNvAPI_GetLogicalGPUFromDisplay},
+     {0xee1370cf, (void**) &pNvAPI_GetLogicalGPUFromDisplay},
 +    {0x6a16d3a0, (void**) &pNvAPI_D3D11_CreateDevice},
  };
  
  static BOOL init(void)
-@@ -705,6 +710,54 @@ cleanup:
+@@ -705,6 +710,56 @@ cleanup:
      if (window) DestroyWindow(window);
  }
  
@@ -153,7 +151,7 @@ index 52ca1d89fca..f08f84b7958 100644
 +    NVAPI_DEVICE_FEATURE_LEVEL level_nvapi;
 +    D3D_FEATURE_LEVEL level_d3d;
 +    ID3D11Device *device;
-+    HRESULT hr;
++    NvAPI_Status status;
 +
 +    if (!pNvAPI_D3D11_CreateDevice)
 +    {
@@ -161,8 +159,9 @@ index 52ca1d89fca..f08f84b7958 100644
 +        return;
 +    }
 +
-+    hr = pNvAPI_D3D11_CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, NULL, 0, D3D11_SDK_VERSION, &device, &level_d3d, NULL, &level_nvapi);
-+    ok(hr == S_OK, "Failed to create device: %#08x\n", hr);
++    status = pNvAPI_D3D11_CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, NULL, 0,
++                                       D3D11_SDK_VERSION, &device, &level_d3d, NULL, &level_nvapi);
++    ok(status == NVAPI_OK, "Expected status NVAPI_OK, got %d\n", status);
 +
 +    switch (level_d3d)
 +    {
@@ -184,22 +183,23 @@ index 52ca1d89fca..f08f84b7958 100644
 +            break;
 +    }
 +
-+    if (SUCCEEDED(hr))
++    if (status == NVAPI_OK)
 +        ID3D11Device_Release(device);
 +
 +    level_d3d = D3D_FEATURE_LEVEL_9_1;
-+    hr = pNvAPI_D3D11_CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &level_d3d, 1, D3D11_SDK_VERSION, &device, NULL, NULL, &level_nvapi);
-+    ok(hr == S_OK, "Failed to create device: %#08x\n", hr);
++    status = pNvAPI_D3D11_CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &level_d3d, 1,
++                                       D3D11_SDK_VERSION, &device, NULL, NULL, &level_nvapi);
++    ok(status == NVAPI_OK, "Expected status NVAPI_OK, got %d\n", status);
 +    ok(level_nvapi == NVAPI_DEVICE_FEATURE_LEVEL_NULL, "Expected level NVAPI_DEVICE_FEATURE_LEVEL_NULL, got %d\n", level_nvapi);
 +
-+    if (SUCCEEDED(hr))
++    if (status == NVAPI_OK)
 +        ID3D11Device_Release(device);
 +}
 +
  START_TEST( nvapi )
  {
      WNDCLASSA wc = {0};
-@@ -724,6 +777,7 @@ START_TEST( nvapi )
+@@ -724,6 +779,7 @@ START_TEST( nvapi )
      test_NvAPI_EnumNvidiaDisplayHandle();
      test_NvAPI_SYS_GetDriverAndBranchVersion();
      test_NvAPI_GetLogicalGPUFromDisplay();

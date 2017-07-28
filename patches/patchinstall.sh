@@ -6855,16 +6855,15 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	patch_apply nvapi-Stub_DLL/0009-nvapi-Add-stub-for-NvAPI_SYS_GetDriverAndBranchVersi.patch
 	patch_apply nvapi-Stub_DLL/0010-nvapi-Add-stub-for-NvAPI_Unload.patch
 	patch_apply nvapi-Stub_DLL/0011-nvapi-Add-stub-for-NvAPI_D3D_GetCurrentSLIState.patch
-	patch_apply nvapi-Stub_DLL/0012-nvapi-Print-fixme-message-for-NvAPI_D3D9_StretchRect.patch
-	patch_apply nvapi-Stub_DLL/0013-nvapi-tests-Use-structure-to-list-imports.patch
-	patch_apply nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
-	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
-	patch_apply nvapi-Stub_DLL/0016-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
-	patch_apply nvapi-Stub_DLL/0017-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
-	patch_apply nvapi-Stub_DLL/0018-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
-	patch_apply nvapi-Stub_DLL/0019-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
-	patch_apply nvapi-Stub_DLL/0020-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
-	patch_apply nvapi-Stub_DLL/0021-nvapi-Implement-NvAPI_D3D11_CreateDevice-and-NvAPI_D.patch
+	patch_apply nvapi-Stub_DLL/0012-nvapi-tests-Use-structure-to-list-imports.patch
+	patch_apply nvapi-Stub_DLL/0013-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
+	patch_apply nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
+	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
+	patch_apply nvapi-Stub_DLL/0016-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
+	patch_apply nvapi-Stub_DLL/0017-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
+	patch_apply nvapi-Stub_DLL/0018-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
+	patch_apply nvapi-Stub_DLL/0019-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
+	patch_apply nvapi-Stub_DLL/0020-nvapi-Implement-NvAPI_D3D11_CreateDevice-and-NvAPI_D.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
@@ -6877,7 +6876,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_Unload.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetCurrentSLIState.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Print fixme message for NvAPI_D3D9_StretchRectEx.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi/tests: Use structure to list imports.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';

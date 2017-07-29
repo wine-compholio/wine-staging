@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1744277bee3c3c77ae657f42d8fac466cfac7924"
+	echo "5d9a4c4dbd85cd97acae0d9f0191415bf4b30673"
 }
 
 # Show version information
@@ -6883,7 +6883,7 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Improve NvAPI_D3D_GetCurrentSLIState.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_GPU_Get{Physical,Virtual}FrameBufferSize.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GPU_GetGpuCoreCount.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_SetDepthBoundsTest.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_SetDepthBoundsTest.", 2 },';
 		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_CreateDevice and NvAPI_D3D11_CreateDeviceAndSwapChain.", 1 },';
 	) >> "$patchlist"
 fi

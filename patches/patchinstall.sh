@@ -190,6 +190,7 @@ patch_enable_all ()
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
+	enable_kernel32_GetProcessWorkingSetSizeEx="$1"
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
@@ -836,6 +837,9 @@ patch_enable ()
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
+			;;
+		kernel32-GetProcessWorkingSetSizeEx)
+			enable_kernel32_GetProcessWorkingSetSizeEx="$2"
 			;;
 		kernel32-GetShortPathName)
 			enable_kernel32_GetShortPathName="$2"
@@ -5030,6 +5034,19 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-GetProcessWorkingSetSizeEx
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-memory-l1-1-1/api-ms-win-core-memory-l1-1-1.spec, dlls/api-ms-win-core-memory-l1-1-2/api-ms-win-
+# | 	core-memory-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/kernelbase/kernelbase.spec
+# |
+if test "$enable_kernel32_GetProcessWorkingSetSizeEx" -eq 1; then
+	patch_apply kernel32-GetProcessWorkingSetSizeEx/0001-kernel32-Add-stub-for-GetProcessWorkingSetSizeEx.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Add stub for GetProcessWorkingSetSizeEx.", 1 },';
 	) >> "$patchlist"
 fi
 

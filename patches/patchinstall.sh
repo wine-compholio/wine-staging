@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "611c15953e8297ac1762abfb5aeca6665985fc0f"
+	echo "619b7e07d7ee1a20bb816ebec8e40eaedc47f870"
 }
 
 # Show version information
@@ -10159,10 +10159,12 @@ if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
 	patch_apply wintrust-WinVerifyTrust/0001-wintrust-tests-Add-tests-for-WinVerifyTrust.-v2.patch
 	patch_apply wintrust-WinVerifyTrust/0002-wintrust-tests-Add-some-additional-tests.patch
 	patch_apply wintrust-WinVerifyTrust/0003-wintrust-Verify-image-hash-in-WinVerifyTrust.patch
+	patch_apply wintrust-WinVerifyTrust/0004-wintrust-use-enhanced-crypto-provider-in-VerifyImage.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 2 },';
+		printf '%s\n' '+    { "Marko Friedemann", "wintrust: Use enhanced crypto provider in VerifyImageHash.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "619b7e07d7ee1a20bb816ebec8e40eaedc47f870"
+	echo "2d9e894d285937716a4541c7fab9152fdf0b495f"
 }
 
 # Show version information
@@ -438,7 +438,6 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
-	enable_wined3d_Backup_Window="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_Copy_Resource_Typeless="$1"
@@ -1581,9 +1580,6 @@ patch_enable ()
 			;;
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
-			;;
-		wined3d-Backup_Window)
-			enable_wined3d_Backup_Window="$2"
 			;;
 		wined3d-CSMT_Helper)
 			enable_wined3d_CSMT_Helper="$2"
@@ -9347,18 +9343,6 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	patch_apply wined3d-Accounting/0001-wined3d-Use-real-values-for-memory-accounting-on-NVI.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Use real values for memory accounting on NVIDIA cards.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Backup_Window
-# |
-# | Modified files:
-# |   *	dlls/wined3d/context.c
-# |
-if test "$enable_wined3d_Backup_Window" -eq 1; then
-	patch_apply wined3d-Backup_Window/0001-wined3d-Fix-context-backup-window-handling.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Fix context backup window handling.", 1 },';
 	) >> "$patchlist"
 fi
 

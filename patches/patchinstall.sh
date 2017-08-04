@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2d9e894d285937716a4541c7fab9152fdf0b495f"
+	echo "7aa4a25bd3d23b57ff990a151296dddb337a5767"
 }
 
 # Show version information
@@ -6395,7 +6395,7 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add test to ensure section name is full path.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';

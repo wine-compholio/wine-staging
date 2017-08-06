@@ -316,6 +316,7 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
+	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
@@ -1214,6 +1215,9 @@ patch_enable ()
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
+			;;
+		packager-DllMain)
+			enable_packager_DllMain="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -7194,6 +7198,21 @@ if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset packager-DllMain
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43472] Prefer native version of packager.dll
+# |
+# | Modified files:
+# |   *	dlls/packager/packager_main.c
+# |
+if test "$enable_packager_DllMain" -eq 1; then
+	patch_apply packager-DllMain/0001-packager-Prefer-native-version.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "packager: Prefer native version.", 1 },';
 	) >> "$patchlist"
 fi
 

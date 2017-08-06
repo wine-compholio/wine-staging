@@ -1,0 +1,69 @@
+From 52a0506018b5f61484935142b79e73dbbe0ae9d7 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 5 Aug 2017 03:38:38 +0200
+Subject: ntdll: Add inline versions of RtlEnterCriticalSection /
+ RtlLeaveCriticalSections.
+
+---
+ dlls/ntdll/ntdll_misc.h | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 19d1e532759..c6c60090d10 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -27,6 +27,7 @@
+ #include "windef.h"
+ #include "winnt.h"
+ #include "winternl.h"
++#include "wine/debug.h"
+ #include "wine/server.h"
+ 
+ #define MAX_NT_PATH_LENGTH 277
+@@ -198,6 +199,43 @@ extern int ntdll_wcstoumbs(DWORD flags, const WCHAR* src, int srclen, char* dst,
+ extern int CDECL NTDLL__vsnprintf( char *str, SIZE_T len, const char *format, __ms_va_list args ) DECLSPEC_HIDDEN;
+ extern int CDECL NTDLL__vsnwprintf( WCHAR *str, SIZE_T len, const WCHAR *format, __ms_va_list args ) DECLSPEC_HIDDEN;
+ 
++#ifdef __WINE_WINE_PORT_H
++
++/* inline version of RtlEnterCriticalSection */
++static inline void enter_critical_section( RTL_CRITICAL_SECTION *crit )
++{
++    if (interlocked_inc( &crit->LockCount ))
++    {
++        if (crit->OwningThread == ULongToHandle(GetCurrentThreadId()))
++        {
++            crit->RecursionCount++;
++            return;
++        }
++        RtlpWaitForCriticalSection( crit );
++    }
++    crit->OwningThread   = ULongToHandle(GetCurrentThreadId());
++    crit->RecursionCount = 1;
++}
++
++/* inline version of RtlLeaveCriticalSection */
++static inline void leave_critical_section( RTL_CRITICAL_SECTION *crit )
++{
++    WINE_DECLARE_DEBUG_CHANNEL(ntdll);
++    if (--crit->RecursionCount)
++    {
++        if (crit->RecursionCount > 0) interlocked_dec( &crit->LockCount );
++        else ERR_(ntdll)( "section %p is not acquired\n", crit );
++    }
++    else
++    {
++        crit->OwningThread = 0;
++        if (interlocked_dec( &crit->LockCount ) >= 0)
++            RtlpUnWaitCriticalSection( crit );
++    }
++}
++
++#endif  /* __WINE_WINE_PORT_H */
++
+ /* load order */
+ 
+ enum loadorder
+-- 
+2.13.1
+

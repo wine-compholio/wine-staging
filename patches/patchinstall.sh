@@ -234,6 +234,7 @@ patch_enable_all ()
 	enable_ntdll_Attach_Process_DLLs="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CLI_Images="$1"
+	enable_ntdll_CriticalSection="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
@@ -970,6 +971,9 @@ patch_enable ()
 			;;
 		ntdll-CLI_Images)
 			enable_ntdll_CLI_Images="$2"
+			;;
+		ntdll-CriticalSection)
+			enable_ntdll_CriticalSection="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -5960,6 +5964,24 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-CriticalSection
+# |
+# | Modified files:
+# |   *	dlls/ntdll/critsection.c, dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/threadpool.c, include/wine/port.h
+# |
+if test "$enable_ntdll_CriticalSection" -eq 1; then
+	patch_apply ntdll-CriticalSection/0001-include-Move-interlocked_inc-dec-to-port.h.patch
+	patch_apply ntdll-CriticalSection/0002-ntdll-Add-inline-versions-of-RtlEnterCriticalSection.patch
+	patch_apply ntdll-CriticalSection/0003-ntdll-Use-fast-CS-functions-for-heap-locking.patch
+	patch_apply ntdll-CriticalSection/0004-ntdll-Use-fast-CS-functions-for-threadpool-locking.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "include: Move interlocked_inc/dec to port.h.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add inline versions of RtlEnterCriticalSection / RtlLeaveCriticalSections.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for heap locking.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for threadpool locking.", 1 },';
 	) >> "$patchlist"
 fi
 

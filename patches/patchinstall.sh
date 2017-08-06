@@ -88,6 +88,7 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi_LsaLookupPrivilegeName="$1"
 	enable_advapi32_BuildSecurityDescriptor="$1"
+	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_Performance_Counters="$1"
@@ -531,6 +532,9 @@ patch_enable ()
 			;;
 		advapi32-BuildSecurityDescriptor)
 			enable_advapi32_BuildSecurityDescriptor="$2"
+			;;
+		advapi32-CreateRestrictedToken)
+			enable_advapi32_CreateRestrictedToken="$2"
 			;;
 		advapi32-GetExplicitEntriesFromAclW)
 			enable_advapi32_GetExplicitEntriesFromAclW="$2"
@@ -3015,6 +3019,23 @@ if test "$enable_advapi32_BuildSecurityDescriptor" -eq 1; then
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "advapi32: Implement BuildSecurityDescriptorW.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add basic tests for BuildSecurityDescriptor.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-CreateRestrictedToken
+# |
+# | Modified files:
+# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/winnt.h,
+# | 	include/winternl.h, server/process.c, server/protocol.def, server/security.h, server/token.c
+# |
+if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
+	patch_apply advapi32-CreateRestrictedToken/0001-ntdll-Implement-NtFilterToken.patch
+	patch_apply advapi32-CreateRestrictedToken/0002-advapi32-Implement-CreateRestrictedToken.patch
+	patch_apply advapi32-CreateRestrictedToken/0003-server-Correctly-validate-SID-length-in-sd_is_valid.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtFilterToken.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement CreateRestrictedToken.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Correctly validate SID length in sd_is_valid.", 1 },';
 	) >> "$patchlist"
 fi
 

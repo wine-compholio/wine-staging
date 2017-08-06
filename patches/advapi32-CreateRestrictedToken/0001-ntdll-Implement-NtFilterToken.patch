@@ -1,0 +1,315 @@
+From 3f314cc8251f62f592013abe7b1c3b977de0699a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 4 Aug 2017 02:33:14 +0200
+Subject: ntdll: Implement NtFilterToken.
+
+---
+ dlls/ntdll/nt.c       | 59 ++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/ntdll.spec |  2 +-
+ include/winnt.h       |  5 +++
+ include/winternl.h    |  1 +
+ server/process.c      |  2 +-
+ server/protocol.def   | 10 ++++++
+ server/security.h     |  4 ++-
+ server/token.c        | 84 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 8 files changed, 162 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 93554e929be..5822dec9b15 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -136,6 +136,65 @@ NTSTATUS WINAPI NtDuplicateToken(
+ }
+ 
+ /******************************************************************************
++ *  NtFilterToken        [NTDLL.@]
++ *  ZwFilterToken        [NTDLL.@]
++ */
++NTSTATUS WINAPI NtFilterToken( HANDLE token, ULONG flags, TOKEN_GROUPS *disable_sids,
++                               TOKEN_PRIVILEGES *privileges, TOKEN_GROUPS *restrict_sids,
++                               HANDLE *new_token )
++{
++    data_size_t privileges_len = 0;
++    data_size_t sids_len = 0;
++    SID *sids = NULL;
++    NTSTATUS status;
++
++    TRACE( "(%p, 0x%08x, %p, %p, %p, %p)\n", token, flags, disable_sids, privileges,
++           restrict_sids, new_token );
++
++    if (flags)
++        FIXME( "flags %x unsupported\n", flags );
++
++    if (restrict_sids)
++        FIXME( "support for restricting sids not yet implemented\n" );
++
++    if (privileges)
++        privileges_len = privileges->PrivilegeCount * sizeof(LUID_AND_ATTRIBUTES);
++
++    if (disable_sids)
++    {
++        DWORD len, i;
++        BYTE *tmp;
++
++        for (i = 0; i < disable_sids->GroupCount; i++)
++            sids_len += RtlLengthSid( disable_sids->Groups[i].Sid );
++
++        sids = RtlAllocateHeap( GetProcessHeap(), 0, sids_len );
++        if (!sids) return STATUS_NO_MEMORY;
++
++        for (i = 0, tmp = (BYTE *)sids; i < disable_sids->GroupCount; i++, tmp += len)
++        {
++            len = RtlLengthSid( disable_sids->Groups[i].Sid );
++            memcpy( tmp, disable_sids->Groups[i].Sid, len );
++        }
++    }
++
++    SERVER_START_REQ( filter_token )
++    {
++        req->handle          = wine_server_obj_handle( token );
++        req->flags           = flags;
++        req->privileges_size = privileges_len;
++        wine_server_add_data( req, privileges->Privileges, privileges_len );
++        wine_server_add_data( req, sids, sids_len );
++        status = wine_server_call( req );
++        if (!status) *new_token = wine_server_ptr_handle( reply->new_handle );
++    }
++    SERVER_END_REQ;
++
++    RtlFreeHeap( GetProcessHeap(), 0, sids );
++    return status;
++}
++
++/******************************************************************************
+  *  NtOpenProcessToken		[NTDLL.@]
+  *  ZwOpenProcessToken		[NTDLL.@]
+  */
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 4f7ee496437..275fda57970 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -179,7 +179,7 @@
+ # @ stub NtEnumerateSystemEnvironmentValuesEx
+ @ stdcall NtEnumerateValueKey(long long long ptr long ptr)
+ @ stub NtExtendSection
+-# @ stub NtFilterToken
++@ stdcall NtFilterToken(long long ptr ptr ptr ptr)
+ @ stdcall NtFindAtom(ptr long ptr)
+ @ stdcall NtFlushBuffersFile(long ptr)
+ @ stdcall NtFlushInstructionCache(long ptr long)
+diff --git a/include/winnt.h b/include/winnt.h
+index f91f81eb559..891c9b6d4bb 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -3844,6 +3844,11 @@ typedef enum _TOKEN_INFORMATION_CLASS {
+ 					TOKEN_ADJUST_SESSIONID | \
+ 					TOKEN_ADJUST_DEFAULT )
+ 
++#define DISABLE_MAX_PRIVILEGE 0x1
++#define SANDBOX_INERT         0x2
++#define LUA_TOKEN             0x4
++#define WRITE_RESTRICTED      0x8
++
+ #ifndef _SECURITY_DEFINED
+ #define _SECURITY_DEFINED
+ 
+diff --git a/include/winternl.h b/include/winternl.h
+index 140669b0105..899e8324d67 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2348,6 +2348,7 @@ NTSYSAPI NTSTATUS  WINAPI NtDuplicateToken(HANDLE,ACCESS_MASK,POBJECT_ATTRIBUTES
+ NTSYSAPI NTSTATUS  WINAPI NtEnumerateKey(HANDLE,ULONG,KEY_INFORMATION_CLASS,void *,DWORD,DWORD *);
+ NTSYSAPI NTSTATUS  WINAPI NtEnumerateValueKey(HANDLE,ULONG,KEY_VALUE_INFORMATION_CLASS,PVOID,ULONG,PULONG);
+ NTSYSAPI NTSTATUS  WINAPI NtExtendSection(HANDLE,PLARGE_INTEGER);
++NTSYSAPI NTSTATUS  WINAPI NtFilterToken(HANDLE,ULONG,TOKEN_GROUPS*,TOKEN_PRIVILEGES*,TOKEN_GROUPS*,HANDLE*);
+ NTSYSAPI NTSTATUS  WINAPI NtFindAtom(const WCHAR*,ULONG,RTL_ATOM*);
+ NTSYSAPI NTSTATUS  WINAPI NtFlushBuffersFile(HANDLE,IO_STATUS_BLOCK*);
+ NTSYSAPI NTSTATUS  WINAPI NtFlushInstructionCache(HANDLE,LPCVOID,SIZE_T);
+diff --git a/server/process.c b/server/process.c
+index cbe726afe81..f0f60edcd3f 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -571,7 +571,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+                                        : alloc_handle_table( process, 0 );
+         /* Note: for security reasons, starting a new process does not attempt
+          * to use the current impersonation token for the new process */
+-        process->token = token_duplicate( parent->token, TRUE, 0, NULL );
++        process->token = token_duplicate( parent->token, TRUE, 0, NULL, NULL, 0, NULL, 0 );
+         process->affinity = parent->affinity;
+     }
+     if (!process->handles || !process->token) goto error;
+diff --git a/server/protocol.def b/server/protocol.def
+index fc6e343af52..b3dce66eb9c 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3391,6 +3391,16 @@ enum caret_state
+     obj_handle_t  new_handle; /* duplicated handle */
+ @END
+ 
++@REQ(filter_token)
++    obj_handle_t  handle;          /* handle to the token to duplicate */
++    unsigned int  flags;           /* flags */
++    data_size_t   privileges_size; /* size of privileges */
++    VARARG(privileges,LUID_AND_ATTRIBUTES,privileges_size); /* privileges to remove from new token */
++    VARARG(disable_sids,SID);      /* array of groups to remove from new token */
++@REPLY
++    obj_handle_t  new_handle;      /* filtered handle */
++@END
++
+ @REQ(access_check)
+     obj_handle_t    handle; /* handle to the token */
+     unsigned int    desired_access; /* desired access to the object */
+diff --git a/server/security.h b/server/security.h
+index 606dbb2ab2c..6c337143c3d 100644
+--- a/server/security.h
++++ b/server/security.h
+@@ -56,7 +56,9 @@ extern const PSID security_high_label_sid;
+ extern struct token *token_create_admin(void);
+ extern int token_assign_label( struct token *token, PSID label );
+ extern struct token *token_duplicate( struct token *src_token, unsigned primary,
+-                                      int impersonation_level, const struct security_descriptor *sd );
++                                      int impersonation_level, const struct security_descriptor *sd,
++                                      const LUID_AND_ATTRIBUTES *filter_privileges, unsigned int priv_count,
++                                      const SID *filter_groups, unsigned int group_count );
+ extern int token_check_privileges( struct token *token, int all_required,
+                                    const LUID_AND_ATTRIBUTES *reqprivs,
+                                    unsigned int count, LUID_AND_ATTRIBUTES *usedprivs);
+diff --git a/server/token.c b/server/token.c
+index 74db66e1e24..acd7a4dedb5 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -299,6 +299,19 @@ static int acl_is_valid( const ACL *acl, data_size_t size )
+     return TRUE;
+ }
+ 
++static unsigned int get_sid_count( const SID *sid, data_size_t size )
++{
++    unsigned int count;
++
++    for (count = 0; size >= sizeof(SID) && security_sid_len( sid ) <= size; count++)
++    {
++        size -= security_sid_len( sid );
++        sid = (const SID *)((char *)sid + security_sid_len( sid ));
++    }
++
++    return count;
++}
++
+ /* checks whether all members of a security descriptor fit inside the size
+  * of memory specified */
+ int sd_is_valid( const struct security_descriptor *sd, data_size_t size )
+@@ -639,8 +652,36 @@ static struct token *create_token( unsigned primary, const SID *user,
+     return token;
+ }
+ 
++static int filter_group( struct group *group, const SID *filter, unsigned int count )
++{
++    unsigned int i;
++
++    for (i = 0; i < count; i++)
++    {
++        if (security_equal_sid( &group->sid, filter )) return 1;
++        filter = (const SID *)((char *)filter + security_sid_len( filter ));
++    }
++
++    return 0;
++}
++
++static int filter_privilege( struct privilege *privilege, const LUID_AND_ATTRIBUTES *filter, unsigned int count )
++{
++    unsigned int i;
++
++    for (i = 0; i < count; i++)
++    {
++        if (!memcmp( &privilege->luid, &filter[i].Luid, sizeof(LUID) ))
++            return 1;
++    }
++
++    return 0;
++}
++
+ struct token *token_duplicate( struct token *src_token, unsigned primary,
+-                               int impersonation_level, const struct security_descriptor *sd )
++                               int impersonation_level, const struct security_descriptor *sd,
++                               const LUID_AND_ATTRIBUTES *filter_privileges, unsigned int priv_count,
++                               const SID *filter_groups, unsigned int group_count)
+ {
+     const luid_t *modified_id =
+         primary || (impersonation_level == src_token->impersonation_level) ?
+@@ -676,6 +717,12 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+             return NULL;
+         }
+         memcpy( newgroup, group, size );
++        if (filter_group( group, filter_groups, group_count ))
++        {
++            newgroup->enabled = 0;
++            newgroup->def = 0;
++            newgroup->deny_only = 1;
++        }
+         list_add_tail( &token->groups, &newgroup->entry );
+         if (src_token->primary_group == &group->sid)
+             token->primary_group = &newgroup->sid;
+@@ -684,11 +731,14 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+ 
+     /* copy privileges */
+     LIST_FOR_EACH_ENTRY( privilege, &src_token->privileges, struct privilege, entry )
++    {
++        if (filter_privilege( privilege, filter_privileges, priv_count )) continue;
+         if (!privilege_add( token, &privilege->luid, privilege->enabled ))
+         {
+             release_object( token );
+             return NULL;
+         }
++    }
+ 
+     if (sd) default_set_sd( &token->obj, sd, OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
+                             DACL_SECURITY_INFORMATION | SACL_SECURITY_INFORMATION );
+@@ -1322,7 +1372,7 @@ DECL_HANDLER(duplicate_token)
+                                                      TOKEN_DUPLICATE,
+                                                      &token_ops )))
+     {
+-        struct token *token = token_duplicate( src_token, req->primary, req->impersonation_level, sd );
++        struct token *token = token_duplicate( src_token, req->primary, req->impersonation_level, sd, NULL, 0, NULL, 0 );
+         if (token)
+         {
+             reply->new_handle = alloc_handle_no_access_check( current->process, token, req->access, objattr->attributes );
+@@ -1332,6 +1382,36 @@ DECL_HANDLER(duplicate_token)
+     }
+ }
+ 
++/* creates a restricted version of a token */
++DECL_HANDLER(filter_token)
++{
++    struct token *src_token;
++
++    if ((src_token = (struct token *)get_handle_obj( current->process, req->handle,
++                                                     TOKEN_DUPLICATE,
++                                                     &token_ops )))
++    {
++        const LUID_AND_ATTRIBUTES *filter_privileges = get_req_data();
++        unsigned int priv_count, group_count;
++        const SID *filter_groups;
++        struct token *token;
++
++        priv_count = min( req->privileges_size, get_req_data_size() ) / sizeof(LUID_AND_ATTRIBUTES);
++        filter_groups = (const SID *)((char *)filter_privileges + priv_count * sizeof(LUID_AND_ATTRIBUTES));
++        group_count = get_sid_count( filter_groups, get_req_data_size() - priv_count * sizeof(LUID_AND_ATTRIBUTES) );
++
++        token = token_duplicate( src_token, src_token->primary, src_token->impersonation_level, NULL,
++                                 filter_privileges, priv_count, filter_groups, group_count );
++        if (token)
++        {
++            unsigned int access = get_handle_access( current->process, req->handle );
++            reply->new_handle = alloc_handle_no_access_check( current->process, token, access, 0 );
++            release_object( token );
++        }
++        release_object( src_token );
++    }
++}
++
+ /* checks the specified privileges are held by the token */
+ DECL_HANDLER(check_token_privileges)
+ {
+-- 
+2.13.1
+

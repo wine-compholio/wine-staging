@@ -105,6 +105,16 @@ def _unique(iterable, key=None):
     # _unique('ABBCcAD', str.lower) --> A B C A D
     return itertools.imap(next, itertools.imap(operator.itemgetter(1), itertools.groupby(iterable, key)))
 
+def _binomial(n, k):
+    "Compute binomial coefficient."
+    num = 1
+    div = 1
+    for t in xrange(1, min(k, n - k) + 1):
+        num *= n
+        div *= t
+        n -= 1
+    return num // div
+
 def _split_seq(iterable, size):
     """Split an iterator into chunks of a given size."""
     it = iter(iterable)
@@ -576,9 +586,18 @@ def generate_apply_order(all_patches, skip_checks=False):
                     dependency_cache[filename].remove(unique_hash)
                     continue
 
-            # Show a progress bar while applying the patches - this task might take some time
             chunk_size = 20
-            with progressbar.ProgressBar(desc=filename, total=2 ** len(indices) / chunk_size) as progress:
+            iterables = []
+            total = 0
+            for i in xrange(1, len(indices) + 1):
+                # HACK: It is no longer feasible to check all combinations for configure.ac.
+                # Only check corner cases (applying individual patches and applying all patches).
+                if filename == "configure.ac" and i > 4 and i <= len(indices) - 4: continue
+                iterables.append(itertools.combinations(indices, i))
+                total += _binomial(len(indices), i)
+
+            # Show a progress bar while applying the patches - this task might take some time
+            with progressbar.ProgressBar(desc=filename, total=total / chunk_size) as progress:
 
                 def test_apply(current):
                     set_apply = [(i, all_patches[i]) for i in current]
@@ -606,9 +625,6 @@ def generate_apply_order(all_patches, skip_checks=False):
                             return current
                     return None
 
-                iterables = []
-                for i in xrange(0, len(indices) + 1):
-                    iterables.append(itertools.combinations(indices, i))
                 it = _split_seq(itertools.chain(*iterables), chunk_size)
                 for k, failed in enumerate(pool.imap_unordered(test_apply_seq, it)):
                     if failed is not None:

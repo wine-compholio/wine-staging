@@ -123,6 +123,7 @@ patch_enable_all ()
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
+	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXCreateTeapot="$1"
@@ -639,6 +640,9 @@ patch_enable ()
 			;;
 		d3dx9_25-ID3DXEffect)
 			enable_d3dx9_25_ID3DXEffect="$2"
+			;;
+		d3dx9_36-32bpp_Alpha_Channel)
+			enable_d3dx9_36_32bpp_Alpha_Channel="$2"
 			;;
 		d3dx9_36-BumpLuminance)
 			enable_d3dx9_36_BumpLuminance="$2"
@@ -4016,6 +4020,18 @@ if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
 	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_-Adjust-ID3DXEffect-interface-based-on-DLL-ver.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_*: Adjust ID3DXEffect interface based on DLL version.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-32bpp_Alpha_Channel
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
+# |
+if test "$enable_d3dx9_36_32bpp_Alpha_Channel" -eq 1; then
+	patch_apply d3dx9_36-32bpp_Alpha_Channel/0001-d3dx9-Return-D3DFMT_A8R8G8B8-in-D3DXGetImageInfoFrom.patch
+	(
+		printf '%s\n' '+    { "Christian Costa", "d3dx9: Return D3DFMT_A8R8G8B8 in D3DXGetImageInfoFromFileInMemory for 32 bpp BMP with alpha.", 1 },';
 	) >> "$patchlist"
 fi
 

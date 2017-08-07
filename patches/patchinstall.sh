@@ -3300,6 +3300,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
+# |   *	[#39262] Run explorer.exe as unevaluated process
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/advapi32/security.c, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c,

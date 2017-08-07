@@ -1,0 +1,62 @@
+From bddfc5e460ca5d5751bf7d9069379e0e0462ae94 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 6 Aug 2017 02:11:15 +0200
+Subject: advapi32: Use token in CreateProcessAsUserW and
+ CreateProcessWithTokenW.
+
+---
+ dlls/advapi32/security.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/advapi32/security.c b/dlls/advapi32/security.c
+index c531e45c9a0..4fc27ef82f9 100644
+--- a/dlls/advapi32/security.c
++++ b/dlls/advapi32/security.c
+@@ -5700,13 +5700,14 @@ BOOL WINAPI DECLSPEC_HOTPATCH CreateProcessAsUserW(
+         LPSTARTUPINFOW lpStartupInfo,
+         LPPROCESS_INFORMATION lpProcessInformation )
+ {
+-    FIXME("%p %s %s %p %p %d 0x%08x %p %s %p %p - semi-stub\n", hToken,
++    TRACE("%p %s %s %p %p %d 0x%08x %p %s %p %p\n", hToken,
+           debugstr_w(lpApplicationName), debugstr_w(lpCommandLine), lpProcessAttributes,
+           lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, 
+           debugstr_w(lpCurrentDirectory), lpStartupInfo, lpProcessInformation);
+ 
+     /* We should create the process with a suspended main thread */
+-    if (!CreateProcessW (lpApplicationName,
++    if (!CreateProcessInternalW(hToken,
++                         lpApplicationName,
+                          lpCommandLine,
+                          lpProcessAttributes,
+                          lpThreadAttributes,
+@@ -5715,7 +5716,8 @@ BOOL WINAPI DECLSPEC_HOTPATCH CreateProcessAsUserW(
+                          lpEnvironment,
+                          lpCurrentDirectory,
+                          lpStartupInfo,
+-                         lpProcessInformation))
++                         lpProcessInformation,
++                         NULL))
+     {
+       return FALSE;
+     }
+@@ -5742,14 +5744,14 @@ BOOL WINAPI CreateProcessWithTokenW(HANDLE token, DWORD logon_flags, LPCWSTR app
+         DWORD creation_flags, void *environment, LPCWSTR current_directory, STARTUPINFOW *startup_info,
+         PROCESS_INFORMATION *process_information )
+ {
+-    FIXME("%p 0x%08x %s %s 0x%08x %p %s %p %p - semi-stub\n", token,
++    TRACE("%p 0x%08x %s %s 0x%08x %p %s %p %p\n", token,
+           logon_flags, debugstr_w(application_name), debugstr_w(command_line),
+           creation_flags, environment, debugstr_w(current_directory),
+           startup_info, process_information);
+ 
+     /* FIXME: check if handles should be inherited */
+-    return CreateProcessW( application_name, command_line, NULL, NULL, FALSE, creation_flags, environment,
+-                           current_directory, startup_info, process_information );
++    return CreateProcessInternalW( token, application_name, command_line, NULL, NULL, FALSE, creation_flags, environment,
++                                   current_directory, startup_info, process_information, NULL );
+ }
+ 
+ /******************************************************************************
+-- 
+2.13.1
+

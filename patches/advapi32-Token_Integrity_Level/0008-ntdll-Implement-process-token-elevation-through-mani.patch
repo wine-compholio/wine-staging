@@ -1,0 +1,149 @@
+From 7b7147df179554c5701f5d759a7b161d79ef90f3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 5 Aug 2017 03:39:55 +0200
+Subject: ntdll: Implement process token elevation through manifests.
+
+---
+ dlls/ntdll/loader.c | 37 +++++++++++++++++++++++++++++++++++++
+ server/process.c    |  8 ++++++++
+ server/process.h    |  1 +
+ server/protocol.def |  7 +++++++
+ server/token.c      | 14 ++++++++++++++
+ 5 files changed, 67 insertions(+)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index a09eca9db75..2f6bcbde8fe 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -3632,6 +3632,32 @@ static void load_global_options(void)
+ 
+ 
+ /***********************************************************************
++ *           elevate_process
++ */
++static void elevate_process( void )
++{
++    NTSTATUS status;
++    HANDLE token;
++
++    if (!(token = __wine_create_default_token( TRUE )))
++    {
++        ERR( "Failed to create admin token\n" );
++        return;
++    }
++
++    SERVER_START_REQ( replace_process_token )
++    {
++        req->token = wine_server_obj_handle( token );
++        if ((status = wine_server_call( req )))
++            ERR( "Failed to replace process token: %08x\n", status );
++    }
++    SERVER_END_REQ;
++
++    NtClose( token );
++}
++
++
++/***********************************************************************
+  *           start_process
+  */
+ static void start_process( void *arg )
+@@ -3679,6 +3705,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+                                 ULONG_PTR unknown3, ULONG_PTR unknown4 )
+ {
+     static const WCHAR globalflagW[] = {'G','l','o','b','a','l','F','l','a','g',0};
++    ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION runlevel;
+     LARGE_INTEGER timeout;
+     NTSTATUS status;
+     WINE_MODREF *wm;
+@@ -3725,6 +3752,16 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     if ((status = fixup_imports( wm, load_path )) != STATUS_SUCCESS) goto error;
+     heap_set_debug_flags( GetProcessHeap() );
+ 
++    /* elevate process if necessary */
++    status = RtlQueryInformationActivationContext( 0, NULL, 0, RunlevelInformationInActivationContext,
++                                                   &runlevel, sizeof(runlevel), NULL );
++    if (!status && (runlevel.RunLevel == ACTCTX_RUN_LEVEL_HIGHEST_AVAILABLE ||
++                    runlevel.RunLevel == ACTCTX_RUN_LEVEL_REQUIRE_ADMIN))
++    {
++        TRACE( "Application requested admin rights (run level %d)\n", runlevel.RunLevel );
++        elevate_process();  /* FIXME: the process exists with a wrong token for a short time */
++    }
++
+     /* Store original entrypoint (in case it gets corrupted) */
+     start_params.kernel_start = kernel_start;
+     start_params.entry = wm->ldr.EntryPoint;
+diff --git a/server/process.c b/server/process.c
+index f0f60edcd3f..74675d343b4 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -1146,6 +1146,14 @@ struct process_snapshot *process_snap( int *count )
+     return snapshot;
+ }
+ 
++/* replace the token of a process */
++void replace_process_token( struct process *process, struct token *new_token )
++{
++    release_object(current->process->token);
++    current->process->token = new_token;
++    grab_object(new_token);
++}
++
+ /* create a new process */
+ DECL_HANDLER(new_process)
+ {
+diff --git a/server/process.h b/server/process.h
+index 548796f9c22..262eb59627b 100644
+--- a/server/process.h
++++ b/server/process.h
+@@ -137,6 +137,7 @@ extern void break_process( struct process *process );
+ extern void detach_debugged_processes( struct thread *debugger );
+ extern struct process_snapshot *process_snap( int *count );
+ extern void enum_processes( int (*cb)(struct process*, void*), void *user);
++extern void replace_process_token( struct process *process, struct token *token );
+ 
+ /* console functions */
+ extern void inherit_console(struct thread *parent_thread, struct process *process, obj_handle_t hconin);
+diff --git a/server/protocol.def b/server/protocol.def
+index 300f23fb9b6..e5b598259f7 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3696,6 +3696,13 @@ struct handle_info
+ @END
+ 
+ 
++/* Create a new token */
++@REQ(replace_process_token)
++    obj_handle_t  token;        /* new process token */
++@REPLY
++@END
++
++
+ /* Create I/O completion port */
+ @REQ(create_completion)
+     unsigned int access;          /* desired access to a port */
+diff --git a/server/token.c b/server/token.c
+index c9d36a5b4f3..385ea3bbfda 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -1822,3 +1822,17 @@ DECL_HANDLER(create_token)
+         release_object( token );
+     }
+ }
++
++/* Replaces the token of the current process  */
++DECL_HANDLER(replace_process_token)
++{
++    struct token *token;
++
++    if ((token = (struct token *)get_handle_obj( current->process, req->token,
++                                                 TOKEN_ASSIGN_PRIMARY,
++                                                 &token_ops )))
++    {
++        replace_process_token( current->process, token );
++        release_object( token );
++    }
++}
+-- 
+2.13.1
+

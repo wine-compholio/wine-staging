@@ -1,0 +1,218 @@
+From fcceb1b0f1aee4ca4fe7362a4e87c4c94456f2ec Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 5 Aug 2017 01:45:29 +0200
+Subject: ntdll: Add function to create new tokens for elevation purposes.
+
+---
+ dlls/ntdll/ntdll.spec   |  3 ++
+ dlls/ntdll/ntdll_misc.h |  3 ++
+ dlls/ntdll/process.c    | 18 +++++++++++
+ server/protocol.def     |  8 +++++
+ server/security.h       |  1 +
+ server/token.c          | 84 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 117 insertions(+)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 275fda57970..8f5357b944c 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1487,6 +1487,9 @@
+ @ cdecl wine_server_send_fd(long)
+ @ cdecl __wine_make_process_system()
+ 
++# Token
++@ cdecl __wine_create_default_token(long)
++
+ # Version
+ @ cdecl wine_get_version() NTDLL_wine_get_version
+ @ cdecl wine_get_patches() NTDLL_wine_get_patches
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index c6c60090d10..e64cb9e75a3 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -82,6 +82,9 @@ extern void fill_cpu_info(void) DECLSPEC_HIDDEN;
+ extern void *grow_virtual_heap( HANDLE handle, SIZE_T *size ) DECLSPEC_HIDDEN;
+ extern void heap_set_debug_flags( HANDLE handle ) DECLSPEC_HIDDEN;
+ 
++/* token */
++extern HANDLE CDECL __wine_create_default_token(BOOL admin);
++
+ /* server support */
+ extern timeout_t server_start_time DECLSPEC_HIDDEN;
+ extern unsigned int server_cpus DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
+index f2eb09c142f..ba4613e87b3 100644
+--- a/dlls/ntdll/process.c
++++ b/dlls/ntdll/process.c
+@@ -99,6 +99,24 @@ HANDLE CDECL __wine_make_process_system(void)
+     return ret;
+ }
+ 
++/***********************************************************************
++ *           __wine_create_default_token   (NTDLL.@)
++ *
++ * Creates a default limited or admin token.
++ */
++HANDLE CDECL __wine_create_default_token( BOOL admin )
++{
++    HANDLE ret = NULL;
++    SERVER_START_REQ( create_token )
++    {
++        req->admin = admin;
++        if (!wine_server_call( req ))
++            ret = wine_server_ptr_handle( reply->token );
++    }
++    SERVER_END_REQ;
++    return ret;
++}
++
+ static UINT process_error_mode;
+ 
+ #define UNIMPLEMENTED_INFO_CLASS(c) \
+diff --git a/server/protocol.def b/server/protocol.def
+index ac2e2242511..300f23fb9b6 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3688,6 +3688,14 @@ struct handle_info
+ @END
+ 
+ 
++/* Create a new token */
++@REQ(create_token)
++    unsigned int  admin;        /* admin or limited token */
++@REPLY
++    obj_handle_t  token;        /* handle for new token */
++@END
++
++
+ /* Create I/O completion port */
+ @REQ(create_completion)
+     unsigned int access;          /* desired access to a port */
+diff --git a/server/security.h b/server/security.h
+index 6c337143c3d..21e90ccf23f 100644
+--- a/server/security.h
++++ b/server/security.h
+@@ -49,6 +49,7 @@ extern const PSID security_builtin_users_sid;
+ extern const PSID security_builtin_admins_sid;
+ extern const PSID security_domain_users_sid;
+ extern const PSID security_high_label_sid;
++extern const PSID security_medium_label_sid;
+ 
+ 
+ /* token functions */
+diff --git a/server/token.c b/server/token.c
+index e61fe97bfa0..c9d36a5b4f3 100644
+--- a/server/token.c
++++ b/server/token.c
+@@ -71,6 +71,7 @@ static const SID anonymous_logon_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORIT
+ static const SID authenticated_user_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_AUTHENTICATED_USER_RID } };
+ static const SID local_system_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_LOCAL_SYSTEM_RID } };
+ static const SID high_label_sid = { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY }, { SECURITY_MANDATORY_HIGH_RID } };
++static const SID medium_label_sid = { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY }, { SECURITY_MANDATORY_MEDIUM_RID } };
+ static const struct /* same fields as struct SID */
+ {
+     BYTE Revision;
+@@ -110,6 +111,7 @@ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
+ const PSID security_builtin_users_sid = (PSID)&builtin_users_sid;
+ const PSID security_domain_users_sid = (PSID)&domain_users_sid;
+ const PSID security_high_label_sid = (PSID)&high_label_sid;
++const PSID security_medium_label_sid = (PSID)&medium_label_sid;
+ 
+ static luid_t prev_luid_value = { 1000, 0 };
+ 
+@@ -924,6 +926,64 @@ struct token *token_create_admin( void )
+     return token;
+ }
+ 
++static struct token *token_create_limited( void )
++{
++    struct token *token = NULL;
++    static const SID_IDENTIFIER_AUTHORITY nt_authority = { SECURITY_NT_AUTHORITY };
++    static const unsigned int alias_admins_subauth[] = { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS };
++    static const unsigned int alias_users_subauth[] = { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS };
++    /* on Windows, this value changes every time the user logs on */
++    static const unsigned int logon_subauth[] = { SECURITY_LOGON_IDS_RID, 0, 1 /* FIXME: should be randomly generated when tokens are inherited by new processes */ };
++    PSID alias_admins_sid;
++    PSID alias_users_sid;
++    PSID logon_sid;
++    const SID *user_sid = security_unix_uid_to_sid( getuid() );
++    ACL *default_dacl = create_default_dacl( user_sid );
++
++    alias_admins_sid = security_sid_alloc( &nt_authority, sizeof(alias_admins_subauth)/sizeof(alias_admins_subauth[0]),
++                                           alias_admins_subauth );
++    alias_users_sid = security_sid_alloc( &nt_authority, sizeof(alias_users_subauth)/sizeof(alias_users_subauth[0]),
++                                          alias_users_subauth );
++    logon_sid = security_sid_alloc( &nt_authority, sizeof(logon_subauth)/sizeof(logon_subauth[0]),
++                                    logon_subauth );
++
++    if (alias_admins_sid && alias_users_sid && logon_sid && default_dacl)
++    {
++        const LUID_AND_ATTRIBUTES user_privs[] =
++        {
++            { SeChangeNotifyPrivilege        , SE_PRIVILEGE_ENABLED },
++            { SeShutdownPrivilege            , 0                    },
++            { SeUndockPrivilege              , 0                    },
++        };
++        /* note: we don't include non-builtin groups here for the user -
++         * telling us these is the job of a client-side program */
++        const SID_AND_ATTRIBUTES user_groups[] =
++        {
++            { security_world_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY },
++            { security_local_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY },
++            { security_interactive_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY },
++            { security_authenticated_user_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY },
++            { security_domain_users_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY|SE_GROUP_OWNER },
++            { alias_admins_sid, SE_GROUP_USE_FOR_DENY_ONLY },
++            { alias_users_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY },
++            { logon_sid, SE_GROUP_ENABLED|SE_GROUP_ENABLED_BY_DEFAULT|SE_GROUP_MANDATORY|SE_GROUP_LOGON_ID },
++        };
++        static const TOKEN_SOURCE admin_source = {"SeMgr", {0, 0}};
++        token = create_token( TRUE, user_sid, user_groups, sizeof(user_groups)/sizeof(user_groups[0]),
++                              user_privs, sizeof(user_privs)/sizeof(user_privs[0]), default_dacl,
++                              admin_source, NULL, -1, TokenElevationTypeLimited, &medium_label_sid );
++        /* we really need a primary group */
++        assert( token->primary_group );
++    }
++
++    free( logon_sid );
++    free( alias_admins_sid );
++    free( alias_users_sid );
++    free( default_dacl );
++
++    return token;
++}
++
+ static struct privilege *token_find_privilege( struct token *token, const LUID *luid, int enabled_only )
+ {
+     struct privilege *privilege;
+@@ -1738,3 +1798,27 @@ DECL_HANDLER(set_token_default_dacl)
+         release_object( token );
+     }
+ }
++
++DECL_HANDLER(create_token)
++{
++    struct token *token;
++    PSID label;
++
++    if (req->admin)
++    {
++        token = token_create_admin();
++        label = security_high_label_sid;
++    }
++    else
++    {
++        token = token_create_limited();
++        label = security_medium_label_sid;
++    }
++
++    if (token)
++    {
++        if (token_assign_label( token, label ))
++            reply->token = alloc_handle( current->process, token, TOKEN_ALL_ACCESS, 0 );
++        release_object( token );
++    }
++}
+-- 
+2.13.1
+

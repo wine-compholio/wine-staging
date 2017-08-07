@@ -93,6 +93,7 @@ patch_enable_all ()
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_Performance_Counters="$1"
 	enable_advapi32_SetSecurityInfo="$1"
+	enable_advapi32_Token_Integrity_Level="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_avifil32_AVIFile_Proxies="$1"
@@ -548,6 +549,9 @@ patch_enable ()
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
+			;;
+		advapi32-Token_Integrity_Level)
+			enable_advapi32_Token_Integrity_Level="$2"
 			;;
 		advapi32-WinBuiltinAnyPackageSid)
 			enable_advapi32_WinBuiltinAnyPackageSid="$2"
@@ -2825,6 +2829,53 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	enable_kernel32_UmsStubs=1
 fi
 
+if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
+	if test "$enable_Staging" -gt 1; then
+		abort "Patchset Staging disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_advapi32_CreateRestrictedToken" -gt 1; then
+		abort "Patchset advapi32-CreateRestrictedToken disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_advapi32_GetExplicitEntriesFromAclW" -gt 1; then
+		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_kernel32_COMSPEC" -gt 1; then
+		abort "Patchset kernel32-COMSPEC disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_kernel32_UmsStubs" -gt 1; then
+		abort "Patchset kernel32-UmsStubs disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
+		abort "Patchset ntdll-APC_Start_Process disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_ntdll_Grow_Virtual_Heap" -gt 1; then
+		abort "Patchset ntdll-Grow_Virtual_Heap disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_ntdll_RunlevelInformationInActivationContext" -gt 1; then
+		abort "Patchset ntdll-RunlevelInformationInActivationContext disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_ntdll_TokenLogonSid" -gt 1; then
+		abort "Patchset ntdll-TokenLogonSid disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
+		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	if test "$enable_server_Misc_ACL" -gt 1; then
+		abort "Patchset server-Misc_ACL disabled, but advapi32-Token_Integrity_Level depends on that."
+	fi
+	enable_Staging=1
+	enable_advapi32_CreateRestrictedToken=1
+	enable_advapi32_GetExplicitEntriesFromAclW=1
+	enable_kernel32_COMSPEC=1
+	enable_kernel32_UmsStubs=1
+	enable_ntdll_APC_Start_Process=1
+	enable_ntdll_Grow_Virtual_Heap=1
+	enable_ntdll_RunlevelInformationInActivationContext=1
+	enable_ntdll_TokenLogonSid=1
+	enable_server_CreateProcess_ACLs=1
+	enable_server_Misc_ACL=1
+fi
+
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-LsaLookupSids depends on that."
@@ -3151,6 +3202,143 @@ if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-COMSPEC
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, programs/cmd/wcmdmain.c
+# |
+if test "$enable_kernel32_COMSPEC" -eq 1; then
+	patch_apply kernel32-COMSPEC/0001-kernel32-Fallback-to-default-comspec-when-COMSPEC-is.patch
+	(
+		printf '%s\n' '+    { "Qian Hong", "kernel32: Fallback to default comspec when %COMSPEC% is not set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-UmsStubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43351] Add semi-stub implementation for CreateRemoteThreadEx
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
+# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, dlls/kernel32/thread.c,
+# | 	dlls/kernelbase/kernelbase.spec, include/winbase.h, include/winnt.h
+# |
+if test "$enable_kernel32_UmsStubs" -eq 1; then
+	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-APC_Start_Process
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_APC_Start_Process" -eq 1; then
+	patch_apply ntdll-APC_Start_Process/0001-ntdll-Process-APC-calls-before-starting-process.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Grow_Virtual_Heap
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39885] Remove memory limitation to 32GB on 64-bit by growing heap dynamically
+# |
+# | Modified files:
+# |   *	dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
+	patch_apply ntdll-Grow_Virtual_Heap/0001-ntdll-Remove-memory-limitation-to-32GB-on-64-bit-by-.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RunlevelInformationInActivationContext
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c, include/winnt.h
+# |
+if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
+	patch_apply ntdll-RunlevelInformationInActivationContext/0001-include-Add-run-level-information-enum-and-structure.patch
+	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
+	patch_apply ntdll-RunlevelInformationInActivationContext/0003-ntdll-Implement-RunlevelInformationInActivationConte.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "include: Add run level information enum and structure to winnt.h.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-TokenLogonSid
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_TokenLogonSid" -eq 1; then
+	patch_apply ntdll-TokenLogonSid/0001-ntdll-TokenLogonSid-stub-in-NtQueryInformationToken.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenLogonSid stub in NtQueryInformationToken.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-Token_Integrity_Level
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-GetExplicitEntriesFromAclW, kernel32-COMSPEC, kernel32-UmsStubs,
+# | 	ntdll-APC_Start_Process, ntdll-Grow_Virtual_Heap, ntdll-RunlevelInformationInActivationContext, ntdll-TokenLogonSid,
+# | 	server-CreateProcess_ACLs, server-Misc_ACL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40613] Basic implementation for token integrity levels and UAC handling
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/advapi32/security.c, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c,
+# | 	dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec,
+# | 	dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/shell32/shlexec.c, dlls/user32/win.c, include/winbase.h,
+# | 	programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/process.c,
+# | 	server/process.h, server/protocol.def, server/request.c, server/security.h, server/token.c
+# |
+if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
+	patch_apply advapi32-Token_Integrity_Level/0001-advapi32-tests-Extend-security-label-token-integrity.patch
+	patch_apply advapi32-Token_Integrity_Level/0002-server-Implement-token-elevation-information.patch
+	patch_apply advapi32-Token_Integrity_Level/0003-server-Correctly-treat-zero-access-mask-in-duplicate.patch
+	patch_apply advapi32-Token_Integrity_Level/0004-server-Implement-token-integrity-level.patch
+	patch_apply advapi32-Token_Integrity_Level/0005-server-Use-all-group-attributes-in-create_token.patch
+	patch_apply advapi32-Token_Integrity_Level/0006-ntdll-Add-function-to-create-new-tokens-for-elevatio.patch
+	patch_apply advapi32-Token_Integrity_Level/0007-shell32-Implement-process-elevation-using-runas-verb.patch
+	patch_apply advapi32-Token_Integrity_Level/0008-ntdll-Implement-process-token-elevation-through-mani.patch
+	patch_apply advapi32-Token_Integrity_Level/0009-kernel32-Implement-CreateProcessInternalW.patch
+	patch_apply advapi32-Token_Integrity_Level/0010-server-Implement-support-for-creating-processes-usin.patch
+	patch_apply advapi32-Token_Integrity_Level/0011-advapi32-Use-token-in-CreateProcessAsUserW-and-Creat.patch
+	patch_apply advapi32-Token_Integrity_Level/0012-user32-Start-explorer.exe-using-limited-rights.patch
+	patch_apply advapi32-Token_Integrity_Level/0013-server-Correctly-assign-security-labels-for-tokens.patch
+	patch_apply advapi32-Token_Integrity_Level/0014-programs-runas-Basic-implementation-for-starting-pro.patch
+	patch_apply advapi32-Token_Integrity_Level/0015-ntdll-Add-semi-stub-for-TokenLinkedToken-info-class.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Extend security label / token integrity tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement token elevation information.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Correctly treat zero access mask in duplicate_token wineserver call.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement token integrity level.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Use all group attributes in create_token.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add function to create new tokens for elevation purposes.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "shell32: Implement process elevation using runas verb.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement process token elevation through manifests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement CreateProcessInternalW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement support for creating processes using a token.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Use token in CreateProcessAsUserW and CreateProcessWithTokenW.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Start explorer.exe using limited rights.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Correctly assign security labels for tokens.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "programs/runas: Basic implementation for starting processes with a different trustlevel.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add semi-stub for TokenLinkedToken info class.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset advapi32-WinBuiltinAnyPackageSid
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3197,24 +3385,6 @@ if test "$enable_combase_RoApi" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for CleanupTlsOleState.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-UmsStubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43351] Add semi-stub implementation for CreateRemoteThreadEx
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
-# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
-# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, dlls/kernel32/thread.c,
-# | 	dlls/kernelbase/kernelbase.spec, include/winbase.h, include/winnt.h
-# |
-if test "$enable_kernel32_UmsStubs" -eq 1; then
-	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4942,18 +5112,6 @@ if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-COMSPEC
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, programs/cmd/wcmdmain.c
-# |
-if test "$enable_kernel32_COMSPEC" -eq 1; then
-	patch_apply kernel32-COMSPEC/0001-kernel32-Fallback-to-default-comspec-when-COMSPEC-is.patch
-	(
-		printf '%s\n' '+    { "Qian Hong", "kernel32: Fallback to default comspec when %COMSPEC% is not set.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5786,18 +5944,6 @@ if test "$enable_ntdll_APC_Performance" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-APC_Start_Process
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_APC_Start_Process" -eq 1; then
-	patch_apply ntdll-APC_Start_Process/0001-ntdll-Process-APC-calls-before-starting-process.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Activation_Context
 # |
 # | Modified files:
@@ -6145,21 +6291,6 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	patch_apply ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Grow_Virtual_Heap
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39885] Remove memory limitation to 32GB on 64-bit by growing heap dynamically
-# |
-# | Modified files:
-# |   *	dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
-	patch_apply ntdll-Grow_Virtual_Heap/0001-ntdll-Remove-memory-limitation-to-32GB-on-64-bit-by-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6612,22 +6743,6 @@ if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RunlevelInformationInActivationContext
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c, include/winnt.h
-# |
-if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
-	patch_apply ntdll-RunlevelInformationInActivationContext/0001-include-Add-run-level-information-enum-and-structure.patch
-	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
-	patch_apply ntdll-RunlevelInformationInActivationContext/0003-ntdll-Implement-RunlevelInformationInActivationConte.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "include: Add run level information enum and structure to winnt.h.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Serial_Port_Detection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6730,18 +6845,6 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-TokenLogonSid
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c
-# |
-if test "$enable_ntdll_TokenLogonSid" -eq 1; then
-	patch_apply ntdll-TokenLogonSid/0001-ntdll-TokenLogonSid-stub-in-NtQueryInformationToken.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenLogonSid stub in NtQueryInformationToken.", 1 },';
 	) >> "$patchlist"
 fi
 

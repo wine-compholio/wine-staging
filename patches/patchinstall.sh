@@ -2284,17 +2284,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_UAV_Counters=1
 fi
 
-if test "$enable_wined3d_UAV_Counters" -eq 1; then
-	if test "$enable_wined3d_Copy_Resource_Typeless" -gt 1; then
-		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-UAV_Counters depends on that."
-	fi
-	if test "$enable_wined3d_Revert_Buffer_Upload" -gt 1; then
-		abort "Patchset wined3d-Revert_Buffer_Upload disabled, but wined3d-UAV_Counters depends on that."
-	fi
-	enable_wined3d_Copy_Resource_Typeless=1
-	enable_wined3d_Revert_Buffer_Upload=1
-fi
-
 if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
 	if test "$enable_d3d11_Depth_Bias" -gt 1; then
 		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Copy_Resource_Typeless depends on that."
@@ -9600,12 +9589,6 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 fi
 
 # Patchset wined3d-UAV_Counters
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless, wined3d-Revert_Buffer_Upload
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43405] Implement copying structure count of UAV
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c

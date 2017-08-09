@@ -1,0 +1,102 @@
+From 421a9c0b534a902617188f3eb0e4f26ce8897613 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 9 Aug 2017 06:32:43 +0200
+Subject: wined3d: Remaining UAV counter changes.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Based on patches by Michael Müller and Józef Kucia.
+---
+ dlls/d3d11/device.c   | 3 +++
+ dlls/wined3d/cs.c     | 4 +++-
+ dlls/wined3d/device.c | 6 ++++++
+ dlls/wined3d/view.c   | 5 +----
+ 4 files changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index 0f268dfed27..5f8d0f3ec13 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -1026,6 +1026,9 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_CopyStructureCount(ID3D11D
+     TRACE("iface %p, dst_buffer %p, dst_offset %u, src_view %p.\n",
+             iface, dst_buffer, dst_offset, src_view);
+ 
++    if (!dst_buffer || !src_view)
++        return;
++
+     buffer_impl = unsafe_impl_from_ID3D11Buffer(dst_buffer);
+     uav = unsafe_impl_from_ID3D11UnorderedAccessView(src_view);
+ 
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index a76598ff4ca..39a85fa513d 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -1295,7 +1295,7 @@ static void wined3d_cs_exec_set_unordered_access_view(struct wined3d_cs *cs, con
+ 
+     device_invalidate_state(cs->device, STATE_UNORDERED_ACCESS_VIEW_BINDING(op->pipeline));
+ 
+-    if (op->initial_count != ~0u)
++    if (op->view && op->initial_count != ~0u)
+         wined3d_unordered_access_view_set_counter(op->view, op->initial_count);
+ }
+ 
+@@ -2252,6 +2252,7 @@ static void wined3d_cs_exec_copy_uav_counter(struct wined3d_cs *cs, const void *
+     context_release(context);
+ 
+     wined3d_resource_release(&op->buffer->resource);
++    wined3d_resource_release(view->resource);
+ }
+ 
+ void wined3d_cs_emit_copy_uav_counter(struct wined3d_cs *cs, struct wined3d_buffer *dst_buffer,
+@@ -2266,6 +2267,7 @@ void wined3d_cs_emit_copy_uav_counter(struct wined3d_cs *cs, struct wined3d_buff
+     op->view = uav;
+ 
+     wined3d_resource_acquire(&dst_buffer->resource);
++    wined3d_resource_acquire(uav->resource);
+ 
+     cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
+ }
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 30e7fbed02a..3ecd9952893 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3966,6 +3966,12 @@ void CDECL wined3d_device_copy_uav_counter(struct wined3d_device *device,
+     TRACE("device %p, dst_buffer %p, offset %u, uav %p.\n",
+             device, dst_buffer, offset, uav);
+ 
++    if (offset + sizeof(GLuint) > dst_buffer->resource.size)
++    {
++        WARN("Offset %u too large.\n", offset);
++        return;
++    }
++
+     wined3d_cs_emit_copy_uav_counter(device->cs, dst_buffer, offset, uav);
+ }
+ 
+diff --git a/dlls/wined3d/view.c b/dlls/wined3d/view.c
+index f4f3b35f20c..896bc12bd32 100644
+--- a/dlls/wined3d/view.c
++++ b/dlls/wined3d/view.c
+@@ -953,7 +953,7 @@ static void wined3d_unordered_access_view_cs_init(void *object)
+         context = context_acquire(resource->device, NULL, 0);
+         gl_info = context->gl_info;
+         create_buffer_view(&view->gl_view, context, desc, buffer, view->format);
+-        if (desc->flags & WINED3D_VIEW_BUFFER_COUNTER)
++        if (desc->flags & (WINED3D_VIEW_BUFFER_COUNTER|WINED3D_VIEW_BUFFER_APPEND))
+         {
+             static const GLuint initial_value = 0;
+             GL_EXTCALL(glGenBuffers(1, &view->counter_bo));
+@@ -994,9 +994,6 @@ static HRESULT wined3d_unordered_access_view_init(struct wined3d_unordered_acces
+         return E_INVALIDARG;
+     view->desc = *desc;
+ 
+-    if (desc->flags & WINED3D_VIEW_BUFFER_APPEND)
+-        FIXME("Unhandled view flags %#x.\n", desc->flags);
+-
+     wined3d_resource_incref(view->resource = resource);
+ 
+     wined3d_cs_init_object(resource->device->cs, wined3d_unordered_access_view_cs_init, view);
+-- 
+2.13.1
+

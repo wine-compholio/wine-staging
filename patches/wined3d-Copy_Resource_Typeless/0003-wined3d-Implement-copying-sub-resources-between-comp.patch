@@ -1,22 +1,22 @@
-From ee5dba7ce1957961af9bfcebf0f797debbc41d3a Mon Sep 17 00:00:00 2001
+From 9ee4e66d81e578d6b0366c5713f77d9ec7a0676e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 9 Jul 2017 01:04:33 +0200
 Subject: wined3d: Implement copying sub resources between compatible formats.
 
 ---
  dlls/d3d11/tests/d3d11.c       |   2 +-
- dlls/wined3d/cs.c              | 156 +++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/cs.c              | 155 +++++++++++++++++++++++++++++++++++++++++
  dlls/wined3d/device.c          |   9 ++-
  dlls/wined3d/directx.c         |   4 ++
  dlls/wined3d/wined3d_gl.h      |   1 +
  dlls/wined3d/wined3d_private.h |   3 +
- 6 files changed, 171 insertions(+), 4 deletions(-)
+ 6 files changed, 170 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 155b8642d04..e2ef854b0aa 100644
+index 0ad5a701e00..50f8696619a 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -10116,7 +10116,7 @@ static void test_copy_subresource_region(void)
+@@ -10094,7 +10094,7 @@ static void test_copy_subresource_region(void)
              for (j = 0; j < min(level_src_height, level_dst_height); j++)
              {
                  c_result = (DWORD*)((char*)map_desc.pData + j * map_desc.RowPitch);
@@ -26,19 +26,19 @@ index 155b8642d04..e2ef854b0aa 100644
                     c_result[i], i, j, c_expected[j * level_src_width + i], k);
              }
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index c7df670682d..88dbedd8d89 100644
+index a76598ff4ca..55bab7b464b 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -70,6 +70,7 @@ enum wined3d_cs_op
-     WINED3D_CS_OP_UPDATE_SUB_RESOURCE,
+@@ -71,6 +71,7 @@ enum wined3d_cs_op
      WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION,
      WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW,
+     WINED3D_CS_OP_COPY_UAV_COUNTER,
 +    WINED3D_CS_OP_COPY_SUB_RESOURCE,
      WINED3D_CS_OP_STOP,
  };
  
-@@ -418,6 +419,17 @@ struct wined3d_cs_clear_unordered_access_view
-     struct wined3d_uvec4 clear_value;
+@@ -428,6 +429,17 @@ struct wined3d_cs_copy_uav_counter
+     struct wined3d_unordered_access_view *view;
  };
  
 +struct wined3d_cs_copy_sub_resource
@@ -55,7 +55,7 @@ index c7df670682d..88dbedd8d89 100644
  struct wined3d_cs_stop
  {
      enum wined3d_cs_op opcode;
-@@ -2227,6 +2239,149 @@ void wined3d_cs_emit_clear_unordered_access_view_uint(struct wined3d_cs *cs,
+@@ -2270,6 +2282,148 @@ void wined3d_cs_emit_copy_uav_counter(struct wined3d_cs *cs, struct wined3d_buff
      cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
  }
  
@@ -65,10 +65,9 @@ index c7df670682d..88dbedd8d89 100644
 +
 +    if (op->dst_resource->type == WINED3D_RTYPE_BUFFER)
 +    {
-+        if (FAILED(wined3d_buffer_copy(buffer_from_resource(op->dst_resource), op->dst_box.left,
++        wined3d_buffer_copy(buffer_from_resource(op->dst_resource), op->dst_box.left,
 +                buffer_from_resource(op->src_resource), op->src_box.left,
-+                op->src_box.right - op->src_box.left)))
-+            ERR("Failed to copy buffer.\n");
++                op->src_box.right - op->src_box.left);
 +    }
 +    else if (op->dst_resource->type == WINED3D_RTYPE_TEXTURE_1D ||
 +            op->dst_resource->type == WINED3D_RTYPE_TEXTURE_2D ||
@@ -205,19 +204,19 @@ index c7df670682d..88dbedd8d89 100644
  static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
  {
      struct wined3d_cs_stop *op;
-@@ -2284,6 +2439,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
-     /* WINED3D_CS_OP_UPDATE_SUB_RESOURCE         */ wined3d_cs_exec_update_sub_resource,
+@@ -2328,6 +2482,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION    */ wined3d_cs_exec_add_dirty_texture_region,
      /* WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW */ wined3d_cs_exec_clear_unordered_access_view,
+     /* WINED3D_CS_OP_COPY_UAV_COUNTER            */ wined3d_cs_exec_copy_uav_counter,
 +    /* WINED3D_CS_OP_COPY_SUB_RESOURCE           */ wined3d_cs_exec_copy_sub_resource,
  };
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 3d12e417a43..43b88913e55 100644
+index 0233a7e9865..abab8d2d819 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4062,7 +4062,10 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4098,7 +4098,10 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -229,7 +228,7 @@ index 3d12e417a43..43b88913e55 100644
      {
          WARN("Resource formats (%s / %s) don't match.\n",
                  debug_d3dformat(dst_resource->format->id),
-@@ -4164,8 +4167,8 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4200,8 +4203,8 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -241,7 +240,7 @@ index 3d12e417a43..43b88913e55 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index b18d1aa3619..8a03dd5913f 100644
+index 3e3a0b42360..843b5efead0 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
 @@ -116,6 +116,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
@@ -282,10 +281,10 @@ index 05558760850..a743ad20316 100644
      ARB_DEPTH_BUFFER_FLOAT,
      ARB_DEPTH_CLAMP,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 1025c98f180..7d2bdf45e52 100644
+index b087ba33d3b..4d9c9274e9f 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3478,6 +3478,9 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
+@@ -3492,6 +3492,9 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
  void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx, const struct wined3d_box *box, const void *data, unsigned int row_pitch,
          unsigned int slice_pitch) DECLSPEC_HIDDEN;

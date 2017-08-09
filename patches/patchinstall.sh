@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7aa4a25bd3d23b57ff990a151296dddb337a5767"
+	echo "52fbaeb2c44e585cacd7f0b57e902dfbcf54d09b"
 }
 
 # Show version information
@@ -9608,17 +9608,12 @@ fi
 # |   *	[#43405] Implement copying structure count of UAV
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/device.c,
-# | 	dlls/wined3d/view.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c
 # |
 if test "$enable_wined3d_UAV_Counters" -eq 1; then
-	patch_apply wined3d-UAV_Counters/0001-wined3d-Implement-support-for-setting-uav-counters.patch
-	patch_apply wined3d-UAV_Counters/0002-wined3d-Create-atomic-counter-when-uav-is-initialize.patch
-	patch_apply wined3d-UAV_Counters/0003-wined3d-Implement-copying-structure-count-of-uav.patch
+	patch_apply wined3d-UAV_Counters/0001-wined3d-Remaining-UAV-counter-changes.patch
 	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement support for setting uav counters.", 1 },';
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Create atomic counter when uav is initialized with WINED3D_VIEW_BUFFER_APPEND.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement copying structure count of uav.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Remaining UAV counter changes.", 1 },';
 	) >> "$patchlist"
 fi
 

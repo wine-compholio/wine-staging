@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "52fbaeb2c44e585cacd7f0b57e902dfbcf54d09b"
+	echo "797a746fc2a1b17d67b7423293e081e3e7171033"
 }
 
 # Show version information
@@ -263,7 +263,6 @@ patch_enable_all ()
 	enable_ntdll_NtContinue="$1"
 	enable_ntdll_NtCreateThreadEx="$1"
 	enable_ntdll_NtDevicePath="$1"
-	enable_ntdll_NtGetContextThread="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
@@ -1060,9 +1059,6 @@ patch_enable ()
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
-			;;
-		ntdll-NtGetContextThread)
-			enable_ntdll_NtGetContextThread="$2"
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
@@ -6520,18 +6516,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtGetContextThread
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_i386.c
-# |
-if test "$enable_ntdll_NtGetContextThread" -eq 1; then
-	patch_apply ntdll-NtGetContextThread/0001-ntdll-Fix-a-TRACE-in-NtGetContextThread.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix a TRACE in NtGetContextThread.", 1 },';
 	) >> "$patchlist"
 fi
 

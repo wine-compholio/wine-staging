@@ -3293,10 +3293,11 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/advapi32/security.c, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c,
-# | 	dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec,
-# | 	dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/shell32/shlexec.c, dlls/user32/win.c, include/winbase.h,
-# | 	programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/process.c,
-# | 	server/process.h, server/protocol.def, server/request.c, server/security.h, server/token.c
+# | 	dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/kernelbase/kernelbase.spec, dlls/ntdll/loader.c,
+# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/shell32/shlexec.c,
+# | 	dlls/user32/win.c, include/winbase.h, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
+# | 	programs/runas/runas.rc, server/process.c, server/process.h, server/protocol.def, server/request.c, server/security.h,
+# | 	server/token.c
 # |
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	patch_apply advapi32-Token_Integrity_Level/0001-advapi32-tests-Extend-security-label-token-integrity.patch

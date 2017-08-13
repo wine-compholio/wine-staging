@@ -405,6 +405,7 @@ patch_enable_all ()
 	enable_user32_ShowWindow="$1"
 	enable_user32_Sorted_Listbox="$1"
 	enable_user32_WM_MEASUREITEM="$1"
+	enable_user32_WindowDisplayAffinity="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1485,6 +1486,9 @@ patch_enable ()
 			;;
 		user32-WM_MEASUREITEM)
 			enable_user32_WM_MEASUREITEM="$2"
+			;;
+		user32-WindowDisplayAffinity)
+			enable_user32_WindowDisplayAffinity="$2"
 			;;
 		user32-lpCreateParams)
 			enable_user32_lpCreateParams="$2"
@@ -8788,6 +8792,20 @@ if test "$enable_user32_Sorted_Listbox" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix order of items passed in WM_COMPAREITEM data.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the listbox sorting algorithm.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: For an owner-drawn listbox without strings WM_MEASUREITEM still needs correct itemData.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-WindowDisplayAffinity
+# |
+# | Modified files:
+# |   *	dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec, dlls/ext-ms-win-ntuser-
+# | 	window-l1-1-1/ext-ms-win-ntuser-window-l1-1-1.spec, dlls/user32/tests/win.c, dlls/user32/user32.spec, dlls/user32/win.c,
+# | 	include/winuser.h
+# |
+if test "$enable_user32_WindowDisplayAffinity" -eq 1; then
+	patch_apply user32-WindowDisplayAffinity/0001-user32-Add-stubs-for-GetWindowDisplayAffinity-and-Se.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "user32: Add stubs for GetWindowDisplayAffinity and SetWindowDisplayAffinity.", 1 },';
 	) >> "$patchlist"
 fi
 

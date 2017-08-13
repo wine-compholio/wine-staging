@@ -1,0 +1,273 @@
+From 33a1f4fe6cd08f88acd01d413d0a2d490bd304d1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 13 Aug 2017 02:09:51 +0200
+Subject: user32: Add stubs for GetWindowDisplayAffinity and
+ SetWindowDisplayAffinity.
+
+---
+ .../ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec    |  4 +-
+ .../ext-ms-win-ntuser-window-l1-1-1.spec           |  4 +-
+ dlls/user32/tests/win.c                            | 87 ++++++++++++++++++++++
+ dlls/user32/user32.spec                            |  2 +
+ dlls/user32/win.c                                  | 34 +++++++++
+ include/winuser.h                                  |  5 ++
+ 6 files changed, 132 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec b/dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec
+index 4b563ffddb7..ea155c098d9 100644
+--- a/dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec
++++ b/dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec
+@@ -24,7 +24,7 @@
+ @ stdcall GetPropW(long wstr) user32.GetPropW
+ @ stdcall GetShellWindow() user32.GetShellWindow
+ @ stdcall GetWindow(long long) user32.GetWindow
+-@ stub GetWindowDisplayAffinity
++@ stdcall GetWindowDisplayAffinity(long ptr) user32.GetWindowDisplayAffinity
+ @ stdcall GetWindowInfo(long ptr) user32.GetWindowInfo
+ @ stdcall GetWindowPlacement(long ptr) user32.GetWindowPlacement
+ @ stdcall GetWindowRect(long ptr) user32.GetWindowRect
+@@ -43,7 +43,7 @@
+ @ stdcall SetLayeredWindowAttributes(ptr long long long) user32.SetLayeredWindowAttributes
+ @ stdcall SetParent(long long) user32.SetParent
+ @ stdcall SetPropW(long wstr long) user32.SetPropW
+-@ stub SetWindowDisplayAffinity
++@ stdcall SetWindowDisplayAffinity(long long) user32.SetWindowDisplayAffinity
+ @ stdcall SetWindowPos(long long long long long long long) user32.SetWindowPos
+ @ stdcall SetWindowTextW(long wstr) user32.SetWindowTextW
+ @ stdcall SetWindowsHookExW(long long long long) user32.SetWindowsHookExW
+diff --git a/dlls/ext-ms-win-ntuser-window-l1-1-1/ext-ms-win-ntuser-window-l1-1-1.spec b/dlls/ext-ms-win-ntuser-window-l1-1-1/ext-ms-win-ntuser-window-l1-1-1.spec
+index 4b563ffddb7..ea155c098d9 100644
+--- a/dlls/ext-ms-win-ntuser-window-l1-1-1/ext-ms-win-ntuser-window-l1-1-1.spec
++++ b/dlls/ext-ms-win-ntuser-window-l1-1-1/ext-ms-win-ntuser-window-l1-1-1.spec
+@@ -24,7 +24,7 @@
+ @ stdcall GetPropW(long wstr) user32.GetPropW
+ @ stdcall GetShellWindow() user32.GetShellWindow
+ @ stdcall GetWindow(long long) user32.GetWindow
+-@ stub GetWindowDisplayAffinity
++@ stdcall GetWindowDisplayAffinity(long ptr) user32.GetWindowDisplayAffinity
+ @ stdcall GetWindowInfo(long ptr) user32.GetWindowInfo
+ @ stdcall GetWindowPlacement(long ptr) user32.GetWindowPlacement
+ @ stdcall GetWindowRect(long ptr) user32.GetWindowRect
+@@ -43,7 +43,7 @@
+ @ stdcall SetLayeredWindowAttributes(ptr long long long) user32.SetLayeredWindowAttributes
+ @ stdcall SetParent(long long) user32.SetParent
+ @ stdcall SetPropW(long wstr long) user32.SetPropW
+-@ stub SetWindowDisplayAffinity
++@ stdcall SetWindowDisplayAffinity(long long) user32.SetWindowDisplayAffinity
+ @ stdcall SetWindowPos(long long long long long long long) user32.SetWindowPos
+ @ stdcall SetWindowTextW(long wstr) user32.SetWindowTextW
+ @ stdcall SetWindowsHookExW(long long long long) user32.SetWindowsHookExW
+diff --git a/dlls/user32/tests/win.c b/dlls/user32/tests/win.c
+index 0fc262986bb..9b8d16adc5f 100644
+--- a/dlls/user32/tests/win.c
++++ b/dlls/user32/tests/win.c
+@@ -67,6 +67,8 @@ static BOOL (WINAPI *pFlashWindowEx)( PFLASHWINFO pfwi );
+ static DWORD (WINAPI *pSetLayout)(HDC hdc, DWORD layout);
+ static DWORD (WINAPI *pGetLayout)(HDC hdc);
+ static BOOL (WINAPI *pMirrorRgn)(HWND hwnd, HRGN hrgn);
++static BOOL (WINAPI *pGetWindowDisplayAffinity)(HWND hwnd, DWORD *affinity);
++static BOOL (WINAPI *pSetWindowDisplayAffinity)(HWND hwnd, DWORD affinity);
+ 
+ static BOOL test_lbuttondown_flag;
+ static DWORD num_gettext_msgs;
+@@ -9950,6 +9952,88 @@ static void test_desktop( void )
+     }
+ }
+ 
++static void test_display_affinity( HWND win )
++{
++    DWORD affinity;
++    BOOL ret, dwm;
++    LONG styleex;
++
++    if (!pGetWindowDisplayAffinity || !pSetWindowDisplayAffinity)
++    {
++        win_skip("GetWindowDisplayAffinity or SetWindowDisplayAffinity missing\n");
++        return;
++    }
++
++    ret = pGetWindowDisplayAffinity(NULL, NULL);
++    ok(!ret, "GetWindowDisplayAffinity succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_WINDOW_HANDLE, "Expected ERROR_INVALID_WINDOW_HANDLE, got %u\n", GetLastError());
++
++    ret = pGetWindowDisplayAffinity(NULL, &affinity);
++    ok(!ret, "GetWindowDisplayAffinity succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_WINDOW_HANDLE, "Expected ERROR_INVALID_WINDOW_HANDLE, got %u\n", GetLastError());
++
++    ret = pGetWindowDisplayAffinity(win, NULL);
++    ok(!ret, "GetWindowDisplayAffinity succeeded\n");
++    ok(GetLastError() == ERROR_NOACCESS, "Expected ERROR_NOACCESS, got %u\n", GetLastError());
++
++    styleex = GetWindowLongW(win, GWL_EXSTYLE);
++    SetWindowLongW(win, GWL_EXSTYLE, styleex & ~WS_EX_LAYERED);
++
++    affinity = 0xdeadbeef;
++    ret = pGetWindowDisplayAffinity(win, &affinity);
++    ok(ret, "GetWindowDisplayAffinity failed with %u\n", GetLastError());
++    ok(affinity == WDA_NONE, "Expected WDA_NONE, got 0x%x\n", affinity);
++
++    /* Windows 7 fails with ERROR_NOT_ENOUGH_MEMORY when dwm compositing is disabled */
++    ret = pSetWindowDisplayAffinity(win, WDA_MONITOR);
++    ok(ret || GetLastError() == ERROR_NOT_ENOUGH_MEMORY,
++       "SetWindowDisplayAffinity failed with %u\n", GetLastError());
++    dwm = ret;
++
++    affinity = 0xdeadbeef;
++    ret = pGetWindowDisplayAffinity(win, &affinity);
++    ok(ret, "GetWindowDisplayAffinity failed with %u\n", GetLastError());
++    if (dwm) ok(affinity == WDA_MONITOR, "Expected WDA_MONITOR, got 0x%x\n", affinity);
++    else ok(affinity == WDA_NONE, "Expected WDA_NONE, got 0x%x\n", affinity);
++
++    ret = pSetWindowDisplayAffinity(win, WDA_NONE);
++    ok(ret || GetLastError() == ERROR_NOT_ENOUGH_MEMORY,
++       "SetWindowDisplayAffinity failed with %u\n", GetLastError());
++
++    affinity = 0xdeadbeef;
++    ret = pGetWindowDisplayAffinity(win, &affinity);
++    ok(ret, "GetWindowDisplayAffinity failed with %u\n", GetLastError());
++    ok(affinity == WDA_NONE, "Expected WDA_NONE, got 0x%x\n", affinity);
++
++    SetWindowLongW(win, GWL_EXSTYLE, styleex | WS_EX_LAYERED);
++
++    affinity = 0xdeadbeef;
++    ret = pGetWindowDisplayAffinity(win, &affinity);
++    ok(ret, "GetWindowDisplayAffinity failed with %u\n", GetLastError());
++    ok(affinity == WDA_NONE, "Expected WDA_NONE, got 0x%x\n", affinity);
++
++    ret = pSetWindowDisplayAffinity(win, WDA_MONITOR);
++    ok(ret || GetLastError() == ERROR_NOT_ENOUGH_MEMORY,
++       "SetWindowDisplayAffinity failed with %u\n", GetLastError());
++
++    affinity = 0xdeadbeef;
++    ret = pGetWindowDisplayAffinity(win, &affinity);
++    ok(ret, "GetWindowDisplayAffinity failed with %u\n", GetLastError());
++    if (dwm) ok(affinity == WDA_MONITOR, "Expected WDA_MONITOR, got 0x%x\n", affinity);
++    else ok(affinity == WDA_NONE, "Expected WDA_NONE, got 0x%x\n", affinity);
++
++    ret = pSetWindowDisplayAffinity(win, WDA_NONE);
++    ok(ret || GetLastError() == ERROR_NOT_ENOUGH_MEMORY,
++       "SetWindowDisplayAffinity failed with %u\n", GetLastError());
++
++    affinity = 0xdeadbeef;
++    ret = pGetWindowDisplayAffinity(win, &affinity);
++    ok(ret, "GetWindowDisplayAffinity failed with %u\n", GetLastError());
++    ok(affinity == WDA_NONE, "Expected WDA_NONE, got 0x%x\n", affinity);
++
++    SetWindowLongW(win, GWL_EXSTYLE, styleex);
++}
++
+ START_TEST(win)
+ {
+     char **argv;
+@@ -9974,6 +10058,8 @@ START_TEST(win)
+     pGetLayout = (void *)GetProcAddress( gdi32, "GetLayout" );
+     pSetLayout = (void *)GetProcAddress( gdi32, "SetLayout" );
+     pMirrorRgn = (void *)GetProcAddress( gdi32, "MirrorRgn" );
++    pGetWindowDisplayAffinity = (void *)GetProcAddress( user32, "GetWindowDisplayAffinity" );
++    pSetWindowDisplayAffinity = (void *)GetProcAddress( user32, "SetWindowDisplayAffinity" );
+ 
+     if (argc==4 && !strcmp(argv[2], "create_children"))
+     {
+@@ -10099,6 +10185,7 @@ START_TEST(win)
+     test_deferwindowpos();
+     test_LockWindowUpdate(hwndMain);
+     test_desktop();
++    test_display_affinity(hwndMain);
+ 
+     /* add the tests above this line */
+     if (hhook) UnhookWindowsHookEx(hhook);
+diff --git a/dlls/user32/user32.spec b/dlls/user32/user32.spec
+index 9407c34843b..b2588128145 100644
+--- a/dlls/user32/user32.spec
++++ b/dlls/user32/user32.spec
+@@ -388,6 +388,7 @@
+ @ stdcall GetWindow(long long)
+ @ stdcall GetWindowContextHelpId(long)
+ @ stdcall GetWindowDC(long)
++@ stdcall GetWindowDisplayAffinity(long ptr)
+ @ stdcall GetWindowInfo(long ptr)
+ @ stdcall GetWindowLongA(long long)
+ @ stdcall -arch=win64 GetWindowLongPtrA(long long)
+@@ -691,6 +692,7 @@
+ @ stdcall SetUserObjectSecurity(long ptr ptr)
+ @ stdcall SetWinEventHook(long long long ptr long long long)
+ @ stdcall SetWindowContextHelpId(long long)
++@ stdcall SetWindowDisplayAffinity(long long)
+ @ stub SetWindowFullScreenState
+ @ stdcall SetWindowLongA(long long long)
+ @ stdcall -arch=win64 SetWindowLongPtrA(long long long)
+diff --git a/dlls/user32/win.c b/dlls/user32/win.c
+index eced3969d36..3042a560ce9 100644
+--- a/dlls/user32/win.c
++++ b/dlls/user32/win.c
+@@ -4034,3 +4034,37 @@ BOOL WINAPI GetGestureInfo(HGESTUREINFO handle, PGESTUREINFO ptr)
+     SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+     return FALSE;
+ }
++
++/*****************************************************************************
++ *              GetWindowDisplayAffinity (USER32.@)
++ */
++BOOL WINAPI GetWindowDisplayAffinity(HWND hwnd, DWORD *affinity)
++{
++    FIXME("(%p, %p): stub\n", hwnd, affinity);
++
++    if (!hwnd || !affinity)
++    {
++        SetLastError(hwnd ? ERROR_NOACCESS : ERROR_INVALID_WINDOW_HANDLE);
++        return FALSE;
++    }
++
++    *affinity = WDA_NONE;
++    return TRUE;
++}
++
++/*****************************************************************************
++ *              SetWindowDisplayAffinity (USER32.@)
++ */
++BOOL WINAPI SetWindowDisplayAffinity(HWND hwnd, DWORD affinity)
++{
++    FIXME("(%p, %u): stub\n", hwnd, affinity);
++
++    if (!hwnd)
++    {
++        SetLastError(ERROR_INVALID_WINDOW_HANDLE);
++        return FALSE;
++    }
++
++    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
++    return FALSE;
++}
+diff --git a/include/winuser.h b/include/winuser.h
+index c496087bbfb..d8a5bec4533 100644
+--- a/include/winuser.h
++++ b/include/winuser.h
+@@ -2535,6 +2535,9 @@ typedef struct tagMINIMIZEDMETRICS {
+     int iArrange;
+ } MINIMIZEDMETRICS, *PMINIMIZEDMETRICS, *LPMINIMIZEDMETRICS;
+ 
++/* Window affinity */
++#define WDA_NONE     0x0
++#define WDA_MONITOR  0x1
+ 
+ /* Window scrolling */
+ #define SW_SCROLLCHILDREN      0x0001
+@@ -3772,6 +3775,7 @@ WINUSERAPI BOOL        WINAPI GetUserObjectSecurity(HANDLE,PSECURITY_INFORMATION
+ WINUSERAPI HWND        WINAPI GetWindow(HWND,UINT);
+ WINUSERAPI DWORD       WINAPI GetWindowContextHelpId(HWND);
+ WINUSERAPI HDC         WINAPI GetWindowDC(HWND);
++WINUSERAPI BOOL        WINAPI GetWindowDisplayAffinity(HWND,DWORD*);
+ WINUSERAPI BOOL        WINAPI GetWindowInfo(HWND, PWINDOWINFO);
+ WINUSERAPI LONG        WINAPI GetWindowLongA(HWND,INT);
+ WINUSERAPI LONG        WINAPI GetWindowLongW(HWND,INT);
+@@ -4074,6 +4078,7 @@ WINUSERAPI BOOL        WINAPI SetUserObjectInformationW(HANDLE,INT,LPVOID,DWORD)
+ #define                       SetUserObjectInformation WINELIB_NAME_AW(SetUserObjectInformation)
+ WINUSERAPI BOOL        WINAPI SetUserObjectSecurity(HANDLE,PSECURITY_INFORMATION,PSECURITY_DESCRIPTOR);
+ WINUSERAPI BOOL        WINAPI SetWindowContextHelpId(HWND,DWORD);
++WINUSERAPI BOOL        WINAPI SetWindowDisplayAffinity(HWND,DWORD);
+ WINUSERAPI LONG        WINAPI SetWindowLongA(HWND,INT,LONG);
+ WINUSERAPI LONG        WINAPI SetWindowLongW(HWND,INT,LONG);
+ #define                       SetWindowLong WINELIB_NAME_AW(SetWindowLong)
+-- 
+2.13.1
+

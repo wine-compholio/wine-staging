@@ -1,0 +1,98 @@
+From 5a85641dc1c7903383d471df7e34977d0e56c1c9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 13 Aug 2017 05:04:21 +0200
+Subject: bcrypt: Add support for 192 and 256 bit aes keys.
+
+---
+ dlls/bcrypt/bcrypt_main.c  | 14 ++++++++++++--
+ dlls/bcrypt/tests/bcrypt.c | 32 ++++++++++++++++++++++++++++++++
+ 2 files changed, 44 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 2b476484a52..e68c5e67516 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -906,11 +906,21 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+         WARN( "handle block size\n" );
+         switch (key->mode)
+         {
+-            case MODE_ID_GCM: return GNUTLS_CIPHER_AES_128_GCM;
++            case MODE_ID_GCM:
++                if (key->secret_len == 16) return GNUTLS_CIPHER_AES_128_GCM;
++                if (key->secret_len == 32) return GNUTLS_CIPHER_AES_256_GCM;
++                break;
+             case MODE_ID_ECB: /* can be emulated with CBC + empty IV */
+             case MODE_ID_CBC:
+-            default:          return GNUTLS_CIPHER_AES_128_CBC;
++                if (key->secret_len == 16) return GNUTLS_CIPHER_AES_128_CBC;
++                if (key->secret_len == 24) return GNUTLS_CIPHER_AES_192_CBC;
++                if (key->secret_len == 32) return GNUTLS_CIPHER_AES_256_CBC;
++                break;
++            default:
++                break;
+         }
++        FIXME( "aes mode %u with key length %u not supported\n", key->mode, key->secret_len );
++        return GNUTLS_CIPHER_UNKNOWN;
+     default:
+         FIXME( "algorithm %u not supported\n", key->alg_id );
+         return GNUTLS_CIPHER_UNKNOWN;
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index 32e25a94a55..98d4961879c 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -882,6 +882,9 @@ static void test_BCryptEncrypt(void)
+         {0x60,0x50,0x40,0x30,0x20,0x10,0x60,0x50,0x40,0x30,0x20,0x10};
+     static UCHAR secret[] =
+         {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
++    static UCHAR secret256[] =
++        {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
++         0x0f,0x0e,0x0d,0x0c,0x0b,0x0a,0x09,0x08,0x07,0x06,0x05,0x04,0x03,0x02,0x01,0x00};
+     static UCHAR iv[] =
+         {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
+     static UCHAR data[] =
+@@ -910,6 +913,10 @@ static void test_BCryptEncrypt(void)
+         {0x0a,0x94,0x0b,0xb5,0x41,0x6e,0xf0,0x45,0xf1,0xc3,0x94,0x58,0xc6,0x53,0xea,0x5a,
+          0x95,0x4f,0x64,0xf2,0xe4,0xe8,0x6e,0x9e,0xee,0x82,0xd2,0x02,0x16,0x68,0x48,0x99,
+          0x95,0x4f,0x64,0xf2,0xe4,0xe8,0x6e,0x9e,0xee,0x82,0xd2,0x02,0x16,0x68,0x48,0x99};
++    static UCHAR expected8[] =
++        {0x66,0xb8,0xbd,0xe5,0x90,0x6c,0xec,0xdf,0xfa,0x8a,0xb2,0xfd,0x92,0x84,0xeb,0xf0,
++         0x95,0xc4,0xdf,0xa7,0x7a,0x62,0xe4,0xab,0xd4,0x0e,0x94,0x4e,0xd7,0x6e,0xa1,0x47,
++         0x29,0x4b,0x37,0xfe,0x28,0x6d,0x5f,0x69,0x46,0x30,0x73,0xc0,0xaa,0x42,0xe4,0x46};
+     static UCHAR expected_tag[] =
+         {0x89,0xb3,0x92,0x00,0x39,0x20,0x09,0xb4,0x6a,0xd6,0xaf,0xca,0x4b,0x5b,0xfd,0xd0};
+     static UCHAR expected_tag2[] =
+@@ -1020,6 +1027,31 @@ static void test_BCryptEncrypt(void)
+     ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
+     HeapFree(GetProcessHeap(), 0, buf);
+ 
++    /* 256 bit key */
++    buf = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, len);
++    ret = pBCryptGenerateSymmetricKey(aes, &key, buf, len, secret256, sizeof(secret256), 0);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    ret = pBCryptEncrypt(key, data2, 32, NULL, ivbuf, 16, NULL, 0, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 48, "got %u\n", size);
++
++    size = 0;
++    memcpy(ivbuf, iv, sizeof(iv));
++    memset(ciphertext, 0, sizeof(ciphertext));
++    ret = pBCryptEncrypt(key, data2, 32, NULL, ivbuf, 16, ciphertext, 48, &size, BCRYPT_BLOCK_PADDING);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(size == 48, "got %u\n", size);
++    ok(!memcmp(ciphertext, expected8, sizeof(expected8)), "wrong data\n");
++    for (i = 0; i < 48; i++)
++        ok(ciphertext[i] == expected8[i], "%u: %02x != %02x\n", i, ciphertext[i], expected8[i]);
++
++    ret = pBCryptDestroyKey(key);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    HeapFree(GetProcessHeap(), 0, buf);
++
+     /******************
+      * AES - GCM mode *
+      ******************/
+-- 
+2.13.1
+

@@ -209,6 +209,7 @@ patch_enable_all ()
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
+	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_krnl386_exe16__lclose16="$1"
@@ -896,6 +897,9 @@ patch_enable ()
 			;;
 		kernel32-VerifyVersionInfo)
 			enable_kernel32_VerifyVersionInfo="$2"
+			;;
+		kernelbase-PathCchCombineEx)
+			enable_kernelbase_PathCchCombineEx="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -5495,6 +5499,23 @@ if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernelbase-PathCchCombineEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42474] Implement kernelbase.PathCchCombineEx
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c, dlls/kernelbase/tests/Makefile.in,
+# | 	dlls/kernelbase/tests/path.c, include/Makefile.in, include/pathcch.h
+# |
+if test "$enable_kernelbase_PathCchCombineEx" -eq 1; then
+	patch_apply kernelbase-PathCchCombineEx/0001-kernelbase-Add-semi-stub-for-PathCchCombineEx.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add semi-stub for PathCchCombineEx.", 1 },';
 	) >> "$patchlist"
 fi
 

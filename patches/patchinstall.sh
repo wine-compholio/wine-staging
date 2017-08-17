@@ -8792,12 +8792,14 @@ fi
 # |
 if test "$enable_user32_Sorted_Listbox" -eq 1; then
 	patch_apply user32-Sorted_Listbox/0001-user32-tests-Add-a-message-test-for-an-owner-drawn-s.patch
-	patch_apply user32-Sorted_Listbox/0002-user32-Fix-order-of-items-passed-in-WM_COMPAREITEM-d.patch
-	patch_apply user32-Sorted_Listbox/0003-user32-Fix-the-listbox-sorting-algorithm.patch
-	patch_apply user32-Sorted_Listbox/0004-user32-For-an-owner-drawn-listbox-without-strings-WM.patch
+	patch_apply user32-Sorted_Listbox/0002-user32-tests-Add-some-message-tests-for-not-an-owner.patch
+	patch_apply user32-Sorted_Listbox/0003-user32-Fix-order-of-items-passed-in-WM_COMPAREITEM-d.patch
+	patch_apply user32-Sorted_Listbox/0004-user32-Fix-the-listbox-sorting-algorithm.patch
+	patch_apply user32-Sorted_Listbox/0005-user32-For-an-owner-drawn-listbox-without-strings-WM.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for an owner-drawn sorted listbox.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix order of items passed in WM_COMPAREITEM data.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add some message tests for not an owner-drawn listbox.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix order of items passed in WM_COMPAREITEM data.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the listbox sorting algorithm.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: For an owner-drawn listbox without strings WM_MEASUREITEM still needs correct itemData.", 1 },';
 	) >> "$patchlist"

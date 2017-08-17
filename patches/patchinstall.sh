@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "797a746fc2a1b17d67b7423293e081e3e7171033"
+	echo "ae2d6e836b98440cdc938718226dc89592a64eda"
 }
 
 # Show version information
@@ -420,7 +420,6 @@ patch_enable_all ()
 	enable_wbemprox_Win32_VideoController="$1"
 	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
-	enable_windowscodecs_32bppGrayFloat="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
@@ -453,7 +452,6 @@ patch_enable_all ()
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
-	enable_wined3d_SM4_OP_NOP="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
@@ -1532,9 +1530,6 @@ patch_enable ()
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
 			;;
-		windowscodecs-32bppGrayFloat)
-			enable_windowscodecs_32bppGrayFloat="$2"
-			;;
 		windowscodecs-32bppPRGBA)
 			enable_windowscodecs_32bppPRGBA="$2"
 			;;
@@ -1630,9 +1625,6 @@ patch_enable ()
 			;;
 		wined3d-Revert_Buffer_Upload)
 			enable_wined3d_Revert_Buffer_Upload="$2"
-			;;
-		wined3d-SM4_OP_NOP)
-			enable_wined3d_SM4_OP_NOP="$2"
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
@@ -2342,11 +2334,7 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	if test "$enable_gdiplus_Grayscale_PNG" -gt 1; then
 		abort "Patchset gdiplus-Grayscale_PNG disabled, but windowscodecs-Palette_Images depends on that."
 	fi
-	if test "$enable_windowscodecs_32bppGrayFloat" -gt 1; then
-		abort "Patchset windowscodecs-32bppGrayFloat disabled, but windowscodecs-Palette_Images depends on that."
-	fi
 	enable_gdiplus_Grayscale_PNG=1
-	enable_windowscodecs_32bppGrayFloat=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -9024,25 +9012,10 @@ if test "$enable_wevtapi_EvtNext" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-32bppGrayFloat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36517] Implement support for WICPixelFormat32bppGrayFloat
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/tests/converter.c
-# |
-if test "$enable_windowscodecs_32bppGrayFloat" -eq 1; then
-	patch_apply windowscodecs-32bppGrayFloat/0004-windowscodecs-Fix-32bppGrayFloat-to-8bppGray-convers.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppGrayFloat to 8bppGray conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-Palette_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat
+# |   *	gdiplus-Grayscale_PNG
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
@@ -9099,7 +9072,7 @@ fi
 # Patchset windowscodecs-GIF_Encoder
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-Palette_Images
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c,
@@ -9195,8 +9168,8 @@ fi
 # Patchset windowscodecs-TIFF_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
-# | 	windowscodecs-IWICPalette_InitializeFromBitmap
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-
+# | 	IWICPalette_InitializeFromBitmap
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
@@ -9242,8 +9215,8 @@ fi
 # Patchset windowscodecs-32bppPRGBA
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-32bppGrayFloat, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder,
-# | 	windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support
+# |   *	gdiplus-Grayscale_PNG, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-
+# | 	IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
@@ -9598,7 +9571,7 @@ fi
 # Patchset wined3d-UAV_Counters
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c
+# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c
 # |
 if test "$enable_wined3d_UAV_Counters" -eq 1; then
 	patch_apply wined3d-UAV_Counters/0001-wined3d-Remaining-UAV-counter-changes.patch
@@ -9668,13 +9641,11 @@ fi
 # | 	include/wine/wined3d.h
 # |
 if test "$enable_wined3d_DrawIndirect" -eq 1; then
-	patch_apply wined3d-DrawIndirect/0001-wined3d-Implement-indirect-compute-dispatch.patch
 	patch_apply wined3d-DrawIndirect/0002-d3d11-tests-Add-a-basic-test-for-DispatchIndirect.patch
 	patch_apply wined3d-DrawIndirect/0003-wined3d-Implement-indirect-drawing.patch
 	patch_apply wined3d-DrawIndirect/0004-wined3d-Implement-DrawInstancedIndirect.patch
 	patch_apply wined3d-DrawIndirect/0005-d3d11-tests-Add-a-basic-test-for-DrawInstancedIndire.patch
 	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement indirect compute dispatch.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Add a basic test for DispatchIndirect.", 1 },';
 		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement indirect drawing.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Implement DrawInstancedIndirect.", 1 },';
@@ -9703,18 +9674,6 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-SM4_OP_NOP
-# |
-# | Modified files:
-# |   *	dlls/wined3d/shader_sm4.c
-# |
-if test "$enable_wined3d_SM4_OP_NOP" -eq 1; then
-	patch_apply wined3d-SM4_OP_NOP/0001-wined3d-Recognize-SM4-nop-opcode.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize SM4 nop opcode.", 1 },';
 	) >> "$patchlist"
 fi
 

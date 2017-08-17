@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ae2d6e836b98440cdc938718226dc89592a64eda"
+	echo "866eec810e7342630d47887f8ad7e1fbb5a0e788"
 }
 
 # Show version information
@@ -3502,10 +3502,7 @@ fi
 # | 	include/bcrypt.h, include/ntstatus.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
-	patch_apply bcrypt-Improvements/0001-bcrypt-Add-AES-provider.patch
-	patch_apply bcrypt-Improvements/0006-bcrypt-Fix-handling-of-padding-when-input-size-equal.patch
-	patch_apply bcrypt-Improvements/0007-bcrypt-Properly-handle-padding-in-AES-decryption.patch
-	patch_apply bcrypt-Improvements/0008-bcrypt-Fix-use-after-free-in-key_init.patch
+	patch_apply bcrypt-Improvements/0001-include-Add-missing-BCRYPT_CHAIN_MODE-definitions.patch
 	patch_apply bcrypt-Improvements/0010-bcrypt-tests-Add-test-for-bugs-in-BCryptGetProperty.patch
 	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0012-bcrypt-Pass-object-to-get_-alg-hash-_property-instea.patch
@@ -3527,10 +3524,7 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0028-bcrypt-Partial-implementation-of-BCryptImportKey-and.patch
 	patch_apply bcrypt-Improvements/0029-bcrypt-Add-support-for-192-and-256-bit-aes-keys.patch
 	(
-		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Add AES provider.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix handling of padding when input size equals block size for AES.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Properly handle padding in AES decryption.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Fix use-after-free in key_init.", 1 },';
+		printf '%s\n' '+    { "Hans Leidekker", "include: Add missing BCRYPT_CHAIN_MODE definitions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';

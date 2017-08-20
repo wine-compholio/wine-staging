@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d53b711f27f15cdeb9700e86526dab13ddf8d731"
+	echo "67f6eb327ef78fe8acf45bf6ac6c93424ec89335"
 }
 
 # Show version information
@@ -4923,16 +4923,14 @@ fi
 # |   *	[#38622] Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/tests/pngformat.c
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c
 # |
 if test "$enable_gdiplus_Grayscale_PNG" -eq 1; then
-	patch_apply gdiplus-Grayscale_PNG/0001-windowscodecs-tests-Add-a-test-for-loading-PNG-grays.patch
 	patch_apply gdiplus-Grayscale_PNG/0002-gdiplus-tests-Add-a-test-for-loading-PNG-grayscale-i.patch
 	patch_apply gdiplus-Grayscale_PNG/0003-gdiplus-Force-conversion-of-8-bpp-grayscale-PNG-imag.patch
 	patch_apply gdiplus-Grayscale_PNG/0004-gdiplus-tests-Add-a-test-for-image-flags-to-PNG-gray.patch
 	patch_apply gdiplus-Grayscale_PNG/0005-gdiplus-Set-correct-color-space-flags-for-grayscale-.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for loading PNG grayscale images.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for loading PNG grayscale images.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for image flags to PNG grayscale image tests.", 1 },';

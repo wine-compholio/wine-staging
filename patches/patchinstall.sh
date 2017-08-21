@@ -451,6 +451,7 @@ patch_enable_all ()
 	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_DrawIndirect="$1"
+	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
@@ -1627,6 +1628,9 @@ patch_enable ()
 		wined3d-DrawIndirect)
 			enable_wined3d_DrawIndirect="$2"
 			;;
+		wined3d-Dual_Source_Blending)
+			enable_wined3d_Dual_Source_Blending="$2"
+			;;
 		wined3d-GTX_560M)
 			enable_wined3d_GTX_560M="$2"
 			;;
@@ -2227,25 +2231,11 @@ if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 	enable_d3d11_Depth_Bias=1
 fi
 
-if test "$enable_wined3d_Viewports" -eq 1; then
-	if test "$enable_wined3d_Core_Context" -gt 1; then
-		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
-	fi
-	enable_wined3d_Core_Context=1
-fi
-
 if test "$enable_wined3d_DrawIndirect" -eq 1; then
 	if test "$enable_wined3d_draw_primitive_arrays" -gt 1; then
 		abort "Patchset wined3d-draw_primitive_arrays disabled, but wined3d-DrawIndirect depends on that."
 	fi
 	enable_wined3d_draw_primitive_arrays=1
-fi
-
-if test "$enable_wined3d_Core_Context" -eq 1; then
-	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Core_Context depends on that."
-	fi
-	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -2273,6 +2263,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
+		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_wined3d_QUERY_Stubs" -gt 1; then
 		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2293,10 +2286,32 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_Accounting=1
 	enable_wined3d_Copy_Resource_Typeless=1
 	enable_wined3d_DXTn=1
+	enable_wined3d_Dual_Source_Blending=1
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Revert_Buffer_Upload=1
 	enable_wined3d_Silence_FIXMEs=1
 	enable_wined3d_UAV_Counters=1
+fi
+
+if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
+	if test "$enable_wined3d_Viewports" -gt 1; then
+		abort "Patchset wined3d-Viewports disabled, but wined3d-Dual_Source_Blending depends on that."
+	fi
+	enable_wined3d_Viewports=1
+fi
+
+if test "$enable_wined3d_Viewports" -eq 1; then
+	if test "$enable_wined3d_Core_Context" -gt 1; then
+		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
+	fi
+	enable_wined3d_Core_Context=1
+fi
+
+if test "$enable_wined3d_Core_Context" -eq 1; then
+	if test "$enable_d3d11_Depth_Bias" -gt 1; then
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Core_Context depends on that."
+	fi
+	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
@@ -9591,6 +9606,57 @@ if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-Core_Context
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
+# | Modified files:
+# |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_Core_Context" -eq 1; then
+	patch_apply wined3d-Core_Context/0001-wined3d-Use-OpenGL-core-context-for-D3D10-11-when-ne.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Use OpenGL core context for D3D10/11 when necessary.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Viewports
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_Viewports" -eq 1; then
+	patch_apply wined3d-Viewports/0001-wined3d-Allow-arbitrary-viewports-for-d3d11.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow arbitrary viewports for d3d11.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Dual_Source_Blending
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
+	patch_apply wined3d-Dual_Source_Blending/0001-wined3d-Unroll-glsl-pixel-shader-output.patch
+	patch_apply wined3d-Dual_Source_Blending/0002-d3d11-tests-Add-basic-dual-source-blend-test.patch
+	patch_apply wined3d-Dual_Source_Blending/0003-wined3d-Implement-dual-source-blending.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Unroll glsl pixel shader output.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic dual source blend test.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement dual source blending.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-QUERY_Stubs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9653,8 +9719,8 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
-# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
-# | 	wined3d-UAV_Counters
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
+# | 	QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9663,21 +9729,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Core_Context
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
-# | Modified files:
-# |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_Core_Context" -eq 1; then
-	patch_apply wined3d-Core_Context/0001-wined3d-Use-OpenGL-core-context-for-D3D10-11-when-ne.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Use OpenGL core context for D3D10/11 when necessary.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9742,22 +9793,6 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Viewports
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_Viewports" -eq 1; then
-	patch_apply wined3d-Viewports/0001-wined3d-Allow-arbitrary-viewports-for-d3d11.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow arbitrary viewports for d3d11.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9857,8 +9892,8 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
-# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
-# | 	wined3d-UAV_Counters, wined3d-CSMT_Helper
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
+# | 	QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

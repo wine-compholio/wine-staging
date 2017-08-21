@@ -457,6 +457,7 @@ patch_enable_all ()
 	enable_wined3d_Revert_Buffer_Upload="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
+	enable_wined3d_Viewports="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
@@ -1644,6 +1645,9 @@ patch_enable ()
 		wined3d-UAV_Counters)
 			enable_wined3d_UAV_Counters="$2"
 			;;
+		wined3d-Viewports)
+			enable_wined3d_Viewports="$2"
+			;;
 		wined3d-WINED3DFMT_R32G32_UINT)
 			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
 			;;
@@ -2221,6 +2225,13 @@ if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
 	fi
 	enable_d3d11_Depth_Bias=1
+fi
+
+if test "$enable_wined3d_Viewports" -eq 1; then
+	if test "$enable_wined3d_Core_Context" -gt 1; then
+		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
+	fi
+	enable_wined3d_Core_Context=1
 fi
 
 if test "$enable_wined3d_DrawIndirect" -eq 1; then
@@ -9731,6 +9742,22 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Viewports
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_Viewports" -eq 1; then
+	patch_apply wined3d-Viewports/0001-wined3d-Allow-arbitrary-viewports-for-d3d11.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow arbitrary viewports for d3d11.", 1 },';
 	) >> "$patchlist"
 fi
 

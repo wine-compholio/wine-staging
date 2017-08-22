@@ -1,0 +1,68 @@
+From 799ae0c6a39c58423281ea5d8c46b1085a07bf48 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 18 Aug 2017 12:12:16 +0800
+Subject: windowscodecs: Move additional processing out of the JPEG decoding
+ loop.
+
+This avoids image corruption when libjpeg reuses existing pixel data.
+---
+ dlls/windowscodecs/jpegformat.c | 27 ++++++++++++++-------------
+ 1 file changed, 14 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/windowscodecs/jpegformat.c b/dlls/windowscodecs/jpegformat.c
+index f31239b8d79..0023fd2bf32 100644
+--- a/dlls/windowscodecs/jpegformat.c
++++ b/dlls/windowscodecs/jpegformat.c
+@@ -603,7 +603,7 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+     JpegDecoder *This = impl_from_IWICBitmapFrameDecode(iface);
+     UINT bpp;
+     UINT stride;
+-    UINT data_size;
++    UINT data_size, i;
+     UINT max_row_needed;
+     jmp_buf jmpbuf;
+     WICRect rect;
+@@ -659,7 +659,6 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+         UINT first_scanline = This->cinfo.output_scanline;
+         UINT max_rows;
+         JSAMPROW out_rows[4];
+-        UINT i;
+         JDIMENSION ret;
+ 
+         max_rows = min(This->cinfo.output_height-first_scanline, 4);
+@@ -674,19 +673,21 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+             LeaveCriticalSection(&This->lock);
+             return E_FAIL;
+         }
++    }
+ 
+-        if (bpp == 24)
+-        {
+-            /* libjpeg gives us RGB data and we want BGR, so byteswap the data */
+-            reverse_bgr8(3, This->image_data + stride * first_scanline,
+-                This->cinfo.output_width, This->cinfo.output_scanline - first_scanline,
+-                stride);
+-        }
++    if (bpp == 24)
++    {
++        /* libjpeg gives us RGB data and we want BGR, so byteswap the data */
++        reverse_bgr8(3, This->image_data,
++            This->cinfo.output_width, This->cinfo.output_height,
++            stride);
++    }
+ 
+-        if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
+-            /* Adobe JPEG's have inverted CMYK data. */
+-            for (i=0; i<data_size; i++)
+-                This->image_data[i] ^= 0xff;
++    if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
++    {
++        /* Adobe JPEG's have inverted CMYK data. */
++        for (i=0; i<data_size; i++)
++            This->image_data[i] ^= 0xff;
+     }
+ 
+     LeaveCriticalSection(&This->lock);
+-- 
+2.14.1
+

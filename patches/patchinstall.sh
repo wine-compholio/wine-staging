@@ -427,6 +427,7 @@ patch_enable_all ()
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
+	enable_windowscodecs_JPEG_Decoder="$1"
 	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
@@ -1555,6 +1556,9 @@ patch_enable ()
 			;;
 		windowscodecs-IWICPalette_InitializeFromBitmap)
 			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
+			;;
+		windowscodecs-JPEG_Decoder)
+			enable_windowscodecs_JPEG_Decoder="$2"
 			;;
 		windowscodecs-Palette_Images)
 			enable_windowscodecs_Palette_Images="$2"
@@ -9328,6 +9332,29 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-JPEG_Decoder
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43520] Fix JPEG decoder and implement support for CMYK to BGR conversion
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
+# |
+if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
+	patch_apply windowscodecs-JPEG_Decoder/0001-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
+	patch_apply windowscodecs-JPEG_Decoder/0002-windowscodecs-Fix-stride-calculation-in-JPEG-decoder.patch
+	patch_apply windowscodecs-JPEG_Decoder/0003-windowscodecs-Move-additional-processing-out-of-the-.patch
+	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
+	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in JPEG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix stride calculation in JPEG decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move additional processing out of the JPEG decoding loop.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for CMYK to BGR conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

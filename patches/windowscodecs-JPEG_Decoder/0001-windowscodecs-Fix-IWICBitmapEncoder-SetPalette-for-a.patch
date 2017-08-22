@@ -1,0 +1,37 @@
+From 3a150ddeeb8cfc19bd93eb6484aad9e1d8f21658 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 18 Aug 2017 11:53:17 +0800
+Subject: windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not
+ initialized case in JPEG encoder.
+
+---
+ dlls/windowscodecs/jpegformat.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/windowscodecs/jpegformat.c b/dlls/windowscodecs/jpegformat.c
+index ae54b0f8009..abab36ab40a 100644
+--- a/dlls/windowscodecs/jpegformat.c
++++ b/dlls/windowscodecs/jpegformat.c
+@@ -1424,8 +1424,18 @@ static HRESULT WINAPI JpegEncoder_SetColorContexts(IWICBitmapEncoder *iface,
+ 
+ static HRESULT WINAPI JpegEncoder_SetPalette(IWICBitmapEncoder *iface, IWICPalette *pIPalette)
+ {
++    JpegEncoder *This = impl_from_IWICBitmapEncoder(iface);
++    HRESULT hr;
++
+     TRACE("(%p,%p)\n", iface, pIPalette);
+-    return WINCODEC_ERR_UNSUPPORTEDOPERATION;
++
++    EnterCriticalSection(&This->lock);
++
++    hr = This->initialized ? WINCODEC_ERR_UNSUPPORTEDOPERATION : WINCODEC_ERR_NOTINITIALIZED;
++
++    LeaveCriticalSection(&This->lock);
++
++    return hr;
+ }
+ 
+ static HRESULT WINAPI JpegEncoder_SetThumbnail(IWICBitmapEncoder *iface, IWICBitmapSource *pIThumbnail)
+-- 
+2.14.1
+

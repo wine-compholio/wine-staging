@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 2.15"
+	echo "Wine Staging 2.16 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -4736,6 +4736,9 @@ if test "$enable_dxgi_DXGI_PRESENT_TEST" -eq 1; then
 fi
 
 # Patchset dxgi-GammaRamp
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43584] Implement DXGI GammaControl methods
 # |
 # | Modified files:
 # |   *	dlls/dxgi/Makefile.in, dlls/dxgi/output.c, dlls/dxgi/tests/device.c

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "79ebd3f3bf9e5b6607363667d03def04e254f710"
+	echo "cc49c40f05a600327b80711f6f80844608dde366"
 }
 
 # Show version information
@@ -389,7 +389,6 @@ patch_enable_all ()
 	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
-	enable_user32_DialogBoxParam="$1"
 	enable_user32_Dialog_Focus="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
@@ -1442,9 +1441,6 @@ patch_enable ()
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
-			;;
-		user32-DialogBoxParam)
-			enable_user32_DialogBoxParam="$2"
 			;;
 		user32-Dialog_Focus)
 			enable_user32_Dialog_Focus="$2"
@@ -8549,23 +8545,6 @@ if test "$enable_user32_DM_SETDEFID" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Do not initialize dialog info for every window passed to DefDlgProc.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Use root dialog for DM_SETDEFID/DM_GETDEFID in DefDlgProc.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a bunch of tests for DM_SETDEFID/DM_GETDEFID handling by a DefDlgProc.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-DialogBoxParam
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40025] DialogBoxParam should return -1 when dialog control creation fails
-# |
-# | Modified files:
-# |   *	dlls/user32/dialog.c, dlls/user32/tests/dialog.c, dlls/user32/tests/resource.rc
-# |
-if test "$enable_user32_DialogBoxParam" -eq 1; then
-	patch_apply user32-DialogBoxParam/0001-user32-tests-Test-DialogBoxParam-using-a-dialog-temp.patch
-	patch_apply user32-DialogBoxParam/0002-user32-DialogBoxParam-should-return-1-when-dialog-co.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Test DialogBoxParam using a dialog template with invalid control class.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: DialogBoxParam should return -1 when dialog control creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 

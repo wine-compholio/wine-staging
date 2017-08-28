@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "083e61fddf90ade32a119d5b6bf84d27adefc589"
+	echo "dfa1815c02d1661766c8f3a4a290635e7adb4ccf"
 }
 
 # Show version information
@@ -324,7 +324,6 @@ patch_enable_all ()
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
-	enable_reg_Tests="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Race_Condition="$1"
@@ -1246,9 +1245,6 @@ patch_enable ()
 			;;
 		quartz-Silence_FIXMEs)
 			enable_quartz_Silence_FIXMEs="$2"
-			;;
-		reg-Tests)
-			enable_reg_Tests="$2"
 			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
@@ -2941,15 +2937,15 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
-# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
-# | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
-# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/shell32/shfldr_fs.c, dlls/vbscript/vbdisp.c,
+# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/module.c,
+# | 	dlls/kernel32/oldconfig.c, dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
+# | 	dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/vbscript/vbdisp.c,
 # | 	dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c, include/wine/list.h,
 # | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
-	patch_apply Compiler_Warnings/0003-shell32-Fix-length-parameter-for-ZeroMemory.patch
+	patch_apply Compiler_Warnings/0002-kernel32-Fix-compile-error-in-load_library-function.patch
 	patch_apply Compiler_Warnings/0004-fusion-Fix-length-parameter-for-ZeroMemory.patch
 	patch_apply Compiler_Warnings/0005-fusion-tests-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0006-kernel32-tests-Avoid-compiler-warnings-with-GCC-7.patch
@@ -2973,7 +2969,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "shell32: Fix length parameter for ZeroMemory.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Fix compile error in load_library function.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion: Fix length parameter for ZeroMemory.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion/tests: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Avoid compiler warnings with GCC 7.", 1 },';
@@ -3777,6 +3773,9 @@ if test "$enable_d3d10_1_Forwards" -eq 1; then
 fi
 
 # Patchset d3d11-Deferred_Context
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43611] Add semi-stub for D3D11 deferred context implementation
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/wined3d.spec,
@@ -7446,18 +7445,6 @@ if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset reg-Tests
-# |
-# | Modified files:
-# |   *	programs/reg/tests/reg.c
-# |
-if test "$enable_reg_Tests" -eq 1; then
-	patch_apply reg-Tests/0001-reg-tests-Avoid-test-failures.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "reg/tests: Avoid test failures.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "dfa1815c02d1661766c8f3a4a290635e7adb4ccf"
+	echo "c579a81a6353dd7c843270561cd5763ff895de40"
 }
 
 # Show version information
@@ -176,7 +176,6 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_DC_Handling="$1"
-	enable_gdiplus_Grayscale_PNG="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
@@ -801,9 +800,6 @@ patch_enable ()
 			;;
 		gdiplus-DC_Handling)
 			enable_gdiplus_DC_Handling="$2"
-			;;
-		gdiplus-Grayscale_PNG)
-			enable_gdiplus_Grayscale_PNG="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -2350,25 +2346,11 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap=1
 fi
 
-if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
-	if test "$enable_gdiplus_Grayscale_PNG" -gt 1; then
-		abort "Patchset gdiplus-Grayscale_PNG disabled, but windowscodecs-IWICPalette_InitializeFromBitmap depends on that."
-	fi
-	enable_gdiplus_Grayscale_PNG=1
-fi
-
 if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	if test "$enable_windowscodecs_Palette_Images" -gt 1; then
 		abort "Patchset windowscodecs-Palette_Images disabled, but windowscodecs-GIF_Encoder depends on that."
 	fi
 	enable_windowscodecs_Palette_Images=1
-fi
-
-if test "$enable_windowscodecs_Palette_Images" -eq 1; then
-	if test "$enable_gdiplus_Grayscale_PNG" -gt 1; then
-		abort "Patchset gdiplus-Grayscale_PNG disabled, but windowscodecs-Palette_Images depends on that."
-	fi
-	enable_gdiplus_Grayscale_PNG=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -2937,19 +2919,17 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
-# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/module.c,
-# | 	dlls/kernel32/oldconfig.c, dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c,
-# | 	dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/rsaenh/rsaenh.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c, include/wine/list.h,
-# | 	include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
+# | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
+# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
+# | 	tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
-	patch_apply Compiler_Warnings/0002-kernel32-Fix-compile-error-in-load_library-function.patch
 	patch_apply Compiler_Warnings/0004-fusion-Fix-length-parameter-for-ZeroMemory.patch
 	patch_apply Compiler_Warnings/0005-fusion-tests-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0006-kernel32-tests-Avoid-compiler-warnings-with-GCC-7.patch
-	patch_apply Compiler_Warnings/0007-rsaenh-tests-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0008-kernel32-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0009-ws2_32-tests-Work-around-an-incorrect-detection-in-G.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
@@ -2969,11 +2949,9 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Fix compile error in load_library function.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion: Fix length parameter for ZeroMemory.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion/tests: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Avoid compiler warnings with GCC 7.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "rsaenh/tests: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
@@ -4960,23 +4938,6 @@ if test "$enable_gdiplus_DC_Handling" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdiplus-Grayscale_PNG
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38622] Force conversion of 8 bpp grayscale PNG images to 32 bpp BGRA
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c
-# |
-if test "$enable_gdiplus_Grayscale_PNG" -eq 1; then
-	patch_apply gdiplus-Grayscale_PNG/0004-gdiplus-tests-Add-a-test-for-image-flags-to-PNG-gray.patch
-	patch_apply gdiplus-Grayscale_PNG/0005-gdiplus-Set-correct-color-space-flags-for-grayscale-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add a test for image flags to PNG grayscale image tests.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Set correct color space flags for grayscale images.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-Performance-Improvements
 # |
 # | Modified files:
@@ -5405,13 +5366,11 @@ if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
 	patch_apply kernel32-PE_Loader_Fixes/0001-server-All-fields-up-to-CheckSum-are-mandatory-regar.patch
 	patch_apply kernel32-PE_Loader_Fixes/0002-ntdll-If-PE-image-size-is-larger-than-the-backed-fil.patch
 	patch_apply kernel32-PE_Loader_Fixes/0003-kernel32-On-process-entry-store-PEB-address-in-ebx.patch
-	patch_apply kernel32-PE_Loader_Fixes/0004-kernel32-tests-Fix-a-module-reference-leak-leading-t.patch
 	patch_apply kernel32-PE_Loader_Fixes/0005-kernel32-tests-Add-a-PE-test-image-that-resembles-fo.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "server: All fields up to CheckSum are mandatory regardless of SizeOfOptionalHeader value.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: If PE image size is larger than the backed file size then treat file as removable.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: On process entry store PEB address in %ebx.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a module reference leak leading to an undeletable temporary file.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add a PE test image that resembles format of some of 8k demos.", 1 },';
 	) >> "$patchlist"
 fi
@@ -9066,9 +9025,6 @@ fi
 
 # Patchset windowscodecs-Palette_Images
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG
-# |
 # | Modified files:
 # |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
 # | 	dlls/windowscodecs/info.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
@@ -9124,7 +9080,7 @@ fi
 # Patchset windowscodecs-GIF_Encoder
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-Palette_Images
+# |   *	windowscodecs-Palette_Images
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c,
@@ -9194,9 +9150,6 @@ fi
 
 # Patchset windowscodecs-IWICPalette_InitializeFromBitmap
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG
-# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39890] Implement IWICPalette::InitializeFromBitmap
 # |
@@ -9220,8 +9173,7 @@ fi
 # Patchset windowscodecs-TIFF_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-
-# | 	IWICPalette_InitializeFromBitmap
+# |   *	windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-IWICPalette_InitializeFromBitmap
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
@@ -9267,8 +9219,8 @@ fi
 # Patchset windowscodecs-32bppPRGBA
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	gdiplus-Grayscale_PNG, windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-
-# | 	IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support
+# |   *	windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-
+# | 	TIFF_Support
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,

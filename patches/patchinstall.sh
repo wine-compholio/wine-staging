@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c579a81a6353dd7c843270561cd5763ff895de40"
+	echo "844b57e4d800bfb260c1694ed54a02b9f5ad1f47"
 }
 
 # Show version information
@@ -2920,16 +2920,14 @@ fi
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
 # | 	dlls/dwrite/layout.c, dlls/fusion/tests/asmenum.c, dlls/fusion/tests/asmname.c, dlls/kernel32/oldconfig.c,
-# | 	dlls/kernel32/tests/heap.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
-# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
-# | 	tools/makedep.c
+# | 	dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c,
+# | 	dlls/vbscript/vbdisp.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c,
+# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
 	patch_apply Compiler_Warnings/0004-fusion-Fix-length-parameter-for-ZeroMemory.patch
 	patch_apply Compiler_Warnings/0005-fusion-tests-Avoid-compiler-warnings-with-GCC-7.patch
-	patch_apply Compiler_Warnings/0006-kernel32-tests-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0008-kernel32-Avoid-compiler-warnings-with-GCC-7.patch
 	patch_apply Compiler_Warnings/0009-ws2_32-tests-Work-around-an-incorrect-detection-in-G.patch
 	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
@@ -2951,7 +2949,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion: Fix length parameter for ZeroMemory.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "fusion/tests: Avoid compiler warnings with GCC 7.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Avoid compiler warnings with GCC 7.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';

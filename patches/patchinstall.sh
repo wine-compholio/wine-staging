@@ -216,6 +216,7 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
 	enable_makedep_PARENTSPEC="$1"
+	enable_mfplat_MFStartup="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mpr_WNetGetUniversalNameW="$1"
@@ -921,6 +922,9 @@ patch_enable ()
 			;;
 		makedep-PARENTSPEC)
 			enable_makedep_PARENTSPEC="$2"
+			;;
+		mfplat-MFStartup)
+			enable_mfplat_MFStartup="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -5619,6 +5623,21 @@ if test "$enable_makedep_PARENTSPEC" -eq 1; then
 	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFStartup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43607] Return S_OK from MFStartup stub
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/tests/mfplat.c
+# |
+if test "$enable_mfplat_MFStartup" -eq 1; then
+	patch_apply mfplat-MFStartup/0001-mfplat-Return-S_OK-from-MFStartup-stub.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "mfplat: Return S_OK from MFStartup stub.", 1 },';
 	) >> "$patchlist"
 fi
 

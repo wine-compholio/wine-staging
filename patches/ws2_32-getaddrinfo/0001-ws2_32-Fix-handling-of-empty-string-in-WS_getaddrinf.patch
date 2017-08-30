@@ -1,0 +1,110 @@
+From b69f0c678ad23c7ee96ec82d18bf3162afe1dac6 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 31 Aug 2017 01:15:05 +0200
+Subject: ws2_32: Fix handling of empty string in WS_getaddrinfo.
+
+Fixes a regression introduced in a2053597cc326e2305c44e1c1a954c2e0ee2853e.
+---
+ dlls/ws2_32/socket.c | 38 ++++++++++++++++++++++++++++++--------
+ 1 file changed, 30 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index dce52e8fd08..45764f5a359 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -6634,6 +6634,22 @@ static int convert_eai_u2w(int unixret) {
+     return unixret;
+ }
+ 
++static char *get_hostname(void)
++{
++    char *ret;
++    DWORD size = 0;
++
++    GetComputerNameExA( ComputerNamePhysicalDnsHostname, NULL, &size );
++    if (GetLastError() != ERROR_MORE_DATA) return NULL;
++    if (!(ret = HeapAlloc( GetProcessHeap(), 0, size ))) return NULL;
++    if (!GetComputerNameExA( ComputerNamePhysicalDnsHostname, ret, &size ))
++    {
++        HeapFree( GetProcessHeap(), 0, ret );
++        return NULL;
++    }
++    return ret;
++}
++
+ static char *get_fqdn(void)
+ {
+     char *ret;
+@@ -6659,9 +6675,8 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+     struct addrinfo *unixaires = NULL;
+     int   result;
+     struct addrinfo unixhints, *punixhints = NULL;
+-    char *dot, *nodeV6 = NULL, *fqdn;
++    char *nodeV6 = NULL, *hostname, *fqdn;
+     const char *node;
+-    size_t hostname_len = 0;
+ 
+     *res = NULL;
+     if (!nodename && !servname)
+@@ -6670,16 +6685,20 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+         return WSAHOST_NOT_FOUND;
+     }
+ 
++    hostname = get_hostname();
++    if (!hostname) return WSA_NOT_ENOUGH_MEMORY;
++
+     fqdn = get_fqdn();
+-    if (!fqdn) return WSA_NOT_ENOUGH_MEMORY;
+-    dot = strchr(fqdn, '.');
+-    if (dot)
+-        hostname_len = dot - fqdn;
++    if (!fqdn)
++    {
++        HeapFree(GetProcessHeap(), 0, hostname);
++        return WSA_NOT_ENOUGH_MEMORY;
++    }
+ 
+     if (!nodename)
+         node = NULL;
+     else if (!nodename[0])
+-        node = fqdn;
++        node = hostname;
+     else
+     {
+         node = nodename;
+@@ -6694,6 +6713,7 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+                 nodeV6 = HeapAlloc(GetProcessHeap(), 0, close_bracket - node);
+                 if (!nodeV6)
+                 {
++                    HeapFree(GetProcessHeap(), 0, hostname);
+                     HeapFree(GetProcessHeap(), 0, fqdn);
+                     return WSA_NOT_ENOUGH_MEMORY;
+                 }
+@@ -6723,6 +6743,7 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+         if (punixhints->ai_socktype < 0)
+         {
+             SetLastError(WSAESOCKTNOSUPPORT);
++            HeapFree(GetProcessHeap(), 0, hostname);
+             HeapFree(GetProcessHeap(), 0, fqdn);
+             HeapFree(GetProcessHeap(), 0, nodeV6);
+             return SOCKET_ERROR;
+@@ -6748,7 +6769,7 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+     result = getaddrinfo(node, servname, punixhints, &unixaires);
+ 
+     if (result && (!hints || !(hints->ai_flags & WS_AI_NUMERICHOST))
+-            && (!strcmp(fqdn, node) || (!strncmp(fqdn, node, hostname_len) && !node[hostname_len])))
++            && (!strcmp(node, hostname) || !strcmp(node, fqdn)))
+     {
+         /* If it didn't work it means the host name IP is not in /etc/hosts, try again
+         * by sending a NULL host and avoid sending a NULL servname too because that
+@@ -6757,6 +6778,7 @@ int WINAPI WS_getaddrinfo(LPCSTR nodename, LPCSTR servname, const struct WS_addr
+         result = getaddrinfo(NULL, servname ? servname : "0", punixhints, &unixaires);
+     }
+     TRACE("%s, %s %p -> %p %d\n", debugstr_a(nodename), debugstr_a(servname), hints, res, result);
++    HeapFree(GetProcessHeap(), 0, hostname);
+     HeapFree(GetProcessHeap(), 0, fqdn);
+     HeapFree(GetProcessHeap(), 0, nodeV6);
+ 
+-- 
+2.14.1
+

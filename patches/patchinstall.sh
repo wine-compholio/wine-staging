@@ -504,6 +504,7 @@ patch_enable_all ()
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_WriteWatches="$1"
+	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_ws2_32_setsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -1784,6 +1785,9 @@ patch_enable ()
 			;;
 		ws2_32-WriteWatches)
 			enable_ws2_32_WriteWatches="$2"
+			;;
+		ws2_32-getaddrinfo)
+			enable_ws2_32_getaddrinfo="$2"
 			;;
 		ws2_32-getsockopt)
 			enable_ws2_32_getsockopt="$2"
@@ -10436,6 +10440,18 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-getaddrinfo
+# |
+# | Modified files:
+# |   *	dlls/ws2_32/socket.c
+# |
+if test "$enable_ws2_32_getaddrinfo" -eq 1; then
+	patch_apply ws2_32-getaddrinfo/0001-ws2_32-Fix-handling-of-empty-string-in-WS_getaddrinf.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Fix handling of empty string in WS_getaddrinfo.", 1 },';
 	) >> "$patchlist"
 fi
 

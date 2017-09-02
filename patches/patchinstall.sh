@@ -452,6 +452,7 @@ patch_enable_all ()
 	enable_wined3d_DrawIndirect="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_GTX_560M="$1"
+	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
@@ -1632,6 +1633,9 @@ patch_enable ()
 		wined3d-GTX_560M)
 			enable_wined3d_GTX_560M="$2"
 			;;
+		wined3d-Indexed_Vertex_Blending)
+			enable_wined3d_Indexed_Vertex_Blending="$2"
+			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
 			;;
@@ -2226,6 +2230,17 @@ if test "$enable_wined3d_conservative_depth" -eq 1; then
 		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-conservative_depth depends on that."
 	fi
 	enable_wined3d_Copy_Resource_Typeless=1
+fi
+
+if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
+	if test "$enable_wined3d_DrawIndirect" -gt 1; then
+		abort "Patchset wined3d-DrawIndirect disabled, but wined3d-Indexed_Vertex_Blending depends on that."
+	fi
+	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
+		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-Indexed_Vertex_Blending depends on that."
+	fi
+	enable_wined3d_DrawIndirect=1
+	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
 
 if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
@@ -9745,6 +9760,58 @@ if test "$enable_wined3d_GTX_560M" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
+# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c,
+# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |
+if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
+	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement all 8 d3d11 color write masks.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Indexed_Vertex_Blending
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-draw_primitive_arrays, wined3d-DrawIndirect, d3d11-Depth_Bias, wined3d-WINED3D_RS_COLORWRITEENABLE
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39057] Support for indexed vertex blending
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c,
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
+	patch_apply wined3d-Indexed_Vertex_Blending/0001-d3d9-tests-Add-test-for-indexed-vertex-blending.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0002-wined3d-Implement-hardware-indexed-vertex-blending-w.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0003-d3d9-tests-Test-normal-calculation-when-indexed-vert.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0004-wined3d-Fix-calculation-of-normal-when-vertex-blendi.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0005-wined3d-Move-matrix-inversion-functions-into-utils.c.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0006-wined3d-Implement-software-processing-for-indexed-ve.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0007-d3d9-tests-Check-MaxVertexBlendMatrixIndex-capabilit.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0008-wined3d-Report-correct-number-of-blend-matrices-when.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0009-wined3d-Track-updates-of-vertex-blend-matrices-separ.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "d3d9/tests: Add test for indexed vertex blending.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Implement hardware indexed vertex blending with 9 matrices.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Test normal calculation when indexed vertex blending is enabled.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Fix calculation of normal when vertex blending is enabled.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Move matrix inversion functions into utils.c.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement software processing for indexed vertex blending.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Check MaxVertexBlendMatrixIndex capability.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Report correct number of blend matrices when software vertex processing is used.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Track updates of vertex blend matrices separately.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Limit_Vram
 # |
 # | Modified files:
@@ -9778,23 +9845,6 @@ if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
-# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c,
-# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
-	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement all 8 d3d11 color write masks.", 1 },';
 	) >> "$patchlist"
 fi
 

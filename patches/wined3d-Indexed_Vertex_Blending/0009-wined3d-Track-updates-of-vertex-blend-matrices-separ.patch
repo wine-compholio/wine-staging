@@ -1,0 +1,56 @@
+From 8a4c30330dab1a81ffd0bd51215ffdd2f6bf9a61 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Thu, 31 Aug 2017 07:42:31 +0200
+Subject: wined3d: Track updates of vertex blend matrices separately.
+
+---
+ dlls/wined3d/glsl_shader.c     | 5 ++++-
+ dlls/wined3d/wined3d_private.h | 3 ++-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
+index a3050590dfb..31b892faf65 100644
+--- a/dlls/wined3d/glsl_shader.c
++++ b/dlls/wined3d/glsl_shader.c
+@@ -1508,6 +1508,8 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+         {
+             if (prog->vs.modelview_matrix_location[i] == -1)
+                 break;
++            if (!(update_mask & WINED3D_SHADER_CONST_FFP_VERTEXBLEND_INDEX(i)))
++                continue;
+ 
+             get_modelview_matrix(context, state, i, &mat);
+             GL_EXTCALL(glUniformMatrix4fv(prog->vs.modelview_matrix_location[i], 1, FALSE, &mat._11));
+@@ -11002,7 +11004,8 @@ static void glsl_vertex_pipe_world(struct wined3d_context *context,
+ static void glsl_vertex_pipe_vertexblend(struct wined3d_context *context,
+         const struct wined3d_state *state, DWORD state_id)
+ {
+-    context->constant_update_mask |= WINED3D_SHADER_CONST_FFP_VERTEXBLEND;
++    int i = state_id - STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(0));
++    context->constant_update_mask |= WINED3D_SHADER_CONST_FFP_VERTEXBLEND_INDEX(i);
+ }
+ 
+ static void glsl_vertex_pipe_view(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index a2be7326834..5089e6b8c32 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -435,13 +435,14 @@ enum wined3d_shader_resource_type
+ #define WINED3D_SHADER_CONST_PS_Y_CORR       0x00001000
+ #define WINED3D_SHADER_CONST_PS_NP2_FIXUP    0x00002000
+ #define WINED3D_SHADER_CONST_FFP_MODELVIEW   0x00004000
+-#define WINED3D_SHADER_CONST_FFP_VERTEXBLEND 0x00008000
+ #define WINED3D_SHADER_CONST_FFP_PROJ        0x00010000
+ #define WINED3D_SHADER_CONST_FFP_TEXMATRIX   0x00020000
+ #define WINED3D_SHADER_CONST_FFP_MATERIAL    0x00040000
+ #define WINED3D_SHADER_CONST_FFP_LIGHTS      0x00080000
+ #define WINED3D_SHADER_CONST_FFP_PS          0x00100000
+ #define WINED3D_SHADER_CONST_FFP_COLOR_KEY   0x00200000
++#define WINED3D_SHADER_CONST_FFP_VERTEXBLEND 0xff000000
++#define WINED3D_SHADER_CONST_FFP_VERTEXBLEND_INDEX(i) (0x01000000 << ((i) - 1))
+ 
+ enum wined3d_shader_register_type
+ {
+-- 
+2.14.1
+

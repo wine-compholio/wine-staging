@@ -1,0 +1,218 @@
+From 0b8b0f04a03d358ee4560502568a695641368812 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <gofmanp@gmail.com>
+Date: Sat, 26 Aug 2017 00:59:29 +0200
+Subject: wined3d: Implement hardware indexed vertex blending with 9 matrices.
+
+---
+ dlls/d3d9/tests/visual.c         |  2 +-
+ dlls/wined3d/glsl_shader.c       | 31 +++++++++++++++++++++----------
+ dlls/wined3d/utils.c             |  3 +++
+ dlls/wined3d/vertexdeclaration.c |  9 +++++++++
+ dlls/wined3d/wined3d_private.h   | 18 +++++++++++++++++-
+ 5 files changed, 51 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
+index 9b845b5ad44..3575b0be2e8 100644
+--- a/dlls/d3d9/tests/visual.c
++++ b/dlls/d3d9/tests/visual.c
+@@ -19844,7 +19844,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+     ok(SUCCEEDED(hr), "Failed to get device caps, hr %#x.\n", hr);
+     if (caps.MaxVertexBlendMatrixIndex < 7 || caps.MaxVertexBlendMatrices < 4)
+     {
+-        todo_wine win_skip("(%s) Too few vertex blend matrices supported: MaxVertexBlendMatrices=%u, MaxVertexBlendMatrixIndex=%u.\n",
++        win_skip("(%s) Too few vertex blend matrices supported: MaxVertexBlendMatrices=%u, MaxVertexBlendMatrixIndex=%u.\n",
+                 test_id_str, caps.MaxVertexBlendMatrices, caps.MaxVertexBlendMatrixIndex);
+         return;
+     }
+diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
+index 1aa23ee33ad..3e84ad0d717 100644
+--- a/dlls/wined3d/glsl_shader.c
++++ b/dlls/wined3d/glsl_shader.c
+@@ -144,7 +144,7 @@ struct glsl_vs_program
+     GLint uniform_b_locations[WINED3D_MAX_CONSTS_B];
+     GLint pos_fixup_location;
+ 
+-    GLint modelview_matrix_location[MAX_VERTEX_BLENDS];
++    GLint modelview_matrix_location[MAX_VERTEX_INDEX_BLENDS];
+     GLint projection_matrix_location;
+     GLint normal_matrix_location;
+     GLint texture_matrix_location[MAX_TEXTURES];
+@@ -1786,7 +1786,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+     {
+         struct wined3d_matrix mat;
+ 
+-        for (i = 1; i < MAX_VERTEX_BLENDS; ++i)
++        for (i = 1; i < MAX_VERTEX_INDEX_BLENDS; ++i)
+         {
+             if (prog->vs.modelview_matrix_location[i] == -1)
+                 break;
+@@ -8519,8 +8519,7 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+     {
+         {"vec4", "ffp_attrib_position"},        /* WINED3D_FFP_POSITION */
+         {"vec4", "ffp_attrib_blendweight"},     /* WINED3D_FFP_BLENDWEIGHT */
+-        /* TODO: Indexed vertex blending */
+-        {"float", ""},                          /* WINED3D_FFP_BLENDINDICES */
++        {"vec4", "ffp_attrib_blendindices"},    /* WINED3D_FFP_BLENDINDICES */
+         {"vec3", "ffp_attrib_normal"},          /* WINED3D_FFP_NORMAL */
+         {"float", "ffp_attrib_psize"},          /* WINED3D_FFP_PSIZE */
+         {"vec4", "ffp_attrib_diffuse"},         /* WINED3D_FFP_DIFFUSE */
+@@ -8532,6 +8531,7 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+     BOOL legacy_lighting = priv->legacy_lighting;
+     GLuint shader_obj;
+     unsigned int i;
++    char var[64];
+ 
+     string_buffer_clear(buffer);
+ 
+@@ -8550,7 +8550,7 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+     }
+     shader_addline(buffer, "\n");
+ 
+-    shader_addline(buffer, "uniform mat4 ffp_modelview_matrix[%u];\n", MAX_VERTEX_BLENDS);
++    shader_addline(buffer, "uniform mat4 ffp_modelview_matrix[%u];\n", MAX_VERTEX_INDEX_BLENDS);
+     shader_addline(buffer, "uniform mat4 ffp_projection_matrix;\n");
+     shader_addline(buffer, "uniform mat3 ffp_normal_matrix;\n");
+     shader_addline(buffer, "uniform mat4 ffp_texture_matrix[%u];\n", MAX_TEXTURES);
+@@ -8642,7 +8642,10 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+ 
+         shader_addline(buffer, "vec4 ec_pos = vec4(0.0);\n");
+         for (i = 0; i < settings->vertexblends + 1; ++i)
+-            shader_addline(buffer, "ec_pos += ffp_attrib_blendweight[%u] * (ffp_modelview_matrix[%u] * ffp_attrib_position);\n", i, i);
++        {
++            sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
++            shader_addline(buffer, "ec_pos += ffp_attrib_blendweight[%u] * (ffp_modelview_matrix[%s] * ffp_attrib_position);\n", i, var);
++        }
+ 
+         shader_addline(buffer, "gl_Position = ffp_projection_matrix * ec_pos;\n");
+         if (settings->clipping)
+@@ -8666,7 +8669,10 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+         else
+         {
+             for (i = 0; i < settings->vertexblends + 1; ++i)
+-                shader_addline(buffer, "normal += ffp_attrib_blendweight[%u] * (mat3(ffp_modelview_matrix[%u]) * ffp_attrib_normal);\n", i, i);
++            {
++                sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
++                shader_addline(buffer, "normal += ffp_attrib_blendweight[%u] * (mat3(ffp_modelview_matrix[%s]) * ffp_attrib_normal);\n", i, var);
++            }
+         }
+ 
+         if (settings->normalize)
+@@ -9539,7 +9545,7 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
+ 
+     vs->pos_fixup_location = GL_EXTCALL(glGetUniformLocation(program_id, "pos_fixup"));
+ 
+-    for (i = 0; i < MAX_VERTEX_BLENDS; ++i)
++    for (i = 0; i < MAX_VERTEX_INDEX_BLENDS; ++i)
+     {
+         string_buffer_sprintf(name, "ffp_modelview_matrix[%u]", i);
+         vs->modelview_matrix_location[i] = GL_EXTCALL(glGetUniformLocation(program_id, name->buffer));
+@@ -10114,7 +10120,7 @@ static void set_glsl_shader_program(const struct wined3d_context *context, const
+         entry->constant_update_mask |= WINED3D_SHADER_CONST_FFP_MODELVIEW
+                 | WINED3D_SHADER_CONST_FFP_PROJ;
+ 
+-        for (i = 1; i < MAX_VERTEX_BLENDS; ++i)
++        for (i = 1; i < MAX_VERTEX_INDEX_BLENDS; ++i)
+         {
+             if (entry->vs.modelview_matrix_location[i] != -1)
+             {
+@@ -11076,7 +11082,7 @@ static void glsl_vertex_pipe_vp_get_caps(const struct wined3d_gl_info *gl_info,
+     caps->ffp_generic_attributes = TRUE;
+     caps->max_active_lights = MAX_ACTIVE_LIGHTS;
+     caps->max_vertex_blend_matrices = MAX_VERTEX_BLENDS;
+-    caps->max_vertex_blend_matrix_index = 0;
++    caps->max_vertex_blend_matrix_index = MAX_VERTEX_INDEX_BLENDS - 1;
+     caps->vertex_processing_caps = WINED3DVTXPCAPS_TEXGEN
+             | WINED3DVTXPCAPS_MATERIALSOURCE7
+             | WINED3DVTXPCAPS_VERTEXFOG
+@@ -11494,6 +11500,11 @@ static const struct StateEntryTemplate glsl_vertex_pipe_vp_states[] =
+     {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(1)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(1)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
+     {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(2)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(2)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
+     {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(3)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(3)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
++    {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(4)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(4)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
++    {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(5)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(5)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
++    {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(6)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(6)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
++    {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(7)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(7)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
++    {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(8)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(8)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
+     {STATE_TEXTURESTAGE(0, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), {STATE_TEXTURESTAGE(0, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), glsl_vertex_pipe_texmatrix}, WINED3D_GL_EXT_NONE       },
+     {STATE_TEXTURESTAGE(1, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), {STATE_TEXTURESTAGE(1, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), glsl_vertex_pipe_texmatrix}, WINED3D_GL_EXT_NONE       },
+     {STATE_TEXTURESTAGE(2, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), {STATE_TEXTURESTAGE(2, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), glsl_vertex_pipe_texmatrix}, WINED3D_GL_EXT_NONE       },
+diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
+index 5e29e7cd7a5..847429511b9 100644
+--- a/dlls/wined3d/utils.c
++++ b/dlls/wined3d/utils.c
+@@ -5810,6 +5810,9 @@ void wined3d_ffp_get_vs_settings(const struct wined3d_context *context,
+             break;
+     }
+ 
++    if (use_indexed_vertex_blending(state, si))
++        settings->vb_indices = 1;
++
+     settings->clipping = state->render_states[WINED3D_RS_CLIPPING]
+             && state->render_states[WINED3D_RS_CLIPPLANEENABLE];
+     settings->normal = !!(si->use_map & (1u << WINED3D_FFP_NORMAL));
+diff --git a/dlls/wined3d/vertexdeclaration.c b/dlls/wined3d/vertexdeclaration.c
+index 4fa6d54c37d..c6ab0ea09c9 100644
+--- a/dlls/wined3d/vertexdeclaration.c
++++ b/dlls/wined3d/vertexdeclaration.c
+@@ -119,6 +119,15 @@ static BOOL declaration_element_valid_ffp(const struct wined3d_vertex_element *e
+                     return FALSE;
+             }
+ 
++        case WINED3D_DECL_USAGE_BLEND_INDICES:
++            switch(element->format)
++            {
++                case WINED3DFMT_R8G8B8A8_UINT:
++                    return TRUE;
++                default:
++                    return FALSE;
++            }
++
+         case WINED3D_DECL_USAGE_NORMAL:
+             switch(element->format)
+             {
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 2c40b2d9838..7c20934ad40 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -272,6 +272,7 @@ static inline enum complex_fixup get_complex_fixup(struct color_fixup_desc fixup
+ #define MAX_UNORDERED_ACCESS_VIEWS  8
+ #define MAX_TGSM_REGISTERS          8192
+ #define MAX_VERTEX_BLENDS           4
++#define MAX_VERTEX_INDEX_BLENDS     9
+ #define MAX_MULTISAMPLE_TYPES       8
+ #define MAX_RENDER_TARGETS          8
+ 
+@@ -2723,7 +2724,8 @@ struct wined3d_ffp_vs_settings
+     DWORD ortho_fog       : 1;
+     DWORD flatshading     : 1;
+     DWORD swizzle_map     : 16; /* MAX_ATTRIBS, 16 */
+-    DWORD padding         : 2;
++    DWORD vb_indices      : 1;
++    DWORD padding         : 1;
+ 
+     DWORD texgen[MAX_TEXTURES];
+ };
+@@ -4299,6 +4301,20 @@ static inline void *wined3d_calloc(SIZE_T count, SIZE_T size)
+     return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, count * size);
+ }
+ 
++static inline BOOL use_indexed_vertex_blending(const struct wined3d_state *state, const struct wined3d_stream_info *si)
++{
++    if (!state->render_states[WINED3D_RS_INDEXEDVERTEXBLENDENABLE])
++        return FALSE;
++
++    if (state->render_states[WINED3D_RS_VERTEXBLEND] == WINED3D_VBF_DISABLE)
++        return FALSE;
++
++    if (!(si->use_map & (1 << WINED3D_FFP_BLENDINDICES)) || !(si->use_map & (1 << WINED3D_FFP_BLENDWEIGHT)))
++        return FALSE;
++
++    return TRUE;
++}
++
+ static inline BOOL use_vs(const struct wined3d_state *state)
+ {
+     /* Check state->vertex_declaration to allow this to be used before the
+-- 
+2.14.1
+

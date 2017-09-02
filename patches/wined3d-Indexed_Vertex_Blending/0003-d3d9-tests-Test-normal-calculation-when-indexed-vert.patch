@@ -1,0 +1,221 @@
+From ca7e96f08d1a718817dcb6f0527a5348161daf82 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 31 Aug 2017 00:23:43 +0200
+Subject: d3d9/tests: Test normal calculation when indexed vertex blending is
+ enabled.
+
+---
+ dlls/d3d9/tests/visual.c | 115 ++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 93 insertions(+), 22 deletions(-)
+
+diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
+index 3575b0be2e8..863a3c513de 100644
+--- a/dlls/d3d9/tests/visual.c
++++ b/dlls/d3d9/tests/visual.c
+@@ -19717,6 +19717,7 @@ done:
+ 
+ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char *test_id_str)
+ {
++    IDirect3DPixelShader9 *ps;
+     D3DCAPS9 caps;
+     D3DCOLOR color;
+     HRESULT hr;
+@@ -19733,31 +19734,49 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+     {{{
+          1.0f, 0.0f, 0.0f, 0.0f,
+          0.0f, 1.0f, 0.0f, 0.0f,
+-         0.0f, 0.0f, 1.0f, 0.0f,
++         0.0f, 0.0f, 2.0f, 0.0f,
+         -4.0f, 4.0f, 0.0f, 1.0f
+     }}},
+     lower_left =
+     {{{
+          1.0f,  0.0f, 0.0f, 0.0f,
+          0.0f,  1.0f, 0.0f, 0.0f,
+-         0.0f,  0.0f, 1.0f, 0.0f,
++         0.0f,  0.0f, 2.0f, 0.0f,
+         -4.0f, -4.0f, 0.0f, 1.0f
+     }}},
+     upper_right =
+     {{{
+         1.0f, 0.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f, 0.0f,
+-        0.0f, 0.0f, 1.0f, 0.0f,
++        0.0f, 0.0f, 2.0f, 0.0f,
+         4.0f, 4.0f, 0.0f, 1.0f
+     }}},
+     lower_right =
+     {{{
+         1.0f,  0.0f, 0.0f, 0.0f,
+         0.0f,  1.0f, 0.0f, 0.0f,
+-        0.0f,  0.0f, 1.0f, 0.0f,
++        0.0f,  0.0f, 2.0f, 0.0f,
+         4.0f, -4.0f, 0.0f, 1.0f
++    }}},
++    identity =
++    {{{
++        1.0f,  0.0f, 0.0f, 0.0f,
++        0.0f,  1.0f, 0.0f, 0.0f,
++        0.0f,  0.0f, 1.0f, 0.0f,
++        0.0f,  0.0f, 0.0f, 1.0f
+     }}};
+ 
++    static const DWORD normal_ps[] =
++    {
++        0xffff0200,                                                             /* ps_2_0               */
++        0x05000051, 0xa00f0000, 0x3f800000, 0x00000000, 0x00000000, 0x00000000, /* def c0, 1, 0, 0, 0   */
++        0x0200001f, 0x80000000, 0xb0070000,                                     /* dcl t0.xyz           */
++        0x02000001, 0x80170000, 0xb0e40000,                                     /* mov_sat r0.xyz, t0   */
++        0x02000001, 0x80080000, 0xa0000000,                                     /* mov r0.w, c0.x       */
++        0x02000001, 0x800f0800, 0x80e40000,                                     /* mov oC0, r0          */
++        0x0000ffff,                                                             /* end                  */
++    };
++
+     static const POINT quad_upper_right_points[] =
+     {
+         {576, 48}, {-1, -1},
+@@ -19798,6 +19817,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+             struct vec3 position;
+             struct vec3 blendweights;
+             DWORD matrixIndices;
++            struct vec3 normal;
+         }
+         vertex_data[4];
+         const POINT *quad_points;
+@@ -19807,34 +19827,34 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+     {
+         /* upper right */
+         {
+-            {{{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405},
+-             {{-1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405},
+-             {{ 1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405},
+-             {{ 1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405}},
++            {{{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{-1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}}},
+             quad_upper_right_points, quad_upper_right_empty_points
+         },
+         /* center */
+         {
+-            {{{-1.0f, -1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405},
+-             {{-1.0f,  1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405},
+-             {{ 1.0f, -1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405},
+-             {{ 1.0f,  1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405}},
++            {{{-1.0f, -1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{-1.0f,  1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f, -1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f,  1.0f, 0.0f}, {0.25f, 0.25f, 0.25f}, 0x06070405, {0.0f, 0.0f, 1.0f}}},
+             quad_center_points, quad_center_empty_points
+         },
+         /*  upper center */
+         {
+-            {{{-1.0f, -1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405},
+-             {{-1.0f,  1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405},
+-             {{ 1.0f, -1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405},
+-             {{ 1.0f,  1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405}},
++            {{{-1.0f, -1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{-1.0f,  1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f, -1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f,  1.0f, 0.0f}, {0.5f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}}},
+             quad_upper_center_points, quad_upper_center_empty_points
+         },
+         /*  full screen */
+         {
+-            {{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, 0x06070405},
+-             {{-1.0f,  1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, 0x06070405},
+-             {{ 1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, 0x06070405},
+-             {{ 1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405}},
++            {{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{-1.0f,  1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}},
++             {{ 1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0x06070405, {0.0f, 0.0f, 1.0f}}},
+             quad_fullscreen_points, quad_fullscreen_empty_points
+         }
+     };
+@@ -19869,21 +19889,32 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+     ok(hr == D3D_OK, "(%s) IDirect3DDevice9_SetRenderState D3DRS_INDEXEDVERTEXBLENDENABLE failed %08x.\n",
+             test_id_str, hr);
+ 
++    hr = IDirect3DDevice9_SetTextureStageState(device, 0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACENORMAL | 1);
++    ok(hr == D3D_OK, "(%s) IDirect3DDevice9_SetTextureStageState failed %08x.\n", test_id_str, hr);
++    hr = IDirect3DDevice9_SetTransform(device, D3DTS_TEXTURE0, &identity);
++    ok(hr == D3D_OK, "(%s) IDirect3DDevice9_SetTransform returned %08x.\n", test_id_str, hr);
++
++    hr = IDirect3DDevice9_CreatePixelShader(device, normal_ps, &ps);
++    ok(hr == D3D_OK, "(%s) IDirect3DDevice9_CreatePixelShader failed %08x.\n", test_id_str, hr);
++
+     for (i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
+     {
+         const POINT *point;
+ 
++        hr = IDirect3DDevice9_SetPixelShader(device, NULL);
++        ok(hr == D3D_OK, "(%s) IDirect3DDevice9_SetPixelShader failed %08x.\n", test_id_str, hr);
++
+         hr = IDirect3DDevice9_Clear(device, 0, NULL, D3DCLEAR_TARGET, 0xff000000, 0.0, 0);
+         ok(SUCCEEDED(hr), "Failed to clear, hr %08x.\n", hr);
+ 
+         hr = IDirect3DDevice9_BeginScene(device);
+         ok(SUCCEEDED(hr), "Failed to begin scene, hr %#x.\n", hr);
+ 
+-        hr = IDirect3DDevice9_SetFVF(device, D3DFVF_XYZB4 | D3DFVF_LASTBETA_UBYTE4);
++        hr = IDirect3DDevice9_SetFVF(device, D3DFVF_XYZB4 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL);
+         ok(SUCCEEDED(hr), "(%s) Failed to set FVF, hr %#x.\n", test_id_str, hr);
+ 
+         hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLESTRIP, 2, tests[i].vertex_data,
+-                6 * sizeof(float) + sizeof(DWORD));
++                9 * sizeof(float) + sizeof(DWORD));
+         ok(SUCCEEDED(hr), "Failed to draw, hr %#x.\n", hr);
+ 
+         hr = IDirect3DDevice9_EndScene(device);
+@@ -19907,7 +19938,47 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+ 
+         hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
+         ok(SUCCEEDED(hr), "Failed to present, hr %#x.\n", hr);
++
++        hr = IDirect3DDevice9_SetPixelShader(device, ps);
++        ok(hr == D3D_OK, "(%s) IDirect3DDevice9_SetPixelShader failed %08x.\n", test_id_str, hr);
++
++        hr = IDirect3DDevice9_Clear(device, 0, NULL, D3DCLEAR_TARGET, 0xff000000, 0.0, 0);
++        ok(SUCCEEDED(hr), "Failed to clear %08x.\n", hr);
++
++        hr = IDirect3DDevice9_BeginScene(device);
++        ok(SUCCEEDED(hr), "Failed to begin scene, hr %#x.\n", hr);
++
++        hr = IDirect3DDevice9_SetFVF(device, D3DFVF_XYZB4 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL);
++        ok(SUCCEEDED(hr), "(%s) Failed to set FVF, hr %#x.\n", test_id_str, hr);
++
++        hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLESTRIP, 2, tests[i].vertex_data,
++                9 * sizeof(float) + sizeof(DWORD));
++        ok(SUCCEEDED(hr), "Failed to draw, hr %#x.\n", hr);
++
++        hr = IDirect3DDevice9_EndScene(device);
++        ok(SUCCEEDED(hr), "Failed to end scene, hr %#x.\n", hr);
++
++        point = tests[i].quad_points;
++        while (point->x != -1 && point->y != -1)
++        {
++            color = getPixelColor(device, point->x, point->y);
++            todo_wine ok(color_match(color, 0x0000007f, 1), "(%s) Expected color 0x0000007f at %dx%d, got 0x%08x.\n", test_id_str, point->x, point->y, color);
++            ++point;
++        }
++
++        point = tests[i].empty_points;
++        while (point->x != -1 && point->y != -1)
++        {
++            color = getPixelColor(device, point->x, point->y);
++            ok(color_match(color, 0x00000000, 1), "(%s) Expected color 0x00000000 at %dx%d, got 0x%08x", test_id_str, point->x, point->y, color);
++            ++point;
++        }
++
++        hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
++        ok(SUCCEEDED(hr), "Failed to present, hr %#x.\n", hr);
+     }
++
++    IDirect3DVertexShader9_Release(ps);
+ }
+ 
+ static void test_indexed_vertex_blending(void)
+-- 
+2.14.1
+

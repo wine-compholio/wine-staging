@@ -1,0 +1,310 @@
+From 97d6b11b95d8cdcc0d777b11f6f00e9d6054adfb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 31 Aug 2017 01:26:38 +0200
+Subject: wined3d: Implement software processing for indexed vertex blending.
+
+---
+ dlls/wined3d/device.c          |  16 ------
+ dlls/wined3d/drawprim.c        | 107 +++++++++++++++++++++++++++++++++++++++--
+ dlls/wined3d/glsl_shader.c     |  32 ++++++++----
+ dlls/wined3d/utils.c           |   7 ++-
+ dlls/wined3d/wined3d_private.h |  16 +++++-
+ 5 files changed, 148 insertions(+), 30 deletions(-)
+
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index d3ee3b0a839..31c7ea431d8 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3963,31 +3963,15 @@ HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device
+ 
+ void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *device, BOOL software)
+ {
+-    static BOOL warned;
+-
+     TRACE("device %p, software %#x.\n", device, software);
+ 
+-    if (!warned)
+-    {
+-        FIXME("device %p, software %#x stub!\n", device, software);
+-        warned = TRUE;
+-    }
+-
+     device->softwareVertexProcessing = software;
+ }
+ 
+ BOOL CDECL wined3d_device_get_software_vertex_processing(const struct wined3d_device *device)
+ {
+-    static BOOL warned;
+-
+     TRACE("device %p.\n", device);
+ 
+-    if (!warned)
+-    {
+-        TRACE("device %p stub!\n", device);
+-        warned = TRUE;
+-    }
+-
+     return device->softwareVertexProcessing;
+ }
+ 
+diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
+index 51460e54d1a..6adb7934134 100644
+--- a/dlls/wined3d/drawprim.c
++++ b/dlls/wined3d/drawprim.c
+@@ -200,6 +200,101 @@ static void draw_primitive_arrays_indirect(struct wined3d_context *context, cons
+     checkGLcall("draw indirect");
+ }
+ 
++static const BYTE *software_vertex_blending(struct wined3d_context *context,
++        const struct wined3d_state *state, const struct wined3d_stream_info *si,
++        unsigned int element_idx, unsigned int stride_idx, float *result)
++{
++#define SI_FORMAT(idx) (si->elements[(idx)].format->emit_idx)
++#define SI_PTR(idx1, idx2) (si->elements[(idx1)].data.addr + si->elements[(idx1)].stride * (idx2))
++
++    const float *data = (const float *)SI_PTR(element_idx, stride_idx);
++    float vector[4] = {0.0f, 0.0f, 0.0f, 1.0f};
++    float cur_weight, weight_sum = 0.0f;
++    struct wined3d_matrix m;
++    const BYTE *blend_index;
++    const float *weights;
++    int i, num_weights;
++
++    if (element_idx != WINED3D_FFP_POSITION && element_idx != WINED3D_FFP_NORMAL)
++        return (BYTE *)data;
++
++    if (!use_indexed_vertex_blending(state, si) || !use_software_vertex_processing(context->device))
++        return (BYTE *)data;
++
++    if (!si->elements[WINED3D_FFP_BLENDINDICES].data.addr ||
++        !si->elements[WINED3D_FFP_BLENDWEIGHT].data.addr)
++    {
++        FIXME("no blend indices / weights set\n");
++        return (BYTE *)data;
++    }
++
++    if (SI_FORMAT(WINED3D_FFP_BLENDINDICES) != WINED3D_FFP_EMIT_UBYTE4)
++    {
++        FIXME("unsupported blend index format: %u\n", SI_FORMAT(WINED3D_FFP_BLENDINDICES));
++        return (BYTE *)data;
++    }
++
++    /* FIXME: validate weight format */
++    switch (state->render_states[WINED3D_RS_VERTEXBLEND])
++    {
++        case WINED3D_VBF_0WEIGHTS: num_weights = 0; break;
++        case WINED3D_VBF_1WEIGHTS: num_weights = 1; break;
++        case WINED3D_VBF_2WEIGHTS: num_weights = 2; break;
++        case WINED3D_VBF_3WEIGHTS: num_weights = 3; break;
++        default:
++            FIXME("unsupported vertex blend render state: %u\n", state->render_states[WINED3D_RS_VERTEXBLEND]);
++            return (BYTE *)data;
++    }
++
++    switch (SI_FORMAT(element_idx))
++    {
++        case WINED3D_FFP_EMIT_FLOAT4: vector[3] = data[3];
++        case WINED3D_FFP_EMIT_FLOAT3: vector[2] = data[2];
++        case WINED3D_FFP_EMIT_FLOAT2: vector[1] = data[1];
++        case WINED3D_FFP_EMIT_FLOAT1: vector[0] = data[0]; break;
++        default:
++            FIXME("unsupported value format: %u\n", SI_FORMAT(element_idx));
++            return (BYTE *)data;
++    }
++
++    blend_index = SI_PTR(WINED3D_FFP_BLENDINDICES, stride_idx);
++    weights = (const float *)SI_PTR(WINED3D_FFP_BLENDWEIGHT, stride_idx);
++    result[0] = result[1] = result[2] = result[3] = 0.0f;
++
++    for (i = 0; i < num_weights + 1; i++)
++    {
++        cur_weight = (i < num_weights) ? weights[i] : 1.0f - weight_sum;
++        get_modelview_matrix(context, state, blend_index[i], &m);
++
++        if (element_idx == WINED3D_FFP_POSITION)
++        {
++            result[0] += cur_weight * (vector[0] * m._11 + vector[1] * m._21 + vector[2] * m._31 + vector[3] * m._41);
++            result[1] += cur_weight * (vector[0] * m._12 + vector[1] * m._22 + vector[2] * m._32 + vector[3] * m._42);
++            result[2] += cur_weight * (vector[0] * m._13 + vector[1] * m._23 + vector[2] * m._33 + vector[3] * m._43);
++            result[3] += cur_weight * (vector[0] * m._14 + vector[1] * m._24 + vector[2] * m._34 + vector[3] * m._44);
++        }
++        else
++        {
++            if (context->d3d_info->wined3d_creation_flags & WINED3D_LEGACY_FFP_LIGHTING)
++                invert_matrix_3d(&m, &m);
++            else
++                invert_matrix(&m, &m);
++
++            /* multiply with transposed M */
++            result[0] += cur_weight * (vector[0] * m._11 + vector[1] * m._12 + vector[2] * m._13);
++            result[1] += cur_weight * (vector[0] * m._21 + vector[1] * m._22 + vector[2] * m._23);
++            result[2] += cur_weight * (vector[0] * m._31 + vector[1] * m._32 + vector[2] * m._33);
++        }
++
++        weight_sum += weights[i];
++    }
++
++#undef SI_FORMAT
++#undef SI_PTR
++
++    return (BYTE *)result;
++}
++
+ static unsigned int get_stride_idx(const void *idx_data, unsigned int idx_size,
+         unsigned int base_vertex_idx, unsigned int start_idx, unsigned int vertex_idx)
+ {
+@@ -228,6 +323,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+     BOOL specular_fog = FALSE;
+     BOOL ps = use_ps(state);
+     const void *ptr;
++    float tmp[4];
+ 
+     static unsigned int once;
+ 
+@@ -264,7 +360,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+                 if (!(use_map & 1u << element_idx))
+                     continue;
+ 
+-                ptr = si->elements[element_idx].data.addr + si->elements[element_idx].stride * stride_idx;
++                ptr = software_vertex_blending(context, state, si, element_idx, stride_idx, tmp);
+                 ops->generic[si->elements[element_idx].format->emit_idx](element_idx, ptr);
+             }
+         }
+@@ -376,7 +472,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+ 
+         if (normal)
+         {
+-            ptr = normal + stride_idx * si->elements[WINED3D_FFP_NORMAL].stride;
++            ptr = software_vertex_blending(context, state, si, WINED3D_FFP_NORMAL, stride_idx, tmp);
+             ops->normal[si->elements[WINED3D_FFP_NORMAL].format->emit_idx](ptr);
+         }
+ 
+@@ -421,7 +517,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+ 
+         if (position)
+         {
+-            ptr = position + stride_idx * si->elements[WINED3D_FFP_POSITION].stride;
++            ptr = software_vertex_blending(context, state, si, WINED3D_FFP_POSITION, stride_idx, tmp);
+             ops->position[si->elements[WINED3D_FFP_POSITION].format->emit_idx](ptr);
+         }
+     }
+@@ -636,6 +732,11 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
+                 WARN_(d3d_perf)("Using software emulation because manual fog coordinates are provided.\n");
+             emulation = TRUE;
+         }
++        else if (use_indexed_vertex_blending(state, stream_info) && use_software_vertex_processing(context->device))
++        {
++            WARN_(d3d_perf)("Using software emulation because application requested SVP.\n");
++            emulation = TRUE;
++        }
+ 
+         if (emulation)
+         {
+diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
+index aaca2f63441..a3050590dfb 100644
+--- a/dlls/wined3d/glsl_shader.c
++++ b/dlls/wined3d/glsl_shader.c
+@@ -8359,14 +8359,21 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+     }
+     else
+     {
+-        for (i = 0; i < settings->vertexblends; ++i)
+-            shader_addline(buffer, "ffp_attrib_blendweight[%u] -= ffp_attrib_blendweight[%u];\n", settings->vertexblends, i);
++        if (!settings->sw_blending)
++        {
++            for (i = 0; i < settings->vertexblends; ++i)
++                shader_addline(buffer, "ffp_attrib_blendweight[%u] -= ffp_attrib_blendweight[%u];\n", settings->vertexblends, i);
+ 
+-        shader_addline(buffer, "vec4 ec_pos = vec4(0.0);\n");
+-        for (i = 0; i < settings->vertexblends + 1; ++i)
++            shader_addline(buffer, "vec4 ec_pos = vec4(0.0);\n");
++            for (i = 0; i < settings->vertexblends + 1; ++i)
++            {
++                sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
++                shader_addline(buffer, "ec_pos += ffp_attrib_blendweight[%u] * (ffp_modelview_matrix[%s] * ffp_attrib_position);\n", i, var);
++            }
++        }
++        else
+         {
+-            sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
+-            shader_addline(buffer, "ec_pos += ffp_attrib_blendweight[%u] * (ffp_modelview_matrix[%s] * ffp_attrib_position);\n", i, var);
++            shader_addline(buffer, "vec4 ec_pos = ffp_attrib_position;\n");
+         }
+ 
+         shader_addline(buffer, "gl_Position = ffp_projection_matrix * ec_pos;\n");
+@@ -8384,10 +8391,17 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+     shader_addline(buffer, "vec3 normal = vec3(0.0);\n");
+     if (settings->normal)
+     {
+-        for (i = 0; i < settings->vertexblends + 1; ++i)
++        if (!settings->sw_blending)
++        {
++            for (i = 0; i < settings->vertexblends + 1; ++i)
++            {
++                sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
++                shader_addline(buffer, "normal += ffp_attrib_blendweight[%u] * (ffp_normal_matrix[%s] * ffp_attrib_normal);\n", i, var);
++            }
++        }
++        else
+         {
+-            sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
+-            shader_addline(buffer, "normal += ffp_attrib_blendweight[%u] * (ffp_normal_matrix[%s] * ffp_attrib_normal);\n", i, var);
++            shader_addline(buffer, "normal = ffp_attrib_normal;\n");
+         }
+ 
+         if (settings->normalize)
+diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
+index b2effb5c2ec..438dfc6fef3 100644
+--- a/dlls/wined3d/utils.c
++++ b/dlls/wined3d/utils.c
+@@ -6086,7 +6086,12 @@ void wined3d_ffp_get_vs_settings(const struct wined3d_context *context,
+     }
+ 
+     if (use_indexed_vertex_blending(state, si))
+-        settings->vb_indices = 1;
++    {
++        if (use_software_vertex_processing(context->device))
++            settings->sw_blending = 1;
++        else
++            settings->vb_indices = 1;
++    }
+ 
+     settings->clipping = state->render_states[WINED3D_RS_CLIPPING]
+             && state->render_states[WINED3D_RS_CLIPPLANEENABLE];
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 08f4f01f7e6..a2be7326834 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -2725,7 +2725,7 @@ struct wined3d_ffp_vs_settings
+     DWORD flatshading     : 1;
+     DWORD swizzle_map     : 16; /* MAX_ATTRIBS, 16 */
+     DWORD vb_indices      : 1;
+-    DWORD padding         : 1;
++    DWORD sw_blending     : 1;
+ 
+     DWORD texgen[MAX_TEXTURES];
+ };
+@@ -4317,6 +4317,20 @@ static inline BOOL use_indexed_vertex_blending(const struct wined3d_state *state
+     return TRUE;
+ }
+ 
++static inline BOOL use_software_vertex_processing(const struct wined3d_device *device)
++{
++    if (device->shader_backend != &glsl_shader_backend)
++        return FALSE;
++
++    if (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
++        return TRUE;
++
++    if (!(device->create_parms.flags & WINED3DCREATE_MIXED_VERTEXPROCESSING))
++        return FALSE;
++
++    return device->softwareVertexProcessing;
++}
++
+ static inline BOOL use_vs(const struct wined3d_state *state)
+ {
+     /* Check state->vertex_declaration to allow this to be used before the
+-- 
+2.14.1
+

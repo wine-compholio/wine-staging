@@ -1,0 +1,76 @@
+From 405f1ca63e69fb5d9143ea26ec375ffef815e0a5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 31 Aug 2017 01:54:22 +0200
+Subject: wined3d: Report correct number of blend matrices when software vertex
+ processing is used.
+
+---
+ dlls/d3d9/tests/visual.c | 4 ++--
+ dlls/wined3d/device.c    | 9 ++++++++-
+ dlls/wined3d/directx.c   | 5 ++++-
+ 3 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
+index e7e6cf6e9e9..1c219ab7cf4 100644
+--- a/dlls/d3d9/tests/visual.c
++++ b/dlls/d3d9/tests/visual.c
+@@ -20021,7 +20021,7 @@ static void test_indexed_vertex_blending(void)
+         memset(&caps, 0, sizeof(caps));
+         hr = IDirect3DDevice9_GetDeviceCaps(device, &caps);
+         ok(SUCCEEDED(hr), "Failed to get device caps, hr %#x.\n", hr);
+-        todo_wine ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
++        ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
+                 caps.MaxVertexBlendMatrixIndex);
+ 
+         do_test_indexed_vertex_blending(device,"IVB software");
+@@ -20047,7 +20047,7 @@ static void test_indexed_vertex_blending(void)
+         memset(&caps, 0, sizeof(caps));
+         hr = IDirect3DDevice9_GetDeviceCaps(device, &caps);
+         ok(SUCCEEDED(hr), "Failed to get device caps, hr %#x.\n", hr);
+-        todo_wine ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
++        ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
+                 caps.MaxVertexBlendMatrixIndex);
+ 
+         hr = IDirect3DDevice9_SetSoftwareVertexProcessing(device, FALSE);
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 31c7ea431d8..6b92bc679c2 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -3530,10 +3530,17 @@ struct wined3d_texture * CDECL wined3d_device_get_texture(const struct wined3d_d
+ 
+ HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device, WINED3DCAPS *caps)
+ {
++    HRESULT hr;
++
+     TRACE("device %p, caps %p.\n", device, caps);
+ 
+-    return wined3d_get_device_caps(device->wined3d, device->adapter->ordinal,
++    hr = wined3d_get_device_caps(device->wined3d, device->adapter->ordinal,
+             device->create_parms.device_type, caps);
++
++    if (SUCCEEDED(hr) && use_software_vertex_processing(device))
++        caps->MaxVertexBlendMatrixIndex = 255;
++
++    return hr;
+ }
+ 
+ HRESULT CDECL wined3d_device_get_display_mode(const struct wined3d_device *device, UINT swapchain_idx,
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index a34ead003cc..fe12e81b915 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -5981,7 +5981,10 @@ HRESULT CDECL wined3d_get_device_caps(const struct wined3d *wined3d, UINT adapte
+     caps->MaxUserClipPlanes                = vertex_caps.max_user_clip_planes;
+     caps->MaxActiveLights                  = vertex_caps.max_active_lights;
+     caps->MaxVertexBlendMatrices           = vertex_caps.max_vertex_blend_matrices;
+-    caps->MaxVertexBlendMatrixIndex        = vertex_caps.max_vertex_blend_matrix_index;
++    if (device_type == WINED3D_DEVICE_TYPE_HAL)
++        caps->MaxVertexBlendMatrixIndex    = vertex_caps.max_vertex_blend_matrix_index;
++    else
++        caps->MaxVertexBlendMatrixIndex    = 255;
+     caps->VertexProcessingCaps             = vertex_caps.vertex_processing_caps;
+     caps->FVFCaps                          = vertex_caps.fvf_caps;
+     caps->RasterCaps                      |= vertex_caps.raster_caps;
+-- 
+2.14.1
+

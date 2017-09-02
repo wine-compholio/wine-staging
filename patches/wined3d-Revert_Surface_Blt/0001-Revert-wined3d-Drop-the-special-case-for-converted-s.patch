@@ -1,0 +1,35 @@
+From 82328a507f971e459e0a005b4f9975388a136ac3 Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Fri, 1 Sep 2017 05:08:54 +0200
+Subject: Revert "wined3d: Drop the special case for "converted" surfaces in
+ wined3d_surface_blt()."
+
+This reverts commit 56128d18d4dfcd306beda6aacb69836938c1a2bf.
+---
+ dlls/wined3d/surface.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
+index e90ef042323..aacdb07ad4a 100644
+--- a/dlls/wined3d/surface.c
++++ b/dlls/wined3d/surface.c
+@@ -3778,6 +3778,16 @@ HRESULT wined3d_surface_blt(struct wined3d_surface *dst_surface, const RECT *dst
+         goto cpu;
+     }
+ 
++    /* We want to avoid invalidating the sysmem location for converted
++     * surfaces, since otherwise we'd have to convert the data back when
++     * locking them. */
++    if (dst_texture->flags & WINED3D_TEXTURE_CONVERTED || dst_texture->resource.format->convert
++            || wined3d_format_get_color_key_conversion(dst_texture, TRUE))
++    {
++        WARN_(d3d_perf)("Converted surface, using CPU blit.\n");
++        goto cpu;
++    }
++
+     if (flags & ~simple_blit)
+     {
+         WARN_(d3d_perf)("Using fallback for complex blit (%#x).\n", flags);
+-- 
+2.14.1
+

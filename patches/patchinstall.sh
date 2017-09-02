@@ -455,6 +455,7 @@ patch_enable_all ()
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
+	enable_wined3d_Revert_Surface_Blt="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_Viewports="$1"
@@ -1639,6 +1640,9 @@ patch_enable ()
 			;;
 		wined3d-Revert_Buffer_Upload)
 			enable_wined3d_Revert_Buffer_Upload="$2"
+			;;
+		wined3d-Revert_Surface_Blt)
+			enable_wined3d_Revert_Surface_Blt="$2"
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
@@ -9750,6 +9754,18 @@ if test "$enable_wined3d_Limit_Vram" -eq 1; then
 	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Revert_Surface_Blt
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_Revert_Surface_Blt" -eq 1; then
+	patch_apply wined3d-Revert_Surface_Blt/0001-Revert-wined3d-Drop-the-special-case-for-converted-s.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Drop the special case for \"converted\" surfaces in wined3d_surface_blt().\".", 1 },';
 	) >> "$patchlist"
 fi
 

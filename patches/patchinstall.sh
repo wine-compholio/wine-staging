@@ -9807,6 +9807,9 @@ fi
 
 # Patchset wined3d-Revert_Surface_Blt
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43627] Revert patch which causes rendering issue in AoE2
+# |
 # | Modified files:
 # |   *	dlls/wined3d/surface.c
 # |

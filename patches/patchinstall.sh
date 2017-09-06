@@ -3798,6 +3798,24 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0019-d3d11-Implement-HSSetSamplers-for-deferred-contexts.patch
 	patch_apply d3d11-Deferred_Context/0020-d3d11-Implement-VSSetSamplers-for-deferred-contexts.patch
 	patch_apply d3d11-Deferred_Context/0021-d3d11-Implement-Begin-and-End-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0022-d3d11-Implement-CopyResource-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0023-d3d11-Implement-SetResourceMinLOD-for-deferred-conte.patch
+	patch_apply d3d11-Deferred_Context/0024-d3d11-Implement-CopySubresourceRegion-for-deferred-c.patch
+	patch_apply d3d11-Deferred_Context/0025-d3d11-Implement-ResolveSubresource-for-deferred-cont.patch
+	patch_apply d3d11-Deferred_Context/0026-d3d11-Implement-CopyStructureCount-for-deferred-cont.patch
+	patch_apply d3d11-Deferred_Context/0027-d3d11-Implement-DrawAuto-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0028-d3d11-Implement-DrawInstanced-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0029-d3d11-Implement-DrawInstancedIndirect-for-deferred-c.patch
+	patch_apply d3d11-Deferred_Context/0030-d3d11-Implement-DrawIndexedInstancedIndirect-for-def.patch
+	patch_apply d3d11-Deferred_Context/0031-d3d11-Implement-ClearUnorderedAccessViewUint-for-def.patch
+	patch_apply d3d11-Deferred_Context/0032-d3d11-Implement-ClearUnorderedAccessViewFloat-for-de.patch
+	patch_apply d3d11-Deferred_Context/0033-d3d11-Implement-RsSetScissorRects-for-deferred-conte.patch
+	patch_apply d3d11-Deferred_Context/0034-d3d11-Implement-OMSetRenderTargetsAndUnorderedAccess.patch
+	patch_apply d3d11-Deferred_Context/0035-d3d11-Implement-SOSetTargets-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0036-d3d11-Implement-GenerateMips-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0037-d3d11-Implement-DispatchIndirect-for-deferred-contex.patch
+	patch_apply d3d11-Deferred_Context/0038-d3d11-Implement-SetPredication-for-deferred-contexts.patch
+	patch_apply d3d11-Deferred_Context/0039-d3d11-Implement-d3d11_deferred_context_UpdateSubreso.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
@@ -3820,6 +3838,24 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement HSSetSamplers for deferred contexts.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement VSSetSamplers for deferred contexts.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Implement Begin and End for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement CopyResource for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement SetResourceMinLOD for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement CopySubresourceRegion for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement ResolveSubresource for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement CopyStructureCount for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement DrawAuto for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement DrawInstanced for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement DrawInstancedIndirect for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement DrawIndexedInstancedIndirect for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement ClearUnorderedAccessViewUint for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement ClearUnorderedAccessViewFloat for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement RsSetScissorRects for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement OMSetRenderTargetsAndUnorderedAccessViews for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement SOSetTargets for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement GenerateMips for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement DispatchIndirect for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement SetPredication for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d11_deferred_context_UpdateSubresource.", 1 },';
 	) >> "$patchlist"
 fi
 

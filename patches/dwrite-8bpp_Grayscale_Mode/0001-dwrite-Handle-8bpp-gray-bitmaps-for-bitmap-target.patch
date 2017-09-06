@@ -1,0 +1,77 @@
+From 8156e6f36bc04da891cd2541d8ad6a65a89738ce Mon Sep 17 00:00:00 2001
+From: Nikolay Sivov <nsivov@codeweavers.com>
+Date: Tue, 5 Sep 2017 13:35:27 +0300
+Subject: dwrite: Handle 8bpp gray bitmaps for bitmap target.
+
+Signed-off-by: Nikolay Sivov <nsivov@codeweavers.com>
+Signed-off-by: Alexandre Julliard <julliard@winehq.org>
+---
+ dlls/dwrite/gdiinterop.c | 38 ++++++++++++++++++++++++--------------
+ 1 file changed, 24 insertions(+), 14 deletions(-)
+
+diff --git a/dlls/dwrite/gdiinterop.c b/dlls/dwrite/gdiinterop.c
+index 5425b5c4aec..2e1811bd66d 100644
+--- a/dlls/dwrite/gdiinterop.c
++++ b/dlls/dwrite/gdiinterop.c
+@@ -256,6 +256,25 @@ static inline DWORD *get_pixel_ptr_32(struct dib_data *dib, int x, int y)
+     return (DWORD *)((BYTE*)dib->ptr + y * dib->stride + x * 4);
+ }
+ 
++static inline BYTE blend_color(BYTE dst, BYTE src, BYTE alpha)
++{
++    return (src * alpha + dst * (255 - alpha) + 127) / 255;
++}
++
++static inline DWORD blend_subpixel(BYTE r, BYTE g, BYTE b, DWORD text, const BYTE *alpha)
++{
++    return blend_color(r, text >> 16, alpha[0]) << 16 |
++           blend_color(g, text >> 8,  alpha[1]) << 8  |
++           blend_color(b, text,       alpha[2]);
++}
++
++static inline DWORD blend_pixel(BYTE r, BYTE g, BYTE b, DWORD text, BYTE alpha)
++{
++    return blend_color(r, text >> 16, alpha) << 16 |
++           blend_color(g, text >> 8,  alpha) << 8  |
++           blend_color(b, text,       alpha);
++}
++
+ static void blit_8(struct dib_data *dib, const BYTE *src, const RECT *rect, DWORD text_pixel)
+ {
+     DWORD *dst_ptr = get_pixel_ptr_32(dib, rect->left, rect->top);
+@@ -263,8 +282,11 @@ static void blit_8(struct dib_data *dib, const BYTE *src, const RECT *rect, DWOR
+ 
+     for (y = rect->top; y < rect->bottom; y++) {
+         for (x = 0; x < src_width; x++) {
+-            if (src[x] < DWRITE_ALPHA_MAX) continue;
+-            dst_ptr[x] = text_pixel;
++            if (src[x]) continue;
++            if (src[x] == DWRITE_ALPHA_MAX)
++                dst_ptr[x] = text_pixel;
++            else
++                dst_ptr[x] = blend_pixel(dst_ptr[x] >> 16, dst_ptr[x] >> 8, dst_ptr[x], text_pixel, src[x]);
+         }
+ 
+         src += src_width;
+@@ -272,18 +294,6 @@ static void blit_8(struct dib_data *dib, const BYTE *src, const RECT *rect, DWOR
+     }
+ }
+ 
+-static inline BYTE blend_color(BYTE dst, BYTE src, BYTE alpha)
+-{
+-    return (src * alpha + dst * (255 - alpha) + 127) / 255;
+-}
+-
+-static inline DWORD blend_subpixel(BYTE r, BYTE g, BYTE b, DWORD text, const BYTE *alpha)
+-{
+-    return blend_color(r, text >> 16, alpha[0]) << 16 |
+-           blend_color(g, text >> 8,  alpha[1]) << 8  |
+-           blend_color(b, text,       alpha[2]);
+-}
+-
+ static void blit_subpixel_888(struct dib_data *dib, int dib_width, const BYTE *src,
+     const RECT *rect, DWORD text_pixel)
+ {
+-- 
+2.14.1
+

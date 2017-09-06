@@ -158,6 +158,7 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
 	enable_dwmapi_DwmSetIcon="$1"
+	enable_dwrite_8bpp_Grayscale_Mode="$1"
 	enable_dxdiag_dontskip="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
@@ -750,6 +751,9 @@ patch_enable ()
 			;;
 		dwmapi-DwmSetIcon)
 			enable_dwmapi_DwmSetIcon="$2"
+			;;
+		dwrite-8bpp_Grayscale_Mode)
+			enable_dwrite_8bpp_Grayscale_Mode="$2"
 			;;
 		dxdiag-dontskip)
 			enable_dxdiag_dontskip="$2"
@@ -4685,6 +4689,28 @@ if test "$enable_dwmapi_DwmSetIcon" -eq 1; then
 	patch_apply dwmapi-DwmSetIcon/0001-dwmapi-Add-stubs-for-DwmSetIconicLivePreviewBitmap-a.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dwmapi: Add stubs for DwmSetIconicLivePreviewBitmap and DwmSetIconicThumbnail.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dwrite-8bpp_Grayscale_Mode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43319] Use 8bpp bitmaps in grayscale mode
+# |
+# | Modified files:
+# |   *	dlls/d2d1/render_target.c, dlls/dwrite/dwrite_private.h, dlls/dwrite/font.c, dlls/dwrite/freetype.c,
+# | 	dlls/dwrite/gdiinterop.c, dlls/dwrite/tests/font.c
+# |
+if test "$enable_dwrite_8bpp_Grayscale_Mode" -eq 1; then
+	patch_apply dwrite-8bpp_Grayscale_Mode/0001-dwrite-Handle-8bpp-gray-bitmaps-for-bitmap-target.patch
+	patch_apply dwrite-8bpp_Grayscale_Mode/0002-dwrite-Validate-buffer-size-passed-to-CreateAlphaTex.patch
+	patch_apply dwrite-8bpp_Grayscale_Mode/0003-dwrite-Use-8bpp-bitmaps-in-grayscale-mode.patch
+	patch_apply dwrite-8bpp_Grayscale_Mode/0004-d2d1-Use-8bpp-text-bitmaps-for-grayscale-mode.patch
+	(
+		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Handle 8bpp gray bitmaps for bitmap target.", 1 },';
+		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Validate buffer size passed to CreateAlphaTexture() against analysis texture type.", 1 },';
+		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Use 8bpp bitmaps in grayscale mode.", 1 },';
+		printf '%s\n' '+    { "Nikolay Sivov", "d2d1: Use 8bpp text bitmaps for grayscale mode.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From a50d535e6d20143d4a8346e8377ee401d9b5ca9a Mon Sep 17 00:00:00 2001
+From 49bf588587cbda92fe79073c08379604f40cc677 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 03:22:09 +0200
 Subject: ntdll: Properly handle PAGE_WRITECOPY protection. (try 5)
@@ -9,10 +9,10 @@ For now, only enable it when a special environment variable is set.
  1 file changed, 40 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 2d12a125a3e..84a7fecb5da 100644
+index c9a5945efbf..c17b359fc7c 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -206,6 +206,21 @@ static const char *VIRTUAL_GetProtStr( BYTE prot )
+@@ -265,6 +265,21 @@ static const char *VIRTUAL_GetProtStr( BYTE prot )
      return buffer;
  }
  
@@ -34,7 +34,7 @@ index 2d12a125a3e..84a7fecb5da 100644
  
  /***********************************************************************
   *           VIRTUAL_GetUnixProt
-@@ -219,8 +234,19 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+@@ -278,8 +293,19 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
      {
          if (vprot & VPROT_READ) prot |= PROT_READ;
          if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
@@ -55,28 +55,28 @@ index 2d12a125a3e..84a7fecb5da 100644
          if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
      }
      if (!prot) prot = PROT_NONE;
-@@ -1625,13 +1651,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1697,13 +1723,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
      {
          void *page = ROUND_ADDR( addr, page_mask );
-         BYTE vprot = get_page_vprot( view, page );
+         BYTE vprot = get_page_vprot( page );
 -        if ((err & EXCEPTION_WRITE_FAULT) && (view->protect & VPROT_WRITEWATCH))
 +        if (err & EXCEPTION_WRITE_FAULT)
          {
 -            if (vprot & VPROT_WRITEWATCH)
 +            if ((view->protect & VPROT_WRITEWATCH) && (vprot & VPROT_WRITEWATCH))
              {
-                 set_page_vprot_bits( view, page, page_size, 0, VPROT_WRITEWATCH );
+                 set_page_vprot_bits( page, page_size, 0, VPROT_WRITEWATCH );
                  mprotect_range( view, page, page_size, 0, 0 );
              }
 +            if (vprot & VPROT_WRITECOPY)
 +            {
-+                set_page_vprot_bits( view, page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
++                set_page_vprot_bits( page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
 +                mprotect_range( view, page, page_size, 0, 0 );
 +            }
              /* ignore fault if page is writable now */
-             if (VIRTUAL_GetUnixProt( get_page_vprot( view, page )) & PROT_WRITE) ret = STATUS_SUCCESS;
+             if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
-@@ -1841,14 +1872,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
+@@ -1913,14 +1944,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
                   * exception. Similar to virtual_handle_fault. */
                  if (!(VIRTUAL_GetUnixProt( vprot ) & PROT_WRITE))
                  {
@@ -86,16 +86,16 @@ index 2d12a125a3e..84a7fecb5da 100644
 -                    if (vprot & VPROT_WRITEWATCH)
 +                    if ((view->protect & VPROT_WRITEWATCH) && (vprot & VPROT_WRITEWATCH))
                      {
-                         set_page_vprot_bits( view, page, page_size, 0, VPROT_WRITEWATCH );
+                         set_page_vprot_bits( page, page_size, 0, VPROT_WRITEWATCH );
                          mprotect_range( view, page, page_size, 0, 0 );
                      }
 +                    if (vprot & VPROT_WRITECOPY)
 +                    {
-+                        set_page_vprot_bits( view, page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
++                        set_page_vprot_bits( page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
 +                        mprotect_range( view, page, page_size, 0, 0 );
 +                    }
                      /* ignore fault if page is writable now */
-                     if (!(VIRTUAL_GetUnixProt( get_page_vprot( view, page )) & PROT_WRITE))
+                     if (!(VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_WRITE))
                          break;
 -- 
 2.14.1

@@ -1,4 +1,4 @@
-From 75af51bc0f3d02eeb1d4e243190db9a4813cb11f Mon Sep 17 00:00:00 2001
+From 62e317a96953781723231782f4d5b2392b347fe5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 1 Jun 2017 06:04:53 +0200
 Subject: ntdll: Fix holes in ELF mappings. (v2)
@@ -10,11 +10,11 @@ Based on a patch by Andrew Wesie.
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 1fa9fd925a1..56a384448c4 100644
+index 25946c22c97..2305bfb47f3 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1670,6 +1670,20 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
-             if (VIRTUAL_GetUnixProt( get_page_vprot( view, page )) & PROT_READ) ret = STATUS_SUCCESS;
+@@ -1720,6 +1720,20 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+             if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_READ) ret = STATUS_SUCCESS;
              else update_shared_data = FALSE;
          }
 +        else if (!err && (view->protect & VPROT_SYSTEM) && (VIRTUAL_GetUnixProt( vprot ) & PROT_READ))
@@ -23,17 +23,17 @@ index 1fa9fd925a1..56a384448c4 100644
 +            unsigned char vec;
 +
 +            if (!VIRTUAL_SetProt( view, page, page_size, vprot ))
-+                set_page_vprot_bits( view, page, page_size, 0, VPROT_READ | VPROT_EXEC );
++                set_page_vprot_bits( page, page_size, 0, VPROT_READ | VPROT_EXEC );
 +            else if (!mincore( page, page_size, &vec ) && (vec & 1))
 +                ret = STATUS_SUCCESS;
 +            else if (wine_anon_mmap( page, page_size, unix_prot, MAP_FIXED ) != page)
-+                set_page_vprot_bits( view, page, page_size, 0, VPROT_READ | VPROT_EXEC );
++                set_page_vprot_bits( page, page_size, 0, VPROT_READ | VPROT_EXEC );
 +            else
 +                ret = STATUS_SUCCESS;
 +        }
          if (!on_signal_stack && (vprot & VPROT_GUARD))
          {
-             set_page_vprot_bits( view, page, page_size, 0, VPROT_GUARD );
+             set_page_vprot_bits( page, page_size, 0, VPROT_GUARD );
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
 index e35a7b694cb..e7af5bc61cc 100644
 --- a/dlls/psapi/tests/psapi_main.c

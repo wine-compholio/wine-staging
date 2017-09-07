@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "eb5c1872540a71ebef4703387c11c414516233f4"
+	echo "b32c3243782477f7cc6dc5a189a3e4a5dacce1c8"
 }
 
 # Show version information
@@ -249,7 +249,6 @@ patch_enable_all ()
 	enable_ntdll_FileFsVolumeInformation="$1"
 	enable_ntdll_FileNameInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
-	enable_ntdll_Grow_Virtual_Heap="$1"
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
@@ -1026,9 +1025,6 @@ patch_enable ()
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
-			;;
-		ntdll-Grow_Virtual_Heap)
-			enable_ntdll_Grow_Virtual_Heap="$2"
 			;;
 		ntdll-HashLinks)
 			enable_ntdll_HashLinks="$2"
@@ -2649,13 +2645,6 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 	enable_kernel32_SetFileCompletionNotificationModes=1
 fi
 
-if test "$enable_ntdll_Heap_Improvements" -eq 1; then
-	if test "$enable_ntdll_Grow_Virtual_Heap" -gt 1; then
-		abort "Patchset ntdll-Grow_Virtual_Heap disabled, but ntdll-Heap_Improvements depends on that."
-	fi
-	enable_ntdll_Grow_Virtual_Heap=1
-fi
-
 if test "$enable_ntdll_HashLinks" -eq 1; then
 	if test "$enable_ntdll_CLI_Images" -gt 1; then
 		abort "Patchset ntdll-CLI_Images disabled, but ntdll-HashLinks depends on that."
@@ -2898,9 +2887,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
 		abort "Patchset ntdll-APC_Start_Process disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_ntdll_Grow_Virtual_Heap" -gt 1; then
-		abort "Patchset ntdll-Grow_Virtual_Heap disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_ntdll_RunlevelInformationInActivationContext" -gt 1; then
 		abort "Patchset ntdll-RunlevelInformationInActivationContext disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2919,7 +2905,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_kernel32_COMSPEC=1
 	enable_kernel32_UmsStubs=1
 	enable_ntdll_APC_Start_Process=1
-	enable_ntdll_Grow_Virtual_Heap=1
 	enable_ntdll_RunlevelInformationInActivationContext=1
 	enable_ntdll_TokenLogonSid=1
 	enable_server_CreateProcess_ACLs=1
@@ -3280,21 +3265,6 @@ if test "$enable_ntdll_APC_Start_Process" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Grow_Virtual_Heap
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39885] Remove memory limitation to 32GB on 64-bit by growing heap dynamically
-# |
-# | Modified files:
-# |   *	dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_Grow_Virtual_Heap" -eq 1; then
-	patch_apply ntdll-Grow_Virtual_Heap/0001-ntdll-Remove-memory-limitation-to-32GB-on-64-bit-by-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Remove memory limitation to 32GB on 64-bit by growing heap dynamically.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-RunlevelInformationInActivationContext
 # |
 # | Modified files:
@@ -3327,8 +3297,8 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-GetExplicitEntriesFromAclW, kernel32-COMSPEC, kernel32-UmsStubs,
-# | 	ntdll-APC_Start_Process, ntdll-Grow_Virtual_Heap, ntdll-RunlevelInformationInActivationContext, ntdll-TokenLogonSid,
-# | 	server-CreateProcess_ACLs, server-Misc_ACL
+# | 	ntdll-APC_Start_Process, ntdll-RunlevelInformationInActivationContext, ntdll-TokenLogonSid, server-CreateProcess_ACLs,
+# | 	server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -4713,20 +4683,11 @@ fi
 # |   *	[#43319] Use 8bpp bitmaps in grayscale mode
 # |
 # | Modified files:
-# |   *	dlls/d2d1/render_target.c, dlls/dwrite/dwrite_private.h, dlls/dwrite/font.c, dlls/dwrite/freetype.c,
-# | 	dlls/dwrite/gdiinterop.c, dlls/dwrite/tests/font.c
+# |   *	dlls/dwrite/gdiinterop.c
 # |
 if test "$enable_dwrite_8bpp_Grayscale_Mode" -eq 1; then
-	patch_apply dwrite-8bpp_Grayscale_Mode/0001-dwrite-Handle-8bpp-gray-bitmaps-for-bitmap-target.patch
-	patch_apply dwrite-8bpp_Grayscale_Mode/0002-dwrite-Validate-buffer-size-passed-to-CreateAlphaTex.patch
-	patch_apply dwrite-8bpp_Grayscale_Mode/0003-dwrite-Use-8bpp-bitmaps-in-grayscale-mode.patch
-	patch_apply dwrite-8bpp_Grayscale_Mode/0004-d2d1-Use-8bpp-text-bitmaps-for-grayscale-mode.patch
 	patch_apply dwrite-8bpp_Grayscale_Mode/0005-dwrite-Fix-8bpp-bitmap-copy.patch
 	(
-		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Handle 8bpp gray bitmaps for bitmap target.", 1 },';
-		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Validate buffer size passed to CreateAlphaTexture() against analysis texture type.", 1 },';
-		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Use 8bpp bitmaps in grayscale mode.", 1 },';
-		printf '%s\n' '+    { "Nikolay Sivov", "d2d1: Use 8bpp text bitmaps for grayscale mode.", 1 },';
 		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Fix 8bpp bitmap copy.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6430,9 +6391,6 @@ if test "$enable_ntdll_HashLinks" -eq 1; then
 fi
 
 # Patchset ntdll-Heap_Improvements
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Grow_Virtual_Heap
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#43224] Improvement for heap allocation performance

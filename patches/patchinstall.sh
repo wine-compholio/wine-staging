@@ -321,6 +321,7 @@ patch_enable_all ()
 	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
+	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
@@ -1240,6 +1241,9 @@ patch_enable ()
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
+			;;
+		opengl32-wglChoosePixelFormat)
+			enable_opengl32_wglChoosePixelFormat="$2"
 			;;
 		packager-DllMain)
 			enable_packager_DllMain="$2"
@@ -7436,6 +7440,21 @@ if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset opengl32-wglChoosePixelFormat
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43638] Treat invalid pixel types as PFD_TYPE_RGBA in wglChoosePixelFormat
+# |
+# | Modified files:
+# |   *	dlls/opengl32/tests/opengl.c, dlls/opengl32/wgl.c
+# |
+if test "$enable_opengl32_wglChoosePixelFormat" -eq 1; then
+	patch_apply opengl32-wglChoosePixelFormat/0001-opengl32-Treat-invalid-pixel-types-as-PFD_TYPE_RGBA-.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "opengl32: Treat invalid pixel types as PFD_TYPE_RGBA in wglChoosePixelFormat.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 6933f5fa85dac92bc6aa20946c42fb55d1465485 Mon Sep 17 00:00:00 2001
+From 68b5e9a9e9a4552c5bc04250d40d20fced0430a6 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
 Subject: ntdll: Resolve drive symlinks before returning section name.
@@ -24,7 +24,7 @@ index 97b42398bb0..c0b2a1ea83e 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index a4daeed3adf..3f4142ee1c5 100644
+index ecee4a193d9..e8586486a58 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -161,6 +161,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
@@ -36,7 +36,7 @@ index a4daeed3adf..3f4142ee1c5 100644
  extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_create_builtin_view( void *base ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index b42da879a4b..59239b986c9 100644
+index 005e9b150d3..deff0da4549 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -53,6 +53,7 @@
@@ -47,16 +47,16 @@ index b42da879a4b..59239b986c9 100644
  #include "wine/list.h"
  #include "wine/debug.h"
  #include "ntdll_misc.h"
-@@ -154,6 +155,8 @@ static BYTE **pages_vprot;
+@@ -152,6 +153,8 @@ static BYTE **pages_vprot;
  static BYTE *pages_vprot;
  #endif
  
 +#define MAX_DIR_ENTRY_LEN 255  /* max length of a directory entry in chars */
 +
- static HANDLE virtual_heap;
+ static struct file_view *view_block_start, *view_block_end, *next_free_view;
+ static const size_t view_block_size = 0x100000;
  static void *preload_reserve_start;
- static void *preload_reserve_end;
-@@ -2589,12 +2592,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -2595,12 +2598,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
@@ -73,7 +73,7 @@ index b42da879a4b..59239b986c9 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -2644,14 +2650,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -2650,14 +2656,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:

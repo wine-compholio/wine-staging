@@ -1,18 +1,18 @@
-From 49bf588587cbda92fe79073c08379604f40cc677 Mon Sep 17 00:00:00 2001
+From c43f021985b9bd0d2ac1ba0e8145b8eddb665506 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 03:22:09 +0200
 Subject: ntdll: Properly handle PAGE_WRITECOPY protection. (try 5)
 
 For now, only enable it when a special environment variable is set.
 ---
- dlls/ntdll/virtual.c | 47 ++++++++++++++++++++++++++++++++++++++++-------
- 1 file changed, 40 insertions(+), 7 deletions(-)
+ dlls/ntdll/virtual.c | 51 ++++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 44 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index c9a5945efbf..c17b359fc7c 100644
+index cb3b9aad385..7365c3ad487 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -265,6 +265,21 @@ static const char *VIRTUAL_GetProtStr( BYTE prot )
+@@ -264,6 +264,21 @@ static const char *VIRTUAL_GetProtStr( BYTE prot )
      return buffer;
  }
  
@@ -34,7 +34,7 @@ index c9a5945efbf..c17b359fc7c 100644
  
  /***********************************************************************
   *           VIRTUAL_GetUnixProt
-@@ -278,8 +293,19 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+@@ -277,8 +292,19 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
      {
          if (vprot & VPROT_READ) prot |= PROT_READ;
          if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
@@ -55,7 +55,7 @@ index c9a5945efbf..c17b359fc7c 100644
          if (vprot & VPROT_WRITEWATCH) prot &= ~PROT_WRITE;
      }
      if (!prot) prot = PROT_NONE;
-@@ -1697,13 +1723,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1721,13 +1747,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
      {
          void *page = ROUND_ADDR( addr, page_mask );
          BYTE vprot = get_page_vprot( page );
@@ -76,27 +76,36 @@ index c9a5945efbf..c17b359fc7c 100644
              /* ignore fault if page is writable now */
              if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_WRITE) ret = STATUS_SUCCESS;
          }
-@@ -1913,14 +1944,16 @@ SIZE_T CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer, SI
-                  * exception. Similar to virtual_handle_fault. */
-                 if (!(VIRTUAL_GetUnixProt( vprot ) & PROT_WRITE))
-                 {
--                    if (!(view->protect & VPROT_WRITEWATCH))
--                        break;
--
--                    if (vprot & VPROT_WRITEWATCH)
-+                    if ((view->protect & VPROT_WRITEWATCH) && (vprot & VPROT_WRITEWATCH))
-                     {
-                         set_page_vprot_bits( page, page_size, 0, VPROT_WRITEWATCH );
-                         mprotect_range( view, page, page_size, 0, 0 );
-                     }
-+                    if (vprot & VPROT_WRITECOPY)
-+                    {
-+                        set_page_vprot_bits( page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
-+                        mprotect_range( view, page, page_size, 0, 0 );
-+                    }
-                     /* ignore fault if page is writable now */
-                     if (!(VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_WRITE))
-                         break;
+@@ -1918,6 +1949,7 @@ NTSTATUS CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer,
+     struct file_view *view;
+     sigset_t sigset;
+     NTSTATUS ret = STATUS_ACCESS_VIOLATION;
++    BOOL writecopy = FALSE;
+ 
+     if (!size) return STATUS_SUCCESS;
+ 
+@@ -1929,12 +1961,17 @@ NTSTATUS CDECL wine_uninterrupted_write_memory( void *addr, const void *buffer,
+ 
+         for (i = 0; i < total; i += page_size)
+         {
+-            int prot = VIRTUAL_GetUnixProt( get_page_vprot( page + i ) & ~VPROT_WRITEWATCH );
+-            if (!(prot & PROT_WRITE)) goto done;
++            BYTE vprot = get_page_vprot( page + i ) & ~VPROT_WRITEWATCH;
++            if (vprot & VPROT_WRITECOPY)
++            {
++                vprot = (vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
++                writecopy = TRUE;
++            }
++            if (!(VIRTUAL_GetUnixProt( vprot ) & PROT_WRITE)) goto done;
+         }
+-        if (view->protect & VPROT_WRITEWATCH)  /* enable write access by clearing write watches */
++        if ((view->protect & VPROT_WRITEWATCH) || writecopy)  /* enable write access by clearing write watches */
+         {
+-            set_page_vprot_bits( addr, size, 0, VPROT_WRITEWATCH );
++            set_page_vprot_bits( addr, size, VPROT_WRITE, VPROT_WRITECOPY | VPROT_WRITEWATCH );
+             mprotect_range( view, addr, size, 0, 0 );
+         }
+         if (buffer) memcpy( addr, buffer, size );
 -- 
 2.14.1
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b32c3243782477f7cc6dc5a189a3e4a5dacce1c8"
+	echo "d003ed3b1743985282c8c8e9c597d77c4b47bb15"
 }
 
 # Show version information
@@ -9127,8 +9127,6 @@ fi
 # | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
-	patch_apply windowscodecs-Palette_Images/0001-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch
-	patch_apply windowscodecs-Palette_Images/0003-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
 	patch_apply windowscodecs-Palette_Images/0004-windowscodecs-Decode-PNG-images-with-a-tRNS-chunk-in.patch
 	patch_apply windowscodecs-Palette_Images/0005-windowscodecs-Add-support-for-palette-image-formats-.patch
 	patch_apply windowscodecs-Palette_Images/0006-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
@@ -9149,8 +9147,6 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
 	patch_apply windowscodecs-Palette_Images/0022-windowscodecs-PNG-decoder-should-use-indexed-formats.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in PNG decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in PNG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Decode PNG images with a tRNS chunk in their native formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in BMP encoder.", 1 },';

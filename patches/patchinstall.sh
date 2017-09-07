@@ -299,6 +299,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
+	enable_ntdll_segv_handler="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_ExceptionInformation="$1"
 	enable_ntoskrnl_DriverTest="$1"
@@ -1175,6 +1176,9 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
+			;;
+		ntdll-segv_handler)
+			enable_ntdll_segv_handler="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -7062,6 +7066,18 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-segv_handler
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_segv_handler" -eq 1; then
+	patch_apply ntdll-segv_handler/0001-ntdll-Fix-privileged-instruction-exception-code.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Fix privileged instruction exception code.", 1 },';
 	) >> "$patchlist"
 fi
 

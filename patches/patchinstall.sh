@@ -2352,6 +2352,13 @@ if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
 	enable_wined3d_1DTextures=1
 fi
 
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	enable_ntdll_User_Shared_Data=1
+fi
+
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	if test "$enable_wineboot_DriveSerial" -gt 1; then
 		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
@@ -9545,6 +9552,10 @@ fi
 
 # Patchset winebuild-Fake_Dlls
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-
+# | 	User_Shared_Data
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42741] Various improvements for fake dlls
 # |
@@ -9552,10 +9563,11 @@ fi
 # |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
 # | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/tests/exception.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
-# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h,
-# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
-# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c,
+# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
+# | 	include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c,
+# | 	tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c,
+# | 	tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
@@ -9567,6 +9579,7 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
 	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
 	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
+	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
@@ -9577,6 +9590,7 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
 	) >> "$patchlist"
 fi
 

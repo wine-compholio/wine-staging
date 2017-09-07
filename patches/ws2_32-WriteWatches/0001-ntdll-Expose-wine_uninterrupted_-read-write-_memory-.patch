@@ -1,4 +1,4 @@
-From c12454876971314ab43cf5519fa4534bbe962a62 Mon Sep 17 00:00:00 2001
+From 49b080a1497ac9817b6fb26fdc45b5c567b5048d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 3 Jan 2015 20:07:08 +0100
 Subject: ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.
@@ -12,10 +12,10 @@ Subject: ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.
  5 files changed, 34 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 38422ae..be5dd63 100644
+index 68d7f22b192..77c4a589e15 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1467,6 +1467,10 @@
+@@ -1491,6 +1491,10 @@
  # signal handling
  @ cdecl __wine_set_signal_handler(long ptr)
  
@@ -27,7 +27,7 @@ index 38422ae..be5dd63 100644
  @ cdecl wine_nt_to_unix_file_name(ptr ptr long long)
  @ cdecl wine_unix_to_nt_file_name(ptr ptr)
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index cbd19db..f5b5339 100644
+index 48acbbfbe85..b8bbefc8a9c 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -172,8 +172,6 @@ extern BOOL virtual_is_valid_code_address( const void *addr, SIZE_T size ) DECLS
@@ -40,10 +40,10 @@ index cbd19db..f5b5339 100644
  extern void virtual_release_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 5c3aa819..cf20483 100644
+index f33c43f1782..03b0f2dcdf6 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -1669,13 +1669,13 @@ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
+@@ -1802,13 +1802,13 @@ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
      union atl_thunk thunk_copy;
      SIZE_T thunk_len;
  
@@ -59,7 +59,7 @@ index 5c3aa819..cf20483 100644
              &thunk_copy.t1.this, sizeof(DWORD) ) == sizeof(DWORD))
          {
              context->Eip = (DWORD_PTR)(&thunk->t1.func + 1) + thunk_copy.t1.func;
-@@ -1719,11 +1719,11 @@ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
+@@ -1852,11 +1852,11 @@ static BOOL check_atl_thunk( EXCEPTION_RECORD *rec, CONTEXT *context )
                                                     thunk_copy.t5.inst2 == 0x0460)
      {
          DWORD func, stack[2];
@@ -75,10 +75,10 @@ index 5c3aa819..cf20483 100644
          {
              context->Ecx = stack[0];
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 4d4bc3b..948a790 100644
+index 40dd3d16b4b..d9d96f7b7ec 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1628,13 +1628,14 @@ BOOL virtual_check_buffer_for_write( void *ptr, SIZE_T size )
+@@ -1769,13 +1769,14 @@ BOOL virtual_check_buffer_for_write( void *ptr, SIZE_T size )
  
  
  /***********************************************************************
@@ -96,8 +96,8 @@ index 4d4bc3b..948a790 100644
  {
      struct file_view *view;
      sigset_t sigset;
-@@ -1653,10 +1654,14 @@ SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T
-             while (bytes_read < size && (VIRTUAL_GetUnixProt( *p++ ) & PROT_READ))
+@@ -1793,10 +1794,14 @@ SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T
+             while (bytes_read < size && (VIRTUAL_GetUnixProt( get_page_vprot( view, page )) & PROT_READ))
              {
                  SIZE_T block_size = min( size, page_size - ((UINT_PTR)addr & page_mask) );
 -                memcpy( buffer, addr, block_size );
@@ -112,9 +112,9 @@ index 4d4bc3b..948a790 100644
 +
 +                addr = (const void *)((const char *)addr + block_size);
                  bytes_read += block_size;
+                 page += page_size;
              }
-         }
-@@ -1667,13 +1672,14 @@ SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T
+@@ -1808,13 +1813,14 @@ SIZE_T virtual_uninterrupted_read_memory( const void *addr, void *buffer, SIZE_T
  
  
  /***********************************************************************
@@ -132,7 +132,7 @@ index 4d4bc3b..948a790 100644
  {
      struct file_view *view;
      sigset_t sigset;
-@@ -1711,10 +1717,14 @@ SIZE_T virtual_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_
+@@ -1852,10 +1858,14 @@ SIZE_T virtual_uninterrupted_write_memory( void *addr, const void *buffer, SIZE_
                  }
  
                  block_size = min( size, page_size - ((UINT_PTR)addr & page_mask) );
@@ -151,10 +151,10 @@ index 4d4bc3b..948a790 100644
              }
          }
 diff --git a/include/winternl.h b/include/winternl.h
-index 5420391..b039dd1 100644
+index df20da58c3c..5c697dd45cd 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2680,6 +2680,9 @@ NTSYSAPI NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW,
+@@ -2789,6 +2789,9 @@ NTSYSAPI NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW,
                                                     UINT disposition, BOOLEAN check_case );
  NTSYSAPI NTSTATUS CDECL wine_unix_to_nt_file_name( const ANSI_STRING *name, UNICODE_STRING *nt );
  
@@ -165,5 +165,5 @@ index 5420391..b039dd1 100644
  /***********************************************************************
   * Inline functions
 -- 
-2.6.1
+2.14.1
 

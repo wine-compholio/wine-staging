@@ -454,6 +454,7 @@ patch_enable_all ()
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
+	enable_wined3d_Interpolation_Modifiers="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
@@ -1640,6 +1641,9 @@ patch_enable ()
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
 			;;
+		wined3d-Interpolation_Modifiers)
+			enable_wined3d_Interpolation_Modifiers="$2"
+			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
 			;;
@@ -2227,6 +2231,17 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_wined3d_CSMT_Helper=1
+fi
+
+if test "$enable_wined3d_Interpolation_Modifiers" -eq 1; then
+	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
+		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-Interpolation_Modifiers depends on that."
+	fi
+	if test "$enable_wined3d_conservative_depth" -gt 1; then
+		abort "Patchset wined3d-conservative_depth disabled, but wined3d-Interpolation_Modifiers depends on that."
+	fi
+	enable_wined3d_Dual_Source_Blending=1
+	enable_wined3d_conservative_depth=1
 fi
 
 if test "$enable_wined3d_conservative_depth" -eq 1; then
@@ -9853,6 +9868,47 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-conservative_depth
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless
+# |
+# | Modified files:
+# |   *	dlls/wined3d/arb_program_shader.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
+# | 	dlls/wined3d/shader_sm4.c, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_conservative_depth" -eq 1; then
+	patch_apply wined3d-conservative_depth/0001-wined3d-Recognize-conservative-depth-output-register.patch
+	patch_apply wined3d-conservative_depth/0002-wined3d-Add-conservative-depth-access-information-to.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize conservative depth output registers in sm4.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add conservative depth access information to glsl pixel shaders.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Interpolation_Modifiers
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-1DTextures, wined3d-
+# | 	Copy_Resource_Typeless, wined3d-conservative_depth
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43239] Implement support for interpolation modifiers in sm4/sm5 pixel shaders
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Interpolation_Modifiers" -eq 1; then
+	patch_apply wined3d-Interpolation_Modifiers/0001-d3d11-tests-Add-test-for-nointerpolation-modifier.patch
+	patch_apply wined3d-Interpolation_Modifiers/0002-wined3d-Unroll-vertex-geometry-shader-outputs-and-pi.patch
+	patch_apply wined3d-Interpolation_Modifiers/0003-wined3d-Add-support-for-interpolation-modifiers-in-s.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add test for nointerpolation modifier.", 1 },';
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Unroll vertex / geometry shader outputs and pixel shader inputs for >= sm4.", 1 },';
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Add support for interpolation modifiers in sm4/sm5 pixel shader inputs.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Limit_Vram
 # |
 # | Modified files:
@@ -9901,24 +9957,6 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-conservative_depth
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless
-# |
-# | Modified files:
-# |   *	dlls/wined3d/arb_program_shader.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
-# | 	dlls/wined3d/shader_sm4.c, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_conservative_depth" -eq 1; then
-	patch_apply wined3d-conservative_depth/0001-wined3d-Recognize-conservative-depth-output-register.patch
-	patch_apply wined3d-conservative_depth/0002-wined3d-Add-conservative-depth-access-information-to.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize conservative depth output registers in sm4.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add conservative depth access information to glsl pixel shaders.", 1 },';
 	) >> "$patchlist"
 fi
 

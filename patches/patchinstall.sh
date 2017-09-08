@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c9f72ccec2387da0c02fa1d35997fb914dcf4656"
+	echo "917e86dd7a4cca1da47262caaded2bef9e022f99"
 }
 
 # Show version information
@@ -6573,14 +6573,12 @@ fi
 # Patchset ntdll-NtQuerySection
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, server/mapping.c
+# |   *	dlls/kernel32/tests/virtual.c
 # |
 if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
-	patch_apply ntdll-NtQuerySection/0003-server-CreateFileMapping-should-not-fail-without-SEC.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "server: CreateFileMapping should not fail without SEC_COMMIT for a named file section.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6618,7 +6616,7 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Skip get_dll_info wineserver call if address does not have VPROT_IMAGE permissions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Skip get_dll_info wineserver call if address does not have SEC_IMAGE permissions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9116,7 +9114,6 @@ fi
 # | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
-	patch_apply windowscodecs-Palette_Images/0004-windowscodecs-Decode-PNG-images-with-a-tRNS-chunk-in.patch
 	patch_apply windowscodecs-Palette_Images/0005-windowscodecs-Add-support-for-palette-image-formats-.patch
 	patch_apply windowscodecs-Palette_Images/0006-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
 	patch_apply windowscodecs-Palette_Images/0007-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
@@ -9130,13 +9127,9 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0015-windowscodecs-Write-the-image-bits-as-a-bottom-top-a.patch
 	patch_apply windowscodecs-Palette_Images/0016-windowscodecs-Limit-number-of-colors-in-a-palette-in.patch
 	patch_apply windowscodecs-Palette_Images/0017-windowscodecs-Add-support-for-palette-image-formats-.patch
-	patch_apply windowscodecs-Palette_Images/0018-windowscodecs-tests-Make-create_decoder-return-an-er.patch
-	patch_apply windowscodecs-Palette_Images/0019-windowscodecs-tests-Add-more-tests-for-loading-PNG-i.patch
 	patch_apply windowscodecs-Palette_Images/0020-windowscodecs-find_decoder-should-return-an-error-it.patch
 	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
-	patch_apply windowscodecs-Palette_Images/0022-windowscodecs-PNG-decoder-should-use-indexed-formats.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Decode PNG images with a tRNS chunk in their native formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in BMP encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in BMP encoder.", 1 },';
@@ -9150,11 +9143,8 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Write the image bits as a bottom-top array in BMP encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make create_decoder() return an error code in PNG tests.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add more tests for loading PNG images in various color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Find_decoder() should return an error it received from the decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should return WINCODEC_ERR_UNKNOWNIMAGEFORMAT when image loading fails.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should use indexed formats for grayscale images when a PLTE chunk exists.", 1 },';
 	) >> "$patchlist"
 fi
 

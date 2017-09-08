@@ -1,4 +1,4 @@
-From c0db9637afab090e25c807c011c632affdeb3097 Mon Sep 17 00:00:00 2001
+From b808bca5ed050a801ae03493788e8c8ec8e3cd38 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 05:44:38 +0200
 Subject: ntdll: Allow to query section names from other processes. (v2)
@@ -13,7 +13,7 @@ Subject: ntdll: Allow to query section names from other processes. (v2)
  6 files changed, 69 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index c97b1e1f73f..52809112ce8 100644
+index ac81c9be9c8..ecee4a193d9 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -161,6 +161,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
@@ -49,11 +49,11 @@ index c02a12ab19a..290d7582f65 100644
          result->type = call->type;
          addr = wine_server_get_ptr( call->virtual_protect.addr );
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 82cb384a825..0e7df59281a 100644
+index 4ee48ec93ab..613caec6642 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2329,7 +2329,7 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
- 
+@@ -2440,7 +2440,7 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
+ }
  
  /* get the section mapping handle */
 -static NTSTATUS get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping )
@@ -61,7 +61,7 @@ index 82cb384a825..0e7df59281a 100644
  {
      struct file_view *view;
      NTSTATUS status = STATUS_INVALID_ADDRESS;
-@@ -2338,8 +2338,18 @@ static NTSTATUS get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mappi
+@@ -2449,8 +2449,18 @@ static NTSTATUS get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mappi
  
      if (process != NtCurrentProcess())
      {
@@ -82,7 +82,7 @@ index 82cb384a825..0e7df59281a 100644
      }
  
      base = ROUND_ADDR( addr, page_mask );
-@@ -2495,7 +2505,7 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -2601,7 +2611,7 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
@@ -106,10 +106,11 @@ index 56bf11a9a85..23025eedab3 100644
  
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(NULL, hMod, szMapPath, sizeof(szMapPath));
-@@ -457,6 +461,20 @@ todo_wine
+@@ -456,6 +460,20 @@ todo_wine
+         ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-     SetLastError(0xdeadbeef);
++    SetLastError(0xdeadbeef);
 +    ret = pGetMappedFileNameW(current_process, base, map_nameW, sizeof(map_nameW)/sizeof(map_nameW[0]));
 +todo_wine {
 +    ok(ret, "GetMappedFileNameW error %d\n", GetLastError());
@@ -123,10 +124,9 @@ index 56bf11a9a85..23025eedab3 100644
 +        ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
 +    }
 +
-+    SetLastError(0xdeadbeef);
+     SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
  todo_wine {
-     ok(ret, "GetMappedFileName error %d\n", GetLastError());
 @@ -501,6 +519,7 @@ todo_wine
  todo_wine
      ok(GetLastError() == ERROR_FILE_INVALID, "expected ERROR_FILE_INVALID, got %d\n", GetLastError());
@@ -147,32 +147,32 @@ index ca54b448ebb..504362702b8 100644
      APC_VIRTUAL_PROTECT,
      APC_VIRTUAL_FLUSH,
      APC_VIRTUAL_LOCK,
-@@ -506,6 +507,12 @@ typedef union
+@@ -505,6 +506,12 @@ typedef union
+         client_ptr_t     addr;      /* requested address */
      } virtual_query;
      struct
-     {
++    {
 +        enum apc_type    type;      /* APC_VIRTUAL_SECTION */
 +        int              __pad;
 +        client_ptr_t     addr;      /* requested address */
 +    } virtual_section;
 +    struct
-+    {
+     {
          enum apc_type    type;      /* APC_VIRTUAL_PROTECT */
          unsigned int     prot;      /* new protection flags */
-         client_ptr_t     addr;      /* requested address */
-@@ -597,6 +604,12 @@ typedef union
+@@ -596,6 +603,12 @@ typedef union
+         unsigned short   alloc_type;/* resulting region allocation type */
      } virtual_query;
      struct
-     {
++    {
 +        enum apc_type    type;      /* APC_VIRTUAL_SECTION */
 +        unsigned int     status;    /* status returned by call */
 +        obj_handle_t     mapping;   /* resulting mapping */
 +    } virtual_section;
 +    struct
-+    {
+     {
          enum apc_type    type;      /* APC_VIRTUAL_PROTECT */
          unsigned int     status;    /* status returned by call */
-         client_ptr_t     addr;      /* resulting address */
 diff --git a/server/thread.c b/server/thread.c
 index 903420bed3f..d3cbcc298c3 100644
 --- a/server/thread.c
@@ -201,5 +201,5 @@ index 903420bed3f..d3cbcc298c3 100644
          break;
      case APC_MAP_VIEW:
 -- 
-2.13.1
+2.14.1
 

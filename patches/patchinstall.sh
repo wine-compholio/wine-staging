@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d003ed3b1743985282c8c8e9c597d77c4b47bb15"
+	echo "c9f72ccec2387da0c02fa1d35997fb914dcf4656"
 }
 
 # Show version information
@@ -158,7 +158,6 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
 	enable_dwmapi_DwmSetIcon="$1"
-	enable_dwrite_8bpp_Grayscale_Mode="$1"
 	enable_dxdiag_dontskip="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
@@ -752,9 +751,6 @@ patch_enable ()
 			;;
 		dwmapi-DwmSetIcon)
 			enable_dwmapi_DwmSetIcon="$2"
-			;;
-		dwrite-8bpp_Grayscale_Mode)
-			enable_dwrite_8bpp_Grayscale_Mode="$2"
 			;;
 		dxdiag-dontskip)
 			enable_dxdiag_dontskip="$2"
@@ -3405,31 +3401,27 @@ fi
 # |   *	[#40451] Add feclient dll
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-heap-l2-1-0/Makefile.in, dlls/api-ms-win-core-heap-l2-1-0/api-ms-win-core-
-# | 	heap-l2-1-0.spec, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-core-shlwapi-
-# | 	obsolete-l1-2-0/Makefile.in, dlls/api-ms-win-core-shlwapi-obsolete-l1-2-0/api-ms-win-core-shlwapi-obsolete-l1-2-0.spec,
-# | 	dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-
-# | 	ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-
-# | 	window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-
-# | 	ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in,
-# | 	dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-
-# | 	thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-
-# | 	appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-
-# | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
-# | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
-# | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
-# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
-# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
-# | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
-# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c, dlls/shcore/Makefile.in, dlls/shcore/main.c,
-# | 	dlls/shcore/shcore.spec, dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c,
-# | 	dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in, include/shellscalingapi.h,
-# | 	include/uiautomationcoreapi.h, tools/make_specfiles
+# |   *	configure.ac, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-
+# | 	draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-
+# | 	ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-
+# | 	window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-
+# | 	win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0
+# | 	/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
+# | 	thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-
+# | 	ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-
+# | 	win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-
+# | 	syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls
+# | 	/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in,
+# | 	dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c,
+# | 	dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in,
+# | 	dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c,
+# | 	dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/uiautomationcore/Makefile.in,
+# | 	dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in,
+# | 	include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
-	patch_apply api-ms-win-Stub_DLLs/0005-api-ms-win-core-heap-l2-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
 	patch_apply api-ms-win-Stub_DLLs/0007-shcore-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
@@ -3437,7 +3429,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0010-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
 	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
-	patch_apply api-ms-win-Stub_DLLs/0013-api-ms-win-core-shlwapi-obsolete-l1-2-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
@@ -3451,7 +3442,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-heap-l2-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
@@ -3459,7 +3449,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-core-shlwapi-obsolete-l1-2-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
@@ -4674,21 +4663,6 @@ if test "$enable_dwmapi_DwmSetIcon" -eq 1; then
 	patch_apply dwmapi-DwmSetIcon/0001-dwmapi-Add-stubs-for-DwmSetIconicLivePreviewBitmap-a.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dwmapi: Add stubs for DwmSetIconicLivePreviewBitmap and DwmSetIconicThumbnail.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dwrite-8bpp_Grayscale_Mode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43319] Use 8bpp bitmaps in grayscale mode
-# |
-# | Modified files:
-# |   *	dlls/dwrite/gdiinterop.c
-# |
-if test "$enable_dwrite_8bpp_Grayscale_Mode" -eq 1; then
-	patch_apply dwrite-8bpp_Grayscale_Mode/0005-dwrite-Fix-8bpp-bitmap-copy.patch
-	(
-		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Fix 8bpp bitmap copy.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 9ee4e66d81e578d6b0366c5713f77d9ec7a0676e Mon Sep 17 00:00:00 2001
+From 04388e5a4fdba61b784a338346f122c97b073ca3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 9 Jul 2017 01:04:33 +0200
 Subject: wined3d: Implement copying sub resources between compatible formats.
@@ -13,10 +13,10 @@ Subject: wined3d: Implement copying sub resources between compatible formats.
  6 files changed, 170 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 0ad5a701e00..50f8696619a 100644
+index 5fa4d3f9def..df22abb3337 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -10094,7 +10094,7 @@ static void test_copy_subresource_region(void)
+@@ -10133,7 +10133,7 @@ static void test_copy_subresource_region(void)
              for (j = 0; j < min(level_src_height, level_dst_height); j++)
              {
                  c_result = (DWORD*)((char*)map_desc.pData + j * map_desc.RowPitch);
@@ -26,7 +26,7 @@ index 0ad5a701e00..50f8696619a 100644
                     c_result[i], i, j, c_expected[j * level_src_width + i], k);
              }
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index a76598ff4ca..55bab7b464b 100644
+index b3b6588ff9b..3666d9f3f7e 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
 @@ -71,6 +71,7 @@ enum wined3d_cs_op
@@ -37,7 +37,7 @@ index a76598ff4ca..55bab7b464b 100644
      WINED3D_CS_OP_STOP,
  };
  
-@@ -428,6 +429,17 @@ struct wined3d_cs_copy_uav_counter
+@@ -426,6 +427,17 @@ struct wined3d_cs_copy_uav_counter
      struct wined3d_unordered_access_view *view;
  };
  
@@ -55,7 +55,7 @@ index a76598ff4ca..55bab7b464b 100644
  struct wined3d_cs_stop
  {
      enum wined3d_cs_op opcode;
-@@ -2270,6 +2282,148 @@ void wined3d_cs_emit_copy_uav_counter(struct wined3d_cs *cs, struct wined3d_buff
+@@ -2296,6 +2308,148 @@ void wined3d_cs_emit_copy_uav_counter(struct wined3d_cs *cs, struct wined3d_buff
      cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
  }
  
@@ -204,7 +204,7 @@ index a76598ff4ca..55bab7b464b 100644
  static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
  {
      struct wined3d_cs_stop *op;
-@@ -2328,6 +2482,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+@@ -2354,6 +2508,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
      /* WINED3D_CS_OP_ADD_DIRTY_TEXTURE_REGION    */ wined3d_cs_exec_add_dirty_texture_region,
      /* WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW */ wined3d_cs_exec_clear_unordered_access_view,
      /* WINED3D_CS_OP_COPY_UAV_COUNTER            */ wined3d_cs_exec_copy_uav_counter,
@@ -213,10 +213,10 @@ index a76598ff4ca..55bab7b464b 100644
  
  static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 0233a7e9865..abab8d2d819 100644
+index 9f7c6e946a5..9cb12422691 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4098,7 +4098,10 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4106,7 +4106,10 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -228,7 +228,7 @@ index 0233a7e9865..abab8d2d819 100644
      {
          WARN("Resource formats (%s / %s) don't match.\n",
                  debug_d3dformat(dst_resource->format->id),
-@@ -4200,8 +4203,8 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
+@@ -4208,8 +4211,8 @@ HRESULT CDECL wined3d_device_copy_sub_resource_region(struct wined3d_device *dev
          return WINED3DERR_INVALIDCALL;
      }
  
@@ -240,18 +240,18 @@ index 0233a7e9865..abab8d2d819 100644
      return WINED3D_OK;
  }
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index 3e3a0b42360..843b5efead0 100644
+index 27d2e13353d..49cb4efa86f 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
-@@ -116,6 +116,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
-     {"GL_ARB_color_buffer_float",           ARB_COLOR_BUFFER_FLOAT        },
+@@ -117,6 +117,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
      {"GL_ARB_compute_shader",               ARB_COMPUTE_SHADER            },
+     {"GL_ARB_conservative_depth",           ARB_CONSERVATIVE_DEPTH        },
      {"GL_ARB_copy_buffer",                  ARB_COPY_BUFFER               },
 +    {"GL_ARB_copy_image",                   ARB_COPY_IMAGE                },
      {"GL_ARB_debug_output",                 ARB_DEBUG_OUTPUT              },
      {"GL_ARB_depth_buffer_float",           ARB_DEPTH_BUFFER_FLOAT        },
      {"GL_ARB_depth_clamp",                  ARB_DEPTH_CLAMP               },
-@@ -2700,6 +2701,8 @@ static void load_gl_funcs(struct wined3d_gl_info *gl_info)
+@@ -2703,6 +2704,8 @@ static void load_gl_funcs(struct wined3d_gl_info *gl_info)
      USE_GL_FUNC(glDispatchComputeIndirect)
      /* GL_ARB_copy_buffer */
      USE_GL_FUNC(glCopyBufferSubData)
@@ -260,7 +260,7 @@ index 3e3a0b42360..843b5efead0 100644
      /* GL_ARB_debug_output */
      USE_GL_FUNC(glDebugMessageCallbackARB)
      USE_GL_FUNC(glDebugMessageControlARB)
-@@ -3884,6 +3887,7 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
+@@ -3888,6 +3891,7 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
  
          {ARB_CLEAR_BUFFER_OBJECT,          MAKEDWORD_VERSION(4, 3)},
          {ARB_COMPUTE_SHADER,               MAKEDWORD_VERSION(4, 3)},
@@ -269,22 +269,22 @@ index 3e3a0b42360..843b5efead0 100644
          {ARB_ES3_COMPATIBILITY,            MAKEDWORD_VERSION(4, 3)},
          {ARB_FRAGMENT_LAYER_VIEWPORT,      MAKEDWORD_VERSION(4, 3)},
 diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
-index 05558760850..a743ad20316 100644
+index 6ab48474817..ef9cfd8e592 100644
 --- a/dlls/wined3d/wined3d_gl.h
 +++ b/dlls/wined3d/wined3d_gl.h
-@@ -50,6 +50,7 @@ enum wined3d_gl_extension
-     ARB_COLOR_BUFFER_FLOAT,
+@@ -51,6 +51,7 @@ enum wined3d_gl_extension
      ARB_COMPUTE_SHADER,
+     ARB_CONSERVATIVE_DEPTH,
      ARB_COPY_BUFFER,
 +    ARB_COPY_IMAGE,
      ARB_DEBUG_OUTPUT,
      ARB_DEPTH_BUFFER_FLOAT,
      ARB_DEPTH_CLAMP,
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b087ba33d3b..4d9c9274e9f 100644
+index 84ca09b9415..547d44e5aa5 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3492,6 +3492,9 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
+@@ -3520,6 +3520,9 @@ void wined3d_cs_emit_unload_resource(struct wined3d_cs *cs, struct wined3d_resou
  void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *resource,
          unsigned int sub_resource_idx, const struct wined3d_box *box, const void *data, unsigned int row_pitch,
          unsigned int slice_pitch) DECLSPEC_HIDDEN;
@@ -295,5 +295,5 @@ index b087ba33d3b..4d9c9274e9f 100644
          void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;
  HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource, unsigned int sub_resource_idx,
 -- 
-2.13.1
+2.14.1
 

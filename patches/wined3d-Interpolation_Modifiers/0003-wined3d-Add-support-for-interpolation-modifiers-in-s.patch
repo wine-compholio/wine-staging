@@ -1,4 +1,4 @@
-From 99875453e00427ccc918e237857d12cd818b8fdf Mon Sep 17 00:00:00 2001
+From dd625cdc1acbb2a9db07cbda8761903f940e31f4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?J=C3=B3zef=20Kucia?= <jkucia@codeweavers.com>
 Date: Fri, 8 Sep 2017 01:43:04 +0200
 Subject: wined3d: Add support for interpolation modifiers in sm4/sm5 pixel
@@ -12,10 +12,10 @@ Subject: wined3d: Add support for interpolation modifiers in sm4/sm5 pixel
  4 files changed, 74 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 1d0fc3960a0..692d1bf8796 100644
+index 1fdf26715b0..76ee6642f3b 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -22438,21 +22438,21 @@ static void test_interpolation(void)
+@@ -21778,21 +21778,21 @@ static void test_interpolation(void)
      color = get_texture_color(render_target, 640, 0);
      ok(compare_color(color, 0xffffffff, 1), "Got unexpected color 0x%08x.\n", color);
      color = get_texture_color(render_target, 320, 2);
@@ -45,10 +45,10 @@ index 1d0fc3960a0..692d1bf8796 100644
      ID3D11InputLayout_Release(input_layout);
      ID3D11RenderTargetView_Release(rtv[1]);
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 2c97ba8ef8d..59bba75b230 100644
+index a74f609e212..417f267fddc 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -387,7 +387,9 @@ static const char *shader_glsl_get_prefix(enum wined3d_shader_type type)
+@@ -386,7 +386,9 @@ static const char *shader_glsl_get_prefix(enum wined3d_shader_type type)
  
  static unsigned int shader_glsl_get_version(const struct wined3d_gl_info *gl_info)
  {
@@ -59,7 +59,7 @@ index 2c97ba8ef8d..59bba75b230 100644
          return 150;
      else if (gl_info->glsl_version >= MAKEDWORD_VERSION(1, 30))
          return 130;
-@@ -1848,8 +1850,51 @@ static const char *shader_glsl_shader_output_name(const struct wined3d_gl_info *
+@@ -2123,8 +2125,51 @@ static const char *shader_glsl_shader_output_name(const struct wined3d_gl_info *
      return shader_glsl_use_interface_blocks(gl_info) ? "shader_out.reg" : "ps_link";
  }
  
@@ -112,7 +112,7 @@ index 2c97ba8ef8d..59bba75b230 100644
  {
      if (shader_glsl_use_interface_blocks(gl_info))
      {
-@@ -1859,7 +1904,7 @@ static void shader_glsl_declare_shader_inputs(const struct wined3d_gl_info *gl_i
+@@ -2134,7 +2179,7 @@ static void shader_glsl_declare_shader_inputs(const struct wined3d_gl_info *gl_i
  
              shader_addline(buffer, "in shader_in_out {\n");
              for (i = 0; i < element_count; ++i)
@@ -121,7 +121,7 @@ index 2c97ba8ef8d..59bba75b230 100644
              shader_addline(buffer, "} shader_in;\n");
          }
          else
-@@ -7162,7 +7207,8 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
+@@ -7384,7 +7429,8 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
          unsigned int in_count = min(vec4_varyings(version->major, gl_info), shader->limits->packed_input);
  
          if (args->vp_mode == vertexshader && reg_maps->input_registers)
@@ -131,7 +131,7 @@ index 2c97ba8ef8d..59bba75b230 100644
          shader_addline(buffer, "vec4 %s_in[%u];\n", prefix, in_count);
      }
  
-@@ -10613,7 +10659,7 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
+@@ -10818,7 +10864,7 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
      /* WINED3DSIH_DCL_INPUT                        */ shader_glsl_nop,
      /* WINED3DSIH_DCL_INPUT_CONTROL_POINT_COUNT    */ shader_glsl_nop,
      /* WINED3DSIH_DCL_INPUT_PRIMITIVE              */ shader_glsl_nop,
@@ -141,11 +141,11 @@ index 2c97ba8ef8d..59bba75b230 100644
      /* WINED3DSIH_DCL_INPUT_PS_SIV                 */ NULL,
      /* WINED3DSIH_DCL_INPUT_SGV                    */ shader_glsl_nop,
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index ad0002b57d7..24fcdb4209a 100644
+index 06f8b0a5e74..687efbc3513 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -1159,6 +1159,20 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
-                     FIXME("Invalid instruction depth declaration for shader type %#x.\n", shader_version.type);
+@@ -1161,6 +1161,20 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
+                             ins.handler_idx, shader_version.type);
              }
          }
 +        else if (ins.handler_idx == WINED3DSIH_DCL_INPUT_PS)
@@ -166,10 +166,10 @@ index ad0002b57d7..24fcdb4209a 100644
          {
              if (shader_version.type == WINED3D_SHADER_TYPE_HULL)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 610b7b04160..dbb0399b12e 100644
+index 2d30d748393..0e0db07ad57 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -553,6 +553,7 @@ enum wined3d_shader_dst_modifier
+@@ -550,6 +550,7 @@ enum wined3d_shader_dst_modifier
  
  enum wined3d_shader_interpolation_mode
  {
@@ -177,10 +177,10 @@ index 610b7b04160..dbb0399b12e 100644
      WINED3DSIM_CONSTANT = 1,
      WINED3DSIM_LINEAR = 2,
      WINED3DSIM_LINEAR_CENTROID = 3,
-@@ -3991,6 +3992,7 @@ struct wined3d_pixel_shader
+@@ -3928,6 +3929,7 @@ struct wined3d_pixel_shader
  
      BOOL force_early_depth_stencil;
-     DWORD depth_compare;
+     enum wined3d_shader_register_type depth_output;
 +    enum wined3d_shader_interpolation_mode interpolation_mode[MAX_REG_INPUT];
  };
  

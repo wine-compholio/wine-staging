@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "917e86dd7a4cca1da47262caaded2bef9e022f99"
+	echo "19d57982ecb4520453a1b77ace386c625312e265"
 }
 
 # Show version information
@@ -465,7 +465,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
-	enable_wined3d_conservative_depth="$1"
 	enable_wined3d_draw_primitive_arrays="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1674,9 +1673,6 @@ patch_enable ()
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
 			;;
-		wined3d-conservative_depth)
-			enable_wined3d_conservative_depth="$2"
-			;;
 		wined3d-draw_primitive_arrays)
 			enable_wined3d_draw_primitive_arrays="$2"
 			;;
@@ -2237,18 +2233,7 @@ if test "$enable_wined3d_Interpolation_Modifiers" -eq 1; then
 	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
 		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-Interpolation_Modifiers depends on that."
 	fi
-	if test "$enable_wined3d_conservative_depth" -gt 1; then
-		abort "Patchset wined3d-conservative_depth disabled, but wined3d-Interpolation_Modifiers depends on that."
-	fi
 	enable_wined3d_Dual_Source_Blending=1
-	enable_wined3d_conservative_depth=1
-fi
-
-if test "$enable_wined3d_conservative_depth" -eq 1; then
-	if test "$enable_wined3d_Copy_Resource_Typeless" -gt 1; then
-		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-conservative_depth depends on that."
-	fi
-	enable_wined3d_Copy_Resource_Typeless=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
@@ -3859,12 +3844,10 @@ fi
 # | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
-	patch_apply d3d11-Depth_Bias/0001-d3d11-tests-Don-t-use-draw_quad-in-test_cb_relative_.patch
 	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
 	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
 	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Don'\''t use draw_quad in test_cb_relative_addressing.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
@@ -9163,7 +9146,6 @@ fi
 if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0001-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0002-windowscodecs-Implement-IWICBitmapEncoderInfo-GetFil.patch
-	patch_apply windowscodecs-GIF_Encoder/0003-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
 	patch_apply windowscodecs-GIF_Encoder/0004-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0005-windowscodecs-Avoid-crashing-if-no-IPropertyBag2-was.patch
 	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
@@ -9191,7 +9173,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in JPEG encoder,.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Avoid crashing if no IPropertyBag2 was passed to IWICBitmapEncoder::CreateNewFrame in JPEG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
@@ -9858,29 +9839,10 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-conservative_depth
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless
-# |
-# | Modified files:
-# |   *	dlls/wined3d/arb_program_shader.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
-# | 	dlls/wined3d/shader_sm4.c, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_conservative_depth" -eq 1; then
-	patch_apply wined3d-conservative_depth/0001-wined3d-Recognize-conservative-depth-output-register.patch
-	patch_apply wined3d-conservative_depth/0002-wined3d-Add-conservative-depth-access-information-to.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Recognize conservative depth output registers in sm4.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add conservative depth access information to glsl pixel shaders.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Interpolation_Modifiers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-1DTextures, wined3d-
-# | 	Copy_Resource_Typeless, wined3d-conservative_depth
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#43239] Implement support for interpolation modifiers in sm4/sm5 pixel shaders

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "19d57982ecb4520453a1b77ace386c625312e265"
+	echo "6144addcf0fc26f187aa05e6bac6c4a0c3542199"
 }
 
 # Show version information
@@ -349,7 +349,6 @@ patch_enable_all ()
 	enable_server_device_manager_destroy="$1"
 	enable_server_free_async_queue="$1"
 	enable_server_send_hardware_message="$1"
-	enable_setupapi_DelReg="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -362,7 +361,6 @@ patch_enable_all ()
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
 	enable_shell32_File_Property_Dialog="$1"
-	enable_shell32_FolderItemsImpl_get_Count="$1"
 	enable_shell32_Icons="$1"
 	enable_shell32_Microsoft_Windows_Themes="$1"
 	enable_shell32_NewMenu_Interface="$1"
@@ -1325,9 +1323,6 @@ patch_enable ()
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
 			;;
-		setupapi-DelReg)
-			enable_setupapi_DelReg="$2"
-			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
 			;;
@@ -1363,9 +1358,6 @@ patch_enable ()
 			;;
 		shell32-File_Property_Dialog)
 			enable_shell32_File_Property_Dialog="$2"
-			;;
-		shell32-FolderItemsImpl_get_Count)
-			enable_shell32_FolderItemsImpl_get_Count="$2"
 			;;
 		shell32-Icons)
 			enable_shell32_Icons="$2"
@@ -7850,21 +7842,6 @@ if test "$enable_server_send_hardware_message" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset setupapi-DelReg
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#13548] setupapi DelReg should recursively delete registry keys
-# |
-# | Modified files:
-# |   *	dlls/setupapi/install.c, dlls/setupapi/tests/install.c
-# |
-if test "$enable_setupapi_DelReg" -eq 1; then
-	patch_apply setupapi-DelReg/0001-setupapi-DelReg-should-recursively-delete-registry-k.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: DelReg should recursively delete registry keys.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset setupapi-DiskSpaceList
 # |
 # | Modified files:
@@ -8113,18 +8090,6 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Recognize cut/copy/paste string verbs in item menu context menu.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-FolderItemsImpl_get_Count
-# |
-# | Modified files:
-# |   *	dlls/shell32/shelldispatch.c, dlls/shell32/tests/shelldispatch.c
-# |
-if test "$enable_shell32_FolderItemsImpl_get_Count" -eq 1; then
-	patch_apply shell32-FolderItemsImpl_get_Count/0001-shell32-Improve-FolderItemsImpl_get_Count-stub.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Improve FolderItemsImpl_get_Count stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9313,13 +9278,11 @@ fi
 # |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
 # |
 if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
-	patch_apply windowscodecs-JPEG_Decoder/0001-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
 	patch_apply windowscodecs-JPEG_Decoder/0002-windowscodecs-Fix-stride-calculation-in-JPEG-decoder.patch
 	patch_apply windowscodecs-JPEG_Decoder/0003-windowscodecs-Move-additional-processing-out-of-the-.patch
 	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
 	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in JPEG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix stride calculation in JPEG decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move additional processing out of the JPEG decoding loop.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c16ef729db50209a626b743f5847a24dff5688a4"
+	echo "218286bb87f8a38a48b4717247e578e02f6a051f"
 }
 
 # Show version information
@@ -9046,11 +9046,6 @@ fi
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0005-windowscodecs-Add-support-for-palette-image-formats-.patch
-	patch_apply windowscodecs-Palette_Images/0006-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
-	patch_apply windowscodecs-Palette_Images/0007-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
-	patch_apply windowscodecs-Palette_Images/0008-windowscodecs-Implement-IWICBitmapDecoder-CopyPalett.patch
-	patch_apply windowscodecs-Palette_Images/0009-windowscodecs-Implement-IWICBitmapFrameEncode-SetPal.patch
-	patch_apply windowscodecs-Palette_Images/0010-windowscodecs-Fix-IWICBitmapEncoder-SetPalette-for-a.patch
 	patch_apply windowscodecs-Palette_Images/0011-windowscodecs-tests-Add-some-tests-for-encoding-1bpp.patch
 	patch_apply windowscodecs-Palette_Images/0012-windowscodecs-tests-Add-tests-for-encoding-2bpp-4bpp.patch
 	patch_apply windowscodecs-Palette_Images/0013-windowscodecs-Use-V_UI1-instead-of-V_UNION-to-assign.patch
@@ -9062,11 +9057,6 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in BMP encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in BMP encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::CopyPalette in TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapFrameEncode::SetPalette in the TIFF encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapEncoder::SetPalette for a not initialized case in TIFF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for encoding 1bpp/8bpp images with a palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';

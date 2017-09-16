@@ -250,6 +250,7 @@ patch_enable_all ()
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
+	enable_ntdll_Icebp_x86_64="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
@@ -1024,6 +1025,9 @@ patch_enable ()
 			;;
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
+			;;
+		ntdll-Icebp_x86_64)
+			enable_ntdll_Icebp_x86_64="$2"
 			;;
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
@@ -6351,6 +6355,18 @@ if test "$enable_ntdll_Heap_Improvements" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add helper function to delete free blocks.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve heap allocation performance.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Icebp_x86_64
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_Icebp_x86_64" -eq 1; then
+	patch_apply ntdll-Icebp_x86_64/0001-ntdll-Translate-icebp-instruction-to-EXCEPTION_SINGL.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Translate icebp instruction to EXCEPTION_SINGLE_STEP on x64.", 1 },';
 	) >> "$patchlist"
 fi
 

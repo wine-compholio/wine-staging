@@ -1,0 +1,42 @@
+From 9c89b126ffe944150dd643009b24b0140758fab3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Mon, 11 Sep 2017 03:07:45 +0200
+Subject: ntdll: Translate icebp instruction to EXCEPTION_SINGLE_STEP on x64.
+
+---
+ dlls/ntdll/signal_x86_64.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index f434775df00..2e1eac2d671 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2815,6 +2815,12 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     }
+ }
+ 
++static inline DWORD is_icebp_instr( CONTEXT *context )
++{
++    const BYTE *instr = (BYTE *)context->Rip - 1;
++    return (*instr == 0xf1) ? EXCEPTION_SINGLE_STEP : 0;
++}
++
+ /**********************************************************************
+  *		trap_handler
+  *
+@@ -2831,8 +2837,12 @@ static void trap_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+         rec->ExceptionCode = EXCEPTION_SINGLE_STEP;
+         break;
+     case TRAP_BRKPT:   /* Breakpoint exception */
++    {
++        CONTEXT *win_context = get_exception_context( rec );
++        if ((rec->ExceptionCode = is_icebp_instr( win_context ))) break;
+         rec->ExceptionAddress = (char *)rec->ExceptionAddress - 1;  /* back up over the int3 instruction */
+         /* fall through */
++    }
+     default:
+         rec->ExceptionCode = EXCEPTION_BREAKPOINT;
+         rec->NumberParameters = 1;
+-- 
+2.14.1
+

@@ -1,20 +1,20 @@
-From 0a05b54ff85992ae187dc095634e0317e30954e9 Mon Sep 17 00:00:00 2001
+From 90e993f23a08f2782181fee754108a4c52ce3daf Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 17 May 2017 23:55:55 +0800
-Subject: server: Add support for a layered window region. (v2)
+Subject: server: Add support for a layered window region. (v3)
 
 ---
  dlls/user32/tests/input.c |  2 --
- dlls/winex11.drv/bitblt.c | 45 ++++++++++++++++++++++++++++++++++
- server/protocol.def       |  7 ++++++
- server/window.c           | 62 +++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 114 insertions(+), 2 deletions(-)
+ dlls/winex11.drv/bitblt.c | 45 +++++++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def       |  7 +++++++
+ server/window.c           | 32 ++++++++++++++++++++++++++++++++
+ 4 files changed, 84 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
-index 08c4c5435c6..87c491657a9 100644
+index c4316d3041b..8c8993bf4bd 100644
 --- a/dlls/user32/tests/input.c
 +++ b/dlls/user32/tests/input.c
-@@ -2276,13 +2276,11 @@ static void test_Input_mouse(void)
+@@ -2385,13 +2385,11 @@ static void test_Input_mouse(void)
  
          if (msg.message == WM_LBUTTONDOWN)
          {
@@ -106,10 +106,10 @@ index 80256dce569..ef23e99dce8 100644
  #endif
  }
 diff --git a/server/protocol.def b/server/protocol.def
-index 7eaaec2b823..f2526c4836c 100644
+index d90666573dd..50000057838 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -2682,6 +2682,13 @@ enum coords_relative
+@@ -2728,6 +2728,13 @@ enum coords_relative
  @END
  
  
@@ -124,7 +124,7 @@ index 7eaaec2b823..f2526c4836c 100644
  @REQ(get_update_region)
      user_handle_t  window;        /* handle to the window */
 diff --git a/server/window.c b/server/window.c
-index f35d6f60a42..672512b3a43 100644
+index 2f2aae483d5..f66f1d6ac6f 100644
 --- a/server/window.c
 +++ b/server/window.c
 @@ -72,6 +72,7 @@ struct window
@@ -153,87 +153,7 @@ index f35d6f60a42..672512b3a43 100644
      return 1;
  }
  
-@@ -875,6 +880,18 @@ static struct region *intersect_window_region( struct region *region, struct win
- }
- 
- 
-+/* intersect the layer region with the specified region, relative to the window parent */
-+static struct region *intersect_layer_region( struct region *region, struct window *win )
-+{
-+    /* make region relative to window rect */
-+    offset_region( region, -win->window_rect.left, -win->window_rect.top );
-+    if (!intersect_region( region, region, win->layer_region )) return NULL;
-+    /* make region relative to parent again */
-+    offset_region( region, win->window_rect.left, win->window_rect.top );
-+    return region;
-+}
-+
-+
- /* convert coordinates from client to screen coords */
- static inline void client_to_screen( struct window *win, int *x, int *y )
- {
-@@ -929,6 +946,11 @@ static struct region *clip_children( struct window *parent, struct window *last,
-             free_region( tmp );
-             return NULL;
-         }
-+        if (ptr->layer_region && !intersect_layer_region( tmp, ptr ))
-+        {
-+            free_region( tmp );
-+            return NULL;
-+        }
-         offset_region( tmp, offset_x, offset_y );
-         if (!(region = subtract_region( region, region, tmp ))) break;
-         if (is_region_empty( region )) break;
-@@ -990,11 +1012,13 @@ static struct region *get_visible_region( struct window *win, unsigned int flags
-     {
-         set_region_rect( region, &win->visible_rect );
-         if (win->win_region && !intersect_window_region( region, win )) goto error;
-+        if (win->layer_region && !intersect_layer_region( region, win )) goto error;
-     }
-     else
-     {
-         set_region_client_rect( region, win );
-         if (win->win_region && !intersect_window_region( region, win )) goto error;
-+        if (win->layer_region && !intersect_layer_region( region, win )) goto error;
-     }
- 
-     /* clip children */
-@@ -1039,6 +1063,7 @@ static struct region *get_visible_region( struct window *win, unsigned int flags
-             }
-             set_region_client_rect( tmp, win );
-             if (win->win_region && !intersect_window_region( tmp, win )) goto error;
-+            if (win->layer_region && !intersect_layer_region( tmp, win )) goto error;
-             if (!intersect_region( region, region, tmp )) goto error;
-             if (is_region_empty( region )) break;
-         }
-@@ -1071,6 +1096,7 @@ static struct region *clip_pixel_format_children( struct window *parent, struct
-         /* add the visible rect */
-         set_region_rect( clip, &ptr->visible_rect );
-         if (ptr->win_region && !intersect_window_region( clip, ptr )) break;
-+        if (ptr->layer_region && !intersect_layer_region( clip, ptr )) break;
-         offset_region( clip, offset_x, offset_y );
-         if (!intersect_region( clip, clip, parent_clip )) break;
-         if (!union_region( region, region, clip )) break;
-@@ -1079,6 +1105,7 @@ static struct region *clip_pixel_format_children( struct window *parent, struct
-         /* subtract the client rect if it uses a custom pixel format */
-         set_region_rect( clip, &ptr->client_rect );
-         if (ptr->win_region && !intersect_window_region( clip, ptr )) break;
-+        if (ptr->layer_region && !intersect_layer_region( clip, ptr )) break;
-         offset_region( clip, offset_x, offset_y );
-         if (!intersect_region( clip, clip, parent_clip )) break;
-         if ((ptr->paint_flags & PAINT_HAS_PIXEL_FORMAT) && !subtract_region( region, region, clip ))
-@@ -1105,8 +1132,10 @@ static struct region *get_surface_region( struct window *win )
-     if (!(clip = create_empty_region())) goto error;
-     set_region_rect( region, &win->visible_rect );
-     if (win->win_region && !intersect_window_region( region, win )) goto error;
-+    if (win->layer_region && !intersect_layer_region( region, win )) goto error;
-     set_region_rect( clip, &win->client_rect );
-     if (win->win_region && !intersect_window_region( clip, win )) goto error;
-+    if (win->layer_region && !intersect_layer_region( clip, win )) goto error;
- 
-     if ((win->paint_flags & PAINT_HAS_PIXEL_FORMAT) && !subtract_region( region, region, clip ))
-         goto error;
-@@ -1825,6 +1854,14 @@ static void set_window_region( struct window *win, struct region *region, int re
+@@ -1825,6 +1830,14 @@ static void set_window_region( struct window *win, struct region *region, int re
  }
  
  
@@ -248,7 +168,7 @@ index f35d6f60a42..672512b3a43 100644
  /* destroy a window */
  void destroy_window( struct window *win )
  {
-@@ -1873,6 +1910,7 @@ void destroy_window( struct window *win )
+@@ -1873,6 +1886,7 @@ void destroy_window( struct window *win )
  
      detach_window_thread( win );
      if (win->win_region) free_region( win->win_region );
@@ -256,7 +176,7 @@ index f35d6f60a42..672512b3a43 100644
      if (win->update_region) free_region( win->update_region );
      if (win->class) release_class( win->class );
      free( win->text );
-@@ -2537,6 +2575,24 @@ DECL_HANDLER(set_window_region)
+@@ -2538,6 +2552,24 @@ DECL_HANDLER(set_window_region)
  }
  
  
@@ -281,19 +201,6 @@ index f35d6f60a42..672512b3a43 100644
  /* get a window update region */
  DECL_HANDLER(get_update_region)
  {
-@@ -2633,6 +2689,12 @@ DECL_HANDLER(update_window_zorder)
-             offset_rect( &tmp, -ptr->window_rect.left, -ptr->window_rect.top );
-             if (!rect_in_region( ptr->win_region, &tmp )) continue;
-         }
-+        if (ptr->layer_region)
-+        {
-+            tmp = rect;
-+            offset_rect( &tmp, -ptr->window_rect.left, -ptr->window_rect.top );
-+            if (!rect_in_region( ptr->layer_region, &tmp )) continue;
-+        }
-         /* found a window obscuring the rectangle, now move win above this one */
-         /* making sure to not violate the topmost rule */
-         if (!(ptr->ex_style & WS_EX_TOPMOST) || (win->ex_style & WS_EX_TOPMOST))
 -- 
-2.12.2
+2.14.1
 

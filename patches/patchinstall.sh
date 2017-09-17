@@ -8721,12 +8721,14 @@ if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
 	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
 	patch_apply user32-Mouse_Message_Hwnd/0002-user32-tests-Add-tests-for-clicking-through-layered-.patch
 	patch_apply user32-Mouse_Message_Hwnd/0003-user32-tests-Add-tests-for-window-region-of-layered-.patch
-	patch_apply user32-Mouse_Message_Hwnd/0004-server-Add-support-for-a-layered-window-region.-v2.patch
+	patch_apply user32-Mouse_Message_Hwnd/0004-user32-tests-Add-tests-for-DC-region.patch
+	patch_apply user32-Mouse_Message_Hwnd/0005-server-Add-support-for-a-layered-window-region.-v2.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for clicking through layered window.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for window region of layered windows.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for DC region.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 3 },';
 	) >> "$patchlist"
 fi
 

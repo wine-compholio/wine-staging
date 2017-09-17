@@ -1,0 +1,280 @@
+From ec757263776955ee6ca680109b47eb3bc6163845 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 16 Sep 2017 18:05:31 +0200
+Subject: wined3d: Implement generation of mip maps for shader resource views.
+
+---
+ dlls/d3d11/device.c            | 14 ++++++-
+ dlls/d3d11/tests/d3d11.c       | 10 ++---
+ dlls/wined3d/cs.c              | 84 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/device.c          |  7 ++++
+ dlls/wined3d/texture.c         |  9 ++++-
+ dlls/wined3d/wined3d.spec      |  1 +
+ dlls/wined3d/wined3d_private.h |  2 +
+ include/wine/wined3d.h         |  1 +
+ 8 files changed, 119 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index f71d4a3e910..bbdc97868db 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -2466,9 +2466,19 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_ClearDepthStencilView(ID3D
+ }
+ 
+ static void STDMETHODCALLTYPE d3d11_immediate_context_GenerateMips(ID3D11DeviceContext *iface,
+-        ID3D11ShaderResourceView *view)
++        ID3D11ShaderResourceView *shader_view)
+ {
+-    FIXME("iface %p, view %p stub!\n", iface, view);
++    struct d3d_device *device = device_from_immediate_ID3D11DeviceContext(iface);
++    struct d3d_shader_resource_view *view = unsafe_impl_from_ID3D11ShaderResourceView(shader_view);
++
++    TRACE("iface %p, shader_view %p.\n", iface, shader_view);
++
++    if (!view)
++        return;
++
++    wined3d_mutex_lock();
++    wined3d_device_generate_mips_view(device->wined3d_device, view->wined3d_view);
++    wined3d_mutex_unlock();
+ }
+ 
+ static void STDMETHODCALLTYPE d3d11_immediate_context_SetResourceMinLOD(ID3D11DeviceContext *iface,
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index 154771f4240..8906b9efa7a 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -22701,11 +22701,11 @@ static void test_mipmap_generation(void)
+     ID3D11DeviceContext_GenerateMips(context, srv);
+ 
+     check_texture_sub_resource_color(texture, 0, NULL, 0xff00ff00, 0);
+-    todo_wine check_texture_sub_resource_color(texture, 1, NULL, 0xff00ff00, 0);
+-    todo_wine check_texture_sub_resource_color(texture, 2, NULL, 0xff00ff00, 0);
++    check_texture_sub_resource_color(texture, 1, NULL, 0xff00ff00, 0);
++    check_texture_sub_resource_color(texture, 2, NULL, 0xff00ff00, 0);
+     check_texture_sub_resource_color(texture, 3, NULL, 0x00ffff00, 0);
+-    todo_wine check_texture_sub_resource_color(texture, 4, NULL, 0x00ffff00, 0);
+-    todo_wine check_texture_sub_resource_color(texture, 5, NULL, 0x00ffff00, 0);
++    check_texture_sub_resource_color(texture, 4, NULL, 0x00ffff00, 0);
++    check_texture_sub_resource_color(texture, 5, NULL, 0x00ffff00, 0);
+ 
+     ID3D11ShaderResourceView_Release(srv);
+     ID3D11Texture2D_Release(texture);
+@@ -22745,7 +22745,7 @@ static void test_mipmap_generation(void)
+     check_texture_sub_resource_color(texture, 0, NULL, 0xff00ff00, 0);
+     check_texture_sub_resource_color(texture, 1, NULL, 0xffff0000, 0);
+     if (!is_warp_device(device)) /* broken on WARP device */
+-        todo_wine check_texture_sub_resource_color(texture, 2, NULL, 0xffff0000, 0);
++        check_texture_sub_resource_color(texture, 2, NULL, 0xffff0000, 0);
+     check_texture_sub_resource_color(texture, 3, NULL, 0xff00ff00, 0);
+     check_texture_sub_resource_color(texture, 4, NULL, 0xffff0000, 0);
+     check_texture_sub_resource_color(texture, 5, NULL, 0x00000000, 0);
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 6b37e9d6f03..70fb19382ea 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -72,6 +72,7 @@ enum wined3d_cs_op
+     WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW,
+     WINED3D_CS_OP_COPY_UAV_COUNTER,
+     WINED3D_CS_OP_COPY_SUB_RESOURCE,
++    WINED3D_CS_OP_GENERATE_MIPS,
+     WINED3D_CS_OP_STOP,
+ };
+ 
+@@ -433,6 +434,12 @@ struct wined3d_cs_copy_sub_resource
+     struct wined3d_box src_box;
+ };
+ 
++struct wined3d_cs_generate_mips
++{
++    enum wined3d_cs_op opcode;
++    struct wined3d_shader_resource_view *view;
++};
++
+ struct wined3d_cs_stop
+ {
+     enum wined3d_cs_op opcode;
+@@ -2500,6 +2507,82 @@ void wined3d_cs_emit_copy_sub_resource(struct wined3d_cs *cs, struct wined3d_res
+     cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
+ }
+ 
++static void wined3d_cs_exec_generate_mips(struct wined3d_cs *cs, const void *data)
++{
++    const struct wined3d_cs_generate_mips *op = data;
++    struct wined3d_shader_resource_view *view = op->view;
++    struct wined3d_resource *resource = view->resource;
++    const struct wined3d_gl_info *gl_info;
++    struct wined3d_texture *texture;
++    struct wined3d_context *context;
++    GLenum target;
++    int i, j;
++
++    if (resource->type != WINED3D_RTYPE_TEXTURE_1D &&
++        resource->type != WINED3D_RTYPE_TEXTURE_2D &&
++        resource->type != WINED3D_RTYPE_TEXTURE_3D)
++    {
++        FIXME("Not implemented for %s resources.\n", debug_d3dresourcetype(resource->type));
++        goto end;
++    }
++
++    texture = texture_from_resource(resource);
++    context = context_acquire(cs->device, NULL, 0);
++    gl_info = context->gl_info;
++
++    for (i = view->desc.u.texture.layer_idx; i < view->desc.u.texture.layer_idx + view->desc.u.texture.layer_count; i++)
++    {
++        wined3d_texture_load_location(texture, i * texture->level_count + view->desc.u.texture.level_idx, context, WINED3D_LOCATION_TEXTURE_RGB);
++    }
++
++    if (view->gl_view.name)
++    {
++        context_bind_texture(context, view->gl_view.target, view->gl_view.name);
++        target = view->gl_view.target;
++    }
++    else
++    {
++        wined3d_texture_bind(texture, context, FALSE);
++        target = texture->target;
++    }
++
++    if (gl_info->fbo_ops.glGenerateMipmap)
++    {
++        gl_info->fbo_ops.glGenerateMipmap(target);
++        checkGLcall("glGenerateMipmap");
++    }
++    else
++        FIXME("Your OpenGL driver does not support glGenerateMipmap.\n");
++
++    for (i = view->desc.u.texture.layer_idx; i < view->desc.u.texture.layer_idx + view->desc.u.texture.layer_count; i++)
++    {
++        for (j = view->desc.u.texture.level_idx + 1; j < view->desc.u.texture.level_idx + view->desc.u.texture.level_count; j++)
++        {
++            wined3d_texture_validate_location(texture, i * texture->level_count + j, WINED3D_LOCATION_TEXTURE_RGB);
++            wined3d_texture_invalidate_location(texture, i * texture->level_count + j, ~WINED3D_LOCATION_TEXTURE_RGB);
++        }
++    }
++
++    wined3d_texture_dirtify(context);
++    context_release(context);
++
++end:
++    wined3d_resource_release(view->resource);
++}
++
++void wined3d_cs_emit_generate_mips(struct wined3d_cs *cs, struct wined3d_shader_resource_view *view)
++{
++    struct wined3d_cs_generate_mips *op;
++
++    op = cs->ops->require_space(cs, sizeof(*op), WINED3D_CS_QUEUE_DEFAULT);
++    op->opcode = WINED3D_CS_OP_GENERATE_MIPS;
++    op->view = view;
++
++    wined3d_resource_acquire(view->resource);
++
++    cs->ops->submit(cs, WINED3D_CS_QUEUE_DEFAULT);
++}
++
+ static void wined3d_cs_emit_stop(struct wined3d_cs *cs)
+ {
+     struct wined3d_cs_stop *op;
+@@ -2559,6 +2642,7 @@ static void (* const wined3d_cs_op_handlers[])(struct wined3d_cs *cs, const void
+     /* WINED3D_CS_OP_CLEAR_UNORDERED_ACCESS_VIEW */ wined3d_cs_exec_clear_unordered_access_view,
+     /* WINED3D_CS_OP_COPY_UAV_COUNTER            */ wined3d_cs_exec_copy_uav_counter,
+     /* WINED3D_CS_OP_COPY_SUB_RESOURCE           */ wined3d_cs_exec_copy_sub_resource,
++    /* WINED3D_CS_OP_GENERATE_MIPS               */ wined3d_cs_exec_generate_mips,
+ };
+ 
+ static void *wined3d_cs_st_require_space(struct wined3d_cs *cs, size_t size, enum wined3d_cs_queue_id queue_id)
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 1194513879c..bf17029b89e 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -4330,6 +4330,13 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+     wined3d_cs_emit_update_sub_resource(device->cs, resource, sub_resource_idx, box, data, row_pitch, depth_pitch);
+ }
+ 
++void CDECL wined3d_device_generate_mips_view(struct wined3d_device *device, struct wined3d_shader_resource_view *view)
++{
++    TRACE("device %p, view %p.\n", device, view);
++
++    wined3d_cs_emit_generate_mips(device->cs, view);
++}
++
+ HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
+         struct wined3d_rendertarget_view *view, const RECT *rect, DWORD flags,
+         const struct wined3d_color *color, float depth, DWORD stencil)
+diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
+index 14f5c4ecc7a..c91d40d18a9 100644
+--- a/dlls/wined3d/texture.c
++++ b/dlls/wined3d/texture.c
+@@ -765,8 +765,7 @@ void wined3d_texture_bind(struct wined3d_texture *texture,
+ }
+ 
+ /* Context activation is done by the caller. */
+-void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
+-        struct wined3d_context *context, BOOL srgb)
++void wined3d_texture_dirtify(struct wined3d_context *context)
+ {
+     /* We don't need a specific texture unit, but after binding the texture
+      * the current unit is dirty. Read the unit back instead of switching to
+@@ -787,7 +786,13 @@ void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
+      * a shader. */
+     context_invalidate_compute_state(context, STATE_COMPUTE_SHADER_RESOURCE_BINDING);
+     context_invalidate_state(context, STATE_GRAPHICS_SHADER_RESOURCE_BINDING);
++}
+ 
++/* Context activation is done by the caller. */
++void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
++        struct wined3d_context *context, BOOL srgb)
++{
++    wined3d_texture_dirtify(context);
+     wined3d_texture_bind(texture, context, srgb);
+ }
+ 
+diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
+index e4d5f2ed9ac..22c76a49281 100644
+--- a/dlls/wined3d/wined3d.spec
++++ b/dlls/wined3d/wined3d.spec
+@@ -52,6 +52,7 @@
+ @ cdecl wined3d_device_end_scene(ptr)
+ @ cdecl wined3d_device_end_stateblock(ptr ptr)
+ @ cdecl wined3d_device_evict_managed_resources(ptr)
++@ cdecl wined3d_device_generate_mips_view(ptr ptr)
+ @ cdecl wined3d_device_get_available_texture_mem(ptr)
+ @ cdecl wined3d_device_get_base_vertex_index(ptr)
+ @ cdecl wined3d_device_get_clip_plane(ptr long ptr)
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 81628d21e8f..4960b513931 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -3195,6 +3195,7 @@ void wined3d_texture_bind(struct wined3d_texture *texture,
+         struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
+ void wined3d_texture_bind_and_dirtify(struct wined3d_texture *texture,
+         struct wined3d_context *context, BOOL srgb) DECLSPEC_HIDDEN;
++void wined3d_texture_dirtify(struct wined3d_context *context) DECLSPEC_HIDDEN;
+ HRESULT wined3d_texture_check_box_dimensions(const struct wined3d_texture *texture,
+         unsigned int level, const struct wined3d_box *box) DECLSPEC_HIDDEN;
+ GLenum wined3d_texture_get_gl_buffer(const struct wined3d_texture *texture) DECLSPEC_HIDDEN;
+@@ -3574,6 +3575,7 @@ void wined3d_cs_emit_update_sub_resource(struct wined3d_cs *cs, struct wined3d_r
+ void wined3d_cs_emit_copy_sub_resource(struct wined3d_cs *cs, struct wined3d_resource *dst_resource,
+         unsigned int dst_sub_resource_idx, const struct wined3d_box *dst_box, struct wined3d_resource *src_resource,
+         unsigned int src_sub_resource_idx, const struct wined3d_box *src_box) DECLSPEC_HIDDEN;
++void wined3d_cs_emit_generate_mips(struct wined3d_cs *cs, struct wined3d_shader_resource_view *view) DECLSPEC_HIDDEN;
+ void wined3d_cs_init_object(struct wined3d_cs *cs,
+         void (*callback)(void *object), void *object) DECLSPEC_HIDDEN;
+ HRESULT wined3d_cs_map(struct wined3d_cs *cs, struct wined3d_resource *resource, unsigned int sub_resource_idx,
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 37aee84308f..961762d2cf0 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -2465,6 +2465,7 @@ void __cdecl wined3d_device_update_sub_resource(struct wined3d_device *device, s
+ HRESULT __cdecl wined3d_device_update_texture(struct wined3d_device *device,
+         struct wined3d_texture *src_texture, struct wined3d_texture *dst_texture);
+ HRESULT __cdecl wined3d_device_validate_device(const struct wined3d_device *device, DWORD *num_passes);
++void CDECL wined3d_device_generate_mips_view(struct wined3d_device *device, struct wined3d_shader_resource_view *view);
+ 
+ HRESULT __cdecl wined3d_palette_create(struct wined3d_device *device, DWORD flags,
+         unsigned int entry_count, const PALETTEENTRY *entries, struct wined3d_palette **palette);
+-- 
+2.14.1
+

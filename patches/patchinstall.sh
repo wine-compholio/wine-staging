@@ -3771,7 +3771,7 @@ fi
 # Patchset d3d11-Deferred_Context
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#43611] Add semi-stub for D3D11 deferred context implementation
+# |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/wined3d.spec,

@@ -8750,6 +8750,7 @@ fi
 # Patchset user32-Mouse_Message_Hwnd
 # |
 # | This patchset fixes the following Wine bugs:
+# |   *	[#22458] Fix issues with inserting symbols by clicking on center in Word 2007 & 2010
 # |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
 # |   *	[#9512] Make sure popups don't block access to objects underneath in DVDPro
 # |

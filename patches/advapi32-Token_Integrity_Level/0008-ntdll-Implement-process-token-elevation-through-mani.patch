@@ -1,4 +1,4 @@
-From 7b7147df179554c5701f5d759a7b161d79ef90f3 Mon Sep 17 00:00:00 2001
+From e15be9d22652dbf7ef027ce5f3ef3faa42139c7a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: ntdll: Implement process token elevation through manifests.
@@ -12,13 +12,14 @@ Subject: ntdll: Implement process token elevation through manifests.
  5 files changed, 67 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index a09eca9db75..2f6bcbde8fe 100644
+index cdf8d586c36..5162e2fc0ec 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3632,6 +3632,32 @@ static void load_global_options(void)
+@@ -3095,6 +3095,32 @@ static void load_global_options(void)
+ }
  
  
- /***********************************************************************
++/***********************************************************************
 + *           elevate_process
 + */
 +static void elevate_process( void )
@@ -44,11 +45,10 @@ index a09eca9db75..2f6bcbde8fe 100644
 +}
 +
 +
-+/***********************************************************************
+ /***********************************************************************
   *           start_process
   */
- static void start_process( void *arg )
-@@ -3679,6 +3705,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3111,6 +3137,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
                                  ULONG_PTR unknown3, ULONG_PTR unknown4 )
  {
      static const WCHAR globalflagW[] = {'G','l','o','b','a','l','F','l','a','g',0};
@@ -56,7 +56,7 @@ index a09eca9db75..2f6bcbde8fe 100644
      LARGE_INTEGER timeout;
      NTSTATUS status;
      WINE_MODREF *wm;
-@@ -3725,6 +3752,16 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3154,6 +3181,16 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
      if ((status = fixup_imports( wm, load_path )) != STATUS_SUCCESS) goto error;
      heap_set_debug_flags( GetProcessHeap() );
  
@@ -70,14 +70,14 @@ index a09eca9db75..2f6bcbde8fe 100644
 +        elevate_process();  /* FIXME: the process exists with a wrong token for a short time */
 +    }
 +
-     /* Store original entrypoint (in case it gets corrupted) */
-     start_params.kernel_start = kernel_start;
-     start_params.entry = wm->ldr.EntryPoint;
+     status = wine_call_on_stack( attach_process_dlls, wm, (char *)NtCurrentTeb()->Tib.StackBase - page_size );
+     if (status != STATUS_SUCCESS) goto error;
+ 
 diff --git a/server/process.c b/server/process.c
-index f0f60edcd3f..74675d343b4 100644
+index f8969433ede..10cf39d8962 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -1146,6 +1146,14 @@ struct process_snapshot *process_snap( int *count )
+@@ -1136,6 +1136,14 @@ struct process_snapshot *process_snap( int *count )
      return snapshot;
  }
  
@@ -105,10 +105,10 @@ index 548796f9c22..262eb59627b 100644
  /* console functions */
  extern void inherit_console(struct thread *parent_thread, struct process *process, obj_handle_t hconin);
 diff --git a/server/protocol.def b/server/protocol.def
-index 300f23fb9b6..e5b598259f7 100644
+index 7590541ac8a..55cc768d21a 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3696,6 +3696,13 @@ struct handle_info
+@@ -3610,6 +3610,13 @@ struct handle_info
  @END
  
  
@@ -123,10 +123,10 @@ index 300f23fb9b6..e5b598259f7 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/token.c b/server/token.c
-index c9d36a5b4f3..385ea3bbfda 100644
+index 7abd92386ea..49e84362a83 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -1822,3 +1822,17 @@ DECL_HANDLER(create_token)
+@@ -1813,3 +1813,17 @@ DECL_HANDLER(create_token)
          release_object( token );
      }
  }
@@ -145,5 +145,5 @@ index c9d36a5b4f3..385ea3bbfda 100644
 +    }
 +}
 -- 
-2.13.1
+2.14.1
 

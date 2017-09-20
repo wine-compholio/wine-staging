@@ -1,22 +1,21 @@
-From 7c039b040883bf9cc22050f2dcb8b70cb9a2e5b8 Mon Sep 17 00:00:00 2001
+From d209582c297d376da27f80dc62c59b2f5440da25 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 1 Apr 2015 04:34:20 +0200
 Subject: ntdll: Load CLI/.NET images in the same way as Windows XP and above.
 
 ---
- dlls/ntdll/loader.c | 123 +++++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 121 insertions(+), 2 deletions(-)
+ dlls/ntdll/loader.c | 127 ++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 123 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index cf758505a4c..e796e7552b0 100644
+index cdf8d586c36..fa66c4c40d2 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -104,12 +104,17 @@ struct start_params
-     void                   *kernel_start;
-     LPTHREAD_START_ROUTINE  entry;
- };
-+static struct start_params start_params;
+@@ -100,11 +100,16 @@ struct builtin_load_info
+ static struct builtin_load_info default_load_info;
+ static struct builtin_load_info *builtin_load_info = &default_load_info;
  
++static CONTEXT start_context = { 0 };
  static HANDLE main_exe_file;
  static UINT tls_module_count;      /* number of modules with TLS directory */
  static IMAGE_TLS_DIRECTORY *tls_dirs;  /* array of TLS directories */
@@ -29,10 +28,11 @@ index cf758505a4c..e796e7552b0 100644
  static RTL_CRITICAL_SECTION loader_section;
  static RTL_CRITICAL_SECTION_DEBUG critsect_debug =
  {
-@@ -343,6 +348,78 @@ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { ret
+@@ -363,6 +368,78 @@ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { ret
+ #endif  /* __i386__ */
  
  
- /*************************************************************************
++/*************************************************************************
 + *      is_cli_only_image
 + *
 + * Checks if an image is a CLI/.NET image which does not contain any
@@ -104,11 +104,10 @@ index cf758505a4c..e796e7552b0 100644
 +}
 +
 +
-+/*************************************************************************
+ /*************************************************************************
   *		get_modref
   *
-  * Looks for the referenced HMODULE in the current process
-@@ -892,6 +969,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
+@@ -913,6 +990,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
      if (!(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS)) return STATUS_SUCCESS;  /* already done */
      wm->ldr.Flags &= ~LDR_DONT_RESOLVE_REFS;
  
@@ -119,7 +118,7 @@ index cf758505a4c..e796e7552b0 100644
      wm->ldr.TlsIndex = alloc_tls_slot( &wm->ldr );
  
      if (!(imports = RtlImageDirectoryEntryToData( wm->ldr.BaseAddress, TRUE,
-@@ -1096,8 +1177,47 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
+@@ -1117,8 +1198,47 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
      BOOL retv = FALSE;
  
      /* Skip calls for modules loaded with special load flags */
@@ -159,7 +158,7 @@ index cf758505a4c..e796e7552b0 100644
 +        #endif
 +
 +            if (!(wm->ldr.Flags & LDR_IMAGE_IS_DLL))
-+                start_params.entry = wm->ldr.EntryPoint;
++                start_context.ContextFlags = 0;
 +
 +            entry = wm->ldr.EntryPoint;
 +        }
@@ -168,14 +167,32 @@ index cf758505a4c..e796e7552b0 100644
      if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
      if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
  
-@@ -3066,7 +3186,6 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3116,7 +3236,6 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
      WINE_MODREF *wm;
      LPCWSTR load_path;
      PEB *peb = NtCurrentTeb()->Peb;
--    struct start_params start_params;
+-    CONTEXT context = { 0 };
  
+     kernel32_start_process = kernel_start;
      if (main_exe_file) NtClose( main_exe_file );  /* at this point the main module is created */
+@@ -3147,7 +3266,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     InsertHeadList( &peb->LdrData->InMemoryOrderModuleList, &wm->ldr.InMemoryOrderModuleList );
  
+     if ((status = virtual_alloc_thread_stack( NtCurrentTeb(), 0, 0 )) != STATUS_SUCCESS) goto error;
+-    if ((status = server_init_process_done( &context )) != STATUS_SUCCESS) goto error;
++    if ((status = server_init_process_done( &start_context )) != STATUS_SUCCESS) goto error;
+ 
+     actctx_init();
+     load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
+@@ -3163,7 +3282,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     timeout.QuadPart = 0;
+     NtDelayExecution( TRUE, &timeout );
+ 
+-    if (context.ContextFlags) NtSetContextThread( GetCurrentThread(), &context );
++    if (start_context.ContextFlags) NtSetContextThread( GetCurrentThread(), &start_context );
+     wine_switch_to_stack( start_process, wm->ldr.EntryPoint, NtCurrentTeb()->Tib.StackBase );
+ 
+ error:
 -- 
-2.11.0
+2.14.1
 

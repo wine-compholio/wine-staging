@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "302153117e20b62c9170aed62aa33e83cacfaf59"
+	echo "fdac39f697e049ead215b164bfe6953269ffa7be"
 }
 
 # Show version information
@@ -2686,7 +2686,11 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	if test "$enable_mscoree_CorValidateImage" -gt 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
+	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
+		abort "Patchset ntdll-APC_Start_Process disabled, but ntdll-CLI_Images depends on that."
+	fi
 	enable_mscoree_CorValidateImage=1
+	enable_ntdll_APC_Start_Process=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -6154,7 +6158,7 @@ fi
 # Patchset ntdll-CLI_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage
+# |   *	mscoree-CorValidateImage, ntdll-APC_Start_Process
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader
@@ -6365,7 +6369,7 @@ fi
 # Patchset ntdll-HashLinks
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE
+# |   *	mscoree-CorValidateImage, ntdll-APC_Start_Process, ntdll-CLI_Images, ntdll-LDR_MODULE
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, include/winternl.h
@@ -6500,8 +6504,8 @@ fi
 # Patchset ntdll-LdrRegisterDllNotification
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-Attach_Process_DLLs, ntdll-
-# | 	ThreadTime, ntdll-Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
+# |   *	mscoree-CorValidateImage, ntdll-APC_Start_Process, ntdll-CLI_Images, ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-
+# | 	Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c, include/winternl.h

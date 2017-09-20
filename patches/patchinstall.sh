@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bb16263fe1974851f495435fef9a3d57fa2d4aa9"
+	echo "302153117e20b62c9170aed62aa33e83cacfaf59"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.17"
+	echo "Wine Staging 2.18 (unreleased)"
 	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
@@ -465,7 +465,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
-	enable_wined3d_cpu_blitter_blit="$1"
 	enable_wined3d_draw_primitive_arrays="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1673,9 +1672,6 @@ patch_enable ()
 			;;
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
-			;;
-		wined3d-cpu_blitter_blit)
-			enable_wined3d_cpu_blitter_blit="$2"
 			;;
 		wined3d-draw_primitive_arrays)
 			enable_wined3d_draw_primitive_arrays="$2"
@@ -9106,8 +9102,6 @@ fi
 # | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
-	patch_apply windowscodecs-Palette_Images/0005-windowscodecs-Add-support-for-palette-image-formats-.patch
-	patch_apply windowscodecs-Palette_Images/0011-windowscodecs-tests-Add-some-tests-for-encoding-1bpp.patch
 	patch_apply windowscodecs-Palette_Images/0012-windowscodecs-tests-Add-tests-for-encoding-2bpp-4bpp.patch
 	patch_apply windowscodecs-Palette_Images/0013-windowscodecs-Use-V_UI1-instead-of-V_UNION-to-assign.patch
 	patch_apply windowscodecs-Palette_Images/0014-windowscodecs-Add-support-for-palette-image-formats-.patch
@@ -9117,8 +9111,6 @@ if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0020-windowscodecs-find_decoder-should-return-an-error-it.patch
 	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to PNG encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for encoding 1bpp/8bpp images with a palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to TIFF encoder.", 1 },';
@@ -9926,21 +9918,6 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-cpu_blitter_blit
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43701] Don't claim SYSMEM location to be current if memory was evicted
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_cpu_blitter_blit" -eq 1; then
-	patch_apply wined3d-cpu_blitter_blit/0001-wined3d-Don-t-claim-SYSMEM-location-to-be-current-if.patch
-	(
-		printf '%s\n' '+    { "Matteo Bruni", "wined3d: Don'\''t claim SYSMEM location to be current if memory was evicted.", 1 },';
 	) >> "$patchlist"
 fi
 

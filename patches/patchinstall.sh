@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fdac39f697e049ead215b164bfe6953269ffa7be"
+	echo "0991e015316e382f787b1f5c93b483c3faf04b9b"
 }
 
 # Show version information
@@ -517,7 +517,6 @@ patch_enable_all ()
 	enable_wusa_MSU_Package_Installer="$1"
 	enable_xaudio2_get_al_format="$1"
 	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
-	enable_xinput9_1_0_Parentsrc="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1828,9 +1827,6 @@ patch_enable ()
 			;;
 		xaudio2_7-OnVoiceProcessingPassStart)
 			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
-			;;
-		xinput9_1_0-Parentsrc)
-			enable_xinput9_1_0_Parentsrc="$2"
 			;;
 		*)
 			return 1
@@ -10704,21 +10700,6 @@ if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -eq 1; then
 	patch_apply xaudio2_7-OnVoiceProcessingPassStart/0001-xaudio2_7-Use-assembly-wrapper-to-call-OnVoiceProces.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "xaudio2_7: Use assembly wrapper to call OnVoiceProcessingPassStart callback.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xinput9_1_0-Parentsrc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42154] Build independent xinput9_1_0.dll instead of using forwards
-# |
-# | Modified files:
-# |   *	dlls/xinput9_1_0/Makefile.in, dlls/xinput9_1_0/xinput9_1_0.spec
-# |
-if test "$enable_xinput9_1_0_Parentsrc" -eq 1; then
-	patch_apply xinput9_1_0-Parentsrc/0001-xinput9_1_0-Build-independent-xinput9_1_0.dll-instea.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "xinput9_1_0: Build independent xinput9_1_0.dll instead of using forwards.", 1 },';
 	) >> "$patchlist"
 fi
 

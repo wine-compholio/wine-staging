@@ -1,31 +1,17 @@
-From fcefc5661656de44d02fed0431b4a61fa618b663 Mon Sep 17 00:00:00 2001
+From ca415799729a5330fc9def2df8fb9c4ffef80448 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 5 Mar 2017 23:50:06 +0100
 Subject: advapi32: Implement LsaLookupPrivilegeName.
 
 ---
- dlls/advapi32/advapi32.spec   |  2 +-
  dlls/advapi32/advapi32_misc.h |  2 ++
- dlls/advapi32/lsa.c           | 39 +++++++++++++++++++++++++++++++++++++++
+ dlls/advapi32/lsa.c           | 30 ++++++++++++++++++++++++++++--
  dlls/advapi32/security.c      | 27 ++++++++++++++++++---------
  include/ntsecapi.h            |  1 +
- 5 files changed, 61 insertions(+), 10 deletions(-)
+ 4 files changed, 49 insertions(+), 11 deletions(-)
 
-diff --git a/dlls/advapi32/advapi32.spec b/dlls/advapi32/advapi32.spec
-index d5503490a0..709a385967 100644
---- a/dlls/advapi32/advapi32.spec
-+++ b/dlls/advapi32/advapi32.spec
-@@ -469,7 +469,7 @@
- @ stdcall LsaLookupNames(long long ptr ptr ptr)
- @ stdcall LsaLookupNames2(ptr long long ptr ptr ptr)
- @ stub LsaLookupPrivilegeDisplayName
--# @ stub LsaLookupPrivilegeName
-+@ stdcall LsaLookupPrivilegeName(long ptr ptr)
- # @ stub LsaLookupPrivilegeValue
- @ stdcall LsaLookupSids(ptr long ptr ptr ptr)
- # @ stub LsaLookupSids2
 diff --git a/dlls/advapi32/advapi32_misc.h b/dlls/advapi32/advapi32_misc.h
-index d116ecb836..ecb07f635a 100644
+index d116ecb836e..ecb07f635a6 100644
 --- a/dlls/advapi32/advapi32_misc.h
 +++ b/dlls/advapi32/advapi32_misc.h
 @@ -68,4 +68,6 @@ static inline WCHAR *strdupAW( const char *src )
@@ -36,28 +22,20 @@ index d116ecb836..ecb07f635a 100644
 +
  #endif /* __WINE_ADVAPI32MISC_H */
 diff --git a/dlls/advapi32/lsa.c b/dlls/advapi32/lsa.c
-index 3da6d19b82..af5f9dd46d 100644
+index 61c91f497eb..e6f88d2fa73 100644
 --- a/dlls/advapi32/lsa.c
 +++ b/dlls/advapi32/lsa.c
-@@ -973,3 +973,42 @@ NTSTATUS WINAPI LsaUnregisterPolicyChangeNotification(
-     FIXME("(%d,%p) stub\n", class, event);
-     return STATUS_SUCCESS;
- }
-+
-+/******************************************************************************
-+ * LsaLookupPrivilegeName [ADVAPI32.@]
-+ *
-+ */
-+NTSTATUS WINAPI LsaLookupPrivilegeName(
-+    LSA_HANDLE handle,
-+    PLUID lpLuid,
-+    PUNICODE_STRING *name)
-+{
+@@ -983,6 +983,32 @@ NTSTATUS WINAPI LsaLookupPrivilegeName(
+     LUID *luid,
+     UNICODE_STRING **name)
+ {
+-    FIXME("(%p,%p,%p) stub\n", handle, luid, name);
+-    return STATUS_NO_SUCH_PRIVILEGE;
 +    UNICODE_STRING *priv_unicode;
 +    size_t priv_size;
 +    WCHAR *strW;
 +
-+    TRACE("(%p, %p, %p)\n", handle, lpLuid, name);
++    TRACE("(%p, %p, %p)\n", handle, luid, name);
 +
 +    if (!handle)
 +        return STATUS_INVALID_HANDLE;
@@ -65,25 +43,25 @@ index 3da6d19b82..af5f9dd46d 100644
 +    if (!name)
 +        return STATUS_INVALID_PARAMETER;
 +
-+    if (lpLuid->HighPart ||
-+        (lpLuid->LowPart < SE_MIN_WELL_KNOWN_PRIVILEGE ||
-+         lpLuid->LowPart > SE_MAX_WELL_KNOWN_PRIVILEGE ||
-+         !WellKnownPrivNames[lpLuid->LowPart]))
++    if (luid->HighPart ||
++        (luid->LowPart < SE_MIN_WELL_KNOWN_PRIVILEGE ||
++         luid->LowPart > SE_MAX_WELL_KNOWN_PRIVILEGE ||
++         !WellKnownPrivNames[luid->LowPart]))
 +        return STATUS_NO_SUCH_PRIVILEGE;
 +
-+    priv_size = (strlenW(WellKnownPrivNames[lpLuid->LowPart]) + 1) * sizeof(WCHAR);
++    priv_size = (strlenW(WellKnownPrivNames[luid->LowPart]) + 1) * sizeof(WCHAR);
 +    priv_unicode = heap_alloc(sizeof(*priv_unicode) + priv_size);
 +    if (!priv_unicode) return STATUS_NO_MEMORY;
 +
 +    strW = (WCHAR *)(priv_unicode + 1);
-+    strcpyW(strW, WellKnownPrivNames[lpLuid->LowPart]);
++    strcpyW(strW, WellKnownPrivNames[luid->LowPart]);
 +    RtlInitUnicodeString(priv_unicode, strW);
 +
 +    *name = priv_unicode;
 +    return STATUS_SUCCESS;
-+}
+ }
 diff --git a/dlls/advapi32/security.c b/dlls/advapi32/security.c
-index e36792cff4..3bc8f48b19 100644
+index e36792cff4b..3bc8f48b19c 100644
 --- a/dlls/advapi32/security.c
 +++ b/dlls/advapi32/security.c
 @@ -1840,7 +1840,7 @@ static const WCHAR SE_IMPERSONATE_NAME_W[] =
@@ -147,7 +125,7 @@ index e36792cff4..3bc8f48b19 100644
      }
  }
 diff --git a/include/ntsecapi.h b/include/ntsecapi.h
-index 2bb3d312e4..0bf0eca43e 100644
+index 2bb3d312e43..0bf0eca43ed 100644
 --- a/include/ntsecapi.h
 +++ b/include/ntsecapi.h
 @@ -370,6 +370,7 @@ NTSTATUS WINAPI LsaLookupNames(LSA_HANDLE,ULONG,PLSA_UNICODE_STRING,PLSA_REFEREN
@@ -159,5 +137,5 @@ index 2bb3d312e4..0bf0eca43e 100644
  ULONG WINAPI LsaNtStatusToWinError(NTSTATUS);
  NTSTATUS WINAPI LsaOpenPolicy(PLSA_UNICODE_STRING,PLSA_OBJECT_ATTRIBUTES,ACCESS_MASK,PLSA_HANDLE);
 -- 
-2.13.1
+2.14.1
 

@@ -1,4 +1,4 @@
-From 1f6c4cab7763e40ed66d3d9336e47be045a4abb1 Mon Sep 17 00:00:00 2001
+From 7c4a78a160ee6b8a23a1eac779901faae5cb2335 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 21 Nov 2014 12:22:46 +0100
 Subject: ws2_32: Avoid race-conditions of async WSARecv() operations with
@@ -37,8 +37,9 @@ Based on the code it looks like we could savely remove the write-watch check
 at the beginning of WS2_recv_base, which might make the application think
 that data is immediately available.
 ---
- dlls/ws2_32/socket.c | 15 ++++++++++++++-
- 1 file changed, 14 insertions(+), 1 deletion(-)
+ dlls/ws2_32/socket.c     | 15 ++++++++++++++-
+ dlls/ws2_32/tests/sock.c | 11 +++--------
+ 2 files changed, 17 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
 index 681f340bc6d..ac356035cc6 100644
@@ -66,6 +67,64 @@ index 681f340bc6d..ac356035cc6 100644
              return -1;
      }
  
+diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
+index 02f7473215d..e1e37404b72 100644
+--- a/dlls/ws2_32/tests/sock.c
++++ b/dlls/ws2_32/tests/sock.c
+@@ -6962,18 +6962,15 @@ static void test_write_watch(void)
+     send(src, "test message", sizeof("test message"), 0);
+ 
+     ret = GetOverlappedResult( (HANDLE)dest, &ov, &bytesReturned, TRUE );
+-    todo_wine
+-    {
+     ok( ret, "GetOverlappedResult failed %u\n", GetLastError() );
+     ok( bytesReturned == sizeof("test message"), "wrong size %u\n", bytesReturned );
+     ok( !memcmp( base, "test ", 5 ), "wrong data %s\n", base );
+     ok( !memcmp( base + 0x4000, "message", 8 ), "wrong data %s\n", base + 0x4000 );
+-    }
+ 
+     count = 64;
+     ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
+     ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
+-    ok( count == 0, "wrong count %lu\n", count );
++    todo_wine ok( count == 0, "wrong count %lu\n", count );
+ 
+     memset( base, 0, size );
+     count = 64;
+@@ -6984,7 +6981,6 @@ static void test_write_watch(void)
+     bufs[1].len = 0x4000;
+     bufs[1].buf = base + 0x2000;
+     ret = WSARecvFrom( dest, bufs, 2, NULL, &flags, &addr, &addr_len, &ov, NULL);
+-    todo_wine
+     ok(ret == SOCKET_ERROR && GetLastError() == ERROR_IO_PENDING,
+        "WSARecv failed - %d error %d\n", ret, GetLastError());
+ 
+@@ -6992,7 +6988,6 @@ static void test_write_watch(void)
+     ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
+     ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
+     ok( count == 5, "wrong count %lu\n", count );
+-    todo_wine
+     ok( !base[0], "data set\n" );
+ 
+     send(src, "test message", sizeof("test message"), 0);
+@@ -7006,7 +7001,7 @@ static void test_write_watch(void)
+     count = 64;
+     ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
+     ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
+-    ok( count == 0, "wrong count %lu\n", count );
++    todo_wine ok( count == 0, "wrong count %lu\n", count );
+ 
+     memset( base, 0, size );
+     count = 64;
+@@ -7035,7 +7030,7 @@ static void test_write_watch(void)
+         count = 64;
+         ret = pGetWriteWatch( WRITE_WATCH_FLAG_RESET, base, size, results, &count, &pagesize );
+         ok( !ret, "GetWriteWatch failed %u\n", GetLastError() );
+-        ok( count == 0, "wrong count %lu\n", count );
++        todo_wine ok( count == 0, "wrong count %lu\n", count );
+     }
+     WSACloseEvent( event );
+     closesocket( dest );
 -- 
 2.14.1
 

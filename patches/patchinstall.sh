@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0991e015316e382f787b1f5c93b483c3faf04b9b"
+	echo "25a8773d21d0113dc5e4f9dee49d9d9dbeed347b"
 }
 
 # Show version information
@@ -6813,7 +6813,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
-# | 	include/winternl.h
+# | 	dlls/ws2_32/tests/sock.c, include/winternl.h
 # |
 if test "$enable_ws2_32_WriteWatches" -eq 1; then
 	patch_apply ws2_32-WriteWatches/0001-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch

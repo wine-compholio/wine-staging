@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "25a8773d21d0113dc5e4f9dee49d9d9dbeed347b"
+	echo "44cb0afb2571984bda8ca1fa084a50c1fc04ac71"
 }
 
 # Show version information
@@ -294,7 +294,6 @@ patch_enable_all ()
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
-	enable_ntdll_WriteWatches="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
@@ -1158,9 +1157,6 @@ patch_enable ()
 			;;
 		ntdll-Wait_User_APC)
 			enable_ntdll_Wait_User_APC="$2"
-			;;
-		ntdll-WriteWatches)
-			enable_ntdll_WriteWatches="$2"
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
@@ -2553,13 +2549,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
-if test "$enable_ntdll_WriteWatches" -eq 1; then
-	if test "$enable_ws2_32_WriteWatches" -gt 1; then
-		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WriteWatches depends on that."
-	fi
-	enable_ws2_32_WriteWatches=1
-fi
-
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -2575,10 +2564,10 @@ if test "$enable_ntdll_Signal_Handler" -eq 1; then
 fi
 
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
-	if test "$enable_ws2_32_WriteWatches" -gt 1; then
-		abort "Patchset ws2_32-WriteWatches disabled, but ntdll-WRITECOPY depends on that."
+	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but ntdll-WRITECOPY depends on that."
 	fi
-	enable_ws2_32_WriteWatches=1
+	enable_ntdll_User_Shared_Data=1
 fi
 
 if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
@@ -2961,9 +2950,10 @@ fi
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
 # | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dsound/primary.c, dlls/dwrite/font.c,
-# | 	dlls/dwrite/layout.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h, dlls/oleaut32/oleaut.c,
-# | 	dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c,
-# | 	dlls/wsdapi/msgparams.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/dwrite/layout.c, dlls/evr/evr.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/ole32/storage32.h,
+# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h,
+# | 	tools/makedep.c
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-ole32-Fix-compilation-with-recent-versions-of-gcc.patch
@@ -2983,6 +2973,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
+	patch_apply Compiler_Warnings/0033-evr-Avoid-implicit-cast-of-interface-pointer.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Fix compilation with recent versions of gcc.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
@@ -3001,6 +2992,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wsdapi: Avoid implicit cast of interface pointer.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "evr: Avoid implicit cast of interface pointer.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6809,25 +6801,11 @@ if test "$enable_ntdll_Serial_Port_Detection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ws2_32-WriteWatches
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_i386.c, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c,
-# | 	dlls/ws2_32/tests/sock.c, include/winternl.h
-# |
-if test "$enable_ws2_32_WriteWatches" -eq 1; then
-	patch_apply ws2_32-WriteWatches/0001-ntdll-Expose-wine_uninterrupted_-read-write-_memory-.patch
-	patch_apply ws2_32-WriteWatches/0002-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Expose wine_uninterrupted_[read|write]_memory as exports.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-WRITECOPY
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-
+# | 	User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
@@ -6854,7 +6832,8 @@ fi
 # Patchset ntdll-Signal_Handler
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches, ntdll-WRITECOPY
+# |   *	ntdll-Attach_Process_DLLs, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-
+# | 	User_Shared_Data, ntdll-WRITECOPY
 # |
 # | Modified files:
 # |   *	dlls/ntdll/signal_i386.c
@@ -6968,21 +6947,6 @@ if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-WriteWatches
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WriteWatches
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/virtual.c, dlls/ntdll/file.c
-# |
-if test "$enable_ntdll_WriteWatches" -eq 1; then
-	patch_apply ntdll-WriteWatches/0001-ntdll-Avoid-race-conditions-with-write-watches-in-Nt.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Avoid race-conditions with write watches in NtReadFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -10562,6 +10526,18 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WriteWatches
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
+# |
+if test "$enable_ws2_32_WriteWatches" -eq 1; then
+	patch_apply ws2_32-WriteWatches/0002-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
 	) >> "$patchlist"
 fi
 

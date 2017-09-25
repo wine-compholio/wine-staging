@@ -1,4 +1,4 @@
-From 6164061c7897abc29b28b0bb3a98b0cc525be934 Mon Sep 17 00:00:00 2001
+From fcb1675d7e732d23fb36fdf2a0da3182d0216e62 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: ntdll: Create thread to update user_shared_data time values when
@@ -85,10 +85,10 @@ index b405bb4e158..187e5a9b57a 100644
  
      LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index dfa808bfb29..463d88c67b9 100644
+index 043c9a64188..157c58f24f4 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -177,6 +177,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
+@@ -181,6 +181,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
  extern void virtual_release_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -99,7 +99,7 @@ index dfa808bfb29..463d88c67b9 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 0e73430907f..97b7383e2b8 100644
+index c42d81c7f89..81c11658a49 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -43,6 +43,7 @@
@@ -121,7 +121,7 @@ index 0e73430907f..97b7383e2b8 100644
  
  PUNHANDLED_EXCEPTION_FILTER unhandled_exception_filter = NULL;
  LPTHREAD_START_ROUTINE kernel32_start_process = NULL;
-@@ -355,18 +358,71 @@ static ULONG_PTR get_image_addr(void)
+@@ -354,18 +357,71 @@ static ULONG_PTR get_image_addr(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
@@ -198,7 +198,7 @@ index 0e73430907f..97b7383e2b8 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -397,7 +453,7 @@ HANDLE thread_init(void)
+@@ -396,7 +452,7 @@ HANDLE thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -208,39 +208,33 @@ index 0e73430907f..97b7383e2b8 100644
      /* allocate and initialize the PEB */
  
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index a452c58a44d..da7206a58b1 100644
+index 2cdcca8a599..0b813d3b0e9 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1758,6 +1758,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
-     struct file_view *view;
+@@ -1784,6 +1784,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+ {
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
-     sigset_t sigset;
+     void *page = ROUND_ADDR( addr, page_mask );
 +    BOOL update_shared_data = FALSE;
+     sigset_t sigset;
+     BYTE vprot;
  
-     server_enter_uninterrupted_section( &csVirtual, &sigset );
-     if ((view = VIRTUAL_FindView( addr, 0 )))
-@@ -1774,6 +1775,18 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
-             /* ignore fault if page is writable now */
-             if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_WRITE) ret = STATUS_SUCCESS;
-         }
-+        else if (!err && page == user_shared_data_external)
-+        {
-+            if (!(vprot & VPROT_READ))
-+            {
-+                set_page_vprot_bits( page, page_size, VPROT_READ | VPROT_WRITE, 0 );
-+                mprotect_range( view, page, page_size, 0, 0 );
-+                update_shared_data = TRUE;
-+            }
-+            /* ignore fault if page is readable now */
-+            if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_READ) ret = STATUS_SUCCESS;
-+            else update_shared_data = FALSE;
-+        }
-         if (!on_signal_stack && (vprot & VPROT_GUARD))
-         {
-             set_page_vprot_bits( page, page_size, 0, VPROT_GUARD );
-@@ -1782,6 +1795,10 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -1809,7 +1810,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+                 ret = STATUS_SUCCESS;
          }
      }
++    else if (!err && page == user_shared_data_external)
++    {
++        if (!(vprot & VPROT_READ))
++        {
++            set_page_vprot_bits( page, page_size, VPROT_READ | VPROT_WRITE, 0 );
++            mprotect_range( page, page_size, 0, 0 );
++            update_shared_data = TRUE;
++        }
++        /* ignore fault if page is readable now */
++        if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_READ) ret = STATUS_SUCCESS;
++        else update_shared_data = FALSE;
++    }
      server_leave_uninterrupted_section( &csVirtual, &sigset );
 +
 +    if (update_shared_data)

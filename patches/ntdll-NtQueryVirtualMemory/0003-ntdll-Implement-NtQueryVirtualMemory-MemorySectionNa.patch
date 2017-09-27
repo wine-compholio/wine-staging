@@ -1,53 +1,29 @@
-From cf7fe40a5d1897b86b655b9bbe3686d77cd3bcd6 Mon Sep 17 00:00:00 2001
+From 0dd49a3b6d7951374e0bd120535f02377112064c Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Sun, 28 May 2017 05:19:30 +0200
 Subject: ntdll: Implement NtQueryVirtualMemory(MemorySectionName). (v3)
 
 Contains several improvements by Sebastian Lackner <sebastian@fds-team.de>.
 ---
- dlls/ntdll/virtual.c          | 109 +++++++++++++++++++++++++++++++++++++++++-
- dlls/psapi/tests/psapi_main.c |   8 +---
- 2 files changed, 109 insertions(+), 8 deletions(-)
+ dlls/ntdll/virtual.c          | 92 ++++++++++++++++++++++++++++++++++++++++++-
+ dlls/psapi/tests/psapi_main.c |  8 +---
+ server/mapping.c              | 29 ++++++++++++++
+ server/protocol.def           |  9 +++++
+ 4 files changed, 130 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 5e92cbb50ea..4ee48ec93ab 100644
+index 4c927597a9f..164186f274b 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2439,6 +2439,33 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
+@@ -2653,6 +2653,7 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
      return 1;
  }
  
-+/* get the section mapping handle */
-+static NTSTATUS get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping )
-+{
-+    struct file_view *view;
-+    NTSTATUS status = STATUS_INVALID_ADDRESS;
-+    sigset_t sigset;
-+    char *base;
-+
-+    if (process != NtCurrentProcess())
-+    {
-+        FIXME( "query section mapping from other process not implemented yet\n" );
-+        return STATUS_NOT_IMPLEMENTED;
-+    }
-+
-+    base = ROUND_ADDR( addr, page_mask );
-+
-+    server_enter_uninterrupted_section( &csVirtual, &sigset );
-+    if ((view = VIRTUAL_FindView( base, 0 )) && view->mapping)
-+    {
-+        status = NtDuplicateObject( NtCurrentProcess(), view->mapping, NtCurrentProcess(),
-+                                    mapping, 0, 0, DUP_HANDLE_SAME_ACCESS );
-+    }
-+    server_leave_uninterrupted_section( &csVirtual, &sigset );
-+    return status;
-+}
-+
 +
  /* get basic information about a memory block */
  static NTSTATUS get_basic_memory_info( HANDLE process, LPCVOID addr,
                                         MEMORY_BASIC_INFORMATION *info,
-@@ -2560,6 +2587,84 @@ static NTSTATUS get_basic_memory_info( HANDLE process, LPCVOID addr,
+@@ -2774,6 +2775,93 @@ static NTSTATUS get_basic_memory_info( HANDLE process, LPCVOID addr,
  }
  
  
@@ -65,7 +41,16 @@ index 5e92cbb50ea..4ee48ec93ab 100644
 +
 +    if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
 +
-+    if (!(status = get_section_mapping( process, addr, &mapping )))
++    SERVER_START_REQ( get_mapping_file )
++    {
++        req->process = wine_server_obj_handle( process );
++        req->addr = wine_server_client_ptr( addr );
++        status = wine_server_call( req );
++        mapping = wine_server_ptr_handle( reply->handle );
++    }
++    SERVER_END_REQ;
++
++    if (!status && mapping)
 +    {
 +        status = server_get_unix_name( mapping, &unix_name );
 +        close_handle( mapping );
@@ -132,7 +117,7 @@ index 5e92cbb50ea..4ee48ec93ab 100644
  #define UNIMPLEMENTED_INFO_CLASS(c) \
      case c: \
          FIXME("(process=%p,addr=%p) Unimplemented information class: " #c "\n", process, addr); \
-@@ -2581,8 +2686,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+@@ -2795,8 +2883,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
          case MemoryBasicInformation:
              return get_basic_memory_info( process, addr, buffer, len, res_len );
  
@@ -145,10 +130,10 @@ index 5e92cbb50ea..4ee48ec93ab 100644
  
          default:
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index e35a7b694cb..56bf11a9a85 100644
+index e7af5bc61cc..ef5ae19aeaf 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -330,14 +330,7 @@ static BOOL nt_get_mapped_file_name(HANDLE process, LPVOID addr, LPWSTR name, DW
+@@ -342,14 +342,7 @@ static BOOL nt_get_mapped_file_name(HANDLE process, LPVOID addr, LPWSTR name, DW
  
      ret_len = 0xdeadbeef;
      status = pNtQueryVirtualMemory(process, addr, MemorySectionName, buf, buf_len, &ret_len);
@@ -163,7 +148,7 @@ index e35a7b694cb..56bf11a9a85 100644
  
      section_name = (MEMORY_SECTION_NAME *)buf;
      ok(ret_len == section_name->SectionFileName.MaximumLength + sizeof(*section_name), "got %lu, %u\n",
-@@ -459,6 +452,7 @@ todo_wine {
+@@ -471,6 +464,7 @@ todo_wine {
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -171,6 +156,66 @@ index e35a7b694cb..56bf11a9a85 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
+diff --git a/server/mapping.c b/server/mapping.c
+index a6d34f91aff..8459c316559 100644
+--- a/server/mapping.c
++++ b/server/mapping.c
+@@ -1011,6 +1011,35 @@ DECL_HANDLER(unmap_view)
+     if (view) free_memory_view( view );
+ }
+ 
++/* get file handle from mapping by address */
++DECL_HANDLER(get_mapping_file)
++{
++    struct memory_view *view;
++    struct process *process;
++    struct file *file;
++
++    if (!(process = get_process_from_handle( req->process, 0 ))) return;
++
++    LIST_FOR_EACH_ENTRY( view, &process->views, struct memory_view, entry )
++        if (req->addr >= view->base && req->addr < view->base + view->size) break;
++
++    if (&view->entry == &process->views)
++    {
++        set_error( STATUS_NOT_MAPPED_VIEW );
++        release_object( process );
++        return;
++    }
++
++    if (view->fd && (file = create_file_for_fd_obj( view->fd, GENERIC_READ,
++                                                    FILE_SHARE_READ | FILE_SHARE_WRITE )))
++    {
++        reply->handle = alloc_handle( process, file, GENERIC_READ, 0 );
++        release_object( file );
++    }
++
++    release_object( process );
++}
++
+ /* get a range of committed pages in a file mapping */
+ DECL_HANDLER(get_mapping_committed_range)
+ {
+diff --git a/server/protocol.def b/server/protocol.def
+index 0bcff7b2b25..f248b3bdec7 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1782,6 +1782,15 @@ enum char_info_mode
+ @END
+ 
+ 
++/* Get file for a mapping */
++@REQ(get_mapping_file)
++    obj_handle_t process;       /* process handle */
++    client_ptr_t addr;          /* arbitrary address in view */
++@REPLY
++    obj_handle_t handle;        /* handle to file */
++@END
++
++
+ /* Get a range of committed pages in a file mapping */
+ @REQ(get_mapping_committed_range)
+     client_ptr_t base;          /* view base address */
 -- 
 2.14.1
 

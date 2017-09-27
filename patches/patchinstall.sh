@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "44cb0afb2571984bda8ca1fa084a50c1fc04ac71"
+	echo "c91a531957acaf4cf7cdb985b5ba47a273f5f9b2"
 }
 
 # Show version information
@@ -6595,9 +6595,8 @@ fi
 # |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
 # |
 # | Modified files:
-# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
-# | 	dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c, server/process.c, server/protocol.def,
-# | 	server/thread.c
+# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c,
+# | 	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c, server/mapping.c, server/process.c, server/protocol.def
 # |
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0001-server-Store-full-path-for-ntdll-kernel32-dll.patch
@@ -6609,7 +6608,6 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0009-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0010-ntdll-Skip-get_dll_info-wineserver-call-if-address-d.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Store full path for ntdll/kernel32 dll.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
@@ -6620,7 +6618,6 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Skip get_dll_info wineserver call if address does not have SEC_IMAGE permissions.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 9a69e1e68004fb9b430151c629855ea7df2b0a8c Mon Sep 17 00:00:00 2001
+From 66e9d350993b7349f2309edd72945e01b6233d1c Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
 Subject: ntdll: Resolve drive symlinks before returning section name.
@@ -11,10 +11,10 @@ Subject: ntdll: Resolve drive symlinks before returning section name.
  4 files changed, 35 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 97b42398bb0..c0b2a1ea83e 100644
+index 2fb30febd63..8f50a81610b 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -2932,7 +2932,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+@@ -2927,7 +2927,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
  }
  
  /* read the contents of an NT symlink object */
@@ -24,22 +24,22 @@ index 97b42398bb0..c0b2a1ea83e 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index ecee4a193d9..e8586486a58 100644
+index 823024215e0..a61638cdc06 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -161,6 +161,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
+@@ -169,6 +169,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
                                             UINT disposition ) DECLSPEC_HIDDEN;
  
  /* virtual memory */
 +extern NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length ) DECLSPEC_HIDDEN;
- extern NTSTATUS virtual_get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping ) DECLSPEC_HIDDEN;
  extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_create_builtin_view( void *base ) DECLSPEC_HIDDEN;
+ extern NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_T commit_size ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 613caec6642..467ce54eaaa 100644
+index 164186f274b..85a7f4dc059 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -53,6 +53,7 @@
+@@ -56,6 +56,7 @@
  #include "wine/library.h"
  #include "wine/server.h"
  #include "wine/exception.h"
@@ -47,7 +47,7 @@ index 613caec6642..467ce54eaaa 100644
  #include "wine/rbtree.h"
  #include "wine/debug.h"
  #include "ntdll_misc.h"
-@@ -152,6 +153,8 @@ static BYTE **pages_vprot;
+@@ -163,6 +164,8 @@ static BYTE **pages_vprot;
  static BYTE *pages_vprot;
  #endif
  
@@ -56,7 +56,7 @@ index 613caec6642..467ce54eaaa 100644
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
  static const size_t view_block_size = 0x100000;
  static void *preload_reserve_start;
-@@ -2602,12 +2605,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -2780,12 +2783,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
@@ -73,7 +73,7 @@ index 613caec6642..467ce54eaaa 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -2657,14 +2663,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -2844,14 +2850,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:
@@ -114,10 +114,10 @@ index 613caec6642..467ce54eaaa 100644
      else
          status = (len < sizeof(MEMORY_SECTION_NAME)) ? STATUS_INFO_LENGTH_MISMATCH : STATUS_BUFFER_OVERFLOW;
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index 0751bb24fb8..dd592a9ab21 100644
+index 6014d6fc152..8704123642e 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -434,7 +434,6 @@ static void test_GetMappedFileName(void)
+@@ -446,7 +446,6 @@ static void test_GetMappedFileName(void)
      ret = pGetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
      ok(ret, "GetMappedFileName error %d\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
@@ -125,7 +125,7 @@ index 0751bb24fb8..dd592a9ab21 100644
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
  
      SetLastError(0xdeadbeef);
-@@ -446,7 +445,6 @@ todo_wine
+@@ -458,7 +457,6 @@ todo_wine
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -133,7 +133,7 @@ index 0751bb24fb8..dd592a9ab21 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-@@ -459,7 +457,6 @@ todo_wine
+@@ -471,7 +469,6 @@ todo_wine
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -141,7 +141,7 @@ index 0751bb24fb8..dd592a9ab21 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-@@ -467,7 +464,6 @@ todo_wine
+@@ -479,7 +476,6 @@ todo_wine
      ret = pGetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
      ok(ret, "GetMappedFileName error %d\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
@@ -149,7 +149,7 @@ index 0751bb24fb8..dd592a9ab21 100644
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
  
      SetLastError(0xdeadbeef);
-@@ -552,7 +548,7 @@ static void test_GetProcessImageFileName(void)
+@@ -564,7 +560,7 @@ static void test_GetProcessImageFileName(void)
      {
          /* Windows returns 2*strlen-1 */
          ok(ret >= strlen(szImgPath), "szImgPath=\"%s\" ret=%d\n", szImgPath, ret);

@@ -1,101 +1,17 @@
-From b808bca5ed050a801ae03493788e8c8ec8e3cd38 Mon Sep 17 00:00:00 2001
+From 996792332616f1daf63bd0fe539245c96550cdb7 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 05:44:38 +0200
 Subject: ntdll: Allow to query section names from other processes. (v2)
 
 ---
- dlls/ntdll/ntdll_misc.h       |  1 +
- dlls/ntdll/server.c           | 13 +++++++++++++
- dlls/ntdll/virtual.c          | 18 ++++++++++++++----
  dlls/psapi/tests/psapi_main.c | 19 +++++++++++++++++++
- server/protocol.def           | 13 +++++++++++++
- server/thread.c               |  9 +++++++++
- 6 files changed, 69 insertions(+), 4 deletions(-)
+ 1 file changed, 19 insertions(+)
 
-diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index ac81c9be9c8..ecee4a193d9 100644
---- a/dlls/ntdll/ntdll_misc.h
-+++ b/dlls/ntdll/ntdll_misc.h
-@@ -161,6 +161,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
-                                            UINT disposition ) DECLSPEC_HIDDEN;
- 
- /* virtual memory */
-+extern NTSTATUS virtual_get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping ) DECLSPEC_HIDDEN;
- extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info ) DECLSPEC_HIDDEN;
- extern NTSTATUS virtual_create_builtin_view( void *base ) DECLSPEC_HIDDEN;
- extern NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_T commit_size ) DECLSPEC_HIDDEN;
-diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index c02a12ab19a..290d7582f65 100644
---- a/dlls/ntdll/server.c
-+++ b/dlls/ntdll/server.c
-@@ -464,6 +464,19 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
-         }
-         break;
-     }
-+    case APC_VIRTUAL_SECTION:
-+    {
-+        HANDLE mapping;
-+        result->type = call->type;
-+        addr = wine_server_get_ptr( call->virtual_section.addr );
-+        if ((ULONG_PTR)addr == call->virtual_section.addr)
-+        {
-+            result->virtual_section.status = virtual_get_section_mapping( NtCurrentProcess(), addr, &mapping );
-+            result->virtual_section.mapping = wine_server_obj_handle( mapping );
-+        }
-+        else result->virtual_section.status = STATUS_WORKING_SET_LIMIT_RANGE;
-+        break;
-+    }
-     case APC_VIRTUAL_PROTECT:
-         result->type = call->type;
-         addr = wine_server_get_ptr( call->virtual_protect.addr );
-diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 4ee48ec93ab..613caec6642 100644
---- a/dlls/ntdll/virtual.c
-+++ b/dlls/ntdll/virtual.c
-@@ -2440,7 +2440,7 @@ static int get_free_mem_state_callback( void *start, size_t size, void *arg )
- }
- 
- /* get the section mapping handle */
--static NTSTATUS get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping )
-+NTSTATUS virtual_get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mapping )
- {
-     struct file_view *view;
-     NTSTATUS status = STATUS_INVALID_ADDRESS;
-@@ -2449,8 +2449,18 @@ static NTSTATUS get_section_mapping( HANDLE process, LPCVOID addr, HANDLE *mappi
- 
-     if (process != NtCurrentProcess())
-     {
--        FIXME( "query section mapping from other process not implemented yet\n" );
--        return STATUS_NOT_IMPLEMENTED;
-+        apc_call_t call;
-+        apc_result_t result;
-+
-+        memset( &call, 0, sizeof(call) );
-+
-+        call.virtual_section.type = APC_VIRTUAL_SECTION;
-+        call.virtual_section.addr = wine_server_client_ptr( addr );
-+        status = server_queue_process_apc( process, &call, &result );
-+        if (status != STATUS_SUCCESS) return status;
-+
-+        *mapping = wine_server_ptr_handle( result.virtual_section.mapping );
-+        return result.virtual_section.status;
-     }
- 
-     base = ROUND_ADDR( addr, page_mask );
-@@ -2601,7 +2611,7 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
- 
-     if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
- 
--    if (!(status = get_section_mapping( process, addr, &mapping )))
-+    if (!(status = virtual_get_section_mapping( process, addr, &mapping )))
-     {
-         status = server_get_unix_name( mapping, &unix_name );
-         close_handle( mapping );
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index 56bf11a9a85..23025eedab3 100644
+index ef5ae19aeaf..ee027480ec5 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -356,6 +356,10 @@ static void test_GetMappedFileName(void)
+@@ -368,6 +368,10 @@ static void test_GetMappedFileName(void)
      char temp_path[MAX_PATH], file_name[MAX_PATH], map_name[MAX_PATH], device_name[MAX_PATH], drive[3];
      WCHAR map_nameW[MAX_PATH], nt_map_name[MAX_PATH];
      HANDLE hfile, hmap;
@@ -106,7 +22,7 @@ index 56bf11a9a85..23025eedab3 100644
  
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(NULL, hMod, szMapPath, sizeof(szMapPath));
-@@ -456,6 +460,20 @@ todo_wine
+@@ -468,6 +472,20 @@ todo_wine
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
@@ -127,7 +43,7 @@ index 56bf11a9a85..23025eedab3 100644
      SetLastError(0xdeadbeef);
      ret = pGetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
  todo_wine {
-@@ -501,6 +519,7 @@ todo_wine
+@@ -513,6 +531,7 @@ todo_wine
  todo_wine
      ok(GetLastError() == ERROR_FILE_INVALID, "expected ERROR_FILE_INVALID, got %d\n", GetLastError());
  
@@ -135,71 +51,6 @@ index 56bf11a9a85..23025eedab3 100644
      UnmapViewOfFile(base);
      CloseHandle(hmap);
  }
-diff --git a/server/protocol.def b/server/protocol.def
-index ca54b448ebb..504362702b8 100644
---- a/server/protocol.def
-+++ b/server/protocol.def
-@@ -448,6 +448,7 @@ enum apc_type
-     APC_VIRTUAL_ALLOC,
-     APC_VIRTUAL_FREE,
-     APC_VIRTUAL_QUERY,
-+    APC_VIRTUAL_SECTION,
-     APC_VIRTUAL_PROTECT,
-     APC_VIRTUAL_FLUSH,
-     APC_VIRTUAL_LOCK,
-@@ -505,6 +506,12 @@ typedef union
-         client_ptr_t     addr;      /* requested address */
-     } virtual_query;
-     struct
-+    {
-+        enum apc_type    type;      /* APC_VIRTUAL_SECTION */
-+        int              __pad;
-+        client_ptr_t     addr;      /* requested address */
-+    } virtual_section;
-+    struct
-     {
-         enum apc_type    type;      /* APC_VIRTUAL_PROTECT */
-         unsigned int     prot;      /* new protection flags */
-@@ -596,6 +603,12 @@ typedef union
-         unsigned short   alloc_type;/* resulting region allocation type */
-     } virtual_query;
-     struct
-+    {
-+        enum apc_type    type;      /* APC_VIRTUAL_SECTION */
-+        unsigned int     status;    /* status returned by call */
-+        obj_handle_t     mapping;   /* resulting mapping */
-+    } virtual_section;
-+    struct
-     {
-         enum apc_type    type;      /* APC_VIRTUAL_PROTECT */
-         unsigned int     status;    /* status returned by call */
-diff --git a/server/thread.c b/server/thread.c
-index 903420bed3f..d3cbcc298c3 100644
---- a/server/thread.c
-+++ b/server/thread.c
-@@ -1484,6 +1484,14 @@ DECL_HANDLER(select)
-             apc->result.create_thread.handle = handle;
-             clear_error();  /* ignore errors from the above calls */
-         }
-+        else if (apc->result.type == APC_VIRTUAL_SECTION)  /* duplicate the handle to the caller process */
-+        {
-+            obj_handle_t mapping = duplicate_handle( current->process, apc->result.virtual_section.mapping,
-+                                                     apc->caller->process, 0, 0, DUP_HANDLE_SAME_ACCESS );
-+            close_handle( current->process, apc->result.virtual_section.mapping );
-+            apc->result.virtual_section.mapping = mapping;
-+            clear_error();  /* ignore errors from the above calls */
-+        }
-         else if (apc->result.type == APC_ASYNC_IO)
-         {
-             if (apc->owner)
-@@ -1544,6 +1552,7 @@ DECL_HANDLER(queue_apc)
-         process = get_process_from_handle( req->handle, PROCESS_VM_OPERATION );
-         break;
-     case APC_VIRTUAL_QUERY:
-+    case APC_VIRTUAL_SECTION:
-         process = get_process_from_handle( req->handle, PROCESS_QUERY_INFORMATION );
-         break;
-     case APC_MAP_VIEW:
 -- 
 2.14.1
 

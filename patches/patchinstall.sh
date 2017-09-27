@@ -204,6 +204,7 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
+	enable_kernel32_Tests="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -887,6 +888,9 @@ patch_enable ()
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
+			;;
+		kernel32-Tests)
+			enable_kernel32_Tests="$2"
 			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
@@ -5489,6 +5493,18 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Tests
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/process.c
+# |
+if test "$enable_kernel32_Tests" -eq 1; then
+	patch_apply kernel32-Tests/0001-kernel32-tests-Close-process-thread-handles.patch
+	(
+		printf '%s\n' '+    { "Mark Jansen", "kernel32/tests: Close process / thread handles.", 1 },';
 	) >> "$patchlist"
 fi
 

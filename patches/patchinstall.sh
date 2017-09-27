@@ -376,6 +376,7 @@ patch_enable_all ()
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
+	enable_shlwapi_PathUnExpandEnvStrings="$1"
 	enable_shlwapi_SHAddDataBlock="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
@@ -1404,6 +1405,9 @@ patch_enable ()
 			;;
 		shlwapi-AssocGetPerceivedType)
 			enable_shlwapi_AssocGetPerceivedType="$2"
+			;;
+		shlwapi-PathUnExpandEnvStrings)
+			enable_shlwapi_PathUnExpandEnvStrings="$2"
 			;;
 		shlwapi-SHAddDataBlock)
 			enable_shlwapi_SHAddDataBlock="$2"
@@ -8284,6 +8288,18 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	(
 		printf '%s\n' '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shlwapi-PathUnExpandEnvStrings
+# |
+# | Modified files:
+# |   *	dlls/shlwapi/path.c, dlls/shlwapi/tests/path.c
+# |
+if test "$enable_shlwapi_PathUnExpandEnvStrings" -eq 1; then
+	patch_apply shlwapi-PathUnExpandEnvStrings/0001-shlwapi-Don-t-attempt-to-unexpand-ComputerName-in-Pa.patch
+	(
+		printf '%s\n' '+    { "Katayama Hirofumi MZ", "shlwapi: Don'\''t attempt to unexpand ComputerName in PathUnExpandEnvStrings.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,72 @@
+From 177a262f06e4278726e1d60b9dc9e5108a621bff Mon Sep 17 00:00:00 2001
+From: Katayama Hirofumi MZ <katayama.hirofumi.mz@gmail.com>
+Date: Sat, 23 Sep 2017 03:41:32 +0900
+Subject: shlwapi: Don't attempt to unexpand ComputerName in
+ PathUnExpandEnvStrings.
+
+---
+ dlls/shlwapi/path.c       |  2 --
+ dlls/shlwapi/tests/path.c | 18 ++++++++++++++++--
+ 2 files changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/shlwapi/path.c b/dlls/shlwapi/path.c
+index 3c07bb8d10a..f972f9d61cf 100644
+--- a/dlls/shlwapi/path.c
++++ b/dlls/shlwapi/path.c
+@@ -4097,7 +4097,6 @@ BOOL WINAPI PathUnExpandEnvStringsA(LPCSTR path, LPSTR buffer, UINT buf_len)
+ 
+ static const WCHAR allusersprofileW[] = {'%','A','L','L','U','S','E','R','S','P','R','O','F','I','L','E','%',0};
+ static const WCHAR appdataW[] = {'%','A','P','P','D','A','T','A','%',0};
+-static const WCHAR computernameW[] = {'%','C','O','M','P','U','T','E','R','N','A','M','E','%',0};
+ static const WCHAR programfilesW[] = {'%','P','r','o','g','r','a','m','F','i','l','e','s','%',0};
+ static const WCHAR systemrootW[] = {'%','S','y','s','t','e','m','R','o','o','t','%',0};
+ static const WCHAR systemdriveW[] = {'%','S','y','s','t','e','m','D','r','i','v','e','%',0};
+@@ -4134,7 +4133,6 @@ BOOL WINAPI PathUnExpandEnvStringsW(LPCWSTR path, LPWSTR buffer, UINT buf_len)
+     struct envvars_map envvars[] = {
+         { allusersprofileW, sizeof(allusersprofileW)/sizeof(WCHAR) },
+         { appdataW,         sizeof(appdataW)/sizeof(WCHAR)         },
+-        { computernameW,    sizeof(computernameW)/sizeof(WCHAR)    },
+         { programfilesW,    sizeof(programfilesW)/sizeof(WCHAR)    },
+         { systemrootW,      sizeof(systemrootW)/sizeof(WCHAR)      },
+         { systemdriveW,     sizeof(systemdriveW)/sizeof(WCHAR)     },
+diff --git a/dlls/shlwapi/tests/path.c b/dlls/shlwapi/tests/path.c
+index f780a78c68c..8fb2dc2c1e6 100644
+--- a/dlls/shlwapi/tests/path.c
++++ b/dlls/shlwapi/tests/path.c
+@@ -1451,10 +1451,11 @@ static void test_PathUnExpandEnvStrings(void)
+     static const WCHAR sysrootW[] = {'%','S','y','s','t','e','m','R','o','o','t','%',0};
+     static const WCHAR sysdriveW[] = {'%','S','y','s','t','e','m','D','r','i','v','e','%',0};
+     static const WCHAR nonpathW[] = {'p','a','t','h',0};
++    static const WCHAR computernameW[] = {'C','O','M','P','U','T','E','R','N','A','M','E',0};
+     static const char sysrootA[] = "%SystemRoot%";
+     static const char sysdriveA[] = "%SystemDrive%";
+-    WCHAR pathW[MAX_PATH], buffW[MAX_PATH], sysdrvW[3];
+-    char path[MAX_PATH], buff[MAX_PATH], sysdrvA[3], envvarA[10];
++    WCHAR pathW[MAX_PATH], buffW[MAX_PATH], sysdrvW[3], envvarW[30];
++    char path[MAX_PATH], buff[MAX_PATH], sysdrvA[3], envvarA[30];
+     BOOL ret;
+     UINT len;
+ 
+@@ -1464,6 +1465,19 @@ static void test_PathUnExpandEnvStrings(void)
+         return;
+     }
+ 
++    /* The value of ComputerName is not a path */
++    ret = GetEnvironmentVariableA("COMPUTERNAME", envvarA, sizeof(envvarA));
++    ok(ret, "got %d\n", ret);
++    SetLastError(0xdeadbeef);
++    ret = pPathUnExpandEnvStringsA(envvarA, buff, sizeof(buff));
++    ok(!ret && GetLastError() == 0xdeadbeef, "got %d, error %d\n", ret, GetLastError());
++
++    ret = GetEnvironmentVariableW(computernameW, envvarW, sizeof(envvarW)/sizeof(WCHAR));
++    ok(ret, "got %d\n", ret);
++    SetLastError(0xdeadbeef);
++    ret = pPathUnExpandEnvStringsW(envvarW, buffW, sizeof(buffW)/sizeof(WCHAR));
++    ok(!ret && GetLastError() == 0xdeadbeef, "got %d, error %d\n", ret, GetLastError());
++
+     /* something that can't be represented with env var */
+     strcpy(path, "somepath_name");
+     strcpy(buff, "xx");
+-- 
+2.14.1
+

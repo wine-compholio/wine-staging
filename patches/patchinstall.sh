@@ -4666,9 +4666,6 @@ fi
 
 # Patchset dwmapi-DwmSetIcon
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43326] Implement stubs for DwmSetIconicLivePreviewBitmap and DwmSetIconicThumbnail
-# |
 # | Modified files:
 # |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c
 # |

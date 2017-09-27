@@ -9645,9 +9645,11 @@ fi
 if test "$enable_wined3d_GenerateMips" -eq 1; then
 	patch_apply wined3d-GenerateMips/0001-d3d11-tests-Add-basic-test-for-mipmap-level-generati.patch
 	patch_apply wined3d-GenerateMips/0002-wined3d-Implement-generation-of-mip-maps-for-shader-.patch
+	patch_apply wined3d-GenerateMips/0003-d3d11-Implement-d3d10_device_GenerateMips.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for mipmap level generation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement generation of mip maps for shader resource views.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_device_GenerateMips.", 1 },';
 	) >> "$patchlist"
 fi
 

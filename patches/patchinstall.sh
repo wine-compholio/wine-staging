@@ -5863,9 +5863,6 @@ fi
 # |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs, dxva2-Video_Decoder, winedevice-Default_Drivers, ntoskrnl-
 # | 	DriverTest
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43093] Return MSIDBSTATE_ERROR when MsiGetDatabaseState is called from a custom action
-# |
 # | Modified files:
 # |   *	configure.ac, dlls/msi/database.c, dlls/msi/tests/Makefile.in, dlls/msi/tests/custom.dll/Makefile.in,
 # | 	dlls/msi/tests/custom.dll/custom.spec, dlls/msi/tests/custom.dll/main.c, dlls/msi/tests/install.c

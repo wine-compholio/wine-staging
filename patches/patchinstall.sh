@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c91a531957acaf4cf7cdb985b5ba47a273f5f9b2"
+	echo "40166848a7944383a4cfdaac9b18bd03fbb2b4f9"
 }
 
 # Show version information
@@ -184,6 +184,7 @@ patch_enable_all ()
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_IMMDisableLegacyIME="$1"
+	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
@@ -829,6 +830,9 @@ patch_enable ()
 			;;
 		imm32-IMMDisableLegacyIME)
 			enable_imm32_IMMDisableLegacyIME="$2"
+			;;
+		include-winsock)
+			enable_include_winsock="$2"
 			;;
 		inseng-Implementation)
 			enable_inseng_Implementation="$2"
@@ -5099,6 +5103,18 @@ if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
 	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset include-winsock
+# |
+# | Modified files:
+# |   *	include/winsock.h
+# |
+if test "$enable_include_winsock" -eq 1; then
+	patch_apply include-winsock/0001-include-Always-define-hton-ntoh-macros.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "include: Always define hton/ntoh macros.", 1 },';
 	) >> "$patchlist"
 fi
 

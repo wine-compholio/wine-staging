@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "40166848a7944383a4cfdaac9b18bd03fbb2b4f9"
+	echo "2ae0574d8eac19db501a79ce2597f2fe30a770bd"
 }
 
 # Show version information
@@ -6788,10 +6788,8 @@ fi
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 if test "$enable_ntdll_RtlIpStringToAddress_Stubs" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress_Stubs/0001-ntdll-Fix-parameters-for-RtlIpv4StringToAddressExW-s.patch
 	patch_apply ntdll-RtlIpStringToAddress_Stubs/0002-ntdll-Add-stub-for-RtlIpv6StringToAddressExW.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix parameters for RtlIpv4StringToAddressExW stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlIpv6StringToAddressExW.", 1 },';
 	) >> "$patchlist"
 fi

@@ -326,6 +326,7 @@ patch_enable_all ()
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
+	enable_regedit_export_string_data="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Race_Condition="$1"
@@ -1258,6 +1259,9 @@ patch_enable ()
 			;;
 		quartz-Silence_FIXMEs)
 			enable_quartz_Silence_FIXMEs="$2"
+			;;
+		regedit-export_string_data)
+			enable_regedit_export_string_data="$2"
 			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
@@ -7481,6 +7485,21 @@ if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset regedit-export_string_data
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43805] Fix crash when exporting REG_SZ data if size == 0
+# |
+# | Modified files:
+# |   *	programs/regedit/regproc.c
+# |
+if test "$enable_regedit_export_string_data" -eq 1; then
+	patch_apply regedit-export_string_data/0001-regedit-Don-t-crash-if-REG_SZ-is-empty.patch
+	(
+		printf '%s\n' '+    { "Fabian Maurer", "regedit: Don'\''t crash if REG_SZ is empty.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,37 @@
+From 66a5b81f6d880bcb6f3ea251e1fe695a60a27379 Mon Sep 17 00:00:00 2001
+From: Fabian Maurer <dark.shadow4@web.de>
+Date: Sat, 30 Sep 2017 18:14:11 +0200
+Subject: regedit: Don't crash if REG_SZ is empty
+
+Some reg files can result in an REG_SZ with length 0, like
+"Value"=hex(1):
+When exporting with size == 0 we need to account for this case
+and set the length to 0 to avoid an underflow.
+
+Signed-off-by: Fabian Maurer <dark.shadow4@web.de>
+---
+ programs/regedit/regproc.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/programs/regedit/regproc.c b/programs/regedit/regproc.c
+index 6e6ea473c75..aa1d6fa90fe 100644
+--- a/programs/regedit/regproc.c
++++ b/programs/regedit/regproc.c
+@@ -1243,11 +1243,12 @@ static size_t export_value_name(FILE *fp, WCHAR *name, size_t len, BOOL unicode)
+ 
+ static void export_string_data(WCHAR **buf, WCHAR *data, size_t size)
+ {
+-    size_t len, line_len;
++    size_t len = 0, line_len;
+     WCHAR *str;
+     static const WCHAR fmt[] = {'"','%','s','"',0};
+ 
+-    len = size / sizeof(WCHAR) - 1;
++    if(size)
++        len = size / sizeof(WCHAR) - 1;
+     str = REGPROC_escape_string(data, len, &line_len);
+     *buf = heap_xalloc((line_len + 3) * sizeof(WCHAR));
+     sprintfW(*buf, fmt, str);
+-- 
+2.14.1
+

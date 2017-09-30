@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2ae0574d8eac19db501a79ce2597f2fe30a770bd"
+	echo "4a2505a93a699baf9668af2cdfdd7b662d13c976"
 }
 
 # Show version information
@@ -349,6 +349,7 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_server_create_ranges="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_server_free_async_queue="$1"
 	enable_server_send_hardware_message="$1"
@@ -1326,6 +1327,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		server-create_ranges)
+			enable_server_create_ranges="$2"
 			;;
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
@@ -7842,6 +7846,18 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-create_ranges
+# |
+# | Modified files:
+# |   *	server/mapping.c
+# |
+if test "$enable_server_create_ranges" -eq 1; then
+	patch_apply server-create_ranges/0001-server-Fix-size-of-allocated-ranges-block-Coverity.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix size of allocated ranges block (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

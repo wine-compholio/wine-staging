@@ -2881,6 +2881,13 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 	enable_wined3d_1DTextures=1
 fi
 
+if test "$enable_d3d11_Deferred_Context" -eq 1; then
+	if test "$enable_wined3d_1DTextures" -gt 1; then
+		abort "Patchset wined3d-1DTextures disabled, but d3d11-Deferred_Context depends on that."
+	fi
+	enable_wined3d_1DTextures=1
+fi
+
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
@@ -3776,7 +3783,57 @@ if test "$enable_d3d10_1_Forwards" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-1DTextures
+# |
+# | Modified files:
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c,
+# | 	dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
+# | 	dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_1DTextures" -eq 1; then
+	patch_apply wined3d-1DTextures/0001-wined3d-Create-dummy-1d-textures.patch
+	patch_apply wined3d-1DTextures/0002-wined3d-Add-1d-texture-resource-type.patch
+	patch_apply wined3d-1DTextures/0003-wined3d-Add-is_power_of_two-helper-function.patch
+	patch_apply wined3d-1DTextures/0004-wined3d-Create-dummy-1d-textures-and-surfaces.patch
+	patch_apply wined3d-1DTextures/0005-wined3d-Implement-preparation-for-1d-textures.patch
+	patch_apply wined3d-1DTextures/0006-wined3d-Implement-uploading-for-1d-textures.patch
+	patch_apply wined3d-1DTextures/0007-wined3d-Implement-loading-from-system-memory-and-buf.patch
+	patch_apply wined3d-1DTextures/0008-wined3d-Implement-downloading-from-s-rgb-1d-textures.patch
+	patch_apply wined3d-1DTextures/0009-wined3d-Implement-converting-between-s-rgb-1d-textur.patch
+	patch_apply wined3d-1DTextures/0010-wined3d-Check-for-1d-textures-in-wined3d_texture_upd.patch
+	patch_apply wined3d-1DTextures/0011-wined3d-Check-if-1d-teture-is-still-in-use-before-re.patch
+	patch_apply wined3d-1DTextures/0012-wined3d-Generate-glsl-samplers-for-1d-texture-arrays.patch
+	patch_apply wined3d-1DTextures/0013-wined3d-Add-support-for-1d-textures-in-context_attac.patch
+	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
+	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
+	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
+	patch_apply wined3d-1DTextures/0017-d3d11-Allow-DXGI_FORMAT_UNKNOWN-in-CheckFormatSuppor.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement preparation for 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement uploading for 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement loading from system memory and buffers to (s)rgb 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement downloading from (s)rgb 1d textures to system memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement converting between (s)rgb 1d textures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Check for 1d textures in wined3d_texture_update_desc.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Check if 1d teture is still in use before releasing.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Generate glsl samplers for 1d texture arrays.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve ID3D11Device_CheckFormatSupport.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Allow DXGI_FORMAT_UNKNOWN in CheckFormatSupport and improve tests.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3d11-Deferred_Context
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-1DTextures
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
@@ -3882,53 +3939,6 @@ if test "$enable_d3d11_Depth_Bias" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-1DTextures
-# |
-# | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c,
-# | 	dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
-# | 	dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_1DTextures" -eq 1; then
-	patch_apply wined3d-1DTextures/0001-wined3d-Create-dummy-1d-textures.patch
-	patch_apply wined3d-1DTextures/0002-wined3d-Add-1d-texture-resource-type.patch
-	patch_apply wined3d-1DTextures/0003-wined3d-Add-is_power_of_two-helper-function.patch
-	patch_apply wined3d-1DTextures/0004-wined3d-Create-dummy-1d-textures-and-surfaces.patch
-	patch_apply wined3d-1DTextures/0005-wined3d-Implement-preparation-for-1d-textures.patch
-	patch_apply wined3d-1DTextures/0006-wined3d-Implement-uploading-for-1d-textures.patch
-	patch_apply wined3d-1DTextures/0007-wined3d-Implement-loading-from-system-memory-and-buf.patch
-	patch_apply wined3d-1DTextures/0008-wined3d-Implement-downloading-from-s-rgb-1d-textures.patch
-	patch_apply wined3d-1DTextures/0009-wined3d-Implement-converting-between-s-rgb-1d-textur.patch
-	patch_apply wined3d-1DTextures/0010-wined3d-Check-for-1d-textures-in-wined3d_texture_upd.patch
-	patch_apply wined3d-1DTextures/0011-wined3d-Check-if-1d-teture-is-still-in-use-before-re.patch
-	patch_apply wined3d-1DTextures/0012-wined3d-Generate-glsl-samplers-for-1d-texture-arrays.patch
-	patch_apply wined3d-1DTextures/0013-wined3d-Add-support-for-1d-textures-in-context_attac.patch
-	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
-	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
-	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
-	patch_apply wined3d-1DTextures/0017-d3d11-Allow-DXGI_FORMAT_UNKNOWN-in-CheckFormatSuppor.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement preparation for 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement uploading for 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement loading from system memory and buffers to (s)rgb 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement downloading from (s)rgb 1d textures to system memory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement converting between (s)rgb 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Check for 1d textures in wined3d_texture_update_desc.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Check if 1d teture is still in use before releasing.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Generate glsl samplers for 1d texture arrays.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve ID3D11Device_CheckFormatSupport.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Allow DXGI_FORMAT_UNKNOWN in CheckFormatSupport and improve tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9804,8 +9814,8 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
+# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-
+# | 	DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
 # | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
 # | 	Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-
 # | 	Silence_FIXMEs, wined3d-UAV_Counters
@@ -10010,8 +10020,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-1DTextures, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
+# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-
+# | 	DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
 # | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
 # | 	Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-
 # | 	Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper

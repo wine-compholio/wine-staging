@@ -194,6 +194,7 @@ patch_enable_all ()
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_GetShortPathName="$1"
+	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
 	enable_kernel32_MODULE_get_binary_info="$1"
@@ -863,6 +864,9 @@ patch_enable ()
 			;;
 		kernel32-GetShortPathName)
 			enable_kernel32_GetShortPathName="$2"
+			;;
+		kernel32-Job_Tests)
+			enable_kernel32_Job_Tests="$2"
 			;;
 		kernel32-K32GetPerformanceInfo)
 			enable_kernel32_K32GetPerformanceInfo="$2"
@@ -5310,6 +5314,18 @@ if test "$enable_kernel32_GetShortPathName" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add some tests for GetLongPathName/GetShortPathName called with a wildcard.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetShortPathName should fail when called with a wildcard.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetLongPathName should fail when called with a wildcard.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-Job_Tests
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/process.c
+# |
+if test "$enable_kernel32_Job_Tests" -eq 1; then
+	patch_apply kernel32-Job_Tests/0001-kernel32-tests-Add-tests-for-job-object-accounting.patch
+	(
+		printf '%s\n' '+    { "Mark Jansen", "kernel32/tests: Add tests for job object accounting.", 1 },';
 	) >> "$patchlist"
 fi
 

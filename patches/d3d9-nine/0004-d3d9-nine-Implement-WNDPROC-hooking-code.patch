@@ -1,0 +1,1288 @@
+From 056f981f4da2aa7d67d6c47c9eb5bc5091fa61f7 Mon Sep 17 00:00:00 2001
+From: Patrick Rudolph <siro@das-labor.org>
+Date: Tue, 9 Feb 2016 07:13:29 +0100
+Subject: [PATCH 4/6] d3d9-nine: Implement WNDPROC hooking code
+
+Copy WINE's wined3d wndproc hooking code.
+The code is taken from wined3d/device.c and wined3d/swapchain.c.
+
+The new approach works much better than using SetWindowsHookEx.
+Use display resolution from registry instead initial display
+resolution.
+Intercept WM_SYSCOMMAND as it wasn't possible before.
+
+Fixes most of failing wine tests test_wndproc() device.c.
+
+Signed-off-by: Patrick Rudolph <siro@das-labor.org>
+---
+ dlls/d3d9-nine/Makefile.in   |   3 +-
+ dlls/d3d9-nine/d3d9_main.c   |   7 +
+ dlls/d3d9-nine/d3dadapter9.c |   3 +-
+ dlls/d3d9-nine/present.c     | 702 ++++++++++++++++++++++++++++---------------
+ dlls/d3d9-nine/present.h     |   2 +-
+ dlls/d3d9-nine/wndproc.c     | 277 +++++++++++++++++
+ dlls/d3d9-nine/wndproc.h     |  41 +++
+ 7 files changed, 788 insertions(+), 247 deletions(-)
+ create mode 100644 dlls/d3d9-nine/wndproc.c
+ create mode 100644 dlls/d3d9-nine/wndproc.h
+
+diff --git a/dlls/d3d9-nine/Makefile.in b/dlls/d3d9-nine/Makefile.in
+index eb515af..f737d80 100644
+--- a/dlls/d3d9-nine/Makefile.in
++++ b/dlls/d3d9-nine/Makefile.in
+@@ -8,6 +8,7 @@ C_SRCS = \
+         d3dadapter9.c \
+         device_wrap.c \
+         present.c \
+-        dri3.c
++        dri3.c \
++        wndproc.c
+ 
+ RC_SRCS = version.rc
+diff --git a/dlls/d3d9-nine/d3d9_main.c b/dlls/d3d9-nine/d3d9_main.c
+index 3a82a1f..dc53f2d 100644
+--- a/dlls/d3d9-nine/d3d9_main.c
++++ b/dlls/d3d9-nine/d3d9_main.c
+@@ -29,6 +29,7 @@
+ #include <d3d9.h>
+ 
+ #include "d3dadapter9.h"
++#include "wndproc.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(d3d9nine);
+ 
+@@ -87,6 +88,12 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, void *reserved)
+             }
+ 
+             fcntl( ConnectionNumber(gdi_display), F_SETFD, 1 ); /* set close on exec flag */
++
++            nine_dll_init(inst);
++            break;
++        case DLL_PROCESS_DETACH:
++            if (!reserved)
++                return nine_dll_destroy(inst);
+             break;
+     }
+ 
+diff --git a/dlls/d3d9-nine/d3dadapter9.c b/dlls/d3d9-nine/d3dadapter9.c
+index 435bd61..16211cb 100644
+--- a/dlls/d3d9-nine/d3dadapter9.c
++++ b/dlls/d3d9-nine/d3dadapter9.c
+@@ -440,7 +440,8 @@ static HRESULT WINAPI DECLSPEC_HOTPATCH d3dadapter9_CreateDeviceEx(struct d3dada
+             ordinal = Adapter - This->map[Adapter].master;
+         }
+         hr = present_create_present_group(This->gdi_display, group->devname, ordinal,
+-                hFocusWindow, pPresentationParameters, nparams, &present, This->ex);
++                hFocusWindow, pPresentationParameters, nparams, &present, This->ex,
++                BehaviorFlags);
+     }
+ 
+     if (FAILED(hr))
+diff --git a/dlls/d3d9-nine/present.c b/dlls/d3d9-nine/present.c
+index c1f629a..708273a 100644
+--- a/dlls/d3d9-nine/present.c
++++ b/dlls/d3d9-nine/present.c
+@@ -33,6 +33,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(d3d9nine);
+ #include <X11/Xutil.h>
+ 
+ #include "dri3.h"
++#include "wndproc.h"
+ 
+ #include "wine/library.h" /* for wine_dl* */
+ #include "wine/unicode.h" /* for strcpyW */
+@@ -96,23 +97,6 @@ struct d3d_drawable
+     HWND wnd; /* HWND (for convenience) */
+ };
+ 
+-#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 1
+-static HHOOK hhook;
+-
+-struct d3d_wnd_hooks
+-{
+-    HWND focus_wnd;
+-    struct DRI3Present *present;
+-    struct d3d_wnd_hooks *prev;
+-    struct d3d_wnd_hooks *next;
+-};
+-
+-static HRESULT dri3_present_unregister_window_hook( struct DRI3Present *This );
+-static HRESULT dri3_present_register_window_hook( struct DRI3Present *This );
+-
+-static struct d3d_wnd_hooks d3d_hooks;
+-#endif
+-
+ struct DRI3Present
+ {
+     /* COM vtable */
+@@ -132,9 +116,15 @@ struct DRI3Present
+ 
+     DEVMODEW initial_mode;
+ 
++    DWORD style;
++    DWORD style_ex;
++
++    BOOL reapply_mode;
+     BOOL ex;
+     BOOL resolution_mismatch;
+     BOOL occluded;
++    BOOL drop_wnd_messages;
++    BOOL no_window_changes;
+     Display *gdi_display;
+ 
+     UINT present_interval;
+@@ -267,9 +257,7 @@ static ULONG WINAPI DRI3Present_Release(struct DRI3Present *This)
+     if (refs == 0)
+     {
+         /* Dtor */
+-#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 1
+-        dri3_present_unregister_window_hook(This);
+-#endif
++        (void) nine_unregister_window(This->focus_wnd);
+         if (This->d3d)
+             destroy_d3dadapter_drawable(This->gdi_display, This->d3d->wnd);
+         ChangeDisplaySettingsExW(This->devname, &(This->initial_mode), 0, CDS_FULLSCREEN, NULL);
+@@ -304,8 +292,7 @@ static HRESULT WINAPI DRI3Present_QueryInterface(struct DRI3Present *This,
+ }
+ 
+ static HRESULT DRI3Present_ChangePresentParameters(struct DRI3Present *This,
+-        D3DPRESENT_PARAMETERS *params,
+-        BOOL first_time);
++        D3DPRESENT_PARAMETERS *params);
+ 
+ static HRESULT WINAPI DRI3Present_SetPresentParameters(struct DRI3Present *This,
+         D3DPRESENT_PARAMETERS *pPresentationParameters,
+@@ -313,10 +300,7 @@ static HRESULT WINAPI DRI3Present_SetPresentParameters(struct DRI3Present *This,
+ {
+     if (pFullscreenDisplayMode)
+         FIXME("Ignoring pFullscreenDisplayMode\n");
+-#if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 1
+-    dri3_present_register_window_hook(This);
+-#endif
+-    return DRI3Present_ChangePresentParameters(This, pPresentationParameters, FALSE);
++    return DRI3Present_ChangePresentParameters(This, pPresentationParameters);
+ }
+ 
+ static HRESULT WINAPI DRI3Present_D3DWindowBufferFromDmaBuf(struct DRI3Present *This,
+@@ -715,162 +699,7 @@ static HRESULT WINAPI DRI3Present_GetWindowInfo( struct DRI3Present *This,
+     return D3D_OK;
+ }
+ 
+-static LONG fullscreen_style(LONG style)
+-{
+-    /* Make sure the window is managed, otherwise we won't get keyboard input. */
+-    style |= WS_POPUP | WS_SYSMENU;
+-    style &= ~(WS_CAPTION | WS_THICKFRAME);
+-
+-    return style;
+-}
+-
+-static LONG fullscreen_exstyle(LONG exstyle)
+-{
+-    /* Filter out window decorations. */
+-    exstyle &= ~(WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE);
+-
+-    return exstyle;
+-}
+-
+ #if WINE_D3DADAPTER_DRIVER_PRESENT_VERSION_MINOR >= 1
+-static struct d3d_wnd_hooks *get_last_hook(void)
+-{
+-    struct d3d_wnd_hooks *hook = &d3d_hooks;
+-    while (hook->next)
+-    {
+-        hook = hook->next;
+-    }
+-    return hook;
+-}
+-
+-LRESULT CALLBACK HookCallback(int nCode, WPARAM wParam, LPARAM lParam)
+-{
+-    struct d3d_wnd_hooks *hook = &d3d_hooks;
+-    DEVMODEW current_mode;
+-
+-    if (nCode < 0)
+-        return CallNextHookEx(hhook, nCode, wParam, lParam);
+-
+-    if (lParam)
+-    {
+-        CWPSTRUCT wndprocparams = *((CWPSTRUCT*)lParam);
+-        while (hook->next)
+-        {
+-            hook = hook->next;
+-            /* Skip messages for other hwnds */
+-            if (hook->focus_wnd != wndprocparams.hwnd)
+-                continue;
+-            switch (wndprocparams.message)
+-            {
+-                case WM_ACTIVATE:
+-                    if(wndprocparams.wParam == WA_INACTIVE)
+-                    {
+-                        if (hook->present && !hook->present->params.Windowed)
+-                        {
+-                            ShowWindow(hook->present->params.hDeviceWindow, SW_MINIMIZE);
+-                            ChangeDisplaySettingsExW(hook->present->devname,
+-                                    &(hook->present->initial_mode), 0, 0, NULL);
+-                            hook->present->occluded = TRUE;
+-                        }
+-                    }
+-                    else
+-                    {
+-                        if (hook->present && !hook->present->params.Windowed &&
+-                                hook->present->occluded)
+-                        {
+-                            ShowWindow(hook->present->params.hDeviceWindow, SW_RESTORE);
+-                            hook->present->occluded = FALSE;
+-                        }
+-                    }
+-                break;
+-                case WM_DISPLAYCHANGE:
+-                    /* Ex restores display mode, while non Ex requires the
+-                     * user to call Device::Reset() */
+-                    ZeroMemory(&current_mode, sizeof(DEVMODEW));
+-                    if (!hook->present->ex && !hook->present->params.Windowed &&
+-                            EnumDisplaySettingsW(hook->present->devname, ENUM_CURRENT_SETTINGS, &current_mode) &&
+-                           (current_mode.dmPelsWidth != hook->present->params.BackBufferWidth ||
+-                            current_mode.dmPelsHeight != hook->present->params.BackBufferHeight))
+-                        hook->present->resolution_mismatch = TRUE;
+-                    else
+-                        hook->present->resolution_mismatch = FALSE;
+-                break;
+-                /* TODO: handle other window messages here */
+-                default:
+-                break;
+-            }
+-        }
+-    }
+-
+-    return CallNextHookEx(hhook, nCode, wParam, lParam);
+-}
+-
+-static HRESULT dri3_present_register_window_hook(struct DRI3Present *This)
+-{
+-    struct d3d_wnd_hooks *lasthook;
+-    struct d3d_wnd_hooks *hook = &d3d_hooks;
+-
+-    HWND hWnd = This->focus_wnd;
+-    /* Let's see if already hooked */
+-    while (hook->next)
+-    {
+-        hook = hook->next;
+-        if (hook->focus_wnd == hWnd && hook->present == This)
+-            return D3D_OK;
+-    }
+-    /* Create single WindowsHook in this process */
+-    if (!hhook)
+-    {
+-        /* TODO: do we need to handle different threadIDs ? */
+-        DWORD threadID = GetWindowThreadProcessId(hWnd, NULL);
+-        hhook = SetWindowsHookExW(WH_CALLWNDPROC, HookCallback, NULL, threadID);
+-        if (!hhook)
+-        {
+-            ERR("SetWindowsHookEx failed with 0x%08x\n", GetLastError());
+-            return D3DERR_DRIVERINTERNALERROR;
+-        }
+-    }
+-    lasthook = get_last_hook();
+-    hook = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+-            sizeof(struct d3d_wnd_hooks));
+-    if (!hook)
+-        return E_OUTOFMEMORY;
+-    /* Add window hwnd to list */
+-    lasthook->next = hook;
+-    hook->prev = lasthook;
+-    hook->focus_wnd = hWnd;
+-    hook->present = This;
+-    return D3D_OK;
+-}
+-
+-static HRESULT dri3_present_unregister_window_hook(struct DRI3Present *This)
+-{
+-    struct d3d_wnd_hooks *hook = &d3d_hooks;
+-
+-    HWND hWnd = This->focus_wnd;
+-    /* Find hook and remove it */
+-    while (hook->next)
+-    {
+-        hook = hook->next;
+-        if(hook->focus_wnd == hWnd && hook->present == This)
+-        {
+-            /* Remove hook */
+-            hook->prev->next = hook->next;
+-            HeapFree(GetProcessHeap(), 0, hook);
+-            /* Start again at list head */
+-            hook = &d3d_hooks;
+-        }
+-    }
+-    /* Remove single process WindowsHook */
+-    if (get_last_hook() == &d3d_hooks && hhook)
+-    {
+-       if (!UnhookWindowsHookEx(hhook))
+-           ERR("UnhookWindowsHookEx failed with 0x%08x\n", GetLastError());
+-       hhook = NULL;
+-    }
+-    return D3D_OK;
+-}
+-
+ static BOOL WINAPI DRI3Present_GetWindowOccluded(struct DRI3Present *This)
+ {
+     return This->occluded;
+@@ -936,6 +765,270 @@ static ID3DPresentVtbl DRI3Present_vtable = {
+ #endif
+ };
+ 
++/* The following code is based on WINE's wined3d/device.c and
++ * wined3d/swapchain.c and WINE's d3d9 files. */
++
++static LONG fullscreen_style(LONG style)
++{
++    /* Make sure the window is managed, otherwise we won't get keyboard input. */
++    style |= WS_POPUP | WS_SYSMENU;
++    style &= ~(WS_CAPTION | WS_THICKFRAME);
++
++    return style;
++}
++
++static LONG fullscreen_exstyle(LONG exstyle)
++{
++    /* Filter out window decorations. */
++    exstyle &= ~(WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE);
++
++    return exstyle;
++}
++
++static HRESULT DRI3Present_ChangeDisplaySettingsIfNeccessary(struct DRI3Present *This, DEVMODEW *new_mode)
++{
++    DEVMODEW current_mode;
++    LONG hr;
++
++    /* Filter invalid resolution */
++    if (!new_mode->dmPelsWidth || !new_mode->dmPelsHeight)
++        return D3DERR_INVALIDCALL;
++
++    /* Ignore invalid frequency requested */
++    if (new_mode->dmDisplayFrequency > 1000)
++        new_mode->dmDisplayFrequency = 0;
++
++    ZeroMemory(&current_mode, sizeof(DEVMODEW));
++    current_mode.dmSize = sizeof(DEVMODEW);
++    /* Only change the mode if necessary. */
++    if (!EnumDisplaySettingsW(This->devname, ENUM_CURRENT_SETTINGS, &current_mode))
++       ERR("Failed to get current display mode.\n");
++    else if (current_mode.dmPelsWidth != new_mode->dmPelsWidth
++           || current_mode.dmPelsHeight != new_mode->dmPelsHeight
++           || (current_mode.dmDisplayFrequency != new_mode->dmDisplayFrequency
++           && (new_mode->dmFields & DM_DISPLAYFREQUENCY)))
++    {
++        hr = ChangeDisplaySettingsExW(This->devname, new_mode, 0, CDS_FULLSCREEN, NULL);
++        if (hr != DISP_CHANGE_SUCCESSFUL)
++        {
++            /* try again without display RefreshRate */
++            if (new_mode->dmFields & DM_DISPLAYFREQUENCY)
++            {
++                new_mode->dmFields &= ~DM_DISPLAYFREQUENCY;
++                new_mode->dmDisplayFrequency = 0;
++                hr = ChangeDisplaySettingsExW(This->devname, new_mode, 0, CDS_FULLSCREEN, NULL);
++                if (hr != DISP_CHANGE_SUCCESSFUL)
++                {
++                    ERR("ChangeDisplaySettingsExW failed with 0x%08X\n", hr);
++                    return D3DERR_INVALIDCALL;
++                }
++            }
++            else
++            {
++                ERR("ChangeDisplaySettingsExW failed with 0x%08X\n", hr);
++                return D3DERR_INVALIDCALL;
++            }
++        }
++    }
++    return D3D_OK;
++}
++
++LRESULT device_process_message(struct DRI3Present *present, HWND window, BOOL unicode,
++        UINT message, WPARAM wparam, LPARAM lparam, WNDPROC proc)
++{
++    boolean drop_wnd_messages;
++    DEVMODEW current_mode;
++    DEVMODEW new_mode;
++
++    TRACE("Got message: window %p, message %#x, wparam %#lx, lparam %#lx.\n",
++                    window, message, wparam, lparam);
++
++    if (present->drop_wnd_messages && message != WM_DISPLAYCHANGE)
++    {
++        TRACE("Filtering message: window %p, message %#x, wparam %#lx, lparam %#lx.\n",
++                window, message, wparam, lparam);
++        if (unicode)
++            return DefWindowProcW(window, message, wparam, lparam);
++        else
++            return DefWindowProcA(window, message, wparam, lparam);
++    }
++
++    if (message == WM_DESTROY)
++    {
++        TRACE("unregister window %p.\n", window);
++        (void) nine_unregister_window(window);
++    }
++    else if (message == WM_DISPLAYCHANGE)
++    {
++        /* Ex restores display mode, while non Ex requires the
++         * user to call Device::Reset() */
++        ZeroMemory(&current_mode, sizeof(DEVMODEW));
++        current_mode.dmSize = sizeof(current_mode);
++        if (!present->ex &&
++            !present->params.Windowed &&
++            present->params.hDeviceWindow &&
++            EnumDisplaySettingsW(present->devname, ENUM_CURRENT_SETTINGS, &current_mode) &&
++            (current_mode.dmPelsWidth != present->params.BackBufferWidth ||
++             current_mode.dmPelsHeight != present->params.BackBufferHeight))
++        {
++            present->resolution_mismatch = TRUE;
++        }
++        else
++        {
++            present->resolution_mismatch = FALSE;
++        }
++    }
++    else if (message == WM_ACTIVATEAPP)
++    {
++        drop_wnd_messages = present->drop_wnd_messages;
++        present->drop_wnd_messages = TRUE;
++
++        if (wparam == WA_INACTIVE)
++        {
++            present->occluded = TRUE;
++            present->reapply_mode = TRUE;
++
++            ZeroMemory(&new_mode, sizeof(DEVMODEW));
++            new_mode.dmSize = sizeof(new_mode);
++            if (EnumDisplaySettingsW(present->devname, ENUM_REGISTRY_SETTINGS, &new_mode))
++                DRI3Present_ChangeDisplaySettingsIfNeccessary(present, &new_mode);
++
++            if (!present->no_window_changes &&
++                    IsWindowVisible(present->params.hDeviceWindow))
++                ShowWindow(present->params.hDeviceWindow, SW_MINIMIZE);
++        }
++        else
++        {
++            present->occluded = FALSE;
++
++            if (!present->no_window_changes)
++            {
++                /* restore window */
++                SetWindowPos(present->params.hDeviceWindow, NULL, 0, 0,
++                             present->params.BackBufferWidth, present->params.BackBufferHeight,
++                             SWP_NOACTIVATE | SWP_NOZORDER);
++            }
++
++            if (present->ex)
++            {
++                ZeroMemory(&new_mode, sizeof(DEVMODEW));
++                new_mode.dmSize = sizeof(new_mode);
++                new_mode.dmPelsWidth = present->params.BackBufferWidth;
++                new_mode.dmPelsHeight = present->params.BackBufferHeight;
++                new_mode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
++                if (present->params.FullScreen_RefreshRateInHz)
++                {
++                    new_mode.dmFields |= DM_DISPLAYFREQUENCY;
++                    new_mode.dmDisplayFrequency = present->params.FullScreen_RefreshRateInHz;
++                }
++                DRI3Present_ChangeDisplaySettingsIfNeccessary(present, &new_mode);
++            }
++        }
++        present->drop_wnd_messages = drop_wnd_messages;
++    }
++    else if (message == WM_SYSCOMMAND)
++    {
++        if (wparam == SC_RESTORE)
++        {
++            if (unicode)
++                DefWindowProcW(window, message, wparam, lparam);
++            else
++                DefWindowProcA(window, message, wparam, lparam);
++        }
++    }
++
++    if (unicode)
++        return CallWindowProcW(proc, window, message, wparam, lparam);
++    else
++        return CallWindowProcA(proc, window, message, wparam, lparam);
++}
++
++static void setup_fullscreen_window(struct DRI3Present *This,
++        HWND hwnd, int w, int h)
++{
++    boolean drop_wnd_messages;
++    LONG style, style_ex;
++
++    This->style = GetWindowLongW(hwnd, GWL_STYLE);
++    This->style_ex = GetWindowLongW(hwnd, GWL_EXSTYLE);
++
++    style = fullscreen_style(This->style);
++    style_ex = fullscreen_exstyle(This->style_ex);
++
++    drop_wnd_messages = This->drop_wnd_messages;
++    This->drop_wnd_messages = TRUE;
++
++    SetWindowLongW(hwnd, GWL_STYLE, style);
++    SetWindowLongW(hwnd, GWL_EXSTYLE, style_ex);
++
++    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, w, h,
++            SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE);
++
++    This->drop_wnd_messages = drop_wnd_messages;
++}
++
++static void move_fullscreen_window(struct DRI3Present *This,
++        HWND hwnd, int w, int h)
++{
++    boolean drop_wnd_messages;
++    LONG style, style_ex;
++
++    /* move draw window back to place */
++
++    style = GetWindowLongW(hwnd, GWL_STYLE);
++    style_ex = GetWindowLongW(hwnd, GWL_EXSTYLE);
++
++    style = fullscreen_style(style);
++    style_ex = fullscreen_exstyle(style_ex);
++
++    drop_wnd_messages = This->drop_wnd_messages;
++    This->drop_wnd_messages = TRUE;
++    SetWindowLongW(hwnd, GWL_STYLE, style);
++    SetWindowLongW(hwnd, GWL_EXSTYLE, style_ex);
++    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, w, h,
++            SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE);
++    This->drop_wnd_messages = drop_wnd_messages;
++}
++
++static void restore_fullscreen_window(struct DRI3Present *This,
++        HWND hwnd)
++{
++    boolean drop_wnd_messages;
++    LONG style, style_ex;
++
++    /* switch from fullscreen to window */
++    style = GetWindowLongW(hwnd, GWL_STYLE);
++    style_ex = GetWindowLongW(hwnd, GWL_EXSTYLE);
++    /* These flags are set by us, not the
++     * application, and we want to ignore them in the test below, since it's
++     * not the application's fault that they changed. Additionally, we want to
++     * preserve the current status of these flags (i.e. don't restore them) to
++     * more closely emulate the behavior of Direct3D, which leaves these flags
++     * alone when returning to windowed mode. */
++    This->style ^= (This->style ^ style) & WS_VISIBLE;
++    This->style_ex ^= (This->style_ex ^ style_ex) & WS_EX_TOPMOST;
++
++    /* Only restore the style if the application didn't modify it during the
++     * fullscreen phase. Some applications change it before calling Reset()
++     * when switching between windowed and fullscreen modes (HL2), some
++     * depend on the original style (Eve Online). */
++    drop_wnd_messages = This->drop_wnd_messages;
++    This->drop_wnd_messages = TRUE;
++    if (style == fullscreen_style(This->style) &&
++            style_ex == fullscreen_exstyle(This->style_ex))
++    {
++        SetWindowLongW(hwnd, GWL_STYLE, This->style);
++        SetWindowLongW(hwnd, GWL_EXSTYLE, This->style_ex);
++    }
++    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED |
++                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
++                 SWP_NOACTIVATE);
++    This->drop_wnd_messages = drop_wnd_messages;
++
++    This->style = 0;
++    This->style_ex = 0;
++}
++
+ static void DRI3Present_UpdatePresentationInterval(struct DRI3Present *This)
+ {
+     switch(This->params.PresentationInterval)
+@@ -974,88 +1067,156 @@ static void DRI3Present_UpdatePresentationInterval(struct DRI3Present *This)
+ }
+ 
+ static HRESULT DRI3Present_ChangePresentParameters(struct DRI3Present *This,
+-         D3DPRESENT_PARAMETERS *params, BOOL first_time)
++        D3DPRESENT_PARAMETERS *params)
+ {
+-    HWND draw_window;
++    HWND focus_window = This->focus_wnd ? This->focus_wnd : params->hDeviceWindow;
+     RECT rect;
+-    LONG hr;
+-
+-    (void) first_time; /* Will be used to manage screen res if windowed mode change */
+-    /* TODO: don't do anything if nothing changed */
+-    /* Sanitize presentation parameters */
+-    draw_window = params->hDeviceWindow ? params->hDeviceWindow : This->focus_wnd;
++    DEVMODEW new_mode;
++    HRESULT hr;
++    boolean drop_wnd_messages;
++
++    TRACE("This=%p, params=%p, focus_window=%p, params->hDeviceWindow=%p\n",
++            This, params, focus_window, params->hDeviceWindow);
++
++    This->params.SwapEffect = params->SwapEffect;
++    This->params.AutoDepthStencilFormat = params->AutoDepthStencilFormat;
++    This->params.Flags = params->Flags;
++    This->params.FullScreen_RefreshRateInHz = params->FullScreen_RefreshRateInHz;
++    This->params.PresentationInterval = params->PresentationInterval;
++    This->params.EnableAutoDepthStencil = params->EnableAutoDepthStencil;
++    if (!params->hDeviceWindow)
++        params->hDeviceWindow = This->params.hDeviceWindow;
++    else
++        This->params.hDeviceWindow = params->hDeviceWindow;
+ 
+-    if (!GetClientRect(draw_window, &rect))
++    if ((This->params.BackBufferWidth != params->BackBufferWidth) ||
++            (This->params.BackBufferHeight != params->BackBufferHeight) ||
++            (This->params.Windowed != params->Windowed) ||
++            This->reapply_mode)
+     {
+-        WARN("GetClientRect failed.\n");
+-        rect.right = 640;
+-        rect.bottom = 480;
+-    }
++        This->reapply_mode = FALSE;
+ 
+-    if (params->BackBufferWidth == 0)
+-        params->BackBufferWidth = rect.right - rect.left;
++        if (!params->Windowed)
++        {
++            TRACE("Setting fullscreen mode: %dx%d@%d\n", params->BackBufferWidth,
++                     params->BackBufferHeight, params->FullScreen_RefreshRateInHz);
++
++            /* switch display mode */
++            ZeroMemory(&new_mode, sizeof(DEVMODEW));
++            new_mode.dmPelsWidth = params->BackBufferWidth;
++            new_mode.dmPelsHeight = params->BackBufferHeight;
++            new_mode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
++            if (params->FullScreen_RefreshRateInHz)
++            {
++                new_mode.dmFields |= DM_DISPLAYFREQUENCY;
++                new_mode.dmDisplayFrequency = params->FullScreen_RefreshRateInHz;
++            }
++            new_mode.dmSize = sizeof(DEVMODEW);
++            hr = DRI3Present_ChangeDisplaySettingsIfNeccessary(This, &new_mode);
++            if (FAILED(hr))
++                return hr;
+ 
+-    if (params->BackBufferHeight == 0)
+-        params->BackBufferHeight = rect.bottom - rect.top;
++            /* Dirty as BackBufferWidth and BackBufferHeight hasn't been set yet */
++            This->resolution_mismatch = FALSE;
++        }
++        else if(!This->params.Windowed && params->Windowed)
++        {
++            TRACE("Setting fullscreen mode: %dx%d@%d\n", This->initial_mode.dmPelsWidth,
++                    This->initial_mode.dmPelsHeight, This->initial_mode.dmDisplayFrequency);
+ 
+-    if (!params->Windowed)
+-    {
+-        /* TODO: Store initial config and restore it when leaving fullscreen, or when leaving wine*/
+-        LONG style, exstyle;
+-        DEVMODEW newMode;
+-
+-        ZeroMemory(&newMode, sizeof(DEVMODEW));
+-        newMode.dmPelsWidth = params->BackBufferWidth;
+-        newMode.dmPelsHeight = params->BackBufferHeight;
+-        newMode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
+-        newMode.dmSize = sizeof(DEVMODEW);
+-        hr = ChangeDisplaySettingsExW(This->devname, &newMode, 0, CDS_FULLSCREEN, NULL);
+-        if (hr != DISP_CHANGE_SUCCESSFUL)
++            hr = DRI3Present_ChangeDisplaySettingsIfNeccessary(This, &This->initial_mode);
++            if (FAILED(hr))
++                return hr;
++
++            /* Dirty as BackBufferWidth and BackBufferHeight hasn't been set yet */
++            This->resolution_mismatch = FALSE;
++        }
++
++        if (This->params.Windowed)
+         {
+-            ERR("ChangeDisplaySettingsExW failed with 0x%08X\n", hr);
+-            return D3DERR_INVALIDCALL;
++            if (!params->Windowed)
++            {
++                /* switch from window to fullscreen */
++                if (!nine_register_window(focus_window, This))
++                    return D3DERR_INVALIDCALL;
++
++                SetWindowPos(focus_window, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
++
++                setup_fullscreen_window(This, params->hDeviceWindow,
++                        params->BackBufferWidth, params->BackBufferHeight);
++            }
+         }
+-        style = fullscreen_style(0);
+-        exstyle = fullscreen_exstyle(0);
+-
+-        SetWindowLongW(draw_window, GWL_STYLE, style);
+-        SetWindowLongW(draw_window, GWL_EXSTYLE, exstyle);
+-        hr = SetWindowPos(draw_window, HWND_TOPMOST, 0, 0, params->BackBufferWidth, params->BackBufferHeight,
+-                SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE);
+-        if (!hr)
++        else
+         {
+-            ERR("SetWindowLongW failed with 0x%08X\n", GetLastError());
+-            return D3DERR_INVALIDCALL;
++            if (!params->Windowed)
++            {
++                /* switch from fullscreen to fullscreen */
++                drop_wnd_messages = This->drop_wnd_messages;
++                This->drop_wnd_messages = TRUE;
++                MoveWindow(params->hDeviceWindow, 0, 0,
++                        params->BackBufferWidth,
++                        params->BackBufferHeight,
++                        TRUE);
++                This->drop_wnd_messages = drop_wnd_messages;
++            }
++            else if (This->style || This->style_ex)
++            {
++                restore_fullscreen_window(This, params->hDeviceWindow);
++            }
++
++            if (params->Windowed && !nine_unregister_window(focus_window))
++                ERR("Window %p is not registered with nine.\n", focus_window);
+         }
++        This->params.Windowed = params->Windowed;
+     }
+-    else if (!first_time && !This->params.Windowed)
++    else if (!params->Windowed)
+     {
+-        hr = ChangeDisplaySettingsExW(This->devname, &(This->initial_mode), 0, CDS_FULLSCREEN, NULL);
+-        if (hr != DISP_CHANGE_SUCCESSFUL)
+-        {
+-            ERR("ChangeDisplaySettingsExW failed with 0x%08X\n", hr);
++        move_fullscreen_window(This, params->hDeviceWindow, params->BackBufferWidth, params->BackBufferHeight);
++    }
++    else
++    {
++        TRACE("Nothing changed.\n");
++    }
++    if (!params->BackBufferWidth || !params->BackBufferHeight) {
++        if (!params->Windowed)
+             return D3DERR_INVALIDCALL;
+-        }
++
++        if (!GetClientRect(params->hDeviceWindow, &rect))
++            return D3DERR_INVALIDCALL;
++
++        if (params->BackBufferWidth == 0)
++            params->BackBufferWidth = rect.right - rect.left;
++
++        if (params->BackBufferHeight == 0)
++            params->BackBufferHeight = rect.bottom - rect.top;
+     }
+-    SetActiveWindow(draw_window);
+ 
+-    This->params = *params;
++    /* Set as last in case of failed reset those aren't updated */
++    This->params.BackBufferWidth = params->BackBufferWidth;
++    This->params.BackBufferHeight = params->BackBufferHeight;
++    This->params.BackBufferFormat = params->BackBufferFormat;
++    This->params.BackBufferCount = params->BackBufferCount;
++    This->params.MultiSampleType = params->MultiSampleType;
++    This->params.MultiSampleQuality = params->MultiSampleQuality;
+ 
+     DRI3Present_UpdatePresentationInterval(This);
+ 
+     return D3D_OK;
+ }
+ 
++/* The following code isn't based on WINE's wined3d or d3d9. */
++
+ static HRESULT DRI3Present_new(Display *gdi_display, const WCHAR *devname,
+         D3DPRESENT_PARAMETERS *params, HWND focus_wnd, struct DRI3Present **out,
+-        boolean ex)
++        boolean ex, boolean no_window_changes)
+ {
+     struct DRI3Present *This;
++    HWND focus_window;
++    DEVMODEW new_mode;
+     HRESULT hr;
++    RECT rect;
+ 
+-    if (!focus_wnd)
+-        focus_wnd = params->hDeviceWindow;
+-    if (!focus_wnd)
++    if (!focus_wnd && !params->hDeviceWindow)
+     {
+         ERR("No focus HWND specified for presentation backend.\n");
+         return D3DERR_INVALIDCALL;
+@@ -1074,17 +1235,65 @@ static HRESULT DRI3Present_new(Display *gdi_display, const WCHAR *devname,
+     This->refs = 1;
+     This->focus_wnd = focus_wnd;
+     This->ex = ex;
++    This->no_window_changes = no_window_changes;
+ 
+-    strcpyW(This->devname, devname);
+-
++    /* store current resolution */
+     ZeroMemory(&(This->initial_mode), sizeof(This->initial_mode));
+     This->initial_mode.dmSize = sizeof(This->initial_mode);
+-
+     EnumDisplaySettingsExW(This->devname, ENUM_CURRENT_SETTINGS, &(This->initial_mode), 0);
+ 
+-    hr = DRI3Present_ChangePresentParameters(This, params, TRUE);
+-    if (hr != D3D_OK)
+-        return hr;
++    if (!params->hDeviceWindow)
++        params->hDeviceWindow = This->focus_wnd;
++
++    if (!params->Windowed) {
++        focus_window = This->focus_wnd ? This->focus_wnd : params->hDeviceWindow;
++
++        if (!nine_register_window(focus_window, This))
++            return D3DERR_INVALIDCALL;
++
++        SetWindowPos(focus_window, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
++
++        /* switch display mode */
++        ZeroMemory(&new_mode, sizeof(DEVMODEW));
++        new_mode.dmSize = sizeof(DEVMODEW);
++        new_mode.dmPelsWidth = params->BackBufferWidth;
++        new_mode.dmPelsHeight = params->BackBufferHeight;
++        new_mode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
++
++        if (params->FullScreen_RefreshRateInHz)
++        {
++            new_mode.dmFields |= DM_DISPLAYFREQUENCY;
++            new_mode.dmDisplayFrequency = params->FullScreen_RefreshRateInHz;
++        }
++
++        hr = DRI3Present_ChangeDisplaySettingsIfNeccessary(This, &new_mode);
++        if (FAILED(hr))
++        {
++            nine_unregister_window(focus_window);
++            HeapFree(GetProcessHeap(), 0, This);
++            return hr;
++        }
++
++        /* Dirty as BackBufferWidth and BackBufferHeight hasn't been set yet */
++        This->resolution_mismatch = FALSE;
++
++        setup_fullscreen_window(This, params->hDeviceWindow,
++                params->BackBufferWidth, params->BackBufferHeight);
++    } else {
++        GetClientRect(params->hDeviceWindow, &rect);
++        if (!params->BackBufferWidth || !params->BackBufferHeight) {
++
++            if (params->BackBufferWidth == 0)
++                params->BackBufferWidth = rect.right - rect.left;
++
++            if (params->BackBufferHeight == 0)
++                params->BackBufferHeight = rect.bottom - rect.top;
++        }
++    }
++
++    This->params = *params;
++
++    strcpyW(This->devname, devname);
+ 
+     DRI3Present_UpdatePresentationInterval(This);
+ 
+@@ -1111,6 +1320,7 @@ struct DRI3PresentGroup
+     struct DRI3Present **present_backends;
+     unsigned npresent_backends;
+     Display *gdi_display;
++    boolean no_window_changes;
+ };
+ 
+ static ULONG WINAPI DRI3PresentGroup_AddRef(struct DRI3PresentGroup *This)
+@@ -1185,7 +1395,8 @@ static HRESULT WINAPI DRI3PresentGroup_CreateAdditionalPresent(struct DRI3Presen
+ {
+     HRESULT hr;
+     hr = DRI3Present_new(This->gdi_display, This->present_backends[0]->devname,
+-            pPresentationParameters, 0, (struct DRI3Present **)ppPresent, This->ex);
++            pPresentationParameters, 0, (struct DRI3Present **)ppPresent,
++            This->ex, This->no_window_changes);
+ 
+     return hr;
+ }
+@@ -1209,7 +1420,7 @@ static ID3DPresentGroupVtbl DRI3PresentGroup_vtable = {
+ 
+ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_name,
+         UINT adapter, HWND focus_wnd, D3DPRESENT_PARAMETERS *params,
+-        unsigned nparams, ID3DPresentGroup **group, boolean ex)
++        unsigned nparams, ID3DPresentGroup **group, boolean ex, DWORD BehaviorFlags)
+ {
+     struct DRI3PresentGroup *This;
+     DISPLAY_DEVICEW dd;
+@@ -1229,6 +1440,7 @@ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_n
+     This->refs = 1;
+     This->ex = ex;
+     This->npresent_backends = nparams;
++    This->no_window_changes = !!(BehaviorFlags & D3DCREATE_NOWINDOWCHANGES);
+     This->present_backends = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+             This->npresent_backends * sizeof(struct DRI3Present *));
+     if (!This->present_backends)
+@@ -1240,6 +1452,7 @@ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_n
+ 
+     if (nparams != 1)
+         adapter = 0;
++
+     for (i = 0; i < This->npresent_backends; ++i)
+     {
+         ZeroMemory(&dd, sizeof(dd));
+@@ -1253,7 +1466,7 @@ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_n
+ 
+         /* Create an ID3DPresent for it */
+         hr = DRI3Present_new(gdi_display, dd.DeviceName, &params[i],
+-                focus_wnd, &This->present_backends[i], ex);
++                focus_wnd, &This->present_backends[i], ex, This->no_window_changes);
+         if (FAILED(hr))
+         {
+             DRI3PresentGroup_Release(This);
+@@ -1366,6 +1579,7 @@ BOOL present_has_d3dadapter(Display *gdi_display)
+         memcpy(pathbuf, path, size >= sizeof(pathbuf) ? (sizeof(pathbuf)-1) : size);
+         pathbuf[sizeof(pathbuf)-1] = 0;
+     }
++
+ use_default_path:
+ #if !defined(D3D9NINE_MODULEPATH)
+     if (!handle)
+diff --git a/dlls/d3d9-nine/present.h b/dlls/d3d9-nine/present.h
+index 0f0bca9..a551687 100644
+--- a/dlls/d3d9-nine/present.h
++++ b/dlls/d3d9-nine/present.h
+@@ -29,7 +29,7 @@
+ 
+ HRESULT present_create_present_group(Display *gdi_display, const WCHAR *device_name, UINT adapter,
+         HWND focus, D3DPRESENT_PARAMETERS *params, unsigned nparams, ID3DPresentGroup **group,
+-        boolean ex);
++        boolean ex, DWORD BehaviorFlags);
+ 
+ HRESULT present_create_adapter9(Display *gdi_display, HDC hdc, ID3DAdapter9 **adapter);
+ 
+diff --git a/dlls/d3d9-nine/wndproc.c b/dlls/d3d9-nine/wndproc.c
+new file mode 100644
+index 0000000..0ed80de
+--- /dev/null
++++ b/dlls/d3d9-nine/wndproc.c
+@@ -0,0 +1,277 @@
++/*
++ * Copyright 2016 Patrick Rudolph
++ *
++ * Based on the file wined3d_main.c taken from wined3d:
++ * All credits go to the original developers:
++ *
++ * Copyright 2002-2003 The wine-d3d team
++ * Copyright 2002-2003 Raphael Junqueira
++ * Copyright 2004      Jason Edmeades
++ * Copyright 2007-2008 Stefan Dösinger for CodeWeavers
++ * Copyright 2009 Henri Verbeet for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "config.h"
++#include "wine/port.h"
++
++#include <stdarg.h>
++#include <math.h>
++#include <limits.h>
++#define NONAMELESSUNION
++#define NONAMELESSSTRUCT
++#define COBJMACROS
++#include "windef.h"
++#include "winbase.h"
++#include "winreg.h"
++#include "wingdi.h"
++#include "winuser.h"
++#include "wine/debug.h"
++#include "wine/unicode.h"
++
++#include "wndproc.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(d3dadapter);
++
++struct nine_wndproc
++{
++    HWND window;
++    BOOL unicode;
++    WNDPROC proc;
++    struct DRI3Present *present;
++};
++
++struct nine_wndproc_table
++{
++    struct nine_wndproc *entries;
++    unsigned int count;
++    unsigned int size;
++};
++
++static struct nine_wndproc_table wndproc_table;
++
++static CRITICAL_SECTION nine_wndproc_cs;
++static CRITICAL_SECTION_DEBUG nine_wndproc_cs_debug =
++{
++    0, 0, &nine_wndproc_cs,
++    {&nine_wndproc_cs_debug.ProcessLocksList,
++    &nine_wndproc_cs_debug.ProcessLocksList},
++    0, 0, {(DWORD_PTR)(__FILE__ ": nine_wndproc_cs")}
++};
++static CRITICAL_SECTION nine_wndproc_cs = {&nine_wndproc_cs_debug, -1, 0, 0, 0, 0};
++
++BOOL nine_dll_init(HINSTANCE hInstDLL)
++{
++    WNDCLASSA wc;
++
++    /* We need our own window class for a fake window which we use to retrieve GL capabilities */
++    /* We might need CS_OWNDC in the future if we notice strange things on Windows.
++     * Various articles/posts about OpenGL problems on Windows recommend this. */
++    wc.style                = CS_HREDRAW | CS_VREDRAW;
++    wc.lpfnWndProc          = DefWindowProcA;
++    wc.cbClsExtra           = 0;
++    wc.cbWndExtra           = 0;
++    wc.hInstance            = hInstDLL;
++    wc.hIcon                = LoadIconA(NULL, (const char *)IDI_WINLOGO);
++    wc.hCursor              = LoadCursorA(NULL, (const char *)IDC_ARROW);
++    wc.hbrBackground        = NULL;
++    wc.lpszMenuName         = NULL;
++    wc.lpszClassName        = NINE_WINDOW_CLASS_NAME;
++
++    if (!RegisterClassA(&wc))
++    {
++        ERR("Failed to register window class '%s'!\n", NINE_WINDOW_CLASS_NAME);
++        return FALSE;
++    }
++
++    DisableThreadLibraryCalls(hInstDLL);
++
++    return TRUE;
++}
++
++BOOL nine_dll_destroy(HINSTANCE hInstDLL)
++{
++    unsigned int i;
++
++    for (i = 0; i < wndproc_table.count; ++i)
++    {
++        /* Trying to unregister these would be futile. These entries can only
++         * exist if either we skipped them in nine_unregister_window() due
++         * to the application replacing the wndproc after the entry was
++         * registered, or if the application still has an active nine
++         * device. In the latter case the application has bigger problems than
++         * these entries. */
++        WARN("Leftover wndproc table entry %p.\n", &wndproc_table.entries[i]);
++    }
++    HeapFree(GetProcessHeap(), 0, wndproc_table.entries);
++
++    UnregisterClassA(NINE_WINDOW_CLASS_NAME, hInstDLL);
++
++    DeleteCriticalSection(&nine_wndproc_cs);
++    return TRUE;
++}
++
++static void nine_wndproc_mutex_lock(void)
++{
++    EnterCriticalSection(&nine_wndproc_cs);
++}
++
++static void nine_wndproc_mutex_unlock(void)
++{
++    LeaveCriticalSection(&nine_wndproc_cs);
++}
++
++static struct nine_wndproc *nine_find_wndproc(HWND window)
++{
++    unsigned int i;
++
++    for (i = 0; i < wndproc_table.count; ++i)
++    {
++        if (wndproc_table.entries[i].window == window)
++        {
++            return &wndproc_table.entries[i];
++        }
++    }
++
++    return NULL;
++}
++
++static LRESULT CALLBACK nine_wndproc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
++{
++    struct nine_wndproc *entry;
++    struct DRI3Present *present;
++    BOOL unicode;
++    WNDPROC proc;
++
++    nine_wndproc_mutex_lock();
++    entry = nine_find_wndproc(window);
++
++    if (!entry)
++    {
++        nine_wndproc_mutex_unlock();
++        ERR("Window %p is not registered with nine.\n", window);
++        return DefWindowProcW(window, message, wparam, lparam);
++    }
++
++    present = entry->present;
++    unicode = entry->unicode;
++    proc = entry->proc;
++    nine_wndproc_mutex_unlock();
++
++    if (present)
++        return device_process_message(present, window, unicode, message, wparam, lparam, proc);
++    if (unicode)
++        return CallWindowProcW(proc, window, message, wparam, lparam);
++    return CallWindowProcA(proc, window, message, wparam, lparam);
++}
++
++BOOL nine_register_window(HWND window, struct DRI3Present *present)
++{
++    struct nine_wndproc *entry;
++
++    nine_wndproc_mutex_lock();
++
++    if (nine_find_wndproc(window))
++    {
++        nine_wndproc_mutex_unlock();
++        WARN("Window %p is already registered with nine.\n", window);
++        return TRUE;
++    }
++
++    if (wndproc_table.size == wndproc_table.count)
++    {
++        unsigned int new_size = max(1, wndproc_table.size * 2);
++        struct nine_wndproc *new_entries;
++
++        if (!wndproc_table.entries) new_entries = HeapAlloc(GetProcessHeap(), 0, new_size * sizeof(*new_entries));
++        else new_entries = HeapReAlloc(GetProcessHeap(), 0, wndproc_table.entries, new_size * sizeof(*new_entries));
++
++        if (!new_entries)
++        {
++            nine_wndproc_mutex_unlock();
++            ERR("Failed to grow table.\n");
++            return FALSE;
++        }
++
++        wndproc_table.entries = new_entries;
++        wndproc_table.size = new_size;
++    }
++
++    entry = &wndproc_table.entries[wndproc_table.count++];
++    entry->window = window;
++    entry->unicode = IsWindowUnicode(window);
++    /* Set a window proc that matches the window. Some applications (e.g. NoX)
++     * replace the window proc after we've set ours, and expect to be able to
++     * call the previous one (ours) directly, without using CallWindowProc(). */
++    if (entry->unicode)
++        entry->proc = (WNDPROC)SetWindowLongPtrW(window, GWLP_WNDPROC, (LONG_PTR)nine_wndproc);
++    else
++        entry->proc = (WNDPROC)SetWindowLongPtrA(window, GWLP_WNDPROC, (LONG_PTR)nine_wndproc);
++    entry->present = present;
++
++    nine_wndproc_mutex_unlock();
++
++    return TRUE;
++}
++
++BOOL nine_unregister_window(HWND window)
++{
++    struct nine_wndproc *entry, *last;
++    LONG_PTR proc;
++
++    nine_wndproc_mutex_lock();
++
++    if (!(entry = nine_find_wndproc(window)))
++    {
++        nine_wndproc_mutex_unlock();
++        return FALSE;
++    }
++
++    if (entry->unicode)
++    {
++        proc = GetWindowLongPtrW(window, GWLP_WNDPROC);
++        if (proc != (LONG_PTR)nine_wndproc)
++        {
++            entry->present = NULL;
++            nine_wndproc_mutex_unlock();
++            WARN("Not unregistering window %p, window proc %#lx doesn't match nine window proc %p.\n",
++                    window, proc, nine_wndproc);
++            return FALSE;
++        }
++
++        SetWindowLongPtrW(window, GWLP_WNDPROC, (LONG_PTR)entry->proc);
++    }
++    else
++    {
++        proc = GetWindowLongPtrA(window, GWLP_WNDPROC);
++        if (proc != (LONG_PTR)nine_wndproc)
++        {
++            entry->present = NULL;
++            nine_wndproc_mutex_unlock();
++            WARN("Not unregistering window %p, window proc %#lx doesn't match nine window proc %p.\n",
++                    window, proc, nine_wndproc);
++            return FALSE;
++        }
++
++        SetWindowLongPtrA(window, GWLP_WNDPROC, (LONG_PTR)entry->proc);
++    }
++
++    last = &wndproc_table.entries[--wndproc_table.count];
++    if (entry != last) *entry = *last;
++
++    nine_wndproc_mutex_unlock();
++    return TRUE;
++}
+diff --git a/dlls/d3d9-nine/wndproc.h b/dlls/d3d9-nine/wndproc.h
+new file mode 100644
+index 0000000..15f26d4
+--- /dev/null
++++ b/dlls/d3d9-nine/wndproc.h
+@@ -0,0 +1,41 @@
++/*
++ * Direct3D wine internal interface main
++ *
++ * Copyright 2002-2003 The wine-d3d team
++ * Copyright 2002-2003 Raphael Junqueira
++ * Copyright 2004      Jason Edmeades
++ * Copyright 2007-2008 Stefan Dösinger for CodeWeavers
++ * Copyright 2009 Henri Verbeet for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#ifndef __WINE_NINE_WNDPROC_H
++#define __WINE_NINE_WNDPROC_H
++
++struct DRI3Present;
++
++BOOL nine_register_window(HWND window, struct DRI3Present *present);
++BOOL nine_unregister_window(HWND window);
++
++BOOL nine_dll_init(HINSTANCE hInstDLL);
++BOOL nine_dll_destroy(HINSTANCE hInstDLL);
++
++LRESULT device_process_message(struct DRI3Present *present, HWND window, BOOL unicode,
++        UINT message, WPARAM wparam, LPARAM lparam, WNDPROC proc);
++
++#define NINE_WINDOW_CLASS_NAME "Gallium_Nine_Window"
++
++#endif
+-- 
+2.7.4
+

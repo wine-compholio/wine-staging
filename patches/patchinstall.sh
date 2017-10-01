@@ -206,6 +206,7 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
+	enable_kernel32_TRUST_E_NOSIGNATURE="$1"
 	enable_kernel32_Tests="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
@@ -900,6 +901,9 @@ patch_enable ()
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
+			;;
+		kernel32-TRUST_E_NOSIGNATURE)
+			enable_kernel32_TRUST_E_NOSIGNATURE="$2"
 			;;
 		kernel32-Tests)
 			enable_kernel32_Tests="$2"
@@ -5548,6 +5552,21 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-TRUST_E_NOSIGNATURE
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43041] Add missing message string for TRUST_E_NOSIGNATURE
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/format_msg.c, dlls/kernel32/winerror.mc
+# |
+if test "$enable_kernel32_TRUST_E_NOSIGNATURE" -eq 1; then
+	patch_apply kernel32-TRUST_E_NOSIGNATURE/0001-kernel32-add-message-resource-for-TRUST_E_NOSIGNATUR.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "kernel32: Add message resource for TRUST_E_NOSIGNATURE.", 1 },';
 	) >> "$patchlist"
 fi
 

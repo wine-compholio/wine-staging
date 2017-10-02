@@ -7144,6 +7144,7 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 	patch_apply nvcuda-CUDA_Support/0008-nvcuda-Add-support-for-CUDA-7.0.patch
 	patch_apply nvcuda-CUDA_Support/0009-nvcuda-Implement-cuModuleLoad-wrapper-function.patch
 	patch_apply nvcuda-CUDA_Support/0010-nvcuda-Search-for-dylib-library-on-Mac-OS-X.patch
+	patch_apply nvcuda-CUDA_Support/0011-nvcuda-Add-semi-stub-for-cuD3D10GetDevice.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "include: Add cuda.h.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
@@ -7155,6 +7156,7 @@ if test "$enable_nvcuda_CUDA_Support" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add support for CUDA 7.0.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement cuModuleLoad wrapper function.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvcuda: Search for dylib library on Mac OS X.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Add semi stub for cuD3D10GetDevice.", 1 },';
 	) >> "$patchlist"
 fi
 

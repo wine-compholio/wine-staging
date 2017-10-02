@@ -1,0 +1,76 @@
+From 4f3a56480857ec2b17c6bb6dd53f40420aebdc3b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Thu, 28 Sep 2017 05:35:49 +0200
+Subject: crypt32: Implement decoding of X509_ECC_SIGNATURE.
+
+---
+ dlls/crypt32/decode.c       | 32 ++++++++++++++++++++++++++++++++
+ dlls/crypt32/tests/encode.c |  2 +-
+ 2 files changed, 33 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/crypt32/decode.c b/dlls/crypt32/decode.c
+index 6b124f9db7d..02392ec6bf0 100644
+--- a/dlls/crypt32/decode.c
++++ b/dlls/crypt32/decode.c
+@@ -5930,6 +5930,35 @@ static BOOL WINAPI CRYPT_AsnDecodeObjectIdentifier(DWORD dwCertEncodingType,
+     return ret;
+ }
+ 
++static BOOL WINAPI CRYPT_AsnDecodeEccSignature(DWORD dwCertEncodingType,
++ LPCSTR lpszStructType, const BYTE *pbEncoded, DWORD cbEncoded, DWORD dwFlags,
++ PCRYPT_DECODE_PARA pDecodePara, void *pvStructInfo, DWORD *pcbStructInfo)
++{
++    BOOL ret;
++    struct AsnDecodeSequenceItem items[] = {
++     { ASN_INTEGER, offsetof(CERT_ECC_SIGNATURE, r),
++       CRYPT_AsnDecodeUnsignedIntegerInternal, sizeof(CRYPT_UINT_BLOB), FALSE,
++       TRUE, offsetof(CERT_ECC_SIGNATURE, r.pbData), 0 },
++     { ASN_INTEGER, offsetof(CERT_ECC_SIGNATURE, s),
++       CRYPT_AsnDecodeUnsignedIntegerInternal, sizeof(CRYPT_UINT_BLOB), FALSE,
++       TRUE, offsetof(CERT_ECC_SIGNATURE, s.pbData), 0 },
++    };
++
++    __TRY
++    {
++        ret = CRYPT_AsnDecodeSequence(items, sizeof(items) / sizeof(items[0]),
++         pbEncoded, cbEncoded, dwFlags, pDecodePara, pvStructInfo,
++         pcbStructInfo, NULL, NULL);
++    }
++    __EXCEPT_PAGE_FAULT
++    {
++        SetLastError(STATUS_ACCESS_VIOLATION);
++        ret = FALSE;
++    }
++    __ENDTRY
++    return ret;
++}
++
+ static CryptDecodeObjectExFunc CRYPT_GetBuiltinDecoder(DWORD dwCertEncodingType,
+  LPCSTR lpszStructType)
+ {
+@@ -6072,6 +6101,9 @@ static CryptDecodeObjectExFunc CRYPT_GetBuiltinDecoder(DWORD dwCertEncodingType,
+         case LOWORD(X509_OBJECT_IDENTIFIER):
+             decodeFunc = CRYPT_AsnDecodeObjectIdentifier;
+             break;
++        case LOWORD(X509_ECC_SIGNATURE):
++            decodeFunc = CRYPT_AsnDecodeEccSignature;
++            break;
+         }
+     }
+     else if (!strcmp(lpszStructType, szOID_CERT_EXTENSIONS))
+diff --git a/dlls/crypt32/tests/encode.c b/dlls/crypt32/tests/encode.c
+index 574b1e95351..5ab828151fa 100644
+--- a/dlls/crypt32/tests/encode.c
++++ b/dlls/crypt32/tests/encode.c
+@@ -8434,7 +8434,7 @@ static void testECDSACert(void)
+     ecc_sig = NULL;
+     ret = pCryptDecodeObjectEx(X509_ASN_ENCODING, X509_ECC_SIGNATURE, info->Signature.pbData,
+                                info->Signature.cbData, decode_flags, NULL, &ecc_sig, &size);
+-    todo_wine ok(ret, "CryptDecodeObjectEx failed with %d\n", GetLastError());
++    ok(ret, "CryptDecodeObjectEx failed with %d\n", GetLastError());
+     if (ret)
+     {
+         ok(ecc_sig->r.cbData == 32, "Expected 32 bytes, got %d\n", ecc_sig->r.cbData);
+-- 
+2.14.1
+

@@ -1,0 +1,362 @@
+From 13ffc8c6432546a32aa4c2af5cd4c3fa1337947e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 29 Sep 2017 20:31:00 +0200
+Subject: bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
+
+---
+ dlls/bcrypt/bcrypt_main.c  | 281 ++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/bcrypt/tests/bcrypt.c |   4 +-
+ 2 files changed, 281 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index f822a7aadf3..866364f237e 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -27,6 +27,7 @@
+ #elif defined(SONAME_LIBGNUTLS)
+ #include <gnutls/gnutls.h>
+ #include <gnutls/crypto.h>
++#include <gnutls/abstract.h>
+ #endif
+ 
+ #include "ntstatus.h"
+@@ -64,6 +65,11 @@ MAKE_FUNCPTR(gnutls_global_init);
+ MAKE_FUNCPTR(gnutls_global_set_log_function);
+ MAKE_FUNCPTR(gnutls_global_set_log_level);
+ MAKE_FUNCPTR(gnutls_perror);
++MAKE_FUNCPTR(gnutls_pubkey_init);
++MAKE_FUNCPTR(gnutls_pubkey_deinit);
++MAKE_FUNCPTR(gnutls_pubkey_import_ecc_raw);
++MAKE_FUNCPTR(gnutls_pk_to_sign);
++MAKE_FUNCPTR(gnutls_pubkey_verify_hash2);
+ #undef MAKE_FUNCPTR
+ 
+ #if GNUTLS_VERSION_MAJOR < 3
+@@ -113,6 +119,11 @@ static BOOL gnutls_initialize(void)
+     LOAD_FUNCPTR(gnutls_global_set_log_function)
+     LOAD_FUNCPTR(gnutls_global_set_log_level)
+     LOAD_FUNCPTR(gnutls_perror)
++    LOAD_FUNCPTR(gnutls_pubkey_init);
++    LOAD_FUNCPTR(gnutls_pubkey_deinit);
++    LOAD_FUNCPTR(gnutls_pubkey_import_ecc_raw);
++    LOAD_FUNCPTR(gnutls_pk_to_sign);
++    LOAD_FUNCPTR(gnutls_pubkey_verify_hash2);
+ #undef LOAD_FUNCPTR
+ 
+     if (!(pgnutls_cipher_tag = wine_dlsym( libgnutls_handle, "gnutls_cipher_tag", NULL, 0 )))
+@@ -1124,6 +1135,264 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+     return STATUS_SUCCESS;
+ }
+ 
++struct buffer
++{
++    BYTE *buffer;
++    DWORD length;
++    DWORD pos;
++    BOOL error;
++};
++
++static void buffer_init( struct buffer *buffer )
++{
++    buffer->buffer = NULL;
++    buffer->length = 0;
++    buffer->pos = 0;
++    buffer->error = FALSE;
++}
++
++static void buffer_free( struct buffer *buffer )
++{
++    HeapFree( GetProcessHeap(), 0, buffer->buffer );
++}
++
++static void buffer_append( struct buffer *buffer, BYTE *data, DWORD len )
++{
++    if (!len) return;
++
++    if (buffer->pos + len > buffer->length)
++    {
++        DWORD new_length = max( max( buffer->pos + len, buffer->length * 2 ), 64 );
++        BYTE *new_buffer;
++
++        if (buffer->buffer)
++            new_buffer = HeapReAlloc( GetProcessHeap(), 0, buffer->buffer, new_length );
++        else
++            new_buffer = HeapAlloc( GetProcessHeap(), 0, new_length );
++
++        if (!new_buffer)
++        {
++            ERR( "out of memory\n" );
++            buffer->error = TRUE;
++            return;
++        }
++
++        buffer->buffer = new_buffer;
++        buffer->length = new_length;
++    }
++
++    memcpy( &buffer->buffer[buffer->pos], data, len );
++    buffer->pos += len;
++}
++
++static void buffer_append_byte( struct buffer *buffer, BYTE value )
++{
++    buffer_append( buffer, &value, sizeof(value) );
++}
++
++static void buffer_append_asn1_length( struct buffer *buffer, DWORD length )
++{
++    DWORD num_bytes;
++
++    if (length < 128)
++    {
++        buffer_append_byte( buffer, length );
++        return;
++    }
++
++    if (length <= 0xff) num_bytes = 1;
++    else if (length <= 0xffff) num_bytes = 2;
++    else if (length <= 0xffffff) num_bytes = 3;
++    else num_bytes = 4;
++
++    buffer_append_byte( buffer, 0x80 | num_bytes );
++    while (num_bytes--)
++        buffer_append_byte( buffer, length >> (num_bytes * 8) );
++}
++
++static void buffer_append_asn1_integer( struct buffer *buffer, BYTE *data, DWORD len )
++{
++    DWORD leading_zero = (*data & 0x80) != 0;
++
++    buffer_append_byte( buffer, 0x02 );  /* tag */
++    buffer_append_asn1_length( buffer, len + leading_zero );
++    if (leading_zero) buffer_append_byte( buffer, 0 );
++    buffer_append( buffer, data, len );
++}
++
++static void buffer_append_asn1_sequence( struct buffer *buffer, struct buffer *content )
++{
++    if (content->error)
++    {
++        buffer->error = TRUE;
++        return;
++    }
++
++    buffer_append_byte( buffer, 0x30 );  /* tag */
++    buffer_append_asn1_length( buffer, content->pos );
++    buffer_append( buffer, content->buffer, content->pos );
++}
++
++static void buffer_append_asn1_r_s( struct buffer *buffer, BYTE *r, DWORD r_len, BYTE *s, DWORD s_len )
++{
++    struct buffer value;
++
++    buffer_init( &value );
++    buffer_append_asn1_integer( &value, r, r_len );
++    buffer_append_asn1_integer( &value, s, s_len );
++    buffer_append_asn1_sequence( buffer, &value );
++    buffer_free( &value );
++}
++
++static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnutls_key )
++{
++    gnutls_ecc_curve_t curve;
++    gnutls_datum_t x, y;
++    int ret;
++
++    switch (key->alg_id)
++    {
++        case ALG_ID_ECDSA_P256: curve = GNUTLS_ECC_CURVE_SECP256R1; break;
++        case ALG_ID_ECDSA_P384: curve = GNUTLS_ECC_CURVE_SECP384R1; break;
++
++        default:
++            FIXME( "Algorithm %d not yet supported\n", key->alg_id );
++            return STATUS_NOT_IMPLEMENTED;
++    }
++
++    if ((ret = pgnutls_pubkey_init( gnutls_key )))
++    {
++        pgnutls_perror( ret );
++        return STATUS_INTERNAL_ERROR;
++    }
++
++    x.data = key->u.a.pubkey;
++    x.size = key->u.a.pubkey_len / 2;
++    y.data = key->u.a.pubkey + x.size;
++    y.size = x.size;
++
++    if ((ret = pgnutls_pubkey_import_ecc_raw( *gnutls_key, curve, &x, &y )))
++    {
++        pgnutls_perror( ret );
++        pgnutls_pubkey_deinit( *gnutls_key );
++        return STATUS_INTERNAL_ERROR;
++    }
++
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_key)
++{
++    switch (key->alg_id)
++    {
++        case ALG_ID_ECDSA_P256:
++        case ALG_ID_ECDSA_P384:
++            return import_gnutls_pubkey_ecc( key, gnutls_key );
++
++        default:
++            FIXME("Algorithm %d not yet supported\n", key->alg_id);
++            return STATUS_NOT_IMPLEMENTED;
++    }
++}
++
++static NTSTATUS prepare_gnutls_signature_ecc( struct key *key, UCHAR *signature, ULONG signature_len,
++                                              gnutls_datum_t *gnutls_signature )
++{
++    struct buffer buffer;
++    DWORD r_len = signature_len / 2;
++    DWORD s_len = r_len;
++    BYTE *r = signature;
++    BYTE *s = signature + r_len;
++
++    buffer_init( &buffer );
++    buffer_append_asn1_r_s( &buffer, r, r_len, s, s_len );
++    if (buffer.error)
++    {
++        buffer_free( &buffer );
++        return STATUS_NO_MEMORY;
++    }
++
++    gnutls_signature->data = buffer.buffer;
++    gnutls_signature->size = buffer.pos;
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULONG signature_len,
++                                          gnutls_datum_t *gnutls_signature )
++{
++    switch (key->alg_id)
++    {
++        case ALG_ID_ECDSA_P256:
++        case ALG_ID_ECDSA_P384:
++            return prepare_gnutls_signature_ecc( key, signature, signature_len, gnutls_signature );
++
++        default:
++            FIXME( "Algorithm %d not yet supported\n", key->alg_id );
++            return STATUS_NOT_IMPLEMENTED;
++    }
++}
++
++static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *hash, ULONG hash_len,
++                                       UCHAR *signature, ULONG signature_len, DWORD flags )
++{
++    gnutls_digest_algorithm_t hash_algo;
++    gnutls_sign_algorithm_t sign_algo;
++    gnutls_datum_t gnutls_hash, gnutls_signature;
++    gnutls_pk_algorithm_t pk_algo;
++    gnutls_pubkey_t gnutls_key;
++    NTSTATUS status;
++    int ret;
++
++    if (flags)
++        FIXME( "Flags %08x not supported\n", flags );
++
++    /* only the hash size must match, not the actual hash function */
++    switch (hash_len)
++    {
++        case 32: hash_algo = GNUTLS_DIG_SHA256; break;
++        case 48: hash_algo = GNUTLS_DIG_SHA384; break;
++
++        default:
++            FIXME( "Hash size %u not yet supported\n", hash_len );
++            return STATUS_INVALID_SIGNATURE;
++    }
++
++    switch (key->alg_id)
++    {
++        case ALG_ID_ECDSA_P256:
++        case ALG_ID_ECDSA_P384:
++            pk_algo = GNUTLS_PK_ECDSA;
++            break;
++
++        default:
++            FIXME( "Algorithm %d not yet supported\n", key->alg_id );
++            return STATUS_NOT_IMPLEMENTED;
++    }
++
++    if ((sign_algo = pgnutls_pk_to_sign( pk_algo, hash_algo )) == GNUTLS_SIGN_UNKNOWN)
++    {
++        FIXME("Gnutls does not support algorithm %d with hash len %u\n", key->alg_id, hash_len);
++        return STATUS_NOT_IMPLEMENTED;
++    }
++
++    if ((status = import_gnutls_pubkey( key, &gnutls_key )))
++        return status;
++
++    if ((status = prepare_gnutls_signature( key, signature, signature_len, &gnutls_signature )))
++    {
++        pgnutls_pubkey_deinit( gnutls_key );
++        return status;
++    }
++
++    gnutls_hash.data = hash;
++    gnutls_hash.size = hash_len;
++    ret = pgnutls_pubkey_verify_hash2( gnutls_key, sign_algo, 0, &gnutls_hash, &gnutls_signature );
++
++    HeapFree( GetProcessHeap(), 0, gnutls_signature.data );
++    pgnutls_pubkey_deinit( gnutls_key );
++    return (ret < 0) ? STATUS_INVALID_SIGNATURE : STATUS_SUCCESS;
++}
++
+ static NTSTATUS key_destroy( struct key *key )
+ {
+     if (key_is_symmetric(key))
+@@ -1230,6 +1499,13 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+     return STATUS_NOT_IMPLEMENTED;
+ }
+ 
++static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *hash, ULONG hash_len,
++                                       UCHAR *signature, ULONG signature_len, DWORD flags )
++{
++    ERR( "support for keys not available at build time\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static NTSTATUS key_destroy( struct key *key )
+ {
+     ERR( "support for keys not available at build time\n" );
+@@ -1463,13 +1739,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
+ {
+     struct key *key = handle;
+ 
+-    FIXME( "%p, %p, %p, %u, %p, %u, %08x: stub!\n", handle, padding, hash,
++    TRACE( "%p, %p, %p, %u, %p, %u, %08x\n", handle, padding, hash,
+            hash_len, signature, signature_len, flags );
+ 
+     if (!key || key->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
++    if (!hash || !hash_len || !signature || !signature_len) return STATUS_INVALID_PARAMETER;
+     if (!key_is_asymmetric(key)) return STATUS_NOT_SUPPORTED;
+ 
+-    return STATUS_NOT_IMPLEMENTED;
++    return key_asymmetric_verify( key, padding, hash, hash_len, signature, signature_len, flags );
+ }
+ 
+ NTSTATUS WINAPI BCryptDestroyKey( BCRYPT_KEY_HANDLE handle )
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index 20f70706430..73bd4d69a5b 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -1688,10 +1688,10 @@ static void test_ECDSA(void)
+     ok(!status, "BCryptImportKeyPair failed: %08x\n", status);
+ 
+     status = pBCryptVerifySignature(key, NULL, certHash, sizeof(certHash) - 1, certSignature, sizeof(certSignature), 0);
+-    todo_wine ok(status == STATUS_INVALID_SIGNATURE, "Expected STATUS_INVALID_SIGNATURE, got %08x\n", status);
++    ok(status == STATUS_INVALID_SIGNATURE, "Expected STATUS_INVALID_SIGNATURE, got %08x\n", status);
+ 
+     status = pBCryptVerifySignature(key, NULL, certHash, sizeof(certHash), certSignature, sizeof(certSignature), 0);
+-    todo_wine ok(!status, "BCryptVerifySignature failed: %08x\n", status);
++    ok(!status, "BCryptVerifySignature failed: %08x\n", status);
+ 
+     pBCryptDestroyKey(key);
+     pBCryptCloseAlgorithmProvider(alg, 0);
+-- 
+2.14.1
+

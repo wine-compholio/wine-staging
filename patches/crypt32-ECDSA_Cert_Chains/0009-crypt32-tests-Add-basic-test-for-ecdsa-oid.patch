@@ -1,0 +1,108 @@
+From 8ad9cbe32ec79dfff404aee19772d684f524e287 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Fri, 29 Sep 2017 22:17:15 +0200
+Subject: crypt32/tests: Add basic test for ecdsa oid.
+
+---
+ dlls/crypt32/tests/oid.c | 35 +++++++++++++++++++++++++++++++++++
+ include/wincrypt.h       | 15 +++++++++++++++
+ 2 files changed, 50 insertions(+)
+
+diff --git a/dlls/crypt32/tests/oid.c b/dlls/crypt32/tests/oid.c
+index b6614071aba..567658d515d 100644
+--- a/dlls/crypt32/tests/oid.c
++++ b/dlls/crypt32/tests/oid.c
+@@ -22,6 +22,7 @@
+ #include <windef.h>
+ #include <winbase.h>
+ #include <winerror.h>
++#define CRYPT_OID_INFO_HAS_EXTRA_FIELDS
+ #include <wincrypt.h>
+ #include <winreg.h>
+ 
+@@ -541,8 +542,10 @@ static void test_enumOIDInfo(void)
+ 
+ static void test_findOIDInfo(void)
+ {
++    static WCHAR sha256ECDSA[] = { 's','h','a','2','5','6','E','C','D','S','A',0 };
+     static WCHAR sha1[] = { 's','h','a','1',0 };
+     static CHAR oid_rsa_md5[] = szOID_RSA_MD5;
++    static CHAR oid_ecda_sha25[] = szOID_ECDSA_SHA256;
+     ALG_ID alg = CALG_SHA1;
+     ALG_ID algs[2] = { CALG_MD5, CALG_RSA_SIGN };
+     PCCRYPT_OID_INFO info;
+@@ -585,6 +588,38 @@ static void test_findOIDInfo(void)
+         ok(U(*info).Algid == CALG_MD5, "Expected CALG_MD5, got %d\n",
+            U(*info).Algid);
+     }
++
++    info = CryptFindOIDInfo(CRYPT_OID_INFO_OID_KEY, oid_ecda_sha25, 0);
++    if (info)
++    {
++        DWORD *data;
++
++        ok(info->cbSize == sizeof(*info),
++           "Expected %d, got %d\n", (int)sizeof(*info), info->cbSize);
++        ok(!strcmp(info->pszOID, oid_ecda_sha25),
++           "Expected %s, got %s\n", oid_ecda_sha25, info->pszOID);
++        ok(!lstrcmpW(info->pwszName, sha256ECDSA),
++           "Expected %s, got %s\n", wine_dbgstr_w(sha256ECDSA), wine_dbgstr_w(info->pwszName));
++        ok(info->dwGroupId == CRYPT_SIGN_ALG_OID_GROUP_ID,
++           "Expected CRYPT_SIGN_ALG_OID_GROUP_ID, got %u\n", info->dwGroupId);
++        ok(U(*info).Algid == CALG_OID_INFO_CNG_ONLY,
++           "Expected CALG_OID_INFO_CNG_ONLY, got %d\n", U(*info).Algid);
++
++        data = (DWORD *)info->ExtraInfo.pbData;
++        ok(info->ExtraInfo.cbData == 8,
++           "Expected 8, got %d\n", info->ExtraInfo.cbData);
++        ok(data[0] == CALG_OID_INFO_PARAMETERS,
++           "Expected CALG_OID_INFO_PARAMETERS, got %x\n", data[0]);
++        ok(data[1] == CRYPT_OID_NO_NULL_ALGORITHM_PARA_FLAG,
++           "Expected CRYPT_OID_NO_NULL_ALGORITHM_PARA_FLAG, got %x\n", data[1]);
++
++        ok(!lstrcmpW(info->pwszCNGAlgid, BCRYPT_SHA256_ALGORITHM), "Expected %s, got %s\n",
++           wine_dbgstr_w(BCRYPT_SHA256_ALGORITHM), wine_dbgstr_w(info->pwszCNGAlgid));
++        ok(!lstrcmpW(info->pwszCNGExtraAlgid, CRYPT_OID_INFO_ECC_PARAMETERS_ALGORITHM), "Expected %s, got %s\n",
++           wine_dbgstr_w(CRYPT_OID_INFO_ECC_PARAMETERS_ALGORITHM), wine_dbgstr_w(info->pwszCNGExtraAlgid));
++    }
++    else
++        todo_wine win_skip("Host does not support ECDSA_SHA256, skipping test\n");
+ }
+ 
+ START_TEST(oid)
+diff --git a/include/wincrypt.h b/include/wincrypt.h
+index 22ff350923a..d3c3bf07056 100644
+--- a/include/wincrypt.h
++++ b/include/wincrypt.h
+@@ -1244,6 +1244,17 @@ typedef BOOL (WINAPI *PFN_CRYPT_ENUM_OID_FUNC)(DWORD dwEncodingType,
+ 
+ #define CRYPT_MATCH_ANY_ENCODING_TYPE 0xffffffff
+ 
++#define CALG_OID_INFO_CNG_ONLY   0xffffffff
++#define CALG_OID_INFO_PARAMETERS 0xfffffffe
++
++#define CRYPT_OID_INFO_HASH_PARAMETERS_ALGORITHM     (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','H','a','s','h','P','a','r','a','m','e','t','e','r','s',0}
++#define CRYPT_OID_INFO_ECC_PARAMETERS_ALGORITHM      (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','E','C','C','P','a','r','a','m','e','t','e','r','s',0}
++#define CRYPT_OID_INFO_MGF1_PARAMETERS_ALGORITHM     (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','M','g','f','1','P','a','r','a','m','e','t','e','r','s',0}
++#define CRYPT_OID_INFO_NO_SIGN_ALGORITHM             (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','N','o','S','i','g','n',0}
++#define CRYPT_OID_INFO_OAEP_PARAMETERS_ALGORITHM     (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','O','A','E','P','P','a','r','a','m','e','t','e','r','s',0}
++#define CRYPT_OID_INFO_ECC_WRAP_PARAMETERS_ALGORITHM (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','E','C','C','W','r','a','p','P','a','r','a','m','e','t','e','r','s',0}
++#define CRYPT_OID_INFO_NO_PARAMETERS_ALGORITHM       (const WCHAR []){'C','r','y','p','t','O','I','D','I','n','f','o','N','o','P','a','r','a','m','e','t','e','r','s',0}
++
+ typedef struct _CRYPT_OID_INFO {
+     DWORD   cbSize;
+     LPCSTR  pszOID;
+@@ -1255,6 +1266,10 @@ typedef struct _CRYPT_OID_INFO {
+         DWORD  dwLength;
+     } DUMMYUNIONNAME;
+     CRYPT_DATA_BLOB ExtraInfo;
++#ifdef CRYPT_OID_INFO_HAS_EXTRA_FIELDS
++    LPCWSTR         pwszCNGAlgid;
++    LPCWSTR         pwszCNGExtraAlgid;
++#endif
+ } CRYPT_OID_INFO, *PCRYPT_OID_INFO;
+ typedef const CRYPT_OID_INFO CCRYPT_OID_INFO, *PCCRYPT_OID_INFO;
+ 
+-- 
+2.14.1
+

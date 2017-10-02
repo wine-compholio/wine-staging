@@ -111,6 +111,7 @@ patch_enable_all ()
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
+	enable_crypt32_ECDSA_Cert_Chains="$1"
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_crypt32_SHA_OIDs="$1"
 	enable_d3d10_1_Forwards="$1"
@@ -617,6 +618,9 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
+			;;
+		crypt32-ECDSA_Cert_Chains)
+			enable_crypt32_ECDSA_Cert_Chains="$2"
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
@@ -2919,6 +2923,13 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	enable_wined3d_1DTextures=1
 fi
 
+if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
+	if test "$enable_bcrypt_Improvements" -gt 1; then
+		abort "Patchset bcrypt-Improvements disabled, but crypt32-ECDSA_Cert_Chains depends on that."
+	fi
+	enable_bcrypt_Improvements=1
+fi
+
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
@@ -3772,6 +3783,48 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset crypt32-ECDSA_Cert_Chains
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	bcrypt-Improvements
+# |
+# | Modified files:
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/crypt32/Makefile.in,
+# | 	dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h, dlls/crypt32/decode.c, dlls/crypt32/oid.c,
+# | 	dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c, dlls/crypt32/tests/oid.c, include/bcrypt.h, include/ntstatus.h,
+# | 	include/wincrypt.h
+# |
+if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
+	patch_apply crypt32-ECDSA_Cert_Chains/0001-bcrypt-Preparation-for-asymmetric-keys.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0002-include-Add-ecdsa-and-asymmetric-key-related-bcrypt-.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0003-bcrypt-tests-Add-basic-test-for-ecdsa.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0004-bcrypt-Implement-importing-of-ecdsa-keys.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0005-bcrypt-Implement-BCryptVerifySignature-for-ecdsa-sig.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0006-crypt32-tests-Basic-tests-for-decoding-ECDSA-signed-.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0007-crypt32-Implement-decoding-of-X509_OBJECT_IDENTIFIER.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0008-crypt32-Implement-decoding-of-X509_ECC_SIGNATURE.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0009-crypt32-tests-Add-basic-test-for-ecdsa-oid.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0010-crypt32-Add-oids-for-sha256ECDSA-and-sha384ECDSA.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0011-crypt32-Correctly-return-how-the-issuer-of-a-self-si.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0012-crypt32-tets-Add-test-for-verifying-an-ecdsa-chain.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0013-crypt32-Implement-verification-of-ECDSA-signatures.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add ecdsa and asymmetric key related bcrypt definitions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add basic test for ecdsa.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement importing of ecdsa keys.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptVerifySignature for ecdsa signatures.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Basic tests for decoding ECDSA signed certificate.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_OBJECT_IDENTIFIER.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_ECC_SIGNATURE.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Add basic test for ecdsa oid.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Add oids for sha256ECDSA and sha384ECDSA.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Correctly return how the issuer of a self signed certificate was checked.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32/tets: Add test for verifying an ecdsa chain.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement verification of ECDSA signatures.", 1 },';
 	) >> "$patchlist"
 fi
 

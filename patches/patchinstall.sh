@@ -2909,9 +2909,13 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 fi
 
 if test "$enable_d3d11_Deferred_Context" -eq 1; then
+	if test "$enable_d3d11_ResolveSubresource" -gt 1; then
+		abort "Patchset d3d11-ResolveSubresource disabled, but d3d11-Deferred_Context depends on that."
+	fi
 	if test "$enable_wined3d_1DTextures" -gt 1; then
 		abort "Patchset wined3d-1DTextures disabled, but d3d11-Deferred_Context depends on that."
 	fi
+	enable_d3d11_ResolveSubresource=1
 	enable_wined3d_1DTextures=1
 fi
 
@@ -3810,6 +3814,20 @@ if test "$enable_d3d10_1_Forwards" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset d3d11-ResolveSubresource
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c
+# |
+if test "$enable_d3d11_ResolveSubresource" -eq 1; then
+	patch_apply d3d11-ResolveSubresource/0001-d3d11-Implement-ResolveSubresource-by-copying-sub-re.patch
+	patch_apply d3d11-ResolveSubresource/0002-d3d11-Implement-d3d10_device_ResolveSubresource-in-t.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ResolveSubresource by copying sub resource (there is no multisample texture support yet).", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_device_ResolveSubresource in the same way as for d3d11.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-1DTextures
 # |
 # | Modified files:
@@ -3860,7 +3878,7 @@ fi
 # Patchset d3d11-Deferred_Context
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures
+# |   *	d3d11-ResolveSubresource, wined3d-1DTextures
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
@@ -3909,6 +3927,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0037-d3d11-Implement-DispatchIndirect-for-deferred-contex.patch
 	patch_apply d3d11-Deferred_Context/0038-d3d11-Implement-SetPredication-for-deferred-contexts.patch
 	patch_apply d3d11-Deferred_Context/0039-d3d11-Implement-d3d11_deferred_context_UpdateSubreso.patch
+	patch_apply d3d11-Deferred_Context/0040-d3d11-Implement-restoring-of-state-after-executing-a.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
@@ -3949,6 +3968,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement DispatchIndirect for deferred contexts.", 1 },';
 		printf '%s\n' '+    { "Johannes Specht", "d3d11: Implement SetPredication for deferred contexts.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d11_deferred_context_UpdateSubresource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement restoring of state after executing a command list.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4025,20 +4045,6 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-ResolveSubresource
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c
-# |
-if test "$enable_d3d11_ResolveSubresource" -eq 1; then
-	patch_apply d3d11-ResolveSubresource/0001-d3d11-Implement-ResolveSubresource-by-copying-sub-re.patch
-	patch_apply d3d11-ResolveSubresource/0002-d3d11-Implement-d3d10_device_ResolveSubresource-in-t.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ResolveSubresource by copying sub resource (there is no multisample texture support yet).", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_device_ResolveSubresource in the same way as for d3d11.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9871,11 +9877,11 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-
-# | 	DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
-# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
-# | 	Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-
-# | 	Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	d3d11-ResolveSubresource, wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
+# | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
+# | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
+# | 	Dual_Source_Blending, wined3d-Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-
+# | 	Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -10094,11 +10100,11 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-
-# | 	DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
-# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
-# | 	Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-
-# | 	Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
+# |   *	d3d11-ResolveSubresource, wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
+# | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
+# | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
+# | 	Dual_Source_Blending, wined3d-Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-
+# | 	Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

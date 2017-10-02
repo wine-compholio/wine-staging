@@ -9774,16 +9774,19 @@ fi
 # |   *	[#43239] Implement support for interpolation modifiers in sm4/sm5 pixel shaders
 # |
 # | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
+# | 	dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Interpolation_Modifiers" -eq 1; then
 	patch_apply wined3d-Interpolation_Modifiers/0001-d3d11-tests-Add-test-for-nointerpolation-modifier.patch
 	patch_apply wined3d-Interpolation_Modifiers/0002-wined3d-Unroll-vertex-geometry-shader-outputs-and-pi.patch
 	patch_apply wined3d-Interpolation_Modifiers/0003-wined3d-Add-support-for-interpolation-modifiers-in-s.patch
+	patch_apply wined3d-Interpolation_Modifiers/0004-wined3d-Add-quirk-for-broken-auxiliary-qualifier-mat.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add test for nointerpolation modifier.", 1 },';
 		printf '%s\n' '+    { "Józef Kucia", "wined3d: Unroll vertex / geometry shader outputs and pixel shader inputs for >= sm4.", 1 },';
 		printf '%s\n' '+    { "Józef Kucia", "wined3d: Add support for interpolation modifiers in sm4/sm5 pixel shader inputs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add quirk for broken auxiliary qualifier matching.", 1 },';
 	) >> "$patchlist"
 fi
 

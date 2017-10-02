@@ -1,0 +1,165 @@
+From 6c58c594500ae6de458b6f0b725d7912b0beb6fd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sun, 1 Oct 2017 15:38:28 +0200
+Subject: wined3d: Add quirk for broken auxiliary qualifier matching.
+
+---
+ dlls/wined3d/directx.c         | 96 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/glsl_shader.c     |  7 +++
+ dlls/wined3d/wined3d_private.h |  1 +
+ 3 files changed, 104 insertions(+)
+
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index 5bca150305a..2a56bb73411 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -943,6 +943,92 @@ static BOOL match_broken_viewport_subpixel_bits(const struct wined3d_gl_info *gl
+     return !wined3d_caps_gl_ctx_test_viewport_subpixel_bits(ctx);
+ }
+ 
++static GLuint compile_glsl_shader(const struct wined3d_gl_info *gl_info, GLenum type, const GLchar *src)
++{
++    GLchar log[4096];
++    GLuint shader;
++    GLint status;
++
++    shader = GL_EXTCALL(glCreateShader(type));
++    if (!shader)
++    {
++        ERR("Failed to create shader\n");
++        return 0;
++    }
++
++    GL_EXTCALL(glShaderSource(shader, 1, &src, NULL));
++    GL_EXTCALL(glCompileShader(shader));
++
++    GL_EXTCALL(glGetShaderiv(shader, GL_COMPILE_STATUS, &status));
++    if (!status)
++    {
++        GL_EXTCALL(glGetShaderInfoLog(shader, sizeof(log), NULL, log));
++        ERR("Failed to compile inferface matching shader %x: %s\n", type, (char *)log);
++        GL_EXTCALL(glDeleteShader(shader));
++        return 0;
++    }
++    return shader;
++}
++
++/* Context activation is done by the caller. */
++static BOOL match_broken_interface_matching(const struct wined3d_gl_info *gl_info,
++        struct wined3d_caps_gl_ctx *ctx, const char *gl_renderer, enum wined3d_gl_vendor gl_vendor,
++        enum wined3d_pci_vendor card_vendor, enum wined3d_pci_device device)
++{
++    static const char vertex_src[] =
++        "#version 440\n"
++        "in vec4 vs_in0;\n"
++        "out shader_in_out { vec4 reg0; } shader_out;\n"
++        "void main()\n"
++        "{\n"
++        "   shader_out.reg0 = (vs_in0.xyzw);\n"
++        "}";
++    static const char frag_src[] =
++        "#version 440\n"
++        "in shader_in_out { centroid vec4 reg0; } shader_in;\n"
++        "out vec4 ps_out0;\n"
++        "void main()\n"
++        "{\n"
++        "   ps_out0 = vec4(1.0, 0.0, 1.0, 1.0);\n"
++        "}";
++
++    GLuint vs = 0, ps = 0, prog = 0;
++    GLchar log[4096];
++    BOOL ret = TRUE;
++    GLint status;
++
++    if (!wined3d_settings.glslRequested || gl_info->glsl_version < MAKEDWORD_VERSION(4, 40))
++        return FALSE;
++
++    if (!(vs = compile_glsl_shader(gl_info, GL_VERTEX_SHADER, vertex_src)))
++        return TRUE;
++
++    if (!(ps = compile_glsl_shader(gl_info, GL_FRAGMENT_SHADER, frag_src)))
++        goto done;
++
++    prog = GL_EXTCALL(glCreateProgram());
++    if (!prog) goto done;
++
++    GL_EXTCALL(glAttachShader(prog, vs));
++    GL_EXTCALL(glAttachShader(prog, ps));
++
++    GL_EXTCALL(glLinkProgram(prog));
++    GL_EXTCALL(glGetProgramiv(prog, GL_LINK_STATUS, &status));
++    if (!status)
++    {
++        GL_EXTCALL(glGetProgramInfoLog(prog, sizeof(log), NULL, log));
++        WARN("OpenGL implementation has broken matching for storage qualifiers: %s\n", log);
++    }
++    else
++        ret = FALSE;
++
++done:
++    if (prog) GL_EXTCALL(glDeleteProgram(prog));
++    if (vs) GL_EXTCALL(glDeleteShader(vs));
++    if (ps) GL_EXTCALL(glDeleteShader(ps));
++    return ret;
++}
++
+ static void quirk_apple_glsl_constants(struct wined3d_gl_info *gl_info)
+ {
+     /* MacOS needs uniforms for relative addressing offsets. This can accumulate to quite a few uniforms.
+@@ -1080,6 +1166,11 @@ static void quirk_broken_viewport_subpixel_bits(struct wined3d_gl_info *gl_info)
+     }
+ }
+ 
++static void quirk_broken_interface_matching(struct wined3d_gl_info *gl_info)
++{
++    gl_info->quirks |= WINED3D_QUIRK_BROKEN_STORAGE_MATCHING;
++}
++
+ struct driver_quirk
+ {
+     BOOL (*match)(const struct wined3d_gl_info *gl_info, struct wined3d_caps_gl_ctx *ctx,
+@@ -1176,6 +1267,11 @@ static const struct driver_quirk quirk_table[] =
+         quirk_broken_viewport_subpixel_bits,
+         "Nvidia viewport subpixel bits bug"
+     },
++    {
++        match_broken_interface_matching,
++        quirk_broken_interface_matching,
++        "Mesa broken shader interface matching"
++    },
+ };
+ 
+ /* Certain applications (Steam) complain if we report an outdated driver version. In general,
+diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
+index dee797a4e1f..16db7069654 100644
+--- a/dlls/wined3d/glsl_shader.c
++++ b/dlls/wined3d/glsl_shader.c
+@@ -1888,6 +1888,13 @@ static const char *shader_glsl_get_interpolation(const struct wined3d_gl_info *g
+         return "";
+     }
+ 
++    if ((gl_info->quirks & WINED3D_QUIRK_BROKEN_STORAGE_MATCHING) &&
++        (strstr(inter, "centroid") || strstr(inter, "sample")))
++    {
++        FIXME("Auxiliary matching for %s broken in host OpenGL implementation, ignoring it.\n", inter);
++        return "";
++    }
++
+     return inter;
+ }
+ 
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 38cbfbe1c25..09ae7a23b89 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -72,6 +72,7 @@
+ #define WINED3D_QUIRK_INFO_LOG_SPAM             0x00000080
+ #define WINED3D_QUIRK_LIMITED_TEX_FILTERING     0x00000100
+ #define WINED3D_QUIRK_BROKEN_ARB_FOG            0x00000200
++#define WINED3D_QUIRK_BROKEN_STORAGE_MATCHING   0x00000400
+ 
+ enum wined3d_ffp_idx
+ {
+-- 
+2.14.1
+

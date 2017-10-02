@@ -473,6 +473,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
 	enable_wined3d_draw_primitive_arrays="$1"
+	enable_wined3d_dxgi_swapchain_Present="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -1703,6 +1704,9 @@ patch_enable ()
 		wined3d-draw_primitive_arrays)
 			enable_wined3d_draw_primitive_arrays="$2"
 			;;
+		wined3d-dxgi_swapchain_Present)
+			enable_wined3d_dxgi_swapchain_Present="$2"
+			;;
 		wined3d-sample_c_lz)
 			enable_wined3d_sample_c_lz="$2"
 			;;
@@ -2251,6 +2255,21 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_wined3d_CSMT_Helper=1
+fi
+
+if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
+	if test "$enable_dxgi_DXGI_PRESENT_TEST" -gt 1; then
+		abort "Patchset dxgi-DXGI_PRESENT_TEST disabled, but wined3d-dxgi_swapchain_Present depends on that."
+	fi
+	if test "$enable_wined3d_DrawIndirect" -gt 1; then
+		abort "Patchset wined3d-DrawIndirect disabled, but wined3d-dxgi_swapchain_Present depends on that."
+	fi
+	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
+		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-dxgi_swapchain_Present depends on that."
+	fi
+	enable_dxgi_DXGI_PRESENT_TEST=1
+	enable_wined3d_DrawIndirect=1
+	enable_wined3d_Silence_FIXMEs=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
@@ -10017,6 +10036,23 @@ if test "$enable_wined3d_buffer_create" -eq 1; then
 	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-dxgi_swapchain_Present
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	dxgi-DXGI_PRESENT_TEST, wined3d-draw_primitive_arrays, wined3d-DrawIndirect, wined3d-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/d3d8/swapchain.c, dlls/d3d9/device.c, dlls/d3d9/swapchain.c, dlls/dxgi/swapchain.c, dlls/wined3d/cs.c,
+# | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
+	patch_apply wined3d-dxgi_swapchain_Present/0001-wined3d-Implement-updating-swap-interval-through-win.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement updating swap interval through wined3d_swapchain_present.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -256,7 +256,6 @@ patch_enable_all ()
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
-	enable_ntdll_Icebp_x86_64="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
@@ -302,7 +301,6 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_call_thread_func_wrapper="$1"
-	enable_ntdll_segv_handler="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_ExceptionInformation="$1"
 	enable_ntoskrnl_DriverTest="$1"
@@ -1055,9 +1053,6 @@ patch_enable ()
 		ntdll-Hide_Wine_Exports)
 			enable_ntdll_Hide_Wine_Exports="$2"
 			;;
-		ntdll-Icebp_x86_64)
-			enable_ntdll_Icebp_x86_64="$2"
-			;;
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
 			;;
@@ -1192,9 +1187,6 @@ patch_enable ()
 			;;
 		ntdll-call_thread_func_wrapper)
 			enable_ntdll_call_thread_func_wrapper="$2"
-			;;
-		ntdll-segv_handler)
-			enable_ntdll_segv_handler="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -6262,12 +6254,20 @@ fi
 # Patchset ntdll-x86_64_ExceptionInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
+# |   *	dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_x86_64_ExceptionInformation" -eq 1; then
 	patch_apply ntdll-x86_64_ExceptionInformation/0001-ntdll-Set-proper-ExceptionInformation-0-for-x86_64-e.patch
+	patch_apply ntdll-x86_64_ExceptionInformation/0002-ntdll-Avoid-crash-when-trying-to-access-page-prot-of.patch
+	patch_apply ntdll-x86_64_ExceptionInformation/0003-ntdll-Translate-icebp-instruction-to-EXCEPTION_SINGL.patch
+	patch_apply ntdll-x86_64_ExceptionInformation/0004-ntdll-Correctly-handle-privileged-instructions-on-x8.patch
+	patch_apply ntdll-x86_64_ExceptionInformation/0005-ntdll-Handle-interrupt-0x2c-on-x86_64.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set proper ExceptionInformation[0] for x86_64 exceptions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Avoid crash when trying to access page prot of address beyond address space limit.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Translate icebp instruction to EXCEPTION_SINGLE_STEP on x64.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Correctly handle privileged instructions on x86_64.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Handle interrupt 0x2c on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6554,18 +6554,6 @@ if test "$enable_ntdll_Heap_Improvements" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add helper function to delete free blocks.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve heap allocation performance.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Icebp_x86_64
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_Icebp_x86_64" -eq 1; then
-	patch_apply ntdll-Icebp_x86_64/0001-ntdll-Translate-icebp-instruction-to-EXCEPTION_SINGL.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Translate icebp instruction to EXCEPTION_SINGLE_STEP on x64.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7153,18 +7141,6 @@ if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
 	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-segv_handler
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_segv_handler" -eq 1; then
-	patch_apply ntdll-segv_handler/0001-ntdll-Fix-privileged-instruction-exception-code.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Fix privileged instruction exception code.", 1 },';
 	) >> "$patchlist"
 fi
 

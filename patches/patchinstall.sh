@@ -356,6 +356,7 @@ patch_enable_all ()
 	enable_server_create_ranges="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_server_free_async_queue="$1"
+	enable_server_open_mapping_file="$1"
 	enable_server_send_hardware_message="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -1353,6 +1354,9 @@ patch_enable ()
 			;;
 		server-free_async_queue)
 			enable_server_free_async_queue="$2"
+			;;
+		server-open_mapping_file)
+			enable_server_open_mapping_file="$2"
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
@@ -8026,6 +8030,21 @@ if test "$enable_server_free_async_queue" -eq 1; then
 	patch_apply server-free_async_queue/0001-server-Avoid-crash-when-async_terminate-destroys-asy.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Avoid crash when async_terminate destroys async object in free_async_queue.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-open_mapping_file
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43830] Backport for regression caused by virtual memory management changes
+# |
+# | Modified files:
+# |   *	server/debugger.c, server/file.h, server/mapping.c
+# |
+if test "$enable_server_open_mapping_file" -eq 1; then
+	patch_apply server-open_mapping_file/0001-server-Use-the-correct-process-when-looking-for-a-ma.patch
+	(
+		printf '%s\n' '+    { "Alexandre Julliard", "server: Use the correct process when looking for a mapped dll.", 1 },';
 	) >> "$patchlist"
 fi
 

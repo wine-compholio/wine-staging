@@ -356,6 +356,7 @@ patch_enable_all ()
 	enable_server_free_async_queue="$1"
 	enable_server_open_mapping_file="$1"
 	enable_server_send_hardware_message="$1"
+	enable_server_shared_mapping="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -1352,6 +1353,9 @@ patch_enable ()
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
+			;;
+		server-shared_mapping)
+			enable_server_shared_mapping="$2"
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
@@ -8036,6 +8040,21 @@ if test "$enable_server_send_hardware_message" -eq 1; then
 	patch_apply server-send_hardware_message/0001-server-Improve-handling-of-hooks-for-normal-non-inje.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Improve handling of hooks for normal (non-injected) hardware messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-shared_mapping
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43829] Keep reference on mapping for shared PE mappings
+# |
+# | Modified files:
+# |   *	server/mapping.c
+# |
+if test "$enable_server_shared_mapping" -eq 1; then
+	patch_apply server-shared_mapping/0001-server-Keep-reference-on-mapping-for-shared-mappings.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Keep reference on mapping for shared mappings.", 1 },';
 	) >> "$patchlist"
 fi
 

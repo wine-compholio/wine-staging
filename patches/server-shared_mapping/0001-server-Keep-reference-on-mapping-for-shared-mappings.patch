@@ -1,0 +1,40 @@
+From 11ed96d6ecfa031fba1cbc80b4e9113bcad6173f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Wed, 4 Oct 2017 03:20:48 +0200
+Subject: server: Keep reference on mapping for shared mappings.
+
+---
+ server/mapping.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/server/mapping.c b/server/mapping.c
+index 5db03f8861a..0a39df69c7a 100644
+--- a/server/mapping.c
++++ b/server/mapping.c
+@@ -110,6 +110,7 @@ static const struct object_ops ranges_ops =
+ struct memory_view
+ {
+     struct list     entry;           /* entry in per-process view list */
++    struct mapping *mapping;         /* for shared PE mappings */
+     struct fd      *fd;              /* fd for mapped file */
+     struct ranges  *committed;       /* list of committed ranges in this mapping */
+     unsigned int    flags;           /* SEC_* flags */
+@@ -336,6 +337,7 @@ static struct memory_view *find_mapped_view( struct process *process, client_ptr
+ 
+ static void free_memory_view( struct memory_view *view )
+ {
++    if (view->mapping) release_object( view->mapping );
+     if (view->fd) release_object( view->fd );
+     if (view->committed) release_object( view->committed );
+     list_remove( &view->entry );
+@@ -989,6 +991,7 @@ DECL_HANDLER(map_view)
+         view->size      = req->size;
+         view->start     = req->start;
+         view->flags     = mapping->flags;
++        view->mapping   = mapping->shared_file ? (struct mapping *)grab_object( mapping ) : NULL;
+         view->fd        = !is_fd_removable( mapping->fd ) ? (struct fd *)grab_object( mapping->fd ) : NULL;
+         view->committed = mapping->committed ? (struct ranges *)grab_object( mapping->committed ) : NULL;
+         list_add_tail( &current->process->views, &view->entry );
+-- 
+2.14.1
+

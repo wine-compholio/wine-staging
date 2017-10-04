@@ -400,6 +400,7 @@ patch_enable_all ()
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
+	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetAutoRotationState="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Groupbox_Rectangle="$1"
@@ -1486,6 +1487,9 @@ patch_enable ()
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
+			;;
+		user32-FlashWindowEx)
+			enable_user32_FlashWindowEx="$2"
 			;;
 		user32-GetAutoRotationState)
 			enable_user32_GetAutoRotationState="$2"
@@ -8814,6 +8818,18 @@ if test "$enable_user32_DrawTextExW" -eq 1; then
 	patch_apply user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Fix handling of invert_y in DrawTextExW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-FlashWindowEx
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/win.c, dlls/user32/win.c
+# |
+if test "$enable_user32_FlashWindowEx" -eq 1; then
+	patch_apply user32-FlashWindowEx/0001-user32-Improve-FlashWindowEx-message-and-return-valu.patch
+	(
+		printf '%s\n' '+    { "James Coonradt", "user32: Improve FlashWindowEx message and return value.", 1 },';
 	) >> "$patchlist"
 fi
 

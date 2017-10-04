@@ -1,17 +1,17 @@
-From 940dc8c23f3b1b9bdb38893ac7e203cbba6a43df Mon Sep 17 00:00:00 2001
+From 597a7781f843f3f23b91c17ce895150ff2c0aa81 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Oct 2017 01:22:19 +0200
 Subject: ntdll: Correctly handle privileged instructions on x86_64.
 
 ---
- dlls/ntdll/signal_x86_64.c | 79 +++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 78 insertions(+), 1 deletion(-)
+ dlls/ntdll/signal_x86_64.c | 82 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 81 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 9abb2e905a9..28f6d926a43 100644
+index d35c3e6663c..996e5728e7e 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -2718,6 +2718,83 @@ static void raise_generic_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
+@@ -2718,6 +2718,86 @@ static void raise_generic_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
  }
  
  
@@ -62,6 +62,9 @@ index 9abb2e905a9..28f6d926a43 100644
 +    case 0x0f: /* extended instruction */
 +        switch(instr[1])
 +        {
++        case 0x06: /* clts */
++        case 0x08: /* invd */
++        case 0x09: /* wbinvd */
 +        case 0x20: /* mov crX, reg */
 +        case 0x21: /* mov drX, reg */
 +        case 0x22: /* mov reg, crX */
@@ -95,7 +98,7 @@ index 9abb2e905a9..28f6d926a43 100644
  /***********************************************************************
   *           handle_interrupt
   *
-@@ -2788,8 +2865,8 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+@@ -2791,8 +2871,8 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
          {
              CONTEXT *win_context = get_exception_context( rec );
              WORD err = ERROR_sig(ucontext);

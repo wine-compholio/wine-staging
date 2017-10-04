@@ -357,6 +357,7 @@ patch_enable_all ()
 	enable_server_open_mapping_file="$1"
 	enable_server_send_hardware_message="$1"
 	enable_server_shared_mapping="$1"
+	enable_setupapi_CM_Get_Parent="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -1356,6 +1357,9 @@ patch_enable ()
 			;;
 		server-shared_mapping)
 			enable_server_shared_mapping="$2"
+			;;
+		setupapi-CM_Get_Parent)
+			enable_setupapi_CM_Get_Parent="$2"
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
@@ -8055,6 +8059,21 @@ if test "$enable_server_shared_mapping" -eq 1; then
 	patch_apply server-shared_mapping/0001-server-Keep-reference-on-mapping-for-shared-mappings.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Keep reference on mapping for shared mappings.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-CM_Get_Parent
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43831] Return CR_NO_SUCH_DEVNODE from CM_Get_Parent stub
+# |
+# | Modified files:
+# |   *	dlls/setupapi/stubs.c
+# |
+if test "$enable_setupapi_CM_Get_Parent" -eq 1; then
+	patch_apply setupapi-CM_Get_Parent/0001-setupapi-Return-CR_NO_SUCH_DEVNODE-from-CM_Get_Paren.patch
+	(
+		printf '%s\n' '+    { "Tim Wanders", "setupapi: Return CR_NO_SUCH_DEVNODE from CM_Get_Parent stub.", 1 },';
 	) >> "$patchlist"
 fi
 

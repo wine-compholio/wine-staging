@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e9c69fde09f0aca171652aaa2e26db2ef075d243"
+	echo "b34ea10112227a0d8554c81fc093c0cf6e1bc1b7"
 }
 
 # Show version information
@@ -350,10 +350,8 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
-	enable_server_create_ranges="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_server_free_async_queue="$1"
-	enable_server_open_mapping_file="$1"
 	enable_server_send_hardware_message="$1"
 	enable_server_shared_mapping="$1"
 	enable_setupapi_CM_Get_Parent="$1"
@@ -517,7 +515,6 @@ patch_enable_all ()
 	enable_ws2_32_Tests="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
-	enable_ws2_32_WriteWatches="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_ws2_32_setsockopt="$1"
@@ -1337,17 +1334,11 @@ patch_enable ()
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
 			;;
-		server-create_ranges)
-			enable_server_create_ranges="$2"
-			;;
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
 			;;
 		server-free_async_queue)
 			enable_server_free_async_queue="$2"
-			;;
-		server-open_mapping_file)
-			enable_server_open_mapping_file="$2"
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
@@ -1837,9 +1828,6 @@ patch_enable ()
 			;;
 		ws2_32-WSACleanup)
 			enable_ws2_32_WSACleanup="$2"
-			;;
-		ws2_32-WriteWatches)
-			enable_ws2_32_WriteWatches="$2"
 			;;
 		ws2_32-getaddrinfo)
 			enable_ws2_32_getaddrinfo="$2"
@@ -7969,18 +7957,6 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-create_ranges
-# |
-# | Modified files:
-# |   *	server/mapping.c
-# |
-if test "$enable_server_create_ranges" -eq 1; then
-	patch_apply server-create_ranges/0001-server-Fix-size-of-allocated-ranges-block-Coverity.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix size of allocated ranges block (Coverity).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-device_manager_destroy
 # |
 # | Modified files:
@@ -8002,21 +7978,6 @@ if test "$enable_server_free_async_queue" -eq 1; then
 	patch_apply server-free_async_queue/0001-server-Avoid-crash-when-async_terminate-destroys-asy.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Avoid crash when async_terminate destroys async object in free_async_queue.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-open_mapping_file
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43830] Backport for regression caused by virtual memory management changes
-# |
-# | Modified files:
-# |   *	server/debugger.c, server/file.h, server/mapping.c
-# |
-if test "$enable_server_open_mapping_file" -eq 1; then
-	patch_apply server-open_mapping_file/0001-server-Use-the-correct-process-when-looking-for-a-ma.patch
-	(
-		printf '%s\n' '+    { "Alexandre Julliard", "server: Use the correct process when looking for a mapped dll.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -10794,18 +10755,6 @@ if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	(
 		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WriteWatches
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/virtual.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_WriteWatches" -eq 1; then
-	patch_apply ws2_32-WriteWatches/0002-ws2_32-Avoid-race-conditions-of-async-WSARecv-operat.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Avoid race-conditions of async WSARecv() operations with write watches.", 2 },';
 	) >> "$patchlist"
 fi
 

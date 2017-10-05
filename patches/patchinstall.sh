@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b34ea10112227a0d8554c81fc093c0cf6e1bc1b7"
+	echo "9a53298eed493080fb132d0cd57fffa95b00b1ec"
 }
 
 # Show version information
@@ -176,7 +176,6 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
-	enable_gdiplus_DC_Handling="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
@@ -353,7 +352,6 @@ patch_enable_all ()
 	enable_server_device_manager_destroy="$1"
 	enable_server_free_async_queue="$1"
 	enable_server_send_hardware_message="$1"
-	enable_server_shared_mapping="$1"
 	enable_setupapi_CM_Get_Parent="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -811,9 +809,6 @@ patch_enable ()
 			;;
 		gdi32-Symbol_Truetype_Font)
 			enable_gdi32_Symbol_Truetype_Font="$2"
-			;;
-		gdiplus-DC_Handling)
-			enable_gdiplus_DC_Handling="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -1342,9 +1337,6 @@ patch_enable ()
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
-			;;
-		server-shared_mapping)
-			enable_server_shared_mapping="$2"
 			;;
 		setupapi-CM_Get_Parent)
 			enable_setupapi_CM_Get_Parent="$2"
@@ -5069,23 +5061,6 @@ if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdiplus-DC_Handling
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35372] Ignore externally set DC state in gdiplus
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/graphics.c
-# |
-if test "$enable_gdiplus_DC_Handling" -eq 1; then
-	patch_apply gdiplus-DC_Handling/0001-gdiplus-Ignore-an-externally-set-DC-origin.patch
-	patch_apply gdiplus-DC_Handling/0002-gdiplus-Ignore-an-externally-set-DC-clipping-region.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC origin.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Ignore an externally set DC clipping region.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-Performance-Improvements
 # |
 # | Modified files:
@@ -7993,21 +7968,6 @@ if test "$enable_server_send_hardware_message" -eq 1; then
 	patch_apply server-send_hardware_message/0001-server-Improve-handling-of-hooks-for-normal-non-inje.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Improve handling of hooks for normal (non-injected) hardware messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-shared_mapping
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43829] Keep reference on mapping for shared PE mappings
-# |
-# | Modified files:
-# |   *	server/mapping.c
-# |
-if test "$enable_server_shared_mapping" -eq 1; then
-	patch_apply server-shared_mapping/0001-server-Keep-reference-on-mapping-for-shared-mappings.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Keep reference on mapping for shared mappings.", 1 },';
 	) >> "$patchlist"
 fi
 

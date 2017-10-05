@@ -3344,7 +3344,7 @@ fi
 # Patchset ntdll-TokenLogonSid
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/nt.c
 # |
 if test "$enable_ntdll_TokenLogonSid" -eq 1; then
 	patch_apply ntdll-TokenLogonSid/0001-ntdll-TokenLogonSid-stub-in-NtQueryInformationToken.patch

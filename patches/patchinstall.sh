@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "825d5c86415d9e76c92a9d533c00790efe847ae7"
+	echo "fb8226f639093a3fef41f7273fa0089246d1dfa4"
 }
 
 # Show version information
@@ -330,7 +330,6 @@ patch_enable_all ()
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Race_Condition="$1"
-	enable_rsaenh_aProvEnumAlgsEx="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -1272,9 +1271,6 @@ patch_enable ()
 			;;
 		rpcrt4-Race_Condition)
 			enable_rpcrt4_Race_Condition="$2"
-			;;
-		rsaenh-aProvEnumAlgsEx)
-			enable_rsaenh_aProvEnumAlgsEx="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -7634,18 +7630,6 @@ if test "$enable_rpcrt4_Race_Condition" -eq 1; then
 	patch_apply rpcrt4-Race_Condition/0001-rpcrt4-Hold-CS-while-iterating-through-protseqs-list.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "rpcrt4: Hold CS while iterating through protseqs list.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset rsaenh-aProvEnumAlgsEx
-# |
-# | Modified files:
-# |   *	dlls/rsaenh/rsaenh.c
-# |
-if test "$enable_rsaenh_aProvEnumAlgsEx" -eq 1; then
-	patch_apply rsaenh-aProvEnumAlgsEx/0001-rsaenh-Fix-length-of-some-algorithm-names-in-aProvEn.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "rsaenh: Fix length of some algorithm names in aProvEnumAlgsEx array.", 1 },';
 	) >> "$patchlist"
 fi
 

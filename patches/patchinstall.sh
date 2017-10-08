@@ -241,6 +241,7 @@ patch_enable_all ()
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_CriticalSection="$1"
+	enable_ntdll_DOS_Area="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
@@ -1004,6 +1005,9 @@ patch_enable ()
 			;;
 		ntdll-CriticalSection)
 			enable_ntdll_CriticalSection="$2"
+			;;
+		ntdll-DOS_Area)
+			enable_ntdll_DOS_Area="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -6321,6 +6325,18 @@ if test "$enable_ntdll_CriticalSection" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add inline versions of RtlEnterCriticalSection / RtlLeaveCriticalSections.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for heap locking.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for threadpool locking.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-DOS_Area
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_DOS_Area" -eq 1; then
+	patch_apply ntdll-DOS_Area/0001-Revert-ntdll-Support-loading-binaries-that-start-ins.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"ntdll: Support loading binaries that start inside the DOS area.\".", 1 },';
 	) >> "$patchlist"
 fi
 

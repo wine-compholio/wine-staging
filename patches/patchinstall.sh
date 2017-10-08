@@ -7192,6 +7192,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35062] Fix graphical corruption in FarCry 3 with NVIDIA drivers
+# |   *	[#43862] CS:GO fails to start when nvapi cannot be initialized
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/d3d11/device.c, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec,

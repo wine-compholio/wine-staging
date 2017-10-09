@@ -273,6 +273,7 @@ patch_enable_all ()
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_NtSuspendProcess="$1"
+	enable_ntdll_NtUnmapViewOfSection="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessImageFileNameWin32="$1"
 	enable_ntdll_ProcessPriorityClass="$1"
@@ -1101,6 +1102,9 @@ patch_enable ()
 			;;
 		ntdll-NtSuspendProcess)
 			enable_ntdll_NtSuspendProcess="$2"
+			;;
+		ntdll-NtUnmapViewOfSection)
+			enable_ntdll_NtUnmapViewOfSection="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -6813,6 +6817,21 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtUnmapViewOfSection
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43860] Don't fail in NtUnmapViewOfSection when trying to unmap builtin view
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_NtUnmapViewOfSection" -eq 1; then
+	patch_apply ntdll-NtUnmapViewOfSection/0001-ntdll-Don-t-fail-in-NtUnmapViewOfSection-when-trying.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Don'\''t fail in NtUnmapViewOfSection when trying to unmap builtin view.", 1 },';
 	) >> "$patchlist"
 fi
 

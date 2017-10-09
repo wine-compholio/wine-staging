@@ -10808,6 +10808,9 @@ fi
 
 # Patchset wuauserv-Dummy_Service
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37781] Implement wuauserv dummy service
+# |
 # | Modified files:
 # |   *	configure.ac, loader/wine.inf.in, programs/wuauserv/Makefile.in, programs/wuauserv/main.c
 # |

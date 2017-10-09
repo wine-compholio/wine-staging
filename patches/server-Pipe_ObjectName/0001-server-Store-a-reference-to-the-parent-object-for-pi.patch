@@ -1,4 +1,4 @@
-From 2136f244ce59e8aa255acff56659fef497ed6821 Mon Sep 17 00:00:00 2001
+From b31cd243e2a02b730e31bde59093afc92b9dcf52 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 01:11:47 +0200
 Subject: server: Store a reference to the parent object for pipe servers. (v2)
@@ -30,19 +30,19 @@ index 43c5ee46d71..9a1ba670ab7 100644
          "name too short %s\n", wine_dbgstr_w(str->Buffer) );
      trace( "got %s len %u\n", wine_dbgstr_w(str->Buffer), len );
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index d7f8a583c92..7104350a358 100644
+index 58f68227f2d..c52a083df9a 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -153,6 +153,8 @@ static void pipe_end_reselect_async( struct fd *fd, struct async_queue *queue );
+@@ -152,6 +152,8 @@ static void pipe_end_reselect_async( struct fd *fd, struct async_queue *queue );
  /* server end functions */
  static void pipe_server_dump( struct object *obj, int verbose );
- static struct fd *pipe_server_get_fd( struct object *obj );
+ static void pipe_server_destroy( struct object *obj);
 +static int pipe_server_link_name( struct object *obj, struct object_name *name, struct object *parent );
 +static void pipe_server_unlink_name( struct object *obj, struct object_name *name );
- static void pipe_server_destroy( struct object *obj);
  static int pipe_server_ioctl( struct fd *fd, ioctl_code_t code, struct async *async );
  
-@@ -171,8 +173,8 @@ static const struct object_ops pipe_server_ops =
+ static const struct object_ops pipe_server_ops =
+@@ -169,8 +171,8 @@ static const struct object_ops pipe_server_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -53,16 +53,16 @@ index d7f8a583c92..7104350a358 100644
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
-@@ -197,6 +199,8 @@ static const struct fd_ops pipe_server_fd_ops =
+@@ -194,6 +196,8 @@ static const struct fd_ops pipe_server_fd_ops =
+ /* client end functions */
  static void pipe_client_dump( struct object *obj, int verbose );
  static int pipe_client_signaled( struct object *obj, struct wait_queue_entry *entry );
- static struct fd *pipe_client_get_fd( struct object *obj );
 +static int pipe_client_link_name( struct object *obj, struct object_name *name, struct object *parent );
 +static void pipe_client_unlink_name( struct object *obj, struct object_name *name );
  static void pipe_client_destroy( struct object *obj );
  static int pipe_client_ioctl( struct fd *fd, ioctl_code_t code, struct async *async );
  
-@@ -215,8 +219,8 @@ static const struct object_ops pipe_client_ops =
+@@ -212,8 +216,8 @@ static const struct object_ops pipe_client_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -73,8 +73,8 @@ index d7f8a583c92..7104350a358 100644
      no_open_file,                 /* open_file */
      no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
-@@ -458,6 +462,17 @@ static void pipe_end_destroy( struct pipe_end *pipe_end )
-     free_async_queue( &pipe_end->write_q );
+@@ -416,6 +420,17 @@ static void pipe_end_destroy( struct pipe_end *pipe_end )
+     if (pipe_end->fd) release_object( pipe_end->fd );
  }
  
 +static int pipe_server_link_name( struct object *obj, struct object_name *name, struct object *parent )
@@ -91,7 +91,7 @@ index d7f8a583c92..7104350a358 100644
  static void pipe_server_destroy( struct object *obj)
  {
      struct pipe_server *server = (struct pipe_server *)obj;
-@@ -483,6 +498,17 @@ static void pipe_server_destroy( struct object *obj)
+@@ -438,6 +453,17 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -109,7 +109,7 @@ index d7f8a583c92..7104350a358 100644
  static void pipe_client_destroy( struct object *obj)
  {
      struct pipe_client *client = (struct pipe_client *)obj;
-@@ -978,9 +1004,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
+@@ -910,9 +936,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
  static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned int options,
                                                 unsigned int pipe_flags )
  {
@@ -121,7 +121,7 @@ index d7f8a583c92..7104350a358 100644
      if (!server)
          return NULL;
  
-@@ -1001,12 +1028,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
+@@ -933,12 +960,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
      return server;
  }
  
@@ -137,15 +137,15 @@ index d7f8a583c92..7104350a358 100644
      if (!client)
          return NULL;
  
-@@ -1084,7 +1112,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -1016,7 +1044,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
          return NULL;
      }
  
 -    if ((client = create_pipe_client( options, pipe->flags, pipe->outsize, options )))
 +    if ((client = create_pipe_client( pipe, options, pipe->flags, pipe->outsize, options )))
      {
-         server->pipe_end.fd = (struct fd *)grab_object( server->ioctl_fd );
-         set_no_fd_status( server->ioctl_fd, STATUS_BAD_DEVICE_TYPE );
+         set_no_fd_status( server->pipe_end.fd, STATUS_BAD_DEVICE_TYPE );
+         allow_fd_caching( server->pipe_end.fd );
 diff --git a/server/object.c b/server/object.c
 index 14cd38e6f7e..77772a8e38b 100644
 --- a/server/object.c

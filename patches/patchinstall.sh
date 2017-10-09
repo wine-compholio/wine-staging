@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fb8226f639093a3fef41f7273fa0089246d1dfa4"
+	echo "63d6dce04746237c1cb39c22914ed666c55178e1"
 }
 
 # Show version information
@@ -6338,9 +6338,9 @@ fi
 # |   *	dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_DOS_Area" -eq 1; then
-	patch_apply ntdll-DOS_Area/0001-Revert-ntdll-Support-loading-binaries-that-start-ins.patch
+	patch_apply ntdll-DOS_Area/0001-ntdll-Fix-code-to-make-DOS-area-accessible.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"ntdll: Support loading binaries that start inside the DOS area.\".", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix code to make DOS area accessible.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6821,9 +6821,6 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 fi
 
 # Patchset ntdll-NtUnmapViewOfSection
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43860] Don't fail in NtUnmapViewOfSection when trying to unmap builtin view
 # |
 # | Modified files:
 # |   *	dlls/ntdll/virtual.c

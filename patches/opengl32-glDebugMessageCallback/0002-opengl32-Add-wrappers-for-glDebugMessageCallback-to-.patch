@@ -1,4 +1,4 @@
-From 8d34e3ec8ce01e63d65469ab8064c1fde6a289b3 Mon Sep 17 00:00:00 2001
+From d50a5bcd0bf3da7efba19797045769ef66bb4e0d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 12 Feb 2016 02:39:07 +0100
 Subject: opengl32: Add wrappers for glDebugMessageCallback to handle calling
@@ -6,17 +6,17 @@ Subject: opengl32: Add wrappers for glDebugMessageCallback to handle calling
 
 ---
  dlls/opengl32/make_opengl    |  5 ++++
- dlls/opengl32/opengl_ext.c   | 18 --------------
+ dlls/opengl32/opengl_ext.c   | 21 ----------------
  dlls/opengl32/opengl_ext.h   |  4 ++++
  dlls/opengl32/tests/opengl.c | 44 ++++++++++++++++++++++++++++++++++
  dlls/opengl32/wgl.c          | 57 ++++++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 110 insertions(+), 18 deletions(-)
+ 5 files changed, 110 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/opengl32/make_opengl b/dlls/opengl32/make_opengl
-index 44d58ec7bba..10fca6d724f 100755
+index dc30df5a3cf..83b10013542 100755
 --- a/dlls/opengl32/make_opengl
 +++ b/dlls/opengl32/make_opengl
-@@ -243,6 +243,11 @@ sub GenerateThunk($$$)
+@@ -172,6 +172,11 @@ sub GenerateThunk($$$)
      return "" if $name eq "glDebugEntry";
      return "" if $name eq "glGetIntegerv";
      return "" if $name eq "glGetString";
@@ -27,36 +27,39 @@ index 44d58ec7bba..10fca6d724f 100755
 +
      return "" if $func_ref->[2] && $func_ref->[2]->[0] =~ /WGL_/;
  
-     $ret .= ConvertType($func_ref->[0]) . " WINAPI $name( ";
+     my $ret = get_func_proto( "%s WINAPI %s(%s)", $name, $func_ref );
 diff --git a/dlls/opengl32/opengl_ext.c b/dlls/opengl32/opengl_ext.c
-index a8d267793e0..1f99991f1f3 100644
+index 91aa33dd19b..6d058c8c1a8 100644
 --- a/dlls/opengl32/opengl_ext.c
 +++ b/dlls/opengl32/opengl_ext.c
-@@ -1990,24 +1990,6 @@ static void WINAPI glCurrentPaletteMatrixARB( GLint index ) {
+@@ -2319,27 +2319,6 @@ static void WINAPI glCurrentPaletteMatrixARB( GLint index )
    funcs->ext.p_glCurrentPaletteMatrixARB( index );
  }
  
--static void WINAPI glDebugMessageCallback( void * callback, const void* userParam ) {
+-static void WINAPI glDebugMessageCallback( GLDEBUGPROC callback, const void *userParam )
+-{
 -  const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
--  TRACE("(%p, %p)\n", callback, userParam );
+-  TRACE( "(%p, %p)\n", callback, userParam );
 -  funcs->ext.p_glDebugMessageCallback( callback, userParam );
 -}
 -
--static void WINAPI glDebugMessageCallbackAMD( void * callback, void* userParam ) {
+-static void WINAPI glDebugMessageCallbackAMD( GLDEBUGPROCAMD callback, void *userParam )
+-{
 -  const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
--  TRACE("(%p, %p)\n", callback, userParam );
+-  TRACE( "(%p, %p)\n", callback, userParam );
 -  funcs->ext.p_glDebugMessageCallbackAMD( callback, userParam );
 -}
 -
--static void WINAPI glDebugMessageCallbackARB( void * callback, const void* userParam ) {
+-static void WINAPI glDebugMessageCallbackARB( GLDEBUGPROCARB callback, const void *userParam )
+-{
 -  const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
--  TRACE("(%p, %p)\n", callback, userParam );
+-  TRACE( "(%p, %p)\n", callback, userParam );
 -  funcs->ext.p_glDebugMessageCallbackARB( callback, userParam );
 -}
 -
- static void WINAPI glDebugMessageControl( GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled ) {
+ static void WINAPI glDebugMessageControl( GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint *ids, GLboolean enabled )
+ {
    const struct opengl_funcs *funcs = NtCurrentTeb()->glTable;
-   TRACE("(%d, %d, %d, %d, %p, %d)\n", source, type, severity, count, ids, enabled );
 diff --git a/dlls/opengl32/opengl_ext.h b/dlls/opengl32/opengl_ext.h
 index 4f1791a6436..8bffba05023 100644
 --- a/dlls/opengl32/opengl_ext.h
@@ -71,10 +74,10 @@ index 4f1791a6436..8bffba05023 100644
 +
  #endif /* __DLLS_OPENGL32_OPENGL_EXT_H */
 diff --git a/dlls/opengl32/tests/opengl.c b/dlls/opengl32/tests/opengl.c
-index fd68a994153..f6845aabfef 100644
+index 4b918424f62..0dc8bd51259 100644
 --- a/dlls/opengl32/tests/opengl.c
 +++ b/dlls/opengl32/tests/opengl.c
-@@ -71,6 +71,11 @@ static HDC (WINAPI *pwglGetPbufferDCARB)(HPBUFFERARB);
+@@ -70,6 +70,11 @@ static HDC (WINAPI *pwglGetPbufferDCARB)(HPBUFFERARB);
  static BOOL (WINAPI *pwglSwapIntervalEXT)(int interval);
  static int (WINAPI *pwglGetSwapIntervalEXT)(void);
  
@@ -86,7 +89,7 @@ index fd68a994153..f6845aabfef 100644
  static const char* wgl_extensions = NULL;
  
  static void init_functions(void)
-@@ -103,6 +108,11 @@ static void init_functions(void)
+@@ -102,6 +107,11 @@ static void init_functions(void)
      GET_PROC(wglSwapIntervalEXT)
      GET_PROC(wglGetSwapIntervalEXT)
  
@@ -98,7 +101,7 @@ index fd68a994153..f6845aabfef 100644
  #undef GET_PROC
  }
  
-@@ -327,6 +337,39 @@ static void test_choosepixelformat(void)
+@@ -326,6 +336,39 @@ static void test_choosepixelformat(void)
      pfd.cAuxBuffers = 0;
  }
  
@@ -138,7 +141,7 @@ index fd68a994153..f6845aabfef 100644
  static void test_setpixelformat(HDC winhdc)
  {
      int res = 0;
-@@ -1810,6 +1853,7 @@ START_TEST(opengl)
+@@ -1809,6 +1852,7 @@ START_TEST(opengl)
          }
  
          test_choosepixelformat();

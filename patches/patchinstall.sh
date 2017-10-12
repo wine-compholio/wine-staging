@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ee7ddd1ed38a3b2f41bdb676f42e3453021968c1"
+	echo "4b028bb09cb9563e111fedab0f4c3663dc278d0a"
 }
 
 # Show version information
@@ -7527,8 +7527,7 @@ fi
 # |   *	[#38402] Fix calling convention of glDebugMessageCallback callback function
 # |
 # | Modified files:
-# |   *	dlls/opengl32/make_opengl, dlls/opengl32/opengl_ext.c, dlls/opengl32/opengl_ext.h, dlls/opengl32/tests/opengl.c,
-# | 	dlls/opengl32/wgl.c
+# |   *	dlls/opengl32/make_opengl, dlls/opengl32/opengl_ext.c, dlls/opengl32/tests/opengl.c, dlls/opengl32/wgl.c
 # |
 if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
 	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch

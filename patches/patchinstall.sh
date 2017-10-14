@@ -3575,6 +3575,7 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40418] Implement BCrypt AES provider
 # |   *	[#42553] Implement BCrypt ECB chaining mode
+# |   *	[#39582] Implement BCrypt RSA provider
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
@@ -3602,6 +3603,14 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0027-bcrypt-Fix-BCryptEncrypt-with-AES_GCM-and-no-input-a.patch
 	patch_apply bcrypt-Improvements/0028-bcrypt-Partial-implementation-of-BCryptImportKey-and.patch
 	patch_apply bcrypt-Improvements/0029-bcrypt-Add-support-for-192-and-256-bit-aes-keys.patch
+	patch_apply bcrypt-Improvements/0030-bcrypt-Preparation-for-asymmetric-keys.patch
+	patch_apply bcrypt-Improvements/0031-include-Add-ecdsa-and-asymmetric-key-related-bcrypt-.patch
+	patch_apply bcrypt-Improvements/0032-bcrypt-tests-Add-basic-test-for-ecdsa.patch
+	patch_apply bcrypt-Improvements/0033-bcrypt-Implement-importing-of-ecdsa-keys.patch
+	patch_apply bcrypt-Improvements/0034-bcrypt-Implement-BCryptVerifySignature-for-ecdsa-sig.patch
+	patch_apply bcrypt-Improvements/0035-bcrypt-Initial-implementation-for-RSA-key-import-and.patch
+	patch_apply bcrypt-Improvements/0036-bcrypt-tests-Add-simple-test-for-RSA.patch
+	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
 	(
 		printf '%s\n' '+    { "Hans Leidekker", "include: Add missing BCRYPT_CHAIN_MODE definitions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
@@ -3624,6 +3633,14 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Andrew Wesie", "bcrypt: Fix BCryptEncrypt with AES_GCM and no input and no output.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Partial implementation of BCryptImportKey and BCryptExportKey.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for 192 and 256 bit aes keys.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "include: Add ecdsa and asymmetric key related bcrypt definitions.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add basic test for ecdsa.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement importing of ecdsa keys.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptVerifySignature for ecdsa signatures.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "bcrypt: Initial implementation for RSA key import and signature verification.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "bcrypt/tests: Add simple test for RSA.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Store full ECCKEY_BLOB struct in BCryptImportKeyPair.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3780,17 +3797,11 @@ fi
 # |   *	[#35902] Implement support for validating ECDSA certificate chains
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/crypt32/Makefile.in,
-# | 	dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h, dlls/crypt32/decode.c, dlls/crypt32/oid.c,
-# | 	dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c, dlls/crypt32/tests/oid.c, include/bcrypt.h, include/ntstatus.h,
-# | 	include/wincrypt.h
+# |   *	dlls/crypt32/Makefile.in, dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h,
+# | 	dlls/crypt32/decode.c, dlls/crypt32/oid.c, dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c,
+# | 	dlls/crypt32/tests/oid.c, include/wincrypt.h
 # |
 if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
-	patch_apply crypt32-ECDSA_Cert_Chains/0001-bcrypt-Preparation-for-asymmetric-keys.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0002-include-Add-ecdsa-and-asymmetric-key-related-bcrypt-.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0003-bcrypt-tests-Add-basic-test-for-ecdsa.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0004-bcrypt-Implement-importing-of-ecdsa-keys.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0005-bcrypt-Implement-BCryptVerifySignature-for-ecdsa-sig.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0006-crypt32-tests-Basic-tests-for-decoding-ECDSA-signed-.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0007-crypt32-Implement-decoding-of-X509_OBJECT_IDENTIFIER.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0008-crypt32-Implement-decoding-of-X509_ECC_SIGNATURE.patch
@@ -3800,11 +3811,6 @@ if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
 	patch_apply crypt32-ECDSA_Cert_Chains/0012-crypt32-tets-Add-test-for-verifying-an-ecdsa-chain.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0013-crypt32-Implement-verification-of-ECDSA-signatures.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Add ecdsa and asymmetric key related bcrypt definitions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add basic test for ecdsa.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement importing of ecdsa keys.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptVerifySignature for ecdsa signatures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Basic tests for decoding ECDSA signed certificate.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_OBJECT_IDENTIFIER.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_ECC_SIGNATURE.", 1 },';

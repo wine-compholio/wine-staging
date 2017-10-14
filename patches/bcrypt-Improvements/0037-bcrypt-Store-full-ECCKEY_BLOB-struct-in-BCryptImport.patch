@@ -1,0 +1,49 @@
+From 3714e6bcd413355a60a691d38f487f321be93b2a Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 14 Oct 2017 22:44:13 +0200
+Subject: bcrypt: Store full ECCKEY_BLOB struct in BCryptImportKeyPair.
+
+---
+ dlls/bcrypt/bcrypt_main.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 3356364a6dc..2aecfb9a227 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -1308,6 +1308,7 @@ static void buffer_append_asn1_r_s( struct buffer *buffer, BYTE *r, DWORD r_len,
+ 
+ static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnutls_key )
+ {
++    BCRYPT_ECCKEY_BLOB *ecc_blob;
+     gnutls_ecc_curve_t curve;
+     gnutls_datum_t x, y;
+     int ret;
+@@ -1328,10 +1329,11 @@ static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnut
+         return STATUS_INTERNAL_ERROR;
+     }
+ 
+-    x.data = key->u.a.pubkey;
+-    x.size = key->u.a.pubkey_len / 2;
+-    y.data = key->u.a.pubkey + x.size;
+-    y.size = x.size;
++    ecc_blob = (BCRYPT_ECCKEY_BLOB *)key->u.a.pubkey;
++    x.data = key->u.a.pubkey + sizeof(*ecc_blob);
++    x.size = ecc_blob->cbKey;
++    y.data = key->u.a.pubkey + sizeof(*ecc_blob) + ecc_blob->cbKey;
++    y.size = ecc_blob->cbKey;
+ 
+     if ((ret = pgnutls_pubkey_import_ecc_raw( *gnutls_key, curve, &x, &y )))
+     {
+@@ -1846,7 +1848,7 @@ NTSTATUS WINAPI BCryptImportKeyPair( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HAN
+             return STATUS_NO_MEMORY;
+ 
+         key->hdr.magic = MAGIC_KEY;
+-        if ((status = key_asymmetric_init( key, alg, (BYTE *)(ecc_blob + 1), ecc_blob->cbKey * 2 )))
++        if ((status = key_asymmetric_init( key, alg, (BYTE *)ecc_blob, sizeof(*ecc_blob) + ecc_blob->cbKey * 2 )))
+         {
+             HeapFree( GetProcessHeap(), 0, key );
+             return status;
+-- 
+2.14.1
+

@@ -1,0 +1,204 @@
+From 0895c4bcdcaaa794619c0a67dcede0b2ab24c1fb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 7 Oct 2017 00:52:34 +0200
+Subject: wined3d: Add support for depth bias clamping.
+
+---
+ dlls/d3d11/device.c       | 12 +++++++-----
+ dlls/d3d11/tests/d3d11.c  |  2 +-
+ dlls/wined3d/cs.c         |  1 +
+ dlls/wined3d/directx.c    |  3 +++
+ dlls/wined3d/state.c      | 19 ++++++++++++++++---
+ dlls/wined3d/stateblock.c |  2 ++
+ dlls/wined3d/utils.c      |  1 +
+ dlls/wined3d/wined3d_gl.h |  1 +
+ include/wine/wined3d.h    |  3 ++-
+ 9 files changed, 34 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
+index a144bccce1e..405a678505f 100644
+--- a/dlls/d3d11/device.c
++++ b/dlls/d3d11/device.c
+@@ -887,7 +887,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_RSSetState(ID3D11DeviceCon
+     struct d3d_device *device = device_from_immediate_ID3D11DeviceContext(iface);
+     struct d3d_rasterizer_state *rasterizer_state_impl;
+     const D3D11_RASTERIZER_DESC *desc;
+-    union {DWORD d; float f;} slope;
++    union {DWORD d; float f;} tmpfloat;
+ 
+     TRACE("iface %p, rasterizer_state %p.\n", iface, rasterizer_state);
+ 
+@@ -901,6 +901,8 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_RSSetState(ID3D11DeviceCon
+         wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_MULTISAMPLEANTIALIAS, FALSE);
+         wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ANTIALIASEDLINEENABLE, FALSE);
+         wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DEPTHBIAS, 0);
++        tmpfloat.f = 0.0f;
++        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DEPTHBIASCLAMP, tmpfloat.d);
+         wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SLOPESCALEDEPTHBIAS, 0);
+         wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DEPTHCLIP, TRUE);
+         wined3d_mutex_unlock();
+@@ -914,12 +916,12 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_RSSetState(ID3D11DeviceCon
+     wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_CULLMODE, desc->CullMode);
+ 
+     /* OpenGL style depth bias. */
+-    slope.f = desc->SlopeScaledDepthBias;
+     wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DEPTHBIAS, desc->DepthBias);
+-    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SLOPESCALEDEPTHBIAS, slope.d);
++    tmpfloat.f = desc->DepthBiasClamp;
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DEPTHBIASCLAMP, tmpfloat.d);
++    tmpfloat.f = desc->SlopeScaledDepthBias;
++    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SLOPESCALEDEPTHBIAS, tmpfloat.d);
+     wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DEPTHCLIP, (desc->DepthClipEnable != FALSE));
+-    if (desc->DepthBiasClamp)
+-        FIXME("Ignoring DepthBiasClamp %f.\n", desc->DepthBiasClamp);
+ 
+     wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SCISSORTESTENABLE, desc->ScissorEnable);
+     wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_MULTISAMPLEANTIALIAS, desc->MultisampleEnable);
+diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
+index cd5103a8367..923da4b38ce 100644
+--- a/dlls/d3d11/tests/d3d11.c
++++ b/dlls/d3d11/tests/d3d11.c
+@@ -15433,7 +15433,7 @@ static void test_depth_separate(void)
+     draw_color_quad_z(&test_context, &white, 0.5f);
+     get_texture_readback(test_context.backbuffer, 0, &rb);
+     color = get_readback_color(&rb, 320, 240);
+-    todo_wine ok(compare_color(color, blue_d, 1), "Got unexpected color 0x%08x.\n", color);
++    ok(compare_color(color, blue_d, 1), "Got unexpected color 0x%08x.\n", color);
+     release_resource_readback(&rb);
+     ID3D11RasterizerState_Release(rs);
+ 
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 04e01da9e0a..599d72889d1 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -986,6 +986,7 @@ static void wined3d_cs_exec_set_depth_stencil_view(struct wined3d_cs *cs, const
+         device_invalidate_state(device, STATE_RENDER(WINED3D_RS_STENCILENABLE));
+         device_invalidate_state(device, STATE_RENDER(WINED3D_RS_STENCILWRITEMASK));
+         device_invalidate_state(device, STATE_RENDER(WINED3D_RS_DEPTHBIAS));
++        device_invalidate_state(device, STATE_RENDER(WINED3D_RS_DEPTHBIASCLAMP));
+     }
+     else if (prev && (prev->format_flags & WINED3DFMT_FLAG_FLOAT)
+             != (op->view->format_flags & WINED3DFMT_FLAG_FLOAT))
+diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
+index 564078f2905..33eb2d3c0c3 100644
+--- a/dlls/wined3d/directx.c
++++ b/dlls/wined3d/directx.c
+@@ -225,6 +225,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
+     {"GL_EXT_packed_depth_stencil",         EXT_PACKED_DEPTH_STENCIL      },
+     {"GL_EXT_packed_float",                 EXT_PACKED_FLOAT              },
+     {"GL_EXT_point_parameters",             EXT_POINT_PARAMETERS          },
++    {"GL_EXT_polygon_offset_clamp",         EXT_POLYGON_OFFSET_CLAMP      },
+     {"GL_EXT_provoking_vertex",             EXT_PROVOKING_VERTEX          },
+     {"GL_EXT_secondary_color",              EXT_SECONDARY_COLOR           },
+     {"GL_EXT_stencil_two_side",             EXT_STENCIL_TWO_SIDE          },
+@@ -3093,6 +3094,8 @@ static void load_gl_funcs(struct wined3d_gl_info *gl_info)
+     /* GL_EXT_point_parameters */
+     USE_GL_FUNC(glPointParameterfEXT)
+     USE_GL_FUNC(glPointParameterfvEXT)
++    /* GL_EXT_polygon_offset_clamp */
++    USE_GL_FUNC(glPolygonOffsetClampEXT)
+     /* GL_EXT_provoking_vertex */
+     USE_GL_FUNC(glProvokingVertexEXT)
+     /* GL_EXT_secondary_color */
+diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
+index 8b1729de2a3..df511009833 100644
+--- a/dlls/wined3d/state.c
++++ b/dlls/wined3d/state.c
+@@ -1728,10 +1728,11 @@ static void state_depthbias(struct wined3d_context *context, const struct wined3
+             DWORD d;
+             INT   i;
+             float f;
+-        } scale_bias, const_bias;
++        } scale_bias, const_bias, bias_clamp;
+ 
+         scale_bias.d = state->render_states[WINED3D_RS_SLOPESCALEDEPTHBIAS];
+         const_bias.d = state->render_states[WINED3D_RS_DEPTHBIAS];
++        bias_clamp.d = state->render_states[WINED3D_RS_DEPTHBIASCLAMP];
+ 
+         gl_info->gl_ops.gl.p_glEnable(GL_POLYGON_OFFSET_FILL);
+         checkGLcall("glEnable(GL_POLYGON_OFFSET_FILL)");
+@@ -1744,8 +1745,19 @@ static void state_depthbias(struct wined3d_context *context, const struct wined3
+         }
+         else if (context->d3d_info->wined3d_creation_flags & WINED3D_FORWARD_DEPTH_BIAS)
+         {
+-            gl_info->gl_ops.gl.p_glPolygonOffset(scale_bias.f, const_bias.i);
+-            checkGLcall("glPolygonOffset(...)");
++            if (gl_info->supported[EXT_POLYGON_OFFSET_CLAMP])
++            {
++                GL_EXTCALL(glPolygonOffsetClampEXT(scale_bias.f, const_bias.i, bias_clamp.f));
++                checkGLcall("glPolygonOffsetClampEXT(...)");
++            }
++            else
++            {
++                if (bias_clamp.f)
++                    WARN("EXT_polygon_offset_clamp extension missing, no support for depth bias clamping.\n");
++
++                gl_info->gl_ops.gl.p_glPolygonOffset(scale_bias.f, const_bias.i);
++                checkGLcall("glPolygonOffset(...)");
++            }
+         }
+         else
+         {
+@@ -5241,6 +5253,7 @@ const struct StateEntryTemplate misc_state_template[] =
+     { STATE_RENDER(WINED3D_RS_BLENDFACTOR),               { STATE_RENDER(WINED3D_RS_BLENDFACTOR),               state_blendfactor   }, EXT_BLEND_COLOR                 },
+     { STATE_RENDER(WINED3D_RS_BLENDFACTOR),               { STATE_RENDER(WINED3D_RS_BLENDFACTOR),               state_blendfactor_w }, WINED3D_GL_EXT_NONE             },
+     { STATE_RENDER(WINED3D_RS_DEPTHBIAS),                 { STATE_RENDER(WINED3D_RS_DEPTHBIAS),                 state_depthbias     }, WINED3D_GL_EXT_NONE             },
++    { STATE_RENDER(WINED3D_RS_DEPTHBIASCLAMP),            { STATE_RENDER(WINED3D_RS_DEPTHBIAS),                 NULL                }, WINED3D_GL_EXT_NONE             },
+     { STATE_RENDER(WINED3D_RS_ZVISIBLE),                  { STATE_RENDER(WINED3D_RS_ZVISIBLE),                  state_zvisible      }, WINED3D_GL_EXT_NONE             },
+     { STATE_RENDER(WINED3D_RS_DEPTHCLIP),                 { STATE_RENDER(WINED3D_RS_DEPTHCLIP),                 state_depthclip     }, ARB_DEPTH_CLAMP                 },
+     { STATE_RENDER(WINED3D_RS_DEPTHCLIP),                 { STATE_RENDER(WINED3D_RS_DEPTHCLIP),                 state_depthclip_w   }, WINED3D_GL_EXT_NONE             },
+diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
+index e55e2b8abc3..71571b24fe5 100644
+--- a/dlls/wined3d/stateblock.c
++++ b/dlls/wined3d/stateblock.c
+@@ -1244,6 +1244,8 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
+     state->render_states[WINED3D_RS_BLENDFACTOR] = 0xffffffff;
+     state->render_states[WINED3D_RS_SRGBWRITEENABLE] = 0;
+     state->render_states[WINED3D_RS_DEPTHBIAS] = 0;
++    tmpfloat.f = 0.0f;
++    state->render_states[WINED3D_RS_DEPTHBIASCLAMP] = tmpfloat.d;
+     state->render_states[WINED3D_RS_DEPTHCLIP] = TRUE;
+     state->render_states[WINED3D_RS_WRAP8] = 0;
+     state->render_states[WINED3D_RS_WRAP9] = 0;
+diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
+index b234a2e3b44..472ac9ead0b 100644
+--- a/dlls/wined3d/utils.c
++++ b/dlls/wined3d/utils.c
+@@ -4299,6 +4299,7 @@ const char *debug_d3drenderstate(enum wined3d_render_state state)
+         D3DSTATE_TO_STR(WINED3D_RS_BLENDFACTOR);
+         D3DSTATE_TO_STR(WINED3D_RS_SRGBWRITEENABLE);
+         D3DSTATE_TO_STR(WINED3D_RS_DEPTHBIAS);
++        D3DSTATE_TO_STR(WINED3D_RS_DEPTHBIASCLAMP);
+         D3DSTATE_TO_STR(WINED3D_RS_WRAP8);
+         D3DSTATE_TO_STR(WINED3D_RS_WRAP9);
+         D3DSTATE_TO_STR(WINED3D_RS_WRAP10);
+diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
+index 084c2d9dc6e..f044c74584e 100644
+--- a/dlls/wined3d/wined3d_gl.h
++++ b/dlls/wined3d/wined3d_gl.h
+@@ -156,6 +156,7 @@ enum wined3d_gl_extension
+     EXT_PACKED_DEPTH_STENCIL,
+     EXT_PACKED_FLOAT,
+     EXT_POINT_PARAMETERS,
++    EXT_POLYGON_OFFSET_CLAMP,
+     EXT_PROVOKING_VERTEX,
+     EXT_SECONDARY_COLOR,
+     EXT_STENCIL_TWO_SIDE,
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 946692fc672..5e9e45942be 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -382,8 +382,9 @@ enum wined3d_render_state
+     WINED3D_RS_DESTBLENDALPHA               = 208,
+     WINED3D_RS_BLENDOPALPHA                 = 209,
+     WINED3D_RS_DEPTHCLIP                    = 210,
++    WINED3D_RS_DEPTHBIASCLAMP               = 211,
+ };
+-#define WINEHIGHEST_RENDER_STATE                                WINED3D_RS_DEPTHCLIP
++#define WINEHIGHEST_RENDER_STATE                                WINED3D_RS_DEPTHBIASCLAMP
+ 
+ enum wined3d_blend
+ {
+-- 
+2.14.1
+

@@ -4017,18 +4017,25 @@ fi
 
 # Patchset d3d11-Depth_Bias
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43848] Implement support for depth bias clamping
+# |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/dxgi/factory.c, dlls/wined3d/directx.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/dxgi/factory.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
 	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
 	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
 	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
+	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
+	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
 	) >> "$patchlist"
 fi
 

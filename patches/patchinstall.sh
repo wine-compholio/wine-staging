@@ -351,6 +351,7 @@ patch_enable_all ()
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
+	enable_server_build_shared_mapping="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_server_free_async_queue="$1"
 	enable_server_send_hardware_message="$1"
@@ -1335,6 +1336,9 @@ patch_enable ()
 			;;
 		server-Timestamp_Compat)
 			enable_server_Timestamp_Compat="$2"
+			;;
+		server-build_shared_mapping)
+			enable_server_build_shared_mapping="$2"
 			;;
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
@@ -7969,6 +7973,18 @@ if test "$enable_server_Timestamp_Compat" -eq 1; then
 	patch_apply server-Timestamp_Compat/0001-server-Compatibility-with-Wine-Staging-format-for-hi.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Compatibility with Wine Staging format for high precision registry timestamps.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-build_shared_mapping
+# |
+# | Modified files:
+# |   *	server/mapping.c
+# |
+if test "$enable_server_build_shared_mapping" -eq 1; then
+	patch_apply server-build_shared_mapping/0001-server-Fix-double-free-in-build_shared_mapping.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix double-free in build_shared_mapping.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "57ca6b90bb7337cb90465b3bf1f147e3d2564f2e"
+	echo "981dec4986e7ac1982049dbede1ca2aa72f5e70c"
 }
 
 # Show version information
@@ -461,7 +461,6 @@ patch_enable_all ()
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_GenerateMips="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
-	enable_wined3d_Interpolation_Modifiers="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Revert_Buffer_Upload="$1"
@@ -1666,9 +1665,6 @@ patch_enable ()
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
 			;;
-		wined3d-Interpolation_Modifiers)
-			enable_wined3d_Interpolation_Modifiers="$2"
-			;;
 		wined3d-Limit_Vram)
 			enable_wined3d_Limit_Vram="$2"
 			;;
@@ -2352,17 +2348,10 @@ if test "$enable_wined3d_GenerateMips" -eq 1; then
 	if test "$enable_wined3d_Copy_Resource_Typeless" -gt 1; then
 		abort "Patchset wined3d-Copy_Resource_Typeless disabled, but wined3d-GenerateMips depends on that."
 	fi
-	if test "$enable_wined3d_Interpolation_Modifiers" -gt 1; then
-		abort "Patchset wined3d-Interpolation_Modifiers disabled, but wined3d-GenerateMips depends on that."
+	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
+		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-GenerateMips depends on that."
 	fi
 	enable_wined3d_Copy_Resource_Typeless=1
-	enable_wined3d_Interpolation_Modifiers=1
-fi
-
-if test "$enable_wined3d_Interpolation_Modifiers" -eq 1; then
-	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
-		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-Interpolation_Modifiers depends on that."
-	fi
 	enable_wined3d_Dual_Source_Blending=1
 fi
 
@@ -4148,16 +4137,14 @@ fi
 # Patchset d3d9-Tests
 # |
 # | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
+# |   *	dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
 # |
 if test "$enable_d3d9_Tests" -eq 1; then
 	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
 	patch_apply d3d9-Tests/0002-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
-	patch_apply d3d9-Tests/0003-d3d11-tests-Avoid-test-failures.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Avoid test failures.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9820,36 +9807,11 @@ if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Interpolation_Modifiers
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43239] Implement support for interpolation modifiers in sm4/sm5 pixel shaders
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
-# | 	dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Interpolation_Modifiers" -eq 1; then
-	patch_apply wined3d-Interpolation_Modifiers/0001-d3d11-tests-Add-test-for-nointerpolation-modifier.patch
-	patch_apply wined3d-Interpolation_Modifiers/0002-wined3d-Unroll-vertex-geometry-shader-outputs-and-pi.patch
-	patch_apply wined3d-Interpolation_Modifiers/0003-wined3d-Add-support-for-interpolation-modifiers-in-s.patch
-	patch_apply wined3d-Interpolation_Modifiers/0004-wined3d-Add-quirk-for-broken-auxiliary-qualifier-mat.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add test for nointerpolation modifier.", 1 },';
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Unroll vertex / geometry shader outputs and pixel shader inputs for >= sm4.", 1 },';
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Add support for interpolation modifiers in sm4/sm5 pixel shader inputs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add quirk for broken auxiliary qualifier matching.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-GenerateMips
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless, wined3d-Core_Context, wined3d-Viewports, wined3d-
-# | 	Dual_Source_Blending, wined3d-Interpolation_Modifiers
+# | 	Dual_Source_Blending
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/texture.c,
@@ -9929,8 +9891,8 @@ fi
 # |   *	d3d11-ResolveSubresource, wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
 # | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
 # | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
-# | 	Dual_Source_Blending, wined3d-Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-
-# | 	Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# | 	Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
+# | 	wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -10152,8 +10114,8 @@ fi
 # |   *	d3d11-ResolveSubresource, wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
 # | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
 # | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
-# | 	Dual_Source_Blending, wined3d-Interpolation_Modifiers, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-
-# | 	Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
+# | 	Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
+# | 	wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "31ef99245ae8cd08b2bb611a2a8803c6206f4d54"
+	echo "2c51fc1bfc1d551aebb47616c19d3329c5e0f7f6"
 }
 
 # Show version information
@@ -3076,23 +3076,15 @@ fi
 
 # Patchset advapi-LsaLookupPrivilegeName
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43316] Add LsaLookupPrivilege[Display]Name stubs
-# |
 # | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/advapi32_misc.h, dlls/advapi32/lsa.c, dlls/advapi32/security.c,
-# | 	dlls/advapi32/tests/lsa.c, include/ntsecapi.h
+# |   *	dlls/advapi32/lsa.c, dlls/advapi32/tests/lsa.c
 # |
 if test "$enable_advapi_LsaLookupPrivilegeName" -eq 1; then
 	patch_apply advapi-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
 	patch_apply advapi-LsaLookupPrivilegeName/0002-advapi32-Use-TRACE-for-LsaOpenPolicy-LsaClose.patch
-	patch_apply advapi-LsaLookupPrivilegeName/0003-advapi32-Implement-LsaLookupPrivilegeName.patch
-	patch_apply advapi-LsaLookupPrivilegeName/0004-advapi32-Add-stub-for-LsaLookupPrivilegeDisplayName.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement LsaLookupPrivilegeName.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Add stub for LsaLookupPrivilegeDisplayName.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From e7126b3b16c10175052730398d4f1e578b024747 Mon Sep 17 00:00:00 2001
+From 4ca5b86202106da7569f8156e0769aa6318c275d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 5 Feb 2017 11:54:21 +0100
 Subject: ws2_32/tests: Add test for completion notification flags.
@@ -8,10 +8,10 @@ Subject: ws2_32/tests: Add test for completion notification flags.
  1 file changed, 23 insertions(+)
 
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 720808887cf..0b8682e2edc 100644
+index 179ace4c6ae..5504a0862a9 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -78,6 +78,10 @@ static int   (WINAPI *pWSAEnumNameSpaceProvidersA)(LPDWORD,LPWSANAMESPACE_INFOA)
+@@ -85,6 +85,10 @@ static int   (WINAPI *pWSAEnumNameSpaceProvidersA)(LPDWORD,LPWSANAMESPACE_INFOA)
  static int   (WINAPI *pWSAEnumNameSpaceProvidersW)(LPDWORD,LPWSANAMESPACE_INFOW);
  static int   (WINAPI *pWSAPoll)(WSAPOLLFD *,ULONG,INT);
  
@@ -22,25 +22,19 @@ index 720808887cf..0b8682e2edc 100644
  /* Function pointers from iphlpapi */
  static DWORD (WINAPI *pGetAdaptersInfo)(PIP_ADAPTER_INFO,PULONG);
  static DWORD (WINAPI *pGetIpForwardTable)(PMIB_IPFORWARDTABLE,PULONG,BOOL);
-@@ -1222,6 +1226,7 @@ static void Init (void)
-     WORD ver = MAKEWORD (2, 2);
-     WSADATA data;
-     HMODULE hws2_32 = GetModuleHandleA("ws2_32.dll"), hiphlpapi;
-+    HMODULE hntdll = GetModuleHandleA("ntdll.dll");
+@@ -1310,7 +1314,11 @@ static void Init (void)
  
-     pfreeaddrinfo = (void *)GetProcAddress(hws2_32, "freeaddrinfo");
-     pgetaddrinfo = (void *)GetProcAddress(hws2_32, "getaddrinfo");
-@@ -1238,6 +1243,9 @@ static void Init (void)
-     pWSAEnumNameSpaceProvidersW = (void *)GetProcAddress(hws2_32, "WSAEnumNameSpaceProvidersW");
-     pWSAPoll = (void *)GetProcAddress(hws2_32, "WSAPoll");
+     ntdll = LoadLibraryA("ntdll.dll");
+     if (ntdll)
++    {
+         pNtClose = (void *)GetProcAddress(ntdll, "NtClose");
++        pNtSetInformationFile = (void *)GetProcAddress(ntdll, "NtSetInformationFile");
++        pNtQueryInformationFile = (void *)GetProcAddress(ntdll, "NtQueryInformationFile");
++    }
  
-+    pNtSetInformationFile = (void *)GetProcAddress(hntdll, "NtSetInformationFile");
-+    pNtQueryInformationFile = (void *)GetProcAddress(hntdll, "NtQueryInformationFile");
-+
-     hiphlpapi = LoadLibraryA("iphlpapi.dll");
-     if (hiphlpapi)
-     {
-@@ -9006,10 +9014,13 @@ end:
+     ok ( WSAStartup ( ver, &data ) == 0, "WSAStartup failed\n" );
+     tls = TlsAlloc();
+@@ -9623,10 +9631,13 @@ end:
  
  static void test_completion_port(void)
  {
@@ -54,7 +48,7 @@ index 720808887cf..0b8682e2edc 100644
      char buf[1024];
      WSABUF bufs;
      DWORD num_bytes, flags;
-@@ -9459,6 +9470,11 @@ static void test_completion_port(void)
+@@ -10238,6 +10249,11 @@ static void test_completion_port(void)
      io_port = CreateIoCompletionPort((HANDLE)dest, previous_port, 236, 0);
      ok(io_port != NULL, "failed to create completion port %u\n", GetLastError());
  
@@ -66,7 +60,7 @@ index 720808887cf..0b8682e2edc 100644
      bret = pAcceptEx(src, dest, buf, sizeof(buf) - 2*(sizeof(struct sockaddr_in) + 16),
              sizeof(struct sockaddr_in) + 16, sizeof(struct sockaddr_in) + 16,
              &num_bytes, &ov);
-@@ -9484,6 +9500,13 @@ static void test_completion_port(void)
+@@ -10263,6 +10279,13 @@ static void test_completion_port(void)
      ok(olp == &ov, "Overlapped structure is at %p\n", olp);
      ok(olp && (olp->Internal == (ULONG)STATUS_SUCCESS), "Internal status is %lx\n", olp ? olp->Internal : 0);
  
@@ -81,5 +75,5 @@ index 720808887cf..0b8682e2edc 100644
      key = 0xdeadbeef;
      num_bytes = 0xdeadbeef;
 -- 
-2.11.0
+2.14.2
 

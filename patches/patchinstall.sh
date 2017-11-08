@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2c51fc1bfc1d551aebb47616c19d3329c5e0f7f6"
+	echo "f962bb0039c87c084214ca0bd4f40693db376195"
 }
 
 # Show version information
@@ -10006,9 +10006,6 @@ if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
 fi
 
 # Patchset wined3d-sample_c_lz
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42863] Emulate sample_c_lz using textureGradOffset for sampler2DArrayShadow
 # |
 # | Modified files:
 # |   *	dlls/wined3d/glsl_shader.c

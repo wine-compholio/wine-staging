@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "039d267b0925273197a9edcf7664c4a42dca932d"
+	echo "31ef99245ae8cd08b2bb611a2a8803c6206f4d54"
 }
 
 # Show version information
@@ -456,7 +456,6 @@ patch_enable_all ()
 	enable_wined3d_Copy_Resource_Typeless="$1"
 	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
-	enable_wined3d_DrawIndirect="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_GenerateMips="$1"
@@ -471,7 +470,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_buffer_create="$1"
-	enable_wined3d_draw_primitive_arrays="$1"
 	enable_wined3d_dxgi_swapchain_Present="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1650,9 +1648,6 @@ patch_enable ()
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
 			;;
-		wined3d-DrawIndirect)
-			enable_wined3d_DrawIndirect="$2"
-			;;
 		wined3d-Dual_Source_Blending)
 			enable_wined3d_Dual_Source_Blending="$2"
 			;;
@@ -1694,9 +1689,6 @@ patch_enable ()
 			;;
 		wined3d-buffer_create)
 			enable_wined3d_buffer_create="$2"
-			;;
-		wined3d-draw_primitive_arrays)
-			enable_wined3d_draw_primitive_arrays="$2"
 			;;
 		wined3d-dxgi_swapchain_Present)
 			enable_wined3d_dxgi_swapchain_Present="$2"
@@ -2249,25 +2241,17 @@ if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
 	if test "$enable_dxgi_DXGI_PRESENT_TEST" -gt 1; then
 		abort "Patchset dxgi-DXGI_PRESENT_TEST disabled, but wined3d-dxgi_swapchain_Present depends on that."
 	fi
-	if test "$enable_wined3d_DrawIndirect" -gt 1; then
-		abort "Patchset wined3d-DrawIndirect disabled, but wined3d-dxgi_swapchain_Present depends on that."
-	fi
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-dxgi_swapchain_Present depends on that."
 	fi
 	enable_dxgi_DXGI_PRESENT_TEST=1
-	enable_wined3d_DrawIndirect=1
 	enable_wined3d_Silence_FIXMEs=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
-	if test "$enable_wined3d_DrawIndirect" -gt 1; then
-		abort "Patchset wined3d-DrawIndirect disabled, but wined3d-Indexed_Vertex_Blending depends on that."
-	fi
 	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
 		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-Indexed_Vertex_Blending depends on that."
 	fi
-	enable_wined3d_DrawIndirect=1
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
 
@@ -2276,13 +2260,6 @@ if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
 	fi
 	enable_d3d11_Depth_Bias=1
-fi
-
-if test "$enable_wined3d_DrawIndirect" -eq 1; then
-	if test "$enable_wined3d_draw_primitive_arrays" -gt 1; then
-		abort "Patchset wined3d-draw_primitive_arrays disabled, but wined3d-DrawIndirect depends on that."
-	fi
-	enable_wined3d_draw_primitive_arrays=1
 fi
 
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
@@ -9904,46 +9881,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-draw_primitive_arrays
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c, dlls/wined3d/wined3d_gl.h
-# |
-if test "$enable_wined3d_draw_primitive_arrays" -eq 1; then
-	patch_apply wined3d-draw_primitive_arrays/0001-d3d11-tests-Add-basic-instance-offset-drawing-test.patch
-	patch_apply wined3d-draw_primitive_arrays/0002-wined3d-Add-support-for-start-instance-in-draw_primi.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic instance offset drawing test.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for start instance in draw_primitive_arrays.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-DrawIndirect
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-draw_primitive_arrays
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43405] Implement support for indirect drawing / compute shader dispatching
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
-# | 	dlls/wined3d/drawprim.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_gl.h, dlls/wined3d/wined3d_private.h,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_DrawIndirect" -eq 1; then
-	patch_apply wined3d-DrawIndirect/0002-d3d11-tests-Add-a-basic-test-for-DispatchIndirect.patch
-	patch_apply wined3d-DrawIndirect/0003-wined3d-Implement-indirect-drawing.patch
-	patch_apply wined3d-DrawIndirect/0004-wined3d-Implement-DrawInstancedIndirect.patch
-	patch_apply wined3d-DrawIndirect/0005-d3d11-tests-Add-a-basic-test-for-DrawInstancedIndire.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Add a basic test for DispatchIndirect.", 1 },';
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement indirect drawing.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Implement DrawInstancedIndirect.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d11/tests: Add a basic test for DrawInstancedIndirect.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-GTX_560M
 # |
 # | Modified files:
@@ -9976,7 +9913,7 @@ fi
 # Patchset wined3d-Indexed_Vertex_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-draw_primitive_arrays, wined3d-DrawIndirect, d3d11-Depth_Bias, wined3d-WINED3D_RS_COLORWRITEENABLE
+# |   *	d3d11-Depth_Bias, wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39057] Support for indexed vertex blending
@@ -10062,7 +9999,7 @@ fi
 # Patchset wined3d-dxgi_swapchain_Present
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxgi-DXGI_PRESENT_TEST, wined3d-draw_primitive_arrays, wined3d-DrawIndirect, wined3d-Silence_FIXMEs
+# |   *	dxgi-DXGI_PRESENT_TEST, wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	dlls/d3d8/swapchain.c, dlls/d3d9/device.c, dlls/d3d9/swapchain.c, dlls/dxgi/swapchain.c, dlls/wined3d/cs.c,

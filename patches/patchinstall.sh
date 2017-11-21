@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6864803f1ab70f9f9e90903b13e67da40973d12a"
+	echo "53290d2ec483006656987352d53842ffc1852c91"
 }
 
 # Show version information
@@ -3540,7 +3540,6 @@ fi
 # | 	include/bcrypt.h, include/ntstatus.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
-	patch_apply bcrypt-Improvements/0001-include-Add-missing-BCRYPT_CHAIN_MODE-definitions.patch
 	patch_apply bcrypt-Improvements/0010-bcrypt-tests-Add-test-for-bugs-in-BCryptGetProperty.patch
 	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0012-bcrypt-Pass-object-to-get_-alg-hash-_property-instea.patch
@@ -3570,7 +3569,6 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0036-bcrypt-tests-Add-simple-test-for-RSA.patch
 	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
 	(
-		printf '%s\n' '+    { "Hans Leidekker", "include: Add missing BCRYPT_CHAIN_MODE definitions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
@@ -4269,11 +4267,9 @@ fi
 # |
 if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
 	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
-	patch_apply d3dx9_36-D3DXStubs/0002-d3dx9_36-Add-D3DXFrameFind-stub.patch
 	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9-Implement-D3DXComputeTangent.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
-		printf '%s\n' '+    { "Andrey Gusev", "d3dx9_36: Add D3DXFrameFind stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9: Implement D3DXComputeTangent.", 1 },';
 	) >> "$patchlist"
 fi

@@ -52,14 +52,14 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "53290d2ec483006656987352d53842ffc1852c91"
+	echo "f9181daa1ddc2c10d3b6ddd4610bc1421cfd0f42"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 2.21"
-	echo "Copyright (C) 2014-2017 the Wine Staging project authors."
+	echo "Wine Staging 3.1 (Unreleased)"
+	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
 	echo "  commit $(upstream_commit)"
@@ -89,7 +89,6 @@ patch_enable_all ()
 	enable_advapi_LsaLookupPrivilegeName="$1"
 	enable_advapi32_BuildSecurityDescriptor="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
-	enable_advapi32_GetExplicitEntriesFromAclW="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_Performance_Counters="$1"
 	enable_advapi32_SetSecurityInfo="$1"
@@ -546,9 +545,6 @@ patch_enable ()
 			;;
 		advapi32-CreateRestrictedToken)
 			enable_advapi32_CreateRestrictedToken="$2"
-			;;
-		advapi32-GetExplicitEntriesFromAclW)
-			enable_advapi32_GetExplicitEntriesFromAclW="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -1834,9 +1830,6 @@ patch_enable ()
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
 			;;
-		xaudio2-get_al_format)
-			enable_xaudio2_get_al_format="$2"
-			;;
 		xaudio2_7-OnVoiceProcessingPassStart)
 			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
 			;;
@@ -2902,9 +2895,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_advapi32_CreateRestrictedToken" -gt 1; then
 		abort "Patchset advapi32-CreateRestrictedToken disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_advapi32_GetExplicitEntriesFromAclW" -gt 1; then
-		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_kernel32_COMSPEC" -gt 1; then
 		abort "Patchset kernel32-COMSPEC disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2928,7 +2918,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	fi
 	enable_Staging=1
 	enable_advapi32_CreateRestrictedToken=1
-	enable_advapi32_GetExplicitEntriesFromAclW=1
 	enable_kernel32_COMSPEC=1
 	enable_kernel32_UmsStubs=1
 	enable_ntdll_APC_Start_Process=1
@@ -2948,14 +2937,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
-
-if test "$enable_advapi32_BuildSecurityDescriptor" -eq 1; then
-	if test "$enable_advapi32_GetExplicitEntriesFromAclW" -gt 1; then
-		abort "Patchset advapi32-GetExplicitEntriesFromAclW disabled, but advapi32-BuildSecurityDescriptor depends on that."
-	fi
-	enable_advapi32_GetExplicitEntriesFromAclW=1
-fi
-
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -3085,18 +3066,6 @@ if test "$enable_advapi_LsaLookupPrivilegeName" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-GetExplicitEntriesFromAclW
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
-# |
-if test "$enable_advapi32_GetExplicitEntriesFromAclW" -eq 1; then
-	patch_apply advapi32-GetExplicitEntriesFromAclW/0001-advapi32-Implement-GetExplicitEntriesFromAclW.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement GetExplicitEntriesFromAclW.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3391,23 +3360,17 @@ fi
 # | 	include/Makefile.in, include/activation.idl, include/objidl.idl, include/roapi.h
 # |
 if test "$enable_combase_RoApi" -eq 1; then
-	patch_apply combase-RoApi/0001-include-Add-activation.idl-with-IActivationFactory-i.patch
 	patch_apply combase-RoApi/0002-include-roapi.h-Add-further-typedefs.patch
-	patch_apply combase-RoApi/0003-combase-Implement-RoGetActivationFactory.patch
 	patch_apply combase-RoApi/0004-combase-Implement-RoActivateInstance.patch
 	patch_apply combase-RoApi/0005-combase-Add-stub-for-RoGetApartmentIdentifier.patch
-	patch_apply combase-RoApi/0006-include-objidl.idl-Add-IApartmentShutdown-interface.patch
 	patch_apply combase-RoApi/0007-combase-Add-stub-for-RoRegisterForApartmentShutdown.patch
 	patch_apply combase-RoApi/0008-combase-Add-stub-for-RoGetServerActivatableClasses.patch
 	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
 	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "include: Add activation.idl with IActivationFactory interface.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include/objidl.idl: Add IApartmentShutdown interface.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
@@ -10735,21 +10698,6 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xaudio2-get_al_format
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42414] Add support for xaudio2 float formats with more than 2 channels
-# |
-# | Modified files:
-# |   *	dlls/xaudio2_7/xaudio_dll.c
-# |
-if test "$enable_xaudio2_get_al_format" -eq 1; then
-	patch_apply xaudio2-get_al_format/0001-xaudio2-Add-support-for-float-formats-with-more-than.patch
-	(
-		printf '%s\n' '+    { "Kimmo Myllyvirta", "xaudio2: Add support for float formats with more than 2 channels.", 1 },';
 	) >> "$patchlist"
 fi
 

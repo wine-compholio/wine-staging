@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f9181daa1ddc2c10d3b6ddd4610bc1421cfd0f42"
+	echo "354fa7eb7921c3317e7943c18871febe5570dd52"
 }
 
 # Show version information
@@ -294,7 +294,6 @@ patch_enable_all ()
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
-	enable_ntdll_TokenLogonSid="$1"
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
@@ -1160,9 +1159,6 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
-			;;
-		ntdll-TokenLogonSid)
-			enable_ntdll_TokenLogonSid="$2"
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
@@ -2907,9 +2903,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_ntdll_RunlevelInformationInActivationContext" -gt 1; then
 		abort "Patchset ntdll-RunlevelInformationInActivationContext disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_ntdll_TokenLogonSid" -gt 1; then
-		abort "Patchset ntdll-TokenLogonSid disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2922,7 +2915,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_kernel32_UmsStubs=1
 	enable_ntdll_APC_Start_Process=1
 	enable_ntdll_RunlevelInformationInActivationContext=1
-	enable_ntdll_TokenLogonSid=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
@@ -3269,23 +3261,11 @@ if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-TokenLogonSid
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/nt.c
-# |
-if test "$enable_ntdll_TokenLogonSid" -eq 1; then
-	patch_apply ntdll-TokenLogonSid/0001-ntdll-TokenLogonSid-stub-in-NtQueryInformationToken.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenLogonSid stub in NtQueryInformationToken.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-GetExplicitEntriesFromAclW, kernel32-COMSPEC, kernel32-UmsStubs,
-# | 	ntdll-APC_Start_Process, ntdll-RunlevelInformationInActivationContext, ntdll-TokenLogonSid, server-CreateProcess_ACLs,
+# | 	ntdll-APC_Start_Process, ntdll-RunlevelInformationInActivationContext, server-CreateProcess_ACLs,
 # | 	server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:

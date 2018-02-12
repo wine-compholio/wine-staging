@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "354fa7eb7921c3317e7943c18871febe5570dd52"
+	echo "0f1cb96b694a38106464044285296e531f90bb67"
 }
 
 # Show version information
@@ -101,7 +101,6 @@ patch_enable_all ()
 	enable_bcrypt_Improvements="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
-	enable_comctl32_Button_Theming="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_comctl32_Tests="$1"
@@ -370,7 +369,6 @@ patch_enable_all ()
 	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
-	enable_shell32_RunDLL_CallEntry16="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHELL_execute="$1"
@@ -580,9 +578,6 @@ patch_enable ()
 			;;
 		combase-RoApi)
 			enable_combase_RoApi="$2"
-			;;
-		comctl32-Button_Theming)
-			enable_comctl32_Button_Theming="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -1387,9 +1382,6 @@ patch_enable ()
 			;;
 		shell32-Progress_Dialog)
 			enable_shell32_Progress_Dialog="$2"
-			;;
-		shell32-RunDLL_CallEntry16)
-			enable_shell32_RunDLL_CallEntry16="$2"
 			;;
 		shell32-SFGAO_HASSUBFOLDER)
 			enable_shell32_SFGAO_HASSUBFOLDER="$2"
@@ -3017,7 +3009,7 @@ if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
 	patch_apply Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
 	patch_apply Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
-	patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
+	#patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
@@ -3389,7 +3381,6 @@ fi
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
-	patch_apply api-ms-win-Stub_DLLs/0007-shcore-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0009-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
 	patch_apply api-ms-win-Stub_DLLs/0010-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
@@ -3401,9 +3392,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0022-shcore-Add-SetProcessDpiAwareness-stub.patch
-	patch_apply api-ms-win-Stub_DLLs/0023-shcore-Implement-stub-for-GetDpiForMonitor.patch
-	patch_apply api-ms-win-Stub_DLLs/0025-shcore-Add-stub-for-GetProcessDpiAwareness.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	(
@@ -3554,21 +3542,6 @@ if test "$enable_browseui_Progress_Dialog" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctl32-Button_Theming
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37584] Properly render themed buttons when they are pressed
-# |
-# | Modified files:
-# |   *	dlls/comctl32/theme_button.c
-# |
-if test "$enable_comctl32_Button_Theming" -eq 1; then
-	patch_apply comctl32-Button_Theming/0001-comctl32-fix-buttons-becoming-unthemed-when-pressed-.patch
-	(
-		printf '%s\n' '+    { "Samuel Kim", "comctl32: Fix buttons becoming unthemed when pressed/released.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8230,21 +8203,6 @@ if test "$enable_shell32_Placeholder_Icons" -eq 1; then
 	patch_apply shell32-Placeholder_Icons/0001-shell32-Add-placeholder-icons-to-match-icon-offset-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Add placeholder icons to match icon offset with XP.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-RunDLL_CallEntry16
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23033] Use manual relay for RunDLL_CallEntry16 in shell32
-# |
-# | Modified files:
-# |   *	dlls/shell32/control.c, dlls/shell32/shell32.spec
-# |
-if test "$enable_shell32_RunDLL_CallEntry16" -eq 1; then
-	patch_apply shell32-RunDLL_CallEntry16/0001-shell32-Use-manual-redirection-for-RunDLL_CallEntry1.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Use manual redirection for RunDLL_CallEntry16.", 1 },';
 	) >> "$patchlist"
 fi
 

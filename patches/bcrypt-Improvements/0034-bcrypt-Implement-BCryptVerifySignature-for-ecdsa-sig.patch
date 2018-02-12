@@ -1,7 +1,7 @@
-From 09e86a5b33ead90b064eeb1d728f567283dfa389 Mon Sep 17 00:00:00 2001
+From 64ad33508c5d3cfc3dcb40987b060cba2889d41d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 29 Sep 2017 20:31:00 +0200
-Subject: bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
+Subject: [PATCH] bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
 
 ---
  dlls/bcrypt/bcrypt_main.c  | 326 ++++++++++++++++++++++++++++++++++++++++++++-
@@ -9,11 +9,11 @@ Subject: bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
  2 files changed, 326 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index f822a7aadf3..881f6f7eb0c 100644
+index 5381d9c..16bff9d 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -27,6 +27,7 @@
- #elif defined(SONAME_LIBGNUTLS)
+ #elif defined(HAVE_GNUTLS_CIPHER_INIT)
  #include <gnutls/gnutls.h>
  #include <gnutls/crypto.h>
 +#include <gnutls/abstract.h>
@@ -21,7 +21,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  
  #include "ntstatus.h"
 @@ -49,9 +50,26 @@ static HINSTANCE instance;
- #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
+ #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
  
 +#if GNUTLS_VERSION_MAJOR < 3
@@ -119,7 +119,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  
      if ((ret = pgnutls_global_init()) != GNUTLS_E_SUCCESS)
      {
-@@ -1124,6 +1180,264 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+@@ -1195,6 +1251,264 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
      return STATUS_SUCCESS;
  }
  
@@ -384,7 +384,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      if (key_is_symmetric(key))
-@@ -1230,6 +1544,13 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+@@ -1409,6 +1723,13 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -398,7 +398,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1463,13 +1784,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
+@@ -1642,13 +1963,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
  {
      struct key *key = handle;
  
@@ -416,10 +416,10 @@ index f822a7aadf3..881f6f7eb0c 100644
  
  NTSTATUS WINAPI BCryptDestroyKey( BCRYPT_KEY_HANDLE handle )
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 20f70706430..73bd4d69a5b 100644
+index 678b5c1..0694a0f 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -1688,10 +1688,10 @@ static void test_ECDSA(void)
+@@ -1411,10 +1411,10 @@ static void test_ECDSA(void)
      ok(!status, "BCryptImportKeyPair failed: %08x\n", status);
  
      status = pBCryptVerifySignature(key, NULL, certHash, sizeof(certHash) - 1, certSignature, sizeof(certSignature), 0);
@@ -433,5 +433,5 @@ index 20f70706430..73bd4d69a5b 100644
      pBCryptDestroyKey(key);
      pBCryptCloseAlgorithmProvider(alg, 0);
 -- 
-2.14.1
+1.9.1
 

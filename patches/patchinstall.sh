@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0f1cb96b694a38106464044285296e531f90bb67"
+	echo "9d897b73a877e5eaae26df87930c951ff8273c14"
 }
 
 # Show version information
@@ -609,9 +609,6 @@ patch_enable ()
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
 			;;
-		crypt32-SHA_OIDs)
-			enable_crypt32_SHA_OIDs="$2"
-			;;
 		d3d10_1-Forwards)
 			enable_d3d10_1_Forwards="$2"
 			;;
@@ -623,9 +620,6 @@ patch_enable ()
 			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
-			;;
-		d3d11-ResolveSubresource)
-			enable_d3d11_ResolveSubresource="$2"
 			;;
 		d3d11-Silence_FIXMEs)
 			enable_d3d11_Silence_FIXMEs="$2"
@@ -680,9 +674,6 @@ patch_enable ()
 			;;
 		d3dx9_36-FindNextValidTechnique)
 			enable_d3dx9_36_FindNextValidTechnique="$2"
-			;;
-		d3dx9_36-GetShaderSemantics)
-			enable_d3dx9_36_GetShaderSemantics="$2"
 			;;
 		d3dx9_36-Optimize_Inplace)
 			enable_d3dx9_36_Optimize_Inplace="$2"
@@ -747,9 +738,6 @@ patch_enable ()
 		dwmapi-DwmSetIcon)
 			enable_dwmapi_DwmSetIcon="$2"
 			;;
-		dxdiag-dontskip)
-			enable_dxdiag_dontskip="$2"
-			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
 			;;
@@ -758,9 +746,6 @@ patch_enable ()
 			;;
 		dxdiagn-GetChildContainer_Leaf_Nodes)
 			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
-			;;
-		dxgi-DXGI_PRESENT_TEST)
-			enable_dxgi_DXGI_PRESENT_TEST="$2"
 			;;
 		dxgi-GammaRamp)
 			enable_dxgi_GammaRamp="$2"
@@ -2219,9 +2204,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 fi
 
 if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
-	if test "$enable_dxgi_DXGI_PRESENT_TEST" -gt 1; then
-		abort "Patchset dxgi-DXGI_PRESENT_TEST disabled, but wined3d-dxgi_swapchain_Present depends on that."
-	fi
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-dxgi_swapchain_Present depends on that."
 	fi
@@ -2826,13 +2808,6 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
-if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
-	if test "$enable_d3dx9_36_GetShaderSemantics" -gt 1; then
-		abort "Patchset d3dx9_36-GetShaderSemantics disabled, but d3dx9_36-D3DXDisassembleShader depends on that."
-	fi
-	enable_d3dx9_36_GetShaderSemantics=1
-fi
-
 if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
 		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_36-CloneEffect depends on that."
@@ -2848,9 +2823,6 @@ if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
 fi
 
 if test "$enable_d3d11_Deferred_Context" -eq 1; then
-	if test "$enable_d3d11_ResolveSubresource" -gt 1; then
-		abort "Patchset d3d11-ResolveSubresource disabled, but d3d11-Deferred_Context depends on that."
-	fi
 	if test "$enable_wined3d_1DTextures" -gt 1; then
 		abort "Patchset wined3d-1DTextures disabled, but d3d11-Deferred_Context depends on that."
 	fi
@@ -3243,11 +3215,9 @@ fi
 # |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c, include/winnt.h
 # |
 if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
-	patch_apply ntdll-RunlevelInformationInActivationContext/0001-include-Add-run-level-information-enum-and-structure.patch
 	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
 	patch_apply ntdll-RunlevelInformationInActivationContext/0003-ntdll-Implement-RunlevelInformationInActivationConte.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "include: Add run level information enum and structure to winnt.h.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
 	) >> "$patchlist"
@@ -3706,21 +3676,6 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset crypt32-SHA_OIDs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41356] Recognize sha256/384/512 KEY OIDs
-# |
-# | Modified files:
-# |   *	dlls/crypt32/oid.c, include/wincrypt.h
-# |
-if test "$enable_crypt32_SHA_OIDs" -eq 1; then
-	patch_apply crypt32-SHA_OIDs/0001-crypt32-Recognize-sha256-384-512-KEY-OIDs.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Recognize sha256/384/512 KEY OIDs.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d10_1-Forwards
 # |
 # | Modified files:
@@ -3733,20 +3688,6 @@ if test "$enable_d3d10_1_Forwards" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d11-ResolveSubresource
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c
-# |
-if test "$enable_d3d11_ResolveSubresource" -eq 1; then
-	patch_apply d3d11-ResolveSubresource/0001-d3d11-Implement-ResolveSubresource-by-copying-sub-re.patch
-	patch_apply d3d11-ResolveSubresource/0002-d3d11-Implement-d3d10_device_ResolveSubresource-in-t.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement ResolveSubresource by copying sub resource (there is no multisample texture support yet).", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_device_ResolveSubresource in the same way as for d3d11.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-1DTextures
 # |
 # | Modified files:
@@ -3756,7 +3697,6 @@ fi
 # | 	include/wine/wined3d.h
 # |
 if test "$enable_wined3d_1DTextures" -eq 1; then
-	patch_apply wined3d-1DTextures/0001-wined3d-Create-dummy-1d-textures.patch
 	patch_apply wined3d-1DTextures/0002-wined3d-Add-1d-texture-resource-type.patch
 	patch_apply wined3d-1DTextures/0003-wined3d-Add-is_power_of_two-helper-function.patch
 	patch_apply wined3d-1DTextures/0004-wined3d-Create-dummy-1d-textures-and-surfaces.patch
@@ -3774,7 +3714,6 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
 	patch_apply wined3d-1DTextures/0017-d3d11-Allow-DXGI_FORMAT_UNKNOWN-in-CheckFormatSuppor.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
@@ -3797,7 +3736,7 @@ fi
 # Patchset d3d11-Deferred_Context
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ResolveSubresource, wined3d-1DTextures
+# |   *	wined3d-1DTextures
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
@@ -3904,10 +3843,10 @@ fi
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
 	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
-	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
-	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
-	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
-	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
+#	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
+#	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
+#	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
+#	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
@@ -4010,12 +3949,12 @@ fi
 # | Modified files:
 # |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
 # |
-if test "$enable_d3d9_DesktopWindow" -eq 1; then
-	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
-	) >> "$patchlist"
-fi
+#if test "$enable_d3d9_DesktopWindow" -eq 1; then
+#	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
+#	(
+#		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
+#	) >> "$patchlist"
+#fi
 
 # Patchset d3d9-Tests
 # |
@@ -4107,32 +4046,7 @@ if test "$enable_d3dx9_36_D3DXCreateTeapot" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-GetShaderSemantics
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22682] Support for D3DXGetShaderInputSemantics
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
-# | 	dlls/d3dx9_28/d3dx9_28.spec, dlls/d3dx9_29/d3dx9_29.spec, dlls/d3dx9_30/d3dx9_30.spec, dlls/d3dx9_31/d3dx9_31.spec,
-# | 	dlls/d3dx9_32/d3dx9_32.spec, dlls/d3dx9_33/d3dx9_33.spec, dlls/d3dx9_34/d3dx9_34.spec, dlls/d3dx9_35/d3dx9_35.spec,
-# | 	dlls/d3dx9_36/d3dx9_36.spec, dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c, dlls/d3dx9_37/d3dx9_37.spec,
-# | 	dlls/d3dx9_38/d3dx9_38.spec, dlls/d3dx9_39/d3dx9_39.spec, dlls/d3dx9_40/d3dx9_40.spec, dlls/d3dx9_41/d3dx9_41.spec,
-# | 	dlls/d3dx9_42/d3dx9_42.spec, dlls/d3dx9_43/d3dx9_43.spec, include/d3dx9shader.h
-# |
-if test "$enable_d3dx9_36_GetShaderSemantics" -eq 1; then
-	patch_apply d3dx9_36-GetShaderSemantics/0001-d3dx9_36-Implement-D3DXGetShaderInputSemantics-tests.patch
-	patch_apply d3dx9_36-GetShaderSemantics/0002-d3dx9_36-Implement-D3DXGetShaderOutputSemantics.-rev.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement D3DXGetShaderInputSemantics + tests.", 3 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXGetShaderOutputSemantics.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-D3DXDisassembleShader
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3dx9_36-GetShaderSemantics
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c
@@ -4659,18 +4573,6 @@ if test "$enable_dwmapi_DwmSetIcon" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dxdiag-dontskip
-# |
-# | Modified files:
-# |   *	programs/dxdiag/main.c
-# |
-if test "$enable_dxdiag_dontskip" -eq 1; then
-	patch_apply dxdiag-dontskip/0001-programs-dxdiag-Handle-dontskip-parameter.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "programs/dxdiag: Handle /dontskip parameter.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxdiagn-Display_Information
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4717,18 +4619,6 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxgi-DXGI_PRESENT_TEST
-# |
-# | Modified files:
-# |   *	dlls/dxgi/swapchain.c
-# |
-if test "$enable_dxgi_DXGI_PRESENT_TEST" -eq 1; then
-	patch_apply dxgi-DXGI_PRESENT_TEST/0001-dxgi-Add-stub-implementation-for-DXGI_PRESENT_TEST.patch
-	(
-		printf '%s\n' '+    { "Kimmo Myllyvirta", "dxgi: Add stub implementation for DXGI_PRESENT_TEST.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9754,7 +9644,7 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ResolveSubresource, wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
+# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
 # | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
 # | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
 # | 	Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
@@ -9888,7 +9778,7 @@ fi
 # Patchset wined3d-dxgi_swapchain_Present
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxgi-DXGI_PRESENT_TEST, wined3d-Silence_FIXMEs
+# |   *	wined3d-Silence_FIXMEs
 # |
 # | Modified files:
 # |   *	dlls/d3d8/swapchain.c, dlls/d3d9/device.c, dlls/d3d9/swapchain.c, dlls/dxgi/swapchain.c, dlls/wined3d/cs.c,
@@ -9934,7 +9824,7 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ResolveSubresource, wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
+# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
 # | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
 # | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
 # | 	Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,

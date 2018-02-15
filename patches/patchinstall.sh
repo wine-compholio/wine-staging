@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "389c3add0ad93f3b2180c636363b25f6c78757a2"
+	echo "65989f2ace1b06617638e31cb7ba56deb38fe690"
 }
 
 # Show version information
@@ -842,9 +842,6 @@ patch_enable ()
 		kernel32-LocaleNameToLCID)
 			enable_kernel32_LocaleNameToLCID="$2"
 			;;
-		kernel32-MODULE_get_binary_info)
-			enable_kernel32_MODULE_get_binary_info="$2"
-			;;
 		kernel32-Misalign_Workaround)
 			enable_kernel32_Misalign_Workaround="$2"
 			;;
@@ -1003,9 +1000,6 @@ patch_enable ()
 			;;
 		ntdll-FileFsVolumeInformation)
 			enable_ntdll_FileFsVolumeInformation="$2"
-			;;
-		ntdll-FileNameInformation)
-			enable_ntdll_FileNameInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -2734,9 +2728,6 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 fi
 
 if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
-	if test "$enable_ntdll_FileNameInformation" -gt 1; then
-		abort "Patchset ntdll-FileNameInformation disabled, but kernel32-SetFileCompletionNotificationModes depends on that."
-	fi
 	enable_ntdll_FileNameInformation=1
 fi
 
@@ -5166,21 +5157,6 @@ if test "$enable_kernel32_LocaleNameToLCID" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-MODULE_get_binary_info
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43217] Implement detection for position-independent executables
-# |
-# | Modified files:
-# |   *	dlls/kernel32/module.c
-# |
-if test "$enable_kernel32_MODULE_get_binary_info" -eq 1; then
-	patch_apply kernel32-MODULE_get_binary_info/0001-kernel32-Add-detection-for-position-independent-exec.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Add detection for position independent executables.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-Misalign_Workaround
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5318,22 +5294,7 @@ if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-FileNameInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_FileNameInformation" -eq 1; then
-	patch_apply ntdll-FileNameInformation/0001-ntdll-Implement-querying-for-FileNameInformation-of-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement querying for FileNameInformation of named pipes in NtQueryInformationFile.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SetFileCompletionNotificationModes
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-FileNameInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
@@ -6319,7 +6280,7 @@ fi
 # Patchset ntdll-NtQueryEaFile
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-FileNameInformation, kernel32-SetFileCompletionNotificationModes
+# |   *	kernel32-SetFileCompletionNotificationModes
 # |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
@@ -6334,7 +6295,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-FileNameInformation, kernel32-SetFileCompletionNotificationModes, ntdll-NtQueryEaFile
+# |   *	kernel32-SetFileCompletionNotificationModes, ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points

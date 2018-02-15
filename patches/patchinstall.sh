@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9d897b73a877e5eaae26df87930c951ff8273c14"
+	echo "389c3add0ad93f3b2180c636363b25f6c78757a2"
 }
 
 # Show version information
@@ -181,7 +181,6 @@ patch_enable_all ()
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
-	enable_imm32_IMMDisableLegacyIME="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
@@ -803,9 +802,6 @@ patch_enable ()
 			;;
 		imagehlp-ImageLoad)
 			enable_imagehlp_ImageLoad="$2"
-			;;
-		imm32-IMMDisableLegacyIME)
-			enable_imm32_IMMDisableLegacyIME="$2"
 			;;
 		include-winsock)
 			enable_include_winsock="$2"
@@ -4943,18 +4939,6 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	(
 		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Msvc compatibility fixes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset imm32-IMMDisableLegacyIME
-# |
-# | Modified files:
-# |   *	dlls/imm32/imm.c, dlls/imm32/imm32.spec
-# |
-if test "$enable_imm32_IMMDisableLegacyIME" -eq 1; then
-	patch_apply imm32-IMMDisableLegacyIME/0001-imm32-Add-stub-for-ImmDisableLegacyIME.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "imm32: Add stub for ImmDisableLegacyIME.", 1 },';
 	) >> "$patchlist"
 fi
 

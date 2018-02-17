@@ -396,7 +396,6 @@ patch_enable_all ()
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
-	enable_user32_Revert_ListBox_Height="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
 	enable_user32_Sorted_Listbox="$1"
@@ -1451,9 +1450,6 @@ patch_enable ()
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
-			;;
-		user32-Revert_ListBox_Height)
-			enable_user32_Revert_ListBox_Height="$2"
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
@@ -8595,21 +8591,6 @@ if test "$enable_user32_Refresh_MDI_Menus" -eq 1; then
 	patch_apply user32-Refresh_MDI_Menus/0001-user32-Refresh-MDI-menus-when-DefMDIChildProcW-WM_SE.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Refresh MDI menus when DefMDIChildProc(WM_SETTEXT) is called.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Revert_ListBox_Height
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43643] Revert patch to fix listbox popup height
-# |
-# | Modified files:
-# |   *	dlls/user32/combo.c, dlls/user32/tests/combo.c
-# |
-if test "$enable_user32_Revert_ListBox_Height" -eq 1; then
-	patch_apply user32-Revert_ListBox_Height/0001-Revert-user32-combo-Set-listbox-popup-height-correct.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"user32/combo: Set listbox popup height correctly and add tests.\".", 1 },';
 	) >> "$patchlist"
 fi
 

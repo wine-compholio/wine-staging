@@ -390,7 +390,6 @@ patch_enable_all ()
 	enable_user32_GetAutoRotationState="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Groupbox_Rectangle="$1"
-	enable_user32_Invalidate_Key_State="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
@@ -1434,9 +1433,6 @@ patch_enable ()
 			;;
 		user32-Groupbox_Rectangle)
 			enable_user32_Groupbox_Rectangle="$2"
-			;;
-		user32-Invalidate_Key_State)
-			enable_user32_Invalidate_Key_State="$2"
 			;;
 		user32-LR_LOADFROMFILE)
 			enable_user32_LR_LOADFROMFILE="$2"
@@ -8478,21 +8474,6 @@ if test "$enable_user32_Groupbox_Rectangle" -eq 1; then
 	patch_apply user32-Groupbox_Rectangle/0001-user32-Always-restore-previously-selected-font-in-th.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Always restore previously selected font in the button painting helpers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Invalidate_Key_State
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29871] Globally invalidate key state on changes in other threads
-# |
-# | Modified files:
-# |   *	dlls/user32/input.c
-# |
-if test "$enable_user32_Invalidate_Key_State" -eq 1; then
-	patch_apply user32-Invalidate_Key_State/0001-user32-Globally-invalidate-key-state-on-changes-in-o.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Globally invalidate key state on changes in other threads.", 1 },';
 	) >> "$patchlist"
 fi
 

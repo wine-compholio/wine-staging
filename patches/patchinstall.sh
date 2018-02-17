@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "65989f2ace1b06617638e31cb7ba56deb38fe690"
+	echo "2936f3f9bb9dc01c595498a821d6adb6775b62cc"
 }
 
 # Show version information
@@ -60,6 +60,7 @@ version()
 {
 	echo "Wine Staging 3.1 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
+	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
 	echo "  commit $(upstream_commit)"
@@ -111,12 +112,10 @@ patch_enable_all ()
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_crypt32_ECDSA_Cert_Chains="$1"
 	enable_crypt32_MS_Root_Certs="$1"
-	enable_crypt32_SHA_OIDs="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
-	enable_d3d11_ResolveSubresource="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -135,7 +134,6 @@ patch_enable_all ()
 	enable_d3dx9_36_Dummy_Skininfo="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_FindNextValidTechnique="$1"
-	enable_d3dx9_36_GetShaderSemantics="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Tests="$1"
 	enable_d3dx9_36_Texture_Align="$1"
@@ -157,11 +155,9 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
 	enable_dwmapi_DwmSetIcon="$1"
-	enable_dxdiag_dontskip="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
-	enable_dxgi_DXGI_PRESENT_TEST="$1"
 	enable_dxgi_GammaRamp="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -194,7 +190,6 @@ patch_enable_all ()
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_LocaleNameToLCID="$1"
-	enable_kernel32_MODULE_get_binary_info="$1"
 	enable_kernel32_Misalign_Workaround="$1"
 	enable_kernel32_MoveFile="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
@@ -248,7 +243,6 @@ patch_enable_all ()
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_FileFsVolumeInformation="$1"
-	enable_ntdll_FileNameInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
@@ -513,7 +507,6 @@ patch_enable_all ()
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
-	enable_xaudio2_get_al_format="$1"
 	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
 }
 
@@ -2197,7 +2190,6 @@ if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-dxgi_swapchain_Present depends on that."
 	fi
-	enable_dxgi_DXGI_PRESENT_TEST=1
 	enable_wined3d_Silence_FIXMEs=1
 fi
 
@@ -2727,10 +2719,6 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	enable_configure_Absolute_RPATH=1
 fi
 
-if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
-	enable_ntdll_FileNameInformation=1
-fi
-
 if test "$enable_kernel32_Processor_Group" -eq 1; then
 	if test "$enable_api_ms_win_Stub_DLLs" -gt 1; then
 		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-Processor_Group depends on that."
@@ -2813,7 +2801,6 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	if test "$enable_wined3d_1DTextures" -gt 1; then
 		abort "Patchset wined3d-1DTextures disabled, but d3d11-Deferred_Context depends on that."
 	fi
-	enable_d3d11_ResolveSubresource=1
 	enable_wined3d_1DTextures=1
 fi
 
@@ -2880,6 +2867,7 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
+
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2968,7 +2956,7 @@ if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
 	patch_apply Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
 	patch_apply Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
-	#patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
+	patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
@@ -3013,9 +3001,6 @@ if test "$enable_advapi_LsaLookupPrivilegeName" -eq 1; then
 fi
 
 # Patchset advapi32-BuildSecurityDescriptor
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	advapi32-GetExplicitEntriesFromAclW
 # |
 # | Modified files:
 # |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
@@ -3199,7 +3184,7 @@ fi
 # Patchset ntdll-RunlevelInformationInActivationContext
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c, include/winnt.h
+# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c
 # |
 if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
 	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
@@ -3213,9 +3198,8 @@ fi
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-GetExplicitEntriesFromAclW, kernel32-COMSPEC, kernel32-UmsStubs,
-# | 	ntdll-APC_Start_Process, ntdll-RunlevelInformationInActivationContext, server-CreateProcess_ACLs,
-# | 	server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, ntdll-APC_Start_Process, ntdll-
+# | 	RunlevelInformationInActivationContext, server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -3285,8 +3269,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-
-# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/roapi.c,
-# | 	include/Makefile.in, include/activation.idl, include/objidl.idl, include/roapi.h
+# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/combase.spec, dlls/combase/roapi.c, include/roapi.h
 # |
 if test "$enable_combase_RoApi" -eq 1; then
 	patch_apply combase-RoApi/0002-include-roapi.h-Add-further-typedefs.patch
@@ -3331,9 +3314,8 @@ fi
 # | 	dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c,
 # | 	dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in,
 # | 	dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c,
-# | 	dlls/shcore/Makefile.in, dlls/shcore/main.c, dlls/shcore/shcore.spec, dlls/uiautomationcore/Makefile.in,
-# | 	dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec, include/Makefile.in,
-# | 	include/shellscalingapi.h, include/uiautomationcoreapi.h, tools/make_specfiles
+# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec,
+# | 	include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
@@ -3354,7 +3336,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
@@ -3366,9 +3347,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-window-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add SetProcessDpiAwareness stub.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Implement stub for GetDpiForMonitor.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "shcore: Add stub for GetProcessDpiAwareness.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
 	) >> "$patchlist"
@@ -3678,9 +3656,8 @@ fi
 # Patchset wined3d-1DTextures
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c,
-# | 	dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c,
-# | 	dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h,
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
 # | 	include/wine/wined3d.h
 # |
 if test "$enable_wined3d_1DTextures" -eq 1; then
@@ -3830,10 +3807,10 @@ fi
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
 	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
-#	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
-#	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
-#	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
-#	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
+	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
+	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
+	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
+	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
@@ -3936,12 +3913,12 @@ fi
 # | Modified files:
 # |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
 # |
-#if test "$enable_d3d9_DesktopWindow" -eq 1; then
-#	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
-#	(
-#		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
-#	) >> "$patchlist"
-#fi
+if test "$enable_d3d9_DesktopWindow" -eq 1; then
+	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
+	) >> "$patchlist"
+fi
 
 # Patchset d3d9-Tests
 # |
@@ -4148,8 +4125,7 @@ fi
 # | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
 # | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_34/Makefile.in, dlls/d3dx9_35/Makefile.in,
 # | 	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c, dlls/d3dx9_37/Makefile.in,
-# | 	dlls/d3dx9_38/Makefile.in, dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in, dlls/d3dx9_41/Makefile.in,
-# | 	dlls/d3dx9_42/Makefile.in, dlls/d3dx9_43/Makefile.in
+# | 	dlls/d3dx9_38/Makefile.in, dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in
 # |
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
@@ -9589,11 +9565,10 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
-# | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
-# | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
-# | 	Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
-# | 	wined3d-UAV_Counters
+# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-
+# | 	DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
+# | 	GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9769,11 +9744,11 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-
-# | 	Attach_Process_DLLs, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting,
-# | 	d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-
-# | 	Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs,
-# | 	wined3d-UAV_Counters, wined3d-CSMT_Helper
+# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-Attach_Process_DLLs, ntdll-
+# | 	DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-
+# | 	Copy_Resource_Typeless, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-
+# | 	GenerateMips, wined3d-QUERY_Stubs, wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-
+# | 	CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

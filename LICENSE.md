@@ -8,6 +8,7 @@ are part of **Wine Staging** and are licensed under the terms of the
 
 ```
 Copyright (C) 2014-2017 the Wine Staging project authors.
+Copyright (C) 2018 Alistair Leslie-Hughes
 
 Wine Staging is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

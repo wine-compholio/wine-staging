@@ -413,7 +413,6 @@ patch_enable_all ()
 	enable_wbemprox_Printer="$1"
 	enable_wbemprox_Win32_OperatingSystem="$1"
 	enable_wbemprox_Win32_VideoController="$1"
-	enable_wevtapi_EvtNext="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -1501,9 +1500,6 @@ patch_enable ()
 			;;
 		wbemprox-Win32_VideoController)
 			enable_wbemprox_Win32_VideoController="$2"
-			;;
-		wevtapi-EvtNext)
-			enable_wevtapi_EvtNext="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -8873,21 +8869,6 @@ if test "$enable_wbemprox_Win32_VideoController" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add InstalledDisplayDrivers for Win32_VideoController.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add DriverDate for Win32_VideoController.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add Vendor field in Win32_ComputerSystemProduct.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wevtapi-EvtNext
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42170] Add stub for wevtapi.EvtNext
-# |
-# | Modified files:
-# |   *	dlls/wevtapi/main.c, dlls/wevtapi/wevtapi.spec
-# |
-if test "$enable_wevtapi_EvtNext" -eq 1; then
-	patch_apply wevtapi-EvtNext/0001-wevtapi-Add-stub-for-EvtNext.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wevtapi: Add stub for EvtNext.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -5951,7 +5951,6 @@ fi
 # |
 if test "$enable_ntdll_x86_64_ExceptionInformation" -eq 1; then
 	patch_apply ntdll-x86_64_ExceptionInformation/0001-ntdll-Set-proper-ExceptionInformation-0-for-x86_64-e.patch
-	patch_apply ntdll-x86_64_ExceptionInformation/0002-ntdll-Avoid-crash-when-trying-to-access-page-prot-of.patch
 	patch_apply ntdll-x86_64_ExceptionInformation/0003-ntdll-Translate-icebp-instruction-to-EXCEPTION_SINGL.patch
 	patch_apply ntdll-x86_64_ExceptionInformation/0004-ntdll-Correctly-handle-privileged-instructions-on-x8.patch
 	patch_apply ntdll-x86_64_ExceptionInformation/0005-ntdll-Handle-interrupt-0x2c-on-x86_64.patch

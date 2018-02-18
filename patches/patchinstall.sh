@@ -5886,6 +5886,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#9158] Support for DOS hidden/system file attributes
+# |   *	[#15679] cygwin symlinks not working in wine
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,

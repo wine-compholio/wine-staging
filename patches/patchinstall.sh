@@ -5884,17 +5884,15 @@ fi
 # Patchset ntdll-x86_64_ExceptionInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c, dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/signal_x86_64.c
 # |
 if test "$enable_ntdll_x86_64_ExceptionInformation" -eq 1; then
 	patch_apply ntdll-x86_64_ExceptionInformation/0001-ntdll-Set-proper-ExceptionInformation-0-for-x86_64-e.patch
-	patch_apply ntdll-x86_64_ExceptionInformation/0002-ntdll-Avoid-crash-when-trying-to-access-page-prot-of.patch
 	patch_apply ntdll-x86_64_ExceptionInformation/0003-ntdll-Translate-icebp-instruction-to-EXCEPTION_SINGL.patch
 	patch_apply ntdll-x86_64_ExceptionInformation/0004-ntdll-Correctly-handle-privileged-instructions-on-x8.patch
 	patch_apply ntdll-x86_64_ExceptionInformation/0005-ntdll-Handle-interrupt-0x2c-on-x86_64.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set proper ExceptionInformation[0] for x86_64 exceptions.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Avoid crash when trying to access page prot of address beyond address space limit.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Translate icebp instruction to EXCEPTION_SINGLE_STEP on x64.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Correctly handle privileged instructions on x86_64.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Handle interrupt 0x2c on x86_64.", 1 },';

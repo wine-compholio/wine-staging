@@ -446,7 +446,6 @@ patch_enable_all ()
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
-	enable_wined3d_Revert_Buffer_Upload="$1"
 	enable_wined3d_Revert_Surface_Blt="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
@@ -1598,9 +1597,6 @@ patch_enable ()
 		wined3d-QUERY_Stubs)
 			enable_wined3d_QUERY_Stubs="$2"
 			;;
-		wined3d-Revert_Buffer_Upload)
-			enable_wined3d_Revert_Buffer_Upload="$2"
-			;;
 		wined3d-Revert_Surface_Blt)
 			enable_wined3d_Revert_Surface_Blt="$2"
 			;;
@@ -2221,9 +2217,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_wined3d_QUERY_Stubs" -gt 1; then
 		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
-	if test "$enable_wined3d_Revert_Buffer_Upload" -gt 1; then
-		abort "Patchset wined3d-Revert_Buffer_Upload disabled, but wined3d-CSMT_Helper depends on that."
-	fi
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -2241,7 +2234,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_Dual_Source_Blending=1
 	enable_wined3d_GenerateMips=1
 	enable_wined3d_QUERY_Stubs=1
-	enable_wined3d_Revert_Buffer_Upload=1
 	enable_wined3d_Silence_FIXMEs=1
 	enable_wined3d_UAV_Counters=1
 fi
@@ -9412,18 +9404,6 @@ if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Revert_Buffer_Upload
-# |
-# | Modified files:
-# |   *	dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Revert_Buffer_Upload" -eq 1; then
-	patch_apply wined3d-Revert_Buffer_Upload/0001-Revert-wined3d-Implement-wined3d_buffer_upload_data-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Implement wined3d_buffer_upload_data() on top of wined3d_buffer_upload_ranges().\".", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
@@ -9460,7 +9440,7 @@ fi
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-
 # | 	DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# | 	wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9639,7 +9619,7 @@ fi
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-
 # | 	DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs,
-# | 	wined3d-Revert_Buffer_Upload, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
+# | 	wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

@@ -3923,7 +3923,7 @@ fi
 # Patchset d3dx9_36-D3DXStubs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38334] Add stub for D3DXFrameFind
+# |   *	[#38352] Add stub for D3DXComputeNormalMap
 # |   *	[#41697] Add stub for D3DXComputeTangent
 # |
 # | Modified files:

@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 3.1 (Unreleased)"
+	echo "Wine Staging 3.2 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -2920,12 +2920,12 @@ if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
 	patch_apply Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
 	patch_apply Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
-	patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
+	#patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow changing strict drawing through an exported function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
+	#	printf '%s\n' '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3771,16 +3771,16 @@ fi
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
 	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
-	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
-	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
-	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
-	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
+#	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
+#	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
+#	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
+#	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
+#		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
+#		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
+#		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
+#		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3877,12 +3877,12 @@ fi
 # | Modified files:
 # |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
 # |
-if test "$enable_d3d9_DesktopWindow" -eq 1; then
-	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
-	) >> "$patchlist"
-fi
+#if test "$enable_d3d9_DesktopWindow" -eq 1; then
+#	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
+#	(
+#		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
+#	) >> "$patchlist"
+#fi
 
 # Patchset d3d9-Tests
 # |

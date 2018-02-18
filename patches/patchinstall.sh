@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 3.2 (Unreleased)"
+	echo "Wine Staging 3.1 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -114,11 +114,9 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
-	enable_d3d11_Depth_Bias="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
-	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
@@ -391,7 +389,6 @@ patch_enable_all ()
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
-	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -600,9 +597,6 @@ patch_enable ()
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
 			;;
-		d3d11-Depth_Bias)
-			enable_d3d11_Depth_Bias="$2"
-			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
 			;;
@@ -611,9 +605,6 @@ patch_enable ()
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
-			;;
-		d3d9-DesktopWindow)
-			enable_d3d9_DesktopWindow="$2"
 			;;
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
@@ -1431,9 +1422,6 @@ patch_enable ()
 		user32-MessageBox_WS_EX_TOPMOST)
 			enable_user32_MessageBox_WS_EX_TOPMOST="$2"
 			;;
-		user32-Mouse_Message_Hwnd)
-			enable_user32_Mouse_Message_Hwnd="$2"
-			;;
 		user32-PNG_Support)
 			enable_user32_PNG_Support="$2"
 			;;
@@ -2172,13 +2160,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
 
-if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
-	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
-	fi
-	enable_d3d11_Depth_Bias=1
-fi
-
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
 		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Helper depends on that."
@@ -2259,21 +2240,10 @@ if test "$enable_wined3d_Viewports" -eq 1; then
 	enable_wined3d_Core_Context=1
 fi
 
-if test "$enable_wined3d_Core_Context" -eq 1; then
-	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Core_Context depends on that."
-	fi
-	enable_d3d11_Depth_Bias=1
-fi
-
 if test "$enable_wined3d_Copy_Resource_Typeless" -eq 1; then
-	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Copy_Resource_Typeless depends on that."
-	fi
 	if test "$enable_wined3d_1DTextures" -gt 1; then
 		abort "Patchset wined3d-1DTextures disabled, but wined3d-Copy_Resource_Typeless depends on that."
 	fi
-	enable_d3d11_Depth_Bias=1
 	enable_wined3d_1DTextures=1
 fi
 
@@ -2916,12 +2886,12 @@ if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
 	patch_apply Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
 	patch_apply Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
-	#patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
+	patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow changing strict drawing through an exported function.", 1 },';
-	#	printf '%s\n' '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3756,30 +3726,6 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d11-Depth_Bias
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43848] Implement support for depth bias clamping
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/dxgi/factory.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c,
-# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
-# |
-if test "$enable_d3d11_Depth_Bias" -eq 1; then
-	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
-#	patch_apply d3d11-Depth_Bias/0003-d3d11-Implement-depth-bias-and-slope.patch
-#	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-SlopeScaledDepthBias-in-RSSetS.patch
-#	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
-#	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
-#		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement depth bias and slope.", 1 },';
-#		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for SlopeScaledDepthBias in RSSetState.", 1 },';
-#		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
-#		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d11-ID3D11Texture1D
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -3867,18 +3813,6 @@ if test "$enable_d3d8_ValidateShader" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
 	) >> "$patchlist"
 fi
-
-# Patchset d3d9-DesktopWindow
-# |
-# | Modified files:
-# |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
-# |
-#if test "$enable_d3d9_DesktopWindow" -eq 1; then
-#	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
-#	(
-#		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
-#	) >> "$patchlist"
-#fi
 
 # Patchset d3d9-Tests
 # |
@@ -6004,7 +5938,7 @@ fi
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
@@ -6598,9 +6532,9 @@ fi
 # |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
 # |
 # | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
-# | 	dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c,
-# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
+# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c,
+# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
+# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
@@ -8475,31 +8409,6 @@ if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-Mouse_Message_Hwnd
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22458] Fix issues with inserting symbols by clicking on center in Word 2007 & 2010
-# |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
-# |   *	[#9512] Make sure popups don't block access to objects underneath in DVDPro
-# |
-# | Modified files:
-# |   *	dlls/user32/message.c, dlls/user32/tests/input.c, dlls/winex11.drv/bitblt.c, server/protocol.def, server/window.c
-# |
-#if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
-#	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
-#	patch_apply user32-Mouse_Message_Hwnd/0002-user32-tests-Add-tests-for-clicking-through-layered-.patch
-#	patch_apply user32-Mouse_Message_Hwnd/0003-user32-tests-Add-tests-for-window-region-of-layered-.patch
-#	patch_apply user32-Mouse_Message_Hwnd/0004-user32-tests-Add-tests-for-DC-region.patch
-#	patch_apply user32-Mouse_Message_Hwnd/0005-server-Add-support-for-a-layered-window-region.-v2.patch
-#	(
-#		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
-#		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for clicking through layered window.", 1 },';
-#		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for window region of layered windows.", 1 },';
-#		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for DC region.", 1 },';
-#		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 3 },';
-#	) >> "$patchlist"
-#fi
-
 # Patchset user32-PNG_Support
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8854,7 +8763,9 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0001-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0002-windowscodecs-Implement-IWICBitmapEncoderInfo-GetFil.patch
 	patch_apply windowscodecs-GIF_Encoder/0004-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0005-windowscodecs-Avoid-crashing-if-no-IPropertyBag2-was.patch
 	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-Avoid-crashing-if-no-IPropertyBag2-was.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0009-gdiplus-Fix-a-typo-in-GIF-container-format-passed-to.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
@@ -9288,7 +9199,7 @@ fi
 # Patchset wined3d-Copy_Resource_Typeless
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-1DTextures
+# |   *	wined3d-1DTextures
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#43264] Implement copying resources between compatible formats
@@ -9313,9 +9224,6 @@ fi
 
 # Patchset wined3d-Core_Context
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
 # | Modified files:
 # |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
 # |
@@ -9329,7 +9237,7 @@ fi
 # Patchset wined3d-Viewports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context
+# |   *	wined3d-Core_Context
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
@@ -9345,7 +9253,7 @@ fi
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
+# |   *	wined3d-Core_Context, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -9365,7 +9273,7 @@ fi
 # Patchset wined3d-GenerateMips
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-1DTextures, wined3d-Copy_Resource_Typeless, wined3d-Core_Context, wined3d-Viewports, wined3d-
+# |   *	wined3d-1DTextures, wined3d-Copy_Resource_Typeless, wined3d-Core_Context, wined3d-Viewports, wined3d-
 # | 	Dual_Source_Blending
 # |
 # | Modified files:
@@ -9432,9 +9340,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-
-# | 	DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs,
-# | 	wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-
+# | 	Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-
+# | 	Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9460,9 +9368,6 @@ fi
 
 # Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
 # | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c,
@@ -9478,7 +9383,7 @@ fi
 # Patchset wined3d-Indexed_Vertex_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-WINED3D_RS_COLORWRITEENABLE
+# |   *	wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39057] Support for indexed vertex blending
@@ -9599,9 +9504,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, d3d11-Depth_Bias, wined3d-Copy_Resource_Typeless, wined3d-
-# | 	DXTn, wined3d-Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs,
-# | 	wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-Copy_Resource_Typeless, wined3d-DXTn, wined3d-
+# | 	Core_Context, wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-GenerateMips, wined3d-QUERY_Stubs, wined3d-
+# | 	Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

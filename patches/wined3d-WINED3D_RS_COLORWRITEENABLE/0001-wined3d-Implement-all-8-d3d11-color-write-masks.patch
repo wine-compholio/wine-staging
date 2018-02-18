@@ -1,7 +1,7 @@
-From 97bf1e62501917f0d15a0baf0055478bdaf5367d Mon Sep 17 00:00:00 2001
+From 3b113e46e5f947d837f15ee1ae287f15493666a3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 20 Jul 2017 13:50:07 +0200
-Subject: wined3d: Implement all 8 d3d11 color write masks.
+Subject: [PATCH] wined3d: Implement all 8 d3d11 color write masks.
 
 ---
  dlls/d3d11/device.c            | 29 ++++++++++-----------
@@ -18,20 +18,20 @@ Subject: wined3d: Implement all 8 d3d11 color write masks.
  11 files changed, 72 insertions(+), 70 deletions(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
-index 405a678505f..fd0afa349f9 100644
+index 25308c2..b380301 100644
 --- a/dlls/d3d11/device.c
 +++ b/dlls/d3d11/device.c
-@@ -687,6 +687,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetBlendState(ID3D11Devi
-     struct d3d_device *device = device_from_immediate_ID3D11DeviceContext(iface);
+@@ -688,6 +688,7 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetBlendState(ID3D11Devi
      static const float default_blend_factor[] = {1.0f, 1.0f, 1.0f, 1.0f};
+     struct d3d_blend_state *blend_state_impl;
      const D3D11_BLEND_DESC *desc;
 +    int i;
  
      TRACE("iface %p, blend_state %p, blend_factor %s, sample_mask 0x%08x.\n",
              iface, blend_state, debug_float4(blend_factor), sample_mask);
-@@ -700,14 +701,11 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetBlendState(ID3D11Devi
-     if (!(device->blend_state = unsafe_impl_from_ID3D11BlendState(blend_state)))
+@@ -702,14 +703,11 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetBlendState(ID3D11Devi
      {
+         wined3d_device_set_blend_state(device->wined3d_device, NULL);
          wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ALPHABLENDENABLE, FALSE);
 -        wined3d_device_set_render_state(device->wined3d_device,
 -                WINED3D_RS_COLORWRITEENABLE, D3D11_COLOR_WRITE_ENABLE_ALL);
@@ -49,7 +49,7 @@ index 405a678505f..fd0afa349f9 100644
          wined3d_mutex_unlock();
          return;
      }
-@@ -734,14 +732,13 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetBlendState(ID3D11Devi
+@@ -737,14 +735,13 @@ static void STDMETHODCALLTYPE d3d11_immediate_context_OMSetBlendState(ID3D11Devi
                  || d->DestBlendAlpha == D3D11_BLEND_BLEND_FACTOR || d->DestBlendAlpha == D3D11_BLEND_INV_BLEND_FACTOR))
              FIXME("Ignoring blend factor %s.\n", debug_float4(blend_factor));
      }
@@ -72,10 +72,10 @@ index 405a678505f..fd0afa349f9 100644
  }
  
 diff --git a/dlls/d3d11/state.c b/dlls/d3d11/state.c
-index b7c9264df47..455123f5bb4 100644
+index a14c9d3..2bec92e 100644
 --- a/dlls/d3d11/state.c
 +++ b/dlls/d3d11/state.c
-@@ -331,10 +331,6 @@ HRESULT d3d_blend_state_create(struct d3d_device *device, const D3D11_BLEND_DESC
+@@ -335,10 +335,6 @@ HRESULT d3d_blend_state_create(struct d3d_device *device, const D3D11_BLEND_DESC
          tmp_desc.RenderTarget[i].DestBlendAlpha = desc->RenderTarget[j].DestBlendAlpha;
          tmp_desc.RenderTarget[i].BlendOpAlpha = desc->RenderTarget[j].BlendOpAlpha;
          tmp_desc.RenderTarget[i].RenderTargetWriteMask = desc->RenderTarget[j].RenderTargetWriteMask;
@@ -85,12 +85,12 @@ index b7c9264df47..455123f5bb4 100644
 -                    tmp_desc.RenderTarget[i].RenderTargetWriteMask, i);
      }
  
-     /* glSampleCoverage() */
+     /* glEnableIndexedEXT(GL_BLEND, ...) */
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index a2c0ba4080c..2a9036cabff 100644
+index b97dff5..7bed2b3 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -2509,10 +2509,8 @@ static void SetupForBlit(const struct wined3d_device *device, struct wined3d_con
+@@ -2586,10 +2586,8 @@ static void SetupForBlit(const struct wined3d_device *device, struct wined3d_con
      }
      gl_info->gl_ops.gl.p_glColorMask(GL_TRUE, GL_TRUE,GL_TRUE,GL_TRUE);
      checkGLcall("glColorMask");
@@ -104,10 +104,10 @@ index a2c0ba4080c..2a9036cabff 100644
      {
          gl_info->gl_ops.gl.p_glDisable(GL_COLOR_SUM_EXT);
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 31955badb10..848274ce633 100644
+index 17103cc..dabb5e2 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -382,10 +382,8 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
+@@ -378,10 +378,8 @@ void device_clear_render_targets(struct wined3d_device *device, UINT rt_count, c
          }
  
          gl_info->gl_ops.gl.p_glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -121,10 +121,10 @@ index 31955badb10..848274ce633 100644
          checkGLcall("glClearColor");
          clear_mask = clear_mask | GL_COLOR_BUFFER_BIT;
 diff --git a/dlls/wined3d/drawprim.c b/dlls/wined3d/drawprim.c
-index 235f87bfa7d..c09319ef248 100644
+index 7eccc8f..8f9e929 100644
 --- a/dlls/wined3d/drawprim.c
 +++ b/dlls/wined3d/drawprim.c
-@@ -502,7 +502,7 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
+@@ -545,7 +545,7 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
          if (!(rtv = fb->render_targets[i]) || rtv->format->id == WINED3DFMT_NULL)
              continue;
  
@@ -134,10 +134,10 @@ index 235f87bfa7d..c09319ef248 100644
              wined3d_rendertarget_view_load_location(rtv, context, rtv->resource->draw_binding);
              wined3d_rendertarget_view_invalidate_location(rtv, ~rtv->resource->draw_binding);
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index df511009833..8820f656976 100644
+index 407ad62..e1408de 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
-@@ -1501,9 +1501,6 @@ static void state_debug_monitor(struct wined3d_context *context, const struct wi
+@@ -1556,9 +1556,6 @@ static void state_debug_monitor(struct wined3d_context *context, const struct wi
  static void state_colorwrite(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
  {
      DWORD mask0 = state->render_states[WINED3D_RS_COLORWRITEENABLE];
@@ -147,7 +147,7 @@ index df511009833..8820f656976 100644
      const struct wined3d_gl_info *gl_info = context->gl_info;
  
      TRACE("Color mask: r(%d) g(%d) b(%d) a(%d)\n",
-@@ -1517,13 +1514,7 @@ static void state_colorwrite(struct wined3d_context *context, const struct wined
+@@ -1572,13 +1569,7 @@ static void state_colorwrite(struct wined3d_context *context, const struct wined
              mask0 & WINED3DCOLORWRITEENABLE_ALPHA ? GL_TRUE : GL_FALSE);
      checkGLcall("glColorMask(...)");
  
@@ -162,7 +162,7 @@ index df511009833..8820f656976 100644
  }
  
  static void set_color_mask(const struct wined3d_gl_info *gl_info, UINT index, DWORD mask)
-@@ -1536,24 +1527,20 @@ static void set_color_mask(const struct wined3d_gl_info *gl_info, UINT index, DW
+@@ -1591,24 +1582,20 @@ static void set_color_mask(const struct wined3d_gl_info *gl_info, UINT index, DW
      checkGLcall("glColorMaski");
  }
  
@@ -197,7 +197,7 @@ index df511009833..8820f656976 100644
  }
  
  static void state_localviewer(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
-@@ -5238,18 +5225,26 @@ const struct StateEntryTemplate misc_state_template[] =
+@@ -5247,18 +5234,26 @@ const struct StateEntryTemplate misc_state_template[] =
      { STATE_RENDER(WINED3D_RS_MULTISAMPLEANTIALIAS),      { STATE_RENDER(WINED3D_RS_MULTISAMPLEANTIALIAS),      state_msaa_w        }, WINED3D_GL_EXT_NONE             },
      { STATE_RENDER(WINED3D_RS_MULTISAMPLEMASK),           { STATE_RENDER(WINED3D_RS_MULTISAMPLEMASK),           state_multisampmask }, WINED3D_GL_EXT_NONE             },
      { STATE_RENDER(WINED3D_RS_DEBUGMONITORTOKEN),         { STATE_RENDER(WINED3D_RS_DEBUGMONITORTOKEN),         state_debug_monitor }, WINED3D_GL_EXT_NONE             },
@@ -232,7 +232,7 @@ index df511009833..8820f656976 100644
      { STATE_RENDER(WINED3D_RS_BLENDFACTOR),               { STATE_RENDER(WINED3D_RS_BLENDFACTOR),               state_blendfactor_w }, WINED3D_GL_EXT_NONE             },
      { STATE_RENDER(WINED3D_RS_DEPTHBIAS),                 { STATE_RENDER(WINED3D_RS_DEPTHBIAS),                 state_depthbias     }, WINED3D_GL_EXT_NONE             },
 diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
-index 71571b24fe5..879a98e738e 100644
+index 4c28eb5..f02da5c 100644
 --- a/dlls/wined3d/stateblock.c
 +++ b/dlls/wined3d/stateblock.c
 @@ -45,6 +45,10 @@ static const DWORD pixel_states_render[] =
@@ -246,7 +246,7 @@ index 71571b24fe5..879a98e738e 100644
      WINED3D_RS_DEPTHBIAS,
      WINED3D_RS_DESTBLEND,
      WINED3D_RS_DESTBLENDALPHA,
-@@ -1212,7 +1216,6 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
+@@ -1211,7 +1215,6 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
      tmpfloat.f = gl_info->limits.pointsize_max;
      state->render_states[WINED3D_RS_POINTSIZE_MAX] = tmpfloat.d;
      state->render_states[WINED3D_RS_INDEXEDVERTEXBLENDENABLE] = FALSE;
@@ -254,7 +254,7 @@ index 71571b24fe5..879a98e738e 100644
      tmpfloat.f = 0.0f;
      state->render_states[WINED3D_RS_TWEENFACTOR] = tmpfloat.d;
      state->render_states[WINED3D_RS_BLENDOP] = WINED3D_BLEND_OP_ADD;
-@@ -1238,9 +1241,6 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
+@@ -1237,9 +1240,6 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
      state->render_states[WINED3D_RS_BACK_STENCILZFAIL] = WINED3D_STENCIL_OP_KEEP;
      state->render_states[WINED3D_RS_BACK_STENCILPASS] = WINED3D_STENCIL_OP_KEEP;
      state->render_states[WINED3D_RS_BACK_STENCILFUNC] = WINED3D_CMP_ALWAYS;
@@ -264,7 +264,7 @@ index 71571b24fe5..879a98e738e 100644
      state->render_states[WINED3D_RS_BLENDFACTOR] = 0xffffffff;
      state->render_states[WINED3D_RS_SRGBWRITEENABLE] = 0;
      state->render_states[WINED3D_RS_DEPTHBIAS] = 0;
-@@ -1259,6 +1259,8 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
+@@ -1255,6 +1255,8 @@ static void state_init_default(struct wined3d_state *state, const struct wined3d
      state->render_states[WINED3D_RS_SRCBLENDALPHA] = WINED3D_BLEND_ONE;
      state->render_states[WINED3D_RS_DESTBLENDALPHA] = WINED3D_BLEND_ZERO;
      state->render_states[WINED3D_RS_BLENDOPALPHA] = WINED3D_BLEND_OP_ADD;
@@ -274,10 +274,10 @@ index 71571b24fe5..879a98e738e 100644
      /* Texture Stage States - Put directly into state block, we will call function below */
      for (i = 0; i < MAX_TEXTURES; ++i)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index 134b6d204f9..88a7c877521 100644
+index 5cb9cda..24a3d24 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -367,6 +367,7 @@ static void surface_blt_fbo(const struct wined3d_device *device,
+@@ -376,6 +376,7 @@ static void surface_blt_fbo(const struct wined3d_device *device,
      RECT src_rect, dst_rect;
      GLenum gl_filter;
      GLenum buffer;
@@ -285,7 +285,7 @@ index 134b6d204f9..88a7c877521 100644
  
      TRACE("device %p, filter %s,\n", device, debug_d3dtexturefiltertype(filter));
      TRACE("src_surface %p, src_location %s, src_rect %s,\n",
-@@ -464,10 +465,8 @@ static void surface_blt_fbo(const struct wined3d_device *device,
+@@ -473,10 +474,8 @@ static void surface_blt_fbo(const struct wined3d_device *device,
      context_invalidate_state(context, STATE_FRAMEBUFFER);
  
      gl_info->gl_ops.gl.p_glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -299,10 +299,10 @@ index 134b6d204f9..88a7c877521 100644
      gl_info->gl_ops.gl.p_glDisable(GL_SCISSOR_TEST);
      context_invalidate_state(context, STATE_RENDER(WINED3D_RS_SCISSORTESTENABLE));
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index 472ac9ead0b..38d0ebe171c 100644
+index 78934af..04c1a35 100644
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
-@@ -4273,7 +4273,6 @@ const char *debug_d3drenderstate(enum wined3d_render_state state)
+@@ -4407,7 +4407,6 @@ const char *debug_d3drenderstate(enum wined3d_render_state state)
          D3DSTATE_TO_STR(WINED3D_RS_DEBUGMONITORTOKEN);
          D3DSTATE_TO_STR(WINED3D_RS_POINTSIZE_MAX);
          D3DSTATE_TO_STR(WINED3D_RS_INDEXEDVERTEXBLENDENABLE);
@@ -310,7 +310,7 @@ index 472ac9ead0b..38d0ebe171c 100644
          D3DSTATE_TO_STR(WINED3D_RS_TWEENFACTOR);
          D3DSTATE_TO_STR(WINED3D_RS_BLENDOP);
          D3DSTATE_TO_STR(WINED3D_RS_POSITIONDEGREE);
-@@ -4293,9 +4292,14 @@ const char *debug_d3drenderstate(enum wined3d_render_state state)
+@@ -4427,9 +4426,14 @@ const char *debug_d3drenderstate(enum wined3d_render_state state)
          D3DSTATE_TO_STR(WINED3D_RS_BACK_STENCILZFAIL);
          D3DSTATE_TO_STR(WINED3D_RS_BACK_STENCILPASS);
          D3DSTATE_TO_STR(WINED3D_RS_BACK_STENCILFUNC);
@@ -326,10 +326,10 @@ index 472ac9ead0b..38d0ebe171c 100644
          D3DSTATE_TO_STR(WINED3D_RS_SRGBWRITEENABLE);
          D3DSTATE_TO_STR(WINED3D_RS_DEPTHBIAS);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 4fca08dbdb7..fd27a37b1a0 100644
+index 7a606a7..fe14c2e 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -272,6 +272,7 @@ static inline enum complex_fixup get_complex_fixup(struct color_fixup_desc fixup
+@@ -275,6 +275,7 @@ static inline enum complex_fixup get_complex_fixup(struct color_fixup_desc fixup
  #define MAX_TGSM_REGISTERS          8192
  #define MAX_VERTEX_BLENDS           4
  #define MAX_MULTISAMPLE_TYPES       8
@@ -338,19 +338,19 @@ index 4fca08dbdb7..fd27a37b1a0 100644
  struct min_lookup
  {
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 5e9e45942be..81faf2d4356 100644
+index 1e3c08b..f21cc94 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -383,8 +383,20 @@ enum wined3d_render_state
+@@ -385,8 +385,20 @@ enum wined3d_render_state
+     WINED3D_RS_SRCBLENDALPHA                = 207,
+     WINED3D_RS_DESTBLENDALPHA               = 208,
      WINED3D_RS_BLENDOPALPHA                 = 209,
-     WINED3D_RS_DEPTHCLIP                    = 210,
-     WINED3D_RS_DEPTHBIASCLAMP               = 211,
-+    WINED3D_RS_COLORWRITEENABLE4            = 212,
-+    WINED3D_RS_COLORWRITEENABLE5            = 213,
-+    WINED3D_RS_COLORWRITEENABLE6            = 214,
-+    WINED3D_RS_COLORWRITEENABLE7            = 215,
++    WINED3D_RS_COLORWRITEENABLE4            = 210,
++    WINED3D_RS_COLORWRITEENABLE5            = 211,
++    WINED3D_RS_COLORWRITEENABLE6            = 212,
++    WINED3D_RS_COLORWRITEENABLE7            = 213,
  };
--#define WINEHIGHEST_RENDER_STATE                                WINED3D_RS_DEPTHBIASCLAMP
+-#define WINEHIGHEST_RENDER_STATE                                WINED3D_RS_BLENDOPALPHA
 +#define WINEHIGHEST_RENDER_STATE                                WINED3D_RS_COLORWRITEENABLE7
 +
 +static inline enum wined3d_render_state WINED3D_RS_COLORWRITE(int index)
@@ -364,5 +364,5 @@ index 5e9e45942be..81faf2d4356 100644
  enum wined3d_blend
  {
 -- 
-2.14.1
+2.7.4
 

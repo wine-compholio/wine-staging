@@ -452,7 +452,6 @@ patch_enable_all ()
 	enable_wined3d_Viewports="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
-	enable_wined3d_buffer_create="$1"
 	enable_wined3d_dxgi_swapchain_Present="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1614,9 +1613,6 @@ patch_enable ()
 			;;
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
-			;;
-		wined3d-buffer_create)
-			enable_wined3d_buffer_create="$2"
 			;;
 		wined3d-dxgi_swapchain_Present)
 			enable_wined3d_dxgi_swapchain_Present="$2"
@@ -9552,18 +9548,6 @@ if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-buffer_create
-# |
-# | Modified files:
-# |   *	dlls/wined3d/buffer.c
-# |
-if test "$enable_wined3d_buffer_create" -eq 1; then
-	patch_apply wined3d-buffer_create/0001-wined3d-Do-not-pin-large-buffers.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Do not pin large buffers.", 1 },';
 	) >> "$patchlist"
 fi
 

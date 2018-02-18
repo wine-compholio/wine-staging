@@ -317,7 +317,6 @@ patch_enable_all ()
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
-	enable_rasapi32_RasGetConnectionStatistics="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_rpcrt4_Race_Condition="$1"
@@ -1211,9 +1210,6 @@ patch_enable ()
 			;;
 		quartz-Silence_FIXMEs)
 			enable_quartz_Silence_FIXMEs="$2"
-			;;
-		rasapi32-RasGetConnectionStatistics)
-			enable_rasapi32_RasGetConnectionStatistics="$2"
 			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
@@ -7239,18 +7235,6 @@ if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset rasapi32-RasGetConnectionStatistics
-# |
-# | Modified files:
-# |   *	dlls/rasapi32/rasapi.c, dlls/rasapi32/rasapi32.spec, include/raserror.h
-# |
-if test "$enable_rasapi32_RasGetConnectionStatistics" -eq 1; then
-	patch_apply rasapi32-RasGetConnectionStatistics/0001-rasapi32-Add-stub-for-RasGetConnectionStatistics.patch
-	(
-		printf '%s\n' '+    { "Stanislav Motylkov", "rasapi32: Add stub for RasGetConnectionStatistics.", 1 },';
 	) >> "$patchlist"
 fi
 

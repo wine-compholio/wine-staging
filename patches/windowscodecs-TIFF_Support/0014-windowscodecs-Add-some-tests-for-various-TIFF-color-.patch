@@ -11,7 +11,7 @@ diff --git a/dlls/windowscodecs/tests/tiffformat.c b/dlls/windowscodecs/tests/ti
 index a742627..2389dbc 100644
 --- a/dlls/windowscodecs/tests/tiffformat.c
 +++ b/dlls/windowscodecs/tests/tiffformat.c
-@@ -236,6 +236,61 @@ static HRESULT create_decoder(const void *image_data, UINT image_size, IWICBitma
+@@ -312,6 +312,61 @@ static HRESULT create_decoder(const void
      return hr;
  }
  
@@ -73,10 +73,72 @@ index a742627..2389dbc 100644
  static void test_tiff_1bpp_palette(void)
  {
      HRESULT hr;
-@@ -503,6 +558,386 @@ static void test_tiff_8bpp_palette(void)
-     IWICBitmapDecoder_Release(decoder);
+@@ -631,6 +686,448 @@ static void test_tiff_resolution(void)
+     }
  }
  
++static HRESULT get_pixelformat_info(const GUID *format, UINT *bpp, UINT *channels, BOOL *trasparency)
++{
++    HRESULT hr;
++    IWICComponentInfo *info;
++    IWICPixelFormatInfo2 *formatinfo;
++
++    hr = IWICImagingFactory_CreateComponentInfo(factory, format, &info);
++    ok(hr == S_OK, "CreateComponentInfo(%s) error %#x\n", wine_dbgstr_guid(format), hr);
++    if (hr == S_OK)
++    {
++        hr = IWICComponentInfo_QueryInterface(info, &IID_IWICPixelFormatInfo2, (void **)&formatinfo);
++        if (hr == S_OK)
++        {
++            hr = IWICPixelFormatInfo2_SupportsTransparency(formatinfo, trasparency);
++            ok(hr == S_OK, "SupportsTransparency error %#x\n", hr);
++            IWICPixelFormatInfo2_Release(formatinfo);
++        }
++        hr = IWICComponentInfo_QueryInterface(info, &IID_IWICPixelFormatInfo, (void **)&formatinfo);
++        if (hr == S_OK)
++        {
++            hr = IWICPixelFormatInfo2_GetBitsPerPixel(formatinfo, bpp);
++            ok(hr == S_OK, "GetBitsPerPixel error %#x\n", hr);
++            hr = IWICPixelFormatInfo2_GetChannelCount(formatinfo, channels);
++            ok(hr == S_OK, "GetChannelCount error %#x\n", hr);
++            IWICPixelFormatInfo2_Release(formatinfo);
++        }
++        IWICComponentInfo_Release(info);
++    }
++    return hr;
++}
++
++static void dump_tiff(void *buf)
++{
++    UINT count, i;
++    struct tiff_1bpp_data *tiff;
++    struct IFD_entry *tag;
++
++    tiff = buf;
++    count = *(short *)((char *)tiff + tiff->dir_offset);
++    tag = (struct IFD_entry *)((char *)tiff + tiff->dir_offset + sizeof(short));
++
++    for (i = 0; i < count; i++)
++    {
++        printf("tag %u: id %04x, type %04x, count %u, value %d",
++                i, tag[i].id, tag[i].type, tag[i].count, tag[i].value);
++        if (tag[i].id == 0x102 && tag[i].count > 2)
++        {
++            short *bps = (short *)((char *)tiff + tag[i].value);
++            printf(" (%d,%d,%d,%d)\n", bps[0], bps[1], bps[2], bps[3]);
++        }
++        else
++            printf("\n");
++    }
++}
++
++ static void test_tiff_1bpp_palette(void)
++ {
++     HRESULT hr;
++@@ -503,6 +558,386 @@ static void test_tiff_8bpp_palette(void)
++     IWICBitmapDecoder_Release(decoder);
++ }
++ 
 +#include "pshpack2.h"
 +static const struct tiff_1x1_data
 +{
@@ -460,7 +522,7 @@ index a742627..2389dbc 100644
  START_TEST(tiffformat)
  {
      HRESULT hr;
-@@ -514,6 +949,7 @@ START_TEST(tiffformat)
+@@ -642,6 +1139,7 @@ START_TEST(tiffformat)
      ok(hr == S_OK, "CoCreateInstance error %#x\n", hr);
      if (FAILED(hr)) return;
  
@@ -470,4 +532,3 @@ index a742627..2389dbc 100644
      test_QueryCapability();
 -- 
 2.9.0
-

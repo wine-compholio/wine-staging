@@ -1,7 +1,8 @@
-From f7a85ba8219c46b226376aed23f2d81bfff902dc Mon Sep 17 00:00:00 2001
+From 67bbbb723dc971116a7b9569081baf2dc387e2ac Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 25 Feb 2015 22:45:42 +0100
-Subject: ntdll: Fix race-condition when threads are killed during shutdown.
+Subject: [PATCH] ntdll: Fix race-condition when threads are killed during
+ shutdown.
 
 When exit_thread is executed, nb_threads is decremented before the thread is
 fully shutdown. When another thread runs ExitProcess() this will cause a SIGQUIT
@@ -18,18 +19,18 @@ fix the most critical one (messed up refcounting of threads) for now.
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 3696c8e..74e64c9 100644
+index c999d4b..5e02966 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -370,6 +370,7 @@ void terminate_thread( int status )
- void exit_thread( int status )
+@@ -459,6 +459,7 @@ void exit_thread( int status )
+ void WINAPI RtlExitUserThread( ULONG status )
  {
      static void *prev_teb;
 +    sigset_t sigset;
      TEB *teb;
  
      if (status)  /* send the exit code to the server (0 is already the default) */
-@@ -383,7 +384,7 @@ void exit_thread( int status )
+@@ -472,7 +473,7 @@ void WINAPI RtlExitUserThread( ULONG status )
          SERVER_END_REQ;
      }
  
@@ -37,8 +38,8 @@ index 3696c8e..74e64c9 100644
 +    if (interlocked_xchg_add( &nb_threads, 0 ) <= 1)
      {
          LdrShutdownProcess();
-         exit( status );
-@@ -405,6 +406,11 @@ void exit_thread( int status )
+         pthread_sigmask( SIG_BLOCK, &server_block_set, NULL );
+@@ -495,6 +496,11 @@ void WINAPI RtlExitUserThread( ULONG status )
          }
      }
  
@@ -47,9 +48,9 @@ index 3696c8e..74e64c9 100644
 +    pthread_sigmask( SIG_BLOCK, &sigset, NULL );
 +    if (interlocked_xchg_add( &nb_threads, -1 ) <= 1) _exit( status );
 +
-     close( ntdll_get_thread_data()->wait_fd[0] );
-     close( ntdll_get_thread_data()->wait_fd[1] );
-     close( ntdll_get_thread_data()->reply_fd );
+     signal_exit_thread( status );
+ }
+ 
 -- 
-2.3.0
+2.7.4
 

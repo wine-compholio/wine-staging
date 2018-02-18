@@ -1,4 +1,4 @@
-From aea2466a7e48d05a176fcd29f68035b15a7a23b7 Mon Sep 17 00:00:00 2001
+From 918650a7ed93edf05284b0ae2903cce44cdd1899 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 01:11:47 +0200
 Subject: [PATCH] server: Store a reference to the parent object for pipe
@@ -12,10 +12,10 @@ Subject: [PATCH] server: Store a reference to the parent object for pipe
  4 files changed, 52 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index 43c5ee4..9a1ba67 100644
+index b58f76365f..84b783b80a 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
-@@ -1487,14 +1487,11 @@ static void test_query_object(void)
+@@ -1503,14 +1503,11 @@ static void test_query_object(void)
      status = pNtQueryObject( handle, ObjectNameInformation, buffer, sizeof(buffer), &len );
      ok( status == STATUS_SUCCESS , "NtQueryObject returned %x\n", status );
      str = (UNICODE_STRING *)buffer;
@@ -31,10 +31,10 @@ index 43c5ee4..9a1ba67 100644
          "name too short %s\n", wine_dbgstr_w(str->Buffer) );
      trace( "got %s len %u\n", wine_dbgstr_w(str->Buffer), len );
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index c6b37ce..825216e 100644
+index c8796b2142..f4cb5fdc12 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -151,6 +151,8 @@ static void pipe_end_reselect_async( struct fd *fd, struct async_queue *queue );
+@@ -152,6 +152,8 @@ static void pipe_end_reselect_async( struct fd *fd, struct async_queue *queue );
  /* server end functions */
  static void pipe_server_dump( struct object *obj, int verbose );
  static void pipe_server_destroy( struct object *obj);
@@ -43,7 +43,7 @@ index c6b37ce..825216e 100644
  static int pipe_server_ioctl( struct fd *fd, ioctl_code_t code, struct async *async );
  static void pipe_server_get_file_info( struct fd *fd, unsigned int info_class );
  
-@@ -169,8 +171,8 @@ static const struct object_ops pipe_server_ops =
+@@ -170,8 +172,8 @@ static const struct object_ops pipe_server_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -52,9 +52,9 @@ index c6b37ce..825216e 100644
 +    pipe_server_link_name,        /* link_name */
 +    pipe_server_unlink_name,      /* unlink_name */
      no_open_file,                 /* open_file */
+     no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
-     pipe_server_destroy           /* destroy */
-@@ -193,6 +195,8 @@ static const struct fd_ops pipe_server_fd_ops =
+@@ -195,6 +197,8 @@ static const struct fd_ops pipe_server_fd_ops =
  
  /* client end functions */
  static void pipe_client_dump( struct object *obj, int verbose );
@@ -63,7 +63,7 @@ index c6b37ce..825216e 100644
  static void pipe_client_destroy( struct object *obj );
  static int pipe_client_ioctl( struct fd *fd, ioctl_code_t code, struct async *async );
  static void pipe_client_get_file_info( struct fd *fd, unsigned int info_class );
-@@ -212,8 +216,8 @@ static const struct object_ops pipe_client_ops =
+@@ -214,8 +218,8 @@ static const struct object_ops pipe_client_ops =
      default_get_sd,               /* get_sd */
      default_set_sd,               /* set_sd */
      no_lookup_name,               /* lookup_name */
@@ -72,9 +72,9 @@ index c6b37ce..825216e 100644
 +    pipe_client_link_name,        /* link_name */
 +    pipe_client_unlink_name,      /* unlink_name */
      no_open_file,                 /* open_file */
+     no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
-     pipe_client_destroy           /* destroy */
-@@ -409,6 +413,17 @@ static void pipe_end_destroy( struct pipe_end *pipe_end )
+@@ -413,6 +417,17 @@ static void pipe_end_destroy( struct pipe_end *pipe_end )
      if (pipe_end->fd) release_object( pipe_end->fd );
  }
  
@@ -92,7 +92,7 @@ index c6b37ce..825216e 100644
  static void pipe_server_destroy( struct object *obj)
  {
      struct pipe_server *server = (struct pipe_server *)obj;
-@@ -431,6 +446,17 @@ static void pipe_server_destroy( struct object *obj)
+@@ -435,6 +450,17 @@ static void pipe_server_destroy( struct object *obj)
      release_object( server->pipe );
  }
  
@@ -110,7 +110,7 @@ index c6b37ce..825216e 100644
  static void pipe_client_destroy( struct object *obj)
  {
      struct pipe_client *client = (struct pipe_client *)obj;
-@@ -956,9 +982,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
+@@ -959,9 +985,10 @@ static void init_pipe_end( struct pipe_end *pipe_end, unsigned int pipe_flags, d
  static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned int options,
                                                 unsigned int pipe_flags )
  {
@@ -122,7 +122,7 @@ index c6b37ce..825216e 100644
      if (!server)
          return NULL;
  
-@@ -979,12 +1006,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
+@@ -982,12 +1009,13 @@ static struct pipe_server *create_pipe_server( struct named_pipe *pipe, unsigned
      return server;
  }
  
@@ -138,7 +138,7 @@ index c6b37ce..825216e 100644
      if (!client)
          return NULL;
  
-@@ -1062,7 +1090,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
+@@ -1065,7 +1093,7 @@ static struct object *named_pipe_open_file( struct object *obj, unsigned int acc
          return NULL;
      }
  
@@ -148,7 +148,7 @@ index c6b37ce..825216e 100644
          set_no_fd_status( server->pipe_end.fd, STATUS_BAD_DEVICE_TYPE );
          allow_fd_caching( server->pipe_end.fd );
 diff --git a/server/object.c b/server/object.c
-index 4455718..81f8d1b 100644
+index d0750c5934..f40aebe4dd 100644
 --- a/server/object.c
 +++ b/server/object.c
 @@ -176,7 +176,7 @@ WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len )
@@ -202,10 +202,10 @@ index 4455718..81f8d1b 100644
  
  /* dump the name of an object to stderr */
 diff --git a/server/object.h b/server/object.h
-index b5c50e1..258a5e7 100644
+index 9ff123ebff..4a5d282a47 100644
 --- a/server/object.h
 +++ b/server/object.h
-@@ -133,6 +133,8 @@ extern WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len );
+@@ -135,6 +135,8 @@ extern WCHAR *get_object_full_name( struct object *obj, data_size_t *ret_len );
  extern void dump_object_name( struct object *obj );
  extern struct object *lookup_named_object( struct object *root, const struct unicode_str *name,
                                             unsigned int attr, struct unicode_str *name_left );
@@ -215,5 +215,5 @@ index b5c50e1..258a5e7 100644
                                    const struct unicode_str *name, unsigned int attributes,
                                    const struct security_descriptor *sd );
 -- 
-2.7.4
+2.16.1
 

@@ -1,19 +1,19 @@
-From fcb1675d7e732d23fb36fdf2a0da3182d0216e62 Mon Sep 17 00:00:00 2001
+From 0e13445877dfa876f22d7ab6e564260d3a516bd0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
-Subject: ntdll: Create thread to update user_shared_data time values when
- necessary.
+Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
+ when necessary.
 
 ---
  dlls/kernel32/cpu.c     |  4 +--
- dlls/ntdll/loader.c     | 32 ++++++++++++++++++++++
+ dlls/ntdll/loader.c     | 31 ++++++++++++++++++++++
  dlls/ntdll/ntdll_misc.h |  3 +++
  dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++-----
  dlls/ntdll/virtual.c    | 17 ++++++++++++
- 5 files changed, 117 insertions(+), 9 deletions(-)
+ 5 files changed, 116 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 2e0e79f8e8d..d53488c7652 100644
+index 2a15dad..50b26ff 100644
 --- a/dlls/kernel32/cpu.c
 +++ b/dlls/kernel32/cpu.c
 @@ -46,7 +46,7 @@
@@ -35,10 +35,10 @@ index 2e0e79f8e8d..d53488c7652 100644
      return FALSE;
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index b405bb4e158..187e5a9b57a 100644
+index bd27b6e..444ea33 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3239,6 +3239,36 @@ static void load_global_options(void)
+@@ -3226,6 +3226,36 @@ static void load_global_options(void)
  }
  
  
@@ -75,7 +75,7 @@ index b405bb4e158..187e5a9b57a 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -3270,6 +3300,7 @@ void WINAPI LdrInitializeThunk( void *ke
+@@ -3257,6 +3287,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
      if (!peb->ProcessParameters->WindowTitle.Buffer)
          peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
      version_init( wm->ldr.FullDllName.Buffer );
@@ -84,10 +84,10 @@ index b405bb4e158..187e5a9b57a 100644
  
      LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 043c9a64188..157c58f24f4 100644
+index 90ff20c..a01fcf4 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -181,6 +181,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
+@@ -190,6 +190,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
  extern void virtual_release_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -98,7 +98,7 @@ index 043c9a64188..157c58f24f4 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index c42d81c7f89..81c11658a49 100644
+index ff14a5e..44ffa9d 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -44,6 +44,7 @@
@@ -117,10 +117,10 @@ index c42d81c7f89..81c11658a49 100644
 +static struct _KUSER_SHARED_DATA user_shared_data_internal;
 +struct _KUSER_SHARED_DATA *user_shared_data_external;
 +struct _KUSER_SHARED_DATA *user_shared_data = &user_shared_data_internal;
+ static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  PUNHANDLED_EXCEPTION_FILTER unhandled_exception_filter = NULL;
- void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
-@@ -359,18 +362,71 @@ static ULONG_PTR get_image_addr(void)
+@@ -360,18 +363,71 @@ static ULONG_PTR get_image_addr(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
@@ -197,20 +197,20 @@ index c42d81c7f89..81c11658a49 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -402,7 +458,7 @@ HANDLE thread_init(void)
+@@ -403,7 +459,7 @@ HANDLE thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
 -    user_shared_data = addr;
 +    user_shared_data_external = addr;
+     memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
  
      /* allocate and initialize the PEB */
- 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 2cdcca8a599..0b813d3b0e9 100644
+index 8303a03..7d71497 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1784,6 +1784,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2013,6 +2013,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
  {
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
      void *page = ROUND_ADDR( addr, page_mask );
@@ -218,7 +218,7 @@ index 2cdcca8a599..0b813d3b0e9 100644
      sigset_t sigset;
      BYTE vprot;
  
-@@ -1809,7 +1810,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2038,7 +2039,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
                  ret = STATUS_SUCCESS;
          }
      }
@@ -243,4 +243,5 @@ index 2cdcca8a599..0b813d3b0e9 100644
  }
  
 -- 
-2.14.1
+1.9.1
+

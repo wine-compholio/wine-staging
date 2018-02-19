@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2936f3f9bb9dc01c595498a821d6adb6775b62cc"
+	echo "538263d0efe725124df88ce1cce124bc3ad7e2af"
 }
 
 # Show version information
@@ -272,7 +272,6 @@ patch_enable_all ()
 	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
-	enable_ntdll_RunlevelInformationInActivationContext="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
 	enable_ntdll_Stack_Guard_Page="$1"
@@ -1067,9 +1066,6 @@ patch_enable ()
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
-			;;
-		ntdll-RunlevelInformationInActivationContext)
-			enable_ntdll_RunlevelInformationInActivationContext="$2"
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
@@ -2730,9 +2726,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
 		abort "Patchset ntdll-APC_Start_Process disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_ntdll_RunlevelInformationInActivationContext" -gt 1; then
-		abort "Patchset ntdll-RunlevelInformationInActivationContext disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2744,7 +2737,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_kernel32_COMSPEC=1
 	enable_kernel32_UmsStubs=1
 	enable_ntdll_APC_Start_Process=1
-	enable_ntdll_RunlevelInformationInActivationContext=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
@@ -3073,25 +3065,11 @@ if test "$enable_ntdll_APC_Start_Process" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RunlevelInformationInActivationContext
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/actctx.c, dlls/ntdll/actctx.c
-# |
-if test "$enable_ntdll_RunlevelInformationInActivationContext" -eq 1; then
-	patch_apply ntdll-RunlevelInformationInActivationContext/0002-ntdll-Parse-execution-level-information-in-manifest-.patch
-	patch_apply ntdll-RunlevelInformationInActivationContext/0003-ntdll-Implement-RunlevelInformationInActivationConte.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Parse execution level information in manifest data.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement RunlevelInformationInActivationContext in RtlQueryInformationActivationContext.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, ntdll-APC_Start_Process, ntdll-
-# | 	RunlevelInformationInActivationContext, server-CreateProcess_ACLs, server-Misc_ACL
+# | 	server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling

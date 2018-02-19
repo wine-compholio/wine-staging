@@ -1,7 +1,7 @@
-From af4b00a0e6afd5a6512386e821a000411ca41b39 Mon Sep 17 00:00:00 2001
+From 66f2053d1f72e821bd1100d8bf2266e73e2e2163 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 9 Apr 2017 03:13:25 +0200
-Subject: server: Skip async completion when possible.
+Subject: [PATCH] server: Skip async completion when possible.
 
 ---
  dlls/ntdll/tests/pipe.c |  2 --
@@ -11,10 +11,10 @@ Subject: server: Skip async completion when possible.
  4 files changed, 13 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ntdll/tests/pipe.c b/dlls/ntdll/tests/pipe.c
-index bda9a144ade..aa240edea21 100644
+index bea849f..06be9eb 100644
 --- a/dlls/ntdll/tests/pipe.c
 +++ b/dlls/ntdll/tests/pipe.c
-@@ -389,9 +389,7 @@ static void test_completion(void)
+@@ -394,9 +394,7 @@ static void test_completion(void)
  
      pov = (void *)0xdeadbeef;
      ret = GetQueuedCompletionStatus(port, &num_bytes, &key, &pov, 1000);
@@ -25,7 +25,7 @@ index bda9a144ade..aa240edea21 100644
  
      CloseHandle(ov.hEvent);
 diff --git a/server/async.c b/server/async.c
-index 1cb020f7d42..210617c0014 100644
+index 4f1bcf1..11bbb25 100644
 --- a/server/async.c
 +++ b/server/async.c
 @@ -53,6 +53,7 @@ struct async
@@ -63,7 +63,7 @@ index 1cb020f7d42..210617c0014 100644
  }
 @@ -375,8 +378,11 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
              data.user.args[2] = 0;
-             thread_queue_apc( async->thread, NULL, &data );
+             thread_queue_apc( NULL, async->thread, NULL, &data );
          }
 -        else if (async->data.apc_context)
 +        else if (async->data.apc_context && (!async->direct_result ||
@@ -75,10 +75,10 @@ index 1cb020f7d42..210617c0014 100644
          if (async->event) set_event( async->event );
          else if (async->fd) set_fd_signaled( async->fd, 1 );
 diff --git a/server/fd.c b/server/fd.c
-index 51f4eac0cd5..d13068c8468 100644
+index a6a96d6..64dbd1b 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2422,7 +2422,7 @@ DECL_HANDLER(flush)
+@@ -2434,7 +2434,7 @@ DECL_HANDLER(flush)
  
      if (!fd) return;
  
@@ -87,7 +87,7 @@ index 51f4eac0cd5..d13068c8468 100644
      {
          reply->event = async_handoff( async, fd->fd_ops->flush( fd, async ), NULL );
          release_object( async );
-@@ -2497,7 +2497,7 @@ DECL_HANDLER(read)
+@@ -2533,7 +2533,7 @@ DECL_HANDLER(read)
  
      if (!fd) return;
  
@@ -96,7 +96,7 @@ index 51f4eac0cd5..d13068c8468 100644
      {
          reply->wait    = async_handoff( async, fd->fd_ops->read( fd, async, req->pos ), NULL );
          reply->options = fd->options;
-@@ -2514,7 +2514,7 @@ DECL_HANDLER(write)
+@@ -2550,7 +2550,7 @@ DECL_HANDLER(write)
  
      if (!fd) return;
  
@@ -105,7 +105,7 @@ index 51f4eac0cd5..d13068c8468 100644
      {
          reply->wait    = async_handoff( async, fd->fd_ops->write( fd, async, req->pos ), &reply->size );
          reply->options = fd->options;
-@@ -2532,7 +2532,7 @@ DECL_HANDLER(ioctl)
+@@ -2568,7 +2568,7 @@ DECL_HANDLER(ioctl)
  
      if (!fd) return;
  
@@ -115,10 +115,10 @@ index 51f4eac0cd5..d13068c8468 100644
          reply->wait    = async_handoff( async, fd->fd_ops->ioctl( fd, req->code, async ), NULL );
          reply->options = fd->options;
 diff --git a/server/file.h b/server/file.h
-index fa41654e6b6..33b42554534 100644
+index 1d25961..ed42fc4 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -180,7 +180,7 @@ extern struct object *create_serial( struct fd *fd );
+@@ -185,7 +185,7 @@ extern struct object *create_serial( struct fd *fd );
  /* async I/O functions */
  extern void free_async_queue( struct async_queue *queue );
  extern struct async *create_async( struct fd *fd, struct thread *thread, const async_data_t *data, struct iosb *iosb );
@@ -128,5 +128,5 @@ index fa41654e6b6..33b42554534 100644
  extern void queue_async( struct async_queue *queue, struct async *async );
  extern void async_set_timeout( struct async *async, timeout_t timeout, unsigned int status );
 -- 
-2.13.1
+1.9.1
 

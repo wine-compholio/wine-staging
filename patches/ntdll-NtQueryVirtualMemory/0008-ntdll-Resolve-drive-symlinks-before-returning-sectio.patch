@@ -1,7 +1,7 @@
-From 66e9d350993b7349f2309edd72945e01b6233d1c Mon Sep 17 00:00:00 2001
+From e850c163a62a5932bff154e8fafd0547c55065eb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
-Subject: ntdll: Resolve drive symlinks before returning section name.
+Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
 
 ---
  dlls/ntdll/directory.c        |  2 +-
@@ -11,10 +11,10 @@ Subject: ntdll: Resolve drive symlinks before returning section name.
  4 files changed, 35 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 2fb30febd63..8f50a81610b 100644
+index b6e89bb19a..53409014ee 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -2927,7 +2927,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+@@ -2929,7 +2929,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
  }
  
  /* read the contents of an NT symlink object */
@@ -24,7 +24,7 @@ index 2fb30febd63..8f50a81610b 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 823024215e0..a61638cdc06 100644
+index f9c6031778..6e1ca3d72f 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -169,6 +169,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
@@ -32,11 +32,11 @@ index 823024215e0..a61638cdc06 100644
  
  /* virtual memory */
 +extern NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length ) DECLSPEC_HIDDEN;
- extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info ) DECLSPEC_HIDDEN;
- extern NTSTATUS virtual_create_builtin_view( void *base ) DECLSPEC_HIDDEN;
- extern NTSTATUS virtual_alloc_thread_stack( TEB *teb, SIZE_T reserve_size, SIZE_T commit_size ) DECLSPEC_HIDDEN;
+ extern NTSTATUS virtual_map_section( HANDLE handle, PVOID *addr_ptr, ULONG zero_bits, SIZE_T commit_size,
+                                      const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr, ULONG protect,
+                                      pe_image_info_t *image_info ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 164186f274b..85a7f4dc059 100644
+index 9912b1a20c..0fd91b4624 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -56,6 +56,7 @@
@@ -56,7 +56,7 @@ index 164186f274b..85a7f4dc059 100644
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
  static const size_t view_block_size = 0x100000;
  static void *preload_reserve_start;
-@@ -2780,12 +2783,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -2969,12 +2972,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
@@ -73,7 +73,7 @@ index 164186f274b..85a7f4dc059 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -2844,14 +2850,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -3033,14 +3039,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:
@@ -114,10 +114,10 @@ index 164186f274b..85a7f4dc059 100644
      else
          status = (len < sizeof(MEMORY_SECTION_NAME)) ? STATUS_INFO_LENGTH_MISMATCH : STATUS_BUFFER_OVERFLOW;
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index 6014d6fc152..8704123642e 100644
+index b3e6b3aa28..d917cd561f 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -446,7 +446,6 @@ static void test_GetMappedFileName(void)
+@@ -450,7 +450,6 @@ static void test_GetMappedFileName(void)
      ret = pGetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
      ok(ret, "GetMappedFileName error %d\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
@@ -125,7 +125,7 @@ index 6014d6fc152..8704123642e 100644
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
  
      SetLastError(0xdeadbeef);
-@@ -458,7 +457,6 @@ todo_wine
+@@ -462,7 +461,6 @@ todo_wine
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -133,7 +133,7 @@ index 6014d6fc152..8704123642e 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-@@ -471,7 +469,6 @@ todo_wine
+@@ -475,7 +473,6 @@ todo_wine
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -141,7 +141,7 @@ index 6014d6fc152..8704123642e 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-@@ -479,7 +476,6 @@ todo_wine
+@@ -483,7 +480,6 @@ todo_wine
      ret = pGetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
      ok(ret, "GetMappedFileName error %d\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
@@ -149,7 +149,7 @@ index 6014d6fc152..8704123642e 100644
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
  
      SetLastError(0xdeadbeef);
-@@ -564,7 +560,7 @@ static void test_GetProcessImageFileName(void)
+@@ -568,7 +564,7 @@ static void test_GetProcessImageFileName(void)
      {
          /* Windows returns 2*strlen-1 */
          ok(ret >= strlen(szImgPath), "szImgPath=\"%s\" ret=%d\n", szImgPath, ret);
@@ -159,5 +159,5 @@ index 6014d6fc152..8704123642e 100644
  
      SetLastError(0xdeadbeef);
 -- 
-2.14.1
+2.16.1
 

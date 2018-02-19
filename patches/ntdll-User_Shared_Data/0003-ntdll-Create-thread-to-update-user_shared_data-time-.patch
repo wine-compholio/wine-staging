@@ -38,11 +38,10 @@ diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
 index b405bb4e158..187e5a9b57a 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3211,6 +3211,37 @@ static void start_process( void *arg )
-     call_thread_entry_point( kernel32_start_process, arg );
+@@ -3239,6 +3239,36 @@ static void load_global_options(void)
  }
  
-+
+ 
 +/***********************************************************************
 + *           user_shared_data_init
 + *
@@ -76,10 +75,10 @@ index b405bb4e158..187e5a9b57a 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -3243,6 +3274,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3270,6 +3300,7 @@ void WINAPI LdrInitializeThunk( void *ke
+     if (!peb->ProcessParameters->WindowTitle.Buffer)
          peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
      version_init( wm->ldr.FullDllName.Buffer );
-     hidden_exports_init( wm->ldr.FullDllName.Buffer );
 +    user_shared_data_init();
      virtual_set_large_address_space();
  
@@ -102,7 +101,7 @@ diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
 index c42d81c7f89..81c11658a49 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -43,6 +43,7 @@
+@@ -44,6 +44,7 @@
  #include "wine/library.h"
  #include "wine/server.h"
  #include "wine/debug.h"
@@ -110,9 +109,9 @@ index c42d81c7f89..81c11658a49 100644
  #include "ntdll_misc.h"
  #include "ddk/wdm.h"
  #include "wine/exception.h"
-@@ -50,7 +51,9 @@
- WINE_DEFAULT_DEBUG_CHANNEL(thread);
- WINE_DECLARE_DEBUG_CHANNEL(relay);
+@@ -54,7 +55,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+ #define PTHREAD_STACK_MIN 16384
+ #endif
  
 -struct _KUSER_SHARED_DATA *user_shared_data = NULL;
 +static struct _KUSER_SHARED_DATA user_shared_data_internal;
@@ -120,17 +119,17 @@ index c42d81c7f89..81c11658a49 100644
 +struct _KUSER_SHARED_DATA *user_shared_data = &user_shared_data_internal;
  
  PUNHANDLED_EXCEPTION_FILTER unhandled_exception_filter = NULL;
- LPTHREAD_START_ROUTINE kernel32_start_process = NULL;
-@@ -354,18 +357,71 @@ static ULONG_PTR get_image_addr(void)
+ void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
+@@ -359,18 +362,71 @@ static ULONG_PTR get_image_addr(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
 +    static int spinlock;
 +    ULARGE_INTEGER interrupt;
      LARGE_INTEGER now;
-+
++    
 +    while (interlocked_cmpxchg( &spinlock, 1, 0 ) != 0);
-+
++    
      NtQuerySystemTime( &now );
 -    user_shared_data->SystemTime.LowPart = now.u.LowPart;
 -    user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
@@ -152,7 +151,7 @@ index c42d81c7f89..81c11658a49 100644
 +    user_shared_data->u.TickCount.High1Time  = interrupt.HighPart;
 +    user_shared_data->TickCountLowDeprecated = interrupt.LowPart;
      user_shared_data->TickCountMultiplier = 1 << 24;
-+
++    
 +    spinlock = 0;
      return (BYTE *)user_shared_data;
  }
@@ -198,7 +197,7 @@ index c42d81c7f89..81c11658a49 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -396,7 +452,7 @@ HANDLE thread_init(void)
+@@ -402,7 +458,7 @@ HANDLE thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -245,4 +244,3 @@ index 2cdcca8a599..0b813d3b0e9 100644
  
 -- 
 2.14.1
-

@@ -1,7 +1,7 @@
-From 8970fffeee459389818a2e96940393692d082e95 Mon Sep 17 00:00:00 2001
+From 8dec986ed00a13f49022bedd5b63c1b9343a9709 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 13 Aug 2017 04:28:43 +0200
-Subject: bcrypt: Partial implementation of BCryptImportKey and
+Subject: [PATCH] bcrypt: Partial implementation of BCryptImportKey and
  BCryptExportKey.
 
 ---
@@ -13,7 +13,7 @@ Subject: bcrypt: Partial implementation of BCryptImportKey and
  5 files changed, 165 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index f5911d2cd40..f8a8c45a1d5 100644
+index fcd0f6d..28c2394 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -20,7 +20,7 @@
@@ -35,10 +35,10 @@ index f5911d2cd40..f8a8c45a1d5 100644
  @ stdcall BCryptOpenAlgorithmProvider(ptr wstr wstr long)
  @ stub BCryptQueryContextConfiguration
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 80b0480265a..dc865ea9d07 100644
+index d985337..46e7ab1 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -1016,6 +1016,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1090,6 +1090,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
      return STATUS_SUCCESS;
  }
  
@@ -52,7 +52,7 @@ index 80b0480265a..dc865ea9d07 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      if (key->handle) pgnutls_cipher_deinit( key->handle );
-@@ -1083,6 +1090,12 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1265,6 +1272,12 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -65,7 +65,7 @@ index 80b0480265a..dc865ea9d07 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1149,6 +1162,94 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
+@@ -1331,6 +1344,94 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
      return STATUS_SUCCESS;
  }
  
@@ -161,7 +161,7 @@ index 80b0480265a..dc865ea9d07 100644
  {
      struct key *key = handle;
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 3bc1ee526f3..98d4961879c 100644
+index ed73db5..d52c79d 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
 @@ -47,6 +47,9 @@ static NTSTATUS (WINAPI *pBCryptDecrypt)(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID
@@ -174,7 +174,7 @@ index 3bc1ee526f3..98d4961879c 100644
  
  static void test_BCryptGenRandom(void)
  {
-@@ -1572,6 +1575,46 @@ static void test_BCryptDecrypt(void)
+@@ -1287,6 +1290,46 @@ static void test_BCryptDecrypt(void)
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  }
  
@@ -221,7 +221,7 @@ index 3bc1ee526f3..98d4961879c 100644
  START_TEST(bcrypt)
  {
      HMODULE module;
-@@ -1600,6 +1643,8 @@ START_TEST(bcrypt)
+@@ -1315,6 +1358,8 @@ START_TEST(bcrypt)
      pBCryptDecrypt = (void *)GetProcAddress(module, "BCryptDecrypt");
      pBCryptDuplicateKey = (void *)GetProcAddress(module, "BCryptDuplicateKey");
      pBCryptDestroyKey = (void *)GetProcAddress(module, "BCryptDestroyKey");
@@ -230,7 +230,7 @@ index 3bc1ee526f3..98d4961879c 100644
  
      test_BCryptGenRandom();
      test_BCryptGetFipsAlgorithmMode();
-@@ -1613,6 +1658,7 @@ START_TEST(bcrypt)
+@@ -1324,6 +1369,7 @@ START_TEST(bcrypt)
      test_BCryptGenerateSymmetricKey();
      test_BCryptEncrypt();
      test_BCryptDecrypt();
@@ -239,7 +239,7 @@ index 3bc1ee526f3..98d4961879c 100644
      if (pBCryptHash) /* >= Win 10 */
          test_BcryptHash();
 diff --git a/dlls/ncrypt/ncrypt.spec b/dlls/ncrypt/ncrypt.spec
-index b14a332e18f..478c2cfb1da 100644
+index 68735eb..d0f0f56 100644
 --- a/dlls/ncrypt/ncrypt.spec
 +++ b/dlls/ncrypt/ncrypt.spec
 @@ -22,7 +22,7 @@
@@ -261,7 +261,7 @@ index b14a332e18f..478c2cfb1da 100644
  @ stub BCryptKeyDerivation
  @ stdcall BCryptOpenAlgorithmProvider(ptr wstr wstr long) bcrypt.BCryptOpenAlgorithmProvider
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index acf2f30e21c..de812ffe333 100644
+index 1e468a3..81822af 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -58,6 +58,10 @@ typedef LONG NTSTATUS;
@@ -275,7 +275,7 @@ index acf2f30e21c..de812ffe333 100644
  #define MS_PRIMITIVE_PROVIDER (const WCHAR [])\
      {'M','i','c','r','o','s','o','f','t',' ','P','r','i','m','i','t','i','v','e',' ','P','r','o','v','i','d','e','r',0}
  #define MS_PLATFORM_CRYPTO_PROVIDER (const WCHAR [])\
-@@ -92,6 +96,13 @@ typedef struct __BCRYPT_KEY_LENGTHS_STRUCT
+@@ -94,6 +98,13 @@ typedef struct __BCRYPT_KEY_LENGTHS_STRUCT
      ULONG dwIncrement;
  } BCRYPT_KEY_LENGTHS_STRUCT, BCRYPT_AUTH_TAG_LENGTHS_STRUCT;
  
@@ -289,9 +289,9 @@ index acf2f30e21c..de812ffe333 100644
  typedef struct _BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO
  {
      ULONG cbSize;
-@@ -114,6 +125,9 @@ typedef struct _BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO
- #define BCRYPT_AUTH_MODE_CHAIN_CALLS_FLAG 0x00000001
- #define BCRYPT_AUTH_MODE_IN_PROGRESS_FLAG 0x00000002
+@@ -139,6 +150,9 @@ typedef struct _CRYPT_PROVIDER_REG
+     PCRYPT_IMAGE_REG pKM;
+ } CRYPT_PROVIDER_REG, *PCRYPT_PROVIDER_REG;
  
 +#define BCRYPT_KEY_DATA_BLOB_MAGIC    0x4d42444b
 +#define BCRYPT_KEY_DATA_BLOB_VERSION1 1
@@ -300,5 +300,5 @@ index acf2f30e21c..de812ffe333 100644
  typedef PVOID BCRYPT_KEY_HANDLE;
  typedef PVOID BCRYPT_HANDLE;
 -- 
-2.13.1
+1.9.1
 

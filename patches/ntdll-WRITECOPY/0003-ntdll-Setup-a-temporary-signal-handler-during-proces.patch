@@ -1,36 +1,23 @@
-From 44f9d4109dfcd0a9e49b3396bd8f8a1f1c2ca1a0 Mon Sep 17 00:00:00 2001
+From a34c31eaedc464322d204c1f0a8df624aac19867 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
-Subject: ntdll: Setup a temporary signal handler during process startup to
- handle page faults. (v2)
+Subject: [PATCH] ntdll: Setup a temporary signal handler during process
+ startup to handle page faults. (v2)
 
 ---
- dlls/ntdll/ntdll_misc.h     |  1 +
  dlls/ntdll/signal_arm.c     |  6 +++++
  dlls/ntdll/signal_arm64.c   |  6 +++++
  dlls/ntdll/signal_i386.c    | 53 +++++++++++++++++++++++++++++++++++++++++++++
  dlls/ntdll/signal_powerpc.c |  6 +++++
  dlls/ntdll/signal_x86_64.c  |  6 +++++
  dlls/ntdll/thread.c         |  1 +
- 7 files changed, 79 insertions(+)
+ 6 files changed, 78 insertions(+)
 
-diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index fafad135f29..ec3b1746f84 100644
---- a/dlls/ntdll/ntdll_misc.h
-+++ b/dlls/ntdll/ntdll_misc.h
-@@ -68,6 +68,7 @@ extern NTSTATUS signal_alloc_thread( TEB **teb ) DECLSPEC_HIDDEN;
- extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
- extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
- extern void signal_init_process( CONTEXT *context, LPTHREAD_START_ROUTINE entry ) DECLSPEC_HIDDEN;
-+extern void signal_init_early(void) DECLSPEC_HIDDEN;
- extern void version_init( const WCHAR *appname ) DECLSPEC_HIDDEN;
- extern void debug_init(void) DECLSPEC_HIDDEN;
- extern HANDLE thread_init(void) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
-index e5e314049e8..61c9ead5682 100644
+index 79aeb2a452..80a15830f6 100644
 --- a/dlls/ntdll/signal_arm.c
 +++ b/dlls/ntdll/signal_arm.c
-@@ -1019,6 +1019,12 @@ void signal_init_process( CONTEXT *context, LPTHREAD_START_ROUTINE entry )
+@@ -1024,6 +1024,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -42,13 +29,13 @@ index e5e314049e8..61c9ead5682 100644
 +}
  
  /**********************************************************************
-  *              __wine_enter_vm86   (NTDLL.@)
+  *              RtlAddFunctionTable   (NTDLL.@)
 diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
-index 5b3e8879b8f..6e4a4f12343 100644
+index 7be64fdb81..8fdead1549 100644
 --- a/dlls/ntdll/signal_arm64.c
 +++ b/dlls/ntdll/signal_arm64.c
-@@ -890,6 +890,12 @@ void signal_init_process( CONTEXT *context, LPTHREAD_START_ROUTINE entry )
-     exit(1);
+@@ -883,6 +883,12 @@ void signal_init_thread( TEB *teb )
+     pthread_setspecific( teb_key, teb );
  }
  
 +/**********************************************************************
@@ -59,13 +46,13 @@ index 5b3e8879b8f..6e4a4f12343 100644
 +}
  
  /**********************************************************************
-  *              __wine_enter_vm86   (NTDLL.@)
+  *		signal_init_process
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index c8b85936fbf..3442851e65a 100644
+index 223894489f..e60f28cca7 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -2181,6 +2181,31 @@ static void usr2_handler( int signal, siginfo_t *siginfo, void *sigcontext )
- #endif /* __HAVE_VM86 */
+@@ -1968,6 +1968,31 @@ static void WINAPI raise_generic_exception( EXCEPTION_RECORD *rec, CONTEXT *cont
+ }
  
  
 +/**********************************************************************
@@ -96,7 +83,7 @@ index c8b85936fbf..3442851e65a 100644
  /**********************************************************************
   *		segv_handler
   *
-@@ -2621,6 +2646,34 @@ void signal_init_process( CONTEXT *context, LPTHREAD_START_ROUTINE entry )
+@@ -2382,6 +2407,34 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -129,14 +116,14 @@ index c8b85936fbf..3442851e65a 100644
 +    exit(1);
 +}
  
- #ifdef __HAVE_VM86
- /**********************************************************************
+ /*******************************************************************
+  *		RtlUnwind (NTDLL.@)
 diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
-index e5a009c2aa2..dcbc1c4fa0b 100644
+index 39e8f42c03..721035489f 100644
 --- a/dlls/ntdll/signal_powerpc.c
 +++ b/dlls/ntdll/signal_powerpc.c
-@@ -1092,6 +1092,12 @@ void signal_init_process( CONTEXT *context, LPTHREAD_START_ROUTINE entry )
-     exit(1);
+@@ -1045,6 +1045,12 @@ void signal_init_thread( TEB *teb )
+     pthread_setspecific( teb_key, teb );
  }
  
 +/**********************************************************************
@@ -147,12 +134,12 @@ index e5a009c2aa2..dcbc1c4fa0b 100644
 +}
  
  /**********************************************************************
-  *              __wine_enter_vm86   (NTDLL.@)
+  *		signal_init_process
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 691ee1ffdbf..1148f0224aa 100644
+index 653024e741..fe0680f494 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -3158,6 +3158,12 @@ void signal_init_process( CONTEXT *context, LPTHREAD_START_ROUTINE entry )
+@@ -3228,6 +3228,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -166,10 +153,10 @@ index 691ee1ffdbf..1148f0224aa 100644
  /**********************************************************************
   *              RtlAddFunctionTable   (NTDLL.@)
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 85ceb2bbeac..cc0159dd87b 100644
+index 1eec3983a3..6d6743b589 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -280,6 +280,7 @@ HANDLE thread_init(void)
+@@ -446,6 +446,7 @@ HANDLE thread_init(void)
      static struct debug_info debug_info;  /* debug info for initial thread */
  
      virtual_init();
@@ -178,5 +165,5 @@ index 85ceb2bbeac..cc0159dd87b 100644
      /* reserve space for shared user data */
  
 -- 
-2.14.1
+2.16.1
 

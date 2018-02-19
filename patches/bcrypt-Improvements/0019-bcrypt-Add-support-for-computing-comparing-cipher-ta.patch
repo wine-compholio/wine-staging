@@ -1,7 +1,7 @@
-From cb5fa7e822dcd6105f189507ab648eacc86ab91a Mon Sep 17 00:00:00 2001
+From 87e8a5e0eeaab01ae5092be876b8d6195e19ed5b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 26 Dec 2016 08:02:36 +0100
-Subject: bcrypt: Add support for computing/comparing cipher tag.
+Subject: [PATCH] bcrypt: Add support for computing/comparing cipher tag.
 
 ---
  dlls/bcrypt/bcrypt_main.c  | 41 ++++++++++++++++++++++++++++++++++++++++-
@@ -9,11 +9,11 @@ Subject: bcrypt: Add support for computing/comparing cipher tag.
  2 files changed, 45 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 97c437a20c0..0ff461adc91 100644
+index c7298fb..e7377f2 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -49,6 +49,9 @@ static HINSTANCE instance;
- #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
+ #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
  
 +/* Not present in gnutls version < 3.0 */
@@ -47,7 +47,7 @@ index 97c437a20c0..0ff461adc91 100644
      if ((ret = pgnutls_global_init()) != GNUTLS_E_SUCCESS)
      {
          pgnutls_perror( ret );
-@@ -892,6 +906,19 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
+@@ -976,6 +990,19 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
      return STATUS_SUCCESS;
  }
  
@@ -67,7 +67,7 @@ index 97c437a20c0..0ff461adc91 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      if (key->handle) pgnutls_cipher_deinit( key->handle );
-@@ -934,6 +961,12 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
+@@ -1126,6 +1153,12 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -80,7 +80,7 @@ index 97c437a20c0..0ff461adc91 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1018,7 +1051,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1210,7 +1243,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if ((status = key_encrypt( key, input, input_len, output, output_len )))
              return status;
  
@@ -89,7 +89,7 @@ index 97c437a20c0..0ff461adc91 100644
      }
  
      if ((status = key_set_params( key, iv, iv_len ))) return status;
-@@ -1077,6 +1110,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1269,6 +1302,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
      if (key->mode == MODE_ID_GCM)
      {
          BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO *auth_info = padding;
@@ -97,7 +97,7 @@ index 97c437a20c0..0ff461adc91 100644
  
          if (!auth_info) return STATUS_INVALID_PARAMETER;
          if (!auth_info->pbNonce) return STATUS_INVALID_PARAMETER;
-@@ -1094,6 +1128,11 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1286,6 +1320,11 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if ((status = key_decrypt( key, input, input_len, output, output_len )))
              return status;
  
@@ -110,10 +110,10 @@ index 97c437a20c0..0ff461adc91 100644
      }
  
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 79e8c4c36d3..14725a52b7a 100644
+index 2a646e8..887fe85 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -1018,11 +1018,11 @@ static void test_BCryptEncrypt(void)
+@@ -751,11 +751,11 @@ static void test_BCryptEncrypt(void)
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
      ok(size == 32, "got %u\n", size);
      ok(!memcmp(ciphertext, expected4, sizeof(expected4)), "wrong data\n");
@@ -127,7 +127,7 @@ index 79e8c4c36d3..14725a52b7a 100644
  
      /* input size is not multiple of block size */
      size = 0;
-@@ -1033,11 +1033,11 @@ static void test_BCryptEncrypt(void)
+@@ -766,11 +766,11 @@ static void test_BCryptEncrypt(void)
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
      ok(size == 24, "got %u\n", size);
      ok(!memcmp(ciphertext, expected4, 24), "wrong data\n");
@@ -141,7 +141,7 @@ index 79e8c4c36d3..14725a52b7a 100644
  
      /* test with padding */
      memcpy(ivbuf, iv, sizeof(iv));
-@@ -1231,7 +1231,7 @@ static void test_BCryptDecrypt(void)
+@@ -974,7 +974,7 @@ static void test_BCryptDecrypt(void)
      memcpy(ivbuf, iv, sizeof(iv));
      auth_info.pbTag = iv; /* wrong tag */
      ret = pBCryptDecrypt(key, ciphertext4, 32, &auth_info, ivbuf, 16, plaintext, 32, &size, 0);
@@ -151,5 +151,5 @@ index 79e8c4c36d3..14725a52b7a 100644
  
      ret = pBCryptDestroyKey(key);
 -- 
-2.13.1
+1.9.1
 

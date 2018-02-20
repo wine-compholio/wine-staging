@@ -1,4 +1,4 @@
-From 122f1f6cc4feb329eead34eb25e7739bdef899fc Mon Sep 17 00:00:00 2001
+From f43e1e4f9fd62217be81ce0c2f25a1237855e564 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 5 Sep 2016 15:31:29 +0200
 Subject: [PATCH] inseng: Implement CIF reader and download functions.
@@ -9,10 +9,10 @@ FIXME: Needs splitting.
  dlls/inseng/icif.c           | 1745 ++++++++++++++++++++++++++++++++++++++++++
  dlls/inseng/inf.c            |  443 +++++++++++
  dlls/inseng/inseng.spec      |    4 +-
- dlls/inseng/inseng_main.c    |  989 +++++++++++++++++++++++-
- dlls/inseng/inseng_private.h |   93 +++
+ dlls/inseng/inseng_main.c    |  990 +++++++++++++++++++++++-
+ dlls/inseng/inseng_private.h |   79 ++
  include/inseng.idl           |  276 ++++++-
- 7 files changed, 3504 insertions(+), 53 deletions(-)
+ 7 files changed, 3490 insertions(+), 54 deletions(-)
  create mode 100644 dlls/inseng/icif.c
  create mode 100644 dlls/inseng/inf.c
  create mode 100644 dlls/inseng/inseng_private.h
@@ -35,7 +35,7 @@ index 652e06b..d0aaa66 100644
  IDL_SRCS = inseng_classes.idl
 diff --git a/dlls/inseng/icif.c b/dlls/inseng/icif.c
 new file mode 100644
-index 0000000..177f1b8
+index 0000000..f7bf0a0
 --- /dev/null
 +++ b/dlls/inseng/icif.c
 @@ -0,0 +1,1745 @@
@@ -933,7 +933,7 @@ index 0000000..177f1b8
 +{
 +    struct ciffenum_components *enumerator;
 +
-+    enumerator = heap_zero_alloc(sizeof(*enumerator));
++    enumerator = heap_alloc_zero(sizeof(*enumerator));
 +    if (!enumerator) return E_OUTOFMEMORY;
 +
 +    enumerator->IEnumCifComponents_iface.lpVtbl = &enum_componentsVtbl;
@@ -1045,7 +1045,7 @@ index 0000000..177f1b8
 +{
 +    struct ciffenum_groups *enumerator;
 +
-+    enumerator = heap_zero_alloc(sizeof(*enumerator));
++    enumerator = heap_alloc_zero(sizeof(*enumerator));
 +    if (!enumerator) return E_OUTOFMEMORY;
 +
 +    enumerator->IEnumCifGroups_iface.lpVtbl = &enum_groupsVtbl;
@@ -1484,7 +1484,7 @@ index 0000000..177f1b8
 +    {
 +        next = next_part(&str, TRUE);
 +
-+        dependency = heap_zero_alloc(sizeof(*dependency));
++        dependency = heap_alloc_zero(sizeof(*dependency));
 +        if (!dependency) goto done;
 +
 +        dependency->id = strdupA(str);
@@ -1532,7 +1532,7 @@ index 0000000..177f1b8
 +            goto next;
 +        index--;
 +
-+        url_entry = heap_zero_alloc(sizeof(*url_entry));
++        url_entry = heap_alloc_zero(sizeof(*url_entry));
 +        if (!url_entry) goto error;
 +
 +        url_entry->index = index;
@@ -1583,7 +1583,7 @@ index 0000000..177f1b8
 +    struct cifcomponent *component;
 +    HRESULT hr = E_OUTOFMEMORY;
 +
-+    component = heap_zero_alloc(sizeof(*component));
++    component = heap_alloc_zero(sizeof(*component));
 +    if (!component) return E_OUTOFMEMORY;
 +
 +    component->ICifComponent_iface.lpVtbl = &cifcomponentVtbl;
@@ -1662,7 +1662,7 @@ index 0000000..177f1b8
 +    struct cifgroup *group;
 +    HRESULT hr = E_OUTOFMEMORY;
 +
-+    group = heap_zero_alloc(sizeof(*group));
++    group = heap_alloc_zero(sizeof(*group));
 +    if (!group) return E_OUTOFMEMORY;
 +
 +    group->ICifGroup_iface.lpVtbl = &cifgroupVtbl;
@@ -1746,7 +1746,7 @@ index 0000000..177f1b8
 +    struct ciffile *file;
 +    HRESULT hr = E_FAIL;
 +
-+    file = heap_zero_alloc(sizeof(*file));
++    file = heap_alloc_zero(sizeof(*file));
 +    if(!file) return E_OUTOFMEMORY;
 +
 +    file->ICifFile_iface.lpVtbl = &ciffileVtbl;
@@ -1786,7 +1786,7 @@ index 0000000..177f1b8
 +}
 diff --git a/dlls/inseng/inf.c b/dlls/inseng/inf.c
 new file mode 100644
-index 0000000..4e164cc
+index 0000000..bead72c
 --- /dev/null
 +++ b/dlls/inseng/inf.c
 @@ -0,0 +1,443 @@
@@ -1881,7 +1881,7 @@ index 0000000..4e164cc
 +static int expand_variables_buffer(struct inf_file *inf, const char *str, char *output)
 +{
 +    const char *p, *var_start = NULL;
-+    int var_len, len = 0;
++    int var_len = 0, len = 0;
 +    const char *substitution;
 +
 +    for (p = str; *p; p++)
@@ -2137,7 +2137,7 @@ index 0000000..4e164cc
 +    name = trim(line, NULL, FALSE);
 +    if (!name) return S_OK;
 +
-+    sec = heap_zero_alloc(sizeof(*sec));
++    sec = heap_alloc_zero(sizeof(*sec));
 +    if (!sec) return E_OUTOFMEMORY;
 +
 +    sec->name = name;
@@ -2165,7 +2165,7 @@ index 0000000..4e164cc
 +    key = trim(key, NULL, FALSE);
 +    value = trim(value, NULL, TRUE);
 +
-+    key_val = heap_zero_alloc(sizeof(*key_val));
++    key_val = heap_alloc_zero(sizeof(*key_val));
 +    if (!key_val) return E_OUTOFMEMORY;
 +
 +    key_val->key = key;
@@ -2205,7 +2205,7 @@ index 0000000..4e164cc
 +    file = CreateFileA(path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 +    if (file == INVALID_HANDLE_VALUE) return E_FAIL;
 +
-+    inf = heap_zero_alloc(sizeof(*inf));
++    inf = heap_alloc_zero(sizeof(*inf));
 +    if (!inf) goto error;
 +
 +    if (!GetFileSizeEx(file, &file_size))
@@ -2213,7 +2213,7 @@ index 0000000..4e164cc
 +
 +    inf->size = file_size.QuadPart;
 +
-+    inf->content = heap_zero_alloc(inf->size);
++    inf->content = heap_alloc_zero(inf->size);
 +    if (!inf->content) goto error;
 +
 +    list_init(&inf->sections);
@@ -2247,7 +2247,7 @@ index 82c0b4d..7ae46fa 100644
 +@ stdcall GetICifRWFileFromFile(ptr str)
  @ stub PurgeDownloadDirectory
 diff --git a/dlls/inseng/inseng_main.c b/dlls/inseng/inseng_main.c
-index 93649e2..ecbd229 100644
+index 93649e2..f2e0ea5 100644
 --- a/dlls/inseng/inseng_main.c
 +++ b/dlls/inseng/inseng_main.c
 @@ -2,6 +2,7 @@
@@ -2258,7 +2258,7 @@ index 93649e2..ecbd229 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -29,9 +30,13 @@
+@@ -29,19 +30,70 @@
  #include "winuser.h"
  #include "ole2.h"
  #include "rpcproxy.h"
@@ -2270,9 +2270,9 @@ index 93649e2..ecbd229 100644
 +#include "inseng_private.h"
 +
  #include "wine/debug.h"
- #include "wine/heap.h"
+-#include "wine/heap.h"
  
-@@ -39,9 +44,38 @@ WINE_DEFAULT_DEBUG_CHANNEL(inseng);
+ WINE_DEFAULT_DEBUG_CHANNEL(inseng);
  
  static HINSTANCE instance;
  
@@ -2308,22 +2308,7 @@ index 93649e2..ecbd229 100644
 +
 +    /* used for the installation thread */
 +    struct thread_info thread;
- };
- 
- static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
-@@ -49,6 +83,269 @@ static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
-     return CONTAINING_RECORD(iface, InstallEngine, IInstallEngine2_iface);
- }
- 
-+static inline struct downloadcb *impl_from_IBindStatusCallback(IBindStatusCallback *iface)
-+{
-+    return CONTAINING_RECORD(iface, struct downloadcb, IBindStatusCallback_iface);
-+}
-+
-+static inline InstallEngine *impl_from_IInstallEngineTiming(IInstallEngineTiming *iface)
-+{
-+    return CONTAINING_RECORD(iface, InstallEngine, IInstallEngineTiming_iface);
-+}
++};
 +
 +struct downloadcb
 +{
@@ -2342,7 +2327,22 @@ index 93649e2..ecbd229 100644
 +    InstallEngine *engine;
 +    HANDLE event_done;
 +    HRESULT hr;
-+};
+ };
+ 
+ static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
+@@ -49,6 +101,250 @@ static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
+     return CONTAINING_RECORD(iface, InstallEngine, IInstallEngine2_iface);
+ }
+ 
++static inline struct downloadcb *impl_from_IBindStatusCallback(IBindStatusCallback *iface)
++{
++    return CONTAINING_RECORD(iface, struct downloadcb, IBindStatusCallback_iface);
++}
++
++static inline InstallEngine *impl_from_IInstallEngineTiming(IInstallEngineTiming *iface)
++{
++    return CONTAINING_RECORD(iface, InstallEngine, IInstallEngineTiming_iface);
++}
 +
 +static HRESULT WINAPI downloadcb_QueryInterface(IBindStatusCallback *iface, REFIID riid, void **ppv)
 +{
@@ -2441,7 +2441,7 @@ index 93649e2..ecbd229 100644
 +            /* fall-through */
 +        case BINDSTATUS_DOWNLOADINGDATA:
 +        case BINDSTATUS_ENDDOWNLOADDATA:
-+            This->engine->thread.downloaded_kb = This->dl_previous_kb  progress / 1024;
++            This->engine->thread.downloaded_kb = This->dl_previous_kb + progress / 1024;
 +            if (This->engine->callback)
 +            {
 +                hr = IInstallEngineCallback_OnComponentProgress(This->engine->callback,
@@ -2553,7 +2553,7 @@ index 93649e2..ecbd229 100644
 +{
 +    struct downloadcb *cb;
 +
-+    cb = heap_zero_alloc(sizeof(*cb));
++    cb = heap_alloc_zero(sizeof(*cb));
 +    if (!cb) return E_OUTOFMEMORY;
 +
 +    cb->IBindStatusCallback_iface.lpVtbl = &BindStatusCallbackVtbl;
@@ -2581,7 +2581,7 @@ index 93649e2..ecbd229 100644
  static HRESULT WINAPI InstallEngine_QueryInterface(IInstallEngine2 *iface, REFIID riid, void **ppv)
  {
      InstallEngine *This = impl_from_IInstallEngine2(iface);
-@@ -62,13 +359,16 @@ static HRESULT WINAPI InstallEngine_QueryInterface(IInstallEngine2 *iface, REFII
+@@ -62,13 +358,16 @@ static HRESULT WINAPI InstallEngine_QueryInterface(IInstallEngine2 *iface, REFII
      }else if(IsEqualGUID(&IID_IInstallEngine2, riid)) {
          TRACE("(%p)->(IID_IInstallEngine2 %p)\n", This, ppv);
          *ppv = &This->IInstallEngine2_iface;
@@ -2600,7 +2600,7 @@ index 93649e2..ecbd229 100644
      return S_OK;
  }
  
-@@ -89,181 +389,726 @@ static ULONG WINAPI InstallEngine_Release(IInstallEngine2 *iface)
+@@ -89,181 +388,726 @@ static ULONG WINAPI InstallEngine_Release(IInstallEngine2 *iface)
  
      TRACE("(%p) ref=%d\n", This, ref);
  
@@ -2728,7 +2728,7 @@ index 93649e2..ecbd229 100644
 +    int len_url = strlen(url);
 +    char *combined;
 +
-+    combined = heap_alloc(len_base  len_url  2);
++    combined = heap_alloc(len_base + len_url + 2);
 +    if (!combined) return NULL;
 +
 +    strcpy(combined, baseurl);
@@ -2770,7 +2770,7 @@ index 93649e2..ecbd229 100644
 +
 +static char *merge_path(char *path1, char *path2)
 +{
-+    int len = strlen(path1)  strlen(path2)  2;
++    int len = strlen(path1) + strlen(path2) + 2;
 +    char *combined = heap_alloc(len);
 +
 +    if (!combined) return NULL;
@@ -2853,12 +2853,12 @@ index 93649e2..ecbd229 100644
 +
 +static HRESULT process_component_dependencies(InstallEngine *This, ICifComponent *comp)
 +{
-+    char id[MAX_ID_LENGTH1], type;
++    char id[MAX_ID_LENGTH+1], type;
 +    DWORD ver, build;
 +    HRESULT hr;
 +    int i;
 +
-+    for (i = 0;; i)
++    for (i = 0;; i++)
 +    {
 +        hr = ICifComponent_GetDependency(comp, i, id, sizeof(id), &type, &ver, &build);
 +        if (SUCCEEDED(hr))
@@ -2873,8 +2873,8 @@ index 93649e2..ecbd229 100644
 +static HRESULT process_component(InstallEngine *This, ICifComponent *comp)
 +{
 +    DWORD size_dl, size_install, phase;
-+    char display[MAX_DISPLAYNAME_LENGTH1];
-+    char id[MAX_ID_LENGTH1];
++    char display[MAX_DISPLAYNAME_LENGTH+1];
++    char id[MAX_ID_LENGTH+1];
 +    HRESULT hr;
 +    int i;
 +
@@ -2901,7 +2901,7 @@ index 93649e2..ecbd229 100644
 +
 +    if (This->thread.operation == OP_DOWNLOAD)
 +    {
-+        for (i = 0;; i)
++        for (i = 0;; i++)
 +        {
 +            DWORD flags;
 +            char *url;
@@ -3112,7 +3112,7 @@ index 93649e2..ecbd229 100644
 +        if (index == 0)
 +        {
 +            char *id_src = component_get_id(comp);
-+            *id = CoTaskMemAlloc(strlen(id_src)  1);
++            *id = CoTaskMemAlloc(strlen(id_src) + 1);
 +
 +            if (*id)
 +                strcpy(*id, id_src);
@@ -3363,7 +3363,7 @@ index 93649e2..ecbd229 100644
      InstallEngine_QueryInterface,
      InstallEngine_AddRef,
      InstallEngine_Release,
-@@ -293,6 +1138,70 @@ static const IInstallEngine2Vtbl InstallEngine2Vtbl = {
+@@ -293,6 +1137,70 @@ static const IInstallEngine2Vtbl InstallEngine2Vtbl = {
      InstallEngine2_GetICifFile
  };
  
@@ -3434,12 +3434,12 @@ index 93649e2..ecbd229 100644
  static HRESULT WINAPI ClassFactory_QueryInterface(IClassFactory *iface, REFIID riid, void **ppv)
  {
      *ppv = NULL;
-@@ -337,12 +1246,14 @@ static HRESULT WINAPI InstallEngineCF_CreateInstance(IClassFactory *iface, IUnkn
+@@ -337,12 +1245,14 @@ static HRESULT WINAPI InstallEngineCF_CreateInstance(IClassFactory *iface, IUnkn
  
      TRACE("(%p %s %p)\n", outer, debugstr_guid(riid), ppv);
  
 -    engine = heap_alloc(sizeof(*engine));
-+    engine = heap_zero_alloc(sizeof(*engine));
++    engine = heap_alloc_zero(sizeof(*engine));
      if(!engine)
          return E_OUTOFMEMORY;
  
@@ -3452,10 +3452,10 @@ index 93649e2..ecbd229 100644
      IInstallEngine2_Release(&engine->IInstallEngine2_iface);
 diff --git a/dlls/inseng/inseng_private.h b/dlls/inseng/inseng_private.h
 new file mode 100644
-index 0000000..1e739d2
+index 0000000..1a649e2
 --- /dev/null
 +++ b/dlls/inseng/inseng_private.h
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,79 @@
 +/*
 + * Copyright 2016 Michael Müller
 + *
@@ -3480,22 +3480,8 @@ index 0000000..1e739d2
 +#include "ole2.h"
 +#include "rpcproxy.h"
 +#include "inseng.h"
++#include "wine/heap.h"
 +#include "wine/unicode.h"
-+
-+static inline void* __WINE_ALLOC_SIZE(1) heap_alloc(size_t size)
-+{
-+    return HeapAlloc(GetProcessHeap(), 0, size);
-+}
-+
-+static inline void *heap_zero_alloc(size_t len)
-+{
-+    return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, len);
-+}
-+
-+static inline BOOL heap_free(void *mem)
-+{
-+    return HeapFree(GetProcessHeap(), 0, mem);
-+}
 +
 +static inline char *strdupA(const char *src)
 +{

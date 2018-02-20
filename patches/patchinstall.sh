@@ -371,7 +371,6 @@ patch_enable_all ()
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
-	enable_user_exe16_CONTAINING_RECORD="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
@@ -1363,9 +1362,6 @@ patch_enable ()
 			;;
 		taskmgr-Memory_Usage)
 			enable_taskmgr_Memory_Usage="$2"
-			;;
-		user.exe16-CONTAINING_RECORD)
-			enable_user_exe16_CONTAINING_RECORD="$2"
 			;;
 		user.exe16-DlgDirList)
 			enable_user_exe16_DlgDirList="$2"
@@ -3068,8 +3064,8 @@ fi
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, ntdll-APC_Start_Process, ntdll-
-# | 	server-CreateProcess_ACLs, server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, ntdll-APC_Start_Process, server-
+# | 	CreateProcess_ACLs, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -3528,9 +3524,10 @@ fi
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
 # | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
-# | 	include/wine/wined3d.h
+# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_1DTextures" -eq 1; then
+	patch_apply wined3d-1DTextures/0001-wined3d-Create-dummy-1d-textures.patch
 	patch_apply wined3d-1DTextures/0002-wined3d-Add-1d-texture-resource-type.patch
 	patch_apply wined3d-1DTextures/0003-wined3d-Add-is_power_of_two-helper-function.patch
 	patch_apply wined3d-1DTextures/0004-wined3d-Create-dummy-1d-textures-and-surfaces.patch
@@ -3548,6 +3545,7 @@ if test "$enable_wined3d_1DTextures" -eq 1; then
 	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
 	patch_apply wined3d-1DTextures/0017-d3d11-Allow-DXGI_FORMAT_UNKNOWN-in-CheckFormatSuppor.patch
 	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
@@ -3959,7 +3957,8 @@ fi
 # | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
 # | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_34/Makefile.in, dlls/d3dx9_35/Makefile.in,
 # | 	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c, dlls/d3dx9_37/Makefile.in,
-# | 	dlls/d3dx9_38/Makefile.in, dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in
+# | 	dlls/d3dx9_38/Makefile.in, dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in, dlls/d3dx9_41/Makefile.in,
+# | 	dlls/d3dx9_42/Makefile.in, dlls/d3dx9_43/Makefile.in
 # |
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
@@ -8071,18 +8070,6 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user.exe16-CONTAINING_RECORD
-# |
-# | Modified files:
-# |   *	dlls/user.exe16/user.c
-# |
-if test "$enable_user_exe16_CONTAINING_RECORD" -eq 1; then
-	patch_apply user.exe16-CONTAINING_RECORD/0001-user.exe16-Don-t-open-code-CONTAINING_RECORD.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "user.exe16: Don'\''t open code CONTAINING_RECORD.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user.exe16-DlgDirList
 # |
 # | This patchset fixes the following Wine bugs:
@@ -9121,7 +9108,7 @@ fi
 # Patchset wined3d-Core_Context
 # |
 # | Modified files:
-# |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
+# |   *	dlls/dxgi/factory.c, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_Core_Context" -eq 1; then
 	patch_apply wined3d-Core_Context/0001-wined3d-Use-OpenGL-core-context-for-D3D10-11-when-ne.patch
@@ -9379,8 +9366,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports,
-# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
-# | 	wined3d-CSMT_Helper
+# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

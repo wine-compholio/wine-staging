@@ -1,4 +1,4 @@
-From 0a88b987dc3a1293f0ca94b661cc96653abfe132 Mon Sep 17 00:00:00 2001
+From 55060223c611c8091c7a248e978966bb8ee3f57b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 29 Sep 2017 20:31:00 +0200
 Subject: [PATCH] bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
@@ -9,7 +9,7 @@ Subject: [PATCH] bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
  2 files changed, 326 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 18976aa..d6e6bb7 100644
+index 2c40ac9..17fb3fe 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -27,6 +27,7 @@
@@ -20,7 +20,7 @@ index 18976aa..d6e6bb7 100644
  #endif
  
  #include "ntstatus.h"
-@@ -49,9 +50,26 @@ static HINSTANCE instance;
+@@ -50,9 +51,26 @@ static HINSTANCE instance;
  #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
  
@@ -47,7 +47,7 @@ index 18976aa..d6e6bb7 100644
  
  static void *libgnutls_handle;
  #define MAKE_FUNCPTR(f) static typeof(f) * p##f
-@@ -64,12 +82,15 @@ MAKE_FUNCPTR(gnutls_global_init);
+@@ -65,12 +83,15 @@ MAKE_FUNCPTR(gnutls_global_init);
  MAKE_FUNCPTR(gnutls_global_set_log_function);
  MAKE_FUNCPTR(gnutls_global_set_log_level);
  MAKE_FUNCPTR(gnutls_perror);
@@ -63,7 +63,7 @@ index 18976aa..d6e6bb7 100644
  #endif
  
  static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void *tag, size_t tag_size)
-@@ -82,6 +103,24 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
+@@ -83,6 +104,24 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
      return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
  }
  
@@ -88,7 +88,7 @@ index 18976aa..d6e6bb7 100644
  static void gnutls_log( int level, const char *msg )
  {
      TRACE( "<%d> %s", level, msg );
-@@ -113,6 +152,8 @@ static BOOL gnutls_initialize(void)
+@@ -114,6 +153,8 @@ static BOOL gnutls_initialize(void)
      LOAD_FUNCPTR(gnutls_global_set_log_function)
      LOAD_FUNCPTR(gnutls_global_set_log_level)
      LOAD_FUNCPTR(gnutls_perror)
@@ -97,7 +97,7 @@ index 18976aa..d6e6bb7 100644
  #undef LOAD_FUNCPTR
  
      if (!(pgnutls_cipher_tag = wine_dlsym( libgnutls_handle, "gnutls_cipher_tag", NULL, 0 )))
-@@ -125,6 +166,21 @@ static BOOL gnutls_initialize(void)
+@@ -126,6 +167,21 @@ static BOOL gnutls_initialize(void)
          WARN("gnutls_cipher_add_auth not found\n");
          pgnutls_cipher_add_auth = compat_gnutls_cipher_add_auth;
      }
@@ -119,7 +119,7 @@ index 18976aa..d6e6bb7 100644
  
      if ((ret = pgnutls_global_init()) != GNUTLS_E_SUCCESS)
      {
-@@ -1195,6 +1251,264 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+@@ -1196,6 +1252,264 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
      return STATUS_SUCCESS;
  }
  
@@ -384,7 +384,7 @@ index 18976aa..d6e6bb7 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      if (key_is_symmetric(key))
-@@ -1410,6 +1724,13 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+@@ -1412,6 +1726,13 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -398,7 +398,7 @@ index 18976aa..d6e6bb7 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1643,13 +1964,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
+@@ -1647,13 +1968,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
  {
      struct key *key = handle;
  
@@ -416,7 +416,7 @@ index 18976aa..d6e6bb7 100644
  
  NTSTATUS WINAPI BCryptDestroyKey( BCRYPT_KEY_HANDLE handle )
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index fe57274..d42eb7c 100644
+index c143ea7..f9587f8 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
 @@ -1415,10 +1415,10 @@ static void test_ECDSA(void)

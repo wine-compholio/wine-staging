@@ -290,7 +290,6 @@ patch_enable_all ()
 	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_ExceptionInformation="$1"
-	enable_ntoskrnl_DriverTest="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -1119,9 +1118,6 @@ patch_enable ()
 			;;
 		ntdll-x86_64_ExceptionInformation)
 			enable_ntdll_x86_64_ExceptionInformation="$2"
-			;;
-		ntoskrnl-DriverTest)
-			enable_ntoskrnl_DriverTest="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -2119,6 +2115,13 @@ if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	enable_winex11__NET_ACTIVE_WINDOW=1
 fi
 
+if test "$enable_winedevice_Default_Drivers" -eq 1; then
+	if test "$enable_dxva2_Video_Decoder" -gt 1; then
+		abort "Patchset dxva2-Video_Decoder disabled, but winedevice-Default_Drivers depends on that."
+	fi
+	enable_dxva2_Video_Decoder=1
+fi
+
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
@@ -2393,24 +2396,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
 	fi
 	enable_nvcuda_CUDA_Support=1
-fi
-
-if test "$enable_ntoskrnl_DriverTest" -eq 1; then
-	if test "$enable_ntoskrnl_Stubs" -gt 1; then
-		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-DriverTest depends on that."
-	fi
-	if test "$enable_winedevice_Default_Drivers" -gt 1; then
-		abort "Patchset winedevice-Default_Drivers disabled, but ntoskrnl-DriverTest depends on that."
-	fi
-	enable_ntoskrnl_Stubs=1
-	enable_winedevice_Default_Drivers=1
-fi
-
-if test "$enable_winedevice_Default_Drivers" -eq 1; then
-	if test "$enable_dxva2_Video_Decoder" -gt 1; then
-		abort "Patchset dxva2-Video_Decoder disabled, but winedevice-Default_Drivers depends on that."
-	fi
-	enable_dxva2_Video_Decoder=1
 fi
 
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
@@ -6146,8 +6131,8 @@ fi
 # |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
 # |
 # | Modified files:
-# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c,
-# | 	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c, server/mapping.c, server/process.c, server/protocol.def
+# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
+# | 	dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
 # |
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0002-ntdll-Split-logic-for-MemoryBasicInformation-into-a-.patch
@@ -6592,58 +6577,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winedevice-Default_Drivers
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
-# | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c, dlls/win32k.sys/Makefile.in,
-# | 	dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec, loader/wine.inf.in, programs/winedevice/device.c,
-# | 	tools/make_specfiles
-# |
-if test "$enable_winedevice_Default_Drivers" -eq 1; then
-	patch_apply winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch
-	patch_apply winedevice-Default_Drivers/0002-dxgkrnl.sys-Add-stub-driver.patch
-	patch_apply winedevice-Default_Drivers/0003-dxgmms1.sys-Add-stub-driver.patch
-	patch_apply winedevice-Default_Drivers/0004-programs-winedevice-Load-some-common-drivers-and-fix.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "win32k.sys: Add stub driver.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxgkrnl.sys: Add stub driver.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxgmms1.sys: Add stub driver.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "programs/winedevice: Load some common drivers and fix ldr order.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-DriverTest
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs, dxva2-Video_Decoder, winedevice-Default_Drivers
-# |
-# | Modified files:
-# |   *	aclocal.m4, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/Makefile.in,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/Makefile.in, dlls/ntoskrnl.exe/tests/driver.sys/driver.c,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/driver.h, dlls/ntoskrnl.exe/tests/driver.sys/driver.sys.spec,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/test.c, dlls/ntoskrnl.exe/tests/driver.sys/test.h,
-# | 	dlls/ntoskrnl.exe/tests/driver.sys/util.h, dlls/ntoskrnl.exe/tests/ntoskrnl.c, include/ddk/ntddk.h, include/wine/test.h,
-# | 	tools/make_makefiles, tools/makedep.c
-# |
-if test "$enable_ntoskrnl_DriverTest" -eq 1; then
-	patch_apply ntoskrnl-DriverTest/0001-ntoskrnl.exe-tests-Add-initial-driver-testing-framew.patch
-	patch_apply ntoskrnl-DriverTest/0002-ntoskrnl.exe-tests-Add-kernel-compliant-test-functio.patch
-	patch_apply ntoskrnl-DriverTest/0003-ntoskrnl.exe-tests-Add-tests-for-NtBuildNumber.patch
-	patch_apply ntoskrnl-DriverTest/0004-ntoskrnl.exe-tests-Add-tests-for-ExInitializeNPagedL.patch
-	patch_apply ntoskrnl-DriverTest/0005-ntoskrnl.exe-tests-Check-ldr-module-order-and-some-c.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe/tests: Add initial driver testing framework and corresponding changes to Makefile system.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add kernel compliant test functions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for NtBuildNumber.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Add tests for ExInitializeNPagedLookasideList.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe/tests: Check ldr module order and some common kernel drivers.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9381,6 +9314,30 @@ if test "$enable_winedbg_Process_Arguments" -eq 1; then
 	patch_apply winedbg-Process_Arguments/0001-programs-winedbg-Print-process-arguments-in-info-thr.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "programs/winedbg: Print process arguments in info threads.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winedevice-Default_Drivers
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	dxva2-Video_Decoder
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
+# | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c, dlls/win32k.sys/Makefile.in,
+# | 	dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec, loader/wine.inf.in, programs/winedevice/device.c,
+# | 	tools/make_specfiles
+# |
+if test "$enable_winedevice_Default_Drivers" -eq 1; then
+	patch_apply winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch
+	patch_apply winedevice-Default_Drivers/0002-dxgkrnl.sys-Add-stub-driver.patch
+	patch_apply winedevice-Default_Drivers/0003-dxgmms1.sys-Add-stub-driver.patch
+	patch_apply winedevice-Default_Drivers/0004-programs-winedevice-Load-some-common-drivers-and-fix.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "win32k.sys: Add stub driver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxgkrnl.sys: Add stub driver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dxgmms1.sys: Add stub driver.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "programs/winedevice: Load some common drivers and fix ldr order.", 1 },';
 	) >> "$patchlist"
 fi
 

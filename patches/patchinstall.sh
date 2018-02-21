@@ -6150,7 +6150,6 @@ fi
 # | 	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c, server/mapping.c, server/process.c, server/protocol.def
 # |
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	patch_apply ntdll-NtQueryVirtualMemory/0001-server-Store-full-path-for-ntdll-kernel32-dll.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0002-ntdll-Split-logic-for-MemoryBasicInformation-into-a-.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0004-ntdll-tests-Add-tests-for-NtQueryVirtualMemory-Memor.patch
@@ -6160,7 +6159,6 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0009-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Store full path for ntdll/kernel32 dll.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';

@@ -2968,6 +2968,9 @@ fi
 
 # Patchset kernel32-COMSPEC
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#19801] Fallback to default comspec when %COMSPEC% is not set
+# |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, programs/cmd/wcmdmain.c
 # |
@@ -3066,6 +3069,9 @@ if test "$enable_advapi32_WinBuiltinAnyPackageSid" -eq 1; then
 fi
 
 # Patchset combase-RoApi
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44399] Implement semi-stub for RoGetActivationFactory
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-
@@ -3200,6 +3206,7 @@ fi
 # |   *	[#40418] Implement BCrypt AES provider
 # |   *	[#42553] Implement BCrypt ECB chaining mode
 # |   *	[#39582] Implement BCrypt RSA provider
+# |   *	[#44053] Implement BCryptImportKey and BCryptExportKey
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
@@ -6799,6 +6806,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#19016] Implement marshalling for TKIND_COCLASS
+# |   *	[#39799] Implement ITypeInfo_fnInvoke for TKIND_COCLASS
 # |
 # | Modified files:
 # |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/tmarshal.c, dlls/oleaut32/typelib.c
@@ -7723,6 +7731,9 @@ fi
 
 # Patchset shell32-UnixFS
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43109] Do not use unixfs for devices without mountpoint
+# |
 # | Modified files:
 # |   *	dlls/shell32/shfldr_desktop.c, dlls/shell32/tests/shlfolder.c
 # |
@@ -8624,7 +8635,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';

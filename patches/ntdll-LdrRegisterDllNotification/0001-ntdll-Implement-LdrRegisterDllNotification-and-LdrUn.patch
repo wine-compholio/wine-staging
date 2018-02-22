@@ -1,4 +1,4 @@
-From 6502de27751f8e34231d33694faa432f17f9d6bd Mon Sep 17 00:00:00 2001
+From ad4c0998c958313b9ea367b0103fc4147013b5a5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 22 Jul 2017 03:56:26 +0200
 Subject: [PATCH] ntdll: Implement LdrRegisterDllNotification and
@@ -12,7 +12,7 @@ Subject: [PATCH] ntdll: Implement LdrRegisterDllNotification and
  4 files changed, 381 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 9451dfa520..d64433c58d 100644
+index 0a9069f..627e0bb 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -40,6 +40,7 @@
@@ -23,9 +23,9 @@ index 9451dfa520..d64433c58d 100644
  #include "wine/server.h"
  #include "ntdll_misc.h"
  #include "ddk/wdm.h"
-@@ -63,6 +64,15 @@ WINE_DECLARE_DEBUG_CHANNEL(imports);
- typedef DWORD (CALLBACK *DLLENTRYPROC)(HMODULE,DWORD,LPVOID);
- typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
+@@ -67,6 +68,15 @@ typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
+ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
+                             's','y','s','t','e','m','3','2','\\',0};
  
 +struct ldr_notification
 +{
@@ -39,7 +39,7 @@ index 9451dfa520..d64433c58d 100644
  #define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
  
  static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
-@@ -348,6 +358,39 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
+@@ -345,6 +355,39 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
  static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { return 0xdeadbeef; }
  #endif  /* __i386__ */
  
@@ -78,8 +78,8 @@ index 9451dfa520..d64433c58d 100644
 +}
  
  /*************************************************************************
-  *      is_cli_only_image
-@@ -1375,16 +1418,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
+  *      hash_basename
+@@ -1295,16 +1338,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
      {
          WINE_MODREF *prev = current_modref;
          current_modref = wm;
@@ -103,7 +103,7 @@ index 9451dfa520..d64433c58d 100644
          current_modref = prev;
      }
  
-@@ -1453,6 +1503,7 @@ static void process_detach(void)
+@@ -1373,6 +1423,7 @@ static void process_detach(void)
              mod->Flags &= ~LDR_PROCESS_ATTACHED;
              MODULE_InitDLL( CONTAINING_RECORD(mod, WINE_MODREF, ldr), 
                              DLL_PROCESS_DETACH, ULongToPtr(process_detaching) );
@@ -111,11 +111,10 @@ index 9451dfa520..d64433c58d 100644
  
              /* Restart at head of WINE_MODREF list, as entries might have
                 been added and/or removed while performing the call ... */
-@@ -1561,6 +1612,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
-     return STATUS_SUCCESS;
+@@ -1482,6 +1533,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
  }
  
-+/******************************************************************
+ /******************************************************************
 + *              LdrRegisterDllNotification (NTDLL.@)
 + */
 +NTSTATUS WINAPI LdrRegisterDllNotification(ULONG flags, PLDR_DLL_NOTIFICATION_FUNCTION callback,
@@ -163,10 +162,11 @@ index 9451dfa520..d64433c58d 100644
 +    return STATUS_SUCCESS;
 +}
 +
- /******************************************************************
++/******************************************************************
   *		LdrLockLoaderLock  (NTDLL.@)
   *
-@@ -2147,6 +2246,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, LPCWSTR fakemo
+  * Note: some flags are not implemented.
+@@ -2068,6 +2167,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
      TRACE_(loaddll)( "Loaded %s at %p: native\n", debugstr_w(wm->ldr.FullDllName.Buffer), module );
  
      wm->ldr.LoadCount = 1;
@@ -175,10 +175,10 @@ index 9451dfa520..d64433c58d 100644
      return STATUS_SUCCESS;
  }
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 264ae0d5a9..0950f78a8a 100644
+index 2257a93..4c34e10 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -84,6 +84,7 @@
+@@ -83,6 +83,7 @@
  @ stdcall LdrProcessRelocationBlock(ptr long ptr long)
  @ stdcall LdrQueryImageFileExecutionOptions(ptr wstr long ptr long ptr)
  @ stdcall LdrQueryProcessModuleInformation(ptr long ptr)
@@ -186,7 +186,7 @@ index 264ae0d5a9..0950f78a8a 100644
  @ stdcall LdrResolveDelayLoadedAPI(ptr ptr ptr ptr ptr long)
  @ stub LdrSetAppCompatDllRedirectionCallback
  @ stub LdrSetDllManifestProber
-@@ -92,6 +93,7 @@
+@@ -91,6 +92,7 @@
  @ stub LdrUnloadAlternateResourceModule
  @ stdcall LdrUnloadDll(ptr)
  @ stdcall LdrUnlockLoaderLock(long long)
@@ -195,7 +195,7 @@ index 264ae0d5a9..0950f78a8a 100644
  @ extern NlsAnsiCodePage
  @ extern NlsMbCodePageTag
 diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
-index 02ae1c1875..8358cd5430 100644
+index 02ae1c1..8358cd5 100644
 --- a/dlls/ntdll/tests/rtl.c
 +++ b/dlls/ntdll/tests/rtl.c
 @@ -105,6 +105,8 @@ static NTSTATUS  (WINAPI *pLdrEnumerateLoadedModules)(void *, void *, void *);
@@ -482,10 +482,10 @@ index 02ae1c1875..8358cd5430 100644
 +    test_LdrRegisterDllNotification();
  }
 diff --git a/include/winternl.h b/include/winternl.h
-index bc8b92798e..2d3350507d 100644
+index 743f3d7..d24e3f9 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2162,6 +2162,32 @@ typedef struct _LDR_MODULE
+@@ -2161,6 +2161,32 @@ typedef struct _LDR_MODULE
      HANDLE              SectionHandle;
  } LDR_MODULE, *PLDR_MODULE;
  
@@ -529,5 +529,5 @@ index bc8b92798e..2d3350507d 100644
  {
      PVOID               Reserved1;                      /* 00/00 */
 -- 
-2.16.1
+2.7.4
 

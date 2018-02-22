@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c3beca6c8fc8c07ecd992e64f8f8d0dda3a10ac8"
+	echo "5ec6b8f807f61ee77b9a96d94798c8e3f3db7af4"
 }
 
 # Show version information
@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Listview_DrawItem="$1"
-	enable_comctl32_TTM_ADDTOOLW="$1"
 	enable_comctl32_Tests="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -227,7 +226,6 @@ patch_enable_all ()
 	enable_ntdll_ApiSetMap="$1"
 	enable_ntdll_ApiSetQueryApiSetPresence="$1"
 	enable_ntdll_Builtin_Prot="$1"
-	enable_ntdll_CLI_Images="$1"
 	enable_ntdll_CriticalSection="$1"
 	enable_ntdll_DOS_Area="$1"
 	enable_ntdll_DOS_Attributes="$1"
@@ -556,9 +554,6 @@ patch_enable ()
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
-			;;
-		comctl32-TTM_ADDTOOLW)
-			enable_comctl32_TTM_ADDTOOLW="$2"
 			;;
 		comctl32-Tests)
 			enable_comctl32_Tests="$2"
@@ -928,9 +923,6 @@ patch_enable ()
 			;;
 		ntdll-Builtin_Prot)
 			enable_ntdll_Builtin_Prot="$2"
-			;;
-		ntdll-CLI_Images)
-			enable_ntdll_CLI_Images="$2"
 			;;
 		ntdll-CriticalSection)
 			enable_ntdll_CriticalSection="$2"
@@ -2498,13 +2490,9 @@ if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 fi
 
 if test "$enable_ntdll_HashLinks" -eq 1; then
-	if test "$enable_ntdll_CLI_Images" -gt 1; then
-		abort "Patchset ntdll-CLI_Images disabled, but ntdll-HashLinks depends on that."
-	fi
 	if test "$enable_ntdll_LDR_MODULE" -gt 1; then
 		abort "Patchset ntdll-LDR_MODULE disabled, but ntdll-HashLinks depends on that."
 	fi
-	enable_ntdll_CLI_Images=1
 	enable_ntdll_LDR_MODULE=1
 fi
 
@@ -2517,13 +2505,6 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	fi
 	enable_ntdll_DllOverrides_WOW64=1
 	enable_ntdll_Loader_Machine_Type=1
-fi
-
-if test "$enable_ntdll_CLI_Images" -eq 1; then
-	if test "$enable_mscoree_CorValidateImage" -gt 1; then
-		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
-	fi
-	enable_mscoree_CorValidateImage=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -3311,21 +3292,6 @@ if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctl32-TTM_ADDTOOLW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#10347] Protect TTM_ADDTOOLW from invalid text pointers
-# |
-# | Modified files:
-# |   *	dlls/comctl32/tests/tooltips.c, dlls/comctl32/tooltips.c
-# |
-if test "$enable_comctl32_TTM_ADDTOOLW" -eq 1; then
-	patch_apply comctl32-TTM_ADDTOOLW/0001-comctl32-tooltip-Protect-TTM_ADDTOOLW-from-invalid-t.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "comctl32/tooltip: Protect TTM_ADDTOOLW from invalid text pointers.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5638,24 +5604,6 @@ if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-CLI_Images
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_CLI_Images" -eq 1; then
-	patch_apply ntdll-CLI_Images/0001-ntdll-Load-CLI-.NET-images-in-the-same-way-as-Window.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Load CLI/.NET images in the same way as Windows XP and above.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-CriticalSection
 # |
 # | Modified files:
@@ -5865,7 +5813,7 @@ fi
 # Patchset ntdll-HashLinks
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE
+# |   *	ntdll-LDR_MODULE
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, include/winternl.h
@@ -5988,8 +5936,7 @@ fi
 # Patchset ntdll-LdrRegisterDllNotification
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-ThreadTime, ntdll-
-# | 	Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
+# |   *	ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c, include/winternl.h
@@ -7672,7 +7619,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/shell32/Makefile.in, dlls/shell32/shell32_classes.idl, dlls/shell32/shell32_main.h, dlls/shell32/shellnew.c,
-# | 	dlls/shell32/shellole.c, include/shlguid.h
+# | 	dlls/shell32/shellole.c
 # |
 if test "$enable_shell32_NewMenu_Interface" -eq 1; then
 	patch_apply shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch

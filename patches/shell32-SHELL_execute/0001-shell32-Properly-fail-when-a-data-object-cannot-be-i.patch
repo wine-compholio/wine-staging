@@ -1,8 +1,8 @@
-From e2c2ef9325bede76a46a6bc557ba7bddce9ceab8 Mon Sep 17 00:00:00 2001
+From 9f4fcf82f0a37cc856a191ec9d1f178b9df722c0 Mon Sep 17 00:00:00 2001
 From: Mark Jansen <learn0more+wine@gmail.com>
 Date: Sun, 4 Jun 2017 22:12:20 +0200
-Subject: shell32: Properly fail when a data object cannot be instantiated and
- expand environment strings in ShellExecute
+Subject: [PATCH] shell32: Properly fail when a data object cannot be
+ instantiated and expand environment strings in ShellExecute
 
 ---
  dlls/shell32/shlexec.c       | 47 +++++++++++++++++++++++++++++++++++++++++++-
@@ -10,10 +10,10 @@ Subject: shell32: Properly fail when a data object cannot be instantiated and
  2 files changed, 53 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/shell32/shlexec.c b/dlls/shell32/shlexec.c
-index c0ef53ab8e7..0cf112b6373 100644
+index 3034008..8d6364b 100644
 --- a/dlls/shell32/shlexec.c
 +++ b/dlls/shell32/shlexec.c
-@@ -1299,6 +1299,7 @@ static HRESULT shellex_load_object_and_run( HKEY hkey, LPCGUID guid, LPSHELLEXEC
+@@ -1317,6 +1317,7 @@ static HRESULT shellex_load_object_and_run( HKEY hkey, LPCGUID guid, LPSHELLEXEC
      if ( !dataobj )
      {
          ERR("failed to get data object\n");
@@ -21,7 +21,7 @@ index c0ef53ab8e7..0cf112b6373 100644
          goto end;
      }
  
-@@ -1557,6 +1558,26 @@ static void do_error_dialog( UINT_PTR retval, HWND hwnd )
+@@ -1575,6 +1576,26 @@ static void do_error_dialog( UINT_PTR retval, HWND hwnd )
      MessageBoxW(hwnd, msg, NULL, MB_ICONERROR);
  }
  
@@ -48,7 +48,7 @@ index c0ef53ab8e7..0cf112b6373 100644
  /*************************************************************************
   *	SHELL_execute [Internal]
   */
-@@ -1570,7 +1591,7 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
+@@ -1588,7 +1609,7 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
          SEE_MASK_UNICODE       | SEE_MASK_ASYNCOK      | SEE_MASK_HMONITOR;
  
      WCHAR parametersBuffer[1024], dirBuffer[MAX_PATH], wcmdBuffer[1024];
@@ -57,7 +57,7 @@ index c0ef53ab8e7..0cf112b6373 100644
      DWORD dwApplicationNameLen = MAX_PATH+2;
      DWORD parametersLen = sizeof(parametersBuffer) / sizeof(WCHAR);
      DWORD wcmdLen = sizeof(wcmdBuffer) / sizeof(WCHAR);
-@@ -1676,6 +1697,29 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
+@@ -1694,6 +1715,29 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
          TRACE("-- idlist=%p (%s)\n", sei_tmp.lpIDList, debugstr_w(wszApplicationName));
      }
  
@@ -87,19 +87,19 @@ index c0ef53ab8e7..0cf112b6373 100644
      if ( ERROR_SUCCESS == ShellExecute_FromContextMenu( &sei_tmp ) )
      {
          sei->hInstApp = (HINSTANCE) 33;
-@@ -1846,6 +1890,7 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
+@@ -1864,6 +1908,7 @@ static BOOL SHELL_execute( LPSHELLEXECUTEINFOW sei, SHELL_ExecuteW32 execfunc )
          retval = (UINT_PTR)ShellExecuteW(sei_tmp.hwnd, sei_tmp.lpVerb, lpstrTmpFile, NULL, NULL, 0);
      }
  
 +end:
      TRACE("retval %lu\n", retval);
  
-     HeapFree(GetProcessHeap(), 0, wszApplicationName);
+     heap_free(wszApplicationName);
 diff --git a/dlls/shell32/tests/shlexec.c b/dlls/shell32/tests/shlexec.c
-index 9db12ce42a8..f0f51f54568 100644
+index 7cdae87..f5f1d77 100644
 --- a/dlls/shell32/tests/shlexec.c
 +++ b/dlls/shell32/tests/shlexec.c
-@@ -1827,7 +1827,7 @@ static fileurl_tests_t fileurl_tests[]=
+@@ -1829,7 +1829,7 @@ static fileurl_tests_t fileurl_tests[]=
      {"file:///", "%%TMPDIR%%\\test file.shlexec", 0, 0},
  
      /* Test shortcuts vs. URLs */
@@ -108,7 +108,7 @@ index 9db12ce42a8..f0f51f54568 100644
  
      /* Confuse things by mixing protocols */
      {"file://", "shlproto://foo/bar", USE_COLON, 0},
-@@ -1973,11 +1973,11 @@ static void test_urls(void)
+@@ -1975,11 +1975,11 @@ static void test_urls(void)
      }
  
      /* A .lnk ending does not turn a URL into a shortcut */
@@ -123,7 +123,7 @@ index 9db12ce42a8..f0f51f54568 100644
  
      /* Neither does a .exe extension */
      rc = shell_execute(NULL, "shlproto://foo/bar.exe", NULL, NULL);
-@@ -2180,13 +2180,13 @@ static void test_lnks(void)
+@@ -2182,13 +2182,13 @@ static void test_lnks(void)
          get_long_path_name(params, filename, sizeof(filename));
          okChildPath("argvA4", filename);
  
@@ -141,5 +141,5 @@ index 9db12ce42a8..f0f51f54568 100644
  
      /* Should just run our executable */
 -- 
-2.13.1
+1.9.1
 

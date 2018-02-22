@@ -1,18 +1,18 @@
-From b04889c49c973048a9ca14ee454e744d163b377c Mon Sep 17 00:00:00 2001
+From a8eaed59c46311213da87a7bdf955be7516e3a1a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 27 Aug 2016 22:25:20 +0200
-Subject: [PATCH 06/17] wined3d: Implement uploading for 1d textures.
+Subject: [PATCH] wined3d: Implement uploading for 1d textures.
 
 ---
  dlls/wined3d/device.c  |  3 ++-
- dlls/wined3d/texture.c | 68 +++++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 69 insertions(+), 2 deletions(-)
+ dlls/wined3d/texture.c | 70 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 71 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 3961f55..eea1de8 100644
+index 1662604..352d2e7 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4261,7 +4261,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
+@@ -4268,7 +4268,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
          height = 1;
          depth = 1;
      }
@@ -23,10 +23,10 @@ index 3961f55..eea1de8 100644
          struct wined3d_texture *texture = texture_from_resource(resource);
          unsigned int level;
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 90c18e8..93b41e9 100644
+index 9e9ab32..63658a8 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1657,8 +1657,74 @@ static void texture1d_upload_data(struct wined3d_texture *texture, unsigned int
+@@ -1644,8 +1644,76 @@ static void texture1d_upload_data(struct wined3d_texture *texture, unsigned int
          const struct wined3d_context *context, const struct wined3d_box *box, const struct wined3d_const_bo_address *data,
          unsigned int row_pitch, unsigned int slice_pitch)
  {
@@ -38,6 +38,7 @@ index 90c18e8..93b41e9 100644
 +    const void *mem = data->addr;
 +    void *converted_mem = NULL;
 +    unsigned int width, x, update_w;
++    GLenum target;
 +
 +    TRACE("texture %p, sub_resource_idx %u, context %p, box %p, data {%#x:%p}, row_pitch %#x, slice_pitch %#x.\n",
              texture, sub_resource_idx, context, box, data->buffer_object, data->addr, row_pitch, slice_pitch);
@@ -77,18 +78,19 @@ index 90c18e8..93b41e9 100644
 +        checkGLcall("glBindBuffer");
 +    }
 +
-+    if (surface->texture_target == GL_TEXTURE_1D_ARRAY)
++    target = wined3d_texture_get_sub_resource_target(texture, sub_resource_idx);
++    if (target == GL_TEXTURE_1D_ARRAY)
 +    {
 +        gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, row_pitch / format->byte_count);
 +
-+        gl_info->gl_ops.gl.p_glTexSubImage2D(surface->texture_target, level, x, surface->texture_layer, update_w, 1, format->glFormat, format->glType, mem);
++        gl_info->gl_ops.gl.p_glTexSubImage2D(target, level, x, surface->texture_layer, update_w, 1, format->glFormat, format->glType, mem);
 +        checkGLcall("glTexSubImage2D");
 +
 +        gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 +    }
 +    else
 +    {
-+        gl_info->gl_ops.gl.p_glTexSubImage1D(surface->texture_target, level, x, update_w, format->glFormat, format->glType, mem);
++        gl_info->gl_ops.gl.p_glTexSubImage1D(target, level, x, update_w, format->glFormat, format->glType, mem);
 +        checkGLcall("glTexSubImage1D");
 +    }
 +

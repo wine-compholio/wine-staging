@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5ec6b8f807f61ee77b9a96d94798c8e3f3db7af4"
+	echo "f9e1dbb83d850a2f7cb17079e02de139e2f8b920"
 }
 
 # Show version information
@@ -910,9 +910,6 @@ patch_enable ()
 			;;
 		msvfw32-ICGetDisplayFormat)
 			enable_msvfw32_ICGetDisplayFormat="$2"
-			;;
-		msxml3-Normalize_Data)
-			enable_msxml3_Normalize_Data="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -5484,21 +5481,6 @@ if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msxml3-Normalize_Data
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42468] Remove CRs in domtext_put_data and add them in domtext_get_xml
-# |
-# | Modified files:
-# |   *	dlls/msxml3/tests/domdoc.c, dlls/msxml3/text.c
-# |
-if test "$enable_msxml3_Normalize_Data" -eq 1; then
-	patch_apply msxml3-Normalize_Data/0001-msxml3-Remove-CRs-in-domtext_put_data-and-add-them-i.patch
-	(
-		printf '%s\n' '+    { "Alex Henrie", "msxml3: Remove CRs in domtext_put_data and add them in domtext_get_xml.", 1 },';
 	) >> "$patchlist"
 fi
 

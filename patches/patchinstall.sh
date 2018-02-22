@@ -8608,7 +8608,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	patch_apply windowscodecs-TIFF_Support/0011-windowscodecs-Add-support-for-32bppCMYK-and-64bppCMY.patch
 	patch_apply windowscodecs-TIFF_Support/0012-windowscodecs-Add-support-for-4bpp-RGBA-format-to-TI.patch
 	patch_apply windowscodecs-TIFF_Support/0013-windowscodecs-Add-support-for-16bpp-RGBA-format-to-T.patch
-	patch_apply windowscodecs-TIFF_Support/0014-windowscodecs-Add-some-tests-for-various-TIFF-color-.patch
 	patch_apply windowscodecs-TIFF_Support/0015-windowscodecs-Tolerate-partial-reads-in-the-IFD-meta.patch
 	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
 	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch

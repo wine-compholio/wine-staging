@@ -1,4 +1,4 @@
-From 3009b829c97f3a072ca0f93250776d0b3de2cbb8 Mon Sep 17 00:00:00 2001
+From 3ff546b9cbde1d0f5ea43c5cbb92ac8dc2028676 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: [PATCH] ntdll: Implement process token elevation through manifests.
@@ -12,13 +12,14 @@ Subject: [PATCH] ntdll: Implement process token elevation through manifests.
  5 files changed, 67 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 49e8619..a908142 100644
+index 3fcbbf77a5..2399f1246e 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3053,6 +3053,32 @@ NTSTATUS attach_dlls( CONTEXT *context )
+@@ -3054,6 +3054,32 @@ NTSTATUS attach_dlls( CONTEXT *context )
+ }
  
  
- /***********************************************************************
++/***********************************************************************
 + *           elevate_process
 + */
 +static void elevate_process( void )
@@ -44,19 +45,18 @@ index 49e8619..a908142 100644
 +}
 +
 +
-+/***********************************************************************
+ /***********************************************************************
   *           load_global_options
   */
- static void load_global_options(void)
-@@ -3113,6 +3139,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3115,6 +3141,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
                                  ULONG_PTR unknown3, ULONG_PTR unknown4 )
  {
      static const WCHAR globalflagW[] = {'G','l','o','b','a','l','F','l','a','g',0};
 +    ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION runlevel;
-     LARGE_INTEGER timeout;
      NTSTATUS status;
      WINE_MODREF *wm;
-@@ -3141,6 +3168,16 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     PEB *peb = NtCurrentTeb()->Peb;
+@@ -3142,6 +3169,16 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
                                         REG_DWORD, &peb->NtGlobalFlag, sizeof(peb->NtGlobalFlag), NULL );
      heap_set_debug_flags( GetProcessHeap() );
  
@@ -74,7 +74,7 @@ index 49e8619..a908142 100644
      RemoveEntryList( &wm->ldr.InLoadOrderModuleList );
      InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderModuleList );
 diff --git a/server/process.c b/server/process.c
-index ee85249..81cea2f 100644
+index ee85249bd4..81cea2f1ba 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -1133,6 +1133,14 @@ struct process_snapshot *process_snap( int *count )
@@ -93,7 +93,7 @@ index ee85249..81cea2f 100644
  DECL_HANDLER(new_process)
  {
 diff --git a/server/process.h b/server/process.h
-index f22c128..78e88ec 100644
+index f22c128f07..78e88ec350 100644
 --- a/server/process.h
 +++ b/server/process.h
 @@ -136,6 +136,7 @@ extern void break_process( struct process *process );
@@ -105,10 +105,10 @@ index f22c128..78e88ec 100644
  /* console functions */
  extern void inherit_console(struct thread *parent_thread, struct process *process, obj_handle_t hconin);
 diff --git a/server/protocol.def b/server/protocol.def
-index f2deca6..35c0eb4 100644
+index 0abd1683f0..5fb6e38ea5 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3649,6 +3649,13 @@ struct handle_info
+@@ -3654,6 +3654,13 @@ struct handle_info
  @END
  
  
@@ -123,7 +123,7 @@ index f2deca6..35c0eb4 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/token.c b/server/token.c
-index 64ab565..52fa10d 100644
+index 64ab565a95..52fa10d52e 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -1802,3 +1802,17 @@ DECL_HANDLER(create_token)
@@ -145,5 +145,5 @@ index 64ab565..52fa10d 100644
 +    }
 +}
 -- 
-1.9.1
+2.16.1
 

@@ -1,18 +1,18 @@
-From ad4c0998c958313b9ea367b0103fc4147013b5a5 Mon Sep 17 00:00:00 2001
+From 99b6bb4e3d0136d51ef3f1b03b3ca8f2b6bdca3d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 22 Jul 2017 03:56:26 +0200
 Subject: [PATCH] ntdll: Implement LdrRegisterDllNotification and
  LdrUnregisterDllNotification.
 
 ---
- dlls/ntdll/loader.c    | 100 ++++++++++++++++++++
+ dlls/ntdll/loader.c    |  90 ++++++++++++++++++
  dlls/ntdll/ntdll.spec  |   2 +
  dlls/ntdll/tests/rtl.c | 250 +++++++++++++++++++++++++++++++++++++++++++++++++
  include/winternl.h     |  29 ++++++
- 4 files changed, 381 insertions(+)
+ 4 files changed, 371 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 0a9069f..627e0bb 100644
+index 0a9069f..adde9ee 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -40,6 +40,7 @@
@@ -39,7 +39,7 @@ index 0a9069f..627e0bb 100644
  #define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
  
  static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
-@@ -345,6 +355,39 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
+@@ -345,6 +355,29 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
  static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { return 0xdeadbeef; }
  #endif  /* __i386__ */
  
@@ -57,29 +57,19 @@ index 0a9069f..627e0bb 100644
 +
 +    LIST_FOR_EACH_ENTRY_SAFE( notify, notify_next, &ldr_notifications, struct ldr_notification, entry )
 +    {
-+        if (TRACE_ON( relay ))
-+        {
-+            if (TRACE_ON( pid ))
-+                DPRINTF( "%04x:", GetCurrentProcessId() );
-+            DPRINTF( "%04x:Call LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
-+                     GetCurrentThreadId(), notify->callback, reason, &data, notify->context );
-+        }
++        TRACE_(relay)("\1Call LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
++                notify->callback, reason, &data, notify->context );
 +
 +        notify->callback(reason, &data, notify->context);
 +
-+        if (TRACE_ON( relay ))
-+        {
-+            if (TRACE_ON( pid ))
-+                DPRINTF( "%04x:", GetCurrentProcessId() );
-+            DPRINTF( "%04x:Ret  LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
-+                     GetCurrentThreadId(), notify->callback, reason, &data, notify->context );
-+        }
++        TRACE_(relay)("\1Ret  LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
++                notify->callback, reason, &data, notify->context );
 +    }
 +}
  
  /*************************************************************************
   *      hash_basename
-@@ -1295,16 +1338,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
+@@ -1295,16 +1328,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
      {
          WINE_MODREF *prev = current_modref;
          current_modref = wm;
@@ -103,7 +93,7 @@ index 0a9069f..627e0bb 100644
          current_modref = prev;
      }
  
-@@ -1373,6 +1423,7 @@ static void process_detach(void)
+@@ -1373,6 +1413,7 @@ static void process_detach(void)
              mod->Flags &= ~LDR_PROCESS_ATTACHED;
              MODULE_InitDLL( CONTAINING_RECORD(mod, WINE_MODREF, ldr), 
                              DLL_PROCESS_DETACH, ULongToPtr(process_detaching) );
@@ -111,7 +101,7 @@ index 0a9069f..627e0bb 100644
  
              /* Restart at head of WINE_MODREF list, as entries might have
                 been added and/or removed while performing the call ... */
-@@ -1482,6 +1533,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
+@@ -1482,6 +1523,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
  }
  
  /******************************************************************
@@ -166,7 +156,7 @@ index 0a9069f..627e0bb 100644
   *		LdrLockLoaderLock  (NTDLL.@)
   *
   * Note: some flags are not implemented.
-@@ -2068,6 +2167,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
+@@ -2068,6 +2157,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
      TRACE_(loaddll)( "Loaded %s at %p: native\n", debugstr_w(wm->ldr.FullDllName.Buffer), module );
  
      wm->ldr.LoadCount = 1;

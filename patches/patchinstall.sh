@@ -382,6 +382,7 @@ patch_enable_all ()
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
+	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
@@ -1391,6 +1392,9 @@ patch_enable ()
 			;;
 		user32-MessageBox_WS_EX_TOPMOST)
 			enable_user32_MessageBox_WS_EX_TOPMOST="$2"
+			;;
+		user32-Mouse_Message_Hwnd)
+			enable_user32_Mouse_Message_Hwnd="$2"
 			;;
 		user32-PNG_Support)
 			enable_user32_PNG_Support="$2"
@@ -8169,6 +8173,31 @@ if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add some tests to see when MessageBox gains WS_EX_TOPMOST style.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: MessageBox should be topmost when MB_SYSTEMMODAL style is set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Mouse_Message_Hwnd
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22458] Fix issues with inserting symbols by clicking on center in Word 2007 & 2010
+# |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
+# |   *	[#9512] Make sure popups don't block access to objects underneath in DVDPro
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, dlls/user32/tests/input.c, dlls/winex11.drv/bitblt.c, server/protocol.def, server/window.c
+# |
+if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
+	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
+	patch_apply user32-Mouse_Message_Hwnd/0002-user32-tests-Add-tests-for-clicking-through-layered-.patch
+	patch_apply user32-Mouse_Message_Hwnd/0003-user32-tests-Add-tests-for-window-region-of-layered-.patch
+	patch_apply user32-Mouse_Message_Hwnd/0004-user32-tests-Add-tests-for-DC-region.patch
+	patch_apply user32-Mouse_Message_Hwnd/0005-server-Add-support-for-a-layered-window-region.-v2.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for clicking through layered window.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for window region of layered windows.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for DC region.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 3 },';
 	) >> "$patchlist"
 fi
 

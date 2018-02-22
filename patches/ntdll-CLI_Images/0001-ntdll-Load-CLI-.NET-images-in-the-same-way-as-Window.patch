@@ -1,14 +1,15 @@
-From d209582c297d376da27f80dc62c59b2f5440da25 Mon Sep 17 00:00:00 2001
+From d7f4b0f5977434617b89b513f3cfcc358c5584e4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 1 Apr 2015 04:34:20 +0200
-Subject: ntdll: Load CLI/.NET images in the same way as Windows XP and above.
+Subject: [PATCH] ntdll: Load CLI/.NET images in the same way as Windows XP and
+ above.
 
 ---
- dlls/ntdll/loader.c | 127 ++++++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 123 insertions(+), 4 deletions(-)
+ dlls/ntdll/loader.c | 128 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 127 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index cdf8d586c36..fa66c4c40d2 100644
+index 3fcbbf7..16d4426 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -104,11 +104,16 @@ struct builtin_load_info
@@ -28,7 +29,7 @@ index cdf8d586c36..fa66c4c40d2 100644
  static RTL_CRITICAL_SECTION loader_section;
  static RTL_CRITICAL_SECTION_DEBUG critsect_debug =
  {
-@@ -341,6 +346,78 @@ static inline ULONG_PTR allocate_stub( c
+@@ -341,6 +346,78 @@ static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { ret
  
  
  /*************************************************************************
@@ -107,7 +108,7 @@ index cdf8d586c36..fa66c4c40d2 100644
   *		get_modref
   *
   * Looks for the referenced HMODULE in the current process
-@@ -917,6 +994,10 @@ static NTSTATUS fixup_imports( WINE_MODR
+@@ -904,6 +981,10 @@ static NTSTATUS fixup_imports( WINE_MODREF *wm, LPCWSTR load_path )
      if (!(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS)) return STATUS_SUCCESS;  /* already done */
      wm->ldr.Flags &= ~LDR_DONT_RESOLVE_REFS;
  
@@ -118,7 +119,7 @@ index cdf8d586c36..fa66c4c40d2 100644
      wm->ldr.TlsIndex = alloc_tls_slot( &wm->ldr );
  
      if (!(imports = RtlImageDirectoryEntryToData( wm->ldr.BaseAddress, TRUE,
-@@ -1107,8 +1188,47 @@ static NTSTATUS MODULE_InitDLL( WINE_MOD
+@@ -1094,8 +1175,47 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
      BOOL retv = FALSE;
  
      /* Skip calls for modules loaded with special load flags */
@@ -167,7 +168,7 @@ index cdf8d586c36..fa66c4c40d2 100644
      if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
      if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
  
-@@ -3329,12 +3449,17 @@ void WINAPI LdrInitializeThunk( void *ke
+@@ -3154,6 +3274,12 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
               debugstr_w(peb->ProcessParameters->ImagePathName.Buffer), status );
          NtTerminateProcess( GetCurrentProcess(), status );
      }
@@ -177,14 +178,9 @@ index cdf8d586c36..fa66c4c40d2 100644
 +             debugstr_w(peb->ProcessParameters->ImagePathName.Buffer), status );
 +        NtTerminateProcess( GetCurrentProcess(), status );
 +    }
- 
-     timeout.QuadPart = 0;
-     NtDelayExecution( TRUE, &timeout );
- 
--    server_init_process_done();
-+	server_init_process_done();
+     server_init_process_done();
  }
  
- 
 -- 
-2.14.1
+2.7.4
+

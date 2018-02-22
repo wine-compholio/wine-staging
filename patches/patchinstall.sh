@@ -223,7 +223,6 @@ patch_enable_all ()
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_msxml3_Normalize_Data="$1"
 	enable_ntdll_APC_Performance="$1"
-	enable_ntdll_APC_Start_Process="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"
 	enable_ntdll_ApiSetQueryApiSetPresence="$1"
@@ -917,9 +916,6 @@ patch_enable ()
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
-			;;
-		ntdll-APC_Start_Process)
-			enable_ntdll_APC_Start_Process="$2"
 			;;
 		ntdll-Activation_Context)
 			enable_ntdll_Activation_Context="$2"
@@ -2527,11 +2523,7 @@ if test "$enable_ntdll_CLI_Images" -eq 1; then
 	if test "$enable_mscoree_CorValidateImage" -gt 1; then
 		abort "Patchset mscoree-CorValidateImage disabled, but ntdll-CLI_Images depends on that."
 	fi
-	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
-		abort "Patchset ntdll-APC_Start_Process disabled, but ntdll-CLI_Images depends on that."
-	fi
 	enable_mscoree_CorValidateImage=1
-	enable_ntdll_APC_Start_Process=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -2697,9 +2689,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_kernel32_UmsStubs" -gt 1; then
 		abort "Patchset kernel32-UmsStubs disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_ntdll_APC_Start_Process" -gt 1; then
-		abort "Patchset ntdll-APC_Start_Process disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2710,7 +2699,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_advapi32_CreateRestrictedToken=1
 	enable_kernel32_COMSPEC=1
 	enable_kernel32_UmsStubs=1
-	enable_ntdll_APC_Start_Process=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
@@ -3027,23 +3015,10 @@ if test "$enable_kernel32_UmsStubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-APC_Start_Process
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_APC_Start_Process" -eq 1; then
-	patch_apply ntdll-APC_Start_Process/0001-ntdll-Process-APC-calls-before-starting-process.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Process APC calls before starting process.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, ntdll-APC_Start_Process, server-
-# | 	CreateProcess_ACLs, server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -5666,7 +5641,7 @@ fi
 # Patchset ntdll-CLI_Images
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-APC_Start_Process
+# |   *	mscoree-CorValidateImage
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38661] Implement proper handling of CLI .NET images in Wine library loader
@@ -5890,7 +5865,7 @@ fi
 # Patchset ntdll-HashLinks
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-APC_Start_Process, ntdll-CLI_Images, ntdll-LDR_MODULE
+# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, include/winternl.h
@@ -6013,8 +5988,8 @@ fi
 # Patchset ntdll-LdrRegisterDllNotification
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	mscoree-CorValidateImage, ntdll-APC_Start_Process, ntdll-CLI_Images, ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-
-# | 	ThreadTime, ntdll-Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
+# |   *	mscoree-CorValidateImage, ntdll-CLI_Images, ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-ThreadTime, ntdll-
+# | 	Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c, include/winternl.h

@@ -113,6 +113,7 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
+	enable_d3d11_Depth_Bias="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
@@ -585,6 +586,9 @@ patch_enable ()
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
+			;;
+		d3d11-Depth_Bias)
+			enable_d3d11_Depth_Bias="$2"
 			;;
 		d3d11-ID3D11Texture1D)
 			enable_d3d11_ID3D11Texture1D="$2"
@@ -2135,6 +2139,13 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
 
+if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
+	if test "$enable_d3d11_Depth_Bias" -gt 1; then
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
+	fi
+	enable_d3d11_Depth_Bias=1
+fi
+
 if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
 		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Helper depends on that."
@@ -2194,6 +2205,13 @@ if test "$enable_wined3d_Viewports" -eq 1; then
 		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
 	fi
 	enable_wined3d_Core_Context=1
+fi
+
+if test "$enable_wined3d_Core_Context" -eq 1; then
+	if test "$enable_d3d11_Depth_Bias" -gt 1; then
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Core_Context depends on that."
+	fi
+	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
@@ -3591,6 +3609,28 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d11_deferred_context_UpdateSubresource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement restoring of state after executing a command list.", 1 },';
 		printf '%s\n' '+    { "Steve Melenchuk", "d3d11: Allow NULL pointer for initial count in d3d11_deferred_context_CSSetUnorderedAccessViews.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d11-Depth_Bias
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43848] Implement support for depth bias clamping
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
+# |
+if test "$enable_d3d11_Depth_Bias" -eq 1; then
+	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
+	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-DepthClipEnable-in-RSSetState.patch
+	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
+	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for DepthClipEnable in RSSetState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8984,6 +9024,9 @@ fi
 
 # Patchset wined3d-Core_Context
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
 # | Modified files:
 # |   *	dlls/dxgi/factory.c, include/wine/wined3d.h
 # |
@@ -8997,7 +9040,7 @@ fi
 # Patchset wined3d-Viewports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-Core_Context
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
@@ -9013,7 +9056,7 @@ fi
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-Core_Context, wined3d-Viewports
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -9079,8 +9122,8 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports,
-# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
+# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -9106,6 +9149,9 @@ fi
 
 # Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias
+# |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
 # | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c,
@@ -9121,7 +9167,7 @@ fi
 # Patchset wined3d-Indexed_Vertex_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-WINED3D_RS_COLORWRITEENABLE
+# |   *	d3d11-Depth_Bias, wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39057] Support for indexed vertex blending
@@ -9242,8 +9288,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, wined3d-Core_Context, wined3d-Viewports,
-# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters, wined3d-CSMT_Helper
+# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
+# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
+# | 	wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance

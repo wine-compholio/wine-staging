@@ -221,7 +221,6 @@ patch_enable_all ()
 	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
-	enable_msxml3_Normalize_Data="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"

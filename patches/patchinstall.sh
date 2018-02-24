@@ -4491,8 +4491,7 @@ fi
 # |   *	[#22749] Add stub for fsutil.exe hardlink command
 # |
 # | Modified files:
-# |   *	configure.ac, programs/fsutil/Makefile.in, programs/fsutil/fsutil.rc, programs/fsutil/main.c,
-# | 	programs/fsutil/resources.h
+# |   *	programs/fsutil/Makefile.in, programs/fsutil/fsutil.rc, programs/fsutil/main.c, programs/fsutil/resources.h
 # |
 if test "$enable_fsutil_Stub_Program" -eq 1; then
 	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
@@ -6268,9 +6267,9 @@ fi
 # |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
 # |
 # | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/ntdll/server.c, dlls/ntdll/signal_arm.c,
-# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
-# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c
+# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
+# | 	dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c,
+# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch

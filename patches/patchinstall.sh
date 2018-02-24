@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f9e1dbb83d850a2f7cb17079e02de139e2f8b920"
+	echo "7be8beab68c5074e78c899acac7ccb6eb2f7e22e"
 }
 
 # Show version information
@@ -197,7 +197,6 @@ patch_enable_all ()
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_TRUST_E_NOSIGNATURE="$1"
-	enable_kernel32_Tests="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -258,7 +257,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_NtSuspendProcess="$1"
-	enable_ntdll_NtUnmapViewOfSection="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessImageFileNameWin32="$1"
 	enable_ntdll_ProcessPriorityClass="$1"
@@ -360,7 +358,6 @@ patch_enable_all ()
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
-	enable_shlwapi_PathUnExpandEnvStrings="$1"
 	enable_shlwapi_SHAddDataBlock="$1"
 	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
@@ -838,9 +835,6 @@ patch_enable ()
 		kernel32-TRUST_E_NOSIGNATURE)
 			enable_kernel32_TRUST_E_NOSIGNATURE="$2"
 			;;
-		kernel32-Tests)
-			enable_kernel32_Tests="$2"
-			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
 			;;
@@ -1020,9 +1014,6 @@ patch_enable ()
 			;;
 		ntdll-NtSuspendProcess)
 			enable_ntdll_NtSuspendProcess="$2"
-			;;
-		ntdll-NtUnmapViewOfSection)
-			enable_ntdll_NtUnmapViewOfSection="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -1326,9 +1317,6 @@ patch_enable ()
 			;;
 		shlwapi-AssocGetPerceivedType)
 			enable_shlwapi_AssocGetPerceivedType="$2"
-			;;
-		shlwapi-PathUnExpandEnvStrings)
-			enable_shlwapi_PathUnExpandEnvStrings="$2"
 			;;
 		shlwapi-SHAddDataBlock)
 			enable_shlwapi_SHAddDataBlock="$2"
@@ -4701,10 +4689,8 @@ fi
 # |
 if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	patch_apply imagehlp-ImageLoad/0001-imagehlp-tests-Add-tests-for-ImageLoad-ImageUnload-G.patch
-	patch_apply imagehlp-ImageLoad/0002-imagehlp-tests-msvc-compatibility-fixes.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
-		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Msvc compatibility fixes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5109,18 +5095,6 @@ if test "$enable_kernel32_TRUST_E_NOSIGNATURE" -eq 1; then
 	patch_apply kernel32-TRUST_E_NOSIGNATURE/0001-kernel32-add-message-resource-for-TRUST_E_NOSIGNATUR.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "kernel32: Add message resource for TRUST_E_NOSIGNATURE.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Tests
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/process.c
-# |
-if test "$enable_kernel32_Tests" -eq 1; then
-	patch_apply kernel32-Tests/0001-kernel32-tests-Close-process-thread-handles.patch
-	(
-		printf '%s\n' '+    { "Mark Jansen", "kernel32/tests: Close process / thread handles.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6152,18 +6126,6 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtUnmapViewOfSection
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_NtUnmapViewOfSection" -eq 1; then
-	patch_apply ntdll-NtUnmapViewOfSection/0001-ntdll-Don-t-fail-in-NtUnmapViewOfSection-when-trying.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Don'\''t fail in NtUnmapViewOfSection when trying to unmap builtin view.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7780,18 +7742,6 @@ if test "$enable_shlwapi_AssocGetPerceivedType" -eq 1; then
 	(
 		printf '%s\n' '+    { "Mark Jansen", "shlwapi/tests: Add tests for AssocGetPerceivedType.", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "shlwapi: Implement AssocGetPerceivedType.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shlwapi-PathUnExpandEnvStrings
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/path.c, dlls/shlwapi/tests/path.c
-# |
-if test "$enable_shlwapi_PathUnExpandEnvStrings" -eq 1; then
-	patch_apply shlwapi-PathUnExpandEnvStrings/0001-shlwapi-Don-t-attempt-to-unexpand-ComputerName-in-Pa.patch
-	(
-		printf '%s\n' '+    { "Katayama Hirofumi MZ", "shlwapi: Don'\''t attempt to unexpand ComputerName in PathUnExpandEnvStrings.", 1 },';
 	) >> "$patchlist"
 fi
 

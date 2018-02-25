@@ -9226,8 +9226,8 @@ fi
 # |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
 # |
 # | Modified files:
-# |   *	dlls/wined3d/buffer.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c,
-# | 	dlls/wined3d/texture.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
@@ -9238,7 +9238,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Discard buffer during upload when replacing complete content.", 1 },';
 	) >> "$patchlist"
 fi
 

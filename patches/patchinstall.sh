@@ -117,6 +117,7 @@ patch_enable_all ()
 	enable_d3d11_ID3D11Texture1D="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
+	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
@@ -592,6 +593,9 @@ patch_enable ()
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
+			;;
+		d3d9-DesktopWindow)
+			enable_d3d9_DesktopWindow="$2"
 			;;
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
@@ -3695,6 +3699,21 @@ if test "$enable_d3d8_ValidateShader" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidateVertexShader stub.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-DesktopWindow
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18490] Allow to set pixel format for desktop window
+# |
+# | Modified files:
+# |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
+# |
+if test "$enable_d3d9_DesktopWindow" -eq 1; then
+	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
 	) >> "$patchlist"
 fi
 

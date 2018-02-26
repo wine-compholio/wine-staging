@@ -1,19 +1,19 @@
-From 799ae0c6a39c58423281ea5d8c46b1085a07bf48 Mon Sep 17 00:00:00 2001
+From 549a63c40b7b9a73055ece62c2d6c4631de79471 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 18 Aug 2017 12:12:16 +0800
-Subject: windowscodecs: Move additional processing out of the JPEG decoding
- loop.
+Subject: [PATCH] windowscodecs: Move additional processing out of the JPEG
+ decoding loop.
 
 This avoids image corruption when libjpeg reuses existing pixel data.
 ---
- dlls/windowscodecs/jpegformat.c | 27 ++++++++++++++-------------
- 1 file changed, 14 insertions(+), 13 deletions(-)
+ dlls/windowscodecs/jpegformat.c | 38 ++++++++++++++++++++------------------
+ 1 file changed, 20 insertions(+), 18 deletions(-)
 
 diff --git a/dlls/windowscodecs/jpegformat.c b/dlls/windowscodecs/jpegformat.c
-index f31239b8d79..0023fd2bf32 100644
+index 27cd880..97899a7 100644
 --- a/dlls/windowscodecs/jpegformat.c
 +++ b/dlls/windowscodecs/jpegformat.c
-@@ -603,7 +603,7 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+@@ -599,10 +599,12 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
      JpegDecoder *This = impl_from_IWICBitmapFrameDecode(iface);
      UINT bpp;
      UINT stride;
@@ -22,15 +22,27 @@ index f31239b8d79..0023fd2bf32 100644
      UINT max_row_needed;
      jmp_buf jmpbuf;
      WICRect rect;
-@@ -659,7 +659,6 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
-         UINT first_scanline = This->cinfo.output_scanline;
++    UINT first_scanline = 0;
++
+     TRACE("(%p,%p,%u,%u,%p)\n", iface, prc, cbStride, cbBufferSize, pbBuffer);
+ 
+     if (!prc)
+@@ -652,12 +654,12 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+ 
+     while (max_row_needed > This->cinfo.output_scanline)
+     {
+-        UINT first_scanline = This->cinfo.output_scanline;
          UINT max_rows;
          JSAMPROW out_rows[4];
 -        UINT i;
          JDIMENSION ret;
  
++        first_scanline = This->cinfo.output_scanline;
++
          max_rows = min(This->cinfo.output_height-first_scanline, 4);
-@@ -674,19 +673,21 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+         for (i=0; i<max_rows; i++)
+             out_rows[i] = This->image_data + stride * (first_scanline+i);
+@@ -670,25 +672,25 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
              LeaveCriticalSection(&This->lock);
              return E_FAIL;
          }
@@ -52,17 +64,25 @@ index f31239b8d79..0023fd2bf32 100644
 +    }
  
 -        if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
+-        {
+-            DWORD *pDwordData = (DWORD*) (This->image_data + stride * first_scanline);
+-            DWORD *pDwordDataEnd = (DWORD*) (This->image_data + This->cinfo.output_scanline * stride);
+ 
 -            /* Adobe JPEG's have inverted CMYK data. */
--            for (i=0; i<data_size; i++)
--                This->image_data[i] ^= 0xff;
+-            while(pDwordData < pDwordDataEnd)
+-                *pDwordData++ ^= 0xffffffff;
+-        }
 +    if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
 +    {
++        DWORD *pDwordData = (DWORD*) (This->image_data + stride * first_scanline);
++        DWORD *pDwordDataEnd = (DWORD*) (This->image_data + This->cinfo.output_scanline * stride);
+ 
 +        /* Adobe JPEG's have inverted CMYK data. */
-+        for (i=0; i<data_size; i++)
-+            This->image_data[i] ^= 0xff;
++        while(pDwordData < pDwordDataEnd)
++            *pDwordData++ ^= 0xffffffff;
      }
  
      LeaveCriticalSection(&This->lock);
 -- 
-2.14.1
+1.9.1
 

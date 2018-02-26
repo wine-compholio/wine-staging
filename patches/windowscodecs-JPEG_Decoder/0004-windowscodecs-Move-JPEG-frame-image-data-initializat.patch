@@ -1,17 +1,17 @@
-From 71de59213235b4e41531d0ecff43790cf172bf90 Mon Sep 17 00:00:00 2001
+From 846b328efd83b161405ed8f663b6cb3465c29ee4 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 18 Aug 2017 12:17:52 +0800
-Subject: windowscodecs: Move JPEG frame image data initialization from
+Subject: [PATCH] windowscodecs: Move JPEG frame image data initialization from
  Frame::CopyPixels to Decoder::Initialize. (v2)
 
 This is how PNG decoder does things, and it avoids image data corruption
 in some cases (presumably when libjpeg reuses existing scanline data).
 ---
- dlls/windowscodecs/jpegformat.c | 146 +++++++++++++++-------------------------
- 1 file changed, 55 insertions(+), 91 deletions(-)
+ dlls/windowscodecs/jpegformat.c | 151 ++++++++++++++--------------------------
+ 1 file changed, 54 insertions(+), 97 deletions(-)
 
 diff --git a/dlls/windowscodecs/jpegformat.c b/dlls/windowscodecs/jpegformat.c
-index 0023fd2bf32..296529cee73 100644
+index 97899a7..0f02b36 100644
 --- a/dlls/windowscodecs/jpegformat.c
 +++ b/dlls/windowscodecs/jpegformat.c
 @@ -155,6 +155,7 @@ typedef struct {
@@ -87,7 +87,7 @@ index 0023fd2bf32..296529cee73 100644
      This->initialized = TRUE;
  
      LeaveCriticalSection(&This->lock);
-@@ -601,99 +653,11 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+@@ -597,106 +649,11 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
      const WICRect *prc, UINT cbStride, UINT cbBufferSize, BYTE *pbBuffer)
  {
      JpegDecoder *This = impl_from_IWICBitmapFrameDecode(iface);
@@ -97,8 +97,10 @@ index 0023fd2bf32..296529cee73 100644
 -    UINT max_row_needed;
 -    jmp_buf jmpbuf;
 -    WICRect rect;
--    TRACE("(%p,%p,%u,%u,%p)\n", iface, prc, cbStride, cbBufferSize, pbBuffer);
--
+-    UINT first_scanline = 0;
+ 
+     TRACE("(%p,%p,%u,%u,%p)\n", iface, prc, cbStride, cbBufferSize, pbBuffer);
+ 
 -    if (!prc)
 -    {
 -        rect.X = 0;
@@ -123,7 +125,7 @@ index 0023fd2bf32..296529cee73 100644
 -
 -    max_row_needed = prc->Y + prc->Height;
 -    if (max_row_needed > This->cinfo.output_height) return E_INVALIDARG;
- 
+-
 -    EnterCriticalSection(&This->lock);
 -
 -    if (!This->image_data)
@@ -146,10 +148,11 @@ index 0023fd2bf32..296529cee73 100644
 -
 -    while (max_row_needed > This->cinfo.output_scanline)
 -    {
--        UINT first_scanline = This->cinfo.output_scanline;
 -        UINT max_rows;
 -        JSAMPROW out_rows[4];
 -        JDIMENSION ret;
+-
+-        first_scanline = This->cinfo.output_scanline;
 -
 -        max_rows = min(This->cinfo.output_height-first_scanline, 4);
 -        for (i=0; i<max_rows; i++)
@@ -173,16 +176,19 @@ index 0023fd2bf32..296529cee73 100644
 -            stride);
 -    }
 -
+-
 -    if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
 -    {
+-        DWORD *pDwordData = (DWORD*) (This->image_data + stride * first_scanline);
+-        DWORD *pDwordDataEnd = (DWORD*) (This->image_data + This->cinfo.output_scanline * stride);
+-
 -        /* Adobe JPEG's have inverted CMYK data. */
--        for (i=0; i<data_size; i++)
--            This->image_data[i] ^= 0xff;
+-        while(pDwordData < pDwordDataEnd)
+-            *pDwordData++ ^= 0xffffffff;
 -    }
 -
 -    LeaveCriticalSection(&This->lock);
-+    TRACE("(%p,%p,%u,%u,%p)\n", iface, prc, cbStride, cbBufferSize, pbBuffer);
- 
+-
 -    return copy_pixels(bpp, This->image_data,
 -        This->cinfo.output_width, This->cinfo.output_height, stride,
 +    return copy_pixels(This->bpp, This->image_data,
@@ -191,5 +197,5 @@ index 0023fd2bf32..296529cee73 100644
  }
  
 -- 
-2.14.1
+1.9.1
 

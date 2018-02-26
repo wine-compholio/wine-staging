@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7be8beab68c5074e78c899acac7ccb6eb2f7e22e"
+	echo "9ae8b8c00f2cca205fdf4ce76e221778b7dfbea7"
 }
 
 # Show version information
@@ -196,7 +196,6 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
-	enable_kernel32_TRUST_E_NOSIGNATURE="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
 	enable_kernel32_VerifyVersionInfo="$1"
@@ -481,7 +480,6 @@ patch_enable_all ()
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
-	enable_ws2_32_setsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
@@ -831,9 +829,6 @@ patch_enable ()
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
-			;;
-		kernel32-TRUST_E_NOSIGNATURE)
-			enable_kernel32_TRUST_E_NOSIGNATURE="$2"
 			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
@@ -1686,9 +1681,6 @@ patch_enable ()
 			;;
 		ws2_32-getsockopt)
 			enable_ws2_32_getsockopt="$2"
-			;;
-		ws2_32-setsockopt)
-			enable_ws2_32_setsockopt="$2"
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
@@ -5079,21 +5071,6 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-TRUST_E_NOSIGNATURE
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43041] Add missing message string for TRUST_E_NOSIGNATURE
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/format_msg.c, dlls/kernel32/winerror.mc
-# |
-if test "$enable_kernel32_TRUST_E_NOSIGNATURE" -eq 1; then
-	patch_apply kernel32-TRUST_E_NOSIGNATURE/0001-kernel32-add-message-resource-for-TRUST_E_NOSIGNATUR.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "kernel32: Add message resource for TRUST_E_NOSIGNATURE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -9859,18 +9836,6 @@ if test "$enable_ws2_32_getsockopt" -eq 1; then
 	patch_apply ws2_32-getsockopt/0001-ws2_32-Divide-values-returned-by-SO_RCVBUF-and-SO_SN.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Divide values returned by SO_RCVBUF and SO_SNDBUF getsockopt options by two.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-setsockopt
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/socket.c, include/winsock.h
-# |
-if test "$enable_ws2_32_setsockopt" -eq 1; then
-	patch_apply ws2_32-setsockopt/0001-w2_32-Ignore-setting-several-port-assignment-related.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "w2_32: Ignore setting several port assignment related socket options.", 1 },';
 	) >> "$patchlist"
 fi
 

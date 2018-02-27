@@ -2823,6 +2823,9 @@ fi
 
 # Patchset advapi32-BuildSecurityDescriptor
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37594] Initial implementation of advapi32.BuildSecurityDescriptorW
+# |
 # | Modified files:
 # |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
 # |
@@ -2978,7 +2981,7 @@ fi
 # Patchset kernel32-UmsStubs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#43351] Add semi-stub implementation for CreateRemoteThreadEx
+# |   *	[#44619] Add stubs for user-mode scheduling functions
 # |
 # | Modified files:
 # |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, include/winbase.h, include/winnt.h
@@ -3194,7 +3197,6 @@ fi
 # Patchset bcrypt-Improvements
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#40418] Implement BCrypt AES provider
 # |   *	[#42553] Implement BCrypt ECB chaining mode
 # |   *	[#39582] Implement BCrypt RSA provider
 # |   *	[#44053] Implement BCryptImportKey and BCryptExportKey
@@ -5902,6 +5904,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44585] Implement LdrRegisterDllNotification/LdrUnregisterDllNotification
+# |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c, include/winternl.h
 # |
@@ -5952,6 +5957,9 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 fi
 
 # Patchset ntdll-NtCreateThreadEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44616] Implement semi-stub for ntdll.NtCreateThreadEx
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
@@ -8234,6 +8242,9 @@ if test "$enable_user32_Sorted_Listbox" -eq 1; then
 fi
 
 # Patchset user32-WindowDisplayAffinity
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44617] Implement stubs for GetWindowDisplayAffinity and SetWindowDisplayAffinity
 # |
 # | Modified files:
 # |   *	dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec, dlls/ext-ms-win-ntuser-

@@ -134,7 +134,6 @@ patch_enable_all ()
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_FindNextValidTechnique="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
-	enable_d3dx9_36_Tests="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
@@ -226,7 +225,6 @@ patch_enable_all ()
 	enable_ntdll_ApiSetQueryApiSetPresence="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CriticalSection="$1"
-	enable_ntdll_DOS_Area="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
@@ -645,9 +643,6 @@ patch_enable ()
 		d3dx9_36-Optimize_Inplace)
 			enable_d3dx9_36_Optimize_Inplace="$2"
 			;;
-		d3dx9_36-Tests)
-			enable_d3dx9_36_Tests="$2"
-			;;
 		d3dx9_36-Texture_Align)
 			enable_d3dx9_36_Texture_Align="$2"
 			;;
@@ -920,9 +915,6 @@ patch_enable ()
 			;;
 		ntdll-CriticalSection)
 			enable_ntdll_CriticalSection="$2"
-			;;
-		ntdll-DOS_Area)
-			enable_ntdll_DOS_Area="$2"
 			;;
 		ntdll-DOS_Attributes)
 			enable_ntdll_DOS_Attributes="$2"
@@ -4009,18 +4001,6 @@ if test "$enable_d3dx9_36_Optimize_Inplace" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-Tests
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/tests/math.c
-# |
-if test "$enable_d3dx9_36_Tests" -eq 1; then
-	patch_apply d3dx9_36-Tests/0001-d3dx9_36-tests-Fix-some-test-failures.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36/tests: Fix some test failures.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-Texture_Align
 # |
 # | Modified files:
@@ -5615,18 +5595,6 @@ if test "$enable_ntdll_CriticalSection" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add inline versions of RtlEnterCriticalSection / RtlLeaveCriticalSections.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for heap locking.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for threadpool locking.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-DOS_Area
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_DOS_Area" -eq 1; then
-	patch_apply ntdll-DOS_Area/0001-ntdll-Fix-code-to-make-DOS-area-accessible.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix code to make DOS area accessible.", 1 },';
 	) >> "$patchlist"
 fi
 

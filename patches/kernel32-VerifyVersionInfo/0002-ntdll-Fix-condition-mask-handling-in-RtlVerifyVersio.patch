@@ -1,41 +1,88 @@
-From ac09483f10409c0f5de9bee8f160c8be45ee351f Mon Sep 17 00:00:00 2001
+From 682d55277eef7f522088a6dbb9a675af9f3bfadd Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 1 Dec 2014 11:30:58 +0100
 Subject: [PATCH] ntdll: Fix condition mask handling in RtlVerifyVersionInfo.
 
 ---
- dlls/kernel32/tests/version.c |  3 ---
+ dlls/kernel32/tests/version.c | 11 ----------
  dlls/ntdll/version.c          | 50 ++++++++++++++++++++++++++++++++-----------
- 2 files changed, 37 insertions(+), 16 deletions(-)
+ 2 files changed, 37 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/kernel32/tests/version.c b/dlls/kernel32/tests/version.c
-index 1a6a0d4..db182a3 100644
+index 49a9357..20fe25d 100644
 --- a/dlls/kernel32/tests/version.c
 +++ b/dlls/kernel32/tests/version.c
-@@ -945,7 +945,6 @@ static void test_VerifyVersionInfo(void)
-     ret = VerifyVersionInfoA(&info, VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
-         VerSetConditionMask(VerSetConditionMask(VerSetConditionMask(0, VER_MINORVERSION, VER_EQUAL),
-         VER_SERVICEPACKMAJOR, VER_EQUAL), VER_SERVICEPACKMINOR, VER_LESS));
--    todo_wine
-     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+@@ -184,8 +184,6 @@ static void test_VerifyVersionInfo(void)
+         DWORD condition3;
+         DWORD typemask4;
+         DWORD condition4;
+-
+-        BOOL todo;
+     } verify_version_tests[] =
+     {
+         {
+@@ -197,7 +195,6 @@ static void test_VerifyVersionInfo(void)
+             VER_MINORVERSION, VER_LESS,
+             0, 0,
+             0, 0,
+-            TRUE,
+         },
+         {
+             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+@@ -280,7 +277,6 @@ static void test_VerifyVersionInfo(void)
+             VER_SERVICEPACKMINOR, VER_LESS,
+             0, 0,
+             0, 0,
+-            TRUE,
+         },
+         {
+             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+@@ -299,7 +295,6 @@ static void test_VerifyVersionInfo(void)
+             VER_SERVICEPACKMAJOR, VER_EQUAL,
+             VER_SERVICEPACKMINOR, VER_LESS,
+             0, 0,
+-            TRUE,
+         },
+         {
+             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+@@ -319,7 +314,6 @@ static void test_VerifyVersionInfo(void)
+             VER_MINORVERSION, VER_EQUAL,
+             VER_SERVICEPACKMAJOR, VER_EQUAL,
+             VER_SERVICEPACKMINOR, VER_LESS,
+-            TRUE,
+         },
+         {
+             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+@@ -364,7 +358,6 @@ static void test_VerifyVersionInfo(void)
+             VER_SERVICEPACKMAJOR, VER_LESS,
+             0, 0,
+             0, 0,
+-            TRUE,
+         },
+         {
+             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+@@ -383,7 +376,6 @@ static void test_VerifyVersionInfo(void)
+             VER_MINORVERSION, VER_EQUAL,
+             VER_SERVICEPACKMAJOR, VER_LESS,
+             0, 0,
+-            TRUE
+         },
+         {
+             VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
+@@ -670,13 +662,10 @@ static void test_VerifyVersionInfo(void)
  
-     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
-@@ -966,7 +965,6 @@ static void test_VerifyVersionInfo(void)
-     ret = VerifyVersionInfoA(&info, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
-         VerSetConditionMask(VerSetConditionMask(VerSetConditionMask(VerSetConditionMask(0, VER_MAJORVERSION, VER_EQUAL),
-         VER_MINORVERSION, VER_EQUAL), VER_SERVICEPACKMAJOR, VER_EQUAL), VER_SERVICEPACKMINOR, VER_LESS));
--    todo_wine
-     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
+         SetLastError(0xdeadbeef);
+         ret = VerifyVersionInfoA(&info, test->verifymask, mask);
+-    todo_wine_if(test->todo)
+-    {
+         ok(test->err ? !ret : ret, "%u: unexpected return value %d.\n", i, ret);
+         if (!ret)
+             ok(GetLastError() == test->err, "%u: unexpected error code %d, expected %d.\n", i, GetLastError(), test->err);
+     }
+-    }
  
-     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
-@@ -1084,7 +1082,6 @@ static void test_VerifyVersionInfo(void)
-     ret = VerifyVersionInfoA(&info, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR,
-         VerSetConditionMask(VerSetConditionMask(VerSetConditionMask(0, VER_MAJORVERSION, VER_EQUAL),
-         VER_MINORVERSION, VER_EQUAL), VER_SERVICEPACKMAJOR, VER_LESS));
--    todo_wine
-     ok(ret, "VerifyVersionInfoA failed with error %d\n", GetLastError());
- 
-     info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXA);
+     /* test handling of version numbers */
+     /* v3.10 is always less than v4.x even
 diff --git a/dlls/ntdll/version.c b/dlls/ntdll/version.c
 index 58ccb95..8beef6d 100644
 --- a/dlls/ntdll/version.c
@@ -124,5 +171,5 @@ index 58ccb95..8beef6d 100644
          }
  
 -- 
-1.9.1
+2.7.4
 

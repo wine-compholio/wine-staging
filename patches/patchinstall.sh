@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 3.2 (Unreleased)"
+	echo "Wine Staging 3.3 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -2989,10 +2989,7 @@ fi
 # |   *	[#43351] Add semi-stub implementation for CreateRemoteThreadEx
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
-# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
-# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, dlls/kernel32/thread.c,
-# | 	dlls/kernelbase/kernelbase.spec, include/winbase.h, include/winnt.h
+# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, include/winbase.h, include/winnt.h
 # |
 if test "$enable_kernel32_UmsStubs" -eq 1; then
 	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
@@ -5114,10 +5111,8 @@ fi
 # |   *	dlls/kernel32/tests/version.c, dlls/ntdll/version.c
 # |
 if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
-	patch_apply kernel32-VerifyVersionInfo/0001-kernel32-tests-Add-additional-tests-for-condition-ma.patch
 	patch_apply kernel32-VerifyVersionInfo/0002-ntdll-Fix-condition-mask-handling-in-RtlVerifyVersio.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32/tests: Add additional tests for condition mask of VerifyVersionInfoA.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
 	) >> "$patchlist"
 fi
@@ -9081,9 +9076,9 @@ fi
 # |   *	d3d11-Depth_Bias
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/drawprim.c,
-# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c,
-# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h,
+# | 	include/wine/wined3d.h
 # |
 if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
@@ -9101,7 +9096,7 @@ fi
 # |   *	[#39057] Support for indexed vertex blending
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/drawprim.c,
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
 # | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then

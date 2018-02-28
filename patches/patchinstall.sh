@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9ae8b8c00f2cca205fdf4ce76e221778b7dfbea7"
+	echo "7b62a970e9ad3b4179394cf54f0232475fe2388a"
 }
 
 # Show version information
@@ -111,7 +111,6 @@ patch_enable_all ()
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_crypt32_ECDSA_Cert_Chains="$1"
 	enable_crypt32_MS_Root_Certs="$1"
-	enable_d3d10_1_Forwards="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
 	enable_d3d11_ID3D11Texture1D="$1"
@@ -198,7 +197,6 @@ patch_enable_all ()
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
-	enable_kernel32_VerifyVersionInfo="$1"
 	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -328,7 +326,6 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
-	enable_server_free_async_queue="$1"
 	enable_server_send_hardware_message="$1"
 	enable_setupapi_CM_Get_Parent="$1"
 	enable_setupapi_DiskSpaceList="$1"
@@ -392,7 +389,6 @@ patch_enable_all ()
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_GetStorageDependencyInformation="$1"
-	enable_vulkan_Vulkan_Implementation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
 	enable_wbemprox_Win32_OperatingSystem="$1"
@@ -402,7 +398,6 @@ patch_enable_all ()
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
-	enable_windowscodecs_JPEG_Decoder="$1"
 	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
@@ -573,9 +568,6 @@ patch_enable ()
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
-			;;
-		d3d10_1-Forwards)
-			enable_d3d10_1_Forwards="$2"
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
@@ -834,9 +826,6 @@ patch_enable ()
 			;;
 		kernel32-UmsStubs)
 			enable_kernel32_UmsStubs="$2"
-			;;
-		kernel32-VerifyVersionInfo)
-			enable_kernel32_VerifyVersionInfo="$2"
 			;;
 		kernelbase-PathCchCombineEx)
 			enable_kernelbase_PathCchCombineEx="$2"
@@ -1225,9 +1214,6 @@ patch_enable ()
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
 			;;
-		server-free_async_queue)
-			enable_server_free_async_queue="$2"
-			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
 			;;
@@ -1417,9 +1403,6 @@ patch_enable ()
 		virtdisk-GetStorageDependencyInformation)
 			enable_virtdisk_GetStorageDependencyInformation="$2"
 			;;
-		vulkan-Vulkan_Implementation)
-			enable_vulkan_Vulkan_Implementation="$2"
-			;;
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
 			;;
@@ -1446,9 +1429,6 @@ patch_enable ()
 			;;
 		windowscodecs-IWICPalette_InitializeFromBitmap)
 			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
-			;;
-		windowscodecs-JPEG_Decoder)
-			enable_windowscodecs_JPEG_Decoder="$2"
 			;;
 		windowscodecs-Palette_Images)
 			enable_windowscodecs_Palette_Images="$2"
@@ -3099,26 +3079,24 @@ fi
 # |   *	[#40451] Add feclient dll
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-quirks-l1-1-0/api-ms-win-core-quirks-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-
-# | 	draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-
-# | 	ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-
-# | 	window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-
-# | 	win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0
-# | 	/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
-# | 	thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-
-# | 	ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-
-# | 	win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-
-# | 	syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls
-# | 	/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in,
-# | 	dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c,
-# | 	dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in,
-# | 	dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c,
+# |   *	configure.ac, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-
+# | 	win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-
+# | 	ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in,
+# | 	dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-
+# | 	stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-
+# | 	shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-
+# | 	ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-
+# | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
+# | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
+# | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
+# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
+# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
+# | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
 # | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec,
 # | 	include/uiautomationcoreapi.h, tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
-	patch_apply api-ms-win-Stub_DLLs/0001-kernelbase-Add-dll-and-add-stub-for-QuirkIsEnabled.patch
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
 	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0009-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
@@ -3134,7 +3112,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add dll and add stub for QuirkIsEnabled.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
@@ -3423,18 +3400,6 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010/2011.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d10_1-Forwards
-# |
-# | Modified files:
-# |   *	dlls/d3d10_1/d3d10_1.spec, tools/make_specfiles
-# |
-if test "$enable_d3d10_1_Forwards" -eq 1; then
-	patch_apply d3d10_1-Forwards/0001-d3d10_1-Add-missing-forwards-to-d3d10.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d10_1: Add missing forwards to d3d10.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5081,21 +5046,6 @@ if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
 	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-VerifyVersionInfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36143] Fix condition mask handling in RtlVerifyVersionInfo
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/version.c, dlls/ntdll/version.c
-# |
-if test "$enable_kernel32_VerifyVersionInfo" -eq 1; then
-	patch_apply kernel32-VerifyVersionInfo/0002-ntdll-Fix-condition-mask-handling-in-RtlVerifyVersio.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix condition mask handling in RtlVerifyVersionInfo.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7250,18 +7200,6 @@ if test "$enable_server_device_manager_destroy" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-free_async_queue
-# |
-# | Modified files:
-# |   *	server/async.c
-# |
-if test "$enable_server_free_async_queue" -eq 1; then
-	patch_apply server-free_async_queue/0001-server-Avoid-crash-when-async_terminate-destroys-asy.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Avoid crash when async_terminate destroys async object in free_async_queue.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-send_hardware_message
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8361,36 +8299,6 @@ if test "$enable_virtdisk_GetStorageDependencyInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset vulkan-Vulkan_Implementation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40164] Implement support for Vulkan
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/vulkan-1/Makefile.in, dlls/vulkan-1/vulkan-1.spec, dlls/vulkan/Makefile.in, dlls/vulkan/vulkan.spec,
-# | 	dlls/vulkan/vulkan_main.c, dlls/vulkan/vulkan_private.h, dlls/vulkan/vulkan_thunks.c
-# |
-if test "$enable_vulkan_Vulkan_Implementation" -eq 1; then
-	patch_apply vulkan-Vulkan_Implementation/0001-vulkan-Initial-implementation.patch
-	patch_apply vulkan-Vulkan_Implementation/0002-vulkan-Implement-vkGetPhysicalDeviceWin32Presentatio.patch
-	patch_apply vulkan-Vulkan_Implementation/0003-vulkan-Use-binary-search-to-lookup-function-in-is_nu.patch
-	patch_apply vulkan-Vulkan_Implementation/0004-vulkan-Try-to-load-libvulkan.so.1.patch
-	patch_apply vulkan-Vulkan_Implementation/0005-vulkan-Enumerate-VK_KHR_win32_surface-only-one-time-.patch
-	patch_apply vulkan-Vulkan_Implementation/0006-vulkan-Update-to-spec-version-1.0.30-no-VK_EXT_debug.patch
-	patch_apply vulkan-Vulkan_Implementation/0007-vulkan-Improve-vkGetPhysicalDeviceWin32PresentationS.patch
-	patch_apply vulkan-Vulkan_Implementation/0008-vulkan-Only-convert-VkDescriptor-Image-Buffer-Info-w.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "vulkan: Initial implementation.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "vulkan: Implement vkGetPhysicalDeviceWin32PresentationSupportKHR.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "vulkan: Use binary search to lookup function in is_null_func.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "vulkan: Try to load libvulkan.so.1.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "vulkan: Enumerate VK_KHR_win32_surface only one time in vkEnumerateInstanceExtensionProperties.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "vulkan: Update to spec version 1.0.30 (no VK_EXT_debug_marker support yet).", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "vulkan: Improve vkGetPhysicalDeviceWin32PresentationSupportKHR and vkCreateWin32SurfaceKHR.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "vulkan: Only convert VkDescriptor{Image,Buffer}Info when type is valid.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wbemdisp-ISWbemSecurity
 # |
 # | Modified files:
@@ -8645,27 +8553,6 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-JPEG_Decoder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43520] Fix JPEG decoder and implement support for CMYK to BGR conversion
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
-# |
-if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
-	patch_apply windowscodecs-JPEG_Decoder/0002-windowscodecs-Fix-stride-calculation-in-JPEG-decoder.patch
-	patch_apply windowscodecs-JPEG_Decoder/0003-windowscodecs-Move-additional-processing-out-of-the-.patch
-	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
-	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix stride calculation in JPEG decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move additional processing out of the JPEG decoding loop.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for CMYK to BGR conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

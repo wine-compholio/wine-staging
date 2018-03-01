@@ -1,35 +1,15 @@
-From 800f9e5129a1f5eabe4dbdc971ead453ee93e26e Mon Sep 17 00:00:00 2001
+From dae45d1760dbbf114271bec67170e2e721c52904 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 16 Aug 2017 02:45:23 +0200
 Subject: [PATCH] kernelbase: Add semi-stub for PathCchCombineEx.
 
 ---
- configure.ac                                       |   1 +
- .../api-ms-win-core-path-l1-1-0.spec               |   2 +-
- dlls/kernelbase/Makefile.in                        |   4 +-
- dlls/kernelbase/kernelbase.spec                    |   2 +-
- dlls/kernelbase/main.c                             |  29 ++++++
- dlls/kernelbase/tests/Makefile.in                  |   5 +
- dlls/kernelbase/tests/path.c                       | 113 +++++++++++++++++++++
- include/Makefile.in                                |   1 +
- include/pathcch.h                                  |  26 +++++
- 9 files changed, 180 insertions(+), 3 deletions(-)
- create mode 100644 dlls/kernelbase/tests/Makefile.in
- create mode 100644 dlls/kernelbase/tests/path.c
- create mode 100644 include/pathcch.h
+ .../api-ms-win-core-path-l1-1-0.spec               |  2 +-
+ dlls/kernelbase/Makefile.in                        |  4 ++-
+ dlls/kernelbase/kernelbase.spec                    |  2 +-
+ dlls/kernelbase/main.c                             | 29 ++++++++++++++++++++++
+ 4 files changed, 34 insertions(+), 3 deletions(-)
 
-diff --git a/configure.ac b/configure.ac
-index 7b796ef..f9e5e1d 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -3308,6 +3308,7 @@ WINE_CONFIG_DLL(kerberos)
- WINE_CONFIG_DLL(kernel32)
- WINE_CONFIG_TEST(dlls/kernel32/tests)
- WINE_CONFIG_DLL(kernelbase)
-+WINE_CONFIG_TEST(dlls/kernelbase/tests)
- WINE_CONFIG_DLL(keyboard.drv16,enable_win16)
- WINE_CONFIG_DLL(krnl386.exe16,enable_win16)
- WINE_CONFIG_DLL(ksuser)
 diff --git a/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec b/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec
 index cb10d89..4df147e 100644
 --- a/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec
@@ -56,7 +36,7 @@ index 74df98c..247c6bf 100644
  C_SRCS = \
  	main.c
 diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
-index eb6edbe..065af41 100644
+index aa67372..8caa3b5 100644
 --- a/dlls/kernelbase/kernelbase.spec
 +++ b/dlls/kernelbase/kernelbase.spec
 @@ -1037,7 +1037,7 @@
@@ -69,10 +49,10 @@ index eb6edbe..065af41 100644
  # @ stub PathCchIsRoot
  # @ stub PathCchRemoveBackslash
 diff --git a/dlls/kernelbase/main.c b/dlls/kernelbase/main.c
-index 9c89ff4..7e5ffde 100644
+index 6871aca..7716912 100644
 --- a/dlls/kernelbase/main.c
 +++ b/dlls/kernelbase/main.c
-@@ -19,7 +19,11 @@
+@@ -20,7 +20,11 @@
  #include "windows.h"
  #include "appmodel.h"
  
@@ -84,7 +64,7 @@ index 9c89ff4..7e5ffde 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(kernelbase);
  
-@@ -87,3 +91,28 @@ BOOL WINAPI QuirkIsEnabled3(void *unk1, void *unk2)
+@@ -97,3 +101,28 @@ BOOL WINAPI QuirkIsEnabled3(void *unk1, void *unk2)
  
      return FALSE;
  }
@@ -113,180 +93,6 @@ index 9c89ff4..7e5ffde 100644
 +    strcpyW(out, result);
 +    return S_OK;
 +}
-diff --git a/dlls/kernelbase/tests/Makefile.in b/dlls/kernelbase/tests/Makefile.in
-new file mode 100644
-index 0000000..92f5ca5
---- /dev/null
-+++ b/dlls/kernelbase/tests/Makefile.in
-@@ -0,0 +1,5 @@
-+TESTDLL   = kernelbase.dll
-+IMPORTS   = kernelbase
-+
-+C_SRCS = \
-+	path.c
-diff --git a/dlls/kernelbase/tests/path.c b/dlls/kernelbase/tests/path.c
-new file mode 100644
-index 0000000..c848640
---- /dev/null
-+++ b/dlls/kernelbase/tests/path.c
-@@ -0,0 +1,113 @@
-+/*
-+ * Path tests for kernelbase.dll
-+ *
-+ * Copyright 2017 Michael Müller
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
-+
-+#include <stdarg.h>
-+#include <windef.h>
-+#include <winbase.h>
-+#include <stdlib.h>
-+#include <winerror.h>
-+#include <winnls.h>
-+#include <pathcch.h>
-+#include <strsafe.h>
-+
-+#include "wine/test.h"
-+
-+static const struct
-+{
-+    const char *path1;
-+    const char *path2;
-+    const char *result;
-+    BOOL todo;
-+}
-+combine_test[] =
-+{
-+    /* nomal paths */
-+    {"C:\\",  "a",     "C:\\a",   FALSE},
-+    {"C:\\b", "..\\a", "C:\\a",   FALSE},
-+    {"C:",    "a",     "C:\\a",   FALSE},
-+    {"C:\\",  ".",     "C:\\",    TRUE},
-+    {"C:\\",  "..",    "C:\\",    FALSE},
-+    {"\\a",   "b",      "\\a\\b", FALSE},
-+
-+    /* normal UNC paths */
-+    {"\\\\192.168.1.1\\test", "a",  "\\\\192.168.1.1\\test\\a", FALSE},
-+    {"\\\\192.168.1.1\\test", "..", "\\\\192.168.1.1", FALSE},
-+
-+    /* NT paths */
-+    {"\\\\?\\C:\\", "a",  "C:\\a", TRUE},
-+    {"\\\\?\\C:\\", "..", "C:\\",  TRUE},
-+
-+    /* NT UNC path */
-+    {"\\\\?\\UNC\\192.168.1.1\\test", "a",  "\\\\192.168.1.1\\test\\a", TRUE},
-+    {"\\\\?\\UNC\\192.168.1.1\\test", "..", "\\\\192.168.1.1", TRUE},
-+};
-+
-+static void test_PathCchCombineEx(void)
-+{
-+    WCHAR expected[MAX_PATH] = {'C',':','\\','a',0};
-+    WCHAR p1[MAX_PATH] = {'C',':','\\',0};
-+    WCHAR p2[MAX_PATH] = {'a',0};
-+    WCHAR output[MAX_PATH];
-+    HRESULT hr;
-+    int i;
-+
-+    hr = PathCchCombineEx(NULL, 2, p1, p2, 0);
-+    ok(hr == E_INVALIDARG, "Expected E_INVALIDARG, got %08x\n", hr);
-+
-+    memset(output, 0xff, sizeof(output));
-+    hr = PathCchCombineEx(output, 0, p1, p2, 0);
-+    ok(hr == E_INVALIDARG, "Expected E_INVALIDARG, got %08x\n", hr);
-+    ok(output[0] == 0xffff, "Expected output buffer to be unchanged\n");
-+
-+    memset(output, 0xff, sizeof(output));
-+    hr = PathCchCombineEx(output, 1, p1, p2, 0);
-+    ok(hr == STRSAFE_E_INSUFFICIENT_BUFFER, "Expected STRSAFE_E_INSUFFICIENT_BUFFER, got %08x\n", hr);
-+    ok(output[0] == 0, "Expected output buffer to contain NULL string\n");
-+
-+    memset(output, 0xff, sizeof(output));
-+    hr = PathCchCombineEx(output, 4, p1, p2, 0);
-+    ok(hr == STRSAFE_E_INSUFFICIENT_BUFFER, "Expected STRSAFE_E_INSUFFICIENT_BUFFER, got %08x\n", hr);
-+    ok(output[0] == 0x0, "Expected output buffer to contain NULL string\n");
-+
-+    memset(output, 0xff, sizeof(output));
-+    hr = PathCchCombineEx(output, 5, p1, p2, 0);
-+    ok(hr == S_OK, "Expected S_OK, got %08x\n", hr);
-+    ok(!lstrcmpW(output, expected),
-+        "Combination of %s + %s returned %s, expected %s\n",
-+        wine_dbgstr_w(p1), wine_dbgstr_w(p2), wine_dbgstr_w(output), wine_dbgstr_w(expected));
-+
-+    for (i = 0; i < sizeof(combine_test)/sizeof(combine_test[0]); i++)
-+    {
-+        MultiByteToWideChar(CP_ACP, 0, combine_test[i].path1, -1, p1, MAX_PATH);
-+        MultiByteToWideChar(CP_ACP, 0, combine_test[i].path2, -1, p2, MAX_PATH);
-+        MultiByteToWideChar(CP_ACP, 0, combine_test[i].result, -1, expected, MAX_PATH);
-+
-+        hr = PathCchCombineEx(output, MAX_PATH, p1, p2, 0);
-+        ok(hr == S_OK, "Expected S_OK, got %08x\n", hr);
-+        todo_wine_if(combine_test[i].todo) ok(!lstrcmpW(output, expected),
-+            "Combination of %s + %s returned %s, expected %s\n",
-+            wine_dbgstr_w(p1), wine_dbgstr_w(p2), wine_dbgstr_w(output), wine_dbgstr_w(expected));
-+    }
-+}
-+
-+START_TEST(path)
-+{
-+    test_PathCchCombineEx();
-+}
-diff --git a/include/Makefile.in b/include/Makefile.in
-index f1bcba3..72304d6 100644
---- a/include/Makefile.in
-+++ b/include/Makefile.in
-@@ -494,6 +494,7 @@ SOURCES = \
- 	opnrst.idl \
- 	optary.idl \
- 	patchapi.h \
-+	pathcch.h \
- 	pdh.h \
- 	pdhmsg.h \
- 	perflib.h \
-diff --git a/include/pathcch.h b/include/pathcch.h
-new file mode 100644
-index 0000000..8831c52
---- /dev/null
-+++ b/include/pathcch.h
-@@ -0,0 +1,26 @@
-+/*
-+ * Copyright 2017 Michael Müller
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
-+
-+#define PATHCCH_NONE                            0x00
-+#define PATHCCH_ALLOW_LONG_PATHS                0x01
-+#define PATHCCH_FORCE_ENABLE_LONG_NAME_PROCESS  0x02
-+#define PATHCCH_FORCE_DISABLE_LONG_NAME_PROCESS 0x04
-+#define PATHCCH_DO_NOT_NORMALIZE_SEGMENTS       0x08
-+#define PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH  0x10
-+
-+HRESULT WINAPI PathCchCombineEx(WCHAR *out, SIZE_T size, const WCHAR *path1, const WCHAR *path2, DWORD flags);
 -- 
 2.7.4
 

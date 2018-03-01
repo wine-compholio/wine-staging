@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0a72708126f5b8fc06698172d973bb529944c3bf"
+	echo "b1aee9c391a7e3ce4a069993d527dbdc518ef29c"
 }
 
 # Show version information
@@ -160,7 +160,6 @@ patch_enable_all ()
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
-	enable_fonts_Tahoma="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_GetCharacterPlacement="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
@@ -168,7 +167,6 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
-	enable_hal_KeQueryPerformanceCounter="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -255,7 +253,6 @@ patch_enable_all ()
 	enable_ntdll_NtSuspendProcess="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessImageFileNameWin32="$1"
-	enable_ntdll_ProcessPriorityClass="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
@@ -378,8 +375,6 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
-	enable_user32_Sorted_Listbox="$1"
-	enable_user32_WM_MEASUREITEM="$1"
 	enable_user32_WindowDisplayAffinity="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
@@ -391,7 +386,6 @@ patch_enable_all ()
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_wbemprox_Printer="$1"
 	enable_wbemprox_Win32_OperatingSystem="$1"
-	enable_wbemprox_Win32_VideoController="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -713,9 +707,6 @@ patch_enable ()
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
 			;;
-		fonts-Tahoma)
-			enable_fonts_Tahoma="$2"
-			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
 			;;
@@ -994,9 +985,6 @@ patch_enable ()
 			;;
 		ntdll-ProcessImageFileNameWin32)
 			enable_ntdll_ProcessImageFileNameWin32="$2"
-			;;
-		ntdll-ProcessPriorityClass)
-			enable_ntdll_ProcessPriorityClass="$2"
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
@@ -1364,12 +1352,6 @@ patch_enable ()
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
 			;;
-		user32-Sorted_Listbox)
-			enable_user32_Sorted_Listbox="$2"
-			;;
-		user32-WM_MEASUREITEM)
-			enable_user32_WM_MEASUREITEM="$2"
-			;;
 		user32-WindowDisplayAffinity)
 			enable_user32_WindowDisplayAffinity="$2"
 			;;
@@ -1402,9 +1384,6 @@ patch_enable ()
 			;;
 		wbemprox-Win32_OperatingSystem)
 			enable_wbemprox_Win32_OperatingSystem="$2"
-			;;
-		wbemprox-Win32_VideoController)
-			enable_wbemprox_Win32_VideoController="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -2194,13 +2173,6 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	enable_ntdll_DllRedirects=1
 fi
 
-if test "$enable_user32_Sorted_Listbox" -eq 1; then
-	if test "$enable_user32_WM_MEASUREITEM" -gt 1; then
-		abort "Patchset user32-WM_MEASUREITEM disabled, but user32-Sorted_Listbox depends on that."
-	fi
-	enable_user32_WM_MEASUREITEM=1
-fi
-
 if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
 	if test "$enable_user32_lpCreateParams" -gt 1; then
 		abort "Patchset user32-lpCreateParams disabled, but user32-MessageBox_WS_EX_TOPMOST depends on that."
@@ -2797,6 +2769,9 @@ if test "$enable_advapi32_BuildSecurityDescriptor" -eq 1; then
 fi
 
 # Patchset advapi32-CreateRestrictedToken
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25834] Implement advapi32.CreateRestrictedToken
 # |
 # | Modified files:
 # |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/winnt.h,
@@ -3712,6 +3687,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3dx9_25-ID3DXEffect
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44635] Improve stub for ID3DXEffectImpl_CloneEffect
+# |
 # | Modified files:
 # |   *	dlls/d3dx9_36/effect.c
 # |
@@ -4248,7 +4226,7 @@ fi
 if test "$enable_dwmapi_DwmSetIcon" -eq 1; then
 	patch_apply dwmapi-DwmSetIcon/0001-dwmapi-Add-stubs-for-DwmSetIconicLivePreviewBitmap-a.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "dwmapi: Add stubs for DwmSetIconicLivePreviewBitmap and DwmSetIconicThumbnail.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "dwmapi: Add stub for DwmSetIconicLivePreviewBitmap.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4399,18 +4377,6 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset fonts-Tahoma
-# |
-# | Modified files:
-# |   *	fonts/tahoma.sfd, fonts/tahoma.ttf
-# |
-if test "$enable_fonts_Tahoma" -eq 1; then
-	patch_apply fonts-Tahoma/0001-fonts-tahoma.sfd-Add-glyphs-U-FB01-and-U-FB02.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "fonts/tahoma.sfd: Add glyphs U+FB01 and U+FB02.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5014,9 +4980,8 @@ fi
 # |   *	[#42474] Implement kernelbase.PathCchCombineEx
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
-# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c, dlls/kernelbase/tests/Makefile.in,
-# | 	dlls/kernelbase/tests/path.c, include/Makefile.in, include/pathcch.h
+# |   *	dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c
 # |
 if test "$enable_kernelbase_PathCchCombineEx" -eq 1; then
 	patch_apply kernelbase-PathCchCombineEx/0001-kernelbase-Add-semi-stub-for-PathCchCombineEx.patch
@@ -6011,18 +5976,6 @@ if test "$enable_ntdll_ProcessImageFileNameWin32" -eq 1; then
 	patch_apply ntdll-ProcessImageFileNameWin32/0001-ntdll-Implement-ProcessImageFileNameWin32-in-NtQuery.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ProcessImageFileNameWin32 in NtQueryInformationProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ProcessPriorityClass
-# |
-# | Modified files:
-# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/info.c
-# |
-if test "$enable_ntdll_ProcessPriorityClass" -eq 1; then
-	patch_apply ntdll-ProcessPriorityClass/0001-ntdll-Implement-ProcessPriorityClass-in-NtQueryInfor.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ProcessPriorityClass in NtQueryInformationProcess.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7057,6 +7010,9 @@ fi
 # |   *	server-Misc_ACL, ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage, server-Signal_Thread, server-
 # | 	Shared_Memory
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44629] Process Hacker can't enumerate handles
+# |
 # | Modified files:
 # |   *	dlls/ntdll/nt.c, dlls/ntdll/om.c, dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, include/winternl.h,
 # | 	server/completion.c, server/directory.c, server/event.c, server/file.c, server/handle.c, server/mailslot.c,
@@ -8081,49 +8037,6 @@ if test "$enable_user32_ShowWindow" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-WM_MEASUREITEM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37025] Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox
-# |
-# | Modified files:
-# |   *	dlls/user32/listbox.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_WM_MEASUREITEM" -eq 1; then
-	patch_apply user32-WM_MEASUREITEM/0001-user32-tests-Add-a-test-for-WM_MEASUREITEM-when-inse.patch
-	patch_apply user32-WM_MEASUREITEM/0002-user32-Pass-correct-itemData-to-WM_MEASUREITEM-when-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Pass correct itemData to WM_MEASUREITEM when inserting an item to an owner-drawn listbox.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Sorted_Listbox
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	user32-WM_MEASUREITEM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42602] Multiple fixes for owner-drawn and sorted listbox
-# |
-# | Modified files:
-# |   *	dlls/user32/listbox.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_Sorted_Listbox" -eq 1; then
-	patch_apply user32-Sorted_Listbox/0001-user32-tests-Add-a-message-test-for-an-owner-drawn-s.patch
-	patch_apply user32-Sorted_Listbox/0002-user32-tests-Add-some-message-tests-for-not-an-owner.patch
-	patch_apply user32-Sorted_Listbox/0003-user32-Fix-order-of-items-passed-in-WM_COMPAREITEM-d.patch
-	patch_apply user32-Sorted_Listbox/0004-user32-Fix-the-listbox-sorting-algorithm.patch
-	patch_apply user32-Sorted_Listbox/0005-user32-For-an-owner-drawn-listbox-without-strings-WM.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for an owner-drawn sorted listbox.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add some message tests for not an owner-drawn listbox.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix order of items passed in WM_COMPAREITEM data.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the listbox sorting algorithm.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: For an owner-drawn listbox without strings WM_MEASUREITEM still needs correct itemData.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-WindowDisplayAffinity
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8283,24 +8196,6 @@ if test "$enable_wbemprox_Win32_OperatingSystem" -eq 1; then
 	patch_apply wbemprox-Win32_OperatingSystem/0001-wbemprox-Add-FreePhysicalMemory-to-Win32_OperatingSy.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add FreePhysicalMemory to Win32_OperatingSystem.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wbemprox-Win32_VideoController
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/builtin.c
-# |
-if test "$enable_wbemprox_Win32_VideoController" -eq 1; then
-	patch_apply wbemprox-Win32_VideoController/0001-wbemprox-Add-ConfigManagerErrorCode-for-Win32_VideoC.patch
-	patch_apply wbemprox-Win32_VideoController/0002-wbemprox-Add-Status-for-Win32_VideoController.patch
-	patch_apply wbemprox-Win32_VideoController/0003-wbemprox-Add-InstalledDisplayDrivers-for-Win32_Video.patch
-	patch_apply wbemprox-Win32_VideoController/0004-wbemprox-Add-DriverDate-for-Win32_VideoController.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add ConfigManagerErrorCode for Win32_VideoController.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add Status for Win32_VideoController.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add InstalledDisplayDrivers for Win32_VideoController.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add DriverDate for Win32_VideoController.", 1 },';
 	) >> "$patchlist"
 fi
 

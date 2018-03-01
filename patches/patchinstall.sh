@@ -370,7 +370,6 @@ patch_enable_all ()
 	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetAutoRotationState="$1"
 	enable_user32_GetSystemMetrics="$1"
-	enable_user32_Groupbox_Rectangle="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
@@ -1340,9 +1339,6 @@ patch_enable ()
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
-			;;
-		user32-Groupbox_Rectangle)
-			enable_user32_Groupbox_Rectangle="$2"
 			;;
 		user32-LR_LOADFROMFILE)
 			enable_user32_LR_LOADFROMFILE="$2"
@@ -7931,18 +7927,6 @@ if test "$enable_user32_GetSystemMetrics" -eq 1; then
 	patch_apply user32-GetSystemMetrics/0001-user32-Allow-changing-the-tablet-media-center-status.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Groupbox_Rectangle
-# |
-# | Modified files:
-# |   *	dlls/user32/button.c
-# |
-if test "$enable_user32_Groupbox_Rectangle" -eq 1; then
-	patch_apply user32-Groupbox_Rectangle/0001-user32-Always-restore-previously-selected-font-in-th.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Always restore previously selected font in the button painting helpers.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,7 +1,7 @@
-From ce3479faa24fcaab430d2c62c1d0c386089206b6 Mon Sep 17 00:00:00 2001
+From 344221b351b7dc15b9cd1e75b741e2dec978e744 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 5 Mar 2017 23:18:03 +0100
-Subject: [PATCH] bcrypt: Implement support for ECB chain mode.
+Subject: [PATCH 26/36] bcrypt: Implement support for ECB chain mode.
 
 ---
  dlls/bcrypt/bcrypt_main.c  |  43 ++++++++--
@@ -9,10 +9,10 @@ Subject: [PATCH] bcrypt: Implement support for ECB chain mode.
  2 files changed, 244 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index b52d289..6859788 100644
+index 79e62e33c9..22a653f7f2 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -225,6 +225,7 @@ enum alg_id
+@@ -238,6 +238,7 @@ enum alg_id
  
  enum mode_id
  {
@@ -20,7 +20,7 @@ index b52d289..6859788 100644
      MODE_ID_CBC,
      MODE_ID_GCM
  };
-@@ -577,8 +578,9 @@ static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop
+@@ -590,8 +591,9 @@ static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop
              const WCHAR *mode;
              switch (alg->mode)
              {
@@ -31,7 +31,7 @@ index b52d289..6859788 100644
                  default: return STATUS_NOT_IMPLEMENTED;
              }
  
-@@ -631,7 +633,12 @@ static NTSTATUS set_alg_property( struct algorithm *alg, const WCHAR *prop, UCHA
+@@ -644,7 +646,12 @@ static NTSTATUS set_alg_property( struct algorithm *alg, const WCHAR *prop, UCHA
      case ALG_ID_AES:
          if (!strcmpW( prop, BCRYPT_CHAINING_MODE ))
          {
@@ -45,7 +45,7 @@ index b52d289..6859788 100644
              {
                  alg->mode = MODE_ID_CBC;
                  return STATUS_SUCCESS;
-@@ -949,7 +956,12 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
+@@ -1003,7 +1010,12 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
  {
      if (!strcmpW( prop, BCRYPT_CHAINING_MODE ))
      {
@@ -59,7 +59,7 @@ index b52d289..6859788 100644
          {
              key->mode = MODE_ID_CBC;
              return STATUS_SUCCESS;
-@@ -979,6 +991,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -1033,6 +1045,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
          switch (key->mode)
          {
              case MODE_ID_GCM: return GNUTLS_CIPHER_AES_128_GCM;
@@ -67,7 +67,7 @@ index b52d289..6859788 100644
              case MODE_ID_CBC:
              default:          return GNUTLS_CIPHER_AES_128_CBC;
          }
-@@ -990,6 +1003,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -1044,6 +1057,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
  
  static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
  {
@@ -75,7 +75,7 @@ index b52d289..6859788 100644
      gnutls_cipher_algorithm_t cipher;
      gnutls_datum_t secret, vector;
      int ret;
-@@ -1003,15 +1017,18 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1057,15 +1071,18 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      if ((cipher = get_gnutls_cipher( key )) == GNUTLS_CIPHER_UNKNOWN)
          return STATUS_NOT_SUPPORTED;
  
@@ -100,7 +100,7 @@ index b52d289..6859788 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1385,11 +1402,15 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1490,11 +1507,15 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
      if (!output) return STATUS_SUCCESS;
      if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -116,7 +116,7 @@ index b52d289..6859788 100644
          bytes_left -= key->block_size;
          src += key->block_size;
          dst += key->block_size;
-@@ -1472,11 +1493,15 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1576,11 +1597,15 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
      else if (output_len < *ret_len)
          return STATUS_BUFFER_TOO_SMALL;
  
@@ -133,10 +133,10 @@ index b52d289..6859788 100644
          src += key->block_size;
          dst += key->block_size;
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index fafc4a1..f9bf77b 100644
+index bd22b80d9a..ade8058724 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -631,6 +631,15 @@ static void test_BCryptEncrypt(void)
+@@ -634,6 +634,15 @@ static void test_BCryptEncrypt(void)
      static UCHAR expected4[] =
          {0xe1,0x82,0xc3,0xc0,0x24,0xfb,0x86,0x85,0xf3,0xf1,0x2b,0x7d,0x09,0xb4,0x73,0x67,
           0x86,0x64,0xc3,0xfe,0xa3,0x07,0x61,0xf8,0x16,0xc9,0x78,0x7f,0xe7,0xb1,0xc4,0x94};
@@ -152,7 +152,7 @@ index fafc4a1..f9bf77b 100644
      static UCHAR expected_tag[] =
          {0x89,0xb3,0x92,0x00,0x39,0x20,0x09,0xb4,0x6a,0xd6,0xaf,0xca,0x4b,0x5b,0xfd,0xd0};
      static UCHAR expected_tag2[] =
-@@ -843,6 +852,97 @@ static void test_BCryptEncrypt(void)
+@@ -846,6 +855,97 @@ static void test_BCryptEncrypt(void)
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
      HeapFree(GetProcessHeap(), 0, buf);
  
@@ -250,7 +250,7 @@ index fafc4a1..f9bf77b 100644
      ret = pBCryptCloseAlgorithmProvider(aes, 0);
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  }
-@@ -877,6 +977,13 @@ static void test_BCryptDecrypt(void)
+@@ -880,6 +980,13 @@ static void test_BCryptDecrypt(void)
      static UCHAR ciphertext4[] =
          {0xe1,0x82,0xc3,0xc0,0x24,0xfb,0x86,0x85,0xf3,0xf1,0x2b,0x7d,0x09,0xb4,0x73,0x67,
           0x86,0x64,0xc3,0xfe,0xa3,0x07,0x61,0xf8,0x16,0xc9,0x78,0x7f,0xe7,0xb1,0xc4,0x94};
@@ -264,7 +264,7 @@ index fafc4a1..f9bf77b 100644
      static UCHAR tag[] =
          {0x89,0xb3,0x92,0x00,0x39,0x20,0x09,0xb4,0x6a,0xd6,0xaf,0xca,0x4b,0x5b,0xfd,0xd0};
      static UCHAR tag2[] =
-@@ -1055,6 +1162,109 @@ static void test_BCryptDecrypt(void)
+@@ -1058,6 +1165,109 @@ static void test_BCryptDecrypt(void)
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
      HeapFree(GetProcessHeap(), 0, buf);
  
@@ -375,5 +375,5 @@ index fafc4a1..f9bf77b 100644
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  }
 -- 
-1.9.1
+2.16.1
 

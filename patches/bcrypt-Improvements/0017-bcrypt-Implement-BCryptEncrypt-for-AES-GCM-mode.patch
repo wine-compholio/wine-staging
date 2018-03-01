@@ -1,15 +1,15 @@
-From fe6fae656c8755b7eb96f7cba4828bd45e7efaec Mon Sep 17 00:00:00 2001
+From ae6849dde0d3c7e125c9913f7bcde27e5c514304 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 26 Dec 2016 07:46:57 +0100
-Subject: [PATCH] bcrypt: Implement BCryptEncrypt for AES GCM mode.
+Subject: [PATCH 17/36] bcrypt: Implement BCryptEncrypt for AES GCM mode.
 
 ---
- dlls/bcrypt/bcrypt_main.c  | 50 ++++++++++++++++++++++++++++++++++++++--------
+ dlls/bcrypt/bcrypt_main.c  | 48 ++++++++++++++++++++++++++++++++++++++--------
  dlls/bcrypt/tests/bcrypt.c | 18 ++++++++---------
- 2 files changed, 51 insertions(+), 17 deletions(-)
+ 2 files changed, 49 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 9cd58c6..88f3ef2 100644
+index 9e9e357634..387f448516 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -63,6 +63,12 @@ MAKE_FUNCPTR(gnutls_global_set_log_level);
@@ -25,7 +25,7 @@ index 9cd58c6..88f3ef2 100644
  static void gnutls_log( int level, const char *msg )
  {
      TRACE( "<%d> %s", level, msg );
-@@ -857,6 +863,7 @@ struct key
+@@ -848,6 +854,7 @@ struct key
  {
      struct object      hdr;
      enum alg_id        alg_id;
@@ -33,7 +33,7 @@ index 9cd58c6..88f3ef2 100644
      ULONG              block_size;
      gnutls_cipher_hd_t handle;
      UCHAR             *secret;
-@@ -884,6 +891,7 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
+@@ -925,6 +932,7 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
      memcpy( buffer, secret, secret_len );
  
      key->alg_id     = alg->id;
@@ -41,7 +41,7 @@ index 9cd58c6..88f3ef2 100644
      key->handle     = 0;        /* initialized on first use */
      key->secret     = buffer;
      key->secret_len = secret_len;
-@@ -896,9 +904,13 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -937,9 +945,13 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
      switch (key->alg_id)
      {
      case ALG_ID_AES:
@@ -58,22 +58,7 @@ index 9cd58c6..88f3ef2 100644
      default:
          FIXME( "algorithm %u not supported\n", key->alg_id );
          return GNUTLS_CIPHER_UNKNOWN;
-@@ -1084,12 +1096,14 @@ static NTSTATUS key_destroy( struct key *key )
- struct key
- {
-     struct object hdr;
-+    enum mode_id  mode;
-     ULONG         block_size;
- };
- 
- static NTSTATUS key_init( struct key *key, struct algorithm *alg, UCHAR *secret, ULONG secret_len )
- {
-     ERR( "support for keys not available at build time\n" );
-+    key->mode = MODE_ID_CBC;
-     return STATUS_NOT_IMPLEMENTED;
- }
- 
-@@ -1169,17 +1183,37 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1262,17 +1274,37 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
             padding, iv, iv_len, output, output_len, ret_len, flags );
  
      if (!key || key->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
@@ -117,10 +102,10 @@ index 9cd58c6..88f3ef2 100644
  
      *ret_len = input_len;
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index c4b411d..2721d7d 100644
+index 70d9e0c246..355a414bca 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -748,12 +748,12 @@ static void test_BCryptEncrypt(void)
+@@ -751,12 +751,12 @@ static void test_BCryptEncrypt(void)
      memset(ciphertext, 0xff, sizeof(ciphertext));
      memset(tag, 0xff, sizeof(tag));
      ret = pBCryptEncrypt(key, data2, 32, &auth_info, ivbuf, 16, ciphertext, 32, &size, 0);
@@ -137,7 +122,7 @@ index c4b411d..2721d7d 100644
      for (i = 0; i < 16; i++)
          todo_wine ok(tag[i] == expected_tag[i], "%u: %02x != %02x\n", i, tag[i], expected_tag[i]);
  
-@@ -763,12 +763,12 @@ static void test_BCryptEncrypt(void)
+@@ -766,12 +766,12 @@ static void test_BCryptEncrypt(void)
      memset(ciphertext, 0xff, sizeof(ciphertext));
      memset(tag, 0xff, sizeof(tag));
      ret = pBCryptEncrypt(key, data2, 24, &auth_info, ivbuf, 16, ciphertext, 24, &size, 0);
@@ -154,7 +139,7 @@ index c4b411d..2721d7d 100644
      for (i = 0; i < 16; i++)
          todo_wine ok(tag[i] == expected_tag2[i], "%u: %02x != %02x\n", i, tag[i], expected_tag2[i]);
  
-@@ -781,7 +781,7 @@ static void test_BCryptEncrypt(void)
+@@ -784,7 +784,7 @@ static void test_BCryptEncrypt(void)
      memcpy(ivbuf, iv, sizeof(iv));
      memset(ciphertext, 0, sizeof(ciphertext));
      ret = pBCryptEncrypt(key, data2, 32, &auth_info, ivbuf, 16, ciphertext, 48, &size, BCRYPT_BLOCK_PADDING);
@@ -164,5 +149,5 @@ index c4b411d..2721d7d 100644
      ret = pBCryptDestroyKey(key);
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
 -- 
-1.9.1
+2.16.1
 

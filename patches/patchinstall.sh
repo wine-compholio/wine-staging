@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7b62a970e9ad3b4179394cf54f0232475fe2388a"
+	echo "0a72708126f5b8fc06698172d973bb529944c3bf"
 }
 
 # Show version information
@@ -737,9 +737,6 @@ patch_enable ()
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
-			;;
-		hal-KeQueryPerformanceCounter)
-			enable_hal_KeQueryPerformanceCounter="$2"
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
@@ -3168,7 +3165,6 @@ fi
 # | 	include/bcrypt.h, include/ntstatus.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
-	patch_apply bcrypt-Improvements/0010-bcrypt-tests-Add-test-for-bugs-in-BCryptGetProperty.patch
 	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0012-bcrypt-Pass-object-to-get_-alg-hash-_property-instea.patch
 	patch_apply bcrypt-Improvements/0013-bcrypt-Implement-BCryptSetProperty-for-algorithms.patch
@@ -3186,7 +3182,6 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
 	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
 	patch_apply bcrypt-Improvements/0027-bcrypt-Fix-BCryptEncrypt-with-AES_GCM-and-no-input-a.patch
-	patch_apply bcrypt-Improvements/0028-bcrypt-Partial-implementation-of-BCryptImportKey-and.patch
 	patch_apply bcrypt-Improvements/0029-bcrypt-Add-support-for-192-and-256-bit-aes-keys.patch
 	patch_apply bcrypt-Improvements/0030-bcrypt-Preparation-for-asymmetric-keys.patch
 	patch_apply bcrypt-Improvements/0031-include-Add-ecdsa-and-asymmetric-key-related-bcrypt-.patch
@@ -3197,7 +3192,6 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0036-bcrypt-tests-Add-simple-test-for-RSA.patch
 	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add test for bugs in BCryptGetProperty.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptSetProperty for algorithms.", 1 },';
@@ -3215,7 +3209,6 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Implement support for ECB chain mode.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "bcrypt: Fix BCryptEncrypt with AES_GCM and no input and no output.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Partial implementation of BCryptImportKey and BCryptExportKey.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for 192 and 256 bit aes keys.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "include: Add ecdsa and asymmetric key related bcrypt definitions.", 1 },';
@@ -4539,21 +4532,6 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change multiplications by additions in the x/y scaler loops.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Remove ceilf/floorf calls from bilinear scaler.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Prefer using pre-multiplied ARGB data in the scaler.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset hal-KeQueryPerformanceCounter
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39500] Implement hal.KeQueryPerformanceCounter
-# |
-# | Modified files:
-# |   *	dlls/hal/hal.c, dlls/hal/hal.spec
-# |
-if test "$enable_hal_KeQueryPerformanceCounter" -eq 1; then
-	patch_apply hal-KeQueryPerformanceCounter/0001-hal-Implement-KeQueryPerformanceCounter.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "hal: Implement KeQueryPerformanceCounter.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5971,7 +5949,6 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0009-ntdll-Fix-error-code-when-querying-too-large-memory-.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
@@ -5980,7 +5957,6 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fix error code when querying too large memory address.", 1 },';
 	) >> "$patchlist"
 fi
 

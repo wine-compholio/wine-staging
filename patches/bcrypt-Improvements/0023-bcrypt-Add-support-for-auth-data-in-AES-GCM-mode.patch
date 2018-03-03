@@ -1,45 +1,39 @@
-From 71875d0a5fa90536bb48d83c3e9cf6163df370de Mon Sep 17 00:00:00 2001
+From 7ecc8c3e96519eb53f0442981bd711b719cebfab Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 26 Dec 2016 15:01:19 +0100
 Subject: [PATCH 23/36] bcrypt: Add support for auth data in AES GCM mode.
 
 ---
- dlls/bcrypt/bcrypt_main.c | 47 +++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 47 insertions(+)
+ dlls/bcrypt/bcrypt_main.c | 41 ++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 40 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 5913d1283e..a9dfb00ab4 100644
+index dc6aa82b81..e4ebcf91ed 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -53,6 +53,10 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+@@ -52,6 +52,7 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
  /* Not present in gnutls version < 3.0 */
  static int (*pgnutls_cipher_tag)(gnutls_cipher_hd_t handle, void * tag, size_t tag_size);
- 
-+/* Not present in gnutls version < 3.0 */
-+static int (*pgnutls_cipher_tag)(gnutls_cipher_hd_t handle, void *tag, size_t tag_size);
 +static int (*pgnutls_cipher_add_auth)(gnutls_cipher_hd_t handle, const void *ptext, size_t ptext_size);
-+
+ 
  static void *libgnutls_handle;
  #define MAKE_FUNCPTR(f) static typeof(f) * p##f
- MAKE_FUNCPTR(gnutls_cipher_decrypt2);
-@@ -77,6 +81,16 @@ static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void * tag, size_
-     return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
- }
+@@ -72,7 +73,12 @@ MAKE_FUNCPTR(gnutls_perror);
+ #define GNUTLS_CIPHER_AES_256_GCM 94
+ #endif
  
+-static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void * tag, size_t tag_size)
 +static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void *tag, size_t tag_size)
 +{
 +    return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
 +}
 +
 +static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *ptext, size_t ptext_size)
-+{
-+    return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
-+}
-+
- static void gnutls_log( int level, const char *msg )
  {
-     TRACE( "<%d> %s", level, msg );
-@@ -127,6 +141,16 @@ static BOOL gnutls_initialize(void)
+     return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
+ }
+@@ -127,6 +133,16 @@ static BOOL gnutls_initialize(void)
          pgnutls_global_set_log_level( 4 );
          pgnutls_global_set_log_function( gnutls_log );
      }
@@ -56,7 +50,7 @@ index 5913d1283e..a9dfb00ab4 100644
  
      return TRUE;
  
-@@ -1050,6 +1074,19 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1050,6 +1066,19 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      return STATUS_SUCCESS;
  }
  
@@ -76,7 +70,7 @@ index 5913d1283e..a9dfb00ab4 100644
  static NTSTATUS key_encrypt( struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output,
                               ULONG output_len )
  {
-@@ -1221,6 +1258,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1221,6 +1250,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -89,7 +83,7 @@ index 5913d1283e..a9dfb00ab4 100644
  static NTSTATUS key_encrypt( struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output,
                               ULONG output_len  )
  {
-@@ -1416,6 +1459,8 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1415,6 +1450,8 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (!output) return STATUS_SUCCESS;
          if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -98,7 +92,7 @@ index 5913d1283e..a9dfb00ab4 100644
          if ((status = key_encrypt( key, input, input_len, output, output_len )))
              return status;
  
-@@ -1492,6 +1537,8 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1492,6 +1529,8 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (!output) return STATUS_SUCCESS;
          if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  

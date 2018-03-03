@@ -1,4 +1,4 @@
-From c7ce0b85b9d54ee608e0c2e70e6376c2f68d188e Mon Sep 17 00:00:00 2001
+From f3115ed9d937156ec03bd00e136268a53a7b383e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 26 Dec 2016 08:02:36 +0100
 Subject: [PATCH 19/36] bcrypt: Add support for computing/comparing cipher tag.
@@ -9,7 +9,7 @@ Subject: [PATCH 19/36] bcrypt: Add support for computing/comparing cipher tag.
  2 files changed, 45 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 17cc92dded..bdf02ca375 100644
+index 17cc92dded..e518d315c3 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -50,6 +50,9 @@ static HINSTANCE instance;
@@ -80,15 +80,7 @@ index 17cc92dded..bdf02ca375 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1283,6 +1316,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
-     if (key->mode == MODE_ID_GCM)
-     {
-         BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO *auth_info = padding;
-+        UCHAR tag[16];
- 
-         if (!auth_info) return STATUS_INVALID_PARAMETER;
-         if (!auth_info->pbNonce) return STATUS_INVALID_PARAMETER;
-@@ -1302,7 +1336,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1302,7 +1335,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if ((status = key_encrypt( key, input, input_len, output, output_len )))
              return status;
  
@@ -97,6 +89,14 @@ index 17cc92dded..bdf02ca375 100644
      }
  
      if ((status = key_set_params( key, iv, iv_len ))) return status;
+@@ -1361,6 +1394,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+     if (key->mode == MODE_ID_GCM)
+     {
+         BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO *auth_info = padding;
++        UCHAR tag[16];
+ 
+         if (!auth_info) return STATUS_INVALID_PARAMETER;
+         if (!auth_info->pbNonce) return STATUS_INVALID_PARAMETER;
 @@ -1378,6 +1412,11 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if ((status = key_decrypt( key, input, input_len, output, output_len )))
              return status;

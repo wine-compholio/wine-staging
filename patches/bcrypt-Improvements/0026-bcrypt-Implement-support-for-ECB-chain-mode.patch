@@ -1,4 +1,4 @@
-From 344221b351b7dc15b9cd1e75b741e2dec978e744 Mon Sep 17 00:00:00 2001
+From a58d04dc5cb0ee6344c596eb5b6ac99fb0dd6c7f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 5 Mar 2017 23:18:03 +0100
 Subject: [PATCH 26/36] bcrypt: Implement support for ECB chain mode.
@@ -9,10 +9,10 @@ Subject: [PATCH 26/36] bcrypt: Implement support for ECB chain mode.
  2 files changed, 244 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 79e62e33c9..22a653f7f2 100644
+index 98c49e7331..cbd38f57d6 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -238,6 +238,7 @@ enum alg_id
+@@ -230,6 +230,7 @@ enum alg_id
  
  enum mode_id
  {
@@ -20,7 +20,7 @@ index 79e62e33c9..22a653f7f2 100644
      MODE_ID_CBC,
      MODE_ID_GCM
  };
-@@ -590,8 +591,9 @@ static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop
+@@ -582,8 +583,9 @@ static NTSTATUS get_alg_property( const struct algorithm *alg, const WCHAR *prop
              const WCHAR *mode;
              switch (alg->mode)
              {
@@ -31,7 +31,7 @@ index 79e62e33c9..22a653f7f2 100644
                  default: return STATUS_NOT_IMPLEMENTED;
              }
  
-@@ -644,7 +646,12 @@ static NTSTATUS set_alg_property( struct algorithm *alg, const WCHAR *prop, UCHA
+@@ -636,7 +638,12 @@ static NTSTATUS set_alg_property( struct algorithm *alg, const WCHAR *prop, UCHA
      case ALG_ID_AES:
          if (!strcmpW( prop, BCRYPT_CHAINING_MODE ))
          {
@@ -45,7 +45,7 @@ index 79e62e33c9..22a653f7f2 100644
              {
                  alg->mode = MODE_ID_CBC;
                  return STATUS_SUCCESS;
-@@ -1003,7 +1010,12 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
+@@ -995,7 +1002,12 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
  {
      if (!strcmpW( prop, BCRYPT_CHAINING_MODE ))
      {
@@ -59,7 +59,7 @@ index 79e62e33c9..22a653f7f2 100644
          {
              key->mode = MODE_ID_CBC;
              return STATUS_SUCCESS;
-@@ -1033,6 +1045,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -1025,6 +1037,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
          switch (key->mode)
          {
              case MODE_ID_GCM: return GNUTLS_CIPHER_AES_128_GCM;
@@ -67,7 +67,7 @@ index 79e62e33c9..22a653f7f2 100644
              case MODE_ID_CBC:
              default:          return GNUTLS_CIPHER_AES_128_CBC;
          }
-@@ -1044,6 +1057,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -1036,6 +1049,7 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
  
  static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
  {
@@ -75,7 +75,7 @@ index 79e62e33c9..22a653f7f2 100644
      gnutls_cipher_algorithm_t cipher;
      gnutls_datum_t secret, vector;
      int ret;
-@@ -1057,15 +1071,18 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1049,15 +1063,18 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      if ((cipher = get_gnutls_cipher( key )) == GNUTLS_CIPHER_UNKNOWN)
          return STATUS_NOT_SUPPORTED;
  
@@ -100,7 +100,7 @@ index 79e62e33c9..22a653f7f2 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1490,11 +1507,15 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1481,11 +1498,15 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
      if (!output) return STATUS_SUCCESS;
      if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -116,7 +116,7 @@ index 79e62e33c9..22a653f7f2 100644
          bytes_left -= key->block_size;
          src += key->block_size;
          dst += key->block_size;
-@@ -1576,11 +1597,15 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1568,11 +1589,15 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
      else if (output_len < *ret_len)
          return STATUS_BUFFER_TOO_SMALL;
  

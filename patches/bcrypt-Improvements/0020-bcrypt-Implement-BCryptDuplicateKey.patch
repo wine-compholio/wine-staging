@@ -1,16 +1,16 @@
-From 20c4886fc456f7994e96ac41759b0d22cabb0e0a Mon Sep 17 00:00:00 2001
+From 622e4b47bdabcdae3deab7347a73d0b3ea804fca Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 26 Dec 2016 08:28:24 +0100
 Subject: [PATCH 20/36] bcrypt: Implement BCryptDuplicateKey.
 
 ---
  dlls/bcrypt/bcrypt.spec   |  2 +-
- dlls/bcrypt/bcrypt_main.c | 49 +++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/bcrypt/bcrypt_main.c | 68 +++++++++++++++++++++++++++++++++++++++++++++++
  dlls/ncrypt/ncrypt.spec   |  2 +-
- 3 files changed, 51 insertions(+), 2 deletions(-)
+ 3 files changed, 70 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index 21b54b4934..28c2394ce4 100644
+index 21b54b4..28c2394 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -12,7 +12,7 @@
@@ -23,7 +23,7 @@ index 21b54b4934..28c2394ce4 100644
  @ stdcall BCryptEnumAlgorithms(long ptr ptr long)
  @ stub BCryptEnumContextFunctionProviders
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index e518d315c3..7111788b55 100644
+index 5daddff..e72a8fd 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -954,6 +954,24 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
@@ -51,7 +51,33 @@ index e518d315c3..7111788b55 100644
  static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
  {
      switch (key->alg_id)
-@@ -1156,6 +1174,13 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
+@@ -1089,6 +1107,25 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
++{
++    UCHAR *buffer;
++
++    if (!(buffer = HeapAlloc( GetProcessHeap(), 0, key_orig->secret_len ))) return STATUS_NO_MEMORY;
++    memcpy( buffer, key_orig->secret, key_orig->secret_len );
++
++    key_copy->hdr           = key_orig->hdr;
++    key_copy->alg_id        = key_orig->alg_id;
++    key_copy->mode          = key_orig->mode;
++    key_copy->block_size    = key_orig->block_size;
++    key_copy->ref_encrypt   = NULL;
++    key_copy->ref_decrypt   = NULL;
++    key_copy->secret        = buffer;
++    key_copy->secret_len    = key_orig->secret_len;
++
++    return STATUS_SUCCESS;
++}
++
+ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+ {
+     CCCryptorStatus status;
+@@ -1172,6 +1209,13 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -65,7 +91,7 @@ index e518d315c3..7111788b55 100644
  static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1284,6 +1309,30 @@ NTSTATUS WINAPI BCryptExportKey(BCRYPT_KEY_HANDLE export_key, BCRYPT_KEY_HANDLE
+@@ -1300,6 +1344,30 @@ NTSTATUS WINAPI BCryptExportKey(BCRYPT_KEY_HANDLE export_key, BCRYPT_KEY_HANDLE
      return key_export( key, type, output, output_len, size );
  }
  
@@ -97,7 +123,7 @@ index e518d315c3..7111788b55 100644
  {
      struct key *key = handle;
 diff --git a/dlls/ncrypt/ncrypt.spec b/dlls/ncrypt/ncrypt.spec
-index 5d5fae0b5c..d0f0f56cc4 100644
+index 5d5fae0..d0f0f56 100644
 --- a/dlls/ncrypt/ncrypt.spec
 +++ b/dlls/ncrypt/ncrypt.spec
 @@ -14,7 +14,7 @@
@@ -110,5 +136,5 @@ index 5d5fae0b5c..d0f0f56cc4 100644
  @ stdcall BCryptEnumAlgorithms(long ptr ptr long) bcrypt.BCryptEnumAlgorithms
  @ stub BCryptEnumContextFunctionProviders
 -- 
-2.16.1
+2.7.4
 

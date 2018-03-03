@@ -1,17 +1,17 @@
-From 291dbb0125d68f708ed5ff575281d4104b6ddc62 Mon Sep 17 00:00:00 2001
+From 6bd5e33916b76195ecf5ce743de346bb9874295b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 29 Sep 2017 19:18:58 +0200
 Subject: [PATCH 32/36] bcrypt: Implement importing of ecdsa keys.
 
 ---
  dlls/bcrypt/bcrypt.spec    |   4 +-
- dlls/bcrypt/bcrypt_main.c  | 161 +++++++++++++++++++++++++++++++++++++++++++--
+ dlls/bcrypt/bcrypt_main.c  | 168 +++++++++++++++++++++++++++++++++++++++++++--
  dlls/bcrypt/tests/bcrypt.c |   6 +-
  include/bcrypt.h           |   2 +
- 4 files changed, 162 insertions(+), 11 deletions(-)
+ 4 files changed, 170 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index 28c2394ce4..78824d73b3 100644
+index 28c2394..78824d7 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -32,7 +32,7 @@
@@ -33,10 +33,10 @@ index 28c2394ce4..78824d73b3 100644
  @ stub GetCipherInterface
  @ stub GetHashInterface
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 5d4a5b5992..edea4571b0 100644
+index 9b1ac80..9efa132 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -225,7 +225,9 @@ enum alg_id
+@@ -220,7 +220,9 @@ enum alg_id
      ALG_ID_SHA1,
      ALG_ID_SHA256,
      ALG_ID_SHA384,
@@ -47,7 +47,7 @@ index 5d4a5b5992..edea4571b0 100644
  };
  
  enum mode_id
-@@ -253,7 +255,9 @@ static const struct {
+@@ -248,7 +250,9 @@ static const struct {
      /* ALG_ID_SHA1   */ {  278,   20,  512, BCRYPT_SHA1_ALGORITHM,   FALSE },
      /* ALG_ID_SHA256 */ {  286,   32,  512, BCRYPT_SHA256_ALGORITHM, FALSE },
      /* ALG_ID_SHA384 */ {  382,   48, 1024, BCRYPT_SHA384_ALGORITHM, FALSE },
@@ -58,7 +58,7 @@ index 5d4a5b5992..edea4571b0 100644
  };
  
  struct algorithm
-@@ -332,6 +336,8 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
+@@ -327,6 +331,8 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
      else if (!strcmpW( id, BCRYPT_SHA256_ALGORITHM )) alg_id = ALG_ID_SHA256;
      else if (!strcmpW( id, BCRYPT_SHA384_ALGORITHM )) alg_id = ALG_ID_SHA384;
      else if (!strcmpW( id, BCRYPT_SHA512_ALGORITHM )) alg_id = ALG_ID_SHA512;
@@ -67,7 +67,7 @@ index 5d4a5b5992..edea4571b0 100644
      else
      {
          FIXME( "algorithm %s not supported\n", debugstr_w(id) );
-@@ -900,6 +906,12 @@ struct key_symmetric
+@@ -895,6 +901,12 @@ struct key_symmetric
      ULONG              secret_len;
  };
  
@@ -80,7 +80,7 @@ index 5d4a5b5992..edea4571b0 100644
  struct key
  {
      struct object      hdr;
-@@ -907,6 +919,7 @@ struct key
+@@ -902,6 +914,7 @@ struct key
      union
      {
          struct key_symmetric s;
@@ -88,7 +88,7 @@ index 5d4a5b5992..edea4571b0 100644
      } u;
  };
  
-@@ -921,6 +934,12 @@ struct key_symmetric
+@@ -916,6 +929,12 @@ struct key_symmetric
      ULONG          secret_len;
  };
  
@@ -101,19 +101,31 @@ index 5d4a5b5992..edea4571b0 100644
  struct key
  {
      struct object  hdr;
-@@ -928,6 +947,7 @@ struct key
+@@ -923,6 +942,7 @@ struct key
      union
      {
          struct key_symmetric s;
 +        struct key_asymmetric a;
      } u;
- }
+ };
  #else
-@@ -989,6 +1009,33 @@ static NTSTATUS key_export( struct key *key, const WCHAR *type, UCHAR *output, U
-     FIXME( "unsupported key type %s\n", debugstr_w(type) );
-     return STATUS_NOT_IMPLEMENTED;
+@@ -998,6 +1018,12 @@ static inline BOOL key_is_symmetric( struct key *key )
+     return FALSE;
  }
+ 
++static inline BOOL key_is_asymmetric( struct key *key )
++{
++    ERR( "support for keys not available at build time\n" );
++    return FALSE;
++}
 +
+ static NTSTATUS key_symmetric_get_mode( struct key *key, enum mode_id *mode )
+ {
+     *mode = key->u.s.mode;
+@@ -1041,6 +1067,33 @@ static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, cons
+     return STATUS_SUCCESS;
+ }
+ 
 +static NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHAR *pubkey, ULONG pubkey_len )
 +{
 +    UCHAR *buffer;
@@ -140,10 +152,11 @@ index 5d4a5b5992..edea4571b0 100644
 +
 +    return STATUS_SUCCESS;
 +}
- #endif
- 
- #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
-@@ -1041,7 +1088,13 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
++
+ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
+ {
+     UCHAR *buffer;
+@@ -1061,7 +1114,13 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
      }
      else
      {
@@ -158,7 +171,7 @@ index 5d4a5b5992..edea4571b0 100644
      }
  
      return STATUS_SUCCESS;
-@@ -1198,8 +1251,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1218,8 +1277,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
  
  static NTSTATUS key_destroy( struct key *key )
  {
@@ -174,19 +187,20 @@ index 5d4a5b5992..edea4571b0 100644
      heap_free( key );
      return STATUS_SUCCESS;
  }
-@@ -1296,7 +1354,10 @@ static NTSTATUS key_destroy( struct key *key )
- {
-     if (key->ref_encrypt) CCCryptorRelease( key->ref_encrypt );
-     if (key->ref_decrypt) CCCryptorRelease( key->ref_decrypt );
--    heap_free( key->secret );
-+    if(key_is_symmetric(key))
-+        heap_free( key->u.s.secret );
-+     else
-+        heap_free( key->u.a.pubkey );
-     heap_free( key );
+@@ -1260,6 +1324,12 @@ static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, cons
      return STATUS_SUCCESS;
  }
-@@ -1307,6 +1368,12 @@ static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, cons
+ 
++static NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHAR *pubkey, ULONG pubkey_len )
++{
++    FIXME( "not implemented on Mac\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
+ {
+     UCHAR *buffer;
+@@ -1374,6 +1444,12 @@ static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, cons
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -199,7 +213,7 @@ index 5d4a5b5992..edea4571b0 100644
  static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1489,6 +1556,88 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
+@@ -1556,6 +1632,88 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
      return STATUS_SUCCESS;
  }
  
@@ -289,7 +303,7 @@ index 5d4a5b5992..edea4571b0 100644
  {
      struct key *key = handle;
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 9b04f62df2..3525fd9913 100644
+index 1c2700d..aaa187e 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
 @@ -1404,7 +1404,7 @@ static void test_ECDSA(void)
@@ -315,7 +329,7 @@ index 9b04f62df2..3525fd9913 100644
      pBCryptDestroyKey(key);
      pBCryptCloseAlgorithmProvider(alg, 0);
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index bf47576ab0..6804f2bff5 100644
+index bf47576..6804f2b 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -210,8 +210,10 @@ NTSTATUS WINAPI BCryptGetFipsAlgorithmMode(BOOLEAN *);
@@ -330,5 +344,5 @@ index bf47576ab0..6804f2bff5 100644
  
  #endif  /* __WINE_BCRYPT_H */
 -- 
-2.16.1
+2.7.4
 

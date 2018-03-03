@@ -1,14 +1,14 @@
-From 7ecc8c3e96519eb53f0442981bd711b719cebfab Mon Sep 17 00:00:00 2001
+From d11095de823d25cd44a80bbdab2745c560db9521 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 26 Dec 2016 15:01:19 +0100
 Subject: [PATCH 23/36] bcrypt: Add support for auth data in AES GCM mode.
 
 ---
- dlls/bcrypt/bcrypt_main.c | 41 ++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 40 insertions(+), 1 deletion(-)
+ dlls/bcrypt/bcrypt_main.c | 42 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 41 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index dc6aa82b81..e4ebcf91ed 100644
+index f027eea..da9cb02 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -52,6 +52,7 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
@@ -33,24 +33,19 @@ index dc6aa82b81..e4ebcf91ed 100644
  {
      return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
  }
-@@ -127,6 +133,16 @@ static BOOL gnutls_initialize(void)
-         pgnutls_global_set_log_level( 4 );
-         pgnutls_global_set_log_function( gnutls_log );
+@@ -115,6 +121,11 @@ static BOOL gnutls_initialize(void)
+         WARN("gnutls_cipher_tag not found\n");
+         pgnutls_cipher_tag = compat_gnutls_cipher_tag;
      }
-+    if (!(pgnutls_cipher_tag = wine_dlsym( libgnutls_handle, "gnutls_cipher_tag", NULL, 0 )))
-+    {
-+        WARN("gnutls_cipher_tag not found\n");
-+        pgnutls_cipher_tag = compat_gnutls_cipher_tag;
-+    }
 +    if (!(pgnutls_cipher_add_auth = wine_dlsym( libgnutls_handle, "gnutls_cipher_add_auth", NULL, 0 )))
 +    {
 +        WARN("gnutls_cipher_add_auth not found\n");
 +        pgnutls_cipher_add_auth = compat_gnutls_cipher_add_auth;
 +    }
  
-     return TRUE;
- 
-@@ -1050,6 +1066,19 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+     if ((ret = pgnutls_global_init()) != GNUTLS_E_SUCCESS)
+     {
+@@ -1050,6 +1061,19 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      return STATUS_SUCCESS;
  }
  
@@ -70,7 +65,20 @@ index dc6aa82b81..e4ebcf91ed 100644
  static NTSTATUS key_encrypt( struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output,
                               ULONG output_len )
  {
-@@ -1221,6 +1250,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1193,6 +1217,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS key_set_auth_data( struct key *key, UCHAR *auth_data, ULONG len )
++{
++    FIXME( "not implemented on Mac\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static NTSTATUS key_encrypt( struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output,
+                              ULONG output_len  )
+ {
+@@ -1262,6 +1292,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -83,7 +91,7 @@ index dc6aa82b81..e4ebcf91ed 100644
  static NTSTATUS key_encrypt( struct key *key, const UCHAR *input, ULONG input_len, UCHAR *output,
                               ULONG output_len  )
  {
-@@ -1415,6 +1450,8 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1456,6 +1492,8 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (!output) return STATUS_SUCCESS;
          if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -92,7 +100,7 @@ index dc6aa82b81..e4ebcf91ed 100644
          if ((status = key_encrypt( key, input, input_len, output, output_len )))
              return status;
  
-@@ -1492,6 +1529,8 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1533,6 +1571,8 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (!output) return STATUS_SUCCESS;
          if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -102,5 +110,5 @@ index dc6aa82b81..e4ebcf91ed 100644
              return status;
  
 -- 
-2.16.1
+2.7.4
 

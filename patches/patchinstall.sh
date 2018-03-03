@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b1aee9c391a7e3ce4a069993d527dbdc518ef29c"
+	echo "f17120d11b0e1272bb9742ad88eb526ac914d7da"
 }
 
 # Show version information
@@ -151,7 +151,6 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
-	enable_dwmapi_DwmSetIcon="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -195,7 +194,6 @@ patch_enable_all ()
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
-	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_krnl386_exe16__lclose16="$1"
@@ -386,8 +384,6 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_GetStorageDependencyInformation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
-	enable_wbemprox_Printer="$1"
-	enable_wbemprox_Win32_OperatingSystem="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -682,9 +678,6 @@ patch_enable ()
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
 			;;
-		dwmapi-DwmSetIcon)
-			enable_dwmapi_DwmSetIcon="$2"
-			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
 			;;
@@ -813,9 +806,6 @@ patch_enable ()
 			;;
 		kernel32-UmsStubs)
 			enable_kernel32_UmsStubs="$2"
-			;;
-		kernelbase-PathCchCombineEx)
-			enable_kernelbase_PathCchCombineEx="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -1387,12 +1377,6 @@ patch_enable ()
 		wbemdisp-ISWbemSecurity)
 			enable_wbemdisp_ISWbemSecurity="$2"
 			;;
-		wbemprox-Printer)
-			enable_wbemprox_Printer="$2"
-			;;
-		wbemprox-Win32_OperatingSystem)
-			enable_wbemprox_Win32_OperatingSystem="$2"
-			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
 			;;
@@ -1497,9 +1481,6 @@ patch_enable ()
 			;;
 		wined3d-UAV_Counters)
 			enable_wined3d_UAV_Counters="$2"
-			;;
-		wined3d-Viewports)
-			enable_wined3d_Viewports="$2"
 			;;
 		wined3d-WINED3DFMT_R32G32_UINT)
 			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
@@ -2110,19 +2091,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_UAV_Counters=1
 fi
 
-if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
-	if test "$enable_wined3d_Viewports" -gt 1; then
-		abort "Patchset wined3d-Viewports disabled, but wined3d-Dual_Source_Blending depends on that."
-	fi
-	enable_wined3d_Viewports=1
-fi
-
-if test "$enable_wined3d_Viewports" -eq 1; then
-	if test "$enable_wined3d_Core_Context" -gt 1; then
-		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
-	fi
-	enable_wined3d_Core_Context=1
-fi
 
 if test "$enable_wined3d_Core_Context" -eq 1; then
 	if test "$enable_d3d11_Depth_Bias" -gt 1; then
@@ -4233,18 +4201,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dwmapi-DwmSetIcon
-# |
-# | Modified files:
-# |   *	dlls/dwmapi/dwmapi.spec, dlls/dwmapi/dwmapi_main.c
-# |
-if test "$enable_dwmapi_DwmSetIcon" -eq 1; then
-	patch_apply dwmapi-DwmSetIcon/0001-dwmapi-Add-stubs-for-DwmSetIconicLivePreviewBitmap-a.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "dwmapi: Add stub for DwmSetIconicLivePreviewBitmap.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dxdiagn-Display_Information
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4986,22 +4942,6 @@ if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
 	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernelbase-PathCchCombineEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42474] Implement kernelbase.PathCchCombineEx
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
-# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/main.c
-# |
-if test "$enable_kernelbase_PathCchCombineEx" -eq 1; then
-	patch_apply kernelbase-PathCchCombineEx/0001-kernelbase-Add-semi-stub-for-PathCchCombineEx.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add semi-stub for PathCchCombineEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8222,36 +8162,6 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wbemprox-Printer
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40539] Provide DeviceID, Location and PortName for printers
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/builtin.c
-# |
-if test "$enable_wbemprox_Printer" -eq 1; then
-	patch_apply wbemprox-Printer/0001-wbemprox-Provide-DeviceID-Location-and-PortName-for-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wbemprox: Provide DeviceID, Location and PortName for printers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wbemprox-Win32_OperatingSystem
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43357] Add FreePhysicalMemory to Win32_OperatingSystem
-# |
-# | Modified files:
-# |   *	dlls/wbemprox/builtin.c
-# |
-if test "$enable_wbemprox_Win32_OperatingSystem" -eq 1; then
-	patch_apply wbemprox-Win32_OperatingSystem/0001-wbemprox-Add-FreePhysicalMemory-to-Win32_OperatingSy.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wbemprox: Add FreePhysicalMemory to Win32_OperatingSystem.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-Palette_Images
 # |
 # | Modified files:
@@ -8719,26 +8629,10 @@ if test "$enable_wined3d_Core_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Viewports
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_Viewports" -eq 1; then
-	patch_apply wined3d-Viewports/0001-wined3d-Allow-arbitrary-viewports-for-d3d11.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow arbitrary viewports for d3d11.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -8805,7 +8699,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
-# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -8971,7 +8865,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
-# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
+# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
 # | 	wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:

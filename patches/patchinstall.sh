@@ -194,6 +194,7 @@ patch_enable_all ()
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernel32_UmsStubs="$1"
+	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_krnl386_exe16__lclose16="$1"
@@ -806,6 +807,9 @@ patch_enable ()
 			;;
 		kernel32-UmsStubs)
 			enable_kernel32_UmsStubs="$2"
+			;;
+		kernelbase-PathCchCombineEx)
+			enable_kernelbase_PathCchCombineEx="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -1482,6 +1486,9 @@ patch_enable ()
 		wined3d-UAV_Counters)
 			enable_wined3d_UAV_Counters="$2"
 			;;
+		wined3d-Viewports)
+			enable_wined3d_Viewports="$2"
+			;;
 		wined3d-WINED3DFMT_R32G32_UINT)
 			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
 			;;
@@ -2091,6 +2098,19 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	enable_wined3d_UAV_Counters=1
 fi
 
+if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
+	if test "$enable_wined3d_Viewports" -gt 1; then
+		abort "Patchset wined3d-Viewports disabled, but wined3d-Dual_Source_Blending depends on that."
+	fi
+	enable_wined3d_Viewports=1
+fi
+
+if test "$enable_wined3d_Viewports" -eq 1; then
+	if test "$enable_wined3d_Core_Context" -gt 1; then
+		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
+	fi
+	enable_wined3d_Core_Context=1
+fi
 
 if test "$enable_wined3d_Core_Context" -eq 1; then
 	if test "$enable_d3d11_Depth_Bias" -gt 1; then
@@ -4942,6 +4962,22 @@ if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
 	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernelbase-PathCchCombineEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42474] Implement kernelbase.PathCchCombineEx
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/path.c
+# |
+if test "$enable_kernelbase_PathCchCombineEx" -eq 1; then
+	patch_apply kernelbase-PathCchCombineEx/0001-kernelbase-Add-semi-stub-for-PathCchCombineEx.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add semi-stub for PathCchCombineEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8620,7 +8656,7 @@ fi
 # |   *	d3d11-Depth_Bias
 # |
 # | Modified files:
-# |   *	dlls/dxgi/factory.c, include/wine/wined3d.h
+# |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_Core_Context" -eq 1; then
 	patch_apply wined3d-Core_Context/0001-wined3d-Use-OpenGL-core-context-for-D3D10-11-when-ne.patch
@@ -8629,10 +8665,26 @@ if test "$enable_wined3d_Core_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Dual_Source_Blending
+# Patchset wined3d-Viewports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	d3d11-Depth_Bias, wined3d-Core_Context
+# |
+# | Modified files:
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_Viewports" -eq 1; then
+	patch_apply wined3d-Viewports/0001-wined3d-Allow-arbitrary-viewports-for-d3d11.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow arbitrary viewports for d3d11.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Dual_Source_Blending
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -8699,7 +8751,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
-# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
@@ -8865,7 +8917,7 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
-# | 	wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
+# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
 # | 	wined3d-CSMT_Helper
 # |
 # | This patchset fixes the following Wine bugs:

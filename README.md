@@ -1,3 +1,7 @@
+> DEPRECATION NOTICE
+>
+> Please note that the development of this repository was halted. Visit [this fork](https://github.com/wine-staging/wine-staging) for an up to date version.
+
 What is Wine Staging?
 ---------------------
 

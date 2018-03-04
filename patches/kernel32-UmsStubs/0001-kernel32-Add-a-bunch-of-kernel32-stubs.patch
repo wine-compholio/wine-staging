@@ -1,74 +1,21 @@
-From 46e49340da6151f517a23d77ab9eed45b9e6982c Mon Sep 17 00:00:00 2001
+From 382ce2af9afc78d09793854af6105bde6d7a8151 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 16 Jun 2016 18:56:21 +0800
-Subject: kernel32: Add a bunch of kernel32 stubs.
+Subject: [PATCH] kernel32: Add a bunch of kernel32 stubs.
 
 64-bit ACDSee Pro 9.0 on start up queries them with GetProcAddress() and
 fails to start if any of these APIs is missing.
 ---
- .../api-ms-win-core-processthreads-l1-1-0.spec     |   2 +-
- .../api-ms-win-core-processthreads-l1-1-1.spec     |   2 +-
- .../api-ms-win-core-processthreads-l1-1-2.spec     |   2 +-
- dlls/kernel32/kernel32.spec                        |  28 ++--
- dlls/kernel32/sync.c                               | 145 +++++++++++++++++++++
- dlls/kernel32/thread.c                             |  12 ++
- dlls/kernelbase/kernelbase.spec                    |   2 +-
- include/winbase.h                                  |  18 +++
- include/winnt.h                                    |  22 +++-
- 9 files changed, 214 insertions(+), 19 deletions(-)
+ dlls/kernel32/kernel32.spec |  26 ++++----
+ dlls/kernel32/sync.c        | 145 ++++++++++++++++++++++++++++++++++++++++++++
+ include/winbase.h           |  17 ++++++
+ include/winnt.h             |  22 ++++++-
+ 4 files changed, 196 insertions(+), 14 deletions(-)
 
-diff --git a/dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec b/dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec
-index 77414bc367c..6a41d51fd39 100644
---- a/dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec
-+++ b/dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec
-@@ -2,7 +2,7 @@
- @ stdcall CreateProcessAsUserW(long wstr wstr ptr ptr long long ptr wstr ptr ptr) advapi32.CreateProcessAsUserW
- @ stdcall CreateProcessW(wstr wstr ptr ptr long long ptr wstr ptr ptr) kernel32.CreateProcessW
- @ stdcall CreateRemoteThread(long ptr long ptr long long ptr) kernel32.CreateRemoteThread
--@ stub CreateRemoteThreadEx
-+@ stdcall CreateRemoteThreadEx(long ptr long ptr long long ptr ptr) kernel32.CreateRemoteThreadEx
- @ stdcall CreateThread(ptr long ptr long long ptr) kernel32.CreateThread
- @ stdcall DeleteProcThreadAttributeList(ptr) kernel32.DeleteProcThreadAttributeList
- @ stdcall ExitProcess(long) kernel32.ExitProcess
-diff --git a/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec b/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec
-index 149678995cc..04329650096 100644
---- a/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec
-+++ b/dlls/api-ms-win-core-processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec
-@@ -2,7 +2,7 @@
- @ stdcall CreateProcessAsUserW(long wstr wstr ptr ptr long long ptr wstr ptr ptr) advapi32.CreateProcessAsUserW
- @ stdcall CreateProcessW(wstr wstr ptr ptr long long ptr wstr ptr ptr) kernel32.CreateProcessW
- @ stdcall CreateRemoteThread(long ptr long ptr long long ptr) kernel32.CreateRemoteThread
--@ stub CreateRemoteThreadEx
-+@ stdcall CreateRemoteThreadEx(long ptr long ptr long long ptr ptr) kernel32.CreateRemoteThreadEx
- @ stdcall CreateThread(ptr long ptr long long ptr) kernel32.CreateThread
- @ stdcall DeleteProcThreadAttributeList(ptr) kernel32.DeleteProcThreadAttributeList
- @ stdcall ExitProcess(long) kernel32.ExitProcess
-diff --git a/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec b/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec
-index 7bfbe72106e..4607da257ba 100644
---- a/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec
-+++ b/dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-core-processthreads-l1-1-2.spec
-@@ -2,7 +2,7 @@
- @ stdcall CreateProcessAsUserW(long wstr wstr ptr ptr long long ptr wstr ptr ptr) advapi32.CreateProcessAsUserW
- @ stdcall CreateProcessW(wstr wstr ptr ptr long long ptr wstr ptr ptr) kernel32.CreateProcessW
- @ stdcall CreateRemoteThread(long ptr long ptr long long ptr) kernel32.CreateRemoteThread
--@ stub CreateRemoteThreadEx
-+@ stdcall CreateRemoteThreadEx(long ptr long ptr long long ptr ptr) kernel32.CreateRemoteThreadEx
- @ stdcall CreateThread(ptr long ptr long long ptr) kernel32.CreateThread
- @ stdcall DeleteProcThreadAttributeList(ptr) kernel32.DeleteProcThreadAttributeList
- @ stdcall ExitProcess(long) kernel32.ExitProcess
 diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
-index 1a11af579f4..87583cd8f78 100644
+index ee11c42..60809f4 100644
 --- a/dlls/kernel32/kernel32.spec
 +++ b/dlls/kernel32/kernel32.spec
-@@ -319,7 +319,7 @@
- # @ stub CreateProcessInternalWSecure
- @ stdcall CreateProcessW(wstr wstr ptr ptr long long ptr wstr ptr ptr)
- @ stdcall CreateRemoteThread(long ptr long ptr long long ptr)
--# @ stub CreateRemoteThreadEx
-+@ stdcall CreateRemoteThreadEx(long ptr long ptr long long ptr ptr)
- @ stdcall CreateSemaphoreA(ptr long long str)
- @ stdcall CreateSemaphoreExA(ptr long long str long long)
- @ stdcall CreateSemaphoreExW(ptr long long wstr long long)
 @@ -340,8 +340,8 @@
  @ stdcall CreateTimerQueue ()
  @ stdcall CreateTimerQueueTimer(ptr long ptr ptr long long long)
@@ -163,7 +110,7 @@ index 1a11af579f4..87583cd8f78 100644
  @ stdcall -i386 -private UTRegister(long str str str ptr ptr ptr) krnl386.exe16.UTRegister
  @ stdcall -i386 -private UTUnRegister(long) krnl386.exe16.UTUnRegister
 diff --git a/dlls/kernel32/sync.c b/dlls/kernel32/sync.c
-index d3d46b7dc89..b0ed3c5fca3 100644
+index d3d46b7..b0ed3c5 100644
 --- a/dlls/kernel32/sync.c
 +++ b/dlls/kernel32/sync.c
 @@ -2454,3 +2454,148 @@ BOOL WINAPI SleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable, RTL_SRW
@@ -315,47 +262,11 @@ index d3d46b7dc89..b0ed3c5fca3 100644
 +    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
 +    return FALSE;
 +}
-diff --git a/dlls/kernel32/thread.c b/dlls/kernel32/thread.c
-index a30428fb277..2e26a9438c0 100644
---- a/dlls/kernel32/thread.c
-+++ b/dlls/kernel32/thread.c
-@@ -113,6 +113,18 @@ HANDLE WINAPI CreateRemoteThread( HANDLE hProcess, SECURITY_ATTRIBUTES *sa, SIZE
- }
- 
- 
-+/***************************************************************************
-+ *                  CreateRemoteThreadEx   (KERNEL32.@)
-+ */
-+HANDLE WINAPI CreateRemoteThreadEx( HANDLE hProcess, SECURITY_ATTRIBUTES *sa, SIZE_T stack,
-+                                    LPTHREAD_START_ROUTINE start, LPVOID param, DWORD flags,
-+                                    LPPROC_THREAD_ATTRIBUTE_LIST attrs, LPDWORD id )
-+{
-+    FIXME( "attribute list ignored\n" );
-+    return CreateRemoteThread( hProcess, sa, stack, start, param, flags, id );
-+}
-+
-+
- /***********************************************************************
-  * OpenThread  [KERNEL32.@]   Retrieves a handle to a thread from its thread id
-  */
-diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
-index bb80f212936..36eee6f9925 100644
---- a/dlls/kernelbase/kernelbase.spec
-+++ b/dlls/kernelbase/kernelbase.spec
-@@ -212,7 +212,7 @@
- # @ stub CreateProcessInternalW
- @ stdcall CreateProcessW(wstr wstr ptr ptr long long ptr wstr ptr ptr) kernel32.CreateProcessW
- @ stdcall CreateRemoteThread(long ptr long ptr long long ptr) kernel32.CreateRemoteThread
--@ stub CreateRemoteThreadEx
-+@ stdcall CreateRemoteThreadEx(long ptr long ptr long long ptr ptr) kernel32.CreateRemoteThreadEx
- @ stdcall CreateRestrictedToken(long long long ptr long ptr long ptr ptr) advapi32.CreateRestrictedToken
- @ stdcall CreateSemaphoreExW(ptr long long wstr long long) kernel32.CreateSemaphoreExW
- @ stdcall CreateSemaphoreW(ptr long long wstr) kernel32.CreateSemaphoreW
 diff --git a/include/winbase.h b/include/winbase.h
-index 1347f8cd1c3..8f9c5a1f649 100644
+index e47c87a..8d65d78 100644
 --- a/include/winbase.h
 +++ b/include/winbase.h
-@@ -1685,6 +1685,20 @@ typedef enum _PROC_THREAD_ATTRIBUTE_NUM
+@@ -1694,6 +1694,20 @@ typedef enum _PROC_THREAD_ATTRIBUTE_NUM
  #define SYMBOLIC_LINK_FLAG_DIRECTORY (0x1)
  #define VALID_SYMBOLIC_LINK_FLAGS SYMBOLIC_LINK_FLAG_DIRECTORY
  
@@ -376,15 +287,7 @@ index 1347f8cd1c3..8f9c5a1f649 100644
  WINBASEAPI BOOL        WINAPI ActivateActCtx(HANDLE,ULONG_PTR *);
  WINADVAPI  BOOL        WINAPI AddAccessAllowedAce(PACL,DWORD,DWORD,PSID);
  WINADVAPI  BOOL        WINAPI AddAccessAllowedAceEx(PACL,DWORD,DWORD,DWORD,PSID);
-@@ -1834,6 +1848,7 @@ WINADVAPI  BOOL        WINAPI CreateProcessAsUserW(HANDLE,LPCWSTR,LPWSTR,LPSECUR
- #define                       CreateProcessAsUser WINELIB_NAME_AW(CreateProcessAsUser)
- WINADVAPI  BOOL        WINAPI CreateProcessWithLogonW(LPCWSTR,LPCWSTR,LPCWSTR,DWORD,LPCWSTR,LPWSTR,DWORD,LPVOID,LPCWSTR,LPSTARTUPINFOW,LPPROCESS_INFORMATION);
- WINBASEAPI HANDLE      WINAPI CreateRemoteThread(HANDLE,LPSECURITY_ATTRIBUTES,SIZE_T,LPTHREAD_START_ROUTINE,LPVOID,DWORD,LPDWORD);
-+WINBASEAPI HANDLE      WINAPI CreateRemoteThreadEx(HANDLE,LPSECURITY_ATTRIBUTES,SIZE_T,LPTHREAD_START_ROUTINE,LPVOID,DWORD,LPPROC_THREAD_ATTRIBUTE_LIST,LPDWORD);
- WINADVAPI  BOOL        WINAPI CreateRestrictedToken(HANDLE,DWORD,DWORD,PSID_AND_ATTRIBUTES,DWORD,PLUID_AND_ATTRIBUTES,DWORD,PSID_AND_ATTRIBUTES,PHANDLE);
- WINBASEAPI HANDLE      WINAPI CreateSemaphoreA(LPSECURITY_ATTRIBUTES,LONG,LONG,LPCSTR);
- WINBASEAPI HANDLE      WINAPI CreateSemaphoreW(LPSECURITY_ATTRIBUTES,LONG,LONG,LPCWSTR);
-@@ -1851,6 +1866,8 @@ WINBASEAPI DWORD       WINAPI CreateTapePartition(HANDLE,DWORD,DWORD,DWORD);
+@@ -1862,6 +1876,8 @@ WINBASEAPI DWORD       WINAPI CreateTapePartition(HANDLE,DWORD,DWORD,DWORD);
  WINBASEAPI HANDLE      WINAPI CreateThread(LPSECURITY_ATTRIBUTES,SIZE_T,LPTHREAD_START_ROUTINE,LPVOID,DWORD,LPDWORD);
  WINBASEAPI HANDLE      WINAPI CreateTimerQueue(void);
  WINBASEAPI BOOL        WINAPI CreateTimerQueueTimer(PHANDLE,HANDLE,WAITORTIMERCALLBACK,PVOID,DWORD,DWORD,ULONG);
@@ -393,7 +296,7 @@ index 1347f8cd1c3..8f9c5a1f649 100644
  WINBASEAPI HANDLE      WINAPI CreateWaitableTimerA(LPSECURITY_ATTRIBUTES,BOOL,LPCSTR);
  WINBASEAPI HANDLE      WINAPI CreateWaitableTimerW(LPSECURITY_ATTRIBUTES,BOOL,LPCWSTR);
  #define                       CreateWaitableTimer WINELIB_NAME_AW(CreateWaitableTimer)
-@@ -1909,6 +1926,7 @@ WINBASEAPI BOOL        WINAPI EndUpdateResourceA(HANDLE,BOOL);
+@@ -1920,6 +1936,7 @@ WINBASEAPI BOOL        WINAPI EndUpdateResourceA(HANDLE,BOOL);
  WINBASEAPI BOOL        WINAPI EndUpdateResourceW(HANDLE,BOOL);
  #define                       EndUpdateResource WINELIB_NAME_AW(EndUpdateResource)
  WINBASEAPI void        WINAPI EnterCriticalSection(CRITICAL_SECTION *lpCrit);
@@ -402,10 +305,10 @@ index 1347f8cd1c3..8f9c5a1f649 100644
  WINBASEAPI BOOL        WINAPI EnumResourceLanguagesW(HMODULE,LPCWSTR,LPCWSTR,ENUMRESLANGPROCW,LONG_PTR);
  #define                       EnumResourceLanguages WINELIB_NAME_AW(EnumResourceLanguages)
 diff --git a/include/winnt.h b/include/winnt.h
-index 450499c1299..5bd1b1b4a83 100644
+index 56b533c..6b598f3 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
-@@ -6016,9 +6016,29 @@ typedef VOID (CALLBACK *PTP_TIMER_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PTP_TIME
+@@ -6120,9 +6120,29 @@ typedef VOID (CALLBACK *PTP_TIMER_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PTP_TIME
  typedef VOID (CALLBACK *PTP_WAIT_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PTP_WAIT,TP_WAIT_RESULT);
  typedef VOID (CALLBACK *PTP_WIN32_IO_CALLBACK)(PTP_CALLBACK_INSTANCE,PVOID,PVOID,ULONG,ULONG_PTR,PTP_IO);
  
@@ -437,5 +340,5 @@ index 450499c1299..5bd1b1b4a83 100644
  }
  #endif
 -- 
-2.13.0
+1.9.1
 

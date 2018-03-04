@@ -1,19 +1,19 @@
-From fcb1675d7e732d23fb36fdf2a0da3182d0216e62 Mon Sep 17 00:00:00 2001
+From 235e57cb0305f1e9a1184318f74f897d527b24cc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
-Subject: ntdll: Create thread to update user_shared_data time values when
- necessary.
+Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
+ when necessary.
 
 ---
  dlls/kernel32/cpu.c     |  4 +--
- dlls/ntdll/loader.c     | 32 ++++++++++++++++++++++
+ dlls/ntdll/loader.c     | 31 ++++++++++++++++++++++
  dlls/ntdll/ntdll_misc.h |  3 +++
  dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++-----
  dlls/ntdll/virtual.c    | 17 ++++++++++++
- 5 files changed, 117 insertions(+), 9 deletions(-)
+ 5 files changed, 116 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 2e0e79f8e8d..d53488c7652 100644
+index 2a15dadbe6..50b26fff9f 100644
 --- a/dlls/kernel32/cpu.c
 +++ b/dlls/kernel32/cpu.c
 @@ -46,7 +46,7 @@
@@ -35,14 +35,13 @@ index 2e0e79f8e8d..d53488c7652 100644
      return FALSE;
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index b405bb4e158..187e5a9b57a 100644
+index 773f95e059..4d0267f0a6 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3211,6 +3211,37 @@ static void start_process( void *arg )
-     call_thread_entry_point( kernel32_start_process, arg );
+@@ -3272,6 +3272,36 @@ static void load_global_options(void)
  }
  
-+
+ 
 +/***********************************************************************
 + *           user_shared_data_init
 + *
@@ -76,19 +75,19 @@ index b405bb4e158..187e5a9b57a 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -3243,6 +3274,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3302,6 +3332,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     if (!peb->ProcessParameters->WindowTitle.Buffer)
          peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
      version_init( wm->ldr.FullDllName.Buffer );
-     hidden_exports_init( wm->ldr.FullDllName.Buffer );
 +    user_shared_data_init();
+     hidden_exports_init( wm->ldr.FullDllName.Buffer );
      virtual_set_large_address_space();
  
-     LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 043c9a64188..157c58f24f4 100644
+index 8624399354..7e5439dec9 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -181,6 +181,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
+@@ -190,6 +190,9 @@ extern void VIRTUAL_SetForceExec( BOOL enable ) DECLSPEC_HIDDEN;
  extern void virtual_release_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -99,10 +98,10 @@ index 043c9a64188..157c58f24f4 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index c42d81c7f89..81c11658a49 100644
+index ff14a5e757..44ffa9d733 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -43,6 +43,7 @@
+@@ -44,6 +44,7 @@
  #include "wine/library.h"
  #include "wine/server.h"
  #include "wine/debug.h"
@@ -110,27 +109,27 @@ index c42d81c7f89..81c11658a49 100644
  #include "ntdll_misc.h"
  #include "ddk/wdm.h"
  #include "wine/exception.h"
-@@ -50,7 +51,9 @@
- WINE_DEFAULT_DEBUG_CHANNEL(thread);
- WINE_DECLARE_DEBUG_CHANNEL(relay);
+@@ -54,7 +55,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+ #define PTHREAD_STACK_MIN 16384
+ #endif
  
 -struct _KUSER_SHARED_DATA *user_shared_data = NULL;
 +static struct _KUSER_SHARED_DATA user_shared_data_internal;
 +struct _KUSER_SHARED_DATA *user_shared_data_external;
 +struct _KUSER_SHARED_DATA *user_shared_data = &user_shared_data_internal;
+ static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  PUNHANDLED_EXCEPTION_FILTER unhandled_exception_filter = NULL;
- LPTHREAD_START_ROUTINE kernel32_start_process = NULL;
-@@ -354,18 +357,71 @@ static ULONG_PTR get_image_addr(void)
+@@ -360,18 +363,71 @@ static ULONG_PTR get_image_addr(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
 +    static int spinlock;
 +    ULARGE_INTEGER interrupt;
      LARGE_INTEGER now;
-+
++    
 +    while (interlocked_cmpxchg( &spinlock, 1, 0 ) != 0);
-+
++    
      NtQuerySystemTime( &now );
 -    user_shared_data->SystemTime.LowPart = now.u.LowPart;
 -    user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
@@ -152,7 +151,7 @@ index c42d81c7f89..81c11658a49 100644
 +    user_shared_data->u.TickCount.High1Time  = interrupt.HighPart;
 +    user_shared_data->TickCountLowDeprecated = interrupt.LowPart;
      user_shared_data->TickCountMultiplier = 1 << 24;
-+
++    
 +    spinlock = 0;
      return (BYTE *)user_shared_data;
  }
@@ -198,20 +197,20 @@ index c42d81c7f89..81c11658a49 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -396,7 +452,7 @@ HANDLE thread_init(void)
+@@ -403,7 +459,7 @@ HANDLE thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
 -    user_shared_data = addr;
 +    user_shared_data_external = addr;
+     memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
  
      /* allocate and initialize the PEB */
- 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 2cdcca8a599..0b813d3b0e9 100644
+index 8303a03eba..7d7149732f 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1784,6 +1784,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2013,6 +2013,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
  {
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
      void *page = ROUND_ADDR( addr, page_mask );
@@ -219,7 +218,7 @@ index 2cdcca8a599..0b813d3b0e9 100644
      sigset_t sigset;
      BYTE vprot;
  
-@@ -1809,7 +1810,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2038,7 +2039,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
                  ret = STATUS_SUCCESS;
          }
      }
@@ -244,5 +243,5 @@ index 2cdcca8a599..0b813d3b0e9 100644
  }
  
 -- 
-2.14.1
+2.16.1
 

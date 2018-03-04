@@ -1,16 +1,17 @@
-From 50e975e43d69b6f33ea10e2a46996edc01b1a4aa Mon Sep 17 00:00:00 2001
+From 62b06b3339801083e955422e22be7f2d3c2ced12 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 24 Jan 2017 01:37:29 +0100
-Subject: dxgi: Implement setting and querying the gamma value of an output.
+Subject: [PATCH] dxgi: Implement setting and querying the gamma value of an
+ output.
 
 ---
  dlls/dxgi/Makefile.in    |  2 +-
- dlls/dxgi/output.c       | 68 +++++++++++++++++++++++++++++++++++++++++++-----
- dlls/dxgi/tests/device.c | 45 ++++++++++++++++++++++++++++++++
- 3 files changed, 108 insertions(+), 7 deletions(-)
+ dlls/dxgi/output.c       | 17 +++++++++++++++--
+ dlls/dxgi/tests/device.c | 45 +++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 61 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/dxgi/Makefile.in b/dlls/dxgi/Makefile.in
-index ce76b8eecc6..1a0c9084d56 100644
+index ce76b8e..1a0c908 100644
 --- a/dlls/dxgi/Makefile.in
 +++ b/dlls/dxgi/Makefile.in
 @@ -1,6 +1,6 @@
@@ -22,11 +23,11 @@ index ce76b8eecc6..1a0c9084d56 100644
  C_SRCS = \
  	adapter.c \
 diff --git a/dlls/dxgi/output.c b/dlls/dxgi/output.c
-index 0cf80841c27..7a215a2aad4 100644
+index 2b168fb..31bdf9a 100644
 --- a/dlls/dxgi/output.c
 +++ b/dlls/dxgi/output.c
-@@ -288,24 +288,80 @@ static void STDMETHODCALLTYPE dxgi_output_ReleaseOwnership(IDXGIOutput *iface)
- static HRESULT STDMETHODCALLTYPE dxgi_output_GetGammaControlCapabilities(IDXGIOutput *iface,
+@@ -293,9 +293,22 @@ static void STDMETHODCALLTYPE dxgi_output_ReleaseOwnership(IDXGIOutput4 *iface)
+ static HRESULT STDMETHODCALLTYPE dxgi_output_GetGammaControlCapabilities(IDXGIOutput4 *iface,
          DXGI_GAMMA_CONTROL_CAPABILITIES *gamma_caps)
  {
 -    FIXME("iface %p, gamma_caps %p stub!\n", iface, gamma_caps);
@@ -49,74 +50,12 @@ index 0cf80841c27..7a215a2aad4 100644
 +    return S_OK;
  }
  
- static HRESULT STDMETHODCALLTYPE dxgi_output_SetGammaControl(IDXGIOutput *iface,
-         const DXGI_GAMMA_CONTROL *gamma_control)
- {
--    FIXME("iface %p, gamma_control %p stub!\n", iface, gamma_control);
-+    struct wined3d_gamma_ramp ramp;
-+    HDC dc;
-+    int i;
- 
--    return E_NOTIMPL;
-+    TRACE("iface %p, gamma_control %p.\n", iface, gamma_control);
-+
-+    if (!gamma_control)
-+        return E_INVALIDARG;
-+
-+    for (i = 0; i < 256; i++)
-+    {
-+        ramp.red[i] = gamma_control->GammaCurve[i].Red * 65535;
-+        ramp.green[i] = gamma_control->GammaCurve[i].Green * 65535;
-+        ramp.blue[i] = gamma_control->GammaCurve[i].Blue * 65535;
-+    }
-+
-+    /* we can not use wined3d_swapchain_set_gamma_ramp here, because outputs don't have
-+     * references to swapchains and the output handling of dxgi is far from complete yet */
-+    dc = GetDC(0);
-+    SetDeviceGammaRamp(dc, &ramp);
-+    ReleaseDC(0, dc);
-+    return S_OK;
- }
- 
- static HRESULT STDMETHODCALLTYPE dxgi_output_GetGammaControl(IDXGIOutput *iface, DXGI_GAMMA_CONTROL *gamma_control)
- {
--    FIXME("iface %p, gamma_control %p stub!\n", iface, gamma_control);
-+    struct wined3d_gamma_ramp ramp;
-+    HDC dc;
-+    int i;
-+
-+    TRACE("iface %p, gamma_control %p.\n", iface, gamma_control);
-+
-+    /* We can not use wined3d_swapchain_get_gamma_ramp here, because outputs don't have
-+     * references to swapchains and the output handling of dxgi is far from complete yet */
-+    dc = GetDC(0);
-+    GetDeviceGammaRamp(dc, &ramp);
-+    ReleaseDC(0, dc);
-+
-+    gamma_control->Scale.Red    = 0.0f;
-+    gamma_control->Scale.Green  = 0.0f;
-+    gamma_control->Scale.Blue   = 0.0f;
-+    gamma_control->Offset.Red   = 0.0f;
-+    gamma_control->Offset.Green = 0.0f;
-+    gamma_control->Offset.Blue  = 0.0f;
-+
-+    for (i = 0; i < 256; i++)
-+    {
-+        gamma_control->GammaCurve[i].Red = ramp.red[i] / 65535.0f;
-+        gamma_control->GammaCurve[i].Green = ramp.green[i] / 65535.0f;
-+        gamma_control->GammaCurve[i].Blue = ramp.blue[i] / 65535.0f;
-+    }
- 
--    return E_NOTIMPL;
-+    return S_OK;
- }
- 
- static HRESULT STDMETHODCALLTYPE dxgi_output_SetDisplaySurface(IDXGIOutput *iface, IDXGISurface *surface)
+ static HRESULT STDMETHODCALLTYPE dxgi_output_SetGammaControl(IDXGIOutput4 *iface,
 diff --git a/dlls/dxgi/tests/device.c b/dlls/dxgi/tests/device.c
-index 0b3891fb46a..3122e3f044a 100644
+index 58c3bba..acf0f85 100644
 --- a/dlls/dxgi/tests/device.c
 +++ b/dlls/dxgi/tests/device.c
-@@ -1574,11 +1574,13 @@ static void test_swapchain_fullscreen_state(IDXGISwapChain *swapchain,
+@@ -1852,11 +1852,13 @@ static void test_swapchain_fullscreen_state(IDXGISwapChain *swapchain,
  static void test_set_fullscreen(void)
  {
      struct swapchain_fullscreen_state initial_state;
@@ -130,7 +69,7 @@ index 0b3891fb46a..3122e3f044a 100644
      ULONG refcount;
      HRESULT hr;
  
-@@ -1594,6 +1596,17 @@ static void test_set_fullscreen(void)
+@@ -1872,6 +1874,17 @@ static void test_set_fullscreen(void)
      hr = IDXGIAdapter_GetParent(adapter, &IID_IDXGIFactory, (void **)&factory);
      ok(SUCCEEDED(hr), "GetParent failed, hr %#x.\n", hr);
  
@@ -148,7 +87,7 @@ index 0b3891fb46a..3122e3f044a 100644
      swapchain_desc.BufferDesc.Width = 800;
      swapchain_desc.BufferDesc.Height = 600;
      swapchain_desc.BufferDesc.RefreshRate.Numerator = 60;
-@@ -1624,6 +1637,38 @@ static void test_set_fullscreen(void)
+@@ -1902,6 +1915,38 @@ static void test_set_fullscreen(void)
          skip("Could not change fullscreen state.\n");
          goto done;
      }
@@ -188,5 +127,5 @@ index 0b3891fb46a..3122e3f044a 100644
      ok(hr == S_OK, "Got unexpected hr %#x.\n", hr);
      refcount = IDXGISwapChain_Release(swapchain);
 -- 
-2.11.0
+1.9.1
 

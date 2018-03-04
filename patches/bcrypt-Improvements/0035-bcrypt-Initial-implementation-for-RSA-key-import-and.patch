@@ -1,8 +1,8 @@
-From 72f7ded1f27e7d14b7efb7200b43e320f3e245d4 Mon Sep 17 00:00:00 2001
+From d9e0c414c53eb664791de70e5eb2b03e2c8ccb66 Mon Sep 17 00:00:00 2001
 From: Kimmo Myllyvirta <kimmo.myllyvirta@gmail.com>
 Date: Tue, 10 Oct 2017 16:40:41 +0300
-Subject: bcrypt: Initial implementation for RSA key import and signature
- verification.
+Subject: [PATCH 34/36] bcrypt: Initial implementation for RSA key import and
+ signature verification.
 
 ---
  dlls/bcrypt/bcrypt_main.c | 128 ++++++++++++++++++++++++++++++++++++++++++----
@@ -10,10 +10,10 @@ Subject: bcrypt: Initial implementation for RSA key import and signature
  2 files changed, 135 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 881f6f7eb0c..3356364a6dc 100644
+index d7a6435581..4f7e7636ca 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -71,6 +71,9 @@ static int (*pgnutls_pubkey_verify_hash2)(gnutls_pubkey_t key, gnutls_sign_algor
+@@ -77,6 +77,9 @@ static int (*pgnutls_pubkey_verify_hash2)(gnutls_pubkey_t key, gnutls_sign_algor
                                            unsigned int flags, const gnutls_datum_t *hash,
                                            const gnutls_datum_t *signature);
  
@@ -23,7 +23,7 @@ index 881f6f7eb0c..3356364a6dc 100644
  static void *libgnutls_handle;
  #define MAKE_FUNCPTR(f) static typeof(f) * p##f
  MAKE_FUNCPTR(gnutls_cipher_decrypt2);
-@@ -121,6 +124,11 @@ static int compat_gnutls_pubkey_verify_hash2(gnutls_pubkey_t key, gnutls_sign_al
+@@ -120,6 +123,11 @@ static int compat_gnutls_pubkey_verify_hash2(gnutls_pubkey_t key, gnutls_sign_al
      return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
  }
  
@@ -45,33 +45,33 @@ index 881f6f7eb0c..3356364a6dc 100644
 +        pgnutls_pubkey_import_rsa_raw = compat_gnutls_pubkey_import_rsa_raw;
 +    }
  
-     if ((ret = pgnutls_global_init()) != GNUTLS_E_SUCCESS)
+     if (TRACE_ON( bcrypt ))
      {
-@@ -234,6 +247,7 @@ enum alg_id
-     ALG_ID_AES,
+@@ -276,6 +289,7 @@ enum alg_id
+     ALG_ID_MD4,
      ALG_ID_MD5,
      ALG_ID_RNG,
 +    ALG_ID_RSA,
      ALG_ID_SHA1,
      ALG_ID_SHA256,
      ALG_ID_SHA384,
-@@ -262,6 +276,7 @@ static const struct {
-     /* ALG_ID_AES    */     {  654,    0,    0, BCRYPT_AES_ALGORITHM,        TRUE  },
-     /* ALG_ID_MD5    */     {  274,   16,  512, BCRYPT_MD5_ALGORITHM,        FALSE },
-     /* ALG_ID_RNG    */     {    0,    0,    0, BCRYPT_RNG_ALGORITHM,        FALSE },
-+    /* ALG_ID_RSA    */     {    0,    0,    0, BCRYPT_RSA_ALGORITHM,        FALSE },
-     /* ALG_ID_SHA1   */     {  278,   20,  512, BCRYPT_SHA1_ALGORITHM,       FALSE },
-     /* ALG_ID_SHA256 */     {  286,   32,  512, BCRYPT_SHA256_ALGORITHM,     FALSE },
-     /* ALG_ID_SHA384 */     {  382,   48, 1024, BCRYPT_SHA384_ALGORITHM,     FALSE },
-@@ -340,6 +355,7 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
-     if (!strcmpW( id, BCRYPT_AES_ALGORITHM )) alg_id = ALG_ID_AES;
+@@ -306,6 +320,7 @@ static const struct {
+     /* ALG_ID_MD4    */ {  270,   16,  512, BCRYPT_MD4_ALGORITHM,    FALSE },
+     /* ALG_ID_MD5    */ {  274,   16,  512, BCRYPT_MD5_ALGORITHM,    FALSE },
+     /* ALG_ID_RNG    */ {    0,    0,    0, BCRYPT_RNG_ALGORITHM,    FALSE },
++    /* ALG_ID_RSA    */ {    0,    0,    0, BCRYPT_RSA_ALGORITHM,    FALSE },
+     /* ALG_ID_SHA1   */ {  278,   20,  512, BCRYPT_SHA1_ALGORITHM,   FALSE },
+     /* ALG_ID_SHA256 */ {  286,   32,  512, BCRYPT_SHA256_ALGORITHM, FALSE },
+     /* ALG_ID_SHA384 */ {  382,   48, 1024, BCRYPT_SHA384_ALGORITHM, FALSE },
+@@ -386,6 +401,7 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
+     else if (!strcmpW( id, BCRYPT_MD4_ALGORITHM )) alg_id = ALG_ID_MD4;
      else if (!strcmpW( id, BCRYPT_MD5_ALGORITHM )) alg_id = ALG_ID_MD5;
      else if (!strcmpW( id, BCRYPT_RNG_ALGORITHM )) alg_id = ALG_ID_RNG;
 +    else if (!strcmpW( id, BCRYPT_RSA_ALGORITHM )) alg_id = ALG_ID_RSA;
      else if (!strcmpW( id, BCRYPT_SHA1_ALGORITHM )) alg_id = ALG_ID_SHA1;
      else if (!strcmpW( id, BCRYPT_SHA256_ALGORITHM )) alg_id = ALG_ID_SHA256;
      else if (!strcmpW( id, BCRYPT_SHA384_ALGORITHM )) alg_id = ALG_ID_SHA384;
-@@ -950,6 +966,7 @@ static NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, con
+@@ -1074,6 +1090,7 @@ static NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, con
      {
      case ALG_ID_ECDSA_P256:
      case ALG_ID_ECDSA_P384:
@@ -79,7 +79,7 @@ index 881f6f7eb0c..3356364a6dc 100644
          break;
  
      default:
-@@ -1326,6 +1343,34 @@ static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnut
+@@ -1449,6 +1466,34 @@ static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnut
      return STATUS_SUCCESS;
  }
  
@@ -114,7 +114,7 @@ index 881f6f7eb0c..3356364a6dc 100644
  static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_key)
  {
      switch (key->alg_id)
-@@ -1333,6 +1378,8 @@ static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_
+@@ -1456,6 +1501,8 @@ static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_
          case ALG_ID_ECDSA_P256:
          case ALG_ID_ECDSA_P384:
              return import_gnutls_pubkey_ecc( key, gnutls_key );
@@ -123,7 +123,7 @@ index 881f6f7eb0c..3356364a6dc 100644
  
          default:
              FIXME("Algorithm %d not yet supported\n", key->alg_id);
-@@ -1362,6 +1409,14 @@ static NTSTATUS prepare_gnutls_signature_ecc( struct key *key, UCHAR *signature,
+@@ -1485,6 +1532,14 @@ static NTSTATUS prepare_gnutls_signature_ecc( struct key *key, UCHAR *signature,
      return STATUS_SUCCESS;
  }
  
@@ -138,7 +138,7 @@ index 881f6f7eb0c..3356364a6dc 100644
  static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULONG signature_len,
                                            gnutls_datum_t *gnutls_signature )
  {
-@@ -1370,6 +1425,8 @@ static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULO
+@@ -1493,6 +1548,8 @@ static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULO
          case ALG_ID_ECDSA_P256:
          case ALG_ID_ECDSA_P384:
              return prepare_gnutls_signature_ecc( key, signature, signature_len, gnutls_signature );
@@ -147,7 +147,7 @@ index 881f6f7eb0c..3356364a6dc 100644
  
          default:
              FIXME( "Algorithm %d not yet supported\n", key->alg_id );
-@@ -1388,18 +1445,38 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
+@@ -1511,18 +1568,38 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
      NTSTATUS status;
      int ret;
  
@@ -195,7 +195,7 @@ index 881f6f7eb0c..3356364a6dc 100644
      }
  
      switch (key->alg_id)
-@@ -1408,6 +1485,9 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
+@@ -1531,6 +1608,9 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
          case ALG_ID_ECDSA_P384:
              pk_algo = GNUTLS_PK_ECC;
              break;
@@ -205,7 +205,7 @@ index 881f6f7eb0c..3356364a6dc 100644
  
          default:
              FIXME( "Algorithm %d not yet supported\n", key->alg_id );
-@@ -1433,7 +1513,8 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
+@@ -1556,7 +1636,8 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
      gnutls_hash.size = hash_len;
      ret = pgnutls_pubkey_verify_hash2( gnutls_key, sign_algo, 0, &gnutls_hash, &gnutls_signature );
  
@@ -215,7 +215,7 @@ index 881f6f7eb0c..3356364a6dc 100644
      pgnutls_pubkey_deinit( gnutls_key );
      return (ret < 0) ? STATUS_INVALID_SIGNATURE : STATUS_SUCCESS;
  }
-@@ -1774,6 +1855,33 @@ NTSTATUS WINAPI BCryptImportKeyPair( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HAN
+@@ -1938,6 +2019,33 @@ NTSTATUS WINAPI BCryptImportKeyPair( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HAN
          *ret_key = key;
          return STATUS_SUCCESS;
      }
@@ -250,7 +250,7 @@ index 881f6f7eb0c..3356364a6dc 100644
      FIXME( "unsupported key type %s\n", debugstr_w(type) );
      return STATUS_NOT_SUPPORTED;
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index 3dcc953e9ed..944796024bf 100644
+index 6804f2bff5..2a9a0d0986 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -63,6 +63,8 @@ typedef LONG NTSTATUS;
@@ -262,15 +262,15 @@ index 3dcc953e9ed..944796024bf 100644
  
  #define MS_PRIMITIVE_PROVIDER (const WCHAR [])\
      {'M','i','c','r','o','s','o','f','t',' ','P','r','i','m','i','t','i','v','e',' ','P','r','o','v','i','d','e','r',0}
-@@ -72,6 +74,7 @@ typedef LONG NTSTATUS;
- #define BCRYPT_AES_ALGORITHM        (const WCHAR []){'A','E','S',0}
+@@ -74,6 +76,7 @@ typedef LONG NTSTATUS;
+ #define BCRYPT_MD4_ALGORITHM        (const WCHAR []){'M','D','4',0}
  #define BCRYPT_MD5_ALGORITHM        (const WCHAR []){'M','D','5',0}
  #define BCRYPT_RNG_ALGORITHM        (const WCHAR []){'R','N','G',0}
 +#define BCRYPT_RSA_ALGORITHM        (const WCHAR []){'R','S','A',0}
  #define BCRYPT_SHA1_ALGORITHM       (const WCHAR []){'S','H','A','1',0}
  #define BCRYPT_SHA256_ALGORITHM     (const WCHAR []){'S','H','A','2','5','6',0}
  #define BCRYPT_SHA384_ALGORITHM     (const WCHAR []){'S','H','A','3','8','4',0}
-@@ -138,6 +141,20 @@ typedef struct _BCRYPT_ECCKEY_BLOB
+@@ -133,6 +136,20 @@ typedef struct _BCRYPT_ECCKEY_BLOB
      ULONG cbKey;
  } BCRYPT_ECCKEY_BLOB, *PBCRYPT_ECCKEY_BLOB;
  
@@ -292,5 +292,5 @@ index 3dcc953e9ed..944796024bf 100644
  {
      LPCWSTR pszAlgId;
 -- 
-2.14.1
+2.16.1
 

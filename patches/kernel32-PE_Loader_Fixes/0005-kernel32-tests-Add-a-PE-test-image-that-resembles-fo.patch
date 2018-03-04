@@ -1,18 +1,18 @@
-From dab3d678b587d38bc2701763d7f20ee563a3dc16 Mon Sep 17 00:00:00 2001
+From 9b16cb2d6cd6a9e12819ea88e71d679ef5bbdc10 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Mon, 2 Jan 2017 15:50:01 +0800
-Subject: kernel32/tests: Add a PE test image that resembles format of some of
- 8k demos.
+Subject: [PATCH] kernel32/tests: Add a PE test image that resembles format of
+ some of 8k demos.
 
 ---
- dlls/kernel32/tests/loader.c | 39 +++++++++++++++++++++++++++++++++++++--
- 1 file changed, 37 insertions(+), 2 deletions(-)
+ dlls/kernel32/tests/loader.c | 40 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 38 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 91a6ff05161..3890d3ba3f3 100644
+index 25d3bf5..5efa0d6 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -184,7 +184,7 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
+@@ -193,7 +193,7 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
      {
          SetLastError(0xdeadbeef);
          ret = WriteFile(hfile, &nt_header->OptionalHeader,
@@ -21,7 +21,7 @@ index 91a6ff05161..3890d3ba3f3 100644
                          &dummy, NULL);
          ok(ret, "WriteFile error %d\n", GetLastError());
          if (nt_header->FileHeader.SizeOfOptionalHeader > sizeof(IMAGE_OPTIONAL_HEADER))
-@@ -200,6 +200,8 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
+@@ -209,6 +209,8 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
      assert(nt_header->FileHeader.NumberOfSections <= 1);
      if (nt_header->FileHeader.NumberOfSections)
      {
@@ -30,7 +30,7 @@ index 91a6ff05161..3890d3ba3f3 100644
          section.SizeOfRawData = 10;
  
          if (nt_header->OptionalHeader.SectionAlignment >= page_size)
-@@ -224,6 +226,17 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
+@@ -233,6 +235,17 @@ static DWORD create_test_dll( const IMAGE_DOS_HEADER *dos_header, UINT dos_size,
          ret = WriteFile(hfile, section_data, sizeof(section_data), &dummy, NULL);
          ok(ret, "WriteFile error %d\n", GetLastError());
      }
@@ -48,17 +48,17 @@ index 91a6ff05161..3890d3ba3f3 100644
      size = GetFileSize(hfile, NULL);
      CloseHandle(hfile);
      return size;
-@@ -294,7 +307,8 @@ static void query_image_section( int id, const char *dll_name, const IMAGE_NT_HE
-         image.LoaderFlags, nt_header->OptionalHeader.LoaderFlags );
+@@ -382,7 +395,8 @@ static BOOL query_image_section( int id, const char *dll_name, const IMAGE_NT_HE
+     ok( image.LoaderFlags == (cor_header != NULL), "%u: LoaderFlags wrong %08x\n", id, image.LoaderFlags );
      ok( image.ImageFileSize == file_size || broken(!image.ImageFileSize), /* winxpsp1 */
          "%u: ImageFileSize wrong %08x / %08x\n", id, image.ImageFileSize, file_size );
 -    ok( image.CheckSum == nt_header->OptionalHeader.CheckSum, "%u: CheckSum wrong %08x / %08x\n", id,
 +    ok( image.CheckSum == nt_header->OptionalHeader.CheckSum || broken(truncated),
 +        "%u: CheckSum wrong %08x / %08x\n", id,
          image.CheckSum, nt_header->OptionalHeader.CheckSum );
-     /* FIXME: needs more work: */
-     /* image.GpValue */
-@@ -444,6 +458,7 @@ static void test_Loader(void)
+ 
+     if (nt_header->OptionalHeader.SizeOfCode || nt_header->OptionalHeader.AddressOfEntryPoint)
+@@ -605,6 +619,7 @@ static void test_Loader(void)
          /* Mandatory are all fields up to SizeOfHeaders, everything else
           * is really optional (at least that's true for XP).
           */
@@ -66,7 +66,7 @@ index 91a6ff05161..3890d3ba3f3 100644
          { sizeof(dos_header),
            1, FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, CheckSum), 0x200, 0x200,
            sizeof(dos_header) + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, CheckSum) + sizeof(IMAGE_SECTION_HEADER) + 0x10,
-@@ -451,6 +466,7 @@ static void test_Loader(void)
+@@ -612,6 +627,7 @@ static void test_Loader(void)
            { ERROR_SUCCESS, ERROR_BAD_EXE_FORMAT, ERROR_INVALID_ADDRESS,
              ERROR_NOACCESS }
          },
@@ -74,7 +74,7 @@ index 91a6ff05161..3890d3ba3f3 100644
          { sizeof(dos_header),
            0, FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, CheckSum), 0x200, 0x200,
            0xd0, /* beyond of the end of file */
-@@ -519,6 +535,14 @@ static void test_Loader(void)
+@@ -680,6 +696,14 @@ static void test_Loader(void)
            0x40, /* minimal image size that Windows7 accepts */
            0,
            { ERROR_SUCCESS }
@@ -89,7 +89,7 @@ index 91a6ff05161..3890d3ba3f3 100644
          }
      };
      int i;
-@@ -738,6 +762,17 @@ static void test_Loader(void)
+@@ -886,6 +910,18 @@ static void test_Loader(void)
                  ok(ret, "FreeLibrary error %d\n", GetLastError());
              }
  
@@ -104,9 +104,10 @@ index 91a6ff05161..3890d3ba3f3 100644
 +                ok(0, "could not create %s\n", dll_name);
 +                break;
 +            }
-             query_image_section( i, dll_name, &nt_header );
++
+             query_image_section( i, dll_name, &nt_header, NULL );
          }
          else
 -- 
-2.14.1
+1.9.1
 

@@ -1,30 +1,36 @@
-From 09e86a5b33ead90b064eeb1d728f567283dfa389 Mon Sep 17 00:00:00 2001
+From d10899e701ce7fd4463b30c90ad8c2656a6adead Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 29 Sep 2017 20:31:00 +0200
-Subject: bcrypt: Implement BCryptVerifySignature for ecdsa signatures.
+Subject: [PATCH 33/36] bcrypt: Implement BCryptVerifySignature for ecdsa
+ signatures.
 
 ---
- dlls/bcrypt/bcrypt_main.c  | 326 ++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/bcrypt/bcrypt_main.c  | 343 +++++++++++++++++++++++++++++++++++++++++++--
  dlls/bcrypt/tests/bcrypt.c |   4 +-
- 2 files changed, 326 insertions(+), 4 deletions(-)
+ 2 files changed, 337 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index f822a7aadf3..881f6f7eb0c 100644
+index 9efa132..082474b 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -27,6 +27,7 @@
- #elif defined(SONAME_LIBGNUTLS)
+ #elif defined(HAVE_GNUTLS_CIPHER_INIT)
  #include <gnutls/gnutls.h>
  #include <gnutls/crypto.h>
 +#include <gnutls/abstract.h>
  #endif
  
  #include "ntstatus.h"
-@@ -49,9 +50,26 @@ static HINSTANCE instance;
- #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
+@@ -50,9 +51,31 @@ static HINSTANCE instance;
+ #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
  
 +#if GNUTLS_VERSION_MAJOR < 3
++#define GNUTLS_CIPHER_AES_192_CBC 92
++#define GNUTLS_CIPHER_AES_128_GCM 93
++#define GNUTLS_CIPHER_AES_256_GCM 94
++#define GNUTLS_PK_ECC 4
++
 +typedef enum
 +{
 +    GNUTLS_ECC_CURVE_INVALID = 0,
@@ -36,7 +42,7 @@ index f822a7aadf3..881f6f7eb0c 100644
 +#endif
 +
  /* Not present in gnutls version < 3.0 */
- static int (*pgnutls_cipher_tag)(gnutls_cipher_hd_t handle, void *tag, size_t tag_size);
+ static int (*pgnutls_cipher_tag)(gnutls_cipher_hd_t handle, void * tag, size_t tag_size);
  static int (*pgnutls_cipher_add_auth)(gnutls_cipher_hd_t handle, const void *ptext, size_t ptext_size);
 +static int (*pgnutls_pubkey_import_ecc_raw)(gnutls_pubkey_t key, gnutls_ecc_curve_t curve,
 +                                            const gnutls_datum_t *x, const gnutls_datum_t *y);
@@ -47,7 +53,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  
  static void *libgnutls_handle;
  #define MAKE_FUNCPTR(f) static typeof(f) * p##f
-@@ -64,12 +82,15 @@ MAKE_FUNCPTR(gnutls_global_init);
+@@ -65,14 +88,10 @@ MAKE_FUNCPTR(gnutls_global_init);
  MAKE_FUNCPTR(gnutls_global_set_log_function);
  MAKE_FUNCPTR(gnutls_global_set_log_level);
  MAKE_FUNCPTR(gnutls_perror);
@@ -55,15 +61,16 @@ index f822a7aadf3..881f6f7eb0c 100644
 +MAKE_FUNCPTR(gnutls_pubkey_deinit);
  #undef MAKE_FUNCPTR
  
- #if GNUTLS_VERSION_MAJOR < 3
- #define GNUTLS_CIPHER_AES_192_CBC 92
- #define GNUTLS_CIPHER_AES_128_GCM 93
- #define GNUTLS_CIPHER_AES_256_GCM 94
-+#define GNUTLS_PK_ECC 4
- #endif
- 
+-#if GNUTLS_VERSION_MAJOR < 3
+-#define GNUTLS_CIPHER_AES_192_CBC 92
+-#define GNUTLS_CIPHER_AES_128_GCM 93
+-#define GNUTLS_CIPHER_AES_256_GCM 94
+-#endif
+-
  static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void *tag, size_t tag_size)
-@@ -82,6 +103,24 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
+ {
+     return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
+@@ -83,6 +102,24 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
      return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
  }
  
@@ -88,7 +95,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  static void gnutls_log( int level, const char *msg )
  {
      TRACE( "<%d> %s", level, msg );
-@@ -113,6 +152,8 @@ static BOOL gnutls_initialize(void)
+@@ -114,6 +151,8 @@ static BOOL gnutls_initialize(void)
      LOAD_FUNCPTR(gnutls_global_set_log_function)
      LOAD_FUNCPTR(gnutls_global_set_log_level)
      LOAD_FUNCPTR(gnutls_perror)
@@ -97,9 +104,9 @@ index f822a7aadf3..881f6f7eb0c 100644
  #undef LOAD_FUNCPTR
  
      if (!(pgnutls_cipher_tag = wine_dlsym( libgnutls_handle, "gnutls_cipher_tag", NULL, 0 )))
-@@ -125,6 +166,21 @@ static BOOL gnutls_initialize(void)
-         WARN("gnutls_cipher_add_auth not found\n");
-         pgnutls_cipher_add_auth = compat_gnutls_cipher_add_auth;
+@@ -132,6 +171,21 @@ static BOOL gnutls_initialize(void)
+         pgnutls_perror( ret );
+         goto fail;
      }
 +    if (!(pgnutls_pubkey_import_ecc_raw = wine_dlsym( libgnutls_handle, "gnutls_pubkey_import_ecc_raw", NULL, 0 )))
 +    {
@@ -117,9 +124,9 @@ index f822a7aadf3..881f6f7eb0c 100644
 +        pgnutls_pubkey_verify_hash2 = compat_gnutls_pubkey_verify_hash2;
 +    }
  
-     if ((ret = pgnutls_global_init()) != GNUTLS_E_SUCCESS)
+     if (TRACE_ON( bcrypt ))
      {
-@@ -1124,6 +1180,264 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+@@ -1275,6 +1329,264 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
      return STATUS_SUCCESS;
  }
  
@@ -383,8 +390,22 @@ index f822a7aadf3..881f6f7eb0c 100644
 +
  static NTSTATUS key_destroy( struct key *key )
  {
-     if (key_is_symmetric(key))
-@@ -1230,6 +1544,13 @@ static NTSTATUS key_symmetric_get_secret( struct key *key, UCHAR **secret, ULONG
+     if(key_is_symmetric(key))
+@@ -1428,6 +1740,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+     return STATUS_NOT_IMPLEMENTED;
+ }
+ 
++static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *hash, ULONG hash_len,
++                                       UCHAR *signature, ULONG signature_len, DWORD flags )
++{
++    FIXME( "not implemented on Mac\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ static NTSTATUS key_destroy( struct key *key )
+ {
+     if (key->u.s.ref_encrypt) CCCryptorRelease( key->u.s.ref_encrypt );
+@@ -1495,6 +1814,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -398,7 +419,7 @@ index f822a7aadf3..881f6f7eb0c 100644
  static NTSTATUS key_destroy( struct key *key )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1463,13 +1784,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
+@@ -1705,13 +2031,14 @@ NTSTATUS WINAPI BCryptVerifySignature( BCRYPT_KEY_HANDLE handle, void *padding,
  {
      struct key *key = handle;
  
@@ -416,10 +437,10 @@ index f822a7aadf3..881f6f7eb0c 100644
  
  NTSTATUS WINAPI BCryptDestroyKey( BCRYPT_KEY_HANDLE handle )
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 20f70706430..73bd4d69a5b 100644
+index aaa187e..6b62fb3 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -1688,10 +1688,10 @@ static void test_ECDSA(void)
+@@ -1420,10 +1420,10 @@ static void test_ECDSA(void)
      ok(!status, "BCryptImportKeyPair failed: %08x\n", status);
  
      status = pBCryptVerifySignature(key, NULL, certHash, sizeof(certHash) - 1, certSignature, sizeof(certSignature), 0);
@@ -433,5 +454,5 @@ index 20f70706430..73bd4d69a5b 100644
      pBCryptDestroyKey(key);
      pBCryptCloseAlgorithmProvider(alg, 0);
 -- 
-2.14.1
+2.7.4
 

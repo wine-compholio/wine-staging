@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f17120d11b0e1272bb9742ad88eb526ac914d7da"
+	echo "acd2f1e59bd22197b63eb5ae4ac0d621a0b8cce0"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 3.3"
+	echo "Wine Staging 3.4 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -193,7 +193,6 @@ patch_enable_all ()
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
-	enable_kernel32_UmsStubs="$1"
 	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -251,7 +250,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_NtSuspendProcess="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
-	enable_ntdll_ProcessImageFileNameWin32="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
@@ -331,7 +329,6 @@ patch_enable_all ()
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
 	enable_setupapi_SetupDiGetDeviceInterfaceDetail="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
-	enable_sfc_SfcGetNextProtectedFile="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
@@ -805,9 +802,6 @@ patch_enable ()
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
 			;;
-		kernel32-UmsStubs)
-			enable_kernel32_UmsStubs="$2"
-			;;
 		kernelbase-PathCchCombineEx)
 			enable_kernelbase_PathCchCombineEx="$2"
 			;;
@@ -978,9 +972,6 @@ patch_enable ()
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
-			;;
-		ntdll-ProcessImageFileNameWin32)
-			enable_ntdll_ProcessImageFileNameWin32="$2"
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
@@ -1218,9 +1209,6 @@ patch_enable ()
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
-			;;
-		sfc-SfcGetNextProtectedFile)
-			enable_sfc_SfcGetNextProtectedFile="$2"
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
@@ -2577,11 +2565,7 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
 	fi
-	if test "$enable_kernel32_UmsStubs" -gt 1; then
-		abort "Patchset kernel32-UmsStubs disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
 	enable_combase_RoApi=1
-	enable_kernel32_UmsStubs=1
 fi
 
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
@@ -2594,9 +2578,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_kernel32_COMSPEC" -gt 1; then
 		abort "Patchset kernel32-COMSPEC disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_kernel32_UmsStubs" -gt 1; then
-		abort "Patchset kernel32-UmsStubs disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2606,7 +2587,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_Staging=1
 	enable_advapi32_CreateRestrictedToken=1
 	enable_kernel32_COMSPEC=1
-	enable_kernel32_UmsStubs=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
@@ -2914,25 +2894,10 @@ if test "$enable_kernel32_COMSPEC" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-UmsStubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44619] Add stubs for user-mode scheduling functions
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec, dlls/kernel32/sync.c, include/winbase.h, include/winnt.h
-# |
-if test "$enable_kernel32_UmsStubs" -eq 1; then
-	patch_apply kernel32-UmsStubs/0001-kernel32-Add-a-bunch-of-kernel32-stubs.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add a bunch of kernel32 stubs.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, kernel32-UmsStubs, server-CreateProcess_ACLs, server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -3029,7 +2994,7 @@ fi
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-UmsStubs
+# |   *	combase-RoApi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40451] Add feclient dll
@@ -3136,7 +3101,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
-# | 	include/bcrypt.h, include/ntstatus.h
+# | 	include/bcrypt.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
@@ -4877,7 +4842,7 @@ fi
 # Patchset kernel32-Processor_Group
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, kernel32-UmsStubs, api-ms-win-Stub_DLLs
+# |   *	combase-RoApi, api-ms-win-Stub_DLLs
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/cpu.c,
@@ -5955,18 +5920,6 @@ if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ProcessImageFileNameWin32
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/process.c, dlls/ntdll/process.c, include/winternl.h
-# |
-if test "$enable_ntdll_ProcessImageFileNameWin32" -eq 1; then
-	patch_apply ntdll-ProcessImageFileNameWin32/0001-ntdll-Implement-ProcessImageFileNameWin32-in-NtQuery.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ProcessImageFileNameWin32 in NtQueryInformationProcess.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7257,18 +7210,6 @@ if test "$enable_setupapi_SetupPromptForDisk" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W.", 1 },';
 		printf '%s\n' '+    { "Hermes Belusca-Maito", "setupapi/tests: Determine path to system32 directory at runtime.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset sfc-SfcGetNextProtectedFile
-# |
-# | Modified files:
-# |   *	dlls/sfc_os/sfc_os.c
-# |
-if test "$enable_sfc_SfcGetNextProtectedFile" -eq 1; then
-	patch_apply sfc-SfcGetNextProtectedFile/0001-sfc_os-Set-an-error-code-in-SfcGetNextProtectedFile-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "sfc_os: Set an error code in SfcGetNextProtectedFile stub.", 1 },';
 	) >> "$patchlist"
 fi
 

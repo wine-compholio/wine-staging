@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "acd2f1e59bd22197b63eb5ae4ac0d621a0b8cce0"
+	echo "dc328fe314970d39cbe6e330d99102adf619a73c"
 }
 
 # Show version information
@@ -411,7 +411,6 @@ patch_enable_all ()
 	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
-	enable_wined3d_GTX_560M="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
@@ -1456,9 +1455,6 @@ patch_enable ()
 			;;
 		wined3d-Dual_Source_Blending)
 			enable_wined3d_Dual_Source_Blending="$2"
-			;;
-		wined3d-GTX_560M)
-			enable_wined3d_GTX_560M="$2"
 			;;
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
@@ -8349,11 +8345,9 @@ fi
 # |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
 # |
 if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
-	patch_apply windowscodecs-JPEG_Decoder/0002-windowscodecs-Fix-stride-calculation-in-JPEG-decoder.patch
 	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
 	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix stride calculation in JPEG decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for CMYK to BGR conversion.", 1 },';
 	) >> "$patchlist"
@@ -8724,18 +8718,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-GTX_560M
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_GTX_560M" -eq 1; then
-	patch_apply wined3d-GTX_560M/0001-wined3d-Recognize-GTX-560M-card-with-NVIDIA-driver.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Recognize GTX 560M card with NVIDIA driver.", 1 },';
 	) >> "$patchlist"
 fi
 

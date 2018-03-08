@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "dc328fe314970d39cbe6e330d99102adf619a73c"
+	echo "813ab925abd45d48c811898028fddc1047b0c250"
 }
 
 # Show version information
@@ -145,7 +145,6 @@ patch_enable_all ()
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
-	enable_devenum_AudioCompressorCategory="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
@@ -657,9 +656,6 @@ patch_enable ()
 			;;
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
-			;;
-		devenum-AudioCompressorCategory)
-			enable_devenum_AudioCompressorCategory="$2"
 			;;
 		dinput-Deadlock)
 			enable_dinput_Deadlock="$2"
@@ -3001,21 +2997,20 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-
-# | 	win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-rtcore-ntuser-window-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-
-# | 	ntuser-window-l1-1-0/api-ms-win-rtcore-ntuser-window-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in,
-# | 	dlls/api-ms-win-shcore-obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-
-# | 	stream-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-
-# | 	shcore-thread-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-
-# | 	ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-
-# | 	mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-
-# | 	rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-
-# | 	syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-
-# | 	win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-
-# | 	xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec,
-# | 	dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
-# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec,
-# | 	include/uiautomationcoreapi.h, tools/make_specfiles
+# | 	win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
+# | 	obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-
+# | 	win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls
+# | 	/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-
+# | 	usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec,
+# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-
+# | 	ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in,
+# | 	dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-
+# | 	themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-
+# | 	xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
+# | 	pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c,
+# | 	dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/uiautomationcore/Makefile.in,
+# | 	dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec, include/uiautomationcoreapi.h,
+# | 	tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
@@ -3027,7 +3022,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0017-api-ms-win-rtcore-ntuser-window-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
@@ -3042,7 +3036,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-window-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
@@ -4056,18 +4049,6 @@ if test "$enable_ddraw_Write_Vtable" -eq 1; then
 	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset devenum-AudioCompressorCategory
-# |
-# | Modified files:
-# |   *	dlls/devenum/Makefile.in, dlls/devenum/createdevenum.c
-# |
-if test "$enable_devenum_AudioCompressorCategory" -eq 1; then
-	patch_apply devenum-AudioCompressorCategory/0001-devenum-Populate-AudioCompressorCategory.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "devenum: Populate AudioCompressorCategory.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5314,6 +5295,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-ThreadTime
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44658] Add dummy apiset to PEB struct
+# |
 # | Modified files:
 # |   *	dlls/ntdll/thread.c, include/Makefile.in, include/apiset.h, include/winternl.h
 # |
@@ -5401,6 +5385,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-User_Shared_Data
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44650] Fix holes in ELF mappings
 # |
 # | Modified files:
 # |   *	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c
@@ -5912,6 +5899,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	kernel32-K32GetPerformanceInfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44656] Implement NtSuspendProcess and NtResumeProcess
 # |
 # | Modified files:
 # |   *	dlls/ntdll/process.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/process.c, server/protocol.def, server/thread.c
@@ -9326,6 +9316,9 @@ if test "$enable_winmm_mciSendCommandA" -eq 1; then
 fi
 
 # Patchset wintrust-WinVerifyTrust
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42518] Implement image hash verification in WinVerifyTrust
 # |
 # | Modified files:
 # |   *	dlls/wintrust/softpub.c, dlls/wintrust/tests/softpub.c

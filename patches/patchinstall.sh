@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "813ab925abd45d48c811898028fddc1047b0c250"
+	echo "661791cb7ea3757655aeff4fb061ada27a88cecc"
 }
 
 # Show version information
@@ -240,7 +240,6 @@ patch_enable_all ()
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtAllocateUuids="$1"
 	enable_ntdll_NtContinue="$1"
-	enable_ntdll_NtCreateThreadEx="$1"
 	enable_ntdll_NtDevicePath="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
@@ -941,9 +940,6 @@ patch_enable ()
 			;;
 		ntdll-NtContinue)
 			enable_ntdll_NtContinue="$2"
-			;;
-		ntdll-NtCreateThreadEx)
-			enable_ntdll_NtCreateThreadEx="$2"
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
@@ -5770,21 +5766,6 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 	patch_apply ntdll-NtContinue/0001-ntdll-Add-stub-for-NtContinue.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for NtContinue.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtCreateThreadEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44616] Implement semi-stub for ntdll.NtCreateThreadEx
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
-# |
-if test "$enable_ntdll_NtCreateThreadEx" -eq 1; then
-	patch_apply ntdll-NtCreateThreadEx/0001-ntdll-Implement-NtCreateThreadEx.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Implement NtCreateThreadEx.", 1 },';
 	) >> "$patchlist"
 fi
 

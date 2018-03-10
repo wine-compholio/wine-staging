@@ -273,6 +273,7 @@ patch_enable_all ()
 	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_ExceptionInformation="$1"
+	enable_ntoskrnl_Ob_callbacks="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -1038,6 +1039,9 @@ patch_enable ()
 			;;
 		ntdll-x86_64_ExceptionInformation)
 			enable_ntdll_x86_64_ExceptionInformation="$2"
+			;;
+		ntoskrnl-Ob_callbacks)
+			enable_ntoskrnl_Ob_callbacks="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -2287,6 +2291,13 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
 	fi
 	enable_nvcuda_CUDA_Support=1
+fi
+
+if test "$enable_ntoskrnl_Ob_callbacks" -eq 1; then
+	if test "$enable_ntoskrnl_Stubs" -gt 1; then
+		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-Ob_callbacks depends on that."
+	fi
+	enable_ntoskrnl_Stubs=1
 fi
 
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
@@ -6227,6 +6238,32 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-Ob_callbacks
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44497] Add stubs for ObRegisterCallbacks, ObUnRegisterCallbacks, ObGetFilterVersion
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/ntifs.h, include/ddk/wdm.h
+# |
+if test "$enable_ntoskrnl_Ob_callbacks" -eq 1; then
+	patch_apply ntoskrnl-Ob_callbacks/0001-include-Add-more-typedefs-to-wdm.h.patch
+	patch_apply ntoskrnl-Ob_callbacks/0002-include-Add-more-types-to-ntifs.h.patch
+	patch_apply ntoskrnl-Ob_callbacks/0003-ntoskrnl.exe-Add-ObRegisterCallbacks-stub.patch
+	patch_apply ntoskrnl-Ob_callbacks/0004-ntoskrnl.exe-Add-ObUnRegisterCallbacks-stub.patch
+	patch_apply ntoskrnl-Ob_callbacks/0005-ntoskrnl.exe-Add-ObGetFilterVersion-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more typedefs to wdm.h.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more types to ntifs.h.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObRegisterCallbacks stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObUnRegisterCallbacks stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObGetFilterVersion stub.", 1 },';
 	) >> "$patchlist"
 fi
 

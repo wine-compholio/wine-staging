@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "661791cb7ea3757655aeff4fb061ada27a88cecc"
+	echo "dfde1195385df5ddb11f1104a0e744596b99477f"
 }
 
 # Show version information
@@ -371,7 +371,6 @@ patch_enable_all ()
 	enable_user32_ShowWindow="$1"
 	enable_user32_Sorted_Listbox="$1"
 	enable_user32_WM_MEASUREITEM="$1"
-	enable_user32_WindowDisplayAffinity="$1"
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1333,9 +1332,6 @@ patch_enable ()
 			;;
 		user32-WM_MEASUREITEM)
 			enable_user32_WM_MEASUREITEM="$2"
-			;;
-		user32-WindowDisplayAffinity)
-			enable_user32_WindowDisplayAffinity="$2"
 			;;
 		user32-lpCreateParams)
 			enable_user32_lpCreateParams="$2"
@@ -2998,9 +2994,8 @@ fi
 # | 	win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls
 # | 	/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-
 # | 	usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec,
-# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-ntuser-mouse-l1-1-0/Makefile.in, dlls/ext-ms-win-
-# | 	ntuser-mouse-l1-1-0/ext-ms-win-ntuser-mouse-l1-1-0.spec, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in,
-# | 	dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-
+# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/Makefile.in, dlls
+# | 	/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0/ext-ms-win-rtcore-ntuser-syscolors-l1-1-0.spec, dlls/ext-ms-win-uxtheme-
 # | 	themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-
 # | 	xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
 # | 	pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c,
@@ -3016,7 +3011,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
 	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0015-ext-ms-win-ntuser-mouse-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0018-ext-ms-win-rtcore-ntuser-syscolors-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
@@ -3030,7 +3024,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-ntuser-mouse-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-rtcore-ntuser-syscolors-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
@@ -7975,23 +7968,6 @@ if test "$enable_user32_Sorted_Listbox" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix order of items passed in WM_COMPAREITEM data.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the listbox sorting algorithm.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: For an owner-drawn listbox without strings WM_MEASUREITEM still needs correct itemData.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-WindowDisplayAffinity
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44617] Implement stubs for GetWindowDisplayAffinity and SetWindowDisplayAffinity
-# |
-# | Modified files:
-# |   *	dlls/ext-ms-win-ntuser-uicontext-ext-l1-1-0/ext-ms-win-ntuser-uicontext-ext-l1-1-0.spec, dlls/ext-ms-win-ntuser-
-# | 	window-l1-1-1/ext-ms-win-ntuser-window-l1-1-1.spec, dlls/user32/tests/win.c, dlls/user32/user32.spec, dlls/user32/win.c,
-# | 	include/winuser.h
-# |
-if test "$enable_user32_WindowDisplayAffinity" -eq 1; then
-	patch_apply user32-WindowDisplayAffinity/0001-user32-Add-stubs-for-GetWindowDisplayAffinity-and-Se.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "user32: Add stubs for GetWindowDisplayAffinity and SetWindowDisplayAffinity.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -157,6 +157,7 @@ patch_enable_all ()
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
+	enable_fltmgr_sys_filters="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_GetCharacterPlacement="$1"
@@ -691,6 +692,9 @@ patch_enable ()
 			;;
 		explorer-Video_Registry_Key)
 			enable_explorer_Video_Registry_Key="$2"
+			;;
+		fltmgr.sys-filters)
+			enable_fltmgr_sys_filters="$2"
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
@@ -2293,24 +2297,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
-if test "$enable_ntoskrnl_Ob_callbacks" -eq 1; then
-	if test "$enable_ntoskrnl_Stubs" -gt 1; then
-		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-Ob_callbacks depends on that."
-	fi
-	enable_ntoskrnl_Stubs=1
-fi
-
-if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	if test "$enable_Compiler_Warnings" -gt 1; then
-		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
-	fi
-	if test "$enable_ntdll_NtAllocateUuids" -gt 1; then
-		abort "Patchset ntdll-NtAllocateUuids disabled, but ntoskrnl-Stubs depends on that."
-	fi
-	enable_Compiler_Warnings=1
-	enable_ntdll_NtAllocateUuids=1
-fi
-
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -2501,6 +2487,31 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 		abort "Patchset imagehlp-Cleanup disabled, but imagehlp-ImageLoad depends on that."
 	fi
 	enable_imagehlp_Cleanup=1
+fi
+
+if test "$enable_fltmgr_sys_filters" -eq 1; then
+	if test "$enable_ntoskrnl_Ob_callbacks" -gt 1; then
+		abort "Patchset ntoskrnl-Ob_callbacks disabled, but fltmgr.sys-filters depends on that."
+	fi
+	enable_ntoskrnl_Ob_callbacks=1
+fi
+
+if test "$enable_ntoskrnl_Ob_callbacks" -eq 1; then
+	if test "$enable_ntoskrnl_Stubs" -gt 1; then
+		abort "Patchset ntoskrnl-Stubs disabled, but ntoskrnl-Ob_callbacks depends on that."
+	fi
+	enable_ntoskrnl_Stubs=1
+fi
+
+if test "$enable_ntoskrnl_Stubs" -eq 1; then
+	if test "$enable_Compiler_Warnings" -gt 1; then
+		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
+	fi
+	if test "$enable_ntdll_NtAllocateUuids" -gt 1; then
+		abort "Patchset ntdll-NtAllocateUuids disabled, but ntoskrnl-Stubs depends on that."
+	fi
+	enable_Compiler_Warnings=1
+	enable_ntdll_NtAllocateUuids=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -4290,6 +4301,108 @@ if test "$enable_explorer_Video_Registry_Key" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-NtAllocateUuids
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35910] Fix API signature of ntdll.NtAllocateUuids
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/om.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winternl.h
+# |
+if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
+	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-Stubs
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
+# |
+if test "$enable_ntoskrnl_Stubs" -eq 1; then
+	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
+	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
+	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
+	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
+	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
+	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
+	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
+	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
+	patch_apply ntoskrnl-Stubs/0012-ntoskrnl-Implement-ExInterlockedPopEntrySList.patch
+	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
+	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
+	(
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
+		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
+		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-Ob_callbacks
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44497] Add stubs for ObRegisterCallbacks, ObUnRegisterCallbacks, ObGetFilterVersion
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/ntifs.h, include/ddk/wdm.h
+# |
+if test "$enable_ntoskrnl_Ob_callbacks" -eq 1; then
+	patch_apply ntoskrnl-Ob_callbacks/0001-include-Add-more-typedefs-to-wdm.h.patch
+	patch_apply ntoskrnl-Ob_callbacks/0002-include-Add-more-types-to-ntifs.h.patch
+	patch_apply ntoskrnl-Ob_callbacks/0003-ntoskrnl.exe-Add-ObRegisterCallbacks-stub.patch
+	patch_apply ntoskrnl-Ob_callbacks/0004-ntoskrnl.exe-Add-ObUnRegisterCallbacks-stub.patch
+	patch_apply ntoskrnl-Ob_callbacks/0005-ntoskrnl.exe-Add-ObGetFilterVersion-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more typedefs to wdm.h.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more types to ntifs.h.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObRegisterCallbacks stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObUnRegisterCallbacks stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObGetFilterVersion stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset fltmgr.sys-filters
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs, ntoskrnl-Ob_callbacks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44500] Add stubs for FltRegisterFilter, FltStartFiltering, FltUnregisterFilter
+# |
+# | Modified files:
+# |   *	dlls/fltmgr.sys/fltmgr.sys.spec, dlls/fltmgr.sys/main.c, include/Makefile.in, include/ddk/fltkernel.h
+# |
+if test "$enable_fltmgr_sys_filters" -eq 1; then
+	patch_apply fltmgr.sys-filters/0001-include-ddk-Add-fltkernel.h.patch
+	patch_apply fltmgr.sys-filters/0002-fltmgr.sys-Add-FltRegisterFilter-stub.patch
+	patch_apply fltmgr.sys-filters/0003-fltmgr.sys-Add-FltStartFiltering-stub.patch
+	patch_apply fltmgr.sys-filters/0004-fltmgr.sys-Add-FltUnregisterFilter-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include/ddk: Add fltkernel.h.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltRegisterFilter stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltStartFiltering stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltUnregisterFilter stub.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset fonts-Missing_Fonts
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5746,21 +5859,6 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtAllocateUuids
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35910] Fix API signature of ntdll.NtAllocateUuids
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/om.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/winternl.h
-# |
-if test "$enable_ntdll_NtAllocateUuids" -eq 1; then
-	patch_apply ntdll-NtAllocateUuids/0001-ntdll-Improve-stub-for-NtAllocateUuids.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "ntdll: Improve stub for NtAllocateUuids.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtContinue
 # |
 # | Modified files:
@@ -6201,69 +6299,6 @@ if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	patch_apply ntdll-set_full_cpu_context/0001-ntdll-Add-back-SS-segment-prefixes-in-set_full_cpu_c.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add back SS segment prefixes in set_full_cpu_context.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-Stubs
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings, ntdll-NtAllocateUuids
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
-# |
-if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
-	patch_apply ntoskrnl-Stubs/0004-ntoskrnl.exe-Add-stubs-for-ObReferenceObjectByPointe.patch
-	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
-	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
-	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
-	patch_apply ntoskrnl-Stubs/0008-ntoskrnl.exe-Fix-IoReleaseCancelSpinLock-argument.patch
-	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
-	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
-	patch_apply ntoskrnl-Stubs/0012-ntoskrnl-Implement-ExInterlockedPopEntrySList.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
-	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
-	(
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stub for ObReferenceObjectByPointer.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Fix IoReleaseCancelSpinLock argument.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
-		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl-Ob_callbacks
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings, ntdll-NtAllocateUuids, ntoskrnl-Stubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44497] Add stubs for ObRegisterCallbacks, ObUnRegisterCallbacks, ObGetFilterVersion
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/ntifs.h, include/ddk/wdm.h
-# |
-if test "$enable_ntoskrnl_Ob_callbacks" -eq 1; then
-	patch_apply ntoskrnl-Ob_callbacks/0001-include-Add-more-typedefs-to-wdm.h.patch
-	patch_apply ntoskrnl-Ob_callbacks/0002-include-Add-more-types-to-ntifs.h.patch
-	patch_apply ntoskrnl-Ob_callbacks/0003-ntoskrnl.exe-Add-ObRegisterCallbacks-stub.patch
-	patch_apply ntoskrnl-Ob_callbacks/0004-ntoskrnl.exe-Add-ObUnRegisterCallbacks-stub.patch
-	patch_apply ntoskrnl-Ob_callbacks/0005-ntoskrnl.exe-Add-ObGetFilterVersion-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more typedefs to wdm.h.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more types to ntifs.h.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObRegisterCallbacks stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObUnRegisterCallbacks stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add ObGetFilterVersion stub.", 1 },';
 	) >> "$patchlist"
 fi
 

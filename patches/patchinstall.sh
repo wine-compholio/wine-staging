@@ -270,7 +270,6 @@ patch_enable_all ()
 	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
-	enable_ntdll_call_thread_func_wrapper="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_ExceptionInformation="$1"
 	enable_ntoskrnl_Ob_callbacks="$1"
@@ -430,12 +429,10 @@ patch_enable_all ()
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_UpdateLayeredWindow="$1"
 	enable_winex11_WM_WINDOWPOSCHANGING="$1"
-	enable_winex11_Window_Groups="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_wglShareLists="$1"
-	enable_winhlp32_Flex_Workaround="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
@@ -1027,9 +1024,6 @@ patch_enable ()
 		ntdll-_aulldvrm)
 			enable_ntdll__aulldvrm="$2"
 			;;
-		ntdll-call_thread_func_wrapper)
-			enable_ntdll_call_thread_func_wrapper="$2"
-			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
 			;;
@@ -1507,9 +1501,6 @@ patch_enable ()
 		winex11-WM_WINDOWPOSCHANGING)
 			enable_winex11_WM_WINDOWPOSCHANGING="$2"
 			;;
-		winex11-Window_Groups)
-			enable_winex11_Window_Groups="$2"
-			;;
 		winex11-Window_Style)
 			enable_winex11_Window_Style="$2"
 			;;
@@ -1521,9 +1512,6 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
-			;;
-		winhlp32-Flex_Workaround)
-			enable_winhlp32_Flex_Workaround="$2"
 			;;
 		winhttp-Accept_Headers)
 			enable_winhttp_Accept_Headers="$2"
@@ -6194,21 +6182,6 @@ if test "$enable_ntdll__aulldvrm" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-call_thread_func_wrapper
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40068] Reserve some more stack space in call_thread_func_wrapper
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_i386.c
-# |
-if test "$enable_ntdll_call_thread_func_wrapper" -eq 1; then
-	patch_apply ntdll-call_thread_func_wrapper/0001-ntdll-Reserve-some-more-stack-space-in-call_thread_f.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Reserve some more stack space in call_thread_func_wrapper.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-set_full_cpu_context
 # |
 # | Modified files:
@@ -8899,21 +8872,6 @@ if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winex11-Window_Groups
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32699] Prevent window managers from grouping all wine programs together
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/window.c
-# |
-if test "$enable_winex11_Window_Groups" -eq 1; then
-	patch_apply winex11-Window_Groups/0001-winex11-Prevent-window-managers-from-grouping-all-wi.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winex11: Prevent window managers from grouping all wine programs together.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winex11-Window_Style
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8954,21 +8912,6 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winhlp32-Flex_Workaround
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42132] Workaround a bug present in the current versions of Flex
-# |
-# | Modified files:
-# |   *	programs/winhlp32/macro.lex.l
-# |
-if test "$enable_winhlp32_Flex_Workaround" -eq 1; then
-	patch_apply winhlp32-Flex_Workaround/0001-winhlp32-Workaround-a-bug-in-Flex.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winhlp32: Workaround a bug in Flex.", 1 },';
 	) >> "$patchlist"
 fi
 

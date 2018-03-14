@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c21c8525f9e69cfd48906ecc33b909490bd82783"
+	echo "1c8c9308e74abe5e5d85dfe722dea10e60092e7c"
 }
 
 # Show version information
@@ -118,7 +118,6 @@ patch_enable_all ()
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
-	enable_d3dx9_25_ID3DXEffect="$1"
 	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
@@ -203,7 +202,6 @@ patch_enable_all ()
 	enable_makedep_PARENTSPEC="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
-	enable_mpr_WNetGetUniversalNameW="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msi_Dummy_Thread="$1"
@@ -568,9 +566,6 @@ patch_enable ()
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
 			;;
-		d3dx9_25-ID3DXEffect)
-			enable_d3dx9_25_ID3DXEffect="$2"
-			;;
 		d3dx9_36-32bpp_Alpha_Channel)
 			enable_d3dx9_36_32bpp_Alpha_Channel="$2"
 			;;
@@ -822,9 +817,6 @@ patch_enable ()
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
-			;;
-		mpr-WNetGetUniversalNameW)
-			enable_mpr_WNetGetUniversalNameW="$2"
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
@@ -2472,21 +2464,10 @@ if test "$enable_dsound_EAX" -eq 1; then
 fi
 
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
-	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
-		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_36-DXTn depends on that."
-	fi
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
 	fi
-	enable_d3dx9_25_ID3DXEffect=1
 	enable_wined3d_DXTn=1
-fi
-
-if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
-	if test "$enable_d3dx9_25_ID3DXEffect" -gt 1; then
-		abort "Patchset d3dx9_25-ID3DXEffect disabled, but d3dx9_36-CloneEffect depends on that."
-	fi
-	enable_d3dx9_25_ID3DXEffect=1
 fi
 
 if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
@@ -3543,26 +3524,6 @@ if test "$enable_d3d9_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_25-ID3DXEffect
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25138] Fix wrong version of ID3DXEffect interface for d3dx9_25
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/Makefile.in, dlls/d3dx9_25/Makefile.in, dlls/d3dx9_26/Makefile.in, dlls/d3dx9_27/Makefile.in,
-# | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
-# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_34/Makefile.in, dlls/d3dx9_35/Makefile.in,
-# | 	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/effect.c, dlls/d3dx9_37/Makefile.in, dlls/d3dx9_38/Makefile.in,
-# | 	dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in, dlls/d3dx9_41/Makefile.in, dlls/d3dx9_42/Makefile.in,
-# | 	dlls/d3dx9_43/Makefile.in, include/d3dx9effect.h
-# |
-if test "$enable_d3dx9_25_ID3DXEffect" -eq 1; then
-	patch_apply d3dx9_25-ID3DXEffect/0001-d3dx9_-Adjust-ID3DXEffect-interface-based-on-DLL-ver.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_*: Adjust ID3DXEffect interface based on DLL version.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-32bpp_Alpha_Channel
 # |
 # | Modified files:
@@ -3590,9 +3551,6 @@ if test "$enable_d3dx9_36_BumpLuminance" -eq 1; then
 fi
 
 # Patchset d3dx9_36-CloneEffect
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3dx9_25-ID3DXEffect
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44635] Improve stub for ID3DXEffectImpl_CloneEffect
@@ -3721,7 +3679,7 @@ fi
 # Patchset d3dx9_36-DXTn
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3dx9_25-ID3DXEffect, wined3d-DXTn
+# |   *	wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
@@ -5088,21 +5046,6 @@ if test "$enable_mountmgr_DosDevices" -eq 1; then
 	patch_apply mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\SYSTEM\\MountedDevices.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mpr-WNetGetUniversalNameW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39452] Return WN_NOT_CONNECTED from WNetGetUniversalName REMOTE_NAME_INFO_LEVEL stub
-# |
-# | Modified files:
-# |   *	dlls/mpr/tests/mpr.c, dlls/mpr/wnet.c
-# |
-if test "$enable_mpr_WNetGetUniversalNameW" -eq 1; then
-	patch_apply mpr-WNetGetUniversalNameW/0001-mpr-Return-correct-error-code-for-non-network-paths-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "mpr: Return correct error code for non network paths and REMOTE_NAME_INFO_LEVEL in WNetGetUniversalName.", 1 },';
 	) >> "$patchlist"
 fi
 

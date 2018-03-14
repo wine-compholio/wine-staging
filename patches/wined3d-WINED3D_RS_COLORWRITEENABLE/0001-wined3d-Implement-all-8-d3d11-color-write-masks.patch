@@ -1,4 +1,4 @@
-From 2ed127d65bdd85581d8d7fb50bde99a8c1354268 Mon Sep 17 00:00:00 2001
+From 40043e895e7e66e43589ac25efc7dade42690656 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 20 Jul 2017 13:50:07 +0200
 Subject: [PATCH] wined3d: Implement all 8 d3d11 color write masks.
@@ -6,7 +6,7 @@ Subject: [PATCH] wined3d: Implement all 8 d3d11 color write masks.
 ---
  dlls/d3d11/device.c            | 29 ++++++++++-----------
  dlls/d3d11/state.c             |  4 ---
- dlls/wined3d/context.c         |  8 +++---
+ dlls/wined3d/context.c         | 10 +++-----
  dlls/wined3d/device.c          |  6 ++---
  dlls/wined3d/state.c           | 57 +++++++++++++++++++-----------------------
  dlls/wined3d/stateblock.c      | 10 +++++---
@@ -14,7 +14,7 @@ Subject: [PATCH] wined3d: Implement all 8 d3d11 color write masks.
  dlls/wined3d/utils.c           |  6 ++++-
  dlls/wined3d/wined3d_private.h |  1 +
  include/wine/wined3d.h         | 14 ++++++++++-
- 10 files changed, 72 insertions(+), 70 deletions(-)
+ 10 files changed, 73 insertions(+), 71 deletions(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
 index 835ea8b..2ef9b46 100644
@@ -86,23 +86,32 @@ index a14c9d3..2bec92e 100644
  
      /* glEnableIndexedEXT(GL_BLEND, ...) */
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 60bf52b..15981ea 100644
+index 6530b6f..15eb449 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -2587,10 +2587,8 @@ static void SetupForBlit(const struct wined3d_device *device, struct wined3d_con
+@@ -2733,7 +2733,7 @@ void context_apply_blit_state(struct wined3d_context *context, const struct wine
+     const struct wined3d_gl_info *gl_info = context->gl_info;
+     struct wined3d_texture *rt = context->current_rt.texture;
+     DWORD rt_mask, *cur_mask;
+-    unsigned int sampler;
++    unsigned int i, sampler;
+     SIZE rt_size;
+ 
+     TRACE("Setting up context %p for blitting.\n", context);
+@@ -2832,10 +2832,8 @@ void context_apply_blit_state(struct wined3d_context *context, const struct wine
+         context_invalidate_state(context, STATE_RENDER(WINED3D_RS_POINTSPRITEENABLE));
      }
-     gl_info->gl_ops.gl.p_glColorMask(GL_TRUE, GL_TRUE,GL_TRUE,GL_TRUE);
-     checkGLcall("glColorMask");
+     gl_info->gl_ops.gl.p_glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 -    context_invalidate_state(context, STATE_RENDER(WINED3D_RS_COLORWRITEENABLE));
 -    context_invalidate_state(context, STATE_RENDER(WINED3D_RS_COLORWRITEENABLE1));
 -    context_invalidate_state(context, STATE_RENDER(WINED3D_RS_COLORWRITEENABLE2));
 -    context_invalidate_state(context, STATE_RENDER(WINED3D_RS_COLORWRITEENABLE3));
 +    for (i = 0; i < MAX_RENDER_TARGETS; ++i)
 +        context_invalidate_state(context, STATE_RENDER(WINED3D_RS_COLORWRITE(i)));
-     if (gl_info->supported[EXT_SECONDARY_COLOR])
-     {
-         gl_info->gl_ops.gl.p_glDisable(GL_COLOR_SUM_EXT);
-@@ -4829,7 +4827,7 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
+ 
+     context->last_was_rhw = TRUE;
+     context_invalidate_state(context, STATE_VDECL); /* because of last_was_rhw = TRUE */
+@@ -4812,7 +4810,7 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
          if (!(rtv = fb->render_targets[i]) || rtv->format->id == WINED3DFMT_NULL)
              continue;
  
@@ -269,10 +278,10 @@ index b9efcec..c9b3527 100644
      /* Texture Stage States - Put directly into state block, we will call function below */
      for (i = 0; i < MAX_TEXTURES; ++i)
 diff --git a/dlls/wined3d/surface.c b/dlls/wined3d/surface.c
-index fa25b03..c46b9b1 100644
+index b0ccfb8..47275e5 100644
 --- a/dlls/wined3d/surface.c
 +++ b/dlls/wined3d/surface.c
-@@ -378,6 +378,7 @@ static void texture2d_blt_fbo(const struct wined3d_device *device, struct wined3
+@@ -365,6 +365,7 @@ static void texture2d_blt_fbo(const struct wined3d_device *device, struct wined3
      GLenum gl_filter;
      GLenum buffer;
      RECT s, d;
@@ -280,7 +289,7 @@ index fa25b03..c46b9b1 100644
  
      TRACE("device %p, context %p, filter %s, src_texture %p, src_sub_resource_idx %u, src_location %s, "
              "src_rect %s, dst_texture %p, dst_sub_resource_idx %u, dst_location %s, dst_rect %s.\n",
-@@ -490,10 +491,8 @@ static void texture2d_blt_fbo(const struct wined3d_device *device, struct wined3
+@@ -477,10 +478,8 @@ static void texture2d_blt_fbo(const struct wined3d_device *device, struct wined3
      context_invalidate_state(context, STATE_FRAMEBUFFER);
  
      gl_info->gl_ops.gl.p_glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -321,7 +330,7 @@ index 304214f..7cb2007 100644
          D3DSTATE_TO_STR(WINED3D_RS_SRGBWRITEENABLE);
          D3DSTATE_TO_STR(WINED3D_RS_DEPTHBIAS);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index e3d669a..45a7903 100644
+index 4f02ae4..628da26 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -276,6 +276,7 @@ static inline enum complex_fixup get_complex_fixup(struct color_fixup_desc fixup
@@ -333,7 +342,7 @@ index e3d669a..45a7903 100644
  struct min_lookup
  {
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 8864965..58da08c 100644
+index 23fffdf..e47eeb6 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
 @@ -388,8 +388,20 @@ enum wined3d_render_state

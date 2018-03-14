@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "dfae798d98bf7a8b45954e6d788928d067d0772e"
+	echo "c21c8525f9e69cfd48906ecc33b909490bd82783"
 }
 
 # Show version information
@@ -3048,7 +3048,7 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42553] Implement BCrypt ECB chaining mode
 # |   *	[#39582] Implement BCrypt RSA provider
-# |   *	[#44053] Implement BCryptImportKey and BCryptExportKey
+# |   *	[#43605] Implement elliptic curve (ECDSA) cryptography
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
@@ -3672,7 +3672,6 @@ fi
 # Patchset d3dx9_36-D3DXStubs
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38352] Add stub for D3DXComputeNormalMap
 # |   *	[#41697] Add stub for D3DXComputeTangent
 # |
 # | Modified files:
@@ -3684,10 +3683,8 @@ fi
 # | 	dlls/d3dx9_43/d3dx9_43.spec
 # |
 if test "$enable_d3dx9_36_D3DXStubs" -eq 1; then
-	patch_apply d3dx9_36-D3DXStubs/0001-d3dx9_36-Add-stub-for-D3DXComputeNormalMap.patch
 	patch_apply d3dx9_36-D3DXStubs/0003-d3dx9-Implement-D3DXComputeTangent.patch
 	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add stub for D3DXComputeNormalMap.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9: Implement D3DXComputeTangent.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5386,14 +5383,8 @@ fi
 # |
 if test "$enable_ntdll_x86_64_ExceptionInformation" -eq 1; then
 	patch_apply ntdll-x86_64_ExceptionInformation/0001-ntdll-Set-proper-ExceptionInformation-0-for-x86_64-e.patch
-	patch_apply ntdll-x86_64_ExceptionInformation/0003-ntdll-Translate-icebp-instruction-to-EXCEPTION_SINGL.patch
-	patch_apply ntdll-x86_64_ExceptionInformation/0004-ntdll-Correctly-handle-privileged-instructions-on-x8.patch
-	patch_apply ntdll-x86_64_ExceptionInformation/0005-ntdll-Handle-interrupt-0x2c-on-x86_64.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set proper ExceptionInformation[0] for x86_64 exceptions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Translate icebp instruction to EXCEPTION_SINGLE_STEP on x64.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Correctly handle privileged instructions on x86_64.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Handle interrupt 0x2c on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8126,9 +8117,6 @@ if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
 fi
 
 # Patchset windowscodecs-JPEG_Decoder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43520] Fix JPEG decoder and implement support for CMYK to BGR conversion
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c

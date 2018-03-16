@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1c8c9308e74abe5e5d85dfe722dea10e60092e7c"
+	echo "bf7b21ec7b587215385c210e695cfa42e19efe4c"
 }
 
 # Show version information
@@ -2930,41 +2930,29 @@ fi
 # |   *	[#40451] Add feclient dll
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/Makefile.in, dlls/api-ms-win-rtcore-ntuser-draw-l1-1-0/api-ms-
-# | 	win-rtcore-ntuser-draw-l1-1-0.spec, dlls/api-ms-win-shcore-obsolete-l1-1-0/Makefile.in, dlls/api-ms-win-shcore-
-# | 	obsolete-l1-1-0/api-ms-win-shcore-obsolete-l1-1-0.spec, dlls/api-ms-win-shcore-stream-l1-1-0/Makefile.in, dlls/api-ms-
-# | 	win-shcore-stream-l1-1-0/api-ms-win-shcore-stream-l1-1-0.spec, dlls/api-ms-win-shcore-thread-l1-1-0/Makefile.in, dlls
-# | 	/api-ms-win-shcore-thread-l1-1-0/api-ms-win-shcore-thread-l1-1-0.spec, dlls/ext-ms-win-appmodel-
-# | 	usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-ms-win-appmodel-usercontext-l1-1-0.spec,
-# | 	dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-uxtheme-themes-l1-1-0/Makefile.in, dlls/ext-ms-win-
-# | 	uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-
-# | 	win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-pal-l1-1-0/main.c, dlls/feclient/Makefile.in,
-# | 	dlls/feclient/feclient.spec, dlls/feclient/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec,
-# | 	dlls/iertutil/main.c, dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c,
-# | 	dlls/uiautomationcore/uiautomationcore.spec, include/uiautomationcoreapi.h, tools/make_specfiles
+# |   *	configure.ac, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-
+# | 	ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-uxtheme-
+# | 	themes-l1-1-0/Makefile.in, dlls/ext-ms-win-uxtheme-themes-l1-1-0/ext-ms-win-uxtheme-themes-l1-1-0.spec, dlls/ext-ms-win-
+# | 	xaml-pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
+# | 	pal-l1-1-0/main.c, dlls/feclient/Makefile.in, dlls/feclient/feclient.spec, dlls/feclient/main.c,
+# | 	dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c, dlls/uiautomationcore/Makefile.in,
+# | 	dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec, include/uiautomationcoreapi.h,
+# | 	tools/make_specfiles
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
-	patch_apply api-ms-win-Stub_DLLs/0008-api-ms-win-shcore-obsolete-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0009-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
 	patch_apply api-ms-win-Stub_DLLs/0010-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
-	patch_apply api-ms-win-Stub_DLLs/0011-api-ms-win-shcore-thread-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
-	patch_apply api-ms-win-Stub_DLLs/0014-api-ms-win-shcore-stream-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0016-ext-ms-win-uxtheme-themes-l1-1-0-Add-dll.patch
-	patch_apply api-ms-win-Stub_DLLs/0019-api-ms-win-rtcore-ntuser-draw-l1-1-0-Add-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0026-feclient-Add-stub-dll.patch
 	patch_apply api-ms-win-Stub_DLLs/0027-uiautomationcore-Add-dll-and-stub-some-functions.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "iertutil: Add dll and add stub for ordinal 811.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-obsolete-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add dll and add stub for XamlBehaviorEnabled.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-thread-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-shcore-stream-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "api-ms-win-rtcore-ntuser-draw-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
 	) >> "$patchlist"

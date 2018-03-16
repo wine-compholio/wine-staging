@@ -1,4 +1,4 @@
-From 2d29b9be9fd47ae00402151aab76fd89f37d9e81 Mon Sep 17 00:00:00 2001
+From 011a76f062774cfa6a4f6081d3ab773ffbb9f93f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 25 Aug 2016 19:24:47 +0200
 Subject: [PATCH] wined3d: Create dummy 1d textures and surfaces.
@@ -9,7 +9,7 @@ Subject: [PATCH] wined3d: Create dummy 1d textures and surfaces.
  2 files changed, 168 insertions(+)
 
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index 97f7aec..f340217 100644
+index 97f7aec4e12..f3402179acf 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
 @@ -75,6 +75,7 @@ HRESULT resource_init(struct wined3d_resource *resource, struct wined3d_device *
@@ -21,10 +21,10 @@ index 97f7aec..f340217 100644
          {WINED3D_RTYPE_TEXTURE_2D,  0,                              WINED3D_GL_RES_TYPE_TEX_RECT},
          {WINED3D_RTYPE_TEXTURE_2D,  0,                              WINED3D_GL_RES_TYPE_RB},
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index ce5c7e8..5685acc 100644
+index 9fc0d22ed41..73874725ca6 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1801,6 +1801,40 @@ void wined3d_texture_upload_data(struct wined3d_texture *texture, unsigned int s
+@@ -1715,6 +1715,40 @@ void wined3d_texture_upload_data(struct wined3d_texture *texture, unsigned int s
              context, box, data, row_pitch, slice_pitch);
  }
  
@@ -65,9 +65,9 @@ index ce5c7e8..5685acc 100644
  static void texture2d_upload_data(struct wined3d_texture *texture, unsigned int sub_resource_idx,
          const struct wined3d_context *context, const struct wined3d_box *box,
          const struct wined3d_const_bo_address *data, unsigned int row_pitch, unsigned int slice_pitch)
-@@ -2178,6 +2212,135 @@ static const struct wined3d_resource_ops texture_resource_ops =
-     texture_resource_sub_resource_unmap,
- };
+@@ -2411,6 +2445,135 @@ static HRESULT wined3d_texture_init(struct wined3d_texture *texture, const struc
+     return WINED3D_OK;
+ }
  
 +static HRESULT texture1d_init(struct wined3d_texture *texture, const struct wined3d_resource_desc *desc,
 +        UINT layer_count, UINT level_count, struct wined3d_device *device, void *parent,
@@ -128,8 +128,8 @@ index ce5c7e8..5685acc 100644
 +        }
 +    }
 +
-+    if (FAILED(hr = wined3d_texture_init(texture, &texture1d_ops, layer_count, level_count, desc,
-+            0, device, parent, parent_ops, &texture_resource_ops)))
++    if (FAILED(hr = wined3d_texture_init(texture, desc, layer_count, level_count,
++            0, device, parent, parent_ops, &texture1d_ops)))
 +    {
 +        WARN("Failed to initialize texture, returning %#x.\n", hr);
 +        return hr;
@@ -167,8 +167,8 @@ index ce5c7e8..5685acc 100644
 +            wined3d_texture_invalidate_location(texture, i, ~WINED3D_LOCATION_SYSMEM);
 +        }
 +
-+        if (FAILED(hr = device_parent->ops->surface_created(device_parent,
-+                texture, i, &sub_resource->parent, &sub_resource->parent_ops)))
++        if (FAILED(hr = device_parent->ops->texture_sub_resource_created(device_parent,
++                desc->resource_type, texture, i, &sub_resource->parent, &sub_resource->parent_ops)))
 +        {
 +            WARN("Failed to create sub-resource parent, hr %#x.\n", hr);
 +            sub_resource->parent = NULL;
@@ -198,10 +198,10 @@ index ce5c7e8..5685acc 100644
 +    return WINED3D_OK;
 +}
 +
- static HRESULT texture_init(struct wined3d_texture *texture, const struct wined3d_resource_desc *desc,
-         unsigned int layer_count, unsigned int level_count, DWORD flags, struct wined3d_device *device,
-         void *parent, const struct wined3d_parent_ops *parent_ops)
-@@ -3075,6 +3238,10 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
+ /* This call just uploads data, the caller is responsible for binding the
+  * correct texture. */
+ /* Context activation is done by the caller. */
+@@ -2985,6 +3148,10 @@ HRESULT CDECL wined3d_texture_create(struct wined3d_device *device, const struct
  
      switch (desc->resource_type)
      {
@@ -210,8 +210,8 @@ index ce5c7e8..5685acc 100644
 +            break;
 +
          case WINED3D_RTYPE_TEXTURE_2D:
-             hr = texture_init(object, desc, layer_count, level_count, flags, device, parent, parent_ops);
-             break;
+             hr = wined3d_texture_init(object, desc, layer_count, level_count,
+                     flags, device, parent, parent_ops, &texture2d_ops);
 -- 
-1.9.1
+2.16.2
 

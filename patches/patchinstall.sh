@@ -378,9 +378,13 @@ patch_enable_all ()
 	enable_virtdisk_GetStorageDependencyInformation="$1"
 	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
+	enable_windowscodecs_32bppPRGBA="$1"
+	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
 	enable_windowscodecs_JPEG_Decoder="$1"
+	enable_windowscodecs_Palette_Images="$1"
+	enable_windowscodecs_TIFF_Support="$1"
 	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -1346,6 +1350,12 @@ patch_enable ()
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
 			;;
+		windowscodecs-32bppPRGBA)
+			enable_windowscodecs_32bppPRGBA="$2"
+			;;
+		windowscodecs-GIF_Encoder)
+			enable_windowscodecs_GIF_Encoder="$2"
+			;;
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
 			;;
@@ -1354,6 +1364,12 @@ patch_enable ()
 			;;
 		windowscodecs-JPEG_Decoder)
 			enable_windowscodecs_JPEG_Decoder="$2"
+			;;
+		windowscodecs-Palette_Images)
+			enable_windowscodecs_Palette_Images="$2"
+			;;
+		windowscodecs-TIFF_Support)
+			enable_windowscodecs_TIFF_Support="$2"
 			;;
 		windowscodecs-WICCreateBitmapFromSection)
 			enable_windowscodecs_WICCreateBitmapFromSection="$2"
@@ -2079,6 +2095,31 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	fi
 	enable_wineboot_DriveSerial=1
 	enable_wineboot_drivers_etc_Stubs=1
+fi
+
+if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
+	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
+		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-32bppPRGBA depends on that."
+	fi
+	enable_windowscodecs_TIFF_Support=1
+fi
+
+if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
+	if test "$enable_windowscodecs_GIF_Encoder" -gt 1; then
+		abort "Patchset windowscodecs-GIF_Encoder disabled, but windowscodecs-TIFF_Support depends on that."
+	fi
+	if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -gt 1; then
+		abort "Patchset windowscodecs-IWICPalette_InitializeFromBitmap disabled, but windowscodecs-TIFF_Support depends on that."
+	fi
+	enable_windowscodecs_GIF_Encoder=1
+	enable_windowscodecs_IWICPalette_InitializeFromBitmap=1
+fi
+
+if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
+	if test "$enable_windowscodecs_Palette_Images" -gt 1; then
+		abort "Patchset windowscodecs-Palette_Images disabled, but windowscodecs-GIF_Encoder depends on that."
+	fi
+	enable_windowscodecs_Palette_Images=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -7981,20 +8022,94 @@ if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-IMILBitmapSource
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
+# Patchset windowscodecs-Palette_Images
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
+# |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
+# | 	dlls/windowscodecs/info.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
 # |
-if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
-	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
-	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
+if test "$enable_windowscodecs_Palette_Images" -eq 1; then
+	patch_apply windowscodecs-Palette_Images/0012-windowscodecs-tests-Add-tests-for-encoding-2bpp-4bpp.patch
+	patch_apply windowscodecs-Palette_Images/0013-windowscodecs-Use-V_UI1-instead-of-V_UNION-to-assign.patch
+	patch_apply windowscodecs-Palette_Images/0014-windowscodecs-Add-support-for-palette-image-formats-.patch
+	patch_apply windowscodecs-Palette_Images/0016-windowscodecs-Limit-number-of-colors-in-a-palette-in.patch
+	patch_apply windowscodecs-Palette_Images/0017-windowscodecs-Add-support-for-palette-image-formats-.patch
+	patch_apply windowscodecs-Palette_Images/0020-windowscodecs-find_decoder-should-return-an-error-it.patch
+	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Find_decoder() should return an error it received from the decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should return WINCODEC_ERR_UNKNOWNIMAGEFORMAT when image loading fails.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-GIF_Encoder
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	windowscodecs-Palette_Images
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c,
+# | 	dlls/windowscodecs/converter.c, dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c,
+# | 	dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/wincodecs_private.h,
+# | 	dlls/windowscodecs/windowscodecs_wincodec.idl
+# |
+if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
+	patch_apply windowscodecs-GIF_Encoder/0001-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0002-windowscodecs-Implement-IWICBitmapEncoderInfo-GetFil.patch
+	patch_apply windowscodecs-GIF_Encoder/0004-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
+	patch_apply windowscodecs-GIF_Encoder/0009-gdiplus-Fix-a-typo-in-GIF-container-format-passed-to.patch
+	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
+	patch_apply windowscodecs-GIF_Encoder/0011-windowscodecs-Add-registration-for-GUID_WICPixelForm.patch
+	patch_apply windowscodecs-GIF_Encoder/0012-windowscodecs-Implement-IWICBitmapDecoder-GetMetadat.patch
+	patch_apply windowscodecs-GIF_Encoder/0014-windowscodecs-Fix-the-buffer-size-check-in-the-TIFF-.patch
+	patch_apply windowscodecs-GIF_Encoder/0015-windowscodecs-Add-support-for-converting-to-8bppInde.patch
+	patch_apply windowscodecs-GIF_Encoder/0016-windowscodecs-WICConvertBitmapSource-should-ask-IWIC.patch
+	patch_apply windowscodecs-GIF_Encoder/0017-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0018-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0019-windowscodecs-Improve-stub-for-IWICBitmapDecoder-Get.patch
+	patch_apply windowscodecs-GIF_Encoder/0020-windowscodecs-Add-registration-of-the-GIF-encoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0021-windowscodecs-Fix-IWICBitmapDecoder-CopyPalette-for-.patch
+	patch_apply windowscodecs-GIF_Encoder/0022-windowscodecs-Better-follow-the-GIF-spec-and-don-t-s.patch
+	patch_apply windowscodecs-GIF_Encoder/0023-windowscodecs-Fix-behaviour-of-format-converter-for-.patch
+	patch_apply windowscodecs-GIF_Encoder/0024-windowscodecs-tests-Add-a-bunch-of-new-tests-for-ind.patch
+	patch_apply windowscodecs-GIF_Encoder/0025-windowscodecs-tests-Add-some-tests-for-converting-24.patch
+	patch_apply windowscodecs-GIF_Encoder/0026-windowscodecs-tests-Add-the-tests-for-GIF-encoder-an.patch
+	patch_apply windowscodecs-GIF_Encoder/0027-windowscodecs-tests-Add-a-missing-check-for-IWICBitm.patch
+	patch_apply windowscodecs-GIF_Encoder/0028-windowscodecs-Correctly-indicate-that-the-global-inf.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in BMP encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Fix a typo in GIF container format passed to encode_image_wic().", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration for GUID_WICPixelFormat32bppGrayFloat pixel format.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::GetMetadataQueryReader in the TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the buffer size check in the TIFF decoder'\''s IWICBitmapFrameDecode::CopyPixels implementation.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bppIndexed format to IWICFormatConverter.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in the JPEG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in the PNG encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve stub for IWICBitmapDecoder::GetMetadataQueryReader in the PNG decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Better follow the GIF spec and don'\''t specify the local color table size if there is no local palette.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix behaviour of format converter for indexed formats when NULL or empty palette has been provided.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a bunch of new tests for indexed format conversions.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for converting 24bppBGR to 8bppIndexed format.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a missing check for IWICBitmapFrameDecode::GetPixelFormat return value.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8017,6 +8132,88 @@ if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-TIFF_Support
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-IWICPalette_InitializeFromBitmap
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c, include/wincodec.idl
+# |
+if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
+	patch_apply windowscodecs-TIFF_Support/0001-windowscodecs-tests-Add-a-test-for-8bpp-indexed-TIFF.patch
+	patch_apply windowscodecs-TIFF_Support/0002-windowscodecs-tests-Make-the-test-for-8bpp-indexed-T.patch
+	patch_apply windowscodecs-TIFF_Support/0003-windowscodecs-Fix-the-SupportsTransparency-flag-valu.patch
+	patch_apply windowscodecs-TIFF_Support/0004-windowscodecs-Fail-earlier-in-TIFF-decoder-s-Initial.patch
+	patch_apply windowscodecs-TIFF_Support/0005-windowscodecs-Avoid-redundant-checks-when-reading-a-.patch
+	patch_apply windowscodecs-TIFF_Support/0006-windowscodecs-Add-support-for-16bppGray-and-32bppGra.patch
+	patch_apply windowscodecs-TIFF_Support/0007-windowscodecs-Add-support-for-3bps-RGB-format-to-TIF.patch
+	patch_apply windowscodecs-TIFF_Support/0008-windowscodecs-Add-support-for-12bpp-RGB-format-to-TI.patch
+	patch_apply windowscodecs-TIFF_Support/0009-windowscodecs-Add-support-for-128bppRGBAFloat-format.patch
+	patch_apply windowscodecs-TIFF_Support/0011-windowscodecs-Add-support-for-32bppCMYK-and-64bppCMY.patch
+	patch_apply windowscodecs-TIFF_Support/0012-windowscodecs-Add-support-for-4bpp-RGBA-format-to-TI.patch
+	patch_apply windowscodecs-TIFF_Support/0013-windowscodecs-Add-support-for-16bpp-RGBA-format-to-T.patch
+	patch_apply windowscodecs-TIFF_Support/0014-windowscodecs-Add-some-tests-for-various-TIFF-color-.patch
+	patch_apply windowscodecs-TIFF_Support/0015-windowscodecs-Tolerate-partial-reads-in-the-IFD-meta.patch
+	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
+	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for 8bpp indexed TIFF format.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make the test for 8bpp indexed TIFF format run under XP.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the SupportsTransparency flag value for various pixel formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fail earlier in TIFF decoder'\''s Initialize method for unsupported pixel formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Avoid redundant checks when reading a TIFF tile.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 128bppRGBAFloat format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-32bppPRGBA
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	windowscodecs-Palette_Images, windowscodecs-GIF_Encoder, windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-
+# | 	TIFF_Support
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/converter.c
+# |
+if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
+	patch_apply windowscodecs-32bppPRGBA/0001-windowscodecs-Add-support-for-32bppRGB-32bppRGBA-and.patch
+	patch_apply windowscodecs-32bppPRGBA/0002-windowscodecs-Fix-32bppRGB-to-32bppRGBA-conversion.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppRGB, 32bppRGBA and 32bppPRGBA to format converter.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppRGB to 32bppRGBA conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-IMILBitmapSource
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
+# |
+if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
+	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
+	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
 	) >> "$patchlist"
 fi
 

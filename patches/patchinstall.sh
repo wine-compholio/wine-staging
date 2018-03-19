@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "afe4f54bb439cfa26ca72968cec2da357ea8836e"
+	echo "ae5d0b22291d866a49f293e782b43ba025ab77ec"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 3.4"
+	echo "Wine Staging 3.5 (unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Listview_DrawItem="$1"
-	enable_comctl32_Tests="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
@@ -524,9 +523,6 @@ patch_enable ()
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
-			;;
-		comctl32-Tests)
-			enable_comctl32_Tests="$2"
 			;;
 		comdlg32-lpstrFileTitle)
 			enable_comdlg32_lpstrFileTitle="$2"
@@ -3053,12 +3049,6 @@ fi
 # | 	include/bcrypt.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
-	patch_apply bcrypt-Improvements/0011-bcrypt-tests-Add-tests-for-AES-GCM-mode.patch
-	patch_apply bcrypt-Improvements/0012-bcrypt-Pass-object-to-get_-alg-hash-_property-instea.patch
-	patch_apply bcrypt-Improvements/0013-bcrypt-Implement-BCryptSetProperty-for-algorithms.patch
-	patch_apply bcrypt-Improvements/0014-bcrypt-Implement-BCryptGetProperty-for-BCRYPT_CHAINI.patch
-	patch_apply bcrypt-Improvements/0015-bcrypt-Implement-BCryptGetProperty-for-BCRYPT_AUTH_T.patch
-	patch_apply bcrypt-Improvements/0016-bcrypt-Fix-string-comparison-in-set_alg_property.patch
 	patch_apply bcrypt-Improvements/0017-bcrypt-Implement-BCryptEncrypt-for-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0018-bcrypt-Implement-BCryptDecrypt-for-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0019-bcrypt-Add-support-for-computing-comparing-cipher-ta.patch
@@ -3080,12 +3070,6 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0036-bcrypt-tests-Add-simple-test-for-RSA.patch
 	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add tests for AES GCM mode.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Pass object to get_{alg,hash}_property instead of alg_id.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptSetProperty for algorithms.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_CHAINING_MODE.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptGetProperty for BCRYPT_AUTH_TAG_LENGTH.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Fix string comparison in set_alg_property.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptEncrypt for AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDecrypt for AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for computing/comparing cipher tag.", 1 },';
@@ -3135,18 +3119,6 @@ if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctl32-Tests
-# |
-# | Modified files:
-# |   *	dlls/comctl32/tests/imagelist.c
-# |
-if test "$enable_comctl32_Tests" -eq 1; then
-	patch_apply comctl32-Tests/0001-comctl32-tests-Prevent-a-possible-nullpointer-derefe.patch
-	(
-		printf '%s\n' '+    { "Mark Jansen", "comctl32/tests: Prevent a possible nullpointer dereference.", 1 },';
 	) >> "$patchlist"
 fi
 

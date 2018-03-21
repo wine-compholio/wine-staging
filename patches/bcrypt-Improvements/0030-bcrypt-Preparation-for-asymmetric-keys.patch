@@ -1,16 +1,25 @@
-From d4255af99adc2fb09940feae4a7836fdd7e45a8e Mon Sep 17 00:00:00 2001
+From 70501f83e7effe724e09263791e99c494ecfbe3d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 29 Sep 2017 18:31:55 +0200
-Subject: [PATCH 29/36] bcrypt: Preparation for asymmetric keys.
+Subject: [PATCH] bcrypt: Preparation for asymmetric keys.
 
 ---
- dlls/bcrypt/bcrypt_main.c | 368 ++++++++++++++++++++++++++++------------------
- 1 file changed, 227 insertions(+), 141 deletions(-)
+ dlls/bcrypt/bcrypt_main.c | 367 ++++++++++++++++++++++++++++------------------
+ 1 file changed, 226 insertions(+), 141 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 227c007..9b1ac80 100644
+index 2e6ed8b..0791cf3 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
+@@ -19,7 +19,7 @@
+ 
+ #include "config.h"
+ #include "wine/port.h"
+-
++#undef HAVE_GNUTLS_CIPHER_INIT
+ #include <stdarg.h>
+ #ifdef HAVE_COMMONCRYPTO_COMMONCRYPTOR_H
+ #include <AvailabilityMacros.h>
 @@ -238,16 +238,17 @@ static const struct {
      ULONG hash_length;
      ULONG block_bits;
@@ -38,7 +47,7 @@ index 227c007..9b1ac80 100644
  };
  
  struct algorithm
-@@ -885,21 +886,28 @@ NTSTATUS WINAPI BCryptHash( BCRYPT_ALG_HANDLE algorithm, UCHAR *secret, ULONG se
+@@ -856,21 +857,28 @@ NTSTATUS WINAPI BCryptHash( BCRYPT_ALG_HANDLE algorithm, UCHAR *secret, ULONG se
  }
  
  #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
@@ -73,7 +82,7 @@ index 227c007..9b1ac80 100644
      enum mode_id   mode;
      ULONG          block_size;
      CCCryptorRef   ref_encrypt;
-@@ -907,16 +915,56 @@ struct key
+@@ -878,16 +886,56 @@ struct key
      UCHAR         *secret;
      ULONG          secret_len;
  };
@@ -132,7 +141,7 @@ index 227c007..9b1ac80 100644
  static ULONG get_block_size( struct algorithm *alg )
  {
      ULONG ret = 0, size = sizeof(ret);
-@@ -928,25 +976,43 @@ static NTSTATUS key_export( struct key *key, const WCHAR *type, UCHAR *output, U
+@@ -899,25 +947,43 @@ static NTSTATUS key_export( struct key *key, const WCHAR *type, UCHAR *output, U
      if (!strcmpW( type, BCRYPT_KEY_DATA_BLOB ))
      {
          BCRYPT_KEY_DATA_BLOB_HEADER *header = (BCRYPT_KEY_DATA_BLOB_HEADER *)output;
@@ -180,7 +189,7 @@ index 227c007..9b1ac80 100644
  {
      UCHAR *buffer;
  
-@@ -962,15 +1028,15 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
+@@ -933,15 +999,15 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
          return STATUS_NOT_SUPPORTED;
      }
  
@@ -202,7 +211,28 @@ index 227c007..9b1ac80 100644
  
      return STATUS_SUCCESS;
  }
-@@ -979,16 +1045,24 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
+@@ -952,17 +1018,17 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
+     {
+         if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_ECB, size ))
+         {
+-            key->mode = MODE_ID_ECB;
++            key->u.s.mode = MODE_ID_ECB;
+             return STATUS_SUCCESS;
+         }
+         else if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_CBC, size ))
+         {
+-            key->mode = MODE_ID_CBC;
++            key->u.s.mode = MODE_ID_CBC;
+             return STATUS_SUCCESS;
+         }
+         else if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_GCM, size ))
+         {
+-            key->mode = MODE_ID_GCM;
++            key->u.s.mode = MODE_ID_GCM;
+             return STATUS_SUCCESS;
+         }
+         else
+@@ -980,16 +1046,24 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
  {
      UCHAR *buffer;
  
@@ -236,28 +266,7 @@ index 227c007..9b1ac80 100644
  
      return STATUS_SUCCESS;
  }
-@@ -999,17 +1073,17 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
-     {
-         if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_ECB, size ))
-         {
--            key->mode = MODE_ID_ECB;
-+            key->u.s.mode = MODE_ID_ECB;
-             return STATUS_SUCCESS;
-         }
-         else if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_CBC, size ))
-         {
--            key->mode = MODE_ID_CBC;
-+            key->u.s.mode = MODE_ID_CBC;
-             return STATUS_SUCCESS;
-         }
-         else if (!strncmpW( (WCHAR *)value, BCRYPT_CHAIN_MODE_GCM, size ))
-         {
--            key->mode = MODE_ID_GCM;
-+            key->u.s.mode = MODE_ID_GCM;
-             return STATUS_SUCCESS;
-         }
-         else
-@@ -1029,22 +1103,22 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -1000,22 +1074,22 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
      {
      case ALG_ID_AES:
          WARN( "handle block size\n" );
@@ -287,7 +296,7 @@ index 227c007..9b1ac80 100644
          return GNUTLS_CIPHER_UNKNOWN;
      default:
          FIXME( "algorithm %u not supported\n", key->alg_id );
-@@ -1052,17 +1126,17 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
+@@ -1023,17 +1097,17 @@ static gnutls_cipher_algorithm_t get_gnutls_cipher( const struct key *key )
      }
  }
  
@@ -309,7 +318,7 @@ index 227c007..9b1ac80 100644
      }
  
      if ((cipher = get_gnutls_cipher( key )) == GNUTLS_CIPHER_UNKNOWN)
-@@ -1074,12 +1148,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1045,12 +1119,12 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
          iv_len  = sizeof(zero_iv);
      }
  
@@ -325,7 +334,7 @@ index 227c007..9b1ac80 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1088,11 +1162,11 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
+@@ -1059,11 +1133,11 @@ static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
      return STATUS_SUCCESS;
  }
  
@@ -339,7 +348,7 @@ index 227c007..9b1ac80 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1101,12 +1175,12 @@ static NTSTATUS key_set_auth_data( struct key *key, UCHAR *auth_data, ULONG len
+@@ -1072,12 +1146,12 @@ static NTSTATUS key_set_auth_data( struct key *key, UCHAR *auth_data, ULONG len
      return STATUS_SUCCESS;
  }
  
@@ -354,7 +363,7 @@ index 227c007..9b1ac80 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1120,7 +1194,7 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
+@@ -1091,7 +1165,7 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
  {
      int ret;
  
@@ -363,7 +372,7 @@ index 227c007..9b1ac80 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1133,7 +1207,7 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1104,7 +1178,7 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
  {
      int ret;
  
@@ -372,7 +381,7 @@ index 227c007..9b1ac80 100644
      {
          pgnutls_perror( ret );
          return STATUS_INTERNAL_ERROR;
-@@ -1144,13 +1218,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1115,13 +1189,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
  
  static NTSTATUS key_destroy( struct key *key )
  {
@@ -389,7 +398,7 @@ index 227c007..9b1ac80 100644
  {
      UCHAR *buffer;
  
-@@ -1172,16 +1246,16 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
+@@ -1143,16 +1217,16 @@ static NTSTATUS key_init( struct key *key, struct algorithm *alg, const UCHAR *s
          return STATUS_NOT_SUPPORTED;
      }
  
@@ -413,7 +422,7 @@ index 227c007..9b1ac80 100644
  
      return STATUS_SUCCESS;
  }
-@@ -1190,17 +1264,17 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
+@@ -1167,66 +1241,66 @@ static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
  {
      UCHAR *buffer;
  
@@ -440,9 +449,6 @@ index 227c007..9b1ac80 100644
 +    key_copy->u.s.secret_len    = key_orig->u.s.secret_len;
  
      return STATUS_SUCCESS;
- }
-@@ -1211,51 +1285,51 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
-     return STATUS_NOT_IMPLEMENTED;
  }
  
 -static NTSTATUS key_set_params( struct key *key, UCHAR *iv, ULONG iv_len )
@@ -507,7 +513,7 @@ index 227c007..9b1ac80 100644
      {
          WARN( "CCCryptorUpdate failed %d\n", status );
          return STATUS_INTERNAL_ERROR;
-@@ -1269,7 +1343,7 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
+@@ -1240,7 +1314,7 @@ static NTSTATUS key_decrypt( struct key *key, const UCHAR *input, ULONG input_le
  {
      CCCryptorStatus status;
  
@@ -516,14 +522,14 @@ index 227c007..9b1ac80 100644
      {
          WARN( "CCCryptorUpdate failed %d\n", status );
          return STATUS_INTERNAL_ERROR;
-@@ -1286,24 +1360,24 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1257,14 +1331,14 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
  
  static NTSTATUS key_destroy( struct key *key )
  {
 -    if (key->ref_encrypt) CCCryptorRelease( key->ref_encrypt );
 -    if (key->ref_decrypt) CCCryptorRelease( key->ref_decrypt );
 -    heap_free( key->secret );
-+    if (key->u.s.ref_encrypt) CCCryptorRelease( key->u.s.ref_encrypt );
++    iif (key->u.s.ref_encrypt) CCCryptorRelease( key->u.s.ref_encrypt );
 +    if (key->u.s.ref_decrypt) CCCryptorRelease( key->u.s.ref_decrypt );
 +    heap_free( key->u.s.secret );
      heap_free( key );
@@ -534,20 +540,12 @@ index 227c007..9b1ac80 100644
 +static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, const UCHAR *secret, ULONG secret_len )
  {
      ERR( "support for keys not available at build time\n" );
--    key->mode = MODE_ID_CBC;
-+    key->u.s.mode = MODE_ID_CBC;
      return STATUS_NOT_IMPLEMENTED;
- }
- 
+@@ -1279,23 +1353,22 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
  static NTSTATUS key_duplicate( struct key *key_orig, struct key *key_copy )
  {
      ERR( "support for keys not available at build time\n" );
 -    key_copy->mode = MODE_ID_CBC;
-+    key_copy->u.s.mode = MODE_ID_CBC;
-     return STATUS_NOT_IMPLEMENTED;
- }
- 
-@@ -1313,19 +1387,19 @@ static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *val
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -570,7 +568,7 @@ index 227c007..9b1ac80 100644
                               ULONG output_len  )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1380,7 +1454,7 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
+@@ -1350,7 +1423,7 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
  
      key->hdr.magic = MAGIC_KEY;
  
@@ -579,7 +577,7 @@ index 227c007..9b1ac80 100644
      {
          heap_free( key );
          *handle = NULL;
-@@ -1499,19 +1573,30 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1469,19 +1542,30 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
      struct key *key = handle;
      ULONG bytes_left = input_len;
      UCHAR *buf, *src, *dst;
@@ -611,7 +609,7 @@ index 227c007..9b1ac80 100644
      {
          BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO *auth_info = padding;
  
-@@ -1522,7 +1607,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1492,7 +1576,7 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (auth_info->dwFlags & BCRYPT_AUTH_MODE_CHAIN_CALLS_FLAG)
              FIXME( "call chaining not implemented\n" );
  
@@ -620,7 +618,7 @@ index 227c007..9b1ac80 100644
              return status;
  
          *ret_len = input_len;
-@@ -1530,46 +1615,47 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1500,46 +1584,47 @@ NTSTATUS WINAPI BCryptEncrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (input && !output) return STATUS_SUCCESS;
          if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -683,7 +681,7 @@ index 227c007..9b1ac80 100644
          heap_free( buf );
      }
  
-@@ -1595,7 +1681,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1565,7 +1650,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          return STATUS_NOT_IMPLEMENTED;
      }
  
@@ -692,7 +690,7 @@ index 227c007..9b1ac80 100644
      {
          BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO *auth_info = padding;
          UCHAR tag[16];
-@@ -1605,7 +1691,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1575,7 +1660,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (!auth_info->pbTag) return STATUS_INVALID_PARAMETER;
          if (auth_info->cbTag < 12 || auth_info->cbTag > 16) return STATUS_INVALID_PARAMETER;
  
@@ -701,7 +699,7 @@ index 227c007..9b1ac80 100644
              return status;
  
          *ret_len = input_len;
-@@ -1613,7 +1699,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1583,7 +1668,7 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          if (!output) return STATUS_SUCCESS;
          if (output_len < *ret_len) return STATUS_BUFFER_TOO_SMALL;
  
@@ -710,7 +708,7 @@ index 227c007..9b1ac80 100644
              return status;
          if ((status = key_decrypt( key, input, input_len, output, output_len )))
              return status;
-@@ -1626,44 +1712,44 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
+@@ -1596,44 +1681,44 @@ NTSTATUS WINAPI BCryptDecrypt( BCRYPT_KEY_HANDLE handle, UCHAR *input, ULONG inp
          return STATUS_SUCCESS;
      }
  
@@ -773,5 +771,5 @@ index 227c007..9b1ac80 100644
          else
              status = STATUS_UNSUCCESSFUL; /* FIXME: invalid padding */
 -- 
-2.7.4
+1.9.1
 

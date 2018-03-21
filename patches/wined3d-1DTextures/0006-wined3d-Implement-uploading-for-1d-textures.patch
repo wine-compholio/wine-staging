@@ -1,15 +1,15 @@
-From af097346c9265b21cc2f823cdd347a976fa7c09b Mon Sep 17 00:00:00 2001
+From c70ae0c4b0a6b7929472b844f374baa42c868fc1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 27 Aug 2016 22:25:20 +0200
 Subject: [PATCH] wined3d: Implement uploading for 1d textures.
 
 ---
  dlls/wined3d/device.c  |  3 ++-
- dlls/wined3d/texture.c | 69 +++++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 70 insertions(+), 2 deletions(-)
+ dlls/wined3d/texture.c | 12 ++++++++++++
+ 2 files changed, 14 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index bdc551e5054..bb61f78d62d 100644
+index bdc551e..bb61f78 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
 @@ -4272,7 +4272,8 @@ void CDECL wined3d_device_update_sub_resource(struct wined3d_device *device, str
@@ -23,88 +23,28 @@ index bdc551e5054..bb61f78d62d 100644
          struct wined3d_texture *texture = texture_from_resource(resource);
          unsigned int level;
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 6957e01e556..fd95963b7dc 100644
+index cb02276..45b5afb 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1784,10 +1784,77 @@ static void texture1d_upload_data(struct wined3d_texture *texture, unsigned int
-         const struct wined3d_const_bo_address *data, unsigned int src_row_pitch, unsigned int src_slice_pitch,
-         unsigned int dst_x, unsigned int dst_y, unsigned int dst_z, BOOL srgb)
- {
--    FIXME("texture %p, sub_resource_idx %u, context %p, format %s, src_box %s, data {%#x:%p}, "
-+    unsigned int level = sub_resource_idx % texture->level_count;
-+    unsigned int layer = sub_resource_idx / texture->level_count;
-+    const struct wined3d_gl_info *gl_info = context->gl_info;
-+    const void *mem = data->addr;
-+    void *converted_mem = NULL;
-+    unsigned int width, x, update_w;
-+    GLenum target;
+@@ -1953,6 +1953,18 @@ void wined3d_texture_upload_data(struct wined3d_texture *texture, unsigned int s
+             GL_EXTCALL(glTexSubImage3D(target, level, dst_x, dst_y, dst_z,
+                     update_w, update_h, update_d, format->glFormat, format->glType, bo.addr));
+         }
++        else if (target == GL_TEXTURE_1D_ARRAY)
++        {
++            gl_info->gl_ops.gl.p_glTexSubImage2D(target, level, dst_x, dst_y, update_w, 1, format->glFormat, format->glType, bo.addr);
++            checkGLcall("glTexSubImage2D");
 +
-+    TRACE("texture %p, sub_resource_idx %u, context %p, format %s, src_box %s, data {%#x:%p}, "
-             "src_row_pitch %#x, src_slice_pitch %#x, dst_x %u, dst_y %u, dst_z %u, srgb %#x.\n",
-             texture, sub_resource_idx, context, debug_d3dformat(format->id), debug_box(src_box),
-             data->buffer_object, data->addr, src_row_pitch, src_slice_pitch, dst_x, dst_y, dst_z, srgb);
-+
-+    width = wined3d_texture_get_level_width(texture, level);
-+
-+    if (!src_box)
-+    {
-+        x = 0;
-+        update_w = width;
-+    }
-+    else
-+    {
-+        x = src_box->left;
-+        update_w = src_box->right - src_box->left;
-+    }
-+
-+    if (format->upload)
-+    {
-+        unsigned int dst_row_pitch;
-+
-+        if (data->buffer_object)
-+            ERR("Loading a converted texture from a PBO.\n");
-+        if (texture->resource.format_flags & WINED3DFMT_FLAG_BLOCKS)
-+            ERR("Converting a block-based format.\n");
-+
-+        dst_row_pitch = update_w * format->conv_byte_count;
-+
-+        converted_mem = HeapAlloc(GetProcessHeap(), 0, dst_row_pitch);
-+        format->upload(data->addr, converted_mem, src_row_pitch, src_slice_pitch, dst_row_pitch, dst_row_pitch, update_w, 1, 1);
-+        mem = converted_mem;
-+    }
-+
-+    if (data->buffer_object)
-+    {
-+        GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, data->buffer_object));
-+        checkGLcall("glBindBuffer");
-+    }
-+
-+    target = wined3d_texture_get_sub_resource_target(texture, sub_resource_idx);
-+    if (target == GL_TEXTURE_1D_ARRAY)
-+    {
-+        gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_row_pitch / format->byte_count);
-+
-+        gl_info->gl_ops.gl.p_glTexSubImage2D(target, level, x, layer, update_w, 1, format->glFormat, format->glType, mem);
-+        checkGLcall("glTexSubImage2D");
-+
-+        gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-+    }
-+    else
-+    {
-+        gl_info->gl_ops.gl.p_glTexSubImage1D(target, level, x, update_w, format->glFormat, format->glType, mem);
-+        checkGLcall("glTexSubImage1D");
-+    }
-+
-+    if (data->buffer_object)
-+    {
-+        GL_EXTCALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-+        checkGLcall("glBindBuffer");
-+    }
-+
-+    HeapFree(GetProcessHeap(), 0, converted_mem);
- }
- 
- /* Context activation is done by the caller. */
++            gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
++        }
++        else if (target == GL_TEXTURE_1D)
++        {
++            gl_info->gl_ops.gl.p_glTexSubImage1D(target, level, dst_x, update_w, format->glFormat, format->glType, bo.addr);
++            checkGLcall("glTexSubImage1D");
++}
+         else
+         {
+             gl_info->gl_ops.gl.p_glTexSubImage2D(target, level, dst_x, dst_y,
 -- 
-2.16.2
+1.9.1
 

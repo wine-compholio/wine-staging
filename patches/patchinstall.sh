@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ae5d0b22291d866a49f293e782b43ba025ab77ec"
+	echo "cfb67712ce35c05d6b7d27ece84c9192e66290b4"
 }
 
 # Show version information
@@ -96,7 +96,6 @@ patch_enable_all ()
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
-	enable_avifil32_AVIFile_Proxies="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_Improvements="$1"
@@ -502,9 +501,6 @@ patch_enable ()
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
-			;;
-		avifil32-AVIFile_Proxies)
-			enable_avifil32_AVIFile_Proxies="$2"
 			;;
 		avifil32-IGetFrame_fnSetFormat)
 			enable_avifil32_IGetFrame_fnSetFormat="$2"
@@ -2992,22 +2988,6 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-uxtheme-themes-l1-1-0: Add dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "feclient: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset avifil32-AVIFile_Proxies
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38564] Add support for AVIFile interface proxies
-# |
-# | Modified files:
-# |   *	dlls/avifil32/Makefile.in, dlls/avifil32/avifil32.idl, dlls/avifil32/avifile_ifaces.idl,
-# | 	dlls/avifil32/avifile_private.h, dlls/avifil32/factory.c
-# |
-if test "$enable_avifil32_AVIFile_Proxies" -eq 1; then
-	patch_apply avifil32-AVIFile_Proxies/0001-avifil32-Add-support-for-AVIFile-interface-proxies.-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "avifil32: Add support for AVIFile interface proxies.", 2 },';
 	) >> "$patchlist"
 fi
 

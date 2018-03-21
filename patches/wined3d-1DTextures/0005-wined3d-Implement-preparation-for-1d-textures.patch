@@ -1,81 +1,48 @@
-From 47673255ab05a81d7fd5e917d7ffc749c269af29 Mon Sep 17 00:00:00 2001
+From 5a362a78214110a3671d6aeab8d60f79164c6f28 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 27 Aug 2016 22:22:26 +0200
 Subject: [PATCH] wined3d: Implement preparation for 1d textures.
 
 ---
- dlls/wined3d/texture.c | 58 +++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 57 insertions(+), 1 deletion(-)
+ dlls/wined3d/texture.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
 
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 5685acc..718c939 100644
+index 71f59d74258..6957e01e556 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1825,7 +1825,63 @@ static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned in
- 
- static void texture1d_prepare_texture(struct wined3d_texture *texture, struct wined3d_context *context, BOOL srgb)
- {
--    FIXME("stub.\n");
-+    const struct wined3d_format *format = texture->resource.format;
-+    unsigned int sub_count = texture->level_count * texture->layer_count;
-+    const struct wined3d_gl_info *gl_info = context->gl_info;
-+    unsigned int width;
-+    GLenum internal;
-+
-+    wined3d_texture_bind_and_dirtify(texture, context, srgb);
-+
-+    if (srgb)
-+        internal = format->glGammaInternal;
-+    else if (texture->resource.usage & WINED3DUSAGE_RENDERTARGET
-+            && wined3d_resource_is_offscreen(&texture->resource))
-+        internal = format->rtInternal;
-+    else
-+        internal = format->glInternal;
-+
-+    if (wined3d_texture_use_immutable_storage(texture, gl_info))
-+    {
-+        width = wined3d_texture_get_level_width(texture, 0);
-+
-+        if (texture->target == GL_TEXTURE_1D_ARRAY)
-+        {
-+            GL_EXTCALL(glTexStorage2D(texture->target, texture->level_count, internal, width, texture->layer_count));
-+            checkGLcall("glTexStorage2D");
-+        }
-+        else
-+        {
-+            GL_EXTCALL(glTexStorage1D(texture->target, texture->level_count, internal, width));
-+            checkGLcall("glTexStorage1D");
-+        }
-+    }
-+    else
-+    {
-+        unsigned int i;
-+
-+        for (i = 0; i < sub_count; ++i)
-+        {
-+            GLenum target;
-+            unsigned int level = i % texture->level_count;
-+
-+            width = wined3d_texture_get_level_width(texture, level);
-+            target = wined3d_texture_get_sub_resource_target(texture, i);
-+
-+            if (texture->target == GL_TEXTURE_1D_ARRAY)
+@@ -477,6 +477,18 @@ static void wined3d_texture_allocate_gl_mutable_storage(struct wined3d_texture *
+                         format->glFormat, format->glType, NULL));
+                 checkGLcall("glTexImage3D");
+             }
++            else if (texture->target == GL_TEXTURE_1D_ARRAY)
 +            {
-+                gl_info->gl_ops.gl.p_glTexImage2D(target, level,
-+                        internal, width, texture->layer_count, 0, format->glFormat, format->glType, NULL);
++                gl_info->gl_ops.gl.p_glTexImage2D(target, level, gl_internal_format,
++                        width, height, 0, format->glFormat, format->glType, NULL);
 +                checkGLcall("glTexImage2D");
 +            }
-+            else
++            else if (texture->target == GL_TEXTURE_1D)
 +            {
 +                gl_info->gl_ops.gl.p_glTexImage1D(target, level,
-+                        internal, width, 0, format->glFormat, format->glType, NULL);
++                        gl_internal_format, width, 0, format->glFormat, format->glType, NULL);
 +                checkGLcall("glTexImage1D");
 +            }
-+        }
-+    }
- }
- 
- static const struct wined3d_texture_ops texture1d_ops =
+             else
+             {
+                 gl_info->gl_ops.gl.p_glTexImage2D(target, level, gl_internal_format,
+@@ -514,6 +526,12 @@ static void wined3d_texture_allocate_gl_immutable_storage(struct wined3d_texture
+             GL_EXTCALL(glTexStorage3DMultisample(texture->target, samples,
+                     gl_internal_format, width, height, texture->layer_count, GL_FALSE));
+             break;
++        case GL_TEXTURE_1D:
++            GL_EXTCALL(glTexStorage1D(texture->target, texture->level_count, gl_internal_format, width));
++            break;
++        case GL_TEXTURE_1D_ARRAY:
++            GL_EXTCALL(glTexStorage2D(texture->target, texture->level_count, gl_internal_format, width, height));
++            break;
+         default:
+             GL_EXTCALL(glTexStorage2D(texture->target, texture->level_count,
+                     gl_internal_format, width, height));
 -- 
-1.9.1
+2.16.2
 

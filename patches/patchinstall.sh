@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f2cb86decb334fc72ff5422122ba190bc9b6046e"
+	echo "afef57f872433bcd3032c2ccbc0453bef5b62178"
 }
 
 # Show version information
@@ -128,7 +128,6 @@ patch_enable_all ()
 	enable_d3dx9_36_DrawText="$1"
 	enable_d3dx9_36_Dummy_Skininfo="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
-	enable_d3dx9_36_FindNextValidTechnique="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
@@ -380,7 +379,6 @@ patch_enable_all ()
 	enable_windowscodecs_JPEG_Decoder="$1"
 	enable_windowscodecs_Palette_Images="$1"
 	enable_windowscodecs_TIFF_Support="$1"
-	enable_windowscodecs_WICCreateBitmapFromSection="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
@@ -410,7 +408,6 @@ patch_enable_all ()
 	enable_wined3d_Viewports="$1"
 	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
-	enable_wined3d_dxgi_swapchain_Present="$1"
 	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -425,7 +422,6 @@ patch_enable_all ()
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_UpdateLayeredWindow="$1"
-	enable_winex11_Vulkan_compile_fix="$1"
 	enable_winex11_WM_WINDOWPOSCHANGING="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -595,9 +591,6 @@ patch_enable ()
 			;;
 		d3dx9_36-Filter_Warnings)
 			enable_d3dx9_36_Filter_Warnings="$2"
-			;;
-		d3dx9_36-FindNextValidTechnique)
-			enable_d3dx9_36_FindNextValidTechnique="$2"
 			;;
 		d3dx9_36-Optimize_Inplace)
 			enable_d3dx9_36_Optimize_Inplace="$2"
@@ -1352,9 +1345,6 @@ patch_enable ()
 		windowscodecs-TIFF_Support)
 			enable_windowscodecs_TIFF_Support="$2"
 			;;
-		windowscodecs-WICCreateBitmapFromSection)
-			enable_windowscodecs_WICCreateBitmapFromSection="$2"
-			;;
 		wine.inf-Directory_ContextMenuHandlers)
 			enable_wine_inf_Directory_ContextMenuHandlers="$2"
 			;;
@@ -1442,9 +1432,6 @@ patch_enable ()
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
 			;;
-		wined3d-dxgi_swapchain_Present)
-			enable_wined3d_dxgi_swapchain_Present="$2"
-			;;
 		wined3d-sample_c_lz)
 			enable_wined3d_sample_c_lz="$2"
 			;;
@@ -1486,9 +1473,6 @@ patch_enable ()
 			;;
 		winex11-UpdateLayeredWindow)
 			enable_winex11_UpdateLayeredWindow="$2"
-			;;
-		winex11-Vulkan-compile-fix)
-			enable_winex11_Vulkan_compile_fix="$2"
 			;;
 		winex11-WM_WINDOWPOSCHANGING)
 			enable_winex11_WM_WINDOWPOSCHANGING="$2"
@@ -1972,13 +1956,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_wined3d_CSMT_Helper=1
-fi
-
-if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
-	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
-		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-dxgi_swapchain_Present depends on that."
-	fi
-	enable_wined3d_Silence_FIXMEs=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
@@ -2624,18 +2601,16 @@ fi
 # Patchset Pipelight
 # |
 # | Modified files:
-# |   *	dlls/user32/message.c, dlls/user32/tests/msg.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_main.c,
-# | 	dlls/winex11.drv/init.c, dlls/winex11.drv/opengl.c, dlls/winex11.drv/x11drv.h
+# |   *	dlls/user32/message.c, dlls/user32/tests/msg.c, dlls/winex11.drv/init.c, dlls/winex11.drv/opengl.c,
+# | 	dlls/winex11.drv/x11drv.h
 # |
 if test "$enable_Pipelight" -eq 1; then
 	patch_apply Pipelight/0001-winex11-Implement-X11DRV_FLUSH_GDI_DISPLAY-ExtEscape-c.patch
 	patch_apply Pipelight/0002-user32-Decrease-minimum-SetTimer-interval-to-5-ms.patch
-	patch_apply Pipelight/0003-wined3d-allow-changing-strict-drawing-through-an-exp.patch
 	patch_apply Pipelight/0004-winex11.drv-Indicate-direct-rendering-through-OpenGL.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Implement X11DRV_FLUSH_GDI_DISPLAY ExtEscape command.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Decrease minimum SetTimer interval to 5 ms.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow changing strict drawing through an exported function.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Indicate direct rendering through OpenGL extension.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3003,17 +2978,11 @@ fi
 # |   *	[#43605] Implement elliptic curve (ECDSA) cryptography
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
-# | 	include/bcrypt.h
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
-	patch_apply bcrypt-Improvements/0020-bcrypt-Implement-BCryptDuplicateKey.patch
-	patch_apply bcrypt-Improvements/0021-bcrypt-tests-Add-tests-for-BCryptDuplicateKey.patch
-	patch_apply bcrypt-Improvements/0023-bcrypt-Add-support-for-auth-data-in-AES-GCM-mode.patch
-	patch_apply bcrypt-Improvements/0024-bcrypt-tests-Add-tests-for-auth-data-in-AES-GCM-mode.patch
 	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
 	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
-	patch_apply bcrypt-Improvements/0027-bcrypt-Fix-BCryptEncrypt-with-AES_GCM-and-no-input-a.patch
 	patch_apply bcrypt-Improvements/0029-bcrypt-Add-support-for-192-and-256-bit-aes-keys.patch
 	patch_apply bcrypt-Improvements/0030-bcrypt-Preparation-for-asymmetric-keys.patch
 	patch_apply bcrypt-Improvements/0032-bcrypt-tests-Add-basic-test-for-ecdsa.patch
@@ -3023,13 +2992,8 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0036-bcrypt-tests-Add-simple-test-for-RSA.patch
 	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptDuplicateKey.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for BCryptDuplicateKey.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for auth data in AES GCM mode.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt/tests: Add tests for auth data in AES GCM mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Implement support for ECB chain mode.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "bcrypt: Fix BCryptEncrypt with AES_GCM and no input and no output.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for 192 and 256 bit aes keys.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add basic test for ecdsa.", 1 },';
@@ -3701,21 +3665,6 @@ if test "$enable_d3dx9_36_Filter_Warnings" -eq 1; then
 	patch_apply d3dx9_36-Filter_Warnings/0001-d3dx9_36-Filter-out-D3DCompile-warning-messages-that.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Filter out D3DCompile warning messages that are not present with D3DCompileShader.", 4 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-FindNextValidTechnique
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34101] Implement ID3DXEffect::FindNextValidTechnique
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/effect.c, dlls/d3dx9_36/tests/effect.c
-# |
-if test "$enable_d3dx9_36_FindNextValidTechnique" -eq 1; then
-	patch_apply d3dx9_36-FindNextValidTechnique/0001-d3dx9_36-Implement-ID3DXEffect_FindNextValidTechniqu.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement ID3DXEffect_FindNextValidTechnique + add tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8092,22 +8041,6 @@ if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-WICCreateBitmapFromSection
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40273] Implement windowscodecs.WICCreateBitmapFromSection(Ex)
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/imgfactory.c, dlls/windowscodecs/windowscodecs.spec,
-# | 	include/wincodec.idl
-# |
-if test "$enable_windowscodecs_WICCreateBitmapFromSection" -eq 1; then
-	patch_apply windowscodecs-WICCreateBitmapFromSection/0001-windowscodecs-Implement-WICCreateBitmapFromSection-E.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement WICCreateBitmapFromSection(Ex).", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wine.inf-Directory_ContextMenuHandlers
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8416,17 +8349,15 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c
+# |   *	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
-	patch_apply wined3d-Silence_FIXMEs/0005-wined3d-Silence-repeated-wined3d_swapchain_present-F.patch
 	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence repeated wined3d_swapchain_present FIXME.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
 	) >> "$patchlist"
 fi
@@ -8548,23 +8479,6 @@ if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-dxgi_swapchain_Present
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-Silence_FIXMEs
-# |
-# | Modified files:
-# |   *	dlls/d3d8/swapchain.c, dlls/d3d9/device.c, dlls/d3d9/swapchain.c, dlls/dxgi/swapchain.c, dlls/wined3d/cs.c,
-# | 	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_dxgi_swapchain_Present" -eq 1; then
-	patch_apply wined3d-dxgi_swapchain_Present/0001-wined3d-Implement-updating-swap-interval-through-win.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement updating swap interval through wined3d_swapchain_present.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8822,18 +8736,6 @@ if test "$enable_winex11_UpdateLayeredWindow" -eq 1; then
 	patch_apply winex11-UpdateLayeredWindow/0001-winex11-Fix-alpha-blending-in-X11DRV_UpdateLayeredWi.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Fix alpha blending in X11DRV_UpdateLayeredWindow.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-Vulkan-compile-fix
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/vulkan.c
-# |
-if test "$enable_winex11_Vulkan_compile_fix" -eq 1; then
-	patch_apply winex11-Vulkan-compile-fix/0001-winex11.drv-Fix-compile-error-when-Vulkan-isn-t-avai.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11.drv: Fix compile error when Vulkan isn'\''t avaiable.", 1 },';
 	) >> "$patchlist"
 fi
 

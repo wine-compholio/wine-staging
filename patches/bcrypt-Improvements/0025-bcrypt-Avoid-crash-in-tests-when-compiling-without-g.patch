@@ -1,54 +1,39 @@
-From 0fbdf39c6714848c3186882ef01111c08174afa1 Mon Sep 17 00:00:00 2001
+From facd838db32bcb086711fda48a7ae9d5419a2d3c Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 26 Dec 2016 16:20:57 +0100
-Subject: [PATCH 25/36] bcrypt: Avoid crash in tests when compiling without
- gnutls support.
+Subject: [PATCH] bcrypt: Avoid crash in tests when compiling without gnutls
+ support.
 
 ---
- dlls/bcrypt/bcrypt_main.c | 13 ++++++++++++-
- 1 file changed, 12 insertions(+), 1 deletion(-)
+ dlls/bcrypt/bcrypt_main.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index da9cb02..1839edc 100644
+index e05e94c..81dce08 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -1344,12 +1344,19 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
+@@ -1293,9 +1293,12 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
+     TRACE( "%p, %p, %p, %u, %p, %u, %08x\n", algorithm, handle, object, object_len, secret, secret_len, flags );
+ 
      if (!alg || alg->hdr.magic != MAGIC_ALG) return STATUS_INVALID_HANDLE;
++    if (!handle) return STATUS_INVALID_PARAMETER;
      if (object) FIXME( "ignoring object buffer\n" );
  
--    if (!(key = heap_alloc( sizeof(*key) ))) return STATUS_NO_MEMORY;
-+
-+    if (!(key = heap_alloc( sizeof(*key) )))
-+    {
-+        *handle = NULL;
-+        return STATUS_NO_MEMORY;
-+    }
++    *handle = NULL;
+     if (!(key = heap_alloc( sizeof(*key) ))) return STATUS_NO_MEMORY;
 +
      key->hdr.magic = MAGIC_KEY;
  
      if ((status = key_init( key, alg, secret, secret_len )))
-     {
-         heap_free( key );
-+        *handle = NULL;
-         return status;
-     }
+@@ -1383,6 +1386,8 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
  
-@@ -1432,11 +1439,15 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
      if (!key_orig || key_orig->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
      if (!handle_copy) return STATUS_INVALID_PARAMETER;
-     if (!(key_copy = HeapAlloc( GetProcessHeap(), 0, sizeof(*key_copy) )))
-+    {
-+        *handle_copy = NULL;
-         return STATUS_NO_MEMORY;
-+    }
++
++    *handle_copy = NULL;
+     if (!(key_copy = heap_alloc( sizeof(*key_copy) ))) return STATUS_NO_MEMORY;
  
      if ((status = key_duplicate( key_orig, key_copy )))
-     {
-         HeapFree( GetProcessHeap(), 0, key_copy );
-+        *handle_copy = NULL;
-         return status;
-     }
- 
 -- 
-2.7.4
+1.9.1
 

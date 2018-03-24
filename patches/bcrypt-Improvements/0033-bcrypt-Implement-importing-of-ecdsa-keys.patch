@@ -1,4 +1,4 @@
-From 6879933e1a7630c2b8d22f2c0e0d2519c8416d5b Mon Sep 17 00:00:00 2001
+From 02f9996f8a3ebcff59cc3993c579ffc36eafa53f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 29 Sep 2017 19:18:58 +0200
 Subject: [PATCH] bcrypt: Implement importing of ecdsa keys.
@@ -6,12 +6,12 @@ Subject: [PATCH] bcrypt: Implement importing of ecdsa keys.
 ---
  dlls/bcrypt/bcrypt.spec    |   4 +-
  dlls/bcrypt/bcrypt_main.c  | 160 +++++++++++++++++++++++++++++++++++++++++++--
- dlls/bcrypt/tests/bcrypt.c |   6 +-
+ dlls/bcrypt/tests/bcrypt.c |   4 +-
  include/bcrypt.h           |   2 +
- 4 files changed, 162 insertions(+), 10 deletions(-)
+ 4 files changed, 161 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index 28c2394..78824d7 100644
+index 28c2394ce45..78824d73b39 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -32,7 +32,7 @@
@@ -33,7 +33,7 @@ index 28c2394..78824d7 100644
  @ stub GetCipherInterface
  @ stub GetHashInterface
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 2dd839f..b1736fa 100644
+index b1f79d830c2..bae9a4b2663 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -220,7 +220,9 @@ enum alg_id
@@ -153,7 +153,7 @@ index 2dd839f..b1736fa 100644
  #endif
  
  #if defined(HAVE_GNUTLS_CIPHER_INIT) && !defined(HAVE_COMMONCRYPTO_COMMONCRYPTOR_H)
-@@ -1174,8 +1225,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -1170,8 +1221,13 @@ static NTSTATUS key_get_tag( struct key *key, UCHAR *tag, ULONG len )
  
  static NTSTATUS key_destroy( struct key *key )
  {
@@ -169,7 +169,7 @@ index 2dd839f..b1736fa 100644
      heap_free( key );
      return STATUS_SUCCESS;
  }
-@@ -1310,6 +1366,12 @@ static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, cons
+@@ -1341,6 +1397,12 @@ static NTSTATUS key_symmetric_init( struct key *key, struct algorithm *alg, cons
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -182,7 +182,7 @@ index 2dd839f..b1736fa 100644
  static NTSTATUS set_key_property( struct key *key, const WCHAR *prop, UCHAR *value, ULONG size, ULONG flags )
  {
      ERR( "support for keys not available at build time\n" );
-@@ -1372,6 +1434,12 @@ static inline BOOL key_is_symmetric( struct key *key )
+@@ -1403,6 +1465,12 @@ static inline BOOL key_is_symmetric( struct key *key )
      return FALSE;
  }
  
@@ -195,7 +195,7 @@ index 2dd839f..b1736fa 100644
  static NTSTATUS key_symmetric_get_mode( struct key *key, enum mode_id *mode )
  {
      *mode = key->u.s.mode;
-@@ -1503,6 +1571,88 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
+@@ -1534,6 +1602,88 @@ NTSTATUS WINAPI BCryptDuplicateKey( BCRYPT_KEY_HANDLE handle, BCRYPT_KEY_HANDLE
      return STATUS_SUCCESS;
  }
  
@@ -285,19 +285,10 @@ index 2dd839f..b1736fa 100644
  {
      struct key *key = handle;
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index a262251..d5f08be 100644
+index 57d04882b54..fa244d19249 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -1419,7 +1419,7 @@ static void test_ECDSA(void)
-     status = pBCryptOpenAlgorithmProvider(&alg, BCRYPT_ECDSA_P256_ALGORITHM, NULL, 0);
-     if (status)
-     {
--        todo_wine win_skip("Failed to open ECDSA provider: %08x, skipping test\n", status);
-+        win_skip("Failed to open ECDSA provider: %08x, skipping test\n", status);
-         return;
-     }
- 
-@@ -1435,10 +1435,10 @@ static void test_ECDSA(void)
+@@ -1486,10 +1486,10 @@ static void test_ECDSA(void)
      ok(!status, "BCryptImportKeyPair failed: %08x\n", status);
  
      status = pBCryptVerifySignature(key, NULL, certHash, sizeof(certHash) - 1, certSignature, sizeof(certSignature), 0);
@@ -311,7 +302,7 @@ index a262251..d5f08be 100644
      pBCryptDestroyKey(key);
      pBCryptCloseAlgorithmProvider(alg, 0);
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index 717d77c..f28b0d3 100644
+index 717d77c7319..f28b0d395d1 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -211,8 +211,10 @@ NTSTATUS WINAPI BCryptGetFipsAlgorithmMode(BOOLEAN *);
@@ -326,5 +317,5 @@ index 717d77c..f28b0d3 100644
  
  #endif  /* __WINE_BCRYPT_H */
 -- 
-1.9.1
+2.16.2
 

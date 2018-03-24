@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "afef57f872433bcd3032c2ccbc0453bef5b62178"
+	echo "5946973021285dd6ecb8df224956fea4817f8fed"
 }
 
 # Show version information
@@ -2982,10 +2982,7 @@ fi
 # |
 if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
-	patch_apply bcrypt-Improvements/0026-bcrypt-Implement-support-for-ECB-chain-mode.patch
-	patch_apply bcrypt-Improvements/0029-bcrypt-Add-support-for-192-and-256-bit-aes-keys.patch
 	patch_apply bcrypt-Improvements/0030-bcrypt-Preparation-for-asymmetric-keys.patch
-	patch_apply bcrypt-Improvements/0032-bcrypt-tests-Add-basic-test-for-ecdsa.patch
 	patch_apply bcrypt-Improvements/0033-bcrypt-Implement-importing-of-ecdsa-keys.patch
 	patch_apply bcrypt-Improvements/0034-bcrypt-Implement-BCryptVerifySignature-for-ecdsa-sig.patch
 	patch_apply bcrypt-Improvements/0035-bcrypt-Initial-implementation-for-RSA-key-import-and.patch
@@ -2993,10 +2990,7 @@ if test "$enable_bcrypt_Improvements" -eq 1; then
 	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Implement support for ECB chain mode.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Add support for 192 and 256 bit aes keys.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt/tests: Add basic test for ecdsa.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement importing of ecdsa keys.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptVerifySignature for ecdsa signatures.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "bcrypt: Initial implementation for RSA key import and signature verification.", 1 },';

@@ -1,4 +1,4 @@
-From 53cb3911bc744414e3f0dce3e33ccad2bbd507e7 Mon Sep 17 00:00:00 2001
+From 26c14820b2293bf466191b655a515ddfb0814f55 Mon Sep 17 00:00:00 2001
 From: Kimmo Myllyvirta <kimmo.myllyvirta@gmail.com>
 Date: Tue, 10 Oct 2017 16:40:41 +0300
 Subject: [PATCH] bcrypt: Initial implementation for RSA key import and
@@ -10,7 +10,7 @@ Subject: [PATCH] bcrypt: Initial implementation for RSA key import and
  2 files changed, 135 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 057a27d..f858bec 100644
+index 593a806c612..e30e52b8b68 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -77,6 +77,9 @@ static int (*pgnutls_pubkey_verify_hash2)(gnutls_pubkey_t key, gnutls_sign_algor
@@ -71,7 +71,7 @@ index 057a27d..f858bec 100644
      else if (!strcmpW( id, BCRYPT_SHA1_ALGORITHM )) alg_id = ALG_ID_SHA1;
      else if (!strcmpW( id, BCRYPT_SHA256_ALGORITHM )) alg_id = ALG_ID_SHA256;
      else if (!strcmpW( id, BCRYPT_SHA384_ALGORITHM )) alg_id = ALG_ID_SHA384;
-@@ -1132,6 +1148,7 @@ static NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, con
+@@ -1080,6 +1096,7 @@ static NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, con
      {
      case ALG_ID_ECDSA_P256:
      case ALG_ID_ECDSA_P384:
@@ -79,7 +79,7 @@ index 057a27d..f858bec 100644
          break;
  
      default:
-@@ -1446,6 +1463,34 @@ static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnut
+@@ -1419,6 +1436,34 @@ static NTSTATUS import_gnutls_pubkey_ecc( struct key *key, gnutls_pubkey_t *gnut
      return STATUS_SUCCESS;
  }
  
@@ -114,7 +114,7 @@ index 057a27d..f858bec 100644
  static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_key)
  {
      switch (key->alg_id)
-@@ -1453,6 +1498,8 @@ static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_
+@@ -1426,6 +1471,8 @@ static NTSTATUS import_gnutls_pubkey( struct key *key,  gnutls_pubkey_t *gnutls_
          case ALG_ID_ECDSA_P256:
          case ALG_ID_ECDSA_P384:
              return import_gnutls_pubkey_ecc( key, gnutls_key );
@@ -123,7 +123,7 @@ index 057a27d..f858bec 100644
  
          default:
              FIXME("Algorithm %d not yet supported\n", key->alg_id);
-@@ -1482,6 +1529,14 @@ static NTSTATUS prepare_gnutls_signature_ecc( struct key *key, UCHAR *signature,
+@@ -1455,6 +1502,14 @@ static NTSTATUS prepare_gnutls_signature_ecc( struct key *key, UCHAR *signature,
      return STATUS_SUCCESS;
  }
  
@@ -138,7 +138,7 @@ index 057a27d..f858bec 100644
  static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULONG signature_len,
                                            gnutls_datum_t *gnutls_signature )
  {
-@@ -1490,6 +1545,8 @@ static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULO
+@@ -1463,6 +1518,8 @@ static NTSTATUS prepare_gnutls_signature( struct key *key, UCHAR *signature, ULO
          case ALG_ID_ECDSA_P256:
          case ALG_ID_ECDSA_P384:
              return prepare_gnutls_signature_ecc( key, signature, signature_len, gnutls_signature );
@@ -147,7 +147,7 @@ index 057a27d..f858bec 100644
  
          default:
              FIXME( "Algorithm %d not yet supported\n", key->alg_id );
-@@ -1508,18 +1565,38 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
+@@ -1481,18 +1538,38 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
      NTSTATUS status;
      int ret;
  
@@ -156,12 +156,12 @@ index 057a27d..f858bec 100644
 +    if (key->alg_id == ALG_ID_RSA)
 +    {
 +        BCRYPT_PKCS1_PADDING_INFO *pinfo = (BCRYPT_PKCS1_PADDING_INFO *)padding;
++
++        if (!(flags & BCRYPT_PAD_PKCS1) || !pinfo) return STATUS_INVALID_PARAMETER;
++        if (!pinfo->pszAlgId) return STATUS_INVALID_SIGNATURE;
  
 -    /* only the hash size must match, not the actual hash function */
 -    switch (hash_len)
-+        if (!(flags & BCRYPT_PAD_PKCS1) || !pinfo) return STATUS_INVALID_PARAMETER;
-+        if (!pinfo->pszAlgId) return STATUS_INVALID_SIGNATURE;
-+
 +        if (!strcmpW( pinfo->pszAlgId, BCRYPT_SHA1_ALGORITHM )) hash_algo = GNUTLS_DIG_SHA1;
 +        else if (!strcmpW( pinfo->pszAlgId, BCRYPT_SHA256_ALGORITHM )) hash_algo = GNUTLS_DIG_SHA256;
 +        else if (!strcmpW( pinfo->pszAlgId, BCRYPT_SHA384_ALGORITHM )) hash_algo = GNUTLS_DIG_SHA384;
@@ -195,7 +195,7 @@ index 057a27d..f858bec 100644
      }
  
      switch (key->alg_id)
-@@ -1528,6 +1605,9 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
+@@ -1501,6 +1578,9 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
          case ALG_ID_ECDSA_P384:
              pk_algo = GNUTLS_PK_ECC;
              break;
@@ -205,7 +205,7 @@ index 057a27d..f858bec 100644
  
          default:
              FIXME( "Algorithm %d not yet supported\n", key->alg_id );
-@@ -1553,7 +1633,8 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
+@@ -1526,7 +1606,8 @@ static NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *ha
      gnutls_hash.size = hash_len;
      ret = pgnutls_pubkey_verify_hash2( gnutls_key, sign_algo, 0, &gnutls_hash, &gnutls_signature );
  
@@ -215,7 +215,7 @@ index 057a27d..f858bec 100644
      pgnutls_pubkey_deinit( gnutls_key );
      return (ret < 0) ? STATUS_INVALID_SIGNATURE : STATUS_SUCCESS;
  }
-@@ -1990,6 +2071,33 @@ NTSTATUS WINAPI BCryptImportKeyPair( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HAN
+@@ -1991,6 +2072,33 @@ NTSTATUS WINAPI BCryptImportKeyPair( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HAN
          *ret_key = key;
          return STATUS_SUCCESS;
      }
@@ -250,7 +250,7 @@ index 057a27d..f858bec 100644
      FIXME( "unsupported key type %s\n", debugstr_w(type) );
      return STATUS_NOT_SUPPORTED;
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index f28b0d3..df54f62 100644
+index f28b0d395d1..df54f621fa7 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -63,6 +63,8 @@ typedef LONG NTSTATUS;
@@ -292,5 +292,5 @@ index f28b0d3..df54f62 100644
  {
      LPCWSTR pszAlgId;
 -- 
-1.9.1
+2.16.2
 

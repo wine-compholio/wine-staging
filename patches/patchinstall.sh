@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5946973021285dd6ecb8df224956fea4817f8fed"
+	echo "e1c7a1f7ce03c1e69e008378e90523e85e1c6e8f"
 }
 
 # Show version information
@@ -98,7 +98,6 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
-	enable_bcrypt_Improvements="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Listview_DrawItem="$1"
@@ -501,9 +500,6 @@ patch_enable ()
 			;;
 		avifile.dll16-AVIStreamGetFrame)
 			enable_avifile_dll16_AVIStreamGetFrame="$2"
-			;;
-		bcrypt-Improvements)
-			enable_bcrypt_Improvements="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2472,13 +2468,6 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	enable_wined3d_1DTextures=1
 fi
 
-if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
-	if test "$enable_bcrypt_Improvements" -gt 1; then
-		abort "Patchset bcrypt-Improvements disabled, but crypt32-ECDSA_Cert_Chains depends on that."
-	fi
-	enable_bcrypt_Improvements=1
-fi
-
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
@@ -2970,35 +2959,6 @@ if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset bcrypt-Improvements
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42553] Implement BCrypt ECB chaining mode
-# |   *	[#39582] Implement BCrypt RSA provider
-# |   *	[#43605] Implement elliptic curve (ECDSA) cryptography
-# |
-# | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h
-# |
-if test "$enable_bcrypt_Improvements" -eq 1; then
-	patch_apply bcrypt-Improvements/0025-bcrypt-Avoid-crash-in-tests-when-compiling-without-g.patch
-	patch_apply bcrypt-Improvements/0030-bcrypt-Preparation-for-asymmetric-keys.patch
-	patch_apply bcrypt-Improvements/0033-bcrypt-Implement-importing-of-ecdsa-keys.patch
-	patch_apply bcrypt-Improvements/0034-bcrypt-Implement-BCryptVerifySignature-for-ecdsa-sig.patch
-	patch_apply bcrypt-Improvements/0035-bcrypt-Initial-implementation-for-RSA-key-import-and.patch
-	patch_apply bcrypt-Improvements/0036-bcrypt-tests-Add-simple-test-for-RSA.patch
-	patch_apply bcrypt-Improvements/0037-bcrypt-Store-full-ECCKEY_BLOB-struct-in-BCryptImport.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Avoid crash in tests when compiling without gnutls support.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Preparation for asymmetric keys.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement importing of ecdsa keys.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "bcrypt: Implement BCryptVerifySignature for ecdsa signatures.", 1 },';
-		printf '%s\n' '+    { "Kimmo Myllyvirta", "bcrypt: Initial implementation for RSA key import and signature verification.", 1 },';
-		printf '%s\n' '+    { "Kimmo Myllyvirta", "bcrypt/tests: Add simple test for RSA.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "bcrypt: Store full ECCKEY_BLOB struct in BCryptImportKeyPair.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset browseui-Progress_Dialog
 # |
 # | Modified files:
@@ -3102,9 +3062,6 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 fi
 
 # Patchset crypt32-ECDSA_Cert_Chains
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	bcrypt-Improvements
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#35902] Implement support for validating ECDSA certificate chains

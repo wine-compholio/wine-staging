@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e1c7a1f7ce03c1e69e008378e90523e85e1c6e8f"
+	echo "d7430abd406d1f298acb9b2e5a397e11e448f304"
 }
 
 # Show version information
@@ -110,7 +110,7 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
-	enable_d3d11_ID3D11Texture1D="$1"
+	enable_d3d11_ID3D11Texture1D_Rebased="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -264,7 +264,6 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_set_full_cpu_context="$1"
-	enable_ntdll_x86_64_ExceptionInformation="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -391,7 +390,6 @@ patch_enable_all ()
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
-	enable_wined3d_1DTextures="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
@@ -537,8 +535,8 @@ patch_enable ()
 		d3d11-Depth_Bias)
 			enable_d3d11_Depth_Bias="$2"
 			;;
-		d3d11-ID3D11Texture1D)
-			enable_d3d11_ID3D11Texture1D="$2"
+		d3d11-ID3D11Texture1D_Rebased)
+			enable_d3d11_ID3D11Texture1D_Rebased="$2"
 			;;
 		d3d11-Silence_FIXMEs)
 			enable_d3d11_Silence_FIXMEs="$2"
@@ -999,9 +997,6 @@ patch_enable ()
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
 			;;
-		ntdll-x86_64_ExceptionInformation)
-			enable_ntdll_x86_64_ExceptionInformation="$2"
-			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
 			;;
@@ -1379,9 +1374,6 @@ patch_enable ()
 			;;
 		winecfg-Unmounted_Devices)
 			enable_winecfg_Unmounted_Devices="$2"
-			;;
-		wined3d-1DTextures)
-			enable_wined3d_1DTextures="$2"
 			;;
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
@@ -1972,6 +1964,9 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
 		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Helper depends on that."
 	fi
+	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
+		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but wined3d-CSMT_Helper depends on that."
+	fi
 	if test "$enable_d3d9_Tests" -gt 1; then
 		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Helper depends on that."
 	fi
@@ -1980,9 +1975,6 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 	fi
 	if test "$enable_ntdll_DllRedirects" -gt 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Helper depends on that."
-	fi
-	if test "$enable_wined3d_1DTextures" -gt 1; then
-		abort "Patchset wined3d-1DTextures disabled, but wined3d-CSMT_Helper depends on that."
 	fi
 	if test "$enable_wined3d_Accounting" -gt 1; then
 		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Helper depends on that."
@@ -2003,10 +1995,10 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 		abort "Patchset wined3d-UAV_Counters disabled, but wined3d-CSMT_Helper depends on that."
 	fi
 	enable_d3d11_Deferred_Context=1
+	enable_d3d11_ID3D11Texture1D_Rebased=1
 	enable_d3d9_Tests=1
 	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
-	enable_wined3d_1DTextures=1
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_Dual_Source_Blending=1
@@ -2016,9 +2008,13 @@ if test "$enable_wined3d_CSMT_Helper" -eq 1; then
 fi
 
 if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
+	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
+		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but wined3d-Dual_Source_Blending depends on that."
+	fi
 	if test "$enable_wined3d_Viewports" -gt 1; then
 		abort "Patchset wined3d-Viewports disabled, but wined3d-Dual_Source_Blending depends on that."
 	fi
+	enable_d3d11_ID3D11Texture1D_Rebased=1
 	enable_wined3d_Viewports=1
 fi
 
@@ -2351,22 +2347,14 @@ if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntdll-Builtin_Prot depends on that."
 	fi
-	if test "$enable_ntdll_x86_64_ExceptionInformation" -gt 1; then
-		abort "Patchset ntdll-x86_64_ExceptionInformation disabled, but ntdll-Builtin_Prot depends on that."
-	fi
 	enable_ntdll_User_Shared_Data=1
-	enable_ntdll_x86_64_ExceptionInformation=1
 fi
 
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
 		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
 	fi
-	if test "$enable_ntdll_x86_64_ExceptionInformation" -gt 1; then
-		abort "Patchset ntdll-x86_64_ExceptionInformation disabled, but ntdll-User_Shared_Data depends on that."
-	fi
 	enable_ntdll_Hide_Wine_Exports=1
-	enable_ntdll_x86_64_ExceptionInformation=1
 fi
 
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
@@ -2454,18 +2442,11 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
-if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
-	if test "$enable_wined3d_1DTextures" -gt 1; then
-		abort "Patchset wined3d-1DTextures disabled, but d3d11-ID3D11Texture1D depends on that."
-	fi
-	enable_wined3d_1DTextures=1
-fi
-
 if test "$enable_d3d11_Deferred_Context" -eq 1; then
-	if test "$enable_wined3d_1DTextures" -gt 1; then
-		abort "Patchset wined3d-1DTextures disabled, but d3d11-Deferred_Context depends on that."
+	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
+		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but d3d11-Deferred_Context depends on that."
 	fi
-	enable_wined3d_1DTextures=1
+	enable_d3d11_ID3D11Texture1D_Rebased=1
 fi
 
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
@@ -3104,56 +3085,28 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-1DTextures
+# Patchset d3d11-ID3D11Texture1D_Rebased
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40976] Implement support for ID3D11Texture1D
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/utils.c, dlls/wined3d/view.c,
-# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	dlls/d3d11/d3d11_private.h, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d11/texture.c, dlls/d3d11/utils.c,
+# | 	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/wined3d/nvidia_texture_shader.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
-if test "$enable_wined3d_1DTextures" -eq 1; then
-	patch_apply wined3d-1DTextures/0001-wined3d-Create-dummy-1d-textures.patch
-	patch_apply wined3d-1DTextures/0002-wined3d-Add-1d-texture-resource-type.patch
-	patch_apply wined3d-1DTextures/0003-wined3d-Add-is_power_of_two-helper-function.patch
-	patch_apply wined3d-1DTextures/0004-wined3d-Create-dummy-1d-textures-and-surfaces.patch
-	patch_apply wined3d-1DTextures/0005-wined3d-Implement-preparation-for-1d-textures.patch
-	patch_apply wined3d-1DTextures/0006-wined3d-Implement-uploading-for-1d-textures.patch
-	patch_apply wined3d-1DTextures/0007-wined3d-Implement-loading-from-system-memory-and-buf.patch
-	patch_apply wined3d-1DTextures/0008-wined3d-Implement-downloading-from-s-rgb-1d-textures.patch
-	patch_apply wined3d-1DTextures/0009-wined3d-Implement-converting-between-s-rgb-1d-textur.patch
-	patch_apply wined3d-1DTextures/0010-wined3d-Check-for-1d-textures-in-wined3d_texture_upd.patch
-	patch_apply wined3d-1DTextures/0011-wined3d-Check-if-1d-teture-is-still-in-use-before-re.patch
-	patch_apply wined3d-1DTextures/0012-wined3d-Generate-glsl-samplers-for-1d-texture-arrays.patch
-	patch_apply wined3d-1DTextures/0013-wined3d-Add-support-for-1d-textures-in-context_attac.patch
-	patch_apply wined3d-1DTextures/0014-wined3d-Handle-1d-textures-in-texture_activate_dimen.patch
-	patch_apply wined3d-1DTextures/0015-wined3d-Allow-creation-of-1d-shader-views.patch
-	patch_apply wined3d-1DTextures/0016-d3d11-Improve-ID3D11Device_CheckFormatSupport.patch
-	patch_apply wined3d-1DTextures/0017-d3d11-Allow-DXGI_FORMAT_UNKNOWN-in-CheckFormatSuppor.patch
+if test "$enable_d3d11_ID3D11Texture1D_Rebased" -eq 1; then
+	patch_apply d3d11-ID3D11Texture1D_Rebased/0001-d3d11-Implement-ID3D11Texture1D.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add 1d texture resource type.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add is_power_of_two helper function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Create dummy 1d textures and surfaces.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement preparation for 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement uploading for 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement loading from system memory and buffers to (s)rgb 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement downloading from (s)rgb 1d textures to system memory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement converting between (s)rgb 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Check for 1d textures in wined3d_texture_update_desc.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Check if 1d teture is still in use before releasing.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Generate glsl samplers for 1d texture arrays.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for 1d textures in context_attach_gl_texture_fbo.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Handle 1d textures in texture_activate_dimensions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow creation of 1d shader views.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve ID3D11Device_CheckFormatSupport.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Allow DXGI_FORMAT_UNKNOWN in CheckFormatSupport and improve tests.", 1 },';
+		printf '%s\n' '+    { "Henri Verbeet", "d3d11: Implement ID3D11Texture1D.", 1 },';
 	) >> "$patchlist"
 fi
 
 # Patchset d3d11-Deferred_Context
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures
+# |   *	d3d11-ID3D11Texture1D_Rebased
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
@@ -3268,65 +3221,6 @@ if test "$enable_d3d11_Depth_Bias" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for DepthClipEnable in RSSetState.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-ID3D11Texture1D
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40976] Implement support for ID3D11Texture1D
-# |
-# | Modified files:
-# |   *	dlls/d3d11/d3d11_private.h, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d11/texture.c, dlls/d3d11/utils.c,
-# | 	dlls/d3d11/view.c
-# |
-if test "$enable_d3d11_ID3D11Texture1D" -eq 1; then
-	patch_apply d3d11-ID3D11Texture1D/0001-d3d11-Add-stub-ID3D11Texture2D-and-ID3D10Texture2D-i.patch
-	patch_apply d3d11-ID3D11Texture1D/0002-d3d11-Create-a-texture-in-d3d_texture1d_init.patch
-	patch_apply d3d11-ID3D11Texture1D/0003-d3d11-Create-a-private-store-in-d3d_texture1d_init.patch
-	patch_apply d3d11-ID3D11Texture1D/0004-d3d11-Generate-dxgi-surface-in-d3d_texture1d_init.patch
-	patch_apply d3d11-ID3D11Texture1D/0005-d3d11-Improve-d3d11_texture1d_GetDesc-by-obtaining-t.patch
-	patch_apply d3d11-ID3D11Texture1D/0006-d3d11-Implement-d3d10_texture1d_-Un-map.patch
-	patch_apply d3d11-ID3D11Texture1D/0007-d3d11-Implement-d3d10_texture1d_GetDesc.patch
-	patch_apply d3d11-ID3D11Texture1D/0008-d3d11-Implement-d3d11_texture1d_-G-S-etPrivateData.patch
-	patch_apply d3d11-ID3D11Texture1D/0009-d3d11-Add-d3d11_texture1d_SetPrivateDataInterface.patch
-	patch_apply d3d11-ID3D11Texture1D/0010-d3d11-Add-a-hack-to-prevent-creation-of-1d-cube-text.patch
-	patch_apply d3d11-ID3D11Texture1D/0011-d3d11-Add-support-for-1d-textures-in-normalize_srv_d.patch
-	patch_apply d3d11-ID3D11Texture1D/0012-d3d11-Add-support-for-1d-textures-in-normalize_rtv_d.patch
-	patch_apply d3d11-ID3D11Texture1D/0013-d3d11-tests-Add-support-for-1d-textures-in-check_srv.patch
-	patch_apply d3d11-ID3D11Texture1D/0014-d3d11-tests-Add-support-for-1d-textures-in-check_rtv.patch
-	patch_apply d3d11-ID3D11Texture1D/0015-d3d11-tests-Add-test-for-creating-1d-textures.patch
-	patch_apply d3d11-ID3D11Texture1D/0016-d3d11-tests-Test-1d-texture-interfaces.patch
-	patch_apply d3d11-ID3D11Texture1D/0017-d3d11-tests-Test-the-creation-of-1d-render-buffers-i.patch
-	patch_apply d3d11-ID3D11Texture1D/0018-d3d11-tests-Test-the-creation-of-1d-shader-resource-.patch
-	patch_apply d3d11-ID3D11Texture1D/0019-d3d11-tests-Prepare-test_texture-for-non-2d-textures.patch
-	patch_apply d3d11-ID3D11Texture1D/0020-d3d11-tests-Prepare-test_texture-for-1d-textures.patch
-	patch_apply d3d11-ID3D11Texture1D/0021-d3d11-tests-Add-some-basic-1d-texture-tests-in-test_.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add stub ID3D11Texture2D and ID3D10Texture2D interfaces.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Create a texture in d3d_texture1d_init.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Create a private store in d3d_texture1d_init.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Generate dxgi surface in d3d_texture1d_init.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Improve d3d11_texture1d_GetDesc by obtaining the current width and format from wined3d.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_(Un)map.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d10_texture1d_GetDesc.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d11_texture1d_{G,S}etPrivateData.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add d3d11_texture1d_SetPrivateDataInterface.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add a hack to prevent creation of 1d cube textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_srv_desc.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for 1d textures in normalize_rtv_desc.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_srv_desc_.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add support for 1d textures in check_rtv_desc_.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add test for creating 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Test 1d texture interfaces.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d render buffers in test_create_rendertarget_view.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Test the creation of 1d shader resource views in test_create_shader_resource_view.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for non 2d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Prepare test_texture for 1d textures.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic 1d texture tests in test_texture.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5079,22 +4973,10 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-x86_64_ExceptionInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_x86_64_ExceptionInformation" -eq 1; then
-	patch_apply ntdll-x86_64_ExceptionInformation/0001-ntdll-Set-proper-ExceptionInformation-0-for-x86_64-e.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Set proper ExceptionInformation[0] for x86_64 exceptions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-User_Shared_Data
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29168] Update user shared data at realtime
@@ -5119,7 +5001,7 @@ fi
 # Patchset ntdll-Builtin_Prot
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-User_Shared_Data
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44650] Fix holes in ELF mappings
@@ -5726,7 +5608,7 @@ fi
 # Patchset ntdll-WRITECOPY
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-User_Shared_Data
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
@@ -5753,7 +5635,7 @@ fi
 # Patchset ntdll-Signal_Handler
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-User_Shared_Data, ntdll-WRITECOPY
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, ntdll-WRITECOPY
 # |
 # | Modified files:
 # |   *	dlls/ntdll/signal_i386.c
@@ -8134,7 +8016,7 @@ fi
 # Patchset winebuild-Fake_Dlls
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-x86_64_ExceptionInformation, ntdll-User_Shared_Data
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42741] Various improvements for fake dlls
@@ -8265,7 +8147,7 @@ fi
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
+# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -8328,7 +8210,7 @@ fi
 # Patchset wined3d-CSMT_Helper
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
+# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
 # | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
@@ -8465,7 +8347,7 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-1DTextures, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
+# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
 # | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
 # | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
 # | 	wined3d-CSMT_Helper

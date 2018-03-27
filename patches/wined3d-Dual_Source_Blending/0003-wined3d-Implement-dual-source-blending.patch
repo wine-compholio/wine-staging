@@ -1,4 +1,4 @@
-From 248a96ea17ba5998b1b2f759fec5736f43cf86ba Mon Sep 17 00:00:00 2001
+From 20a2042fef1594938d5591889c18832903e42911 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 18 Aug 2017 23:51:59 +0200
 Subject: [PATCH] wined3d: Implement dual source blending.
@@ -14,10 +14,10 @@ Subject: [PATCH] wined3d: Implement dual source blending.
  7 files changed, 92 insertions(+), 16 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 3732fbf..15c8abd 100644
+index ccc8846..207a5a2 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -25560,7 +25560,7 @@ static void test_dual_blending(void)
+@@ -26315,7 +26315,7 @@ static void test_dual_blending(void)
      ID3D11DeviceContext_ClearRenderTargetView(context, rtv[1], white);
      ID3D11DeviceContext_Draw(context, 3, 0);
  
@@ -27,10 +27,10 @@ index 3732fbf..15c8abd 100644
  
      ID3D11BlendState_Release(blend_state);
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 73327bd..384266b 100644
+index 4b2f263..9afbd43 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -3131,10 +3131,19 @@ static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const
+@@ -3108,10 +3108,19 @@ static DWORD find_draw_buffers_mask(const struct wined3d_context *context, const
      else if (!context->render_offscreen)
          return context_generate_rt_mask_from_resource(rts[0]->resource);
  
@@ -52,10 +52,10 @@ index 73327bd..384266b 100644
      {
          i = wined3d_bit_scan(&mask);
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index 7c3a07c..cc45ed7 100644
+index 3492d8d..8a55d27 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
-@@ -3545,6 +3545,12 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info)
+@@ -3532,6 +3532,12 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info)
          gl_info->limits.buffers = min(MAX_RENDER_TARGET_VIEWS, gl_max);
          TRACE("Max draw buffers: %u.\n", gl_max);
      }
@@ -68,7 +68,7 @@ index 7c3a07c..cc45ed7 100644
      if (gl_info->supported[ARB_MULTITEXTURE])
      {
          if (gl_info->supported[WINED3D_GL_LEGACY_CONTEXT])
-@@ -4340,6 +4346,10 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
+@@ -4321,6 +4327,10 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
      for (i = 0; i < gl_info->limits.buffers; ++i)
          adapter->d3d_info.valid_rt_mask |= (1u << i);
  
@@ -80,7 +80,7 @@ index 7c3a07c..cc45ed7 100644
      {
          /* We do not want to deal with re-creating immutable texture storage for color keying emulation. */
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 7edec82..7f7ad3f 100644
+index 3c2b870..2cbab85 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -3008,6 +3008,7 @@ static void shader_glsl_get_register_name(const struct wined3d_shader_register *
@@ -119,7 +119,7 @@ index 7edec82..7f7ad3f 100644
          }
      }
  
-@@ -10250,13 +10263,25 @@ static void set_glsl_shader_program(const struct wined3d_context *context, const
+@@ -10247,13 +10260,25 @@ static void set_glsl_shader_program(const struct wined3d_context *context, const
  
          if (!needs_legacy_glsl_syntax(gl_info))
          {
@@ -152,10 +152,10 @@ index 7edec82..7f7ad3f 100644
          }
      }
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 66e1bbf..0513c9e 100644
+index c20c1da..9fd7338 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -4011,6 +4011,8 @@ void find_ps_compile_args(const struct wined3d_state *state, const struct wined3
+@@ -4008,6 +4008,8 @@ void find_ps_compile_args(const struct wined3d_state *state, const struct wined3
  
      args->render_offscreen = shader->reg_maps.vpos && gl_info->supported[ARB_FRAGMENT_COORD_CONVENTIONS]
              ? context->render_offscreen : 0;
@@ -165,7 +165,7 @@ index 66e1bbf..0513c9e 100644
  
  static HRESULT pixel_shader_init(struct wined3d_shader *shader, struct wined3d_device *device,
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index 486d22a..4ecd336 100644
+index c234758..a293be2 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
 @@ -534,12 +534,14 @@ static void state_blend(struct wined3d_context *context, const struct wined3d_st
@@ -208,7 +208,7 @@ index 486d22a..4ecd336 100644
              state->render_states[WINED3D_RS_SRCBLEND],
              state->render_states[WINED3D_RS_DESTBLEND], rt_format);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index c008124..098be97 100644
+index 288e4a8..0a6bc5a 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -194,6 +194,7 @@ struct wined3d_d3d_info
@@ -239,7 +239,7 @@ index c008124..098be97 100644
  
      DWORD constant_update_mask;
      DWORD                   numbered_array_mask;
-@@ -2521,6 +2524,7 @@ struct wined3d_fbo_ops
+@@ -2518,6 +2521,7 @@ struct wined3d_fbo_ops
  struct wined3d_gl_limits
  {
      UINT buffers;
@@ -247,7 +247,7 @@ index c008124..098be97 100644
      UINT lights;
      UINT textures;
      UINT texture_coords;
-@@ -2867,6 +2871,22 @@ struct wined3d_state
+@@ -2857,6 +2861,22 @@ struct wined3d_state
      struct wined3d_rasterizer_state *rasterizer_state;
  };
  
@@ -269,7 +269,7 @@ index c008124..098be97 100644
 +
  struct wined3d_dummy_textures
  {
-     GLuint tex_2d;
+     GLuint tex_1d;
 -- 
 2.7.4
 

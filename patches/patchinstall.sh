@@ -5721,6 +5721,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Compiler_Warnings
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44837] Add stub for ntoskrnl.exe.Ps{Acquire,Release}ProcessExitSynchronization
+# |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
 # |
@@ -5735,6 +5738,10 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0012-ntoskrnl-Implement-ExInterlockedPopEntrySList.patch
 	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
 	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
+	patch_apply ntoskrnl-Stubs/0015-ntoskrnl-Add-PsAcquireProcessExitSynchronization-PsR.patch
+	patch_apply ntoskrnl-Stubs/0016-ntoskrnl-Add-ExfUnblockPushLock-stub.patch
+	patch_apply ntoskrnl-Stubs/0017-ntoskrnl-Add-PsGetProcessId-stub.patch
+	patch_apply ntoskrnl-Stubs/0018-ntoskrnl-Add-ObGetObjectType-stub.patch
 	(
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
@@ -5746,6 +5753,10 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl: Implement ExInterlockedPopEntrySList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl: Add PsAcquireProcessExitSynchronization/PsReleaseProcessExitSynchronization stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl: Add ExfUnblockPushLock stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl: Add PsGetProcessId stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl: Add ObGetObjectType stub.", 1 },';
 	) >> "$patchlist"
 fi
 

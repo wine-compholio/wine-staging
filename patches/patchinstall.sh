@@ -3031,7 +3031,7 @@ fi
 if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010/2011.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010.", 1 },';
 	) >> "$patchlist"
 fi
 

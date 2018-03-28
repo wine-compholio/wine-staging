@@ -3897,11 +3897,13 @@ if test "$enable_fltmgr_sys_filters" -eq 1; then
 	patch_apply fltmgr.sys-filters/0002-fltmgr.sys-Add-FltRegisterFilter-stub.patch
 	patch_apply fltmgr.sys-filters/0003-fltmgr.sys-Add-FltStartFiltering-stub.patch
 	patch_apply fltmgr.sys-filters/0004-fltmgr.sys-Add-FltUnregisterFilter-stub.patch
+	patch_apply fltmgr.sys-filters/0005-fltmgr.sys-Implement-FltGetRoutineAddress.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include/ddk: Add fltkernel.h.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltRegisterFilter stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltStartFiltering stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltUnregisterFilter stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Implement FltGetRoutineAddress.", 1 },';
 	) >> "$patchlist"
 fi
 

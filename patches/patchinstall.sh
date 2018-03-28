@@ -194,7 +194,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
-	enable_makedep_PARENTSPEC="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -391,21 +390,15 @@ patch_enable_all ()
 	enable_winecfg_Staging="$1"
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_Accounting="$1"
-	enable_wined3d_CSMT_Helper="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_wined3d_Core_Context="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
-	enable_wined3d_Limit_Vram="$1"
 	enable_wined3d_QUERY_Stubs="$1"
-	enable_wined3d_Revert_Surface_Blt="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_Viewports="$1"
-	enable_wined3d_WINED3DFMT_R32G32_UINT="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
-	enable_wined3d_sample_c_lz="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -786,9 +779,6 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
-			;;
-		makedep-PARENTSPEC)
-			enable_makedep_PARENTSPEC="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -1378,14 +1368,8 @@ patch_enable ()
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
 			;;
-		wined3d-CSMT_Helper)
-			enable_wined3d_CSMT_Helper="$2"
-			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
-			;;
-		wined3d-Core_Context)
-			enable_wined3d_Core_Context="$2"
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
@@ -1396,14 +1380,8 @@ patch_enable ()
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
 			;;
-		wined3d-Limit_Vram)
-			enable_wined3d_Limit_Vram="$2"
-			;;
 		wined3d-QUERY_Stubs)
 			enable_wined3d_QUERY_Stubs="$2"
-			;;
-		wined3d-Revert_Surface_Blt)
-			enable_wined3d_Revert_Surface_Blt="$2"
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
@@ -1414,14 +1392,8 @@ patch_enable ()
 		wined3d-Viewports)
 			enable_wined3d_Viewports="$2"
 			;;
-		wined3d-WINED3DFMT_R32G32_UINT)
-			enable_wined3d_WINED3DFMT_R32G32_UINT="$2"
-			;;
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
-			;;
-		wined3d-sample_c_lz)
-			enable_wined3d_sample_c_lz="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -1939,13 +1911,6 @@ if test "$enable_winedevice_Default_Drivers" -eq 1; then
 	enable_dxva2_Video_Decoder=1
 fi
 
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	if test "$enable_wined3d_CSMT_Helper" -gt 1; then
-		abort "Patchset wined3d-CSMT_Helper disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	enable_wined3d_CSMT_Helper=1
-fi
-
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
 		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-Indexed_Vertex_Blending depends on that."
@@ -1960,44 +1925,40 @@ if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 	enable_d3d11_Depth_Bias=1
 fi
 
-if test "$enable_wined3d_CSMT_Helper" -eq 1; then
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
-		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
-		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_d3d9_Tests" -gt 1; then
-		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Helper depends on that."
-	fi
-	if test "$enable_makedep_PARENTSPEC" -gt 1; then
-		abort "Patchset makedep-PARENTSPEC disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_wined3d_Accounting" -gt 1; then
-		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_wined3d_DXTn" -gt 1; then
-		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
-		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_wined3d_QUERY_Stubs" -gt 1; then
-		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
-		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	if test "$enable_wined3d_UAV_Counters" -gt 1; then
-		abort "Patchset wined3d-UAV_Counters disabled, but wined3d-CSMT_Helper depends on that."
+		abort "Patchset wined3d-UAV_Counters disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_d3d11_Deferred_Context=1
 	enable_d3d11_ID3D11Texture1D_Rebased=1
 	enable_d3d9_Tests=1
-	enable_makedep_PARENTSPEC=1
 	enable_ntdll_DllRedirects=1
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
@@ -2019,15 +1980,8 @@ if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
 fi
 
 if test "$enable_wined3d_Viewports" -eq 1; then
-	if test "$enable_wined3d_Core_Context" -gt 1; then
-		abort "Patchset wined3d-Core_Context disabled, but wined3d-Viewports depends on that."
-	fi
-	enable_wined3d_Core_Context=1
-fi
-
-if test "$enable_wined3d_Core_Context" -eq 1; then
 	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Core_Context depends on that."
+		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Viewports depends on that."
 	fi
 	enable_d3d11_Depth_Bias=1
 fi
@@ -4668,18 +4622,6 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "libs/wine: Do not restrict base address of main thread on 64 bit mac os.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset makedep-PARENTSPEC
-# |
-# | Modified files:
-# |   *	tools/makedep.c
-# |
-if test "$enable_makedep_PARENTSPEC" -eq 1; then
-	patch_apply makedep-PARENTSPEC/0001-makedep-Add-support-for-PARENTSPEC-Makefile-variable.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "makedep: Add support for PARENTSPEC Makefile variable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8113,25 +8055,10 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Core_Context
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
-# | Modified files:
-# |   *	dlls/dxgi/factory.c, dlls/wined3d/directx.c, include/wine/wined3d.h
-# |
-if test "$enable_wined3d_Core_Context" -eq 1; then
-	patch_apply wined3d-Core_Context/0001-wined3d-Use-OpenGL-core-context-for-D3D10-11-when-ne.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Use OpenGL core context for D3D10/11 when necessary.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Viewports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Core_Context
+# |   *	d3d11-Depth_Bias
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
@@ -8147,7 +8074,7 @@ fi
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Depth_Bias, wined3d-Core_Context, wined3d-Viewports
+# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Depth_Bias, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -8207,20 +8134,24 @@ if test "$enable_wined3d_UAV_Counters" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-CSMT_Helper
+# Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
-# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type,
+# | 	ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Viewports, wined3d-Dual_Source_Blending,
+# | 	wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/wined3d-csmt/Makefile.in, dlls/wined3d-csmt/version.rc
+# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h
 # |
-if test "$enable_wined3d_CSMT_Helper" -eq 1; then
-	patch_apply wined3d-CSMT_Helper/0001-wined3d-Add-second-dll-with-STAGING_CSMT-definition-.patch
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	patch_apply wined3d-CSMT_Main/0001-wined3d-Add-additional-synchronization-CS-ops.patch
+	patch_apply wined3d-CSMT_Main/0042-wined3d-Reset-context-before-destruction.patch
+	patch_apply wined3d-CSMT_Main/0045-wined3d-Improve-wined3d_cs_emit_update_sub_resource.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add second dll with STAGING_CSMT definition set.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8276,59 +8207,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Limit_Vram
-# |
-# | Modified files:
-# |   *	dlls/wined3d/directx.c
-# |
-if test "$enable_wined3d_Limit_Vram" -eq 1; then
-	patch_apply wined3d-Limit_Vram/0001-wined3d-Limit-the-vram-memory-to-LONG_MAX-only-on-32.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Limit the vram memory to LONG_MAX only on 32 bit.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Revert_Surface_Blt
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43627] Revert patch which causes rendering issue in AoE2
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_Revert_Surface_Blt" -eq 1; then
-	patch_apply wined3d-Revert_Surface_Blt/0001-Revert-wined3d-Drop-the-special-case-for-converted-s.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"wined3d: Drop the special case for \"converted\" surfaces in wined3d_surface_blt().\".", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-WINED3DFMT_R32G32_UINT
-# |
-# | Modified files:
-# |   *	dlls/wined3d/utils.c
-# |
-if test "$enable_wined3d_WINED3DFMT_R32G32_UINT" -eq 1; then
-	patch_apply wined3d-WINED3DFMT_R32G32_UINT/0002-wined3d-Add-hack-for-WINED3DFMT_R24_UNORM_X8_TYPELES.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add hack for WINED3DFMT_R24_UNORM_X8_TYPELESS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-sample_c_lz
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_sample_c_lz" -eq 1; then
-	patch_apply wined3d-sample_c_lz/0001-wined3d-Emulate-sample_c_lz-using-textureGradOffset-.patch
-	patch_apply wined3d-sample_c_lz/0002-wined3d-Emulate-textureLod-samplerCubeShadow-.-using.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate sample_c_lz using textureGradOffset for sampler2DArrayShadow.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Emulate textureLod(samplerCubeShadow, ...) using shadowCubeGrad.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-wined3d_guess_gl_vendor
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8341,33 +8219,6 @@ if test "$enable_wined3d_wined3d_guess_gl_vendor" -eq 1; then
 	patch_apply wined3d-wined3d_guess_gl_vendor/0001-wined3d-Also-check-for-Brian-Paul-to-detect-Mesa-gl_.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "wined3d: Also check for '\''Brian Paul'\'' to detect Mesa gl_vendor.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-CSMT_Main
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, makedep-PARENTSPEC, ntdll-DllOverrides_WOW64, ntdll-
-# | 	Loader_Machine_Type, ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Core_Context,
-# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters,
-# | 	wined3d-CSMT_Helper
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#11674] Support for CSMT (command stream) to increase graphic performance
-# |
-# | Modified files:
-# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/surface.c, dlls/wined3d/swapchain.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/9999-IfDefined.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Send blits through the command stream.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Wrap GL BOs in a structure.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Don'\''t call glFinish before swapping.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 	) >> "$patchlist"
 fi
 

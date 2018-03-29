@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d7430abd406d1f298acb9b2e5a397e11e448f304"
+	echo "be002fd92b9d72163bf130ab8ade8aa4d9cdbad0"
 }
 
 # Show version information
@@ -162,7 +162,6 @@ patch_enable_all ()
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_hnetcfg_INetFwAuthorizedApplication="$1"
-	enable_ieframe_IViewObject_Draw="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -683,9 +682,6 @@ patch_enable ()
 			;;
 		hnetcfg-INetFwAuthorizedApplication)
 			enable_hnetcfg_INetFwAuthorizedApplication="$2"
-			;;
-		ieframe-IViewObject-Draw)
-			enable_ieframe_IViewObject_Draw="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -4062,21 +4058,6 @@ if test "$enable_hnetcfg_INetFwAuthorizedApplication" -eq 1; then
 	patch_apply hnetcfg-INetFwAuthorizedApplication/0001-hnetcfg-Improve-INetFwAuthorizedApplication-get_Proc.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ieframe-IViewObject-Draw
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30611] Fake success in IViewObject::Draw stub
-# |
-# | Modified files:
-# |   *	dlls/ieframe/view.c
-# |
-if test "$enable_ieframe_IViewObject_Draw" -eq 1; then
-	patch_apply ieframe-IViewObject-Draw/0001-ieframe-Return-S_OK-in-IViewObject-Draw-stub.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ieframe: Return S_OK in IViewObject::Draw stub.", 1 },';
 	) >> "$patchlist"
 fi
 

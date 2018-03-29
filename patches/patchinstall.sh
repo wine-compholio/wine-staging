@@ -98,6 +98,7 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
+	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_combase_RoApi="$1"
 	enable_comctl32_Listview_DrawItem="$1"
@@ -490,6 +491,9 @@ patch_enable ()
 			;;
 		avifile.dll16-AVIStreamGetFrame)
 			enable_avifile_dll16_AVIStreamGetFrame="$2"
+			;;
+		bcrypt-BCryptDeriveKeyPBKDF2)
+			enable_bcrypt_BCryptDeriveKeyPBKDF2="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2399,6 +2403,13 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	enable_d3d11_ID3D11Texture1D_Rebased=1
 fi
 
+if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
+	if test "$enable_crypt32_ECDSA_Cert_Chains" -gt 1; then
+		abort "Patchset crypt32-ECDSA_Cert_Chains disabled, but bcrypt-BCryptDeriveKeyPBKDF2 depends on that."
+	fi
+	enable_crypt32_ECDSA_Cert_Chains=1
+fi
+
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	if test "$enable_combase_RoApi" -gt 1; then
 		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
@@ -2890,6 +2901,55 @@ if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset crypt32-ECDSA_Cert_Chains
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35902] Implement support for validating ECDSA certificate chains
+# |
+# | Modified files:
+# |   *	dlls/crypt32/Makefile.in, dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h,
+# | 	dlls/crypt32/decode.c, dlls/crypt32/oid.c, dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c,
+# | 	dlls/crypt32/tests/oid.c, include/wincrypt.h
+# |
+if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
+	patch_apply crypt32-ECDSA_Cert_Chains/0006-crypt32-tests-Basic-tests-for-decoding-ECDSA-signed-.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0007-crypt32-Implement-decoding-of-X509_OBJECT_IDENTIFIER.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0008-crypt32-Implement-decoding-of-X509_ECC_SIGNATURE.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0009-crypt32-tests-Add-basic-test-for-ecdsa-oid.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0010-crypt32-Add-oids-for-sha256ECDSA-and-sha384ECDSA.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0011-crypt32-Correctly-return-how-the-issuer-of-a-self-si.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0012-crypt32-tets-Add-test-for-verifying-an-ecdsa-chain.patch
+	patch_apply crypt32-ECDSA_Cert_Chains/0013-crypt32-Implement-verification-of-ECDSA-signatures.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Basic tests for decoding ECDSA signed certificate.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_OBJECT_IDENTIFIER.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_ECC_SIGNATURE.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Add basic test for ecdsa oid.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Add oids for sha256ECDSA and sha384ECDSA.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Correctly return how the issuer of a self signed certificate was checked.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32/tets: Add test for verifying an ecdsa chain.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement verification of ECDSA signatures.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset bcrypt-BCryptDeriveKeyPBKDF2
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	crypt32-ECDSA_Cert_Chains
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42704] Implement BCryptDeriveKeyPBKDF2
+# |
+# | Modified files:
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h
+# |
+if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
+	patch_apply bcrypt-BCryptDeriveKeyPBKDF2/0001-bcrypt-Implement-BCryptDeriveKeyPBKDF2-and-add-test-.patch
+	(
+		printf '%s\n' '+    { "Jack Grigg", "bcrypt: Implement BCryptDeriveKeyPBKDF2 and add test vectors.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset browseui-Progress_Dialog
 # |
 # | Modified files:
@@ -2989,37 +3049,6 @@ if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
 	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset crypt32-ECDSA_Cert_Chains
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35902] Implement support for validating ECDSA certificate chains
-# |
-# | Modified files:
-# |   *	dlls/crypt32/Makefile.in, dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h,
-# | 	dlls/crypt32/decode.c, dlls/crypt32/oid.c, dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c,
-# | 	dlls/crypt32/tests/oid.c, include/wincrypt.h
-# |
-if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
-	patch_apply crypt32-ECDSA_Cert_Chains/0006-crypt32-tests-Basic-tests-for-decoding-ECDSA-signed-.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0007-crypt32-Implement-decoding-of-X509_OBJECT_IDENTIFIER.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0008-crypt32-Implement-decoding-of-X509_ECC_SIGNATURE.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0009-crypt32-tests-Add-basic-test-for-ecdsa-oid.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0010-crypt32-Add-oids-for-sha256ECDSA-and-sha384ECDSA.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0011-crypt32-Correctly-return-how-the-issuer-of-a-self-si.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0012-crypt32-tets-Add-test-for-verifying-an-ecdsa-chain.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0013-crypt32-Implement-verification-of-ECDSA-signatures.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Basic tests for decoding ECDSA signed certificate.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_OBJECT_IDENTIFIER.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_ECC_SIGNATURE.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Add basic test for ecdsa oid.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Add oids for sha256ECDSA and sha384ECDSA.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Correctly return how the issuer of a self signed certificate was checked.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32/tets: Add test for verifying an ecdsa chain.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement verification of ECDSA signatures.", 1 },';
 	) >> "$patchlist"
 fi
 

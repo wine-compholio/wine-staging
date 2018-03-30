@@ -1,20 +1,41 @@
-From 71de59213235b4e41531d0ecff43790cf172bf90 Mon Sep 17 00:00:00 2001
+From 6599895d37972742aa9a5709972af934e9c0800f Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 18 Aug 2017 12:17:52 +0800
-Subject: windowscodecs: Move JPEG frame image data initialization from
+Subject: [PATCH] windowscodecs: Move JPEG frame image data initialization from
  Frame::CopyPixels to Decoder::Initialize. (v2)
 
 This is how PNG decoder does things, and it avoids image data corruption
 in some cases (presumably when libjpeg reuses existing scanline data).
 ---
- dlls/windowscodecs/jpegformat.c | 146 +++++++++++++++-------------------------
- 1 file changed, 55 insertions(+), 91 deletions(-)
+ dlls/windowscodecs/converter.c  |   1 +
+ dlls/windowscodecs/jpegformat.c | 152 +++++++++++++++-------------------------
+ 2 files changed, 57 insertions(+), 96 deletions(-)
 
+diff --git a/dlls/windowscodecs/converter.c b/dlls/windowscodecs/converter.c
+index 42ba260..ad2b3de 100644
+--- a/dlls/windowscodecs/converter.c
++++ b/dlls/windowscodecs/converter.c
+@@ -30,6 +30,7 @@
+ 
+ #include "wincodecs_private.h"
+ 
++#include "wine/heap.h"
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(wincodecs);
 diff --git a/dlls/windowscodecs/jpegformat.c b/dlls/windowscodecs/jpegformat.c
-index 0023fd2bf32..296529cee73 100644
+index 27cd880..1feff69 100644
 --- a/dlls/windowscodecs/jpegformat.c
 +++ b/dlls/windowscodecs/jpegformat.c
-@@ -155,6 +155,7 @@ typedef struct {
+@@ -50,6 +50,7 @@
+ 
+ #include "wincodecs_private.h"
+ 
++#include "wine/heap.h"
+ #include "wine/debug.h"
+ #include "wine/library.h"
+ 
+@@ -155,6 +156,7 @@ typedef struct {
      struct jpeg_error_mgr jerr;
      struct jpeg_source_mgr source_mgr;
      BYTE source_buffer[1024];
@@ -22,7 +43,7 @@ index 0023fd2bf32..296529cee73 100644
      BYTE *image_data;
      CRITICAL_SECTION lock;
  } JpegDecoder;
-@@ -303,6 +304,8 @@ static HRESULT WINAPI JpegDecoder_Initialize(IWICBitmapDecoder *iface, IStream *
+@@ -303,6 +305,8 @@ static HRESULT WINAPI JpegDecoder_Initialize(IWICBitmapDecoder *iface, IStream *
      int ret;
      LARGE_INTEGER seek;
      jmp_buf jmpbuf;
@@ -31,7 +52,7 @@ index 0023fd2bf32..296529cee73 100644
      TRACE("(%p,%p,%u)\n", iface, pIStream, cacheOptions);
  
      EnterCriticalSection(&This->lock);
-@@ -381,6 +384,55 @@ static HRESULT WINAPI JpegDecoder_Initialize(IWICBitmapDecoder *iface, IStream *
+@@ -381,6 +385,55 @@ static HRESULT WINAPI JpegDecoder_Initialize(IWICBitmapDecoder *iface, IStream *
          return E_FAIL;
      }
  
@@ -42,7 +63,7 @@ index 0023fd2bf32..296529cee73 100644
 +    This->stride = (This->bpp * This->cinfo.output_width + 7) / 8;
 +    data_size = This->stride * This->cinfo.output_height;
 +
-+    This->image_data = HeapAlloc(GetProcessHeap(), 0, data_size);
++    This->image_data = heap_alloc(data_size);
 +    if (!This->image_data)
 +    {
 +        LeaveCriticalSection(&This->lock);
@@ -87,13 +108,13 @@ index 0023fd2bf32..296529cee73 100644
      This->initialized = TRUE;
  
      LeaveCriticalSection(&This->lock);
-@@ -601,99 +653,11 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+@@ -597,104 +650,11 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
      const WICRect *prc, UINT cbStride, UINT cbBufferSize, BYTE *pbBuffer)
  {
      JpegDecoder *This = impl_from_IWICBitmapFrameDecode(iface);
 -    UINT bpp;
 -    UINT stride;
--    UINT data_size, i;
+-    UINT data_size;
 -    UINT max_row_needed;
 -    jmp_buf jmpbuf;
 -    WICRect rect;
@@ -123,9 +144,9 @@ index 0023fd2bf32..296529cee73 100644
 -
 -    max_row_needed = prc->Y + prc->Height;
 -    if (max_row_needed > This->cinfo.output_height) return E_INVALIDARG;
- 
--    EnterCriticalSection(&This->lock);
 -
+-    EnterCriticalSection(&This->lock);
+ 
 -    if (!This->image_data)
 -    {
 -        This->image_data = HeapAlloc(GetProcessHeap(), 0, data_size);
@@ -149,6 +170,7 @@ index 0023fd2bf32..296529cee73 100644
 -        UINT first_scanline = This->cinfo.output_scanline;
 -        UINT max_rows;
 -        JSAMPROW out_rows[4];
+-        UINT i;
 -        JDIMENSION ret;
 -
 -        max_rows = min(This->cinfo.output_height-first_scanline, 4);
@@ -163,21 +185,25 @@ index 0023fd2bf32..296529cee73 100644
 -            LeaveCriticalSection(&This->lock);
 -            return E_FAIL;
 -        }
--    }
 -
--    if (bpp == 24)
--    {
--        /* libjpeg gives us RGB data and we want BGR, so byteswap the data */
--        reverse_bgr8(3, This->image_data,
--            This->cinfo.output_width, This->cinfo.output_height,
--            stride);
--    }
+-        if (bpp == 24)
+-        {
+-            /* libjpeg gives us RGB data and we want BGR, so byteswap the data */
+-            reverse_bgr8(3, This->image_data + stride * first_scanline,
+-                This->cinfo.output_width, This->cinfo.output_scanline - first_scanline,
+-                stride);
+-        }
 -
--    if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
--    {
--        /* Adobe JPEG's have inverted CMYK data. */
--        for (i=0; i<data_size; i++)
--            This->image_data[i] ^= 0xff;
+-        if (This->cinfo.out_color_space == JCS_CMYK && This->cinfo.saw_Adobe_marker)
+-        {
+-            DWORD *pDwordData = (DWORD*) (This->image_data + stride * first_scanline);
+-            DWORD *pDwordDataEnd = (DWORD*) (This->image_data + This->cinfo.output_scanline * stride);
+-
+-            /* Adobe JPEG's have inverted CMYK data. */
+-            while(pDwordData < pDwordDataEnd)
+-                *pDwordData++ ^= 0xffffffff;
+-        }
+-
 -    }
 -
 -    LeaveCriticalSection(&This->lock);
@@ -191,5 +217,5 @@ index 0023fd2bf32..296529cee73 100644
  }
  
 -- 
-2.14.1
+1.9.1
 

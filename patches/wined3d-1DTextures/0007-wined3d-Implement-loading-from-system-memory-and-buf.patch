@@ -1,18 +1,18 @@
-From d0b2b377e3be8800332a32b7feb9e3c734a5b25a Mon Sep 17 00:00:00 2001
+From 22426ce3fa27934afee1235ee690909e370c8e21 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 27 Aug 2016 22:38:47 +0200
-Subject: wined3d: Implement loading from system memory and buffers to (s)rgb
- 1d textures.
+Subject: [PATCH] wined3d: Implement loading from system memory and buffers to
+ (s)rgb 1d textures.
 
 ---
- dlls/wined3d/texture.c | 69 ++++++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 67 insertions(+), 2 deletions(-)
+ dlls/wined3d/texture.c | 64 ++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 62 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 614b4cf..2accfe7 100644
+index 45b5afb..a2ed5f4 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -1530,10 +1530,75 @@ static void texture1d_upload_data(struct wined3d_texture *texture, unsigned int
+@@ -1771,10 +1771,70 @@ HRESULT CDECL wined3d_texture_add_dirty_region(struct wined3d_texture *texture,
  static BOOL texture1d_load_location(struct wined3d_texture *texture, unsigned int sub_resource_idx,
          struct wined3d_context *context, DWORD location)
  {
@@ -33,10 +33,10 @@ index 614b4cf..2accfe7 100644
 +        return TRUE;
 +    }
 +
-+    if ((texture->resource.access_flags & required_access) != required_access)
++    if ((texture->resource.access & required_access) != required_access)
 +    {
 +        ERR("Operation requires %#x access, but 1d texture only has %#x.\n",
-+                required_access, texture->resource.access_flags);
++                required_access, texture->resource.access);
 +        return FALSE;
 +    }
 +
@@ -57,18 +57,13 @@ index 614b4cf..2accfe7 100644
 +        case WINED3D_LOCATION_TEXTURE_SRGB:
 +            if (sub_resource->locations & WINED3D_LOCATION_SYSMEM)
 +            {
-+                struct wined3d_const_bo_address data = {0, texture->resource.heap_memory};
-+                data.addr += sub_resource->offset;
 +                wined3d_texture_bind_and_dirtify(texture, context, location == WINED3D_LOCATION_TEXTURE_SRGB);
 +                wined3d_texture_get_pitch(texture, sub_resource_idx, &row_pitch, &slice_pitch);
-+                texture1d_upload_data(texture, sub_resource_idx, context, NULL, &data, row_pitch, slice_pitch);
 +            }
 +            else if (sub_resource->locations & WINED3D_LOCATION_BUFFER)
 +            {
-+                struct wined3d_const_bo_address data = {sub_resource->buffer_object, NULL};
 +                wined3d_texture_bind_and_dirtify(texture, context, location == WINED3D_LOCATION_TEXTURE_SRGB);
 +                wined3d_texture_get_pitch(texture, sub_resource_idx, &row_pitch, &slice_pitch);
-+                texture1d_upload_data(texture, sub_resource_idx, context, NULL, &data, row_pitch, slice_pitch);
 +            }
 +            else
 +            {
@@ -89,7 +84,7 @@ index 614b4cf..2accfe7 100644
 +    return TRUE;
  }
  
- static void texture1d_prepare_texture(struct wined3d_texture *texture, struct wined3d_context *context, BOOL srgb)
+ static const struct wined3d_texture_ops texture1d_ops =
 -- 
-2.9.0
+1.9.1
 

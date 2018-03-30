@@ -1,7 +1,7 @@
-From 3f11f4c46bc1242c96fd0779f6594eadfc5ab5ff Mon Sep 17 00:00:00 2001
+From 926d6492812bd4753109f8e4525d84d8105ab5fb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 12 Jun 2017 00:16:08 +0200
-Subject: loader: Implement preloader for Mac OS.
+Subject: [PATCH] loader: Implement preloader for Mac OS.
 
 ---
  Makefile.in          |   1 +
@@ -14,10 +14,10 @@ Subject: loader: Implement preloader for Mac OS.
  7 files changed, 491 insertions(+), 53 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
-index 22b2ae7230..29b6cbdd53 100644
+index 6f1af8c..397ff16 100644
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -89,6 +89,7 @@ WINELOADER_PROGRAMS = @WINELOADER_PROGRAMS@
+@@ -90,6 +90,7 @@ WINELOADER_PROGRAMS = @WINELOADER_PROGRAMS@
  WINELOADER_DEPENDS  = @WINELOADER_DEPENDS@
  WINELOADER_INSTALL  = @WINELOADER_INSTALL@
  WINELOADER_LDFLAGS  = @WINELOADER_LDFLAGS@
@@ -26,10 +26,10 @@ index 22b2ae7230..29b6cbdd53 100644
  LIBWINE_IMPORTLIB   = @LIBWINE_IMPORTLIB@
  LIBWINE_INSTALL_LIB = @LIBWINE_INSTALL_LIB@
 diff --git a/configure.ac b/configure.ac
-index 0f2221963d..d9bdf413bb 100644
+index fc79b7a..40dcc70 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -683,6 +683,7 @@ AC_SUBST(LDRPATH_INSTALL,"")
+@@ -707,6 +707,7 @@ AC_SUBST(LDRPATH_INSTALL,"")
  AC_SUBST(LDRPATH_LOCAL,"")
  AC_SUBST(LDEXECFLAGS,"")
  AC_SUBST(WINELOADER_LDFLAGS,"")
@@ -37,7 +37,7 @@ index 0f2221963d..d9bdf413bb 100644
  LIBEXT="so"
  DLLEXT=".so"
  IMPLIBEXT="def"
-@@ -741,9 +742,17 @@ case $host_os in
+@@ -765,9 +766,17 @@ case $host_os in
      AC_SUBST(APPLICATIONSERVICES_LIBS,"-framework ApplicationServices")
      AC_SUBST(CORESERVICES_LIBS,"-framework CoreServices")
      AC_SUBST(APPKIT_LIBS,"-framework AppKit")
@@ -57,7 +57,7 @@ index 0f2221963d..d9bdf413bb 100644
      if test "$ac_cv_header_DiskArbitration_DiskArbitration_h" = "yes"
      then
          dnl DiskArbitration API is not public on Darwin < 8.0, use it only if header found
-@@ -856,6 +865,7 @@ case $host_os in
+@@ -880,6 +889,7 @@ case $host_os in
      enable_wineandroid_drv=${enable_wineandroid_drv:-yes}
      WINE_TRY_CFLAGS([-fPIC -Wl,--export-dynamic],
                      [WINELOADER_LDFLAGS="-Wl,--export-dynamic"])
@@ -65,7 +65,7 @@ index 0f2221963d..d9bdf413bb 100644
      WINE_TRY_CFLAGS([-fPIC -Wl,--rpath,\$ORIGIN/../lib],
                      [LDRPATH_INSTALL="-Wl,--rpath,\\\$\$ORIGIN/\`\$(MAKEDEP) -R \${bindir} \${libdir}\`"
                       LDRPATH_LOCAL="-Wl,--rpath,\\\$\$ORIGIN/\$(top_builddir)/libs/wine"],
-@@ -900,6 +910,7 @@ case $host_os in
+@@ -927,6 +937,7 @@ case $host_os in
  
        WINE_TRY_CFLAGS([-fPIC -Wl,--export-dynamic],
                        [WINELOADER_LDFLAGS="-Wl,--export-dynamic"])
@@ -73,7 +73,7 @@ index 0f2221963d..d9bdf413bb 100644
  
        WINE_TRY_CFLAGS([-fPIC -Wl,--rpath,\$ORIGIN/../lib],
                        [LDRPATH_INSTALL="-Wl,--rpath,\\\$\$ORIGIN/\`\$(MAKEDEP) -R \${bindir} \${libdir}\`:\$(DESTDIR)\${libdir}"
-@@ -2009,6 +2020,14 @@ case $host_os in
+@@ -2089,6 +2100,14 @@ case $host_os in
          ;;
      esac
      ;;
@@ -89,10 +89,10 @@ index 0f2221963d..d9bdf413bb 100644
  
  dnl **** Check for functions ****
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index ee9c8d0195..f115576e1d 100644
+index 6efdf5a..8303a03 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1840,11 +1840,9 @@ void virtual_release_address_space(void)
+@@ -2424,11 +2424,9 @@ void virtual_release_address_space(void)
      }
      else
      {
@@ -105,10 +105,10 @@ index ee9c8d0195..f115576e1d 100644
  
      server_leave_uninterrupted_section( &csVirtual, &sigset );
 diff --git a/libs/wine/config.c b/libs/wine/config.c
-index be9f401d9e..bccb36a6c1 100644
+index 45a7c48..cba4224 100644
 --- a/libs/wine/config.c
 +++ b/libs/wine/config.c
-@@ -654,7 +654,7 @@ void wine_exec_wine_binary( const char *name, char **argv, const char *env_var )
+@@ -678,7 +678,7 @@ void wine_exec_wine_binary( const char *name, char **argv, const char *env_var )
  
      if (!name) name = argv0_name;  /* no name means default loader */
  
@@ -118,7 +118,7 @@ index be9f401d9e..bccb36a6c1 100644
  #else
      use_preloader = 0;
 diff --git a/loader/Makefile.in b/loader/Makefile.in
-index 4fb91ff541..b715f02257 100644
+index 4fb91ff..b715f02 100644
 --- a/loader/Makefile.in
 +++ b/loader/Makefile.in
 @@ -26,7 +26,7 @@ wine64_DEPS = $(WINELOADER_DEPENDS)
@@ -132,7 +132,7 @@ index 4fb91ff541..b715f02257 100644
 -wine64_preloader_LDFLAGS = -static -nostartfiles -nodefaultlibs -Wl,-Ttext=0x7c400000
 +wine64_preloader_LDFLAGS = $(WINEPRELOADER_LDFLAGS)
 diff --git a/loader/main.c b/loader/main.c
-index 13740c7b3c..5212e3f079 100644
+index 39d26e6..da32fc9 100644
 --- a/loader/main.c
 +++ b/loader/main.c
 @@ -50,30 +50,6 @@
@@ -187,7 +187,7 @@ index 13740c7b3c..5212e3f079 100644
   *           check_command_line
   *
 @@ -315,6 +284,13 @@ static int pre_exec(void)
-     return 1;  /* we have a preloader on x86-64 */
+     return 1;  /* we have a preloader on x86-64/arm64 */
  }
  
 +#elif defined(__APPLE__) && (defined(__i386__) || defined(__x86_64__))
@@ -215,7 +215,7 @@ index 13740c7b3c..5212e3f079 100644
  
      wine_init( argc, argv, error, sizeof(error) );
 diff --git a/loader/preloader.c b/loader/preloader.c
-index 5e6add7830..90ab6764fa 100644
+index 725926e..d2f8dc15 100644
 --- a/loader/preloader.c
 +++ b/loader/preloader.c
 @@ -4,6 +4,8 @@
@@ -525,7 +525,7 @@ index 5e6add7830..90ab6764fa 100644
  #ifdef __i386__
  
  /* data for setting up the glibc-style thread-local storage in %gs */
-@@ -458,16 +698,17 @@ SYSCALL_NOERR( wld_getegid, 108 /* SYS_getegid */ );
+@@ -564,16 +804,17 @@ SYSCALL_NOERR( wld_getegid, 177 /* SYS_getegid */ );
  #else
  #error preloader not implemented for this CPU
  #endif
@@ -545,7 +545,7 @@ index 5e6add7830..90ab6764fa 100644
  {
      if (len <= 0) return 0;
      while ((--len > 0) && *str1 && (*str1 == *str2)) { str1++; str2++; }
-@@ -560,6 +801,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
+@@ -666,6 +907,8 @@ static __attribute__((noreturn,format(printf,1,2))) void fatal_error(const char
      wld_exit(1);
  }
  
@@ -554,7 +554,7 @@ index 5e6add7830..90ab6764fa 100644
  #ifdef DUMP_AUX_INFO
  /*
   *  Dump interesting bits of the ELF auxv_t structure that is passed
-@@ -1039,6 +1282,8 @@ found:
+@@ -1148,6 +1391,8 @@ found:
      return (void *)(symtab[idx].st_value + map->l_addr);
  }
  
@@ -563,7 +563,7 @@ index 5e6add7830..90ab6764fa 100644
  /*
   *  preload_reserve
   *
-@@ -1070,6 +1315,7 @@ static void preload_reserve( const char *str )
+@@ -1179,6 +1424,7 @@ static void preload_reserve( const char *str )
  
      /* sanity checks */
      if (end <= start) start = end = NULL;
@@ -571,7 +571,7 @@ index 5e6add7830..90ab6764fa 100644
      else if ((char *)end > preloader_start &&
               (char *)start <= preloader_end)
      {
-@@ -1077,6 +1323,7 @@ static void preload_reserve( const char *str )
+@@ -1186,6 +1432,7 @@ static void preload_reserve( const char *str )
                       start, end, preloader_start, preloader_end );
          start = end = NULL;
      }
@@ -579,7 +579,7 @@ index 5e6add7830..90ab6764fa 100644
  
      /* check for overlap with low memory areas */
      for (i = 0; preload_info[i].size; i++)
-@@ -1101,7 +1348,7 @@ error:
+@@ -1210,7 +1457,7 @@ error:
  }
  
  /* check if address is in one of the reserved ranges */
@@ -588,7 +588,7 @@ index 5e6add7830..90ab6764fa 100644
  {
      int i;
  
-@@ -1125,6 +1372,203 @@ static void remove_preload_range( int i )
+@@ -1234,6 +1481,203 @@ static void remove_preload_range( int i )
      }
  }
  
@@ -792,12 +792,12 @@ index 5e6add7830..90ab6764fa 100644
  /*
   *  is_in_preload_range
   *
-@@ -1293,3 +1737,5 @@ void* wld_start( void **stack )
+@@ -1406,3 +1850,5 @@ void* wld_start( void **stack )
  
      return (void *)ld_so_map.l_entry;
  }
 +
 +#endif /* __APPLE__ */
 -- 
-2.13.1
+1.9.1
 

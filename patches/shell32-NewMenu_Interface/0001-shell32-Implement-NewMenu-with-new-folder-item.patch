@@ -1,7 +1,7 @@
-From e412429964c86aabcea561e5eca9b625fe2e094b Mon Sep 17 00:00:00 2001
+From d723f08398d372ad918147ea75207de29f59484e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 16 Aug 2015 17:34:22 +0200
-Subject: shell32: Implement NewMenu with new folder item.
+Subject: [PATCH] shell32: Implement NewMenu with new folder item.
 
 ---
  dlls/shell32/Makefile.in         |   1 +
@@ -9,12 +9,11 @@ Subject: shell32: Implement NewMenu with new folder item.
  dlls/shell32/shell32_main.h      |   1 +
  dlls/shell32/shellnew.c          | 558 +++++++++++++++++++++++++++++++++++++++
  dlls/shell32/shellole.c          |   1 +
- include/shlguid.h                |   2 +
- 6 files changed, 568 insertions(+)
+ 5 files changed, 566 insertions(+)
  create mode 100644 dlls/shell32/shellnew.c
 
 diff --git a/dlls/shell32/Makefile.in b/dlls/shell32/Makefile.in
-index 970ecba4f65..25d9ebd541b 100644
+index 970ecba..25d9ebd 100644
 --- a/dlls/shell32/Makefile.in
 +++ b/dlls/shell32/Makefile.in
 @@ -32,6 +32,7 @@ C_SRCS = \
@@ -26,10 +25,10 @@ index 970ecba4f65..25d9ebd541b 100644
  	shellord.c \
  	shellpath.c \
 diff --git a/dlls/shell32/shell32_classes.idl b/dlls/shell32/shell32_classes.idl
-index cc57b2bab57..e8476a03cb3 100644
+index 6ed497f..60de627 100644
 --- a/dlls/shell32/shell32_classes.idl
 +++ b/dlls/shell32/shell32_classes.idl
-@@ -76,6 +76,11 @@ coclass KnownFolderManager { interface IKnownFolderManager; }
+@@ -82,6 +82,11 @@ coclass KnownFolderManager { interface IKnownFolderManager; }
  
  [
      threading(apartment),
@@ -42,10 +41,10 @@ index cc57b2bab57..e8476a03cb3 100644
  ] coclass AutoComplete { interface IAutoComplete2; }
  
 diff --git a/dlls/shell32/shell32_main.h b/dlls/shell32/shell32_main.h
-index bdebcba0e39..ececaa77ef8 100644
+index b65141f..cf6a256 100644
 --- a/dlls/shell32/shell32_main.h
 +++ b/dlls/shell32/shell32_main.h
-@@ -101,6 +101,7 @@ HRESULT WINAPI RecycleBin_Constructor(IUnknown * pUnkOuter, REFIID riif, LPVOID
+@@ -102,6 +102,7 @@ HRESULT WINAPI RecycleBin_Constructor(IUnknown * pUnkOuter, REFIID riif, LPVOID
  HRESULT WINAPI QueryAssociations_Constructor(IUnknown *pUnkOuter, REFIID riid, LPVOID *ppOutput) DECLSPEC_HIDDEN;
  HRESULT WINAPI ExplorerBrowser_Constructor(IUnknown *pUnkOuter, REFIID riid, LPVOID *ppv) DECLSPEC_HIDDEN;
  HRESULT WINAPI KnownFolderManager_Constructor(IUnknown *pUnkOuter, REFIID riid, LPVOID *ppv) DECLSPEC_HIDDEN;
@@ -55,7 +54,7 @@ index bdebcba0e39..ececaa77ef8 100644
  HRESULT WINAPI CPanel_ExtractIconW(LPITEMIDLIST pidl, LPCWSTR pszFile, UINT nIconIndex, HICON *phiconLarge, HICON *phiconSmall, UINT nIconSize) DECLSPEC_HIDDEN;
 diff --git a/dlls/shell32/shellnew.c b/dlls/shell32/shellnew.c
 new file mode 100644
-index 00000000000..59e18d6d228
+index 0000000..59e18d6
 --- /dev/null
 +++ b/dlls/shell32/shellnew.c
 @@ -0,0 +1,558 @@
@@ -618,10 +617,10 @@ index 00000000000..59e18d6d228
 +    return hr;
 +}
 diff --git a/dlls/shell32/shellole.c b/dlls/shell32/shellole.c
-index d3d972b96d1..88dfdeca461 100644
+index 7b6ee92..e6ff1e9 100644
 --- a/dlls/shell32/shellole.c
 +++ b/dlls/shell32/shellole.c
-@@ -88,6 +88,7 @@ static const struct {
+@@ -89,6 +89,7 @@ static const struct {
  	{&CLSID_Shell,          IShellDispatch_Constructor},
  	{&CLSID_DestinationList, CustomDestinationList_Constructor},
  	{&CLSID_ShellImageDataFactory, ShellImageDataFactory_Constructor},
@@ -629,19 +628,6 @@ index d3d972b96d1..88dfdeca461 100644
  	{NULL, NULL}
  };
  
-diff --git a/include/shlguid.h b/include/shlguid.h
-index 2279defb1db..09aacc58e66 100644
---- a/include/shlguid.h
-+++ b/include/shlguid.h
-@@ -146,6 +146,8 @@ DEFINE_GUID(CLSID_ProgressDialog, 0xf8383852, 0xfcd3, 0x11d1, 0xa6, 0xb9, 0x0, 0
- 
- DEFINE_GUID(CLSID_ShellItem,      0x2fe352ea, 0xfd1f, 0x11d2, 0xb1, 0xf4, 0x00, 0xc0, 0x4f, 0x8e, 0xeb, 0x3e);
- 
-+DEFINE_GUID(CLSID_NewMenu,        0xd969a300, 0xe7ff, 0x11d0, 0xa9, 0x3b, 0x0, 0xa0, 0xc9, 0xf, 0x27, 0x19);
-+
- #define PSGUID_SHELLDETAILS     {0x28636aa6, 0x953d, 0x11d2, 0xb5, 0xd6, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0}
- DEFINE_GUID(FMTID_ShellDetails,  0x28636aa6, 0x953d, 0x11d2, 0xb5, 0xd6, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0);
- #define PID_FINDDATA        0
 -- 
-2.11.0
+2.7.4
 

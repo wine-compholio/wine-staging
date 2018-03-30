@@ -1,7 +1,8 @@
-From 13b20600cb2924b63ecf7c0b37db45fd7c26a8ce Mon Sep 17 00:00:00 2001
+From 4b31157383a5e422660c17d47fd4cda511a991a4 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 7 Nov 2014 03:26:18 +0100
-Subject: ntdll: Return correct values in GetThreadTimes() for all threads.
+Subject: [PATCH] ntdll: Return correct values in GetThreadTimes() for all
+ threads.
 
 Based on a patch by Ray Hinchliffe <ray@pobox.co.uk>.
 ---
@@ -11,7 +12,7 @@ Based on a patch by Ray Hinchliffe <ray@pobox.co.uk>.
  3 files changed, 69 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 95b7add..a3b1cb0 100644
+index c999d4b..1491ebb 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -23,6 +23,8 @@
@@ -20,10 +21,10 @@ index 95b7add..a3b1cb0 100644
  #include <stdarg.h>
 +#include <string.h>
 +#include <stdio.h>
+ #include <limits.h>
  #include <sys/types.h>
  #ifdef HAVE_SYS_MMAN_H
- #include <sys/mman.h>
-@@ -963,7 +965,10 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+@@ -1017,7 +1019,10 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
      case ThreadTimes:
          {
              KERNEL_USER_TIMES   kusrt;
@@ -34,7 +35,7 @@ index 95b7add..a3b1cb0 100644
              SERVER_START_REQ( get_thread_times )
              {
                  req->handle = wine_server_obj_handle( handle );
-@@ -972,36 +977,79 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+@@ -1026,36 +1031,79 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
                  {
                      kusrt.CreateTime.QuadPart = reply->creation_time;
                      kusrt.ExitTime.QuadPart = reply->exit_time;
@@ -132,10 +133,10 @@ index 95b7add..a3b1cb0 100644
                  if (ret_len) *ret_len = min( length, sizeof(kusrt) );
              }
 diff --git a/server/protocol.def b/server/protocol.def
-index 15735e0..967bc81 100644
+index 3bed47a..031b490 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -856,6 +856,8 @@ struct rawinput_device
+@@ -908,6 +908,8 @@ struct rawinput_device
  @REPLY
      timeout_t    creation_time; /* thread creation time */
      timeout_t    exit_time;     /* thread exit time */
@@ -145,10 +146,10 @@ index 15735e0..967bc81 100644
  
  
 diff --git a/server/thread.c b/server/thread.c
-index 902848e..f2b0853 100644
+index 2cf5054..46fc9a7 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -1394,6 +1394,8 @@ DECL_HANDLER(get_thread_times)
+@@ -1413,6 +1413,8 @@ DECL_HANDLER(get_thread_times)
      {
          reply->creation_time  = thread->creation_time;
          reply->exit_time      = thread->exit_time;
@@ -158,5 +159,5 @@ index 902848e..f2b0853 100644
          release_object( thread );
      }
 -- 
-2.4.5
+1.9.1
 

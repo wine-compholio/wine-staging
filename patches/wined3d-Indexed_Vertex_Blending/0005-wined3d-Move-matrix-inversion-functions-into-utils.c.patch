@@ -1,19 +1,19 @@
-From fadcafb0c6505447ba086d8dc4a6a024a040c61e Mon Sep 17 00:00:00 2001
+From 2c5b6d42fa11db7fb80f91a3343bb27876b697b6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 31 Aug 2017 01:07:25 +0200
 Subject: wined3d: Move matrix inversion functions into utils.c
 
 ---
- dlls/wined3d/glsl_shader.c     | 275 -----------------------------------------
- dlls/wined3d/utils.c           | 275 +++++++++++++++++++++++++++++++++++++++++
- dlls/wined3d/wined3d_private.h |   2 +
- 3 files changed, 277 insertions(+), 275 deletions(-)
+ dlls/wined3d/glsl_shader.c     | 287 -----------------------------------------
+ dlls/wined3d/utils.c           | 287 +++++++++++++++++++++++++++++++++++++++++
+ dlls/wined3d/wined3d_private.h |   3 +
+ 3 files changed, 290 insertions(+), 287 deletions(-)
 
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 2aa0d0db0a4..aaca2f63441 100644
+index bb3b1c2..d53ad70 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -1221,281 +1221,6 @@ static void shader_glsl_load_np2fixup_constants(const struct glsl_ps_program *ps
+@@ -1236,293 +1236,6 @@ static void shader_glsl_load_np2fixup_constants(const struct glsl_ps_program *ps
      GL_EXTCALL(glUniform4fv(ps->np2_fixup_location, ps->np2_fixup_info->num_consts, &np2fixup_constants[0].sx));
  }
  
@@ -88,7 +88,7 @@ index 2aa0d0db0a4..aaca2f63441 100644
 -    *b = tmp;
 -}
 -
--static BOOL invert_matrix(struct wined3d_matrix *out, struct wined3d_matrix *m)
+-static BOOL invert_matrix(struct wined3d_matrix *out, const struct wined3d_matrix *m)
 -{
 -    float wtmp[4][8];
 -    float m0, m1, m2, m3, s;
@@ -292,14 +292,26 @@ index 2aa0d0db0a4..aaca2f63441 100644
 -    return TRUE;
 -}
 -
+-static void transpose_matrix(struct wined3d_matrix *out, const struct wined3d_matrix *m)
+-{
+-    struct wined3d_matrix temp;
+-    unsigned int i, j;
+-
+-    for (i = 0; i < 4; ++i)
+-        for (j = 0; j < 4; ++j)
+-            (&temp._11)[4 * j + i] = (&m->_11)[4 * i + j];
+-
+-    *out = temp;
+-}
+-
  static void shader_glsl_ffp_vertex_texmatrix_uniform(const struct wined3d_context *context,
          const struct wined3d_state *state, unsigned int tex, struct glsl_shader_prog_link *prog)
  {
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index 847429511b9..b2effb5c2ec 100644
+index 60a9ee0..8a07b3e 100644
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
-@@ -5234,6 +5234,281 @@ void multiply_matrix(struct wined3d_matrix *dst, const struct wined3d_matrix *sr
+@@ -5409,6 +5409,293 @@ void multiply_matrix(struct wined3d_matrix *dst, const struct wined3d_matrix *sr
      *dst = tmp;
  }
  
@@ -374,7 +386,7 @@ index 847429511b9..b2effb5c2ec 100644
 +    *b = tmp;
 +}
 +
-+BOOL invert_matrix(struct wined3d_matrix *out, struct wined3d_matrix *m)
++BOOL invert_matrix(struct wined3d_matrix *out, const struct wined3d_matrix *m)
 +{
 +    float wtmp[4][8];
 +    float m0, m1, m2, m3, s;
@@ -578,22 +590,35 @@ index 847429511b9..b2effb5c2ec 100644
 +    return TRUE;
 +}
 +
++void transpose_matrix(struct wined3d_matrix *out, const struct wined3d_matrix *m)
++{
++    struct wined3d_matrix temp;
++    unsigned int i, j;
++
++    for (i = 0; i < 4; ++i)
++        for (j = 0; j < 4; ++j)
++            (&temp._11)[4 * j + i] = (&m->_11)[4 * i + j];
++
++    *out = temp;
++}
++
  DWORD get_flexible_vertex_size(DWORD d3dvtVertexType) {
      DWORD size = 0;
      int i;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 7c20934ad40..08f4f01f7e6 100644
+index 64dad01..92a5ef1 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3889,6 +3889,8 @@ GLenum gl_primitive_type_from_d3d(enum wined3d_primitive_type primitive_type) DE
+@@ -3911,6 +3911,9 @@ GLenum gl_primitive_type_from_d3d(enum wined3d_primitive_type primitive_type) DE
  /* Math utils */
  void multiply_matrix(struct wined3d_matrix *dest, const struct wined3d_matrix *src1,
          const struct wined3d_matrix *src2) DECLSPEC_HIDDEN;
 +BOOL invert_matrix_3d(struct wined3d_matrix *out, const struct wined3d_matrix *in) DECLSPEC_HIDDEN;
-+BOOL invert_matrix(struct wined3d_matrix *out, struct wined3d_matrix *m) DECLSPEC_HIDDEN;
++BOOL invert_matrix(struct wined3d_matrix *out, const struct wined3d_matrix *m) DECLSPEC_HIDDEN;
++void transpose_matrix(struct wined3d_matrix *out, const struct wined3d_matrix *m) DECLSPEC_HIDDEN;
  
  void wined3d_release_dc(HWND window, HDC dc) DECLSPEC_HIDDEN;
  
 -- 
-2.14.1
+2.7.4
 

@@ -1,4 +1,4 @@
-From 417a574db2c401f6b5150683e284418f88a03e67 Mon Sep 17 00:00:00 2001
+From 621820e1345fb06680ec25c3c5690a928a2b1141 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 23 Sep 2016 20:17:47 +0800
 Subject: windowscodecs: Add support for palette image formats to BMP encoder.
@@ -11,7 +11,7 @@ Subject: windowscodecs: Add support for palette image formats to BMP encoder.
  4 files changed, 60 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/windowscodecs/bmpencode.c b/dlls/windowscodecs/bmpencode.c
-index af082ae..d4ec651 100644
+index 97f30d7197..86e42b9a68 100644
 --- a/dlls/windowscodecs/bmpencode.c
 +++ b/dlls/windowscodecs/bmpencode.c
 @@ -1,5 +1,6 @@
@@ -53,7 +53,7 @@ index af082ae..d4ec651 100644
  #endif
      {NULL}
  };
-@@ -179,11 +186,13 @@ static HRESULT WINAPI BmpFrameEncode_SetPixelFormat(IWICBitmapFrameEncode *iface
+@@ -184,11 +191,13 @@ static HRESULT WINAPI BmpFrameEncode_SetPixelFormat(IWICBitmapFrameEncode *iface
  
      for (i=0; formats[i].guid; i++)
      {
@@ -68,7 +68,7 @@ index af082ae..d4ec651 100644
  
      This->format = &formats[i];
      memcpy(pPixelFormat, This->format->guid, sizeof(GUID));
-@@ -202,6 +211,7 @@ static HRESULT WINAPI BmpFrameEncode_SetPalette(IWICBitmapFrameEncode *iface,
+@@ -207,6 +216,7 @@ static HRESULT WINAPI BmpFrameEncode_SetPalette(IWICBitmapFrameEncode *iface,
      IWICPalette *palette)
  {
      BmpFrameEncode *This = impl_from_IWICBitmapFrameEncode(iface);
@@ -76,7 +76,7 @@ index af082ae..d4ec651 100644
  
      TRACE("(%p,%p)\n", iface, palette);
  
-@@ -210,7 +220,14 @@ static HRESULT WINAPI BmpFrameEncode_SetPalette(IWICBitmapFrameEncode *iface,
+@@ -215,7 +225,14 @@ static HRESULT WINAPI BmpFrameEncode_SetPalette(IWICBitmapFrameEncode *iface,
      if (!This->initialized)
          return WINCODEC_ERR_NOTINITIALIZED;
  
@@ -92,7 +92,7 @@ index af082ae..d4ec651 100644
  }
  
  static HRESULT WINAPI BmpFrameEncode_SetThumbnail(IWICBitmapFrameEncode *iface,
-@@ -316,8 +333,8 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+@@ -330,8 +347,8 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
      bih.bV5SizeImage = This->stride*This->height;
      bih.bV5XPelsPerMeter = (This->xres+0.0127) / 0.0254;
      bih.bV5YPelsPerMeter = (This->yres+0.0127) / 0.0254;
@@ -103,7 +103,7 @@ index af082ae..d4ec651 100644
  
      if (This->format->compression == BI_BITFIELDS)
      {
-@@ -334,6 +351,7 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+@@ -348,6 +365,7 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
  
      bfh.bfSize = sizeof(BITMAPFILEHEADER) + info_size + bih.bV5SizeImage;
      bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + info_size;
@@ -111,7 +111,7 @@ index af082ae..d4ec651 100644
  
      pos.QuadPart = 0;
      hr = IStream_Seek(This->stream, pos, STREAM_SEEK_SET, NULL);
-@@ -347,6 +365,14 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
+@@ -361,6 +379,14 @@ static HRESULT WINAPI BmpFrameEncode_Commit(IWICBitmapFrameEncode *iface)
      if (FAILED(hr)) return hr;
      if (byteswritten != info_size) return E_FAIL;
  
@@ -123,11 +123,11 @@ index af082ae..d4ec651 100644
 +        if (byteswritten != This->colors * sizeof(WICColor)) return E_FAIL;
 +    }
 +
-     /* write the image bits as a bottom-top array */
-     bits = This->bits + bih.bV5SizeImage;
-     for (i = 0; i < This->height; i++)
+     hr = IStream_Write(This->stream, This->bits, bih.bV5SizeImage, &byteswritten);
+     if (FAILED(hr)) return hr;
+     if (byteswritten != bih.bV5SizeImage) return E_FAIL;
 diff --git a/dlls/windowscodecs/info.c b/dlls/windowscodecs/info.c
-index 84b80bc..bce2c47 100644
+index 6ddfdda25f..fbd0da97cf 100644
 --- a/dlls/windowscodecs/info.c
 +++ b/dlls/windowscodecs/info.c
 @@ -2280,6 +2280,12 @@ HRESULT CreateComponentEnumerator(DWORD componentTypes, DWORD options, IEnumUnkn
@@ -153,7 +153,7 @@ index 84b80bc..bce2c47 100644
          IWICBitmapSource_AddRef(pISrc);
          *ppIDst = pISrc;
 diff --git a/dlls/windowscodecs/regsvr.c b/dlls/windowscodecs/regsvr.c
-index b32b294..c72fbf1 100644
+index b32b294d72..c72fbf1899 100644
 --- a/dlls/windowscodecs/regsvr.c
 +++ b/dlls/windowscodecs/regsvr.c
 @@ -1347,6 +1347,11 @@ static GUID const * const bmp_encode_formats[] = {
@@ -169,10 +169,10 @@ index b32b294..c72fbf1 100644
  };
  
 diff --git a/dlls/windowscodecs/tests/converter.c b/dlls/windowscodecs/tests/converter.c
-index dec2ae7..6ee5652 100644
+index c4cae4f330..80ef61087d 100644
 --- a/dlls/windowscodecs/tests/converter.c
 +++ b/dlls/windowscodecs/tests/converter.c
-@@ -785,6 +785,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+@@ -814,6 +814,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
  
      if (IsEqualGUID(format, &GUID_WICPixelFormat1bppIndexed))
      {
@@ -181,7 +181,7 @@ index dec2ae7..6ee5652 100644
          ok(bih.bV5Width == 32, "wrong width %u\n", bih.bV5Width);
          ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
  
-@@ -795,6 +797,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+@@ -824,6 +826,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
      }
      else if (IsEqualGUID(format, &GUID_WICPixelFormat2bppIndexed))
      {
@@ -190,7 +190,7 @@ index dec2ae7..6ee5652 100644
          ok(bih.bV5Width == 16, "wrong width %u\n", bih.bV5Width);
          ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
  
-@@ -805,6 +809,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+@@ -834,6 +838,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
      }
      else if (IsEqualGUID(format, &GUID_WICPixelFormat4bppIndexed))
      {
@@ -199,7 +199,7 @@ index dec2ae7..6ee5652 100644
          ok(bih.bV5Width == 8, "wrong width %u\n", bih.bV5Width);
          ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
  
-@@ -815,6 +821,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+@@ -844,6 +850,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
      }
      else if (IsEqualGUID(format, &GUID_WICPixelFormat8bppIndexed))
      {
@@ -208,7 +208,7 @@ index dec2ae7..6ee5652 100644
          ok(bih.bV5Width == 4, "wrong width %u\n", bih.bV5Width);
          ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
  
-@@ -825,6 +833,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
+@@ -854,6 +862,8 @@ static void check_bmp_format(IStream *stream, const WICPixelFormatGUID *format)
      }
      else if (IsEqualGUID(format, &GUID_WICPixelFormat32bppBGR))
      {
@@ -217,7 +217,7 @@ index dec2ae7..6ee5652 100644
          ok(bih.bV5Width == 4, "wrong width %u\n", bih.bV5Width);
          ok(bih.bV5Height == 2, "wrong height %u\n", bih.bV5Height);
  
-@@ -1061,7 +1071,8 @@ static void test_multi_encoder(const struct bitmap_data **srcs, const CLSID* cls
+@@ -1152,7 +1162,8 @@ static void test_multi_encoder(const struct bitmap_data **srcs, const CLSID* cls
                      hr = IWICBitmapFrameEncode_SetPixelFormat(frameencode, &pixelformat);
                      ok(SUCCEEDED(hr), "SetPixelFormat failed, hr=%x\n", hr);
                      ok(IsEqualGUID(&pixelformat, dsts[i]->format) ||
@@ -227,7 +227,7 @@ index dec2ae7..6ee5652 100644
                         "SetPixelFormat changed the format to %s (%s)\n", wine_dbgstr_guid(&pixelformat), name);
  
                      hr = IWICBitmapFrameEncode_SetSize(frameencode, srcs[i]->width, srcs[i]->height);
-@@ -1395,19 +1406,16 @@ START_TEST(converter)
+@@ -1496,19 +1507,16 @@ START_TEST(converter)
      test_encoder(&testdata_24bppBGR, &CLSID_WICPngEncoder,
                   &testdata_24bppBGR, &CLSID_WICPngDecoder, "PNG encoder 24bppBGR");
  
@@ -249,5 +249,5 @@ index dec2ae7..6ee5652 100644
                   &testdata_32bppBGR, &CLSID_WICBmpDecoder, "BMP encoder 32bppBGR");
  
 -- 
-2.9.0
+2.16.2
 

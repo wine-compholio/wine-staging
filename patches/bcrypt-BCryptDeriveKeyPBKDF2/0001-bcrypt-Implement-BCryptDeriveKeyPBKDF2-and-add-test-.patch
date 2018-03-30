@@ -1,0 +1,346 @@
+From d850bbb2836fa4d77c7842009901382b54f29a69 Mon Sep 17 00:00:00 2001
+From: Jack Grigg <me@jackgrigg.com>
+Date: Sat, 17 Mar 2018 21:14:05 +1100
+Subject: [PATCH] bcrypt: Implement BCryptDeriveKeyPBKDF2 and add test vectors.
+
+Fixes https://bugs.winehq.org/show_bug.cgi?id=42704
+
+Tested on Ubuntu 16.04.2 LTS.
+
+v2 - Removed C++ comment
+   - Removed all warnings.
+   - Use heap_* functions
+   - Formatting changes.
+
+Signed-off-by: Jack Grigg <me@jackgrigg.com>
+---
+ dlls/bcrypt/bcrypt.spec    |   1 +
+ dlls/bcrypt/bcrypt_main.c  | 163 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/bcrypt/tests/bcrypt.c |  85 +++++++++++++++++++++++
+ include/bcrypt.h           |   1 +
+ 4 files changed, 250 insertions(+)
+
+diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
+index 78824d73b39..f4d9a57bb08 100644
+--- a/dlls/bcrypt/bcrypt.spec
++++ b/dlls/bcrypt/bcrypt.spec
+@@ -8,6 +8,7 @@
+ @ stdcall BCryptDecrypt(ptr ptr long ptr ptr long ptr long ptr long)
+ @ stub BCryptDeleteContext
+ @ stub BCryptDeriveKey
++@ stdcall BCryptDeriveKeyPBKDF2(ptr ptr long ptr long int64 ptr long long)
+ @ stdcall BCryptDestroyHash(ptr)
+ @ stdcall BCryptDestroyKey(ptr)
+ @ stub BCryptDestroySecret
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 1490089cf72..4ffab1a9cf9 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -2282,6 +2282,169 @@ NTSTATUS WINAPI BCryptSetProperty( BCRYPT_HANDLE handle, const WCHAR *prop, UCHA
+     }
+ }
+ 
++NTSTATUS PBKDF2_F( BCRYPT_ALG_HANDLE algorithm,
++                   UCHAR *password, ULONG password_length,
++                   UCHAR *salt, ULONG salt_length,
++                   ULONGLONG iterations, int i,
++                   UCHAR *res, int hash_length )
++{
++    BCRYPT_HASH_HANDLE handle;
++    NTSTATUS status = STATUS_NOT_SUPPORTED;
++    UCHAR bytes[4];
++    UCHAR *tmp;
++    int j;
++    int k;
++
++    if (!(tmp = heap_alloc( hash_length )))
++    {
++        return STATUS_NO_MEMORY;
++    }
++
++    for (j = 0; j < iterations; j++)
++    {
++        status = BCryptCreateHash( algorithm, &handle, NULL, 0,
++                                   password, password_length, 0 );
++        if (status != STATUS_SUCCESS)
++            goto done;
++
++        if (j == 0)
++        {
++            /* Use salt || INT(i) */
++            status = BCryptHashData( handle, salt, salt_length, 0 );
++            if (status != STATUS_SUCCESS)
++                goto done;
++            bytes[0] = (i >> 24) & 0xFF;
++            bytes[1] = (i >> 16) & 0xFF;
++            bytes[2] = (i >> 8) & 0xFF;
++            bytes[3] = i & 0xFF;
++            status = BCryptHashData( handle, bytes, 4, 0 );
++        }
++        else
++        {
++            /* Use U_j */
++            status = BCryptHashData( handle, tmp, hash_length, 0 );
++        }
++        if (status != STATUS_SUCCESS)
++            goto done;
++
++        status = BCryptFinishHash( handle, tmp, hash_length, 0 );
++        if (status != STATUS_SUCCESS)
++            goto done;
++
++        status = BCryptDestroyHash( handle );
++        if (status != STATUS_SUCCESS)
++            goto done;
++
++        handle = NULL;
++
++        if (j == 0)
++        {
++            /* Copy into res */
++            memcpy( res, tmp, hash_length );
++        }
++        else
++        {
++            /* XOR into res */
++            for (k = 0; k < hash_length; k++)
++                res[k] ^= tmp[k];
++        }
++    }
++
++done:
++    TRACE("<- status 0x%08x\n", status);
++    if(handle)
++        BCryptDestroyHash( handle );
++    heap_free( tmp );
++    return status;
++}
++
++/************************************************************
++ *            BCryptDeriveKeyPBKDF2   (BCRYPT.@)
++ *
++ * Derive a key from a password using the PBKDF2 function
++ * (RFC 2898).
++ *
++ * PARAMS
++ *   handle          [I] Pointer to the PRF provider
++ *   password        [I] Optional pointer to the beginning of the password
++ *   password_length [I] Length of the password
++ *   salt            [I] Optional pointer to the beginning of the salt
++ *   salt_length     [I] Length of the salt
++ *   iterations      [I] Iteration count
++ *   dk              [O] Pointer to the beginning of the buffer to store the
++ *                       derived key in, at least dklen in size
++ *   dklen           [I] Intended length of the derived key, at most
++ *                       (2^32 - 1) * (output length of PRF)
++ *   flags           [I] Reserved, must be zero
++ *
++ * RETURNS
++ *   Success: STATUS_SUCCESS.
++ *   Failure: - STATUS_INVALID_HANDLE
++ *            - STATUS_INVALID_PARAMETER
++ *            - STATUS_NO_MEMORY
++ */
++NTSTATUS WINAPI BCryptDeriveKeyPBKDF2( BCRYPT_ALG_HANDLE handle,
++                                       PUCHAR password, ULONG password_length,
++                                       PUCHAR salt, ULONG salt_length,
++                                       ULONGLONG iterations,
++                                       PUCHAR dk, ULONG dklen,
++                                       ULONG flags )
++{
++    struct algorithm *alg = handle;
++    int hlen = alg_props[alg->id].hash_length;
++    UCHAR *partial;
++    NTSTATUS status;
++    int l;
++    int r;
++    int i;
++
++    TRACE( "%p, %p, %u, %p, %u, %s, %p, %u, %08x - stub\n",
++           handle, password, password_length, salt, salt_length,
++           wine_dbgstr_longlong(iterations), dk, dklen, flags );
++
++    if (dklen <= 0 || dklen > ((((ULONGLONG) 1) << 32) - 1) * hlen)
++    {
++        return STATUS_INVALID_PARAMETER;
++    }
++
++    l = 1 + ((dklen - 1) / hlen); /* ceil(dklen/hlen) */
++    r = dklen - (l - 1) * hlen;
++
++    /* Full blocks */
++    for (i = 1; i < l; i++)
++    {
++        status = PBKDF2_F( handle,
++                           password, password_length,
++                           salt, salt_length,
++                           iterations, i,
++                           dk + ((i - 1) * hlen), hlen );
++        if (status != STATUS_SUCCESS)
++        {
++            return status;
++        }
++    }
++
++    /* Final partial block */
++    if (!(partial = heap_alloc( hlen )))
++    {
++        return STATUS_NO_MEMORY;
++    }
++    status = PBKDF2_F( handle,
++                       password, password_length,
++                       salt, salt_length,
++                       iterations, l,
++                       partial, hlen );
++    if (status != STATUS_SUCCESS)
++    {
++        heap_free( partial );
++        return status;
++    }
++    memcpy( dk + ((l - 1) * hlen), partial, r );
++    heap_free( partial );
++
++    return STATUS_SUCCESS;
++}
++
+ BOOL WINAPI DllMain( HINSTANCE hinst, DWORD reason, LPVOID reserved )
+ {
+     switch (reason)
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index 7d59f6d4c1d..5b1b6c7e189 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -26,6 +26,8 @@
+ 
+ #include "wine/test.h"
+ 
++#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
++
+ static NTSTATUS (WINAPI *pBCryptOpenAlgorithmProvider)(BCRYPT_ALG_HANDLE *, LPCWSTR, LPCWSTR, ULONG);
+ static NTSTATUS (WINAPI *pBCryptCloseAlgorithmProvider)(BCRYPT_ALG_HANDLE, ULONG);
+ static NTSTATUS (WINAPI *pBCryptGetFipsAlgorithmMode)(BOOLEAN *);
+@@ -36,6 +38,8 @@ static NTSTATUS (WINAPI *pBCryptHashData)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULO
+ static NTSTATUS (WINAPI *pBCryptDuplicateHash)(BCRYPT_HASH_HANDLE, BCRYPT_HASH_HANDLE *, UCHAR *, ULONG, ULONG);
+ static NTSTATUS (WINAPI *pBCryptFinishHash)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
+ static NTSTATUS (WINAPI *pBCryptDestroyHash)(BCRYPT_HASH_HANDLE);
++static NTSTATUS (WINAPI *pBCryptDeriveKeyPBKDF2)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, PUCHAR, ULONG,
++                                                 ULONGLONG, PUCHAR, ULONG, ULONG);
+ static NTSTATUS (WINAPI *pBCryptGenRandom)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
+ static NTSTATUS (WINAPI *pBCryptGetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG *, ULONG);
+ static NTSTATUS (WINAPI *pBCryptSetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG);
+@@ -396,6 +400,81 @@ static void test_BcryptHash(void)
+     ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
+ }
+ 
++/* Test vectors from RFC 6070 */
++static UCHAR password[] = "password";
++static UCHAR salt[] = "salt";
++static UCHAR long_password[] =
++    "passwordPASSWORDpassword";
++static UCHAR long_salt[] =
++    "saltSALTsaltSALTsaltSALTsaltSALTsalt";
++static UCHAR password_NUL[] = "pass\0word";
++static UCHAR salt_NUL[] = "sa\0lt";
++
++static UCHAR dk1[] =
++    "0c60c80f961f0e71f3a9b524af6012062fe037a6";
++static UCHAR dk2[] =
++    "ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957";
++static UCHAR dk3[] =
++    "4b007901b765489abead49d926f721d065a429c1";
++static UCHAR dk4[] =
++    "eefe3d61cd4da4e4e9945b3d6ba2158c2634e984";
++static UCHAR dk5[] =
++    "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038";
++static UCHAR dk6[] =
++    "56fa6aa75548099dcc37d7f03425e0c3";
++
++static const struct {
++    ULONG password_length;
++    ULONG salt_length;
++    ULONGLONG iterations;
++    ULONG dklen;
++    UCHAR *password;
++    UCHAR *salt;
++    const UCHAR *dk;
++} rfc6070[] = {
++    {  8,  4,        1, 20, password,      salt,      dk1 },
++    {  8,  4,        2, 20, password,      salt,      dk2 },
++    {  8,  4,     4096, 20, password,      salt,      dk3 },
++    {  8,  4, 16777216, 20, password,      salt,      dk4 },
++    { 24, 36,     4096, 25, long_password, long_salt, dk5 },
++    {  9,  5,     4096, 16, password_NUL,  salt_NUL,  dk6 }
++};
++
++static void test_BcryptDeriveKeyPBKDF2(void)
++{
++    BCRYPT_ALG_HANDLE alg;
++    UCHAR dk[25];
++    char str[51];
++    NTSTATUS ret;
++    int i;
++
++    alg = NULL;
++    ret = pBCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA1_ALGORITHM, MS_PRIMITIVE_PROVIDER,
++                                       BCRYPT_ALG_HANDLE_HMAC_FLAG);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++    ok(alg != NULL, "alg not set\n");
++
++    test_hash_length(alg, 20);
++    test_alg_name(alg, "SHA1");
++
++    for (i = 0; i < ARRAY_SIZE(rfc6070); i++)
++    {
++        memset(dk, 0, sizeof(dk));
++        ret = pBCryptDeriveKeyPBKDF2(alg,
++                                     rfc6070[i].password, rfc6070[i].password_length,
++                                     rfc6070[i].salt, rfc6070[i].salt_length,
++                                     rfc6070[i].iterations,
++                                     dk, rfc6070[i].dklen,
++                                     0);
++        ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++        format_hash( dk, rfc6070[i].dklen, str );
++        ok(!memcmp(str, rfc6070[i].dk, rfc6070[i].dklen), "got %s\n", str);
++    }
++
++    ret = pBCryptCloseAlgorithmProvider(alg, 0);
++    ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
++}
++
+ static void test_rng(void)
+ {
+     BCRYPT_ALG_HANDLE alg;
+@@ -1609,6 +1688,7 @@ START_TEST(bcrypt)
+     pBCryptDuplicateHash = (void *)GetProcAddress(module, "BCryptDuplicateHash");
+     pBCryptFinishHash = (void *)GetProcAddress(module, "BCryptFinishHash");
+     pBCryptDestroyHash = (void *)GetProcAddress(module, "BCryptDestroyHash");
++    pBCryptDeriveKeyPBKDF2 = (void *)GetProcAddress(module, "BCryptDeriveKeyPBKDF2");
+     pBCryptGenRandom = (void *)GetProcAddress(module, "BCryptGenRandom");
+     pBCryptGetProperty = (void *)GetProcAddress(module, "BCryptGetProperty");
+     pBCryptSetProperty = (void *)GetProcAddress(module, "BCryptSetProperty");
+@@ -1639,5 +1719,10 @@ START_TEST(bcrypt)
+     else
+         win_skip("BCryptHash is not available\n");
+ 
++    if (pBCryptDeriveKeyPBKDF2) /* >= Win 7 */
++        test_BcryptDeriveKeyPBKDF2();
++    else
++        win_skip("BCryptDeriveKeyPBKDF2 is not available\n");
++
+     FreeLibrary(module);
+ }
+diff --git a/include/bcrypt.h b/include/bcrypt.h
+index df54f621fa7..d3e4b9959dc 100644
+--- a/include/bcrypt.h
++++ b/include/bcrypt.h
+@@ -217,6 +217,7 @@ typedef PVOID BCRYPT_HASH_HANDLE;
+ NTSTATUS WINAPI BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE, ULONG);
+ NTSTATUS WINAPI BCryptCreateHash(BCRYPT_ALG_HANDLE, BCRYPT_HASH_HANDLE *, PUCHAR, ULONG, PUCHAR, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptDecrypt(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG, ULONG *, ULONG);
++NTSTATUS WINAPI BCryptDeriveKeyPBKDF2(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, PUCHAR, ULONG, ULONGLONG, PUCHAR, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptDestroyHash(BCRYPT_HASH_HANDLE);
+ NTSTATUS WINAPI BCryptDestroyKey(BCRYPT_KEY_HANDLE);
+ NTSTATUS WINAPI BCryptEncrypt(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG, ULONG *, ULONG);
+-- 
+2.16.2
+

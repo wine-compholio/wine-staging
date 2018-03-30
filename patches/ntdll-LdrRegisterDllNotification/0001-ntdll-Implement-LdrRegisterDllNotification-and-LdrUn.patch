@@ -1,18 +1,18 @@
-From 69d9fedb1a587fbc8706daa3a29293637238573f Mon Sep 17 00:00:00 2001
+From 99b6bb4e3d0136d51ef3f1b03b3ca8f2b6bdca3d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 22 Jul 2017 03:56:26 +0200
-Subject: ntdll: Implement LdrRegisterDllNotification and
+Subject: [PATCH] ntdll: Implement LdrRegisterDllNotification and
  LdrUnregisterDllNotification.
 
 ---
- dlls/ntdll/loader.c    | 100 ++++++++++++++++++++
+ dlls/ntdll/loader.c    |  90 ++++++++++++++++++
  dlls/ntdll/ntdll.spec  |   2 +
  dlls/ntdll/tests/rtl.c | 250 +++++++++++++++++++++++++++++++++++++++++++++++++
  include/winternl.h     |  29 ++++++
- 4 files changed, 381 insertions(+)
+ 4 files changed, 371 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 15ed31452e1..de2800c260a 100644
+index 0a9069f..adde9ee 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -40,6 +40,7 @@
@@ -23,9 +23,9 @@ index 15ed31452e1..de2800c260a 100644
  #include "wine/server.h"
  #include "ntdll_misc.h"
  #include "ddk/wdm.h"
-@@ -64,6 +65,15 @@ WINE_DECLARE_DEBUG_CHANNEL(pid);
- typedef DWORD (CALLBACK *DLLENTRYPROC)(HMODULE,DWORD,LPVOID);
- typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
+@@ -67,6 +68,15 @@ typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
+ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
+                             's','y','s','t','e','m','3','2','\\',0};
  
 +struct ldr_notification
 +{
@@ -38,8 +38,8 @@ index 15ed31452e1..de2800c260a 100644
 +
  #define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
  
- static BOOL process_attaching = TRUE;   /* set on process attach to avoid calling callbacks too early */
-@@ -355,6 +365,39 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
+ static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
+@@ -345,6 +355,29 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
  static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { return 0xdeadbeef; }
  #endif  /* __i386__ */
  
@@ -57,29 +57,19 @@ index 15ed31452e1..de2800c260a 100644
 +
 +    LIST_FOR_EACH_ENTRY_SAFE( notify, notify_next, &ldr_notifications, struct ldr_notification, entry )
 +    {
-+        if (TRACE_ON( relay ))
-+        {
-+            if (TRACE_ON( pid ))
-+                DPRINTF( "%04x:", GetCurrentProcessId() );
-+            DPRINTF( "%04x:Call LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
-+                     GetCurrentThreadId(), notify->callback, reason, &data, notify->context );
-+        }
++        TRACE_(relay)("\1Call LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
++                notify->callback, reason, &data, notify->context );
 +
 +        notify->callback(reason, &data, notify->context);
 +
-+        if (TRACE_ON( relay ))
-+        {
-+            if (TRACE_ON( pid ))
-+                DPRINTF( "%04x:", GetCurrentProcessId() );
-+            DPRINTF( "%04x:Ret  LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
-+                     GetCurrentThreadId(), notify->callback, reason, &data, notify->context );
-+        }
++        TRACE_(relay)("\1Ret  LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
++                notify->callback, reason, &data, notify->context );
 +    }
 +}
  
  /*************************************************************************
-  *      is_cli_only_image
-@@ -1408,16 +1451,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
+  *      hash_basename
+@@ -1295,16 +1328,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
      {
          WINE_MODREF *prev = current_modref;
          current_modref = wm;
@@ -103,7 +93,7 @@ index 15ed31452e1..de2800c260a 100644
          current_modref = prev;
      }
  
-@@ -1486,6 +1536,7 @@ static void process_detach(void)
+@@ -1373,6 +1413,7 @@ static void process_detach(void)
              mod->Flags &= ~LDR_PROCESS_ATTACHED;
              MODULE_InitDLL( CONTAINING_RECORD(mod, WINE_MODREF, ldr), 
                              DLL_PROCESS_DETACH, ULongToPtr(process_detaching) );
@@ -111,7 +101,7 @@ index 15ed31452e1..de2800c260a 100644
  
              /* Restart at head of WINE_MODREF list, as entries might have
                 been added and/or removed while performing the call ... */
-@@ -1612,6 +1663,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
+@@ -1482,6 +1523,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
  }
  
  /******************************************************************
@@ -166,19 +156,19 @@ index 15ed31452e1..de2800c260a 100644
   *		LdrLockLoaderLock  (NTDLL.@)
   *
   * Note: some flags are not implemented.
-@@ -2171,6 +2270,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, LPCWSTR fakemo
+@@ -2068,6 +2157,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
      TRACE_(loaddll)( "Loaded %s at %p: native\n", debugstr_w(wm->ldr.FullDllName.Buffer), module );
  
      wm->ldr.LoadCount = 1;
 +
      *pwm = wm;
-     status = STATUS_SUCCESS;
- done:
+     return STATUS_SUCCESS;
+ }
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 4511e8efd26..42f26298dce 100644
+index 2257a93..4c34e10 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -84,6 +84,7 @@
+@@ -83,6 +83,7 @@
  @ stdcall LdrProcessRelocationBlock(ptr long ptr long)
  @ stdcall LdrQueryImageFileExecutionOptions(ptr wstr long ptr long ptr)
  @ stdcall LdrQueryProcessModuleInformation(ptr long ptr)
@@ -186,7 +176,7 @@ index 4511e8efd26..42f26298dce 100644
  @ stdcall LdrResolveDelayLoadedAPI(ptr ptr ptr ptr ptr long)
  @ stub LdrSetAppCompatDllRedirectionCallback
  @ stub LdrSetDllManifestProber
-@@ -92,6 +93,7 @@
+@@ -91,6 +92,7 @@
  @ stub LdrUnloadAlternateResourceModule
  @ stdcall LdrUnloadDll(ptr)
  @ stdcall LdrUnlockLoaderLock(long long)
@@ -195,19 +185,19 @@ index 4511e8efd26..42f26298dce 100644
  @ extern NlsAnsiCodePage
  @ extern NlsMbCodePageTag
 diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
-index 4700f4ac54a..93415ee5da0 100644
+index 02ae1c1..8358cd5 100644
 --- a/dlls/ntdll/tests/rtl.c
 +++ b/dlls/ntdll/tests/rtl.c
-@@ -112,6 +112,8 @@ static BOOL      (WINAPI *pRtlIsCriticalSectionLockedByThread)(CRITICAL_SECTION
- static NTSTATUS  (WINAPI *pRtlInitializeCriticalSectionEx)(CRITICAL_SECTION *, ULONG, ULONG);
- static NTSTATUS  (WINAPI *pLdrEnumerateLoadedModules)(void *, void *, void *);
+@@ -105,6 +105,8 @@ static NTSTATUS  (WINAPI *pLdrEnumerateLoadedModules)(void *, void *, void *);
  static NTSTATUS  (WINAPI *pRtlQueryPackageIdentity)(HANDLE, WCHAR*, SIZE_T*, WCHAR*, SIZE_T*, BOOLEAN*);
+ static NTSTATUS  (WINAPI *pRtlMakeSelfRelativeSD)(PSECURITY_DESCRIPTOR,PSECURITY_DESCRIPTOR,LPDWORD);
+ static NTSTATUS  (WINAPI *pRtlAbsoluteToSelfRelativeSD)(PSECURITY_DESCRIPTOR,PSECURITY_DESCRIPTOR,PULONG);
 +static NTSTATUS  (WINAPI *pLdrRegisterDllNotification)(ULONG, PLDR_DLL_NOTIFICATION_FUNCTION, void *, void **);
 +static NTSTATUS  (WINAPI *pLdrUnregisterDllNotification)(void *);
  
  static HMODULE hkernel32 = 0;
  static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
-@@ -119,6 +121,9 @@ static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
+@@ -112,6 +114,9 @@ static BOOL      (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
  
  #define LEN 16
  static const char* src_src = "This is a test!"; /* 16 bytes long, incl NUL */
@@ -217,16 +207,16 @@ index 4700f4ac54a..93415ee5da0 100644
  static ULONG src_aligned_block[4];
  static ULONG dest_aligned_block[32];
  static const char *src = (const char*)src_aligned_block;
-@@ -175,6 +180,8 @@ static void InitFunctionPtrs(void)
-         pRtlInitializeCriticalSectionEx = (void *)GetProcAddress(hntdll, "RtlInitializeCriticalSectionEx");
-         pLdrEnumerateLoadedModules = (void *)GetProcAddress(hntdll, "LdrEnumerateLoadedModules");
+@@ -162,6 +167,8 @@ static void InitFunctionPtrs(void)
          pRtlQueryPackageIdentity = (void *)GetProcAddress(hntdll, "RtlQueryPackageIdentity");
+         pRtlMakeSelfRelativeSD = (void *)GetProcAddress(hntdll, "RtlMakeSelfRelativeSD");
+         pRtlAbsoluteToSelfRelativeSD = (void *)GetProcAddress(hntdll, "RtlAbsoluteToSelfRelativeSD");
 +        pLdrRegisterDllNotification = (void *)GetProcAddress(hntdll, "LdrRegisterDllNotification");
 +        pLdrUnregisterDllNotification = (void *)GetProcAddress(hntdll, "LdrUnregisterDllNotification");
      }
      hkernel32 = LoadLibraryA("kernel32.dll");
      ok(hkernel32 != 0, "LoadLibrary failed\n");
-@@ -3345,6 +3352,248 @@ done:
+@@ -2334,6 +2341,248 @@ done:
      CoUninitialize();
  }
  
@@ -475,17 +465,17 @@ index 4700f4ac54a..93415ee5da0 100644
  START_TEST(rtl)
  {
      InitFunctionPtrs();
-@@ -3384,4 +3633,5 @@ START_TEST(rtl)
-     test_RtlLeaveCriticalSection();
+@@ -2369,4 +2618,5 @@ START_TEST(rtl)
      test_LdrEnumerateLoadedModules();
      test_RtlQueryPackageIdentity();
+     test_RtlMakeSelfRelativeSD();
 +    test_LdrRegisterDllNotification();
  }
 diff --git a/include/winternl.h b/include/winternl.h
-index 133653adfca..140669b0105 100644
+index 743f3d7..d24e3f9 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2186,6 +2186,32 @@ typedef struct _LDR_MODULE
+@@ -2161,6 +2161,32 @@ typedef struct _LDR_MODULE
      HANDLE              SectionHandle;
  } LDR_MODULE, *PLDR_MODULE;
  
@@ -518,7 +508,7 @@ index 133653adfca..140669b0105 100644
  /* those defines are (some of the) regular LDR_MODULE.Flags values */
  #define LDR_IMAGE_IS_DLL                0x00000004
  #define LDR_LOAD_IN_PROGRESS            0x00001000
-@@ -2204,6 +2230,9 @@ typedef struct _LDR_MODULE
+@@ -2180,6 +2206,9 @@ typedef struct _LDR_MODULE
  /* FIXME: to be checked */
  #define MAXIMUM_FILENAME_LENGTH 256
  
@@ -529,5 +519,5 @@ index 133653adfca..140669b0105 100644
  {
      PVOID               Reserved1;                      /* 00/00 */
 -- 
-2.13.1
+2.7.4
 

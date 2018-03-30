@@ -269,6 +269,7 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
+	enable_ole32_Implicit_MTA="$1"
 	enable_ole32_STGPROP="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_DispCallFunc="$1"
@@ -1003,6 +1004,9 @@ patch_enable ()
 			;;
 		ole32-HGLOBALStream)
 			enable_ole32_HGLOBALStream="$2"
+			;;
+		ole32-Implicit_MTA)
+			enable_ole32_Implicit_MTA="$2"
 			;;
 		ole32-STGPROP)
 			enable_ole32_STGPROP="$2"
@@ -5941,6 +5945,31 @@ if test "$enable_ole32_HGLOBALStream" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Allow moving a being reallocated block of memory managed by HGLOBAL based IStream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Read.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Write.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-Implicit_MTA
+# |
+# | Modified files:
+# |   *	dlls/ole32/compobj.c, dlls/ole32/compobj_private.h, dlls/ole32/marshal.c, dlls/ole32/rpc.c, dlls/ole32/stubmanager.c,
+# | 	dlls/ole32/tests/compobj.c, dlls/ole32/tests/marshal.c
+# |
+if test "$enable_ole32_Implicit_MTA" -eq 1; then
+	patch_apply ole32-Implicit_MTA/0001-ole32-Always-grab-a-reference-to-apt-in-CoGetClassOb.patch
+	patch_apply ole32-Implicit_MTA/0002-ole32-Add-a-helper-for-grabbing-the-current-apartmen.patch
+	patch_apply ole32-Implicit_MTA/0003-ole32-Allow-more-functions-to-use-the-implicit-MTA.patch
+	patch_apply ole32-Implicit_MTA/0004-ole32-Report-the-implicit-MTA-in-CoGetApartmentType.patch
+	patch_apply ole32-Implicit_MTA/0005-ole32-tests-Test-CoWaitForMultipleHandles-in-an-unin.patch
+	patch_apply ole32-Implicit_MTA/0006-ole32-Allow-unmarshalling-objects-into-an-implicit-M.patch
+	patch_apply ole32-Implicit_MTA/0007-ole32-Allow-marshalling-objects-from-an-implicit-MTA.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ole32: Always grab a reference to apt in CoGetClassObject().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ole32: Add a helper for grabbing the current apartment or MTA.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ole32: Allow more functions to use the implicit MTA.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ole32: Report the implicit MTA in CoGetApartmentType().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ole32/tests: Test CoWaitForMultipleHandles() in an uninitialized or MTA apartment.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ole32: Allow unmarshalling objects into an implicit MTA.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ole32: Allow marshalling objects from an implicit MTA.", 1 },';
 	) >> "$patchlist"
 fi
 

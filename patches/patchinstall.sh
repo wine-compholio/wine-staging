@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "be002fd92b9d72163bf130ab8ade8aa4d9cdbad0"
+	echo "ecbb4fa3ea2d3a9e1d3f560c7e0dea008439db5b"
 }
 
 # Show version information
@@ -423,7 +423,6 @@ patch_enable_all ()
 	enable_wininet_Http_Decoding="$1"
 	enable_wininet_InternetCrackUrlW="$1"
 	enable_wininet_Internet_Settings="$1"
-	enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintrust_WinVerifyTrust="$1"
@@ -1466,9 +1465,6 @@ patch_enable ()
 			;;
 		wininet-Internet_Settings)
 			enable_wininet_Internet_Settings="$2"
-			;;
-		wininet-ParseX509EncodedCertificateForListBoxEntry)
-			enable_wininet_ParseX509EncodedCertificateForListBoxEntry="$2"
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
@@ -8610,21 +8606,6 @@ if test "$enable_wininet_Internet_Settings" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-ParseX509EncodedCertificateForListBoxEntry
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29842] Add stub for wininet.ParseX509EncodedCertificateForListBoxEntry
-# |
-# | Modified files:
-# |   *	dlls/wininet/dialogs.c, dlls/wininet/wininet.spec, include/winineti.h
-# |
-if test "$enable_wininet_ParseX509EncodedCertificateForListBoxEntry" -eq 1; then
-	patch_apply wininet-ParseX509EncodedCertificateForListBoxEntry/0001-wininet-add-ParseX509EncodedCertificateForListBoxEnt.patch
-	(
-		printf '%s\n' '+    { "Austin English", "wininet: Add ParseX509EncodedCertificateForListBoxEntry stub.", 2 },';
 	) >> "$patchlist"
 fi
 

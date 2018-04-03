@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ca9d03a7ac6bb599e50aa05ea5ec99d5cf096e2a"
+	echo "2986e895015b9785d61e7265763efacc053d7ad6"
 }
 
 # Show version information
@@ -111,7 +111,6 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
-	enable_d3d11_ID3D11Texture1D_Rebased="$1"
 	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
@@ -261,7 +260,6 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_Zero_mod_name="$1"
-	enable_ntdll__aulldvrm="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -354,7 +352,6 @@ patch_enable_all ()
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
-	enable_user32_PNG_Support="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
@@ -529,9 +526,6 @@ patch_enable ()
 			;;
 		d3d11-Depth_Bias)
 			enable_d3d11_Depth_Bias="$2"
-			;;
-		d3d11-ID3D11Texture1D_Rebased)
-			enable_d3d11_ID3D11Texture1D_Rebased="$2"
 			;;
 		d3d11-Silence_FIXMEs)
 			enable_d3d11_Silence_FIXMEs="$2"
@@ -980,9 +974,6 @@ patch_enable ()
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
 			;;
-		ntdll-_aulldvrm)
-			enable_ntdll__aulldvrm="$2"
-			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
 			;;
@@ -1258,9 +1249,6 @@ patch_enable ()
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
-			;;
-		user32-PNG_Support)
-			enable_user32_PNG_Support="$2"
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
@@ -1925,9 +1913,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
 		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Main depends on that."
 	fi
-	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
-		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but wined3d-CSMT_Main depends on that."
-	fi
 	if test "$enable_d3d9_Tests" -gt 1; then
 		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Main depends on that."
 	fi
@@ -1950,7 +1935,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		abort "Patchset wined3d-UAV_Counters disabled, but wined3d-CSMT_Main depends on that."
 	fi
 	enable_d3d11_Deferred_Context=1
-	enable_d3d11_ID3D11Texture1D_Rebased=1
 	enable_d3d9_Tests=1
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
@@ -1961,13 +1945,9 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 fi
 
 if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
-	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
-		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but wined3d-Dual_Source_Blending depends on that."
-	fi
 	if test "$enable_wined3d_Viewports" -gt 1; then
 		abort "Patchset wined3d-Viewports disabled, but wined3d-Dual_Source_Blending depends on that."
 	fi
-	enable_d3d11_ID3D11Texture1D_Rebased=1
 	enable_wined3d_Viewports=1
 fi
 
@@ -2386,13 +2366,6 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
 	fi
 	enable_wined3d_DXTn=1
-fi
-
-if test "$enable_d3d11_Deferred_Context" -eq 1; then
-	if test "$enable_d3d11_ID3D11Texture1D_Rebased" -gt 1; then
-		abort "Patchset d3d11-ID3D11Texture1D_Rebased disabled, but d3d11-Deferred_Context depends on that."
-	fi
-	enable_d3d11_ID3D11Texture1D_Rebased=1
 fi
 
 if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
@@ -3056,28 +3029,7 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d11-ID3D11Texture1D_Rebased
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40976] Implement support for ID3D11Texture1D
-# |
-# | Modified files:
-# |   *	dlls/d3d11/d3d11_private.h, dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/d3d11/texture.c, dlls/d3d11/utils.c,
-# | 	dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/wined3d/nvidia_texture_shader.c, dlls/wined3d/resource.c, dlls/wined3d/shader.c, dlls/wined3d/texture.c,
-# | 	dlls/wined3d/utils.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
-# |
-if test "$enable_d3d11_ID3D11Texture1D_Rebased" -eq 1; then
-	patch_apply d3d11-ID3D11Texture1D_Rebased/0001-d3d11-Implement-ID3D11Texture1D.patch
-	(
-		printf '%s\n' '+    { "Henri Verbeet", "d3d11: Implement ID3D11Texture1D.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d11-Deferred_Context
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
@@ -5711,21 +5663,6 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-_aulldvrm
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42267] Implement ntdll._aulldvrm
-# |
-# | Modified files:
-# |   *	dlls/ntdll/large_int.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/large_int.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntdll__aulldvrm" -eq 1; then
-	patch_apply ntdll-_aulldvrm/0001-ntdll-Implement-_alldvrm-_aulldvrm-and-add-tests.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement _alldvrm/_aulldvrm and add tests.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-set_full_cpu_context
 # |
 # | Modified files:
@@ -5750,7 +5687,6 @@ fi
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	patch_apply ntoskrnl-Stubs/0003-ntoskrnl.exe-Add-stubs-for-ExAcquireFastMutexUnsafe-.patch
 	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
 	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
 	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
@@ -5765,7 +5701,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0017-ntoskrnl-Add-PsGetProcessId-stub.patch
 	patch_apply ntoskrnl-Stubs/0018-ntoskrnl-Add-ObGetObjectType-stub.patch
 	(
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Add stubs for ExAcquireFastMutexUnsafe and ExReleaseFastMutexUnsafe.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
@@ -7420,21 +7355,6 @@ if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-PNG_Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38959] Add support for loading PNG icon files
-# |
-# | Modified files:
-# |   *	dlls/user32/Makefile.in, dlls/user32/cursoricon.c
-# |
-if test "$enable_user32_PNG_Support" -eq 1; then
-	patch_apply user32-PNG_Support/0001-user32-Add-support-for-PNG-icons.-v4.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for PNG icons.", 5 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-Refresh_MDI_Menus
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8100,7 +8020,7 @@ fi
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Depth_Bias, wined3d-Viewports
+# |   *	d3d11-Depth_Bias, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -8163,8 +8083,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias,
-# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Viewports, wined3d-
+# | 	Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h

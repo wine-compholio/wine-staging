@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "79f93ecf429f42db15bc14f276045fdad35cef13"
+	echo "ca9d03a7ac6bb599e50aa05ea5ec99d5cf096e2a"
 }
 
 # Show version information
@@ -310,7 +310,6 @@ patch_enable_all ()
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_server_send_hardware_message="$1"
-	enable_setupapi_CM_Get_Parent="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -1127,9 +1126,6 @@ patch_enable ()
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
-			;;
-		setupapi-CM_Get_Parent)
-			enable_setupapi_CM_Get_Parent="$2"
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
@@ -5099,13 +5095,11 @@ fi
 # Patchset ntdll-Exception
 # |
 # | Modified files:
-# |   *	dlls/kernel32/debugger.c, dlls/ntdll/om.c, dlls/ntdll/tests/exception.c
+# |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
 # |
 if test "$enable_ntdll_Exception" -eq 1; then
-	patch_apply ntdll-Exception/0001-ntdll-Throw-exception-if-invalid-handle-is-passed-to.patch
 	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Throw exception if invalid handle is passed to NtClose and debugger enabled.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5500,6 +5494,9 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	ntdll-RtlQueryPackageIdentity
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44897] Implement stub for ntdll.RtlGetUnloadEventTraceEx
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c
@@ -6617,21 +6614,6 @@ if test "$enable_server_send_hardware_message" -eq 1; then
 	patch_apply server-send_hardware_message/0001-server-Improve-handling-of-hooks-for-normal-non-inje.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Improve handling of hooks for normal (non-injected) hardware messages.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-CM_Get_Parent
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43831] Return CR_NO_SUCH_DEVNODE from CM_Get_Parent stub
-# |
-# | Modified files:
-# |   *	dlls/setupapi/stubs.c
-# |
-if test "$enable_setupapi_CM_Get_Parent" -eq 1; then
-	patch_apply setupapi-CM_Get_Parent/0001-setupapi-Return-CR_NO_SUCH_DEVNODE-from-CM_Get_Paren.patch
-	(
-		printf '%s\n' '+    { "Tim Wanders", "setupapi: Return CR_NO_SUCH_DEVNODE from CM_Get_Parent stub.", 1 },';
 	) >> "$patchlist"
 fi
 

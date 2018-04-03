@@ -1931,9 +1931,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_d3d9_Tests" -gt 1; then
 		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Main depends on that."
 	fi
-	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but wined3d-CSMT_Main depends on that."
-	fi
 	if test "$enable_wined3d_Accounting" -gt 1; then
 		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Main depends on that."
 	fi
@@ -1955,7 +1952,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	enable_d3d11_Deferred_Context=1
 	enable_d3d11_ID3D11Texture1D_Rebased=1
 	enable_d3d9_Tests=1
-	enable_ntdll_DllRedirects=1
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_Dual_Source_Blending=1
@@ -8167,9 +8163,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type,
-# | 	ntdll-DllRedirects, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Viewports, wined3d-Dual_Source_Blending,
-# | 	wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	d3d11-ID3D11Texture1D_Rebased, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias,
+# | 	wined3d-Viewports, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h

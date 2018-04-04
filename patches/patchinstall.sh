@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2986e895015b9785d61e7265763efacc053d7ad6"
+	echo "3263d51a1fd86abf195c5be224f6fdb4db284b53"
 }
 
 # Show version information
@@ -3863,19 +3863,11 @@ fi
 # |   *	[#44500] Add stubs for FltRegisterFilter, FltStartFiltering, FltUnregisterFilter
 # |
 # | Modified files:
-# |   *	dlls/fltmgr.sys/fltmgr.sys.spec, dlls/fltmgr.sys/main.c, include/Makefile.in, include/ddk/fltkernel.h
+# |   *	dlls/fltmgr.sys/fltmgr.sys.spec, dlls/fltmgr.sys/main.c
 # |
 if test "$enable_fltmgr_sys_filters" -eq 1; then
-	patch_apply fltmgr.sys-filters/0001-include-ddk-Add-fltkernel.h.patch
-	patch_apply fltmgr.sys-filters/0002-fltmgr.sys-Add-FltRegisterFilter-stub.patch
-	patch_apply fltmgr.sys-filters/0003-fltmgr.sys-Add-FltStartFiltering-stub.patch
-	patch_apply fltmgr.sys-filters/0004-fltmgr.sys-Add-FltUnregisterFilter-stub.patch
 	patch_apply fltmgr.sys-filters/0005-fltmgr.sys-Implement-FltGetRoutineAddress.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include/ddk: Add fltkernel.h.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltRegisterFilter stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltStartFiltering stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Add FltUnregisterFilter stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Implement FltGetRoutineAddress.", 1 },';
 	) >> "$patchlist"
 fi

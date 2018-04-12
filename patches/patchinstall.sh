@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "aa27dd07aa55301f3e23acf9f74daa0f465e7b6d"
+	echo "a7b33a6a428c9920d8130819373b1554bbd206c4"
 }
 
 # Show version information
@@ -152,7 +152,6 @@ patch_enable_all ()
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
-	enable_fltmgr_sys_filters="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_GetCharacterPlacement="$1"
@@ -193,6 +192,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
+	enable_mfplat_MFStartup="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -285,7 +285,6 @@ patch_enable_all ()
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_rpcrt4_Race_Condition="$1"
 	enable_secur32_Zero_Buffer_Length="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_CreateProcess_ACLs="$1"
@@ -648,9 +647,6 @@ patch_enable ()
 		explorer-Video_Registry_Key)
 			enable_explorer_Video_Registry_Key="$2"
 			;;
-		fltmgr.sys-filters)
-			enable_fltmgr_sys_filters="$2"
-			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
 			;;
@@ -770,6 +766,9 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
+			;;
+		mfplat-MFStartup)
+			enable_mfplat_MFStartup="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -1046,9 +1045,6 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
-			;;
-		rpcrt4-Race_Condition)
-			enable_rpcrt4_Race_Condition="$2"
 			;;
 		secur32-Zero_Buffer_Length)
 			enable_secur32_Zero_Buffer_Length="$2"
@@ -3845,21 +3841,6 @@ if test "$enable_explorer_Video_Registry_Key" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset fltmgr.sys-filters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44500] Add stubs for FltRegisterFilter, FltStartFiltering, FltUnregisterFilter
-# |
-# | Modified files:
-# |   *	dlls/fltmgr.sys/fltmgr.sys.spec, dlls/fltmgr.sys/main.c
-# |
-if test "$enable_fltmgr_sys_filters" -eq 1; then
-	patch_apply fltmgr.sys-filters/0005-fltmgr.sys-Implement-FltGetRoutineAddress.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "fltmgr.sys: Implement FltGetRoutineAddress.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset fonts-Missing_Fonts
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4558,6 +4539,21 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "libs/wine: Do not restrict base address of main thread on 64 bit mac os.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFStartup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43607] Return S_OK from MFStartup stub
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/tests/mfplat.c
+# |
+if test "$enable_mfplat_MFStartup" -eq 1; then
+	patch_apply mfplat-MFStartup/0001-mfplat-Return-S_OK-from-MFStartup-stub.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "mfplat: Return S_OK from MFStartup stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5660,6 +5656,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Compiler_Warnings
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37355] Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
+# |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
 # |
@@ -6148,18 +6147,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset rpcrt4-Race_Condition
-# |
-# | Modified files:
-# |   *	dlls/rpcrt4/rpc_server.c
-# |
-if test "$enable_rpcrt4_Race_Condition" -eq 1; then
-	patch_apply rpcrt4-Race_Condition/0001-rpcrt4-Hold-CS-while-iterating-through-protseqs-list.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "rpcrt4: Hold CS while iterating through protseqs list.", 1 },';
 	) >> "$patchlist"
 fi
 

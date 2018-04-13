@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a7b33a6a428c9920d8130819373b1554bbd206c4"
+	echo "3f281a3baad9f5f8f875da902718a1d5d3dc0d9f"
 }
 
 # Show version information
@@ -184,6 +184,7 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
+	enable_kernel32_SetProcessAffinityUpdateMode="$1"
 	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
@@ -434,6 +435,7 @@ patch_enable_all ()
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
+	enable_xaudio2_CommitChanges="$1"
 }
 
 # Enable or disable a specific patchset
@@ -742,6 +744,9 @@ patch_enable ()
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
+			;;
+		kernel32-SetProcessAffinityUpdateMode)
+			enable_kernel32_SetProcessAffinityUpdateMode="$2"
 			;;
 		kernel32-TimezoneInformation_Registry)
 			enable_kernel32_TimezoneInformation_Registry="$2"
@@ -1492,6 +1497,9 @@ patch_enable ()
 			;;
 		xaudio2_7-OnVoiceProcessingPassStart)
 			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
+			;;
+		xaudio2_CommitChanges)
+			enable_xaudio2_CommitChanges="$2"
 			;;
 		*)
 			return 1
@@ -4417,6 +4425,20 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetProcessAffinityUpdateMode
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
+# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/kernelbase/kernelbase.spec
+# |
+if test "$enable_kernel32_SetProcessAffinityUpdateMode" -eq 1; then
+	patch_apply kernel32-SetProcessAffinityUpdateMode/0001-kernel32-add-SetProcessAffinityUpdateMode-stub.patch
+	(
+		printf '%s\n' '+    { "Thomas Crider", "kernel32: Add SetProcessAffinityUpdateMode stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8711,6 +8733,21 @@ if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -eq 1; then
 	patch_apply xaudio2_7-OnVoiceProcessingPassStart/0001-xaudio2_7-Use-assembly-wrapper-to-call-OnVoiceProces.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "xaudio2_7: Use assembly wrapper to call OnVoiceProcessingPassStart callback.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xaudio2_CommitChanges
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44883] Return S_OK from IXAudio2Impl_CommitChanges()
+# |
+# | Modified files:
+# |   *	dlls/xaudio2_7/xaudio_dll.c
+# |
+if test "$enable_xaudio2_CommitChanges" -eq 1; then
+	patch_apply xaudio2_CommitChanges/0001-xaudio2-revert-commit-b747d6f6ccdf1699a9242a570d681f.patch
+	(
+		printf '%s\n' '+    { "Thomas Crider", "xaudio2: Revert commit b747d6f6ccdf1699a9242a570d681fa246de592e, fixes #44883.", 1 },';
 	) >> "$patchlist"
 fi
 

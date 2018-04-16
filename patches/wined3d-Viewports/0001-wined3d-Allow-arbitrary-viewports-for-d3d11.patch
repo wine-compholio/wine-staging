@@ -1,7 +1,7 @@
-From 9e3fd02b6ba9494fd9433fef92cbf6cbcfb39ff6 Mon Sep 17 00:00:00 2001
+From c609a9065e0139dba4a6c50419e1bc06a2bf53aa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 17 Aug 2017 19:29:30 +0200
-Subject: wined3d: Allow arbitrary viewports for d3d11.
+Subject: [PATCH] wined3d: Allow arbitrary viewports for d3d11.
 
 ---
  dlls/d3d11/tests/d3d11.c   | 55 ++++++++++++++++++++++++++++++++++++++++++++++
@@ -13,10 +13,10 @@ Subject: wined3d: Allow arbitrary viewports for d3d11.
  6 files changed, 66 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index f4abd51..c6b9221 100644
+index 1b713e4..531d955 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -23392,6 +23392,60 @@ static void test_fractional_viewports(void)
+@@ -24217,6 +24217,60 @@ static void test_fractional_viewports(void)
      release_test_context(&test_context);
  }
  
@@ -77,7 +77,7 @@ index f4abd51..c6b9221 100644
  static void test_early_depth_stencil(void)
  {
      ID3D11DepthStencilState *depth_stencil_state;
-@@ -25461,6 +25515,7 @@ START_TEST(d3d11)
+@@ -26479,6 +26533,7 @@ START_TEST(d3d11)
      test_gather_c();
      test_depth_bias();
      test_fractional_viewports();
@@ -112,10 +112,10 @@ index cdce669..644766c 100644
      if (!extended)
          flags |= WINED3D_VIDMEM_ACCOUNTING;
 diff --git a/dlls/ddraw/ddraw_private.h b/dlls/ddraw/ddraw_private.h
-index a9632de..fe3301e 100644
+index b8552af..50e4d82 100644
 --- a/dlls/ddraw/ddraw_private.h
 +++ b/dlls/ddraw/ddraw_private.h
-@@ -65,7 +65,7 @@ struct FvfToDecl
+@@ -66,7 +66,7 @@ struct FvfToDecl
  #define DDRAW_WINED3D_FLAGS     (WINED3D_LEGACY_DEPTH_BIAS | WINED3D_VIDMEM_ACCOUNTING \
          | WINED3D_RESTORE_MODE_ON_ACTIVATE | WINED3D_FOCUS_MESSAGES | WINED3D_PIXEL_CENTER_INTEGER \
          | WINED3D_LEGACY_UNBOUND_RESOURCE_COLOR | WINED3D_NO_PRIMITIVE_RESTART \
@@ -125,32 +125,32 @@ index a9632de..fe3301e 100644
  enum ddraw_device_state
  {
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index f20507b..c234758 100644
+index 88e6181..d665012 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
-@@ -4559,10 +4559,13 @@ static void get_viewport(struct wined3d_context *context, const struct wined3d_s
+@@ -4559,10 +4559,13 @@ static void get_viewports(struct wined3d_context *context, const struct wined3d_
  
-     if (target)
-     {
--        if (viewport->width > target->width)
--            viewport->width = target->width;
--        if (viewport->height > target->height)
--            viewport->height = target->height;
-+        if (context->d3d_info->wined3d_creation_flags & WINED3D_LIMIT_VIEWPORT)
-+        {
-+            if (viewport->width > target->width)
-+                viewport->width = target->width;
-+            if (viewport->height > target->height)
-+                viewport->height = target->height;
-+        }
+         if (target)
+         {
+-            if (viewports[i].width > target->width)
+-                viewports[i].width = target->width;
+-            if (viewports[i].height > target->height)
+-                viewports[i].height = target->height;
++            if (context->d3d_info->wined3d_creation_flags & WINED3D_LIMIT_VIEWPORT)
++            {
++                if (viewports[i].width > target->width)
++                    viewports[i].width = target->width;
++                if (viewports[i].height > target->height)
++                    viewports[i].height = target->height;
++            }
+         }
      }
  
-     /*
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 5921646..d4abb29 100644
+index 6bfbc03..97fb693 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -1314,6 +1314,7 @@ enum wined3d_shader_byte_code_format
+@@ -1315,6 +1315,7 @@ enum wined3d_shader_byte_code_format
  #define WINED3D_NO_PRIMITIVE_RESTART                            0x00000800
  #define WINED3D_LEGACY_CUBEMAP_FILTERING                        0x00001000
  #define WINED3D_NORMALIZED_DEPTH_BIAS                           0x00002000

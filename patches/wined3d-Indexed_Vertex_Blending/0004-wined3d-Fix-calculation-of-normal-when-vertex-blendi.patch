@@ -1,4 +1,4 @@
-From a62959a00ea79f2fff613f4a4dbc27d7cd426af0 Mon Sep 17 00:00:00 2001
+From ff076f32b12e12ad59b82a96133c6080022ce25b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 31 Aug 2017 01:00:04 +0200
 Subject: wined3d: Fix calculation of normal when vertex blending is enabled.
@@ -9,10 +9,10 @@ Subject: wined3d: Fix calculation of normal when vertex blending is enabled.
  2 files changed, 36 insertions(+), 42 deletions(-)
 
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index 052327c..1fe62fa 100644
+index ae5d76c..517f6c0 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
-@@ -20510,7 +20510,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+@@ -20580,7 +20580,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
          while (point->x != -1 && point->y != -1)
          {
              color = getPixelColor(device, point->x, point->y);
@@ -22,7 +22,7 @@ index 052327c..1fe62fa 100644
          }
  
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 12100a5..bb3b1c2 100644
+index 2cad436..ca92f56 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -144,8 +144,8 @@ struct glsl_vs_program
@@ -96,12 +96,12 @@ index 12100a5..bb3b1c2 100644
 @@ -1757,6 +1747,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
      const struct wined3d_gl_info *gl_info = context->gl_info;
      struct shader_glsl_priv *priv = shader_priv;
-     float position_fixup[4];
+     float position_fixup[4 * WINED3D_MAX_VIEWPORTS];
 +    float normal[3 * 3];
      DWORD update_mask;
  
      struct glsl_shader_prog_link *prog = ctx_data->glsl_program;
-@@ -1811,7 +1802,9 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1813,7 +1804,9 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
          GL_EXTCALL(glUniformMatrix4fv(prog->vs.modelview_matrix_location[0], 1, FALSE, &mat._11));
          checkGLcall("glUniformMatrix4fv");
  
@@ -112,7 +112,7 @@ index 12100a5..bb3b1c2 100644
      }
  
      if (update_mask & WINED3D_SHADER_CONST_FFP_VERTEXBLEND)
-@@ -1826,6 +1819,10 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1828,6 +1821,10 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
              get_modelview_matrix(context, state, i, &mat);
              GL_EXTCALL(glUniformMatrix4fv(prog->vs.modelview_matrix_location[i], 1, FALSE, &mat._11));
              checkGLcall("glUniformMatrix4fv");
@@ -123,7 +123,7 @@ index 12100a5..bb3b1c2 100644
          }
      }
  
-@@ -8787,8 +8784,8 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+@@ -8818,8 +8815,8 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
      shader_addline(buffer, "\n");
  
      shader_addline(buffer, "uniform mat4 ffp_modelview_matrix[%u];\n", MAX_VERTEX_INDEX_BLENDS);
@@ -133,17 +133,17 @@ index 12100a5..bb3b1c2 100644
      shader_addline(buffer, "uniform mat4 ffp_texture_matrix[%u];\n", MAX_TEXTURES);
  
      shader_addline(buffer, "uniform struct\n{\n");
-@@ -8898,17 +8895,10 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+@@ -8929,17 +8926,10 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
      shader_addline(buffer, "vec3 normal = vec3(0.0);\n");
      if (settings->normal)
      {
 -        if (!settings->vertexblends)
--        {
++        for (i = 0; i < settings->vertexblends + 1; ++i)
+         {
 -            shader_addline(buffer, "normal = ffp_normal_matrix * ffp_attrib_normal;\n");
 -        }
 -        else
-+        for (i = 0; i < settings->vertexblends + 1; ++i)
-         {
+-        {
 -            for (i = 0; i < settings->vertexblends + 1; ++i)
 -            {
 -                sprintf(var, settings->vb_indices ? "int(ffp_attrib_blendindices[%u] + 0.1)" : "%u", i);
@@ -154,7 +154,7 @@ index 12100a5..bb3b1c2 100644
          }
  
          if (settings->normalize)
-@@ -9786,8 +9776,12 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
+@@ -9814,8 +9804,12 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
          string_buffer_sprintf(name, "ffp_modelview_matrix[%u]", i);
          vs->modelview_matrix_location[i] = GL_EXTCALL(glGetUniformLocation(program_id, name->buffer));
      }

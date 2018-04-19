@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "70c5dc64fc02408c6f7233c996e0ffdc5dc4a5a0"
+	echo "c5023aea7e97213159b754a168b7abddc89664bb"
 }
 
 # Show version information
@@ -88,7 +88,6 @@ patch_enable_all ()
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi_LsaLookupPrivilegeName="$1"
-	enable_advapi32_BuildSecurityDescriptor="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_Performance_Counters="$1"
@@ -185,7 +184,6 @@ patch_enable_all ()
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernel32_SetProcessAffinityUpdateMode="$1"
-	enable_kernel32_TimezoneInformation_Registry="$1"
 	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -456,9 +454,6 @@ patch_enable ()
 			;;
 		advapi-LsaLookupPrivilegeName)
 			enable_advapi_LsaLookupPrivilegeName="$2"
-			;;
-		advapi32-BuildSecurityDescriptor)
-			enable_advapi32_BuildSecurityDescriptor="$2"
 			;;
 		advapi32-CreateRestrictedToken)
 			enable_advapi32_CreateRestrictedToken="$2"
@@ -747,9 +742,6 @@ patch_enable ()
 			;;
 		kernel32-SetProcessAffinityUpdateMode)
 			enable_kernel32_SetProcessAffinityUpdateMode="$2"
-			;;
-		kernel32-TimezoneInformation_Registry)
-			enable_kernel32_TimezoneInformation_Registry="$2"
 			;;
 		kernelbase-PathCchCombineEx)
 			enable_kernelbase_PathCchCombineEx="$2"
@@ -2532,23 +2524,6 @@ if test "$enable_advapi_LsaLookupPrivilegeName" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-BuildSecurityDescriptor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37594] Initial implementation of advapi32.BuildSecurityDescriptorW
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
-# |
-if test "$enable_advapi32_BuildSecurityDescriptor" -eq 1; then
-	patch_apply advapi32-BuildSecurityDescriptor/0001-advapi32-Implement-BuildSecurityDescriptorW.patch
-	patch_apply advapi32-BuildSecurityDescriptor/0002-advapi32-tests-Add-basic-tests-for-BuildSecurityDesc.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "advapi32: Implement BuildSecurityDescriptorW.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add basic tests for BuildSecurityDescriptor.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4439,18 +4414,6 @@ if test "$enable_kernel32_SetProcessAffinityUpdateMode" -eq 1; then
 	patch_apply kernel32-SetProcessAffinityUpdateMode/0001-kernel32-add-SetProcessAffinityUpdateMode-stub.patch
 	(
 		printf '%s\n' '+    { "Thomas Crider", "kernel32: Add SetProcessAffinityUpdateMode stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-TimezoneInformation_Registry
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel_main.c, dlls/kernel32/kernel_private.h, dlls/kernel32/time.c
-# |
-if test "$enable_kernel32_TimezoneInformation_Registry" -eq 1; then
-	patch_apply kernel32-TimezoneInformation_Registry/0001-kernel32-Init-TimezoneInformation-registry.patch
-	(
-		printf '%s\n' '+    { "Qian Hong", "kernel32: Init TimezoneInformation registry.", 1 },';
 	) >> "$patchlist"
 fi
 

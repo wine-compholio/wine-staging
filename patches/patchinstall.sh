@@ -397,6 +397,7 @@ patch_enable_all ()
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
 	enable_winedevice_Fix_Relocation="$1"
+	enable_winemapi_user_xdg_mail="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
@@ -1381,6 +1382,9 @@ patch_enable ()
 			;;
 		winedevice-Fix_Relocation)
 			enable_winedevice_Fix_Relocation="$2"
+			;;
+		winemapi-user-xdg-mail)
+			enable_winemapi_user_xdg_mail="$2"
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
@@ -8129,6 +8133,18 @@ if test "$enable_winedevice_Fix_Relocation" -eq 1; then
 	patch_apply winedevice-Fix_Relocation/0001-winedevice-Avoid-invalid-memory-access-when-relocati.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winedevice: Avoid invalid memory access when relocation block addresses memory outside of the current page.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winemapi-user-xdg-mail
+# |
+# | Modified files:
+# |   *	dlls/winemapi/Makefile.in, dlls/winemapi/sendmail.c, dlls/winemapi/winemapi_private.h, dlls/winemapi/xdg-email.c
+# |
+if test "$enable_winemapi_user_xdg_mail" -eq 1; then
+	patch_apply winemapi-user-xdg-mail/0001-winemapi-Directly-use-xdg-email-if-available-enablin.patch
+	(
+		printf '%s\n' '+    { "Jeremy White", "winemapi: Directly use xdg-email if available, enabling file attachments.", 1 },';
 	) >> "$patchlist"
 fi
 

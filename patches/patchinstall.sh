@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "448344c5e443b35c06bc0cc4f2e8ee9b7968008f"
+	echo "a373054b72f396a04ab4f191e1f6c2c9e0476aa0"
 }
 
 # Show version information
@@ -251,7 +251,6 @@ patch_enable_all ()
 	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
-	enable_ntdll_SystemRecommendedSharedDataAlignment="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -321,7 +320,6 @@ patch_enable_all ()
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
-	enable_shell32_SHCreateSessionKey="$1"
 	enable_shell32_SHELL_execute="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_SHFileOperation_Win9x="$1"
@@ -945,9 +943,6 @@ patch_enable ()
 		ntdll-SystemInterruptInformation)
 			enable_ntdll_SystemInterruptInformation="$2"
 			;;
-		ntdll-SystemRecommendedSharedDataAlignment)
-			enable_ntdll_SystemRecommendedSharedDataAlignment="$2"
-			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
 			;;
@@ -1154,9 +1149,6 @@ patch_enable ()
 			;;
 		shell32-SFGAO_HASSUBFOLDER)
 			enable_shell32_SFGAO_HASSUBFOLDER="$2"
-			;;
-		shell32-SHCreateSessionKey)
-			enable_shell32_SHCreateSessionKey="$2"
 			;;
 		shell32-SHELL_execute)
 			enable_shell32_SHELL_execute="$2"
@@ -2750,11 +2742,9 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-
-# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/roapi.c,
-# | 	include/roapi.h
+# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/roapi.c
 # |
 if test "$enable_combase_RoApi" -eq 1; then
-	patch_apply combase-RoApi/0002-include-roapi.h-Add-further-typedefs.patch
 	patch_apply combase-RoApi/0003-combase-Implement-RoGetActivationFactory.patch
 	patch_apply combase-RoApi/0004-combase-Implement-RoActivateInstance.patch
 	patch_apply combase-RoApi/0005-combase-Add-stub-for-RoGetApartmentIdentifier.patch
@@ -2763,7 +2753,6 @@ if test "$enable_combase_RoApi" -eq 1; then
 	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
 	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "include/roapi.h: Add further typedefs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
@@ -5562,18 +5551,6 @@ if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-SystemRecommendedSharedDataAlignment
-# |
-# | Modified files:
-# |   *	include/winternl.h
-# |
-if test "$enable_ntdll_SystemRecommendedSharedDataAlignment" -eq 1; then
-	patch_apply ntdll-SystemRecommendedSharedDataAlignment/0001-include-Add-more-constants-to-SYSTEM_INFORMATION_CLA.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "include: Add more constants to SYSTEM_INFORMATION_CLASS.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-SystemRoot_Symlink
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6765,18 +6742,6 @@ if test "$enable_shell32_SFGAO_HASSUBFOLDER" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for unixfs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-SHCreateSessionKey
-# |
-# | Modified files:
-# |   *	dlls/shell32/shellreg.c, dlls/shell32/tests/shellole.c
-# |
-if test "$enable_shell32_SHCreateSessionKey" -eq 1; then
-	patch_apply shell32-SHCreateSessionKey/0001-shell32-Implement-SHCreateSessionKey.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "shell32: Implement SHCreateSessionKey.", 1 },';
 	) >> "$patchlist"
 fi
 

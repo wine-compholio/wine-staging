@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a373054b72f396a04ab4f191e1f6c2c9e0476aa0"
+	echo "ee7756fdfd46cd64a09089def3c330a3b262cdd5"
 }
 
 # Show version information
@@ -159,7 +159,6 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
-	enable_hnetcfg_INetFwAuthorizedApplication="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -666,9 +665,6 @@ patch_enable ()
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
-			;;
-		hnetcfg-INetFwAuthorizedApplication)
-			enable_hnetcfg_INetFwAuthorizedApplication="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -3958,18 +3954,6 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change multiplications by additions in the x/y scaler loops.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Remove ceilf/floorf calls from bilinear scaler.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Prefer using pre-multiplied ARGB data in the scaler.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset hnetcfg-INetFwAuthorizedApplication
-# |
-# | Modified files:
-# |   *	dlls/hnetcfg/apps.c
-# |
-if test "$enable_hnetcfg_INetFwAuthorizedApplication" -eq 1; then
-	patch_apply hnetcfg-INetFwAuthorizedApplication/0001-hnetcfg-Improve-INetFwAuthorizedApplication-get_Proc.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "hnetcfg: Improve INetFwAuthorizedApplication::get_ProcessImageFileName stub.", 1 },';
 	) >> "$patchlist"
 fi
 

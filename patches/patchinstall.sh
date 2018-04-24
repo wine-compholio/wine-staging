@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ee7756fdfd46cd64a09089def3c330a3b262cdd5"
+	echo "e13f59085f8a3787abd4e3f3eabae1a7e607a3c0"
 }
 
 # Show version information
@@ -8086,6 +8086,9 @@ if test "$enable_winedevice_Fix_Relocation" -eq 1; then
 fi
 
 # Patchset winemapi-user-xdg-mail
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11770] - use xdg-email if it's available.
 # |
 # | Modified files:
 # |   *	dlls/winemapi/Makefile.in, dlls/winemapi/sendmail.c, dlls/winemapi/winemapi_private.h, dlls/winemapi/xdg-email.c

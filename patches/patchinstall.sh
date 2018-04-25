@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e13f59085f8a3787abd4e3f3eabae1a7e607a3c0"
+	echo "5e74b9ea945db50bd31cef3254865f6cd9544eb2"
 }
 
 # Show version information
@@ -5198,6 +5198,9 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 fi
 
 # Patchset ntdll-NtContinue
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31910] Add stub for NtContinue
 # |
 # | Modified files:
 # |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec

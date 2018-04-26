@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5e74b9ea945db50bd31cef3254865f6cd9544eb2"
+	echo "d6654dbf2b38d02f3c6e0ede706a0388cd7cd4a6"
 }
 
 # Show version information
@@ -110,7 +110,6 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
-	enable_d3d11_Silence_FIXMEs="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
@@ -520,9 +519,6 @@ patch_enable ()
 			;;
 		d3d11-Depth_Bias)
 			enable_d3d11_Depth_Bias="$2"
-			;;
-		d3d11-Silence_FIXMEs)
-			enable_d3d11_Silence_FIXMEs="$2"
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
@@ -3115,18 +3111,6 @@ if test "$enable_d3d11_Depth_Bias" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for DepthClipEnable in RSSetState.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-Silence_FIXMEs
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c
-# |
-if test "$enable_d3d11_Silence_FIXMEs" -eq 1; then
-	patch_apply d3d11-Silence_FIXMEs/0001-d3d11-Silence-ID3D11Device_GetDeviceRemovedReason.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Silence ID3D11Device_GetDeviceRemovedReason.", 1 },';
 	) >> "$patchlist"
 fi
 

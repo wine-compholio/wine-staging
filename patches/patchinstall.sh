@@ -8725,9 +8725,9 @@ fi
 # |   *	dlls/xaudio2_7/xaudio_dll.c
 # |
 if test "$enable_xaudio2_CommitChanges" -eq 1; then
-	patch_apply xaudio2_CommitChanges/0001-xaudio2-revert-commit-b747d6f6ccdf1699a9242a570d681f.patch
+	patch_apply xaudio2_CommitChanges/0001-xaudio2-Return-S_OK-in-IXAudio2-in-CommitChanges.patch
 	(
-		printf '%s\n' '+    { "Thomas Crider", "xaudio2: Revert commit b747d6f6ccdf1699a9242a570d681fa246de592e, fixes #44883.", 1 },';
+		printf '%s\n' '+    { "Thomas Crider", "xaudio2: Return S_OK in IXAudio2 in CommitChanges.", 1 },';
 	) >> "$patchlist"
 fi
 

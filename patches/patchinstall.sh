@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
+	enable_dxgi_SetMaximumFrameLatency="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
@@ -635,6 +636,9 @@ patch_enable ()
 			;;
 		dxgi-MakeWindowAssociation)
 			enable_dxgi_MakeWindowAssociation="$2"
+			;;
+		dxgi-SetMaximumFrameLatency)
+			enable_dxgi_SetMaximumFrameLatency="$2"
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
@@ -3763,6 +3767,21 @@ if test "$enable_dxgi_MakeWindowAssociation" -eq 1; then
 	patch_apply dxgi-MakeWindowAssociation/0001-dxgi-Improve-stubs-for-MakeWindowAssociation-and-Get.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxgi: Improve stubs for MakeWindowAssociation and GetWindowAssociation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxgi-SetMaximumFrameLatency
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44061] Return S_OK from GetMaximumFrameLatency
+# |
+# | Modified files:
+# |   *	dlls/dxgi/device.c
+# |
+if test "$enable_dxgi_SetMaximumFrameLatency" -eq 1; then
+	patch_apply dxgi-SetMaximumFrameLatency/0001-dxgi-Return-S_OK-in-SetMaximumFrameLatency.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dxgi: Return S_OK in SetMaximumFrameLatency.", 1 },';
 	) >> "$patchlist"
 fi
 

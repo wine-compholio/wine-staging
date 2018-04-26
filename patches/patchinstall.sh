@@ -418,6 +418,7 @@ patch_enable_all ()
 	enable_wininet_Internet_Settings="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
+	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -1444,6 +1445,9 @@ patch_enable ()
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
 			;;
+		wintrust-WTHelperGetProvCertFromChain)
+			enable_wintrust_WTHelperGetProvCertFromChain="$2"
+			;;
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
 			;;
@@ -1856,6 +1860,13 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
 	fi
 	enable_server_Desktop_Refcount=1
+fi
+
+if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
+	if test "$enable_wintrust_WinVerifyTrust" -gt 1; then
+		abort "Patchset wintrust-WinVerifyTrust disabled, but wintrust-WTHelperGetProvCertFromChain depends on that."
+	fi
+	enable_wintrust_WinVerifyTrust=1
 fi
 
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
@@ -8484,6 +8495,24 @@ if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 2 },';
 		printf '%s\n' '+    { "Marko Friedemann", "wintrust: Use enhanced crypto provider in VerifyImageHash.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wintrust-WTHelperGetProvCertFromChain
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wintrust-WinVerifyTrust
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44061] Check Parameter in WTHelperGetProvCertFromChain
+# |
+# | Modified files:
+# |   *	dlls/wintrust/tests/softpub.c, dlls/wintrust/wintrust_main.c
+# |
+if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
+	patch_apply wintrust-WTHelperGetProvCertFromChain/0001-wintrust-Add-parameter-check-in-WTHelperGetProvCertF.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintrust: Add parameter check in WTHelperGetProvCertFromChain.", 1 },';
 	) >> "$patchlist"
 fi
 

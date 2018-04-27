@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d6654dbf2b38d02f3c6e0ede706a0388cd7cd4a6"
+	echo "9fecb7499531ddbcde7970b4d98df92dbc1bc010"
 }
 
 # Show version information
@@ -195,7 +195,6 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
-	enable_msi_Dummy_Thread="$1"
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
@@ -388,7 +387,6 @@ patch_enable_all ()
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
-	enable_wined3d_Viewports="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -774,9 +772,6 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
-			;;
-		msi-Dummy_Thread)
-			enable_msi_Dummy_Thread="$2"
 			;;
 		msi-MsiGetDatabaseState)
 			enable_msi_MsiGetDatabaseState="$2"
@@ -1354,9 +1349,6 @@ patch_enable ()
 		wined3d-UAV_Counters)
 			enable_wined3d_UAV_Counters="$2"
 			;;
-		wined3d-Viewports)
-			enable_wined3d_Viewports="$2"
-			;;
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
 			;;
@@ -1926,20 +1918,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Silence_FIXMEs=1
 	enable_wined3d_UAV_Counters=1
-fi
-
-if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
-	if test "$enable_wined3d_Viewports" -gt 1; then
-		abort "Patchset wined3d-Viewports disabled, but wined3d-Dual_Source_Blending depends on that."
-	fi
-	enable_wined3d_Viewports=1
-fi
-
-if test "$enable_wined3d_Viewports" -eq 1; then
-	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-Viewports depends on that."
-	fi
-	enable_d3d11_Depth_Bias=1
 fi
 
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
@@ -4592,21 +4570,6 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		printf '%s\n' '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msi-Dummy_Thread
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18070] Workaround COM/MTA issues due to lack of separate msi custom action process
-# |
-# | Modified files:
-# |   *	dlls/msi/action.c
-# |
-if test "$enable_msi_Dummy_Thread" -eq 1; then
-	patch_apply msi-Dummy_Thread/0001-msi-Create-dummy-thread-to-initialize-COM-for-custom.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "msi: Create dummy thread to initialize COM for custom actions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7885,26 +7848,7 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Viewports
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/d3d8/directx.c, dlls/d3d9/directx.c, dlls/ddraw/ddraw_private.h, dlls/wined3d/state.c,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_Viewports" -eq 1; then
-	patch_apply wined3d-Viewports/0001-wined3d-Allow-arbitrary-viewports-for-d3d11.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Allow arbitrary viewports for d3d11.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Dual_Source_Blending
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-Viewports
 # |
 # | Modified files:
 # |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
@@ -7967,8 +7911,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, d3d11-Depth_Bias, wined3d-Viewports, wined3d-
-# | 	Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs,
+# | 	wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h

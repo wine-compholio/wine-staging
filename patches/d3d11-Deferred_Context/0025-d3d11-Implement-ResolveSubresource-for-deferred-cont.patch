@@ -1,14 +1,14 @@
-From d9105362c97b8ee7123bb3d711893f0ee15e81e4 Mon Sep 17 00:00:00 2001
+From c040d0aaf9fb1cff798a5c632b4f18f0c12e8282 Mon Sep 17 00:00:00 2001
 From: Johannes Specht <jojos_band@gmx.net>
 Date: Mon, 4 Sep 2017 02:30:32 +0200
-Subject: d3d11: Implement ResolveSubresource for deferred contexts.
+Subject: [PATCH] d3d11: Implement ResolveSubresource for deferred contexts.
 
 ---
  dlls/d3d11/device.c | 47 +++++++++++++++++++++++++++++++++++++++++++++--
  1 file changed, 45 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
-index c41f8ce7619..65e729030a9 100644
+index 0c5360a..5709bf0 100644
 --- a/dlls/d3d11/device.c
 +++ b/dlls/d3d11/device.c
 @@ -43,6 +43,7 @@ enum deferred_cmd
@@ -19,11 +19,10 @@ index c41f8ce7619..65e729030a9 100644
  
      DEFERRED_CSSETSHADER,               /* cs_info */
      DEFERRED_DSSETSHADER,               /* ds_info */
-@@ -165,6 +166,14 @@ struct deferred_call
-             D3D11_BOX *src_box;
+@@ -166,6 +167,14 @@ struct deferred_call
          } copy_subresource_region_info;
          struct
-+        {
+         {
 +            ID3D11Resource *dst_resource;
 +            UINT dst_subresource_idx;
 +            ID3D11Resource *src_resource;
@@ -31,9 +30,10 @@ index c41f8ce7619..65e729030a9 100644
 +            DXGI_FORMAT format;
 +        } resolve_subresource_info;
 +        struct
-         {
++        {
              ID3D11ComputeShader *shader;
              /* FIXME: add class instances */
+         } cs_info;
 @@ -463,6 +472,14 @@ static void free_deferred_calls(struct list *commands)
                      ID3D11Resource_Release(call->copy_subresource_region_info.src_resource);
                  break;
@@ -49,13 +49,13 @@ index c41f8ce7619..65e729030a9 100644
              case DEFERRED_CSSETSHADER:
              {
                  if (call->cs_info.shader)
-@@ -687,6 +704,16 @@ static void exec_deferred_calls(ID3D11DeviceContext *iface, struct list *command
+@@ -687,6 +704,16 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
                          call->copy_subresource_region_info.src_box);
                  break;
              }
 +            case DEFERRED_RESOLVESUBRESOURCE:
 +            {
-+                ID3D11DeviceContext_ResolveSubresource(iface,
++                ID3D11DeviceContext1_ResolveSubresource(iface,
 +                        call->resolve_subresource_info.dst_resource,
 +                        call->resolve_subresource_info.dst_subresource_idx,
 +                        call->resolve_subresource_info.src_resource,
@@ -65,8 +65,8 @@ index c41f8ce7619..65e729030a9 100644
 +            }
              case DEFERRED_CSSETSHADER:
              {
-                 ID3D11DeviceContext_CSSetShader(iface, call->cs_info.shader, NULL, 0);
-@@ -4565,10 +4592,26 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_ResolveSubresource(ID3D11De
+                 ID3D11DeviceContext1_CSSetShader(iface, call->cs_info.shader, NULL, 0);
+@@ -4745,10 +4772,26 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_ResolveSubresource(ID3D11De
          ID3D11Resource *src_resource, UINT src_subresource_idx,
          DXGI_FORMAT format)
  {
@@ -96,5 +96,5 @@ index c41f8ce7619..65e729030a9 100644
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_ExecuteCommandList(ID3D11DeviceContext *iface,
 -- 
-2.14.1
+1.9.1
 

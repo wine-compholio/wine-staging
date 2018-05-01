@@ -1,7 +1,7 @@
-From c252dab70a66866545221059544881116b49cd08 Mon Sep 17 00:00:00 2001
+From 2aca1492440a076d00c910b6479b76fe69c1b2ee Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 31 Aug 2017 05:04:15 +0200
-Subject: d3d11: Implement d3d11_deferred_context_UpdateSubresource.
+Subject: [PATCH] d3d11: Implement d3d11_deferred_context_UpdateSubresource.
 
 ---
  dlls/d3d11/device.c       | 75 +++++++++++++++++++++++++++++++++++++-
@@ -11,7 +11,7 @@ Subject: d3d11: Implement d3d11_deferred_context_UpdateSubresource.
  4 files changed, 170 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
-index eb32c50ea8b..6812a608856 100644
+index c83d6a0..4f3700d 100644
 --- a/dlls/d3d11/device.c
 +++ b/dlls/d3d11/device.c
 @@ -45,6 +45,7 @@ enum deferred_cmd
@@ -22,11 +22,10 @@ index eb32c50ea8b..6812a608856 100644
      DEFERRED_RESOLVESUBRESOURCE,        /* resolve_subresource_info */
      DEFERRED_COPYSTRUCTURECOUNT,        /* copy_structure_count_info */
  
-@@ -184,6 +185,15 @@ struct deferred_call
-             D3D11_BOX *src_box;
+@@ -185,6 +186,15 @@ struct deferred_call
          } copy_subresource_region_info;
          struct
-+        {
+         {
 +            ID3D11Resource *resource;
 +            UINT subresource_idx;
 +            D3D11_BOX *box;
@@ -35,9 +34,10 @@ index eb32c50ea8b..6812a608856 100644
 +            UINT depth_pitch;
 +        } update_subresource_info;
 +        struct
-         {
++        {
              ID3D11Resource *dst_resource;
              UINT dst_subresource_idx;
+             ID3D11Resource *src_resource;
 @@ -568,6 +578,12 @@ static void free_deferred_calls(struct list *commands)
                      ID3D11Resource_Release(call->copy_subresource_region_info.src_resource);
                  break;
@@ -51,13 +51,13 @@ index eb32c50ea8b..6812a608856 100644
              case DEFERRED_RESOLVESUBRESOURCE:
              {
                  if (call->resolve_subresource_info.dst_resource)
-@@ -899,6 +915,17 @@ static void exec_deferred_calls(ID3D11DeviceContext *iface, struct list *command
+@@ -899,6 +915,17 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
                          call->copy_structure_count_info.src_view);
                  break;
              }
 +            case DEFERRED_UPDATESUBRESOURCE:
 +            {
-+                ID3D11DeviceContext_UpdateSubresource(iface,
++                ID3D11DeviceContext1_UpdateSubresource(iface,
 +                        call->update_subresource_info.resource,
 +                        call->update_subresource_info.subresource_idx,
 +                        call->update_subresource_info.box,
@@ -68,8 +68,8 @@ index eb32c50ea8b..6812a608856 100644
 +            }
              case DEFERRED_CSSETSHADER:
              {
-                 ID3D11DeviceContext_CSSetShader(iface, call->cs_info.shader, NULL, 0);
-@@ -4873,8 +4900,54 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_UpdateSubresource(ID3D11Dev
+                 ID3D11DeviceContext1_CSSetShader(iface, call->cs_info.shader, NULL, 0);
+@@ -5054,8 +5081,54 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_UpdateSubresource(ID3D11Dev
          ID3D11Resource *resource, UINT subresource_idx, const D3D11_BOX *box,
          const void *data, UINT row_pitch, UINT depth_pitch)
  {
@@ -126,10 +126,10 @@ index eb32c50ea8b..6812a608856 100644
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_CopyStructureCount(ID3D11DeviceContext *iface,
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index ce522ddc944..78deb5078b1 100644
+index 28581a1..c2a9933 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
-@@ -382,6 +382,99 @@ HRESULT CDECL wined3d_resource_unmap(struct wined3d_resource *resource, unsigned
+@@ -373,6 +373,99 @@ HRESULT CDECL wined3d_resource_unmap(struct wined3d_resource *resource, unsigned
      return wined3d_cs_unmap(resource->device->cs, resource, sub_resource_idx);
  }
  
@@ -230,10 +230,10 @@ index ce522ddc944..78deb5078b1 100644
  {
      wined3d_cs_emit_preload_resource(resource->device->cs, resource);
 diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
-index e8e96bdedb6..e4d5f2ed9ac 100644
+index 58dc0a9..fe6e0af 100644
 --- a/dlls/wined3d/wined3d.spec
 +++ b/dlls/wined3d/wined3d.spec
-@@ -226,6 +226,7 @@
+@@ -234,6 +234,7 @@
  @ cdecl wined3d_resource_set_parent(ptr ptr)
  @ cdecl wined3d_resource_set_priority(ptr long)
  @ cdecl wined3d_resource_unmap(ptr long)
@@ -242,10 +242,10 @@ index e8e96bdedb6..e4d5f2ed9ac 100644
  @ cdecl wined3d_rendertarget_view_create(ptr ptr ptr ptr ptr)
  @ cdecl wined3d_rendertarget_view_create_from_sub_resource(ptr long ptr ptr ptr)
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index df587733b20..905f43dbc5a 100644
+index fa929e5..0adb891 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -2591,6 +2591,8 @@ void __cdecl wined3d_resource_preload(struct wined3d_resource *resource);
+@@ -2597,6 +2597,8 @@ void __cdecl wined3d_resource_preload(struct wined3d_resource *resource);
  void __cdecl wined3d_resource_set_parent(struct wined3d_resource *resource, void *parent);
  DWORD __cdecl wined3d_resource_set_priority(struct wined3d_resource *resource, DWORD priority);
  HRESULT __cdecl wined3d_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx);
@@ -255,5 +255,5 @@ index df587733b20..905f43dbc5a 100644
  HRESULT __cdecl wined3d_rendertarget_view_create(const struct wined3d_view_desc *desc,
          struct wined3d_resource *resource, void *parent, const struct wined3d_parent_ops *parent_ops,
 -- 
-2.14.1
+1.9.1
 

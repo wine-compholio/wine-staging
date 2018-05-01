@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9fecb7499531ddbcde7970b4d98df92dbc1bc010"
+	echo "784b617ae936f97118e18624da85cc9de900e3a7"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 3.7"
+	echo "Wine Staging 3.8 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -190,7 +190,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
-	enable_mfplat_MFStartup="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -757,9 +756,6 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
-			;;
-		mfplat-MFStartup)
-			enable_mfplat_MFStartup="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4493,21 +4489,6 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "libs/wine: Do not restrict base address of main thread on 64 bit mac os.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-MFStartup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43607] Return S_OK from MFStartup stub
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/tests/mfplat.c
-# |
-if test "$enable_mfplat_MFStartup" -eq 1; then
-	patch_apply mfplat-MFStartup/0001-mfplat-Return-S_OK-from-MFStartup-stub.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "mfplat: Return S_OK from MFStartup stub.", 1 },';
 	) >> "$patchlist"
 fi
 

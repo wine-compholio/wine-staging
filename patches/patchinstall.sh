@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "784b617ae936f97118e18624da85cc9de900e3a7"
+	echo "dbce559df683b7831861c747f1f4d28614eedbe2"
 }
 
 # Show version information
@@ -2103,13 +2103,6 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 	enable_nvapi_Stub_DLL=1
 fi
 
-if test "$enable_nvapi_Stub_DLL" -eq 1; then
-	if test "$enable_nvcuda_CUDA_Support" -gt 1; then
-		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
-	fi
-	enable_nvcuda_CUDA_Support=1
-fi
-
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	if test "$enable_Compiler_Warnings" -gt 1; then
 		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
@@ -2324,6 +2317,20 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
 	fi
 	enable_wined3d_DXTn=1
+fi
+
+if test "$enable_d3d11_Deferred_Context" -eq 1; then
+	if test "$enable_nvapi_Stub_DLL" -gt 1; then
+		abort "Patchset nvapi-Stub_DLL disabled, but d3d11-Deferred_Context depends on that."
+	fi
+	enable_nvapi_Stub_DLL=1
+fi
+
+if test "$enable_nvapi_Stub_DLL" -eq 1; then
+	if test "$enable_nvcuda_CUDA_Support" -gt 1; then
+		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
+	fi
+	enable_nvcuda_CUDA_Support=1
 fi
 
 if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
@@ -2970,7 +2977,106 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset nvcuda-CUDA_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37664] MediaCoder needs CUDA for video encoding
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/nvcuda/Makefile.in, dlls/nvcuda/internal.c, dlls/nvcuda/nvcuda.c, dlls/nvcuda/nvcuda.h,
+# | 	dlls/nvcuda/nvcuda.rc, dlls/nvcuda/nvcuda.spec, dlls/nvcuda/tests/Makefile.in, dlls/nvcuda/tests/nvcuda.c,
+# | 	include/Makefile.in, include/cuda.h
+# |
+if test "$enable_nvcuda_CUDA_Support" -eq 1; then
+	patch_apply nvcuda-CUDA_Support/0001-include-Add-cuda.h.h.patch
+	patch_apply nvcuda-CUDA_Support/0002-nvcuda-Add-stub-dll.patch
+	patch_apply nvcuda-CUDA_Support/0003-nvcuda-First-implementation.patch
+	patch_apply nvcuda-CUDA_Support/0004-nvcuda-Implement-new-functions-added-in-CUDA-6.5.patch
+	patch_apply nvcuda-CUDA_Support/0005-nvcuda-Properly-wrap-undocumented-ContextStorage-int.patch
+	patch_apply nvcuda-CUDA_Support/0006-nvcuda-Emulate-two-d3d9-initialization-functions.patch
+	patch_apply nvcuda-CUDA_Support/0007-nvcuda-Properly-wrap-stream-callbacks-by-forwarding-.patch
+	patch_apply nvcuda-CUDA_Support/0008-nvcuda-Add-support-for-CUDA-7.0.patch
+	patch_apply nvcuda-CUDA_Support/0009-nvcuda-Implement-cuModuleLoad-wrapper-function.patch
+	patch_apply nvcuda-CUDA_Support/0010-nvcuda-Search-for-dylib-library-on-Mac-OS-X.patch
+	patch_apply nvcuda-CUDA_Support/0011-nvcuda-Add-semi-stub-for-cuD3D10GetDevice.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "include: Add cuda.h.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: First implementation.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement new functions added in CUDA 6.5.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Properly wrap undocumented '\''ContextStorage'\'' interface and add tests.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Properly wrap stream callbacks by forwarding them to a worker thread.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add support for CUDA 7.0.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement cuModuleLoad wrapper function.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Search for dylib library on Mac OS X.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvcuda: Add semi stub for cuD3D10GetDevice.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset nvapi-Stub_DLL
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	nvcuda-CUDA_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35062] Fix graphical corruption in FarCry 3 with NVIDIA drivers
+# |   *	[#43862] CS:GO fails to start when nvapi cannot be initialized
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/d3d11/device.c, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec,
+# | 	dlls/nvapi/tests/Makefile.in, dlls/nvapi/tests/nvapi.c, dlls/nvapi64/Makefile.in, dlls/nvapi64/nvapi64.spec,
+# | 	include/Makefile.in, include/nvapi.h, include/wine/wined3d.h
+# |
+if test "$enable_nvapi_Stub_DLL" -eq 1; then
+	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
+	patch_apply nvapi-Stub_DLL/0002-nvapi-Add-stubs-for-NvAPI_EnumLogicalGPUs-and-undocu.patch
+	patch_apply nvapi-Stub_DLL/0003-nvapi-Add-NvAPI_GetPhysicalGPUsFromLogicalGPU.patch
+	patch_apply nvapi-Stub_DLL/0004-nvapi-Add-stub-for-NvAPI_EnumPhysicalGPUs.patch
+	patch_apply nvapi-Stub_DLL/0005-nvapi-Add-stubs-for-NvAPI_GPU_GetFullName.patch
+	patch_apply nvapi-Stub_DLL/0006-nvapi-Explicity-return-NULL-for-0x33c7358c-and-0x593.patch
+	patch_apply nvapi-Stub_DLL/0007-nvapi-Add-stub-for-NvAPI_DISP_GetGDIPrimaryDisplayId.patch
+	patch_apply nvapi-Stub_DLL/0008-nvapi-Add-stub-for-EnumNvidiaDisplayHandle.patch
+	patch_apply nvapi-Stub_DLL/0009-nvapi-Add-stub-for-NvAPI_SYS_GetDriverAndBranchVersi.patch
+	patch_apply nvapi-Stub_DLL/0010-nvapi-Add-stub-for-NvAPI_Unload.patch
+	patch_apply nvapi-Stub_DLL/0011-nvapi-Add-stub-for-NvAPI_D3D_GetCurrentSLIState.patch
+	patch_apply nvapi-Stub_DLL/0012-nvapi-tests-Use-structure-to-list-imports.patch
+	patch_apply nvapi-Stub_DLL/0013-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
+	patch_apply nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
+	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
+	patch_apply nvapi-Stub_DLL/0016-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
+	patch_apply nvapi-Stub_DLL/0017-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
+	patch_apply nvapi-Stub_DLL/0018-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
+	patch_apply nvapi-Stub_DLL/0019-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
+	patch_apply nvapi-Stub_DLL/0020-nvapi-Implement-NvAPI_D3D11_CreateDevice-and-NvAPI_D.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add NvAPI_GetPhysicalGPUsFromLogicalGPU.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_EnumPhysicalGPUs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_GPU_GetFullName.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Explicity return NULL for 0x33c7358c and 0x593e8644.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_DISP_GetGDIPrimaryDisplayId.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for EnumNvidiaDisplayHandle.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_Unload.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetCurrentSLIState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi/tests: Use structure to list imports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D9_RegisterResource.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Improve NvAPI_D3D_GetCurrentSLIState.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_GPU_Get{Physical,Virtual}FrameBufferSize.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GPU_GetGpuCoreCount.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_SetDepthBoundsTest.", 2 },';
+		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_CreateDevice and NvAPI_D3D11_CreateDeviceAndSwapChain.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset d3d11-Deferred_Context
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
@@ -5594,102 +5700,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset nvcuda-CUDA_Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37664] MediaCoder needs CUDA for video encoding
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/nvcuda/Makefile.in, dlls/nvcuda/internal.c, dlls/nvcuda/nvcuda.c, dlls/nvcuda/nvcuda.h,
-# | 	dlls/nvcuda/nvcuda.rc, dlls/nvcuda/nvcuda.spec, dlls/nvcuda/tests/Makefile.in, dlls/nvcuda/tests/nvcuda.c,
-# | 	include/Makefile.in, include/cuda.h
-# |
-if test "$enable_nvcuda_CUDA_Support" -eq 1; then
-	patch_apply nvcuda-CUDA_Support/0001-include-Add-cuda.h.h.patch
-	patch_apply nvcuda-CUDA_Support/0002-nvcuda-Add-stub-dll.patch
-	patch_apply nvcuda-CUDA_Support/0003-nvcuda-First-implementation.patch
-	patch_apply nvcuda-CUDA_Support/0004-nvcuda-Implement-new-functions-added-in-CUDA-6.5.patch
-	patch_apply nvcuda-CUDA_Support/0005-nvcuda-Properly-wrap-undocumented-ContextStorage-int.patch
-	patch_apply nvcuda-CUDA_Support/0006-nvcuda-Emulate-two-d3d9-initialization-functions.patch
-	patch_apply nvcuda-CUDA_Support/0007-nvcuda-Properly-wrap-stream-callbacks-by-forwarding-.patch
-	patch_apply nvcuda-CUDA_Support/0008-nvcuda-Add-support-for-CUDA-7.0.patch
-	patch_apply nvcuda-CUDA_Support/0009-nvcuda-Implement-cuModuleLoad-wrapper-function.patch
-	patch_apply nvcuda-CUDA_Support/0010-nvcuda-Search-for-dylib-library-on-Mac-OS-X.patch
-	patch_apply nvcuda-CUDA_Support/0011-nvcuda-Add-semi-stub-for-cuD3D10GetDevice.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "include: Add cuda.h.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add stub dll.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvcuda: First implementation.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement new functions added in CUDA 6.5.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvcuda: Properly wrap undocumented '\''ContextStorage'\'' interface and add tests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvcuda: Emulate two d3d9 initialization functions.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Properly wrap stream callbacks by forwarding them to a worker thread.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Add support for CUDA 7.0.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "nvcuda: Implement cuModuleLoad wrapper function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvcuda: Search for dylib library on Mac OS X.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvcuda: Add semi stub for cuD3D10GetDevice.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset nvapi-Stub_DLL
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	nvcuda-CUDA_Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35062] Fix graphical corruption in FarCry 3 with NVIDIA drivers
-# |   *	[#43862] CS:GO fails to start when nvapi cannot be initialized
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/d3d11/device.c, dlls/nvapi/Makefile.in, dlls/nvapi/nvapi.c, dlls/nvapi/nvapi.spec,
-# | 	dlls/nvapi/tests/Makefile.in, dlls/nvapi/tests/nvapi.c, dlls/nvapi64/Makefile.in, dlls/nvapi64/nvapi64.spec,
-# | 	include/Makefile.in, include/nvapi.h, include/wine/wined3d.h
-# |
-if test "$enable_nvapi_Stub_DLL" -eq 1; then
-	patch_apply nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
-	patch_apply nvapi-Stub_DLL/0002-nvapi-Add-stubs-for-NvAPI_EnumLogicalGPUs-and-undocu.patch
-	patch_apply nvapi-Stub_DLL/0003-nvapi-Add-NvAPI_GetPhysicalGPUsFromLogicalGPU.patch
-	patch_apply nvapi-Stub_DLL/0004-nvapi-Add-stub-for-NvAPI_EnumPhysicalGPUs.patch
-	patch_apply nvapi-Stub_DLL/0005-nvapi-Add-stubs-for-NvAPI_GPU_GetFullName.patch
-	patch_apply nvapi-Stub_DLL/0006-nvapi-Explicity-return-NULL-for-0x33c7358c-and-0x593.patch
-	patch_apply nvapi-Stub_DLL/0007-nvapi-Add-stub-for-NvAPI_DISP_GetGDIPrimaryDisplayId.patch
-	patch_apply nvapi-Stub_DLL/0008-nvapi-Add-stub-for-EnumNvidiaDisplayHandle.patch
-	patch_apply nvapi-Stub_DLL/0009-nvapi-Add-stub-for-NvAPI_SYS_GetDriverAndBranchVersi.patch
-	patch_apply nvapi-Stub_DLL/0010-nvapi-Add-stub-for-NvAPI_Unload.patch
-	patch_apply nvapi-Stub_DLL/0011-nvapi-Add-stub-for-NvAPI_D3D_GetCurrentSLIState.patch
-	patch_apply nvapi-Stub_DLL/0012-nvapi-tests-Use-structure-to-list-imports.patch
-	patch_apply nvapi-Stub_DLL/0013-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
-	patch_apply nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
-	patch_apply nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
-	patch_apply nvapi-Stub_DLL/0016-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
-	patch_apply nvapi-Stub_DLL/0017-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
-	patch_apply nvapi-Stub_DLL/0018-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
-	patch_apply nvapi-Stub_DLL/0019-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
-	patch_apply nvapi-Stub_DLL/0020-nvapi-Implement-NvAPI_D3D11_CreateDevice-and-NvAPI_D.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "nvapi: First implementation.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_EnumLogicalGPUs and undocumented equivalent.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add NvAPI_GetPhysicalGPUsFromLogicalGPU.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_EnumPhysicalGPUs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stubs for NvAPI_GPU_GetFullName.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Explicity return NULL for 0x33c7358c and 0x593e8644.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_DISP_GetGDIPrimaryDisplayId.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for EnumNvidiaDisplayHandle.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_SYS_GetDriverAndBranchVersion.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_Unload.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetCurrentSLIState.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi/tests: Use structure to list imports.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GetLogicalGPUFromDisplay.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D_GetObjectHandleForResource.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_D3D9_RegisterResource.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Improve NvAPI_D3D_GetCurrentSLIState.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_GPU_Get{Physical,Virtual}FrameBufferSize.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Add stub for NvAPI_GPU_GetGpuCoreCount.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_SetDepthBoundsTest.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "nvapi: Implement NvAPI_D3D11_CreateDevice and NvAPI_D3D11_CreateDeviceAndSwapChain.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset nvcuvid-CUDA_Video_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -7892,8 +7902,8 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs,
-# | 	wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, wined3d-
+# | 	Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h

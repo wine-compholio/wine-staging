@@ -1,4 +1,4 @@
-From 44d20d13197dfd845a2fb6f7f40bac51e089e5ef Mon Sep 17 00:00:00 2001
+From 7c5d975bef7261f253bf80f4ae5a0e424073d480 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 21:08:51 +0200
 Subject: ntoskrnl.exe: Implement NtBuildNumber.
@@ -6,10 +6,12 @@ Subject: ntoskrnl.exe: Implement NtBuildNumber.
 ---
  dlls/ntoskrnl.exe/ntoskrnl.c        | 11 +++++++++--
  dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
- 2 files changed, 10 insertions(+), 3 deletions(-)
+ dlls/ntoskrnl.exe/tests/driver.c    | 30 ++++++++++++++++++++++++++++++
+ include/ddk/wdm.h                   |  1 +
+ 4 files changed, 41 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index a263941..3059dfb 100644
+index ae699dc..21507dc 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
 @@ -52,6 +52,7 @@ WINE_DECLARE_DEBUG_CHANNEL(plugplay);
@@ -20,7 +22,7 @@ index a263941..3059dfb 100644
  
  extern LONG CALLBACK vectored_handler( EXCEPTION_POINTERS *ptrs );
  
-@@ -2655,6 +2656,13 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
+@@ -2724,6 +2725,13 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -34,7 +36,7 @@ index a263941..3059dfb 100644
  
  /*****************************************************
   *           DllMain
-@@ -2662,7 +2670,6 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
+@@ -2731,7 +2739,6 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
  BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
  {
      static void *handler;
@@ -42,7 +44,7 @@ index a263941..3059dfb 100644
  
      switch(reason)
      {
-@@ -2671,7 +2678,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
+@@ -2740,7 +2747,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
  #if defined(__i386__) || defined(__x86_64__)
          handler = RtlAddVectoredExceptionHandler( TRUE, vectored_handler );
  #endif
@@ -52,10 +54,10 @@ index a263941..3059dfb 100644
      case DLL_PROCESS_DETACH:
          if (reserved) break;
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-index 134cf71..34b1f52 100644
+index fc2fd94..7c40d5c 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-@@ -742,7 +742,7 @@
+@@ -743,7 +743,7 @@
  @ stdcall NtAllocateLocallyUniqueId(ptr)
  @ stdcall NtAllocateUuids(ptr ptr ptr ptr)
  @ stdcall NtAllocateVirtualMemory(long ptr long ptr long long)
@@ -64,6 +66,73 @@ index 134cf71..34b1f52 100644
  @ stdcall NtClose(long)
  @ stdcall NtConnectPort(ptr ptr ptr ptr ptr ptr ptr ptr)
  @ stdcall NtCreateEvent(ptr long ptr long long)
+diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
+index 84cfff7..5fe997a 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.c
++++ b/dlls/ntoskrnl.exe/tests/driver.c
+@@ -143,6 +143,22 @@ static void winetest_end_todo(void)
+ #define todo_wine               todo_if(running_under_wine)
+ #define todo_wine_if(is_todo)   todo_if((is_todo) && running_under_wine)
+ 
++static void *get_proc_address(const char *name)
++{
++    UNICODE_STRING name_u;
++    ANSI_STRING name_a;
++    NTSTATUS status;
++    void *ret;
++
++    RtlInitAnsiString(&name_a, name);
++    status = RtlAnsiStringToUnicodeString(&name_u, &name_a, TRUE);
++    if (status) return NULL;
++
++    ret = MmGetSystemRoutineAddress(&name_u);
++    RtlFreeUnicodeString(&name_u);
++    return ret;
++}
++
+ static void test_currentprocess(void)
+ {
+     PEPROCESS current;
+@@ -172,6 +188,19 @@ todo_wine
+     IoFreeMdl(mdl);
+ }
+ 
++static void test_version(void)
++{
++    USHORT *pNtBuildNumber;
++    ULONG build;
++
++    pNtBuildNumber = get_proc_address("NtBuildNumber");
++    ok(!!pNtBuildNumber, "Could not get pointer to NtBuildNumber\n");
++
++    PsGetVersion(NULL, NULL, &build, NULL);
++    ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
++    return;
++}
++
+ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
+ {
+     ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
+@@ -197,6 +226,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
+ 
+     test_currentprocess();
+     test_mdl_map();
++    test_version();
+ 
+     /* print process report */
+     if (test_input->winetest_debug)
+diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
+index cab9828..d6b808f 100644
+--- a/include/ddk/wdm.h
++++ b/include/ddk/wdm.h
+@@ -1421,6 +1421,7 @@ PVOID     WINAPI MmAllocateContiguousMemory(SIZE_T,PHYSICAL_ADDRESS);
+ PVOID     WINAPI MmAllocateNonCachedMemory(SIZE_T);
+ PMDL      WINAPI MmAllocatePagesForMdl(PHYSICAL_ADDRESS,PHYSICAL_ADDRESS,PHYSICAL_ADDRESS,SIZE_T);
+ void      WINAPI MmFreeNonCachedMemory(PVOID,SIZE_T);
++void *    WINAPI MmGetSystemRoutineAddress(UNICODE_STRING*);
+ PVOID     WINAPI MmMapLockedPagesSpecifyCache(PMDL,KPROCESSOR_MODE,MEMORY_CACHING_TYPE,PVOID,ULONG,ULONG);
+ MM_SYSTEMSIZE WINAPI MmQuerySystemSize(void);
+ void      WINAPI MmProbeAndLockPages(PMDLX, KPROCESSOR_MODE, LOCK_OPERATION);
 -- 
 2.7.4
 

@@ -1864,7 +1864,11 @@ if test "$enable_winedevice_Default_Drivers" -eq 1; then
 	if test "$enable_dxva2_Video_Decoder" -gt 1; then
 		abort "Patchset dxva2-Video_Decoder disabled, but winedevice-Default_Drivers depends on that."
 	fi
+	if test "$enable_ntoskrnl_Stubs" -gt 1; then
+		abort "Patchset ntoskrnl-Stubs disabled, but winedevice-Default_Drivers depends on that."
+	fi
 	enable_dxva2_Video_Decoder=1
+	enable_ntoskrnl_Stubs=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
@@ -5673,7 +5677,8 @@ fi
 # |   *	[#37355] Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h, include/winnt.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
+# | 	include/winnt.h
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
@@ -7997,13 +8002,13 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder
+# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
-# | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c, dlls/win32k.sys/Makefile.in,
-# | 	dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec, loader/wine.inf.in, programs/winedevice/device.c,
-# | 	tools/make_specfiles
+# | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c,
+# | 	dlls/ntoskrnl.exe/tests/driver.c, dlls/win32k.sys/Makefile.in, dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec,
+# | 	include/ddk/ntddk.h, loader/wine.inf.in, programs/winedevice/device.c, tools/make_specfiles
 # |
 if test "$enable_winedevice_Default_Drivers" -eq 1; then
 	patch_apply winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch

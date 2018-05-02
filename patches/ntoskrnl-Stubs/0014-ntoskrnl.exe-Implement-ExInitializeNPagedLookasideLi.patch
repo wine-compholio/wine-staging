@@ -1,16 +1,17 @@
-From 8f1d4c0a6fec701d3af943188952d55f8b56582a Mon Sep 17 00:00:00 2001
+From e4a32c13ea03d6bfc08f78d93b517d612005a395 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 23:42:56 +0200
 Subject: ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
 
 ---
- dlls/ntoskrnl.exe/ntoskrnl.c | 19 ++++++++++-
- include/ddk/wdm.h            | 76 ++++++++++++++++++++++++++++++++++++++++++--
- include/winnt.h              |  2 ++
- 3 files changed, 93 insertions(+), 4 deletions(-)
+ dlls/ntoskrnl.exe/ntoskrnl.c     | 19 +++++++++-
+ dlls/ntoskrnl.exe/tests/driver.c | 37 +++++++++++++++++--
+ include/ddk/wdm.h                | 76 ++++++++++++++++++++++++++++++++++++++--
+ include/winnt.h                  |  2 ++
+ 4 files changed, 127 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index 81f5738..a9f7029 100644
+index 21507dc..a865cd8 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
 @@ -1814,7 +1814,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
@@ -39,8 +40,90 @@ index 81f5738..a9f7029 100644
  }
  
  /***********************************************************************
+diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
+index 5fe997a..1ef27fb 100644
+--- a/dlls/ntoskrnl.exe/tests/driver.c
++++ b/dlls/ntoskrnl.exe/tests/driver.c
+@@ -22,6 +22,9 @@
+ 
+ #include <stdarg.h>
+ 
++#define NONAMELESSUNION
++#define NONAMELESSSTRUCT
++
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+ #include "windef.h"
+@@ -201,6 +204,33 @@ static void test_version(void)
+     return;
+ }
+ 
++static void test_lookaside_list(void)
++{
++    NPAGED_LOOKASIDE_LIST list;
++    ULONG tag = 0x454e4957; /* WINE */
++
++    ExInitializeNPagedLookasideList(&list, NULL, NULL, POOL_NX_ALLOCATION, LOOKASIDE_MINIMUM_BLOCK_SIZE, tag, 0);
++    ok(list.L.Depth == 4, "Expected 4 got %u\n", list.L.Depth);
++    ok(list.L.MaximumDepth == 256, "Expected 256 got %u\n", list.L.MaximumDepth);
++    ok(list.L.TotalAllocates == 0, "Expected 0 got %u\n", list.L.TotalAllocates);
++    ok(list.L.u2.AllocateMisses == 0, "Expected 0 got %u\n", list.L.u2.AllocateMisses);
++    ok(list.L.TotalFrees == 0, "Expected 0 got %u\n", list.L.TotalFrees);
++    ok(list.L.u3.FreeMisses == 0, "Expected 0 got %u\n", list.L.u3.FreeMisses);
++    ok(list.L.Type == (NonPagedPool|POOL_NX_ALLOCATION),
++       "Expected NonPagedPool|POOL_NX_ALLOCATION got %u\n", list.L.Type);
++    ok(list.L.Tag == tag, "Expected %x got %x\n", tag, list.L.Tag);
++    ok(list.L.Size == LOOKASIDE_MINIMUM_BLOCK_SIZE,
++       "Expected %u got %u\n", LOOKASIDE_MINIMUM_BLOCK_SIZE, list.L.Size);
++    ok(list.L.LastTotalAllocates == 0,"Expected 0 got %u\n", list.L.LastTotalAllocates);
++    ok(list.L.u6.LastAllocateMisses == 0,"Expected 0 got %u\n", list.L.u6.LastAllocateMisses);
++    ExDeleteNPagedLookasideList(&list);
++
++    list.L.Depth = 0;
++    ExInitializeNPagedLookasideList(&list, NULL, NULL, 0, LOOKASIDE_MINIMUM_BLOCK_SIZE, tag, 20);
++    ok(list.L.Depth == 4, "Expected 4 got %u\n", list.L.Depth);
++    ExDeleteNPagedLookasideList(&list);
++}
++
+ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
+ {
+     ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
+@@ -227,6 +257,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
+     test_currentprocess();
+     test_mdl_map();
+     test_version();
++    test_lookaside_list();
+ 
+     /* print process report */
+     if (test_input->winetest_debug)
+@@ -261,7 +292,7 @@ static NTSTATUS test_basic_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *
+ 
+ static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
+ {
+-    irp->IoStatus.Status = STATUS_SUCCESS;
++    irp->IoStatus.u.Status = STATUS_SUCCESS;
+     IoCompleteRequest(irp, IO_NO_INCREMENT);
+     return STATUS_SUCCESS;
+ }
+@@ -283,14 +314,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+             break;
+     }
+ 
+-    irp->IoStatus.Status = status;
++    irp->IoStatus.u.Status = status;
+     IoCompleteRequest(irp, IO_NO_INCREMENT);
+     return status;
+ }
+ 
+ static NTSTATUS WINAPI driver_Close(DEVICE_OBJECT *device, IRP *irp)
+ {
+-    irp->IoStatus.Status = STATUS_SUCCESS;
++    irp->IoStatus.u.Status = STATUS_SUCCESS;
+     IoCompleteRequest(irp, IO_NO_INCREMENT);
+     return STATUS_SUCCESS;
+ }
 diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
-index 8634f36..8453079 100644
+index d6b808f..b43ec62 100644
 --- a/include/ddk/wdm.h
 +++ b/include/ddk/wdm.h
 @@ -144,20 +144,18 @@ typedef enum _KWAIT_REASON

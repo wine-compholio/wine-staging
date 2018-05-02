@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "dbce559df683b7831861c747f1f4d28614eedbe2"
+	echo "8dca6c35e11a104385242ed8346ee05707b78ef7"
 }
 
 # Show version information
@@ -2730,19 +2730,15 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-
-# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/Makefile.in, dlls/combase/combase.spec, dlls/combase/roapi.c
+# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/combase.spec, dlls/combase/roapi.c
 # |
 if test "$enable_combase_RoApi" -eq 1; then
-	patch_apply combase-RoApi/0003-combase-Implement-RoGetActivationFactory.patch
-	patch_apply combase-RoApi/0004-combase-Implement-RoActivateInstance.patch
 	patch_apply combase-RoApi/0005-combase-Add-stub-for-RoGetApartmentIdentifier.patch
 	patch_apply combase-RoApi/0007-combase-Add-stub-for-RoRegisterForApartmentShutdown.patch
 	patch_apply combase-RoApi/0008-combase-Add-stub-for-RoGetServerActivatableClasses.patch
 	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
 	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoGetActivationFactory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "combase: Implement RoActivateInstance.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';

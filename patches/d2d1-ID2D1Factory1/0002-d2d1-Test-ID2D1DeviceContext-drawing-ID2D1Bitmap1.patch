@@ -1,0 +1,152 @@
+From 041f7ef0b4e4d0ca72470032b2ce7eac9b3a118b Mon Sep 17 00:00:00 2001
+From: Lucian Poston <lucian.poston@gmail.com>
+Date: Wed, 2 May 2018 23:38:21 -0700
+Subject: [PATCH 2/7] d2d1: Test ID2D1DeviceContext drawing ID2D1Bitmap1
+
+This test is based on the d2d usage in the Temple+ app referred to in
+the winehq bug at https://bugs.winehq.org/show_bug.cgi?id=44052
+
+Essentially, this test draws a rectangle using a d2d device context,
+similar to the basic how-to in the link below.
+https://msdn.microsoft.com/en-us/library/windows/desktop/hh780339(v=vs.85).aspx
+
+Signed-off-by: Lucian Poston <lucian.poston@gmail.com>
+---
+ dlls/d2d1/tests/d2d1.c | 107 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 107 insertions(+)
+
+diff --git a/dlls/d2d1/tests/d2d1.c b/dlls/d2d1/tests/d2d1.c
+index 9bd9e2b..21b4e53 100644
+--- a/dlls/d2d1/tests/d2d1.c
++++ b/dlls/d2d1/tests/d2d1.c
+@@ -20,6 +20,7 @@
+ #include <limits.h>
+ #include <math.h>
+ #include "d2d1.h"
++#include "d2d1_1.h"
+ #include "wincrypt.h"
+ #include "wine/test.h"
+ #include "initguid.h"
+@@ -4635,6 +4636,111 @@ todo_wine
+     DestroyWindow(window);
+ }
+ 
++static void test_draw_via_ID2D1DeviceContext(void)
++{
++    HRESULT hr;
++    ID2D1Factory1 *factory;
++    ID2D1Device *device;
++    ID3D10Device1 *d3d10_device;
++    IDXGIDevice *dxgi_device;
++    ID2D1DeviceContext *context;
++    IDXGISurface *dxgi_surface;
++    ID2D1Bitmap1 *bitmap;
++    D2D1_BITMAP_PROPERTIES1 bitmap_properties;
++    IDXGISwapChain *swapchain;
++    HWND window;
++    ID2D1SolidColorBrush *brush;
++    D2D1_COLOR_F c;
++    D2D1_RECT_F r;
++    set_color(&c, 0.5f, 0.5f, 0.5f, 0.5f);
++    set_rect(&r, 10.0f, 480.0f, 10.0f, 480.0f);
++
++    if (!(d3d10_device = create_device()))
++    {
++        skip("Failed to create device, skipping test.\n");
++        return;
++    }
++
++    window = create_window();
++    swapchain = create_swapchain(d3d10_device, window, TRUE);
++    hr = IDXGISwapChain_GetBuffer(swapchain, 0, &IID_IDXGISurface, (void **)&dxgi_surface);
++    ok(SUCCEEDED(hr), "Failed to get buffer, hr %#x.\n", hr);
++
++    hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED,
++            &IID_ID2D1Factory1, NULL, (void**)&factory);
++    if (FAILED(hr))
++    {
++        skip("ID2D1Factory1 unavailable, skipping test.\n");
++        return;
++    }
++
++    hr = ID3D10Device1_QueryInterface(d3d10_device, &IID_IDXGIDevice,
++            (void**)&dxgi_device);
++    ok(SUCCEEDED(hr), "Failed to create dxgi_device, hr %#x.\n", hr);
++    if (FAILED(hr))
++    {
++        skip("dxgi_device unavailable, skipping test.\n");
++        return;
++    }
++
++    hr = ID2D1Factory1_CreateDevice(factory, dxgi_device, &device);
++    todo_wine
++    ok(SUCCEEDED(hr), "Failed to create device, hr %#x.\n", hr);
++    if (FAILED(hr))
++    {
++        skip("device unavailable, skipping test.\n");
++        return;
++    }
++
++    hr = ID2D1Device_CreateDeviceContext(device,
++            D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &context);
++    todo_wine
++    ok(SUCCEEDED(hr), "Failed to create device context, hr %#x.\n", hr);
++    if (FAILED(hr))
++    {
++        skip("device context unavailable, skipping test.\n");
++        return;
++    }
++
++    bitmap_properties.pixelFormat.format = DXGI_FORMAT_UNKNOWN;
++    bitmap_properties.pixelFormat.alphaMode = D2D1_ALPHA_MODE_IGNORE;
++    bitmap_properties.dpiX = 96.0;
++    bitmap_properties.dpiY = 96.0;
++    bitmap_properties.bitmapOptions = D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
++    hr = ID2D1DeviceContext_CreateBitmapFromDxgiSurface(context, dxgi_surface,
++            &bitmap_properties, &bitmap);
++    todo_wine
++    ok(SUCCEEDED(hr), "Failed to create bitmap, hr %#x.\n", hr);
++    if (FAILED(hr))
++    {
++        skip("bitmap unavailable for use as device context target, skipping test.\n");
++        return;
++    }
++
++    ID2D1DeviceContext_SetTarget(context, (ID2D1Image *)bitmap);
++    ID2D1DeviceContext_CreateSolidColorBrush(context, &c, NULL, &brush);
++
++    ID2D1DeviceContext_BeginDraw(context);
++    ID2D1DeviceContext_DrawRectangle(context, &r, (ID2D1Brush *)brush, 1.0f, NULL);
++    hr = ID2D1DeviceContext_EndDraw(context, NULL, NULL);
++    todo_wine
++    ok(SUCCEEDED(hr), "Failed to draw, hr %#x.\n", hr);
++    hr = IDXGISwapChain_Present(swapchain, 0, 0);
++    todo_wine
++    ok(SUCCEEDED(hr), "Failed to present image, hr %#x.\n", hr);
++
++    ID2D1SolidColorBrush_Release(brush);
++    DestroyWindow(window);
++    IDXGISwapChain_Release(swapchain);
++    ID2D1Bitmap1_Release(bitmap);
++    IDXGISurface_Release(dxgi_surface);
++    ID2D1DeviceContext_Release(context);
++    IDXGIDevice_Release(dxgi_device);
++    ID3D10Device1_Release(d3d10_device);
++    ID2D1Device_Release(device);
++    ID2D1Factory1_Release(factory);
++}
++
+ static void create_target_dibsection(HDC hdc, UINT32 width, UINT32 height)
+ {
+     char bmibuf[FIELD_OFFSET(BITMAPINFO, bmiColors[256])];
+@@ -6444,6 +6550,7 @@ START_TEST(d2d1)
+     test_opacity_brush();
+     test_create_target();
+     test_draw_text_layout();
++    test_draw_via_ID2D1DeviceContext();
+     test_dc_target();
+     test_hwnd_target();
+     test_bitmap_target();
+-- 
+1.9.1
+

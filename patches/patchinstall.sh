@@ -108,6 +108,7 @@ patch_enable_all ()
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_crypt32_ECDSA_Cert_Chains="$1"
 	enable_crypt32_MS_Root_Certs="$1"
+	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
 	enable_d3d8_ValidateShader="$1"
@@ -510,6 +511,9 @@ patch_enable ()
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
+			;;
+		d2d1-ID2D1Factory1)
+			enable_d2d1_ID2D1Factory1="$2"
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
@@ -2974,6 +2978,35 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d2d1-ID2D1Factory1
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44052] - Add ID2D1Bitmap1/ID2D1Factory1 support
+# |
+# | Modified files:
+# |   *	dlls/d2d1/Makefile.in, dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/d2d1_private.h, dlls/d2d1/device.c,
+# | 	dlls/d2d1/device_context.c, dlls/d2d1/factory.c, dlls/d2d1/geometry.c, dlls/d2d1/render_target.c,
+# | 	dlls/d2d1/tests/d2d1.c, include/d2d1_1.idl, include/dcommon.idl
+# |
+if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
+	patch_apply d2d1-ID2D1Factory1/0001-d2d1-Add-d2d1_1.idl-for-drawing-ID2D1Bitmap1.patch
+	patch_apply d2d1-ID2D1Factory1/0002-d2d1-Test-ID2D1DeviceContext-drawing-ID2D1Bitmap1.patch
+	patch_apply d2d1-ID2D1Factory1/0003-d2d1-Use-ID2D1Factory1-in-d2d_geometry.patch
+	patch_apply d2d1-ID2D1Factory1/0004-d2d1-Implement-ID2D1Device.patch
+	patch_apply d2d1-ID2D1Factory1/0005-d2d1-Stub-ID2D1DeviceContext.patch
+	patch_apply d2d1-ID2D1Factory1/0006-d2d1-Implement-ID2D1DeviceContext.patch
+	patch_apply d2d1-ID2D1Factory1/0007-d2d1-Implement-ID2D1Bitmap1.patch
+	(
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Add d2d1_1.idl for drawing ID2D1Bitmap1.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Test ID2D1DeviceContext drawing ID2D1Bitmap1.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory1 in d2d_geometry.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1Device.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Stub ID2D1DeviceContext.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1DeviceContext.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1Bitmap1.", 1 },';
 	) >> "$patchlist"
 fi
 

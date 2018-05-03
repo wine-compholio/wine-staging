@@ -1,0 +1,253 @@
+From d8f2ab6b92e9c845c57df905d13c60d9dec0f94f Mon Sep 17 00:00:00 2001
+From: Lucian Poston <lucian.poston@gmail.com>
+Date: Thu, 3 May 2018 01:37:52 -0700
+Subject: [PATCH 4/7] d2d1: Implement ID2D1Device
+
+https://bugs.winehq.org/show_bug.cgi?id=44052
+
+Signed-off-by: Lucian Poston <lucian.poston@gmail.com>
+---
+ dlls/d2d1/Makefile.in    |   1 +
+ dlls/d2d1/d2d1_private.h |  10 +++
+ dlls/d2d1/device.c       | 159 +++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/d2d1/factory.c      |  13 +++-
+ dlls/d2d1/tests/d2d1.c   |   1 -
+ 5 files changed, 181 insertions(+), 3 deletions(-)
+ create mode 100644 dlls/d2d1/device.c
+
+diff --git a/dlls/d2d1/Makefile.in b/dlls/d2d1/Makefile.in
+index 20d3f26..5aa2f4c 100644
+--- a/dlls/d2d1/Makefile.in
++++ b/dlls/d2d1/Makefile.in
+@@ -8,6 +8,7 @@ C_SRCS = \
+ 	bitmap_render_target.c \
+ 	brush.c \
+ 	dc_render_target.c \
++	device.c \
+ 	factory.c \
+ 	geometry.c \
+ 	hwnd_render_target.c \
+diff --git a/dlls/d2d1/d2d1_private.h b/dlls/d2d1/d2d1_private.h
+index ed29c4c..4af5372 100644
+--- a/dlls/d2d1/d2d1_private.h
++++ b/dlls/d2d1/d2d1_private.h
+@@ -567,4 +567,14 @@ static inline const char *debug_d2d_rect_f(const D2D1_RECT_F *rect)
+     return wine_dbg_sprintf("(%.8e,%.8e)-(%.8e,%.8e)", rect->left, rect->top, rect->right, rect->bottom );
+ }
+ 
++struct d2d_device
++{
++    ID2D1Device ID2D1Device_iface;
++    LONG refcount;
++    ID2D1Factory1 *factory;
++    IDXGIDevice *dxgi_device;
++};
++
++void d2d_device_init(struct d2d_device *This, ID2D1Factory1 *iface, IDXGIDevice *dxgiDevice) DECLSPEC_HIDDEN;
++
+ #endif /* __WINE_D2D1_PRIVATE_H */
+diff --git a/dlls/d2d1/device.c b/dlls/d2d1/device.c
+new file mode 100644
+index 0000000..c060d4f
+--- /dev/null
++++ b/dlls/d2d1/device.c
+@@ -0,0 +1,159 @@
++/*
++ * Copyright 2018 Lucian Poston
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "config.h"
++#include "wine/port.h"
++
++#include "d2d1_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(d2d);
++
++static inline struct d2d_device *impl_from_ID2D1Device(ID2D1Device *iface)
++{
++    return CONTAINING_RECORD(iface, struct d2d_device, ID2D1Device_iface);
++}
++
++static HRESULT WINAPI d2d_device_QueryInterface(
++        ID2D1Device *iface,
++        REFIID riid,
++        void **ppvObject)
++{
++    TRACE("iface %p, riid %s, ppvObject %p.\n", iface, debugstr_guid(riid), ppvObject);
++    if (ppvObject == NULL)
++        return E_POINTER;
++
++    if (IsEqualGUID(riid, &IID_ID2D1Device)
++            || IsEqualGUID(riid, &IID_ID2D1Resource)
++            || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        ID2D1Device_AddRef(iface);
++        *ppvObject = iface;
++        return S_OK;
++    }
++
++    WARN("%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid(riid));
++    *ppvObject = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI d2d_device_AddRef(
++        ID2D1Device *iface)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    ULONG refcount = InterlockedIncrement(&This->refcount);
++    TRACE("%p increasing refcount to %u.\n", iface, refcount);
++    return refcount;
++}
++
++static ULONG WINAPI d2d_device_Release(
++        ID2D1Device *iface)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    ULONG refcount = InterlockedDecrement(&This->refcount);
++    TRACE("%p decreasing refcount to %u.\n", iface, refcount);
++
++    if (refcount == 0)
++    {
++        IDXGIDevice_Release(This->dxgi_device);
++        ID2D1Factory1_Release(This->factory);
++        HeapFree(GetProcessHeap(), 0, This);
++    }
++
++    return refcount;
++}
++
++static void WINAPI d2d_device_GetFactory(
++        ID2D1Device *iface,
++        ID2D1Factory **factory)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++
++    TRACE("iface %p, factory %p.\n", iface, factory);
++    *factory = (ID2D1Factory *)This->factory;
++    ID2D1Factory1_AddRef(This->factory);
++}
++
++static HRESULT WINAPI d2d_device_CreateDeviceContext(
++        ID2D1Device *iface,
++        D2D1_DEVICE_CONTEXT_OPTIONS options,
++        ID2D1DeviceContext **deviceContext)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    FIXME("%p stub!\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI d2d_device_CreatePrintControl(
++        ID2D1Device *iface,
++        IWICImagingFactory *wicFactory,
++        IPrintDocumentPackageTarget *documentTarget,
++        const D2D1_PRINT_CONTROL_PROPERTIES *printControlProperties,
++        ID2D1PrintControl **printControl)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    FIXME("%p stub!\n", This);
++    return E_NOTIMPL;
++}
++
++static void WINAPI d2d_device_SetMaximumTextureMemory(
++        ID2D1Device *iface,
++        UINT64 maximumInBytes)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    FIXME("%p stub!\n", This);
++}
++
++static UINT64 WINAPI d2d_device_GetMaximumTextureMemory(
++        ID2D1Device *iface)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    FIXME("%p stub!\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI d2d_device_ClearResources(
++        ID2D1Device *iface,
++        UINT millisecondsSinceUse)
++{
++    struct d2d_device *This = impl_from_ID2D1Device(iface);
++    FIXME("%p stub!\n", This);
++    return E_NOTIMPL;
++}
++
++static const struct ID2D1DeviceVtbl d2d_device_vtbl =
++{
++    d2d_device_QueryInterface,
++    d2d_device_AddRef,
++    d2d_device_Release,
++    d2d_device_GetFactory,
++    d2d_device_CreateDeviceContext,
++    d2d_device_CreatePrintControl,
++    d2d_device_SetMaximumTextureMemory,
++    d2d_device_GetMaximumTextureMemory,
++    d2d_device_ClearResources,
++};
++
++void d2d_device_init(struct d2d_device *device, ID2D1Factory1 *iface, IDXGIDevice *dxgi_device)
++{
++    device->ID2D1Device_iface.lpVtbl = &d2d_device_vtbl;
++    device->refcount = 1;
++    device->factory = iface;
++    ID2D1Factory1_AddRef(device->factory);
++    device->dxgi_device = dxgi_device;
++    IDXGIDevice_AddRef(device->dxgi_device);
++}
+diff --git a/dlls/d2d1/factory.c b/dlls/d2d1/factory.c
+index 9bacc85..a6bc6e2 100644
+--- a/dlls/d2d1/factory.c
++++ b/dlls/d2d1/factory.c
+@@ -375,9 +375,18 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateDCRenderTarget(ID2D1Factory1
+ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateDevice(ID2D1Factory1 *iface,
+         IDXGIDevice *dxgi_device, ID2D1Device **device)
+ {
+-    FIXME("iface %p, dxgi_device %p, device %p stub!\n", iface, dxgi_device, device);
++    struct d2d_device *object;
+ 
+-    return E_NOTIMPL;
++    TRACE("iface %p, dxgi_device %p, device %p\n", iface, dxgi_device, device);
++
++    if (!(object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object))))
++        return E_OUTOFMEMORY;
++
++    d2d_device_init(object, iface, dxgi_device);
++    *device = &object->ID2D1Device_iface;
++    TRACE("Created device %p.\n", object);
++
++    return S_OK;
+ }
+ 
+ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateStrokeStyle1(ID2D1Factory1 *iface,
+diff --git a/dlls/d2d1/tests/d2d1.c b/dlls/d2d1/tests/d2d1.c
+index 21b4e53..cf0ddd7 100644
+--- a/dlls/d2d1/tests/d2d1.c
++++ b/dlls/d2d1/tests/d2d1.c
+@@ -4684,7 +4684,6 @@ static void test_draw_via_ID2D1DeviceContext(void)
+     }
+ 
+     hr = ID2D1Factory1_CreateDevice(factory, dxgi_device, &device);
+-    todo_wine
+     ok(SUCCEEDED(hr), "Failed to create device, hr %#x.\n", hr);
+     if (FAILED(hr))
+     {
+-- 
+1.9.1
+

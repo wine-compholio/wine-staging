@@ -1,4 +1,4 @@
-From a8093f27fc5efa1a4999bddb45badadb93f00f7e Mon Sep 17 00:00:00 2001
+From 7ea5a3f6c925a51a19ba51726d82dac1ffd76f55 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 16 Aug 2015 17:34:22 +0200
 Subject: [PATCH] shell32: Implement NewMenu with new folder item.
@@ -8,18 +8,20 @@ Added and Correct tests
 Use IContextMenu3 for all IContextMenu* interfaces.
 Use heap_alloc/free functions
 
+v3:
+Correct header issue when compiling i386 (var_arg)
 ---
  dlls/shell32/Makefile.in         |   1 +
  dlls/shell32/shell32_classes.idl |   5 +
  dlls/shell32/shell32_main.h      |   1 +
- dlls/shell32/shellnew.c          | 495 +++++++++++++++++++++++++++++++++++++++
+ dlls/shell32/shellnew.c          | 498 +++++++++++++++++++++++++++++++
  dlls/shell32/shellole.c          |   1 +
  dlls/shell32/tests/shlview.c     |   9 +-
- 6 files changed, 511 insertions(+), 1 deletion(-)
+ 6 files changed, 514 insertions(+), 1 deletion(-)
  create mode 100644 dlls/shell32/shellnew.c
 
 diff --git a/dlls/shell32/Makefile.in b/dlls/shell32/Makefile.in
-index 970ecba..25d9ebd 100644
+index 970ecba4f6..25d9ebd541 100644
 --- a/dlls/shell32/Makefile.in
 +++ b/dlls/shell32/Makefile.in
 @@ -32,6 +32,7 @@ C_SRCS = \
@@ -31,23 +33,23 @@ index 970ecba..25d9ebd 100644
  	shellord.c \
  	shellpath.c \
 diff --git a/dlls/shell32/shell32_classes.idl b/dlls/shell32/shell32_classes.idl
-index 6ed497f..60de627 100644
+index 6ed497fea5..60de627be3 100644
 --- a/dlls/shell32/shell32_classes.idl
 +++ b/dlls/shell32/shell32_classes.idl
-@@ -82,6 +82,11 @@ coclass KnownFolderManager { interface IKnownFolderManager; }
+@@ -80,6 +80,11 @@ coclass KnownFolderManager { interface IKnownFolderManager; }
+     uuid(4657278a-411b-11d2-839a-00c04fd918d0)
+ ] coclass DragDropHelper { interface IDropTargetHelper; }
  
- [
-     threading(apartment),
++[
++    threading(apartment),
 +    uuid(d969a300-e7ff-11d0-a93b-00a0c90f2719)
 +] coclass NewMenu { interface IShellExtInit; }
 +
-+[
-+    threading(apartment),
+ [
+     threading(apartment),
      uuid(00bb2763-6a77-11d0-a535-00c04fd7d062)
- ] coclass AutoComplete { interface IAutoComplete2; }
- 
 diff --git a/dlls/shell32/shell32_main.h b/dlls/shell32/shell32_main.h
-index d1b0e01..fd5d207 100644
+index d1b0e01cf1..fd5d207f37 100644
 --- a/dlls/shell32/shell32_main.h
 +++ b/dlls/shell32/shell32_main.h
 @@ -105,6 +105,7 @@ HRESULT WINAPI RecycleBin_Constructor(IUnknown * pUnkOuter, REFIID riif, LPVOID
@@ -60,10 +62,10 @@ index d1b0e01..fd5d207 100644
  HRESULT WINAPI CPanel_ExtractIconW(LPITEMIDLIST pidl, LPCWSTR pszFile, UINT nIconIndex, HICON *phiconLarge, HICON *phiconSmall, UINT nIconSize) DECLSPEC_HIDDEN;
 diff --git a/dlls/shell32/shellnew.c b/dlls/shell32/shellnew.c
 new file mode 100644
-index 0000000..eb6bbb2
+index 0000000000..89be091e03
 --- /dev/null
 +++ b/dlls/shell32/shellnew.c
-@@ -0,0 +1,495 @@
+@@ -0,0 +1,498 @@
 +/*
 + * Copyright 2015 Michael Müller
 + *
@@ -81,9 +83,12 @@ index 0000000..eb6bbb2
 + * License along with this library; if not, write to the Free Software
 + * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 + */
++#include "config.h"
 +
 +#define COBJMACROS
 +#define NONAMELESSUNION
++
++#include <stdarg.h>
 +
 +#include "winerror.h"
 +#include "windef.h"
@@ -560,7 +565,7 @@ index 0000000..eb6bbb2
 +    return hr;
 +}
 diff --git a/dlls/shell32/shellole.c b/dlls/shell32/shellole.c
-index 3fe9680..649e646 100644
+index 3fe96801aa..649e6460cf 100644
 --- a/dlls/shell32/shellole.c
 +++ b/dlls/shell32/shellole.c
 @@ -89,6 +89,7 @@ static const struct {
@@ -572,7 +577,7 @@ index 3fe9680..649e646 100644
  };
  
 diff --git a/dlls/shell32/tests/shlview.c b/dlls/shell32/tests/shlview.c
-index f5d96c8..dbb24d9 100644
+index f5d96c8d44..dbb24d9356 100644
 --- a/dlls/shell32/tests/shlview.c
 +++ b/dlls/shell32/tests/shlview.c
 @@ -1479,7 +1479,6 @@ static void test_newmenu(void)
@@ -599,5 +604,5 @@ index f5d96c8..dbb24d9 100644
      ok(hr == S_OK, "Failed to get IContextMenu3, hr %#x.\n", hr);
      IUnknown_Release(unk2);
 -- 
-1.9.1
+2.17.0
 

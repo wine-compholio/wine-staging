@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e637a6f0bf1eeba3e6be62c4e1c5688bb8f6102e"
+	echo "540c48b91175b11c7b8646d0a036b20c46425080"
 }
 
 # Show version information
@@ -99,7 +99,6 @@ patch_enable_all ()
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
 	enable_browseui_Progress_Dialog="$1"
-	enable_combase_RoApi="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -485,9 +484,6 @@ patch_enable ()
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
-			;;
-		combase-RoApi)
-			enable_combase_RoApi="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -2352,13 +2348,6 @@ if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
 	enable_crypt32_ECDSA_Cert_Chains=1
 fi
 
-if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
-	if test "$enable_combase_RoApi" -gt 1; then
-		abort "Patchset combase-RoApi disabled, but api-ms-win-Stub_DLLs depends on that."
-	fi
-	enable_combase_RoApi=1
-fi
-
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but advapi32-Token_Integrity_Level depends on that."
@@ -2735,34 +2724,7 @@ if test "$enable_advapi32_WinBuiltinAnyPackageSid" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset combase-RoApi
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44399] Implement semi-stub for RoGetActivationFactory
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-l1-1-0/api-ms-win-core-winrt-l1-1-0.spec, dlls/api-ms-win-core-winrt-registration-l1-1-0/api-
-# | 	ms-win-core-winrt-registration-l1-1-0.spec, dlls/combase/combase.spec, dlls/combase/roapi.c
-# |
-if test "$enable_combase_RoApi" -eq 1; then
-	patch_apply combase-RoApi/0005-combase-Add-stub-for-RoGetApartmentIdentifier.patch
-	patch_apply combase-RoApi/0007-combase-Add-stub-for-RoRegisterForApartmentShutdown.patch
-	patch_apply combase-RoApi/0008-combase-Add-stub-for-RoGetServerActivatableClasses.patch
-	patch_apply combase-RoApi/0009-combase-Add-stub-for-RoRegisterActivationFactories.patch
-	patch_apply combase-RoApi/0010-combase-Add-stub-for-CleanupTlsOleState.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetApartmentIdentifier.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterForApartmentShutdown.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoGetServerActivatableClasses.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for RoRegisterActivationFactories.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "combase: Add stub for CleanupTlsOleState.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset api-ms-win-Stub_DLLs
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40451] Add feclient dll
@@ -4469,7 +4431,7 @@ fi
 # Patchset kernel32-Processor_Group
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	combase-RoApi, api-ms-win-Stub_DLLs
+# |   *	api-ms-win-Stub_DLLs
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/cpu.c,
@@ -6731,7 +6693,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/shell32/Makefile.in, dlls/shell32/shell32_classes.idl, dlls/shell32/shell32_main.h, dlls/shell32/shellnew.c,
-# | 	dlls/shell32/shellole.c
+# | 	dlls/shell32/shellole.c, dlls/shell32/tests/shlview.c
 # |
 if test "$enable_shell32_NewMenu_Interface" -eq 1; then
 	patch_apply shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch

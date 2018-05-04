@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8dca6c35e11a104385242ed8346ee05707b78ef7"
+	echo "e637a6f0bf1eeba3e6be62c4e1c5688bb8f6102e"
 }
 
 # Show version information
@@ -414,7 +414,6 @@ patch_enable_all ()
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
 	enable_wininet_InternetCrackUrlW="$1"
-	enable_wininet_Internet_Settings="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
@@ -1431,9 +1430,6 @@ patch_enable ()
 			;;
 		wininet-InternetCrackUrlW)
 			enable_wininet_InternetCrackUrlW="$2"
-			;;
-		wininet-Internet_Settings)
-			enable_wininet_Internet_Settings="$2"
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
@@ -8428,20 +8424,6 @@ if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
 	patch_apply wininet-InternetCrackUrlW/0002-wininet-Resize-buffer-when-call-to-InternetCanonical.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-Internet_Settings
-# |
-# | Modified files:
-# |   *	dlls/wininet/internet.c, dlls/wininet/tests/internet.c
-# |
-if test "$enable_wininet_Internet_Settings" -eq 1; then
-	patch_apply wininet-Internet_Settings/0001-wininet-Allow-INTERNET_OPTION_SETTINGS_CHANGED-on-co.patch
-	patch_apply wininet-Internet_Settings/0002-wininet-Add-support-for-INTERNET_OPTION_SETTINGS_CHA.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wininet: Allow INTERNET_OPTION_SETTINGS_CHANGED on connections.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wininet: Add support for INTERNET_OPTION_SETTINGS_CHANGED in InternetSetOption.", 1 },';
 	) >> "$patchlist"
 fi
 

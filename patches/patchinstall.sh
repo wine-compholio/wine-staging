@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "540c48b91175b11c7b8646d0a036b20c46425080"
+	echo "7f955f22d317cad1e7d5323179e9a0ee635c9768"
 }
 
 # Show version information
@@ -313,7 +313,6 @@ patch_enable_all ()
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
-	enable_shell32_File_Property_Dialog="$1"
 	enable_shell32_Microsoft_Windows_Themes="$1"
 	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Placeholder_Icons="$1"
@@ -1126,9 +1125,6 @@ patch_enable ()
 			;;
 		shell32-Context_Menu)
 			enable_shell32_Context_Menu="$2"
-			;;
-		shell32-File_Property_Dialog)
-			enable_shell32_File_Property_Dialog="$2"
 			;;
 		shell32-Microsoft_Windows_Themes)
 			enable_shell32_Microsoft_Windows_Themes="$2"
@@ -2003,13 +1999,9 @@ if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
 fi
 
 if test "$enable_shell32_ACE_Viewer" -eq 1; then
-	if test "$enable_shell32_File_Property_Dialog" -gt 1; then
-		abort "Patchset shell32-File_Property_Dialog disabled, but shell32-ACE_Viewer depends on that."
-	fi
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
 		abort "Patchset shell32-Progress_Dialog disabled, but shell32-ACE_Viewer depends on that."
 	fi
-	enable_shell32_File_Property_Dialog=1
 	enable_shell32_Progress_Dialog=1
 fi
 
@@ -4180,7 +4172,7 @@ fi
 # |   *	[#34372] Support for AllocateAndGetTcpExTableFromStack
 # |
 # | Modified files:
-# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, dlls/iphlpapi/ipstats.h
+# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, include/iphlpapi.h
 # |
 if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
@@ -4269,6 +4261,10 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 fi
 
 # Patchset kernel32-Debugger
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35928] Crash handlers/debuggers fail to display user-interface when invoked for crashing (non-interactive) service
+# | 	processes (inherited Wine service window station/desktop)
 # |
 # | Modified files:
 # |   *	dlls/kernel32/except.c
@@ -5249,15 +5245,11 @@ fi
 # Patchset ntdll-RtlQueryPackageIdentity
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c, include/shobjidl.idl
+# |   *	dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
-	patch_apply ntdll-RtlQueryPackageIdentity/0001-ntdll-Add-stub-for-RtlQueryPackageIdentity.patch
-	patch_apply ntdll-RtlQueryPackageIdentity/0002-include-Add-IApplicationActivationManager-interface-.patch
 	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlQueryPackageIdentity.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Add IApplicationActivationManager interface declaration.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6568,21 +6560,6 @@ if test "$enable_shdocvw_ParseURLFromOutsideSource_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shell32-File_Property_Dialog
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40426] Implement general tab for file property dialog
-# |
-# | Modified files:
-# |   *	dlls/shell32/shell32.rc, dlls/shell32/shlview_cmenu.c, dlls/shell32/shresdef.h
-# |
-if test "$enable_shell32_File_Property_Dialog" -eq 1; then
-	patch_apply shell32-File_Property_Dialog/0001-shell32-Add-general-tab-in-file-property-dialog.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Add general tab in file property dialog.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shell32-SHFileOperation_Move
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6622,8 +6599,8 @@ fi
 # Patchset shell32-ACE_Viewer
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	shell32-File_Property_Dialog, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
-# | 	shell32-SHFileOperation_Move, shell32-Progress_Dialog
+# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move,
+# | 	shell32-Progress_Dialog
 # |
 # | Modified files:
 # |   *	dlls/aclui/Makefile.in, dlls/aclui/aclui.rc, dlls/aclui/aclui_main.c, dlls/aclui/resource.h, dlls/aclui/user_icons.bmp,

@@ -144,7 +144,6 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
-	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -619,9 +618,6 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
-			;;
-		dwrite-FontFallback)
-			enable_dwrite_FontFallback="$2"
 			;;
 		dxdiagn-Display_Information)
 			enable_dxdiagn_Display_Information="$2"
@@ -3782,23 +3778,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dwrite-FontFallback
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44052] - Support for font fallback.
-# |
-# | Modified files:
-# |   *	dlls/dwrite/analyzer.c, dlls/dwrite/layout.c, dlls/dwrite/tests/font.c
-# |
-if test "$enable_dwrite_FontFallback" -eq 1; then
-	patch_apply dwrite-FontFallback/0001-dwrite-test-font-collection-fallback-logic.patch
-	patch_apply dwrite-FontFallback/0002-dwrite-Fix-font-fallback.patch
-	(
-		printf '%s\n' '+    { "Lucian Poston", "dwrite: Test font collection fallback logic.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "dwrite: Fix font fallback.", 1 },';
 	) >> "$patchlist"
 fi
 

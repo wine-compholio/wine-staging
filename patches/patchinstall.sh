@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
+	enable_dxgi_IDXGIDevice2="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxgi_SetMaximumFrameLatency="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -632,6 +633,9 @@ patch_enable ()
 			;;
 		dxgi-GammaRamp)
 			enable_dxgi_GammaRamp="$2"
+			;;
+		dxgi-IDXGIDevice2)
+			enable_dxgi_IDXGIDevice2="$2"
 			;;
 		dxgi-MakeWindowAssociation)
 			enable_dxgi_MakeWindowAssociation="$2"
@@ -3843,6 +3847,21 @@ if test "$enable_dxgi_GammaRamp" -eq 1; then
 	patch_apply dxgi-GammaRamp/0001-dxgi-Implement-setting-and-querying-the-gamma-value-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxgi: Implement setting and querying the gamma value of an output.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dxgi-IDXGIDevice2
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45080] - Add support for IDXGIDevice2 interface
+# |
+# | Modified files:
+# |   *	dlls/dxgi/device.c, include/wine/winedxgi.idl
+# |
+if test "$enable_dxgi_IDXGIDevice2" -eq 1; then
+	patch_apply dxgi-IDXGIDevice2/0001-dxgi-Add-IDXGIDevice2-stub.patch
+	(
+		printf '%s\n' '+    { "Nikolay Sivov", "dxgi: Add IDXGIDevice2 stub.", 1 },';
 	) >> "$patchlist"
 fi
 

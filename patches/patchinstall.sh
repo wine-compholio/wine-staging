@@ -87,8 +87,8 @@ patch_enable_all ()
 	enable_Coverity="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_advapi_LsaLookupPrivilegeName="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
+	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_Performance_Counters="$1"
 	enable_advapi32_SetSecurityInfo="$1"
@@ -449,11 +449,11 @@ patch_enable ()
 		Staging)
 			enable_Staging="$2"
 			;;
-		advapi-LsaLookupPrivilegeName)
-			enable_advapi_LsaLookupPrivilegeName="$2"
-			;;
 		advapi32-CreateRestrictedToken)
 			enable_advapi32_CreateRestrictedToken="$2"
+			;;
+		advapi32-LsaLookupPrivilegeName)
+			enable_advapi32_LsaLookupPrivilegeName="$2"
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
@@ -2494,20 +2494,6 @@ if test "$enable_Staging" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset advapi-LsaLookupPrivilegeName
-# |
-# | Modified files:
-# |   *	dlls/advapi32/lsa.c, dlls/advapi32/tests/lsa.c
-# |
-if test "$enable_advapi_LsaLookupPrivilegeName" -eq 1; then
-	patch_apply advapi-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
-	patch_apply advapi-LsaLookupPrivilegeName/0002-advapi32-Use-TRACE-for-LsaOpenPolicy-LsaClose.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-CreateRestrictedToken
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2561,6 +2547,20 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset advapi32-LsaLookupPrivilegeName
+# |
+# | Modified files:
+# |   *	dlls/advapi32/lsa.c, dlls/advapi32/tests/lsa.c
+# |
+if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
+	patch_apply advapi32-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
+	patch_apply advapi32-LsaLookupPrivilegeName/0002-advapi32-Use-TRACE-for-LsaOpenPolicy-LsaClose.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
 	) >> "$patchlist"
 fi
 

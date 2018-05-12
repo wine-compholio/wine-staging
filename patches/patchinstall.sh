@@ -383,6 +383,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
+	enable_wined3d_Implement_oMask="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
@@ -1335,6 +1336,9 @@ patch_enable ()
 			;;
 		wined3d-Dual_Source_Blending)
 			enable_wined3d_Dual_Source_Blending="$2"
+			;;
+		wined3d-Implement-oMask)
+			enable_wined3d_Implement_oMask="$2"
 			;;
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
@@ -7922,6 +7926,21 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Implement-oMask
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44964] Implement oMask.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_Implement_oMask" -eq 1; then
+	patch_apply wined3d-Implement-oMask/0001-wined3d-Implement-oMask.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement oMask.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7280f7fb744e951281e7f051c347fb8fef5ab36b"
+	echo "09bf88092d0748ceac355098a942b01b267e8773"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 3.8"
+	echo "Wine Staging 3.9 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -149,7 +149,6 @@ patch_enable_all ()
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
-	enable_dxgi_IDXGIDevice2="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxgi_SetMaximumFrameLatency="$1"
 	enable_dxva2_Video_Decoder="$1"
@@ -242,7 +241,6 @@ patch_enable_all ()
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
-	enable_ntdll_RtlIpStringToAddress_Stubs="$1"
 	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
@@ -320,7 +318,6 @@ patch_enable_all ()
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHELL_execute="$1"
 	enable_shell32_SHFileOperation_Move="$1"
-	enable_shell32_SHFileOperation_Win9x="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
@@ -635,9 +632,6 @@ patch_enable ()
 		dxgi-GammaRamp)
 			enable_dxgi_GammaRamp="$2"
 			;;
-		dxgi-IDXGIDevice2)
-			enable_dxgi_IDXGIDevice2="$2"
-			;;
 		dxgi-MakeWindowAssociation)
 			enable_dxgi_MakeWindowAssociation="$2"
 			;;
@@ -914,9 +908,6 @@ patch_enable ()
 		ntdll-RtlGetUnloadEventTraceEx)
 			enable_ntdll_RtlGetUnloadEventTraceEx="$2"
 			;;
-		ntdll-RtlIpStringToAddress_Stubs)
-			enable_ntdll_RtlIpStringToAddress_Stubs="$2"
-			;;
 		ntdll-RtlIpStringToAddress_Tests)
 			enable_ntdll_RtlIpStringToAddress_Tests="$2"
 			;;
@@ -1147,9 +1138,6 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation_Move)
 			enable_shell32_SHFileOperation_Move="$2"
-			;;
-		shell32-SHFileOperation_Win9x)
-			enable_shell32_SHFileOperation_Win9x="$2"
 			;;
 		shell32-Toolbar_Bitmaps)
 			enable_shell32_Toolbar_Bitmaps="$2"
@@ -1995,13 +1983,6 @@ if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	enable_widl_SLTG_Typelib_Support=1
 fi
 
-if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
-	if test "$enable_shell32_Progress_Dialog" -gt 1; then
-		abort "Patchset shell32-Progress_Dialog disabled, but shell32-SHFileOperation_Win9x depends on that."
-	fi
-	enable_shell32_Progress_Dialog=1
-fi
-
 if test "$enable_shell32_ACE_Viewer" -eq 1; then
 	if test "$enable_shell32_Progress_Dialog" -gt 1; then
 		abort "Patchset shell32-Progress_Dialog disabled, but shell32-ACE_Viewer depends on that."
@@ -2514,6 +2495,20 @@ if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset advapi32-LsaLookupPrivilegeName
+# |
+# | Modified files:
+# |   *	dlls/advapi32/lsa.c, dlls/advapi32/tests/lsa.c
+# |
+if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
+	patch_apply advapi32-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
+	patch_apply advapi32-LsaLookupPrivilegeName/0002-advapi32-Use-TRACE-for-LsaOpenPolicy-LsaClose.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-CreateProcess_ACLs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2547,20 +2542,6 @@ if test "$enable_server_Misc_ACL" -eq 1; then
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-LsaLookupPrivilegeName
-# |
-# | Modified files:
-# |   *	dlls/advapi32/lsa.c, dlls/advapi32/tests/lsa.c
-# |
-if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
-	patch_apply advapi32-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
-	patch_apply advapi32-LsaLookupPrivilegeName/0002-advapi32-Use-TRACE-for-LsaOpenPolicy-LsaClose.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3851,21 +3832,6 @@ if test "$enable_dxgi_GammaRamp" -eq 1; then
 	patch_apply dxgi-GammaRamp/0001-dxgi-Implement-setting-and-querying-the-gamma-value-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxgi: Implement setting and querying the gamma value of an output.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxgi-IDXGIDevice2
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45080] - Add support for IDXGIDevice2 interface
-# |
-# | Modified files:
-# |   *	dlls/dxgi/device.c, include/wine/winedxgi.idl
-# |
-if test "$enable_dxgi_IDXGIDevice2" -eq 1; then
-	patch_apply dxgi-IDXGIDevice2/0001-dxgi-Add-IDXGIDevice2-stub.patch
-	(
-		printf '%s\n' '+    { "Nikolay Sivov", "dxgi: Add IDXGIDevice2 stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5497,18 +5463,6 @@ if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlIpStringToAddress_Stubs
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntdll_RtlIpStringToAddress_Stubs" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress_Stubs/0002-ntdll-Add-stub-for-RtlIpv6StringToAddressExW.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlIpv6StringToAddressExW.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-RtlIpStringToAddress_Tests
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6719,25 +6673,6 @@ if test "$enable_shell32_SHELL_execute" -eq 1; then
 	patch_apply shell32-SHELL_execute/0001-shell32-Properly-fail-when-a-data-object-cannot-be-i.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "shell32: Properly fail when a data object cannot be instantiated and expand environment strings in ShellExecute.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-SHFileOperation_Win9x
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move,
-# | 	shell32-Progress_Dialog
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37916] Anno 1602 installer depends on Windows 98 behavior of SHFileOperationW
-# |
-# | Modified files:
-# |   *	dlls/shell32/shlfileop.c
-# |
-if test "$enable_shell32_SHFileOperation_Win9x" -eq 1; then
-	patch_apply shell32-SHFileOperation_Win9x/0001-shell32-Choose-return-value-for-SHFileOperationW-dep.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Choose return value for SHFileOperationW depending on windows version.", 1 },';
 	) >> "$patchlist"
 fi
 

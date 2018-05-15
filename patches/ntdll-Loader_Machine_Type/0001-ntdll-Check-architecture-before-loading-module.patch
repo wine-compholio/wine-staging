@@ -1,17 +1,17 @@
-From 2fdbbe0a5efd6c4425b9eafba32e7b75b2b81c7b Mon Sep 17 00:00:00 2001
+From 79f6535315f6c60b302025b53ca6a66dd4f36603 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 18 Jul 2015 04:52:55 +0200
 Subject: [PATCH] ntdll: Check architecture before loading module.
 
 ---
- dlls/ntdll/loader.c | 149 +++++++++++++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 142 insertions(+), 7 deletions(-)
+ dlls/ntdll/loader.c | 161 +++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 154 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 1a3dd80..db79296 100644
+index 1a3dd80..c7b3761 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -2198,6 +2198,119 @@ done:
+@@ -2198,6 +2198,131 @@ done:
      return status;
  }
  
@@ -122,16 +122,28 @@ index 1a3dd80..db79296 100644
 +{
 +    SECTION_IMAGE_INFORMATION info;
 +    SIZE_T ret;
++    HANDLE mapping;
++    LARGE_INTEGER size;
++    NTSTATUS status;
 +
-+    if(NtQuerySection(hfile, SectionImageInformation, &info, sizeof(info), &ret) == STATUS_SUCCESS)
-+        return !info.TransferAddress;
++    size.QuadPart = 0;
++    status = NtCreateSection( &mapping, STANDARD_RIGHTS_REQUIRED | SECTION_QUERY |
++                              SECTION_MAP_READ | SECTION_MAP_EXECUTE,
++                              NULL, &size, PAGE_EXECUTE_READ, SEC_IMAGE, hfile );
++
++    status = NtQuerySection(mapping, SectionImageInformation, &info, sizeof(info), &ret);
++    NtClose( mapping );
++    if(status == STATUS_SUCCESS)
++    {
++        return !info.ImageContainsCode;
++    }
 +
 +    return FALSE;
 +}
  
  /***********************************************************************
   *	open_dll_file
-@@ -2244,7 +2357,7 @@ static HANDLE open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm, struct
+@@ -2244,7 +2369,7 @@ static HANDLE open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm, struct
   */
  static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
                                 WCHAR *filename, ULONG *size, WINE_MODREF **pwm,
@@ -140,7 +152,7 @@ index 1a3dd80..db79296 100644
  {
      UNICODE_STRING nt_name;
      WCHAR *file_part, *ext, *dllname;
-@@ -2289,20 +2402,41 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
+@@ -2289,20 +2414,41 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
  
      if (RtlDetermineDosPathNameType_U( libname ) == RELATIVE_PATH)
      {
@@ -186,7 +198,7 @@ index 1a3dd80..db79296 100644
          }
  
          /* not found */
-@@ -2352,6 +2486,7 @@ overflow:
+@@ -2352,6 +2498,7 @@ overflow:
   */
  static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_MODREF** pwm )
  {
@@ -194,7 +206,7 @@ index 1a3dd80..db79296 100644
      enum loadorder loadorder;
      WCHAR buffer[64];
      WCHAR *filename;
-@@ -2368,7 +2503,7 @@ static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_
+@@ -2368,7 +2515,7 @@ static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_
      size = sizeof(buffer);
      for (;;)
      {
@@ -203,7 +215,7 @@ index 1a3dd80..db79296 100644
          if (nts == STATUS_SUCCESS) break;
          if (filename != buffer) RtlFreeHeap( GetProcessHeap(), 0, filename );
          if (nts != STATUS_BUFFER_TOO_SMALL) return nts;
-@@ -2507,7 +2642,7 @@ NTSTATUS WINAPI LdrGetDllHandle( LPCWSTR load_path, ULONG flags, const UNICODE_S
+@@ -2507,7 +2654,7 @@ NTSTATUS WINAPI LdrGetDllHandle( LPCWSTR load_path, ULONG flags, const UNICODE_S
      size = sizeof(buffer);
      for (;;)
      {

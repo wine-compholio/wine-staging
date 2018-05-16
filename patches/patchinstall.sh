@@ -110,7 +110,6 @@ patch_enable_all ()
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d11_Depth_Bias="$1"
-	enable_d3d11_dynamic_cpu_access="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
@@ -511,9 +510,6 @@ patch_enable ()
 			;;
 		d3d11-Depth_Bias)
 			enable_d3d11_Depth_Bias="$2"
-			;;
-		d3d11-dynamic-cpu-access)
-			enable_d3d11_dynamic_cpu_access="$2"
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
@@ -3147,21 +3143,6 @@ if test "$enable_d3d11_Depth_Bias" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for DepthClipEnable in RSSetState.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-dynamic-cpu-access
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45066] - Enable CPU access for dynamic buffers.
-# |
-# | Modified files:
-# |   *	dlls/d3d11/buffer.c
-# |
-if test "$enable_d3d11_dynamic_cpu_access" -eq 1; then
-	patch_apply d3d11-dynamic-cpu-access/0001-d3d11-D3D11_USAGE_DYNAMIC-needs-to-have-CPU-access.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3d11: D3D11_USAGE_DYNAMIC needs to have CPU access.", 1 },';
 	) >> "$patchlist"
 fi
 

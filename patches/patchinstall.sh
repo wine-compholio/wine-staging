@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "48aeef69fc99ff1460da934f4933f0499ff33b13"
+	echo "8e9ea7a8a163147012908bad696a539454654d8f"
 }
 
 # Show version information
@@ -229,7 +229,6 @@ patch_enable_all ()
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
-	enable_ntdll_NtSetInformationToken="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_NtSuspendProcess="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -863,9 +862,6 @@ patch_enable ()
 			;;
 		ntdll-NtQueryVirtualMemory)
 			enable_ntdll_NtQueryVirtualMemory="$2"
-			;;
-		ntdll-NtSetInformationToken)
-			enable_ntdll_NtSetInformationToken="$2"
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
@@ -5256,23 +5252,6 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtSetInformationToken
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#32907] Return success for TokenSessionId in NtSetInformationToken
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c
-# |
-if test "$enable_ntdll_NtSetInformationToken" -eq 1; then
-	patch_apply ntdll-NtSetInformationToken/0001-ntdll-Return-success-for-TokenSessionId-in-NtSetInfo.patch
-	patch_apply ntdll-NtSetInformationToken/0002-ntdll-TokenIntegrityLevel-stub-in-NtSetInformationTo.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Return success for TokenSessionId in NtSetInformationToken.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: TokenIntegrityLevel stub in NtSetInformationToken.", 1 },';
 	) >> "$patchlist"
 fi
 

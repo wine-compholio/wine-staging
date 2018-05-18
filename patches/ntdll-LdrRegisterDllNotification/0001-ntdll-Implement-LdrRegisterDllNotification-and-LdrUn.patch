@@ -1,18 +1,16 @@
-From 99b6bb4e3d0136d51ef3f1b03b3ca8f2b6bdca3d Mon Sep 17 00:00:00 2001
+From 1a105dee7bff64ffe5280b29e4274c0d375cacf9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 22 Jul 2017 03:56:26 +0200
 Subject: [PATCH] ntdll: Implement LdrRegisterDllNotification and
  LdrUnregisterDllNotification.
 
 ---
- dlls/ntdll/loader.c    |  90 ++++++++++++++++++
- dlls/ntdll/ntdll.spec  |   2 +
+ dlls/ntdll/loader.c    |  79 +++++++++++++++-
  dlls/ntdll/tests/rtl.c | 250 +++++++++++++++++++++++++++++++++++++++++++++++++
- include/winternl.h     |  29 ++++++
- 4 files changed, 371 insertions(+)
+ 2 files changed, 325 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 0a9069f..adde9ee 100644
+index ba3e2df..6495bb3 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -40,6 +40,7 @@
@@ -39,7 +37,7 @@ index 0a9069f..adde9ee 100644
  #define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
  
  static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
-@@ -345,6 +355,29 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
+@@ -350,6 +360,29 @@ static ULONG_PTR allocate_stub( const char *dll, const char *name )
  static inline ULONG_PTR allocate_stub( const char *dll, const char *name ) { return 0xdeadbeef; }
  #endif  /* __i386__ */
  
@@ -69,7 +67,7 @@ index 0a9069f..adde9ee 100644
  
  /*************************************************************************
   *      hash_basename
-@@ -1295,16 +1328,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
+@@ -1334,16 +1367,23 @@ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved )
      {
          WINE_MODREF *prev = current_modref;
          current_modref = wm;
@@ -93,7 +91,7 @@ index 0a9069f..adde9ee 100644
          current_modref = prev;
      }
  
-@@ -1373,6 +1413,7 @@ static void process_detach(void)
+@@ -1412,6 +1452,7 @@ static void process_detach(void)
              mod->Flags &= ~LDR_PROCESS_ATTACHED;
              MODULE_InitDLL( CONTAINING_RECORD(mod, WINE_MODREF, ldr), 
                              DLL_PROCESS_DETACH, ULongToPtr(process_detaching) );
@@ -101,15 +99,12 @@ index 0a9069f..adde9ee 100644
  
              /* Restart at head of WINE_MODREF list, as entries might have
                 been added and/or removed while performing the call ... */
-@@ -1482,6 +1523,54 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
- }
- 
- /******************************************************************
-+ *              LdrRegisterDllNotification (NTDLL.@)
-+ */
-+NTSTATUS WINAPI LdrRegisterDllNotification(ULONG flags, PLDR_DLL_NOTIFICATION_FUNCTION callback,
-+                                           void *context, void **cookie)
-+{
+@@ -1526,8 +1567,27 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback,
+ NTSTATUS WINAPI LdrRegisterDllNotification(ULONG flags, PLDR_DLL_NOTIFICATION_FUNCTION callback,
+                                            void *context, void **cookie)
+ {
+-    FIXME( "(%04x, %p, %p, %p) stub\n", flags, callback, context, cookie );
+-    return STATUS_NOT_IMPLEMENTED;
 +    struct ldr_notification *notify;
 +
 +    TRACE( "(%x, %p, %p, %p)\n", flags, callback, context, cookie );
@@ -131,13 +126,15 @@ index 0a9069f..adde9ee 100644
 +
 +    *cookie = notify;
 +    return STATUS_SUCCESS;
-+}
-+
-+/******************************************************************
-+ *              LdrUnregisterDllNotification (NTDLL.@)
-+ */
-+NTSTATUS WINAPI LdrUnregisterDllNotification(void *cookie)
-+{
+ }
+ 
+ /******************************************************************
+@@ -1535,8 +1595,18 @@ NTSTATUS WINAPI LdrRegisterDllNotification(ULONG flags, PLDR_DLL_NOTIFICATION_FU
+  */
+ NTSTATUS WINAPI LdrUnregisterDllNotification( void *cookie )
+ {
+-    FIXME( "(%p) stub\n", cookie );
+-    return STATUS_NOT_IMPLEMENTED;
 +    struct ldr_notification *notify = cookie;
 +
 +    TRACE( "(%p)\n", cookie );
@@ -150,13 +147,10 @@ index 0a9069f..adde9ee 100644
 +
 +    RtlFreeHeap( GetProcessHeap(), 0, notify );
 +    return STATUS_SUCCESS;
-+}
-+
-+/******************************************************************
-  *		LdrLockLoaderLock  (NTDLL.@)
-  *
-  * Note: some flags are not implemented.
-@@ -2068,6 +2157,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
+ }
+ 
+ /******************************************************************
+@@ -2141,6 +2211,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, LPCWSTR fakemo
      TRACE_(loaddll)( "Loaded %s at %p: native\n", debugstr_w(wm->ldr.FullDllName.Buffer), module );
  
      wm->ldr.LoadCount = 1;
@@ -164,26 +158,6 @@ index 0a9069f..adde9ee 100644
      *pwm = wm;
      return STATUS_SUCCESS;
  }
-diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 2257a93..4c34e10 100644
---- a/dlls/ntdll/ntdll.spec
-+++ b/dlls/ntdll/ntdll.spec
-@@ -83,6 +83,7 @@
- @ stdcall LdrProcessRelocationBlock(ptr long ptr long)
- @ stdcall LdrQueryImageFileExecutionOptions(ptr wstr long ptr long ptr)
- @ stdcall LdrQueryProcessModuleInformation(ptr long ptr)
-+@ stdcall LdrRegisterDllNotification(long ptr long ptr)
- @ stdcall LdrResolveDelayLoadedAPI(ptr ptr ptr ptr ptr long)
- @ stub LdrSetAppCompatDllRedirectionCallback
- @ stub LdrSetDllManifestProber
-@@ -91,6 +92,7 @@
- @ stub LdrUnloadAlternateResourceModule
- @ stdcall LdrUnloadDll(ptr)
- @ stdcall LdrUnlockLoaderLock(long long)
-+@ stdcall LdrUnregisterDllNotification(ptr)
- @ stub LdrVerifyImageMatchesChecksum
- @ extern NlsAnsiCodePage
- @ extern NlsMbCodePageTag
 diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
 index 02ae1c1..8358cd5 100644
 --- a/dlls/ntdll/tests/rtl.c
@@ -471,53 +445,6 @@ index 02ae1c1..8358cd5 100644
      test_RtlMakeSelfRelativeSD();
 +    test_LdrRegisterDllNotification();
  }
-diff --git a/include/winternl.h b/include/winternl.h
-index 743f3d7..d24e3f9 100644
---- a/include/winternl.h
-+++ b/include/winternl.h
-@@ -2161,6 +2161,32 @@ typedef struct _LDR_MODULE
-     HANDLE              SectionHandle;
- } LDR_MODULE, *PLDR_MODULE;
- 
-+typedef struct _LDR_DLL_LOADED_NOTIFICATION_DATA
-+{
-+    ULONG Flags;
-+    PCUNICODE_STRING FullDllName;
-+    PCUNICODE_STRING BaseDllName;
-+    PVOID DllBase;
-+    ULONG SizeOfImage;
-+} LDR_DLL_LOADED_NOTIFICATION_DATA, *PLDR_DLL_LOADED_NOTIFICATION_DATA;
-+
-+typedef struct _LDR_DLL_UNLOADED_NOTIFICATION_DATA
-+{
-+    ULONG Flags;
-+    PCUNICODE_STRING FullDllName;
-+    PCUNICODE_STRING BaseDllName;
-+    PVOID DllBase;
-+    ULONG SizeOfImage;
-+} LDR_DLL_UNLOADED_NOTIFICATION_DATA, *PLDR_DLL_UNLOADED_NOTIFICATION_DATA;
-+
-+typedef union _LDR_DLL_NOTIFICATION_DATA
-+{
-+    LDR_DLL_LOADED_NOTIFICATION_DATA Loaded;
-+    LDR_DLL_UNLOADED_NOTIFICATION_DATA Unloaded;
-+} LDR_DLL_NOTIFICATION_DATA, *PLDR_DLL_NOTIFICATION_DATA;
-+
-+typedef void (CALLBACK *PLDR_DLL_NOTIFICATION_FUNCTION)(ULONG, LDR_DLL_NOTIFICATION_DATA*, void*);
-+
- /* those defines are (some of the) regular LDR_MODULE.Flags values */
- #define LDR_IMAGE_IS_DLL                0x00000004
- #define LDR_LOAD_IN_PROGRESS            0x00001000
-@@ -2180,6 +2206,9 @@ typedef struct _LDR_MODULE
- /* FIXME: to be checked */
- #define MAXIMUM_FILENAME_LENGTH 256
- 
-+#define LDR_DLL_NOTIFICATION_REASON_LOADED   1
-+#define LDR_DLL_NOTIFICATION_REASON_UNLOADED 2
-+
- typedef struct _SYSTEM_MODULE
- {
-     PVOID               Reserved1;                      /* 00/00 */
 -- 
-2.7.4
+1.9.1
 

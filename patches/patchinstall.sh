@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ba1d9f3aad85303997635ce8328caffa08992c14"
+	echo "48aeef69fc99ff1460da934f4933f0499ff33b13"
 }
 
 # Show version information
@@ -181,7 +181,6 @@ patch_enable_all ()
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetFileCompletionNotificationModes="$1"
-	enable_kernel32_SetProcessAffinityUpdateMode="$1"
 	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -307,7 +306,6 @@ patch_enable_all ()
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
-	enable_shell32_Microsoft_Windows_Themes="$1"
 	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
@@ -346,7 +344,6 @@ patch_enable_all ()
 	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
-	enable_version_GetFileVersionInfoSizeExW="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_GetStorageDependencyInformation="$1"
@@ -376,7 +373,6 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
-	enable_wined3d_Implement_oMask="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
@@ -723,9 +719,6 @@ patch_enable ()
 			;;
 		kernel32-SetFileCompletionNotificationModes)
 			enable_kernel32_SetFileCompletionNotificationModes="$2"
-			;;
-		kernel32-SetProcessAffinityUpdateMode)
-			enable_kernel32_SetProcessAffinityUpdateMode="$2"
 			;;
 		kernelbase-PathCchCombineEx)
 			enable_kernelbase_PathCchCombineEx="$2"
@@ -1102,9 +1095,6 @@ patch_enable ()
 		shell32-Context_Menu)
 			enable_shell32_Context_Menu="$2"
 			;;
-		shell32-Microsoft_Windows_Themes)
-			enable_shell32_Microsoft_Windows_Themes="$2"
-			;;
 		shell32-NewMenu_Interface)
 			enable_shell32_NewMenu_Interface="$2"
 			;;
@@ -1219,9 +1209,6 @@ patch_enable ()
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
 			;;
-		version-GetFileVersionInfoSizeExW)
-			enable_version_GetFileVersionInfoSizeExW="$2"
-			;;
 		version-VerFindFileA)
 			enable_version_VerFindFileA="$2"
 			;;
@@ -1308,9 +1295,6 @@ patch_enable ()
 			;;
 		wined3d-Dual_Source_Blending)
 			enable_wined3d_Dual_Source_Blending="$2"
-			;;
-		wined3d-Implement-oMask)
-			enable_wined3d_Implement_oMask="$2"
 			;;
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
@@ -4415,20 +4399,6 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetProcessAffinityUpdateMode
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-processthreads-l1-1-0/api-ms-win-core-processthreads-l1-1-0.spec, dlls/api-ms-win-core-
-# | 	processthreads-l1-1-1/api-ms-win-core-processthreads-l1-1-1.spec, dlls/api-ms-win-core-processthreads-l1-1-2/api-ms-win-
-# | 	core-processthreads-l1-1-2.spec, dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/kernelbase/kernelbase.spec
-# |
-if test "$enable_kernel32_SetProcessAffinityUpdateMode" -eq 1; then
-	patch_apply kernel32-SetProcessAffinityUpdateMode/0001-kernel32-add-SetProcessAffinityUpdateMode-stub.patch
-	(
-		printf '%s\n' '+    { "Thomas Crider", "kernel32: Add SetProcessAffinityUpdateMode stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernelbase-PathCchCombineEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5177,7 +5147,7 @@ fi
 # |   *	[#44585] Implement LdrRegisterDllNotification/LdrUnregisterDllNotification
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/tests/rtl.c, include/winternl.h
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_LdrRegisterDllNotification" -eq 1; then
 	patch_apply ntdll-LdrRegisterDllNotification/0001-ntdll-Implement-LdrRegisterDllNotification-and-LdrUn.patch
@@ -6521,21 +6491,6 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shell32-Microsoft_Windows_Themes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34910] Create Microsoft\Windows\Themes directory during Wineprefix creation
-# |
-# | Modified files:
-# |   *	dlls/shell32/shellpath.c
-# |
-if test "$enable_shell32_Microsoft_Windows_Themes" -eq 1; then
-	patch_apply shell32-Microsoft_Windows_Themes/0001-shell32-Create-Microsoft-Windows-Themes-directory-du.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "shell32: Create Microsoft\\Windows\\Themes directory during Wineprefix creation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shell32-NewMenu_Interface
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7191,18 +7146,6 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset version-GetFileVersionInfoSizeExW
-# |
-# | Modified files:
-# |   *	dlls/version/version.c
-# |
-if test "$enable_version_GetFileVersionInfoSizeExW" -eq 1; then
-	patch_apply version-GetFileVersionInfoSizeExW/0001-version-Return-ERROR_FILE_NOT_FOUND-for-Win-9X-when-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "version: Return ERROR_FILE_NOT_FOUND for Win 9X when a file was not found in GetFileVersionInfoSizeEx.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset version-VerFindFileA
 # |
 # | Modified files:
@@ -7781,21 +7724,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Implement-oMask
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44964] Implement oMask.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Implement_oMask" -eq 1; then
-	patch_apply wined3d-Implement-oMask/0001-wined3d-Implement-oMask.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Implement oMask.", 1 },';
 	) >> "$patchlist"
 fi
 

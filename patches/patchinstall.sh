@@ -3105,13 +3105,15 @@ fi
 # |   *	[#43848] Implement support for depth bias clamping
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
-# | 	dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
 	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
+	patch_apply d3d11-Depth_Bias/0007-d3d10core-tests-Add-test-for-depth-bias-clamp.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "d3d10core/tests: Add test for depth bias clamp.", 1 },';
 	) >> "$patchlist"
 fi
 

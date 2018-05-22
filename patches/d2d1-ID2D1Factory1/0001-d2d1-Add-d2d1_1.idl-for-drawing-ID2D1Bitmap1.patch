@@ -1,65 +1,36 @@
-From 6bb2d09fd7d71ccf338f3a32d52dfbc3029b104c Mon Sep 17 00:00:00 2001
+From b9218f8580e217d01bbef80ff78b21c877fd4a3f Mon Sep 17 00:00:00 2001
 From: Lucian Poston <lucian.poston@gmail.com>
 Date: Wed, 2 May 2018 22:38:33 -0700
-Subject: [PATCH 1/7] d2d1: Add d2d1_1.idl for drawing ID2D1Bitmap1
+Subject: d2d1: Add d2d1_1.idl for drawing ID2D1Bitmap1
 
 https://bugs.winehq.org/show_bug.cgi?id=44052
 
 Signed-off-by: Lucian Poston <lucian.poston@gmail.com>
 ---
- include/d2d1_1.idl  | 523 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ include/d2d1_1.idl  | 462 ++++++++++++++++++++++++++++++++++++++++++++++++++++
  include/dcommon.idl |  15 ++
- 2 files changed, 538 insertions(+)
+ 2 files changed, 477 insertions(+)
 
 diff --git a/include/d2d1_1.idl b/include/d2d1_1.idl
-index 1fbbb30..2ff042f 100644
+index 2b1ef2e..33a661c 100644
 --- a/include/d2d1_1.idl
 +++ b/include/d2d1_1.idl
-@@ -17,7 +17,17 @@
-  */
+@@ -18,6 +18,11 @@
  
  import "d2d1.idl";
-+import "dxgi.idl";
  
-+interface IWICImagingFactory;
 +interface IWICColorContext;
-+interface IPrintDocumentPackageTarget;
-+interface ID2D1PrintControl;
 +interface ID2D1ColorContext;
-+interface ID2D1Bitmap1;
 +interface ID2D1CommandSink;
 +interface ID2D1Effect;
 +interface ID2D1ImageBrush;
- interface ID2D1Device;
+ interface ID2D1DeviceContext;
  interface ID2D1StrokeStyle1;
  interface ID2D1PathGeometry1;
-@@ -50,6 +60,105 @@ typedef enum D2D1_UNIT_MODE
-     D2D1_UNIT_MODE_FORCE_DWORD = 0xffffffff,
- } D2D1_UNIT_MODE;
+@@ -76,6 +81,82 @@ typedef enum D2D1_COLOR_SPACE
+     D2D1_COLOR_SPACE_FORCE_DWORD = 0xffffffff,
+ } D2D1_COLOR_SPACE;
  
-+typedef enum D2D1_DEVICE_CONTEXT_OPTIONS
-+{
-+    D2D1_DEVICE_CONTEXT_OPTIONS_NONE = 0,
-+    D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS = 1,
-+    D2D1_DEVICE_CONTEXT_OPTIONS_FORCE_DWORD = 0xffffffff,
-+} D2D1_DEVICE_CONTEXT_OPTIONS;
-+
-+typedef enum D2D1_PRINT_FONT_SUBSET_MODE
-+{
-+    D2D1_PRINT_FONT_SUBSET_DEFAULT = 0,
-+    D2D1_PRINT_FONT_SUBSET_EACHPAGE = 1,
-+    D2D1_PRINT_FONT_SUBSET_NONE = 2,
-+    D2D1_PRINT_FONT_SUBSET_FORCE_DWORD = 0xffffffff,
-+} D2D1_PRINT_FONT_SUBSET_MODE;
-+
-+typedef enum D2D1_COLOR_SPACE
-+{
-+    D2D1_COLOR_SPACE_CUSTOM = 0,
-+    D2D1_COLOR_SPACE_SRGB = 1,
-+    D2D1_COLOR_SPACE_SCRGB = 2,
-+    D2D1_COLOR_SPACE_FORCE_DWORD = 0xffffffff,
-+} D2D1_COLOR_SPACE;
-+
 +typedef enum D2D1_BITMAP_OPTIONS
 +{
 +    D2D1_BITMAP_OPTIONS_NONE = 0,
@@ -139,9 +110,9 @@ index 1fbbb30..2ff042f 100644
  typedef struct D2D1_PROPERTY_BINDING D2D1_PROPERTY_BINDING;
  
  typedef struct D2D1_STROKE_STYLE_PROPERTIES1
-@@ -75,6 +184,76 @@ typedef struct D2D1_DRAWING_STATE_DESCRIPTION1
-     D2D1_UNIT_MODE unitMode;
- } D2D1_DRAWING_STATE_DESCRIPTION1;
+@@ -108,6 +189,69 @@ typedef struct D2D1_PRINT_CONTROL_PROPERTIES
+     D2D1_COLOR_SPACE colorSpace;
+ } D2D1_PRINT_CONTROL_PROPERTIES;
  
 +typedef struct D2D1_MAPPED_RECT
 +{
@@ -197,13 +168,6 @@ index 1fbbb30..2ff042f 100644
 +    ID2D1ColorContext *colorContext;
 +} D2D1_BITMAP_PROPERTIES1;
 +
-+typedef struct D2D1_PRINT_CONTROL_PROPERTIES
-+{
-+    D2D1_PRINT_FONT_SUBSET_MODE fontSubset;
-+    float rasterDPI;
-+    D2D1_COLOR_SPACE colorSpace;
-+} D2D1_PRINT_CONTROL_PROPERTIES;
-+
 +typedef struct D2D1_POINT_DESCRIPTION
 +{
 +    D2D1_POINT_2F point;
@@ -216,7 +180,7 @@ index 1fbbb30..2ff042f 100644
  typedef HRESULT (__stdcall *PD2D1_EFFECT_FACTORY)(IUnknown **effect);
  
  [
-@@ -134,3 +313,347 @@ interface ID2D1Factory1 : ID2D1Factory
+@@ -193,3 +337,321 @@ interface ID2D1Factory1 : ID2D1Factory
          [out] ID2D1Properties **props
      );
  }
@@ -538,32 +502,6 @@ index 1fbbb30..2ff042f 100644
 +        [in] const D2D1_RECT_F *src_rect
 +    );
 +}
-+
-+[
-+    local,
-+    object,
-+    uuid(47dd575d-ac05-4cdd-8049-9b02cd16f44c)
-+]
-+interface ID2D1Device : ID2D1Resource
-+{
-+    HRESULT CreateDeviceContext(
-+        [in] D2D1_DEVICE_CONTEXT_OPTIONS options,
-+        [out] ID2D1DeviceContext **context
-+    );
-+    HRESULT CreatePrintControl(
-+        [in] IWICImagingFactory *wic_factory,
-+        [in] IPrintDocumentPackageTarget *document_target,
-+        [in] const D2D1_PRINT_CONTROL_PROPERTIES *desc,
-+        [out] ID2D1PrintControl **print_control
-+    );
-+    void SetMaximumTextureMemory(
-+        [in] UINT64 max_texture_memory
-+    );
-+    UINT64 GetMaximumTextureMemory();
-+    HRESULT ClearResources(
-+        [in, defaultvalue(0)] UINT msec_since_use
-+    );
-+}
 diff --git a/include/dcommon.idl b/include/dcommon.idl
 index db5055d..18f2fbe 100644
 --- a/include/dcommon.idl
@@ -588,5 +526,5 @@ index db5055d..18f2fbe 100644
 +    };
 +} D2D_MATRIX_4X4_F;
 -- 
-1.9.1
+2.7.4
 

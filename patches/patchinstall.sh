@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8e9ea7a8a163147012908bad696a539454654d8f"
+	echo "8b9ba16e9ad9ca85b93b05c13d6c5044a1a5ecf3"
 }
 
 # Show version information
@@ -2887,22 +2887,17 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/d2d1/Makefile.in, dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/d2d1_private.h, dlls/d2d1/device.c,
-# | 	dlls/d2d1/device_context.c, dlls/d2d1/factory.c, dlls/d2d1/geometry.c, dlls/d2d1/render_target.c,
-# | 	dlls/d2d1/tests/d2d1.c, include/d2d1_1.idl, include/dcommon.idl
+# | 	dlls/d2d1/device_context.c, dlls/d2d1/factory.c, dlls/d2d1/geometry.c, include/d2d1_1.idl, include/dcommon.idl
 # |
 if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
 	patch_apply d2d1-ID2D1Factory1/0001-d2d1-Add-d2d1_1.idl-for-drawing-ID2D1Bitmap1.patch
-	patch_apply d2d1-ID2D1Factory1/0002-d2d1-Test-ID2D1DeviceContext-drawing-ID2D1Bitmap1.patch
 	patch_apply d2d1-ID2D1Factory1/0003-d2d1-Use-ID2D1Factory1-in-d2d_geometry.patch
-	patch_apply d2d1-ID2D1Factory1/0004-d2d1-Implement-ID2D1Device.patch
 	patch_apply d2d1-ID2D1Factory1/0005-d2d1-Stub-ID2D1DeviceContext.patch
 	patch_apply d2d1-ID2D1Factory1/0006-d2d1-Implement-ID2D1DeviceContext.patch
 	patch_apply d2d1-ID2D1Factory1/0007-d2d1-Implement-ID2D1Bitmap1.patch
 	(
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Add d2d1_1.idl for drawing ID2D1Bitmap1.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Test ID2D1DeviceContext drawing ID2D1Bitmap1.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory1 in d2d_geometry.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1Device.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Stub ID2D1DeviceContext.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1DeviceContext.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1Bitmap1.", 1 },';
@@ -3110,18 +3105,12 @@ fi
 # |   *	[#43848] Implement support for depth bias clamping
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
+# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
+# | 	dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
-	patch_apply d3d11-Depth_Bias/0002-d3d11-tests-Add-some-basic-depth-tests.patch
-	patch_apply d3d11-Depth_Bias/0004-d3d11-Add-support-for-DepthClipEnable-in-RSSetState.patch
-	patch_apply d3d11-Depth_Bias/0005-d3d11-tests-Add-basic-test-for-depth-bias-clamping.patch
 	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add some basic depth tests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11: Add support for DepthClipEnable in RSSetState.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic test for depth bias clamping.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5231,6 +5220,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
+# |   *	[#27248] Implement K32GetMappedFileName
 # |
 # | Modified files:
 # |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
@@ -5546,9 +5536,6 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Compiler_Warnings
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37355] Add stub for ntoskrnl.Mm{Map,Unmap}LockedPages
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,

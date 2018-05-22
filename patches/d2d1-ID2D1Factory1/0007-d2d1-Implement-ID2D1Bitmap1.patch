@@ -1,7 +1,7 @@
-From 986ff7ac31a4413b83b665d828ebc0844f50b526 Mon Sep 17 00:00:00 2001
+From 4da54c6040345f0a4d2f9d11e1d24461dec69e77 Mon Sep 17 00:00:00 2001
 From: Lucian Poston <lucian.poston@gmail.com>
 Date: Thu, 3 May 2018 04:36:13 -0700
-Subject: [PATCH 7/7] d2d1: Implement ID2D1Bitmap1
+Subject: d2d1: Implement ID2D1Bitmap1
 
 https://bugs.winehq.org/show_bug.cgi?id=44052
 
@@ -10,10 +10,9 @@ Signed-off-by: Lucian Poston <lucian.poston@gmail.com>
  dlls/d2d1/bitmap.c         | 277 +++++++++++++++++++++++++++++++++------------
  dlls/d2d1/brush.c          |   8 +-
  dlls/d2d1/d2d1_private.h   |   8 +-
+ dlls/d2d1/device.c         |   6 +-
  dlls/d2d1/device_context.c |  24 +++-
- dlls/d2d1/render_target.c  |   6 +-
- dlls/d2d1/tests/d2d1.c     |   3 -
- 6 files changed, 243 insertions(+), 83 deletions(-)
+ 5 files changed, 243 insertions(+), 80 deletions(-)
 
 diff --git a/dlls/d2d1/bitmap.c b/dlls/d2d1/bitmap.c
 index 0d4098f..32e6085 100644
@@ -556,7 +555,7 @@ index c46d940..b00629f 100644
      {
          (*brush)->u.bitmap.extend_mode_x = bitmap_brush_desc->extendModeX;
 diff --git a/dlls/d2d1/d2d1_private.h b/dlls/d2d1/d2d1_private.h
-index 1cb57e4..2169ff1 100644
+index 1958aa0..9db671e 100644
 --- a/dlls/d2d1/d2d1_private.h
 +++ b/dlls/d2d1/d2d1_private.h
 @@ -330,7 +330,8 @@ HRESULT d2d_mesh_create(ID2D1Factory *factory, struct d2d_mesh **mesh) DECLSPEC_
@@ -585,6 +584,37 @@ index 1cb57e4..2169ff1 100644
  HRESULT d2d_bitmap_create_shared(ID2D1RenderTarget *render_target, ID3D10Device *device, REFIID iid, void *data,
          const D2D1_BITMAP_PROPERTIES *desc, struct d2d_bitmap **bitmap) DECLSPEC_HIDDEN;
  HRESULT d2d_bitmap_create_from_wic_bitmap(ID2D1Factory *factory, ID3D10Device *device, IWICBitmapSource *bitmap_source,
+diff --git a/dlls/d2d1/device.c b/dlls/d2d1/device.c
+index 24fb3c9..5ba3d07 100644
+--- a/dlls/d2d1/device.c
++++ b/dlls/d2d1/device.c
+@@ -291,7 +291,7 @@ static HRESULT STDMETHODCALLTYPE d2d_d3d_render_target_CreateBitmap(ID2D1RenderT
+             iface, size.width, size.height, src_data, pitch, desc, bitmap);
+ 
+     if (SUCCEEDED(hr = d2d_bitmap_create(render_target->factory, render_target->device, size, src_data, pitch, desc, &object)))
+-        *bitmap = &object->ID2D1Bitmap_iface;
++        *bitmap = (ID2D1Bitmap *)&object->ID2D1Bitmap_iface;
+ 
+     return hr;
+ }
+@@ -308,7 +308,7 @@ static HRESULT STDMETHODCALLTYPE d2d_d3d_render_target_CreateBitmapFromWicBitmap
+ 
+     if (SUCCEEDED(hr = d2d_bitmap_create_from_wic_bitmap(render_target->factory, render_target->device, bitmap_source,
+             desc, &object)))
+-        *bitmap = &object->ID2D1Bitmap_iface;
++        *bitmap = (ID2D1Bitmap *)&object->ID2D1Bitmap_iface;
+ 
+     return hr;
+ }
+@@ -324,7 +324,7 @@ static HRESULT STDMETHODCALLTYPE d2d_d3d_render_target_CreateSharedBitmap(ID2D1R
+             iface, debugstr_guid(iid), data, desc, bitmap);
+ 
+     if (SUCCEEDED(hr = d2d_bitmap_create_shared(iface, render_target->device, iid, data, desc, &object)))
+-        *bitmap = &object->ID2D1Bitmap_iface;
++        *bitmap = (ID2D1Bitmap *)&object->ID2D1Bitmap_iface;
+ 
+     return hr;
+ }
 diff --git a/dlls/d2d1/device_context.c b/dlls/d2d1/device_context.c
 index 75d163c..e5577b0 100644
 --- a/dlls/d2d1/device_context.c
@@ -620,60 +650,6 @@ index 75d163c..e5577b0 100644
  }
  
  static HRESULT WINAPI d2d_device_context_CreateEffect(
-diff --git a/dlls/d2d1/render_target.c b/dlls/d2d1/render_target.c
-index 3f15406..7c6752f 100644
---- a/dlls/d2d1/render_target.c
-+++ b/dlls/d2d1/render_target.c
-@@ -286,7 +286,7 @@ static HRESULT STDMETHODCALLTYPE d2d_d3d_render_target_CreateBitmap(ID2D1RenderT
-             iface, size.width, size.height, src_data, pitch, desc, bitmap);
- 
-     if (SUCCEEDED(hr = d2d_bitmap_create(render_target->factory, render_target->device, size, src_data, pitch, desc, &object)))
--        *bitmap = &object->ID2D1Bitmap_iface;
-+        *bitmap = (ID2D1Bitmap *)&object->ID2D1Bitmap_iface;
- 
-     return hr;
- }
-@@ -303,7 +303,7 @@ static HRESULT STDMETHODCALLTYPE d2d_d3d_render_target_CreateBitmapFromWicBitmap
- 
-     if (SUCCEEDED(hr = d2d_bitmap_create_from_wic_bitmap(render_target->factory, render_target->device, bitmap_source,
-             desc, &object)))
--        *bitmap = &object->ID2D1Bitmap_iface;
-+        *bitmap = (ID2D1Bitmap *)&object->ID2D1Bitmap_iface;
- 
-     return hr;
- }
-@@ -319,7 +319,7 @@ static HRESULT STDMETHODCALLTYPE d2d_d3d_render_target_CreateSharedBitmap(ID2D1R
-             iface, debugstr_guid(iid), data, desc, bitmap);
- 
-     if (SUCCEEDED(hr = d2d_bitmap_create_shared(iface, render_target->device, iid, data, desc, &object)))
--        *bitmap = &object->ID2D1Bitmap_iface;
-+        *bitmap = (ID2D1Bitmap *)&object->ID2D1Bitmap_iface;
- 
-     return hr;
- }
-diff --git a/dlls/d2d1/tests/d2d1.c b/dlls/d2d1/tests/d2d1.c
-index 5e9bf97..5d38672 100644
---- a/dlls/d2d1/tests/d2d1.c
-+++ b/dlls/d2d1/tests/d2d1.c
-@@ -4707,7 +4707,6 @@ static void test_draw_via_ID2D1DeviceContext(void)
-     bitmap_properties.bitmapOptions = D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
-     hr = ID2D1DeviceContext_CreateBitmapFromDxgiSurface(context, dxgi_surface,
-             &bitmap_properties, &bitmap);
--    todo_wine
-     ok(SUCCEEDED(hr), "Failed to create bitmap, hr %#x.\n", hr);
-     if (FAILED(hr))
-     {
-@@ -4721,10 +4720,8 @@ static void test_draw_via_ID2D1DeviceContext(void)
-     ID2D1DeviceContext_BeginDraw(context);
-     ID2D1DeviceContext_DrawRectangle(context, &r, (ID2D1Brush *)brush, 1.0f, NULL);
-     hr = ID2D1DeviceContext_EndDraw(context, NULL, NULL);
--    todo_wine
-     ok(SUCCEEDED(hr), "Failed to draw, hr %#x.\n", hr);
-     hr = IDXGISwapChain_Present(swapchain, 0, 0);
--    todo_wine
-     ok(SUCCEEDED(hr), "Failed to present image, hr %#x.\n", hr);
- 
-     ID2D1SolidColorBrush_Release(brush);
 -- 
-1.9.1
+2.7.4
 

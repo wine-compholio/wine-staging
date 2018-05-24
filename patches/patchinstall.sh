@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bf4d0982fd88f9c8848b9e27bb1391d45d18b68e"
+	echo "b70f0d723a768b9fdc89cd835b23718f6cd61f31"
 }
 
 # Show version information
@@ -143,7 +143,6 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
-	enable_dxdiagn_Display_Information="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
@@ -604,9 +603,6 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
-			;;
-		dxdiagn-Display_Information)
-			enable_dxdiagn_Display_Information="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -3687,22 +3683,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxdiagn-Display_Information
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34686] Return additional properties for display devices in dxdiagn
-# |   *	[#42599] Application crashes because of missing properties in dxdiagn
-# |
-# | Modified files:
-# |   *	dlls/dxdiagn/provider.c, dlls/dxdiagn/tests/container.c
-# |
-if test "$enable_dxdiagn_Display_Information" -eq 1; then
-	patch_apply dxdiagn-Display_Information/0001-dxdiagn-Add-several-more-fields-for-DisplayDevices.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Add several more fields for DisplayDevices.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7197,7 +7177,7 @@ fi
 # |   *	windowscodecs-Palette_Images
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c,
+# |   *	dlls/gdiplus/tests/image.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/clsfactory.c,
 # | 	dlls/windowscodecs/converter.c, dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c,
 # | 	dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
 # | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/wincodecs_private.h,
@@ -7209,7 +7189,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0004-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
-	patch_apply windowscodecs-GIF_Encoder/0009-gdiplus-Fix-a-typo-in-GIF-container-format-passed-to.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
 	patch_apply windowscodecs-GIF_Encoder/0011-windowscodecs-Add-registration-for-GUID_WICPixelForm.patch
 	patch_apply windowscodecs-GIF_Encoder/0012-windowscodecs-Implement-IWICBitmapDecoder-GetMetadat.patch
@@ -7234,7 +7213,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Fix a typo in GIF container format passed to encode_image_wic().", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration for GUID_WICPixelFormat32bppGrayFloat pixel format.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::GetMetadataQueryReader in the TIFF decoder.", 1 },';

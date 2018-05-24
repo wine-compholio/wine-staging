@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "da5112c74313b5236183135204cab38a8b0169ed"
+	echo "bf4d0982fd88f9c8848b9e27bb1391d45d18b68e"
 }
 
 # Show version information
@@ -2886,21 +2886,19 @@ fi
 # |   *	[#44052] - Add ID2D1Bitmap1/ID2D1Factory1 support
 # |
 # | Modified files:
-# |   *	dlls/d2d1/Makefile.in, dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/d2d1_private.h, dlls/d2d1/device.c,
-# | 	dlls/d2d1/device_context.c, dlls/d2d1/factory.c, dlls/d2d1/geometry.c, include/d2d1_1.idl, include/dcommon.idl
+# |   *	dlls/d2d1/Makefile.in, dlls/d2d1/d2d1_private.h, dlls/d2d1/device.c, dlls/d2d1/device_context.c, dlls/d2d1/factory.c,
+# | 	dlls/d2d1/geometry.c, include/d2d1_1.idl, include/dcommon.idl
 # |
 if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
 	patch_apply d2d1-ID2D1Factory1/0001-d2d1-Add-d2d1_1.idl-for-drawing-ID2D1Bitmap1.patch
 	patch_apply d2d1-ID2D1Factory1/0003-d2d1-Use-ID2D1Factory1-in-d2d_geometry.patch
 	patch_apply d2d1-ID2D1Factory1/0005-d2d1-Stub-ID2D1DeviceContext.patch
 	patch_apply d2d1-ID2D1Factory1/0006-d2d1-Implement-ID2D1DeviceContext.patch
-	patch_apply d2d1-ID2D1Factory1/0007-d2d1-Implement-ID2D1Bitmap1.patch
 	(
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Add d2d1_1.idl for drawing ID2D1Bitmap1.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory1 in d2d_geometry.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Stub ID2D1DeviceContext.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1DeviceContext.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1Bitmap1.", 1 },';
 	) >> "$patchlist"
 fi
 

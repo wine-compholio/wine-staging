@@ -1,3 +1,10 @@
+Deprecation Notice
+------------------
+
+As of February 2018, the Wine Staging project has been discontinued by the original
+maintainers. Alistair Leslie-Hughes has volunteered to continue the project
+at his own [GitHub repository](https://github.com/wine-staging/wine-staging).
+
 What is Wine Staging?
 ---------------------
 
@@ -6,14 +13,14 @@ features, which have not been integrated into the development branch yet. The
 idea of Wine Staging is to provide experimental features faster to end users and
 to give developers the possibility to discuss and improve their patches before
 they are integrated into the main branch. More information about Wine Staging
-can also be found on our website [wine-staging.com](http://wine-staging.com).
+can also be found at [winehq.org](https://www.winehq.org).
 
 Installation
 ------------
 
 Ready-to-use packages for Wine Staging are available for a variety of Linux
 distributions and for Mac OS X. Just follow the
-[installation instructions](https://wine-staging.com/installation.html)
+[installation instructions](https://wiki.winehq.org/Download)
 for your operating system.
 
 On most distributions the `wine-staging` package is installed to

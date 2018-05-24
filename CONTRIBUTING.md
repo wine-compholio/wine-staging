@@ -14,17 +14,5 @@ binary packages, please open a bug report in the "Packaging" product.
 
 ### Submitting patches
 
-**IMPORTANT:** Please use [dev.wine-staging.com](https://dev.wine-staging.com/patches)
-for patch submissions, we currently do not accept Pull requests on GitHub.
-
-Wine Staging mainly concentrates on experimental features and patches which are
-difficult to get into the development branch. If you have a very simple bug fix
-including tests, there is usually no need to send it to Wine Staging. You can
-directly contribute it to the
-[development branch](http://wiki.winehq.org/SubmittingPatches). However, if you
-already tried that without success, or are working on such a complex area that
-you do not really think its ready for inclusion, you might want to submit it to
-our Staging tree. Please open a patch submission request on
-[dev.wine-staging.com](https://dev.wine-staging.com/patches) including the patch.
-More information is also available in our
-[Wiki](https://wiki.winehq.org/Wine-Staging_Patches).
+Sorry, this repository is deprecated. Please submit your patches to the
+[development branch](http://wiki.winehq.org/SubmittingPatches).

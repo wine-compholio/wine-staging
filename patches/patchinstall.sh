@@ -7188,6 +7188,7 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0002-windowscodecs-Implement-IWICBitmapEncoderInfo-GetFil.patch
 	patch_apply windowscodecs-GIF_Encoder/0004-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0006-windowscodecs-Implement-IWICBitmapEncoder-GetEncoder.patch
+	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
 	patch_apply windowscodecs-GIF_Encoder/0011-windowscodecs-Add-registration-for-GUID_WICPixelForm.patch
@@ -7212,6 +7213,7 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoderInfo::GetFileExtensions.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in JPEG encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapEncoder::GetEncoderInfo in TIFF encoder.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs/tests: Add IWICBitmapEncoderInfo test.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration for GUID_WICPixelFormat32bppGrayFloat pixel format.", 1 },';

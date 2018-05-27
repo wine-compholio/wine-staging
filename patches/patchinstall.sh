@@ -3052,6 +3052,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0039-d3d11-Implement-d3d11_deferred_context_UpdateSubreso.patch
 	patch_apply d3d11-Deferred_Context/0040-d3d11-Implement-restoring-of-state-after-executing-a.patch
 	patch_apply d3d11-Deferred_Context/0041-d3d11-Allow-NULL-pointer-for-initial-count-in-d3d11_.patch
+	patch_apply d3d11-Deferred_Context/0042-d3d11-Correctly-align-map-info-buffer.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
@@ -3094,6 +3095,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement d3d11_deferred_context_UpdateSubresource.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement restoring of state after executing a command list.", 1 },';
 		printf '%s\n' '+    { "Steve Melenchuk", "d3d11: Allow NULL pointer for initial count in d3d11_deferred_context_CSSetUnorderedAccessViews.", 1 },';
+		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Correctly align map info buffer.", 1 },';
 	) >> "$patchlist"
 fi
 

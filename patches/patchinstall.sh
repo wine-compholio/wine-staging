@@ -369,6 +369,7 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Main="$1"
+	enable_wined3d_CompareInterpolationMode="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
@@ -1281,6 +1282,9 @@ patch_enable ()
 			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
+			;;
+		wined3d-CompareInterpolationMode)
+			enable_wined3d_CompareInterpolationMode="$2"
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
@@ -7670,6 +7674,21 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-CompareInterpolationMode
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45127] Correctly compare Interpolation mode values
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_CompareInterpolationMode" -eq 1; then
+	patch_apply wined3d-CompareInterpolationMode/0001-wined3d-Correctly-compare-Interpolation-mode-values.patch
+	(
+		printf '%s\n' '+    { "Matteo Bruni", "wined3d: Correctly compare Interpolation mode values.", 1 },';
 	) >> "$patchlist"
 fi
 

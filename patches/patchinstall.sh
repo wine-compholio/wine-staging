@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "59994c94092efb70fcbec0cb147401609d125e41"
+	echo "37e837113ce6654c436211031712719e8f9f29a2"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 3.9"
+	echo "Wine Staging 3.10 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -2887,15 +2887,13 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/d2d1/Makefile.in, dlls/d2d1/d2d1_private.h, dlls/d2d1/device.c, dlls/d2d1/device_context.c, dlls/d2d1/factory.c,
-# | 	dlls/d2d1/geometry.c, include/d2d1_1.idl, include/dcommon.idl
+# | 	dlls/d2d1/geometry.c
 # |
 if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
-	patch_apply d2d1-ID2D1Factory1/0001-d2d1-Add-d2d1_1.idl-for-drawing-ID2D1Bitmap1.patch
 	patch_apply d2d1-ID2D1Factory1/0003-d2d1-Use-ID2D1Factory1-in-d2d_geometry.patch
 	patch_apply d2d1-ID2D1Factory1/0005-d2d1-Stub-ID2D1DeviceContext.patch
 	patch_apply d2d1-ID2D1Factory1/0006-d2d1-Implement-ID2D1DeviceContext.patch
 	(
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Add d2d1_1.idl for drawing ID2D1Bitmap1.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory1 in d2d_geometry.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Stub ID2D1DeviceContext.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1DeviceContext.", 1 },';
@@ -3005,6 +3003,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
+# |   *	[#44089] Correcly align the mapinfo buffer.
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/wined3d.spec,

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d3a71dec7ee99e9c65630d080c02d7d4182e61a6"
+	echo "185d9ee7ebf56e0663f715e532f2ee2c27289f12"
 }
 
 # Show version information
@@ -3730,7 +3730,7 @@ fi
 # |   *	[#43584] Implement DXGI GammaControl methods
 # |
 # | Modified files:
-# |   *	dlls/dxgi/Makefile.in, dlls/dxgi/output.c, dlls/dxgi/tests/device.c
+# |   *	dlls/dxgi/output.c, dlls/dxgi/tests/device.c
 # |
 if test "$enable_dxgi_GammaRamp" -eq 1; then
 	patch_apply dxgi-GammaRamp/0001-dxgi-Implement-setting-and-querying-the-gamma-value-.patch

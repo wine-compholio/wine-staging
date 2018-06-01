@@ -391,6 +391,7 @@ patch_enable_all ()
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_UpdateLayeredWindow="$1"
+	enable_winex11_Vulkan_support="$1"
 	enable_winex11_WM_WINDOWPOSCHANGING="$1"
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
@@ -1348,6 +1349,9 @@ patch_enable ()
 			;;
 		winex11-UpdateLayeredWindow)
 			enable_winex11_UpdateLayeredWindow="$2"
+			;;
+		winex11-Vulkan_support)
+			enable_winex11_Vulkan_support="$2"
 			;;
 		winex11-WM_WINDOWPOSCHANGING)
 			enable_winex11_WM_WINDOWPOSCHANGING="$2"
@@ -7973,6 +7977,21 @@ if test "$enable_winex11_UpdateLayeredWindow" -eq 1; then
 	patch_apply winex11-UpdateLayeredWindow/0001-winex11-Fix-alpha-blending-in-X11DRV_UpdateLayeredWi.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Fix alpha blending in X11DRV_UpdateLayeredWindow.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-Vulkan_support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44775] Allow vulkan support to be detected at runtime.
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/vulkan.c
+# |
+if test "$enable_winex11_Vulkan_support" -eq 1; then
+	patch_apply winex11-Vulkan_support/0001-winex11-Specify-a-default-vulkan-driver-if-one-not-f.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Specify a default vulkan driver if one not found at build time.", 1 },';
 	) >> "$patchlist"
 fi
 

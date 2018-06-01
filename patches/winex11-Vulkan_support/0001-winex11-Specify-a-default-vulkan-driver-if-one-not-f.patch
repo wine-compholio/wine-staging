@@ -1,0 +1,63 @@
+From 9dd1831e5104052b7ede82c15ab367102512700e Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Fri, 1 Jun 2018 14:03:26 +1000
+Subject: [PATCH] winex11: Specify a default vulkan driver if one not found at
+ build time
+
+We cannot specify it as a dependency since Debian Jessie has the
+vulkan library in backports and not everybody will have this mapped.
+---
+ dlls/winex11.drv/vulkan.c | 25 +++++++++++++------------
+ 1 file changed, 13 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index a72be33..e38d4f1 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -40,7 +40,9 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(vulkan);
+ 
+-#ifdef SONAME_LIBVULKAN
++#ifndef SONAME_LIBVULKAN
++#define SONAME_LIBVULKAN ""
++#endif
+ 
+ typedef VkFlags VkXlibSurfaceCreateFlagsKHR;
+ #define VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR 1000004000
+@@ -90,9 +92,17 @@ static void *vulkan_handle;
+ 
+ static BOOL WINAPI wine_vk_init(INIT_ONCE *once, void *param, void **context)
+ {
+-    if (!(vulkan_handle = wine_dlopen(SONAME_LIBVULKAN, RTLD_NOW, NULL, 0)))
++    const char *libvulkan_candidates[] = {SONAME_LIBVULKAN,
++                                          "libvulkan.so.1",
++                                          "libvulkan.so",
++                                          NULL};
++    int i;
++    for (i=0; libvulkan_candidates[i] && !vulkan_handle; i++)
++        vulkan_handle = wine_dlopen(libvulkan_candidates[i], RTLD_NOW, NULL, 0);
++
++    if (!vulkan_handle)
+     {
+-        ERR("Failed to load %s\n", SONAME_LIBVULKAN);
++        ERR("Failed to load vulkan library\n");
+         return TRUE;
+     }
+ 
+@@ -574,12 +584,3 @@ const struct vulkan_funcs *get_vulkan_driver(UINT version)
+     return NULL;
+ }
+ 
+-#else /* No vulkan */
+-
+-const struct vulkan_funcs *get_vulkan_driver(UINT version)
+-{
+-    ERR("Wine was built without Vulkan support.\n");
+-    return NULL;
+-}
+-
+-#endif /* SONAME_LIBVULKAN */
+-- 
+1.9.1
+

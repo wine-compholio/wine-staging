@@ -404,6 +404,7 @@ patch_enable_all ()
 	enable_wininet_InternetCrackUrlW="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
+	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wpcap_Dynamic_Linking="$1"
@@ -1388,6 +1389,9 @@ patch_enable ()
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
+			;;
+		wintab32-improvements)
+			enable_wintab32_improvements="$2"
 			;;
 		wintrust-WTHelperGetProvCertFromChain)
 			enable_wintrust_WTHelperGetProvCertFromChain="$2"
@@ -8172,6 +8176,27 @@ if test "$enable_winmm_mciSendCommandA" -eq 1; then
 	patch_apply winmm-mciSendCommandA/0001-winmm-Do-not-crash-in-Win-9X-mode-when-an-invalid-de.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winmm: Do not crash in Win 9X mode when an invalid device ptr is passed to MCI_OPEN.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wintab32-improvements
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#11846] Improve pressure sensitivity.
+# |   *	[#15443] Improve Wacom Bambo drawing support
+# |   *	[#18517] Improve eraser from working.
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/wintab.c, dlls/wintab32/context.c
+# |
+if test "$enable_wintab32_improvements" -eq 1; then
+	patch_apply wintab32-improvements/0001-winex11-Implement-PK_CHANGE-for-wintab.patch
+	patch_apply wintab32-improvements/0002-wintab32-Set-lcSysExtX-Y-for-the-first-index-of-WTI_.patch
+	patch_apply wintab32-improvements/0003-winex11-Handle-negative-orAltitude-values.patch
+	(
+		printf '%s\n' '+    { "Eriks Dobelis", "winex11: Implement PK_CHANGE for wintab.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32: Set lcSysExtX/Y for the first index of WTI_DDCTXS.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Handle negative orAltitude values.", 1 },';
 	) >> "$patchlist"
 fi
 

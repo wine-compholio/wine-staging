@@ -7135,14 +7135,17 @@ fi
 # |   *	[#42577] Add stub for virtdisk.GetStorageDependencyInformation
 # |
 # | Modified files:
-# |   *	dlls/virtdisk/virtdisk.spec, dlls/virtdisk/virtdisk_main.c, include/Makefile.in, include/virtdisk.h
+# |   *	configure, configure.ac, dlls/virtdisk/tests/Makefile.in, dlls/virtdisk/tests/virtdisk.c, dlls/virtdisk/virtdisk.spec,
+# | 	dlls/virtdisk/virtdisk_main.c, include/Makefile.in, include/virtdisk.h
 # |
 if test "$enable_virtdisk_GetStorageDependencyInformation" -eq 1; then
 	patch_apply virtdisk-GetStorageDependencyInformation/0001-include-add-headerfile-virtdisk.h.patch
 	patch_apply virtdisk-GetStorageDependencyInformation/0002-virtdisk-Add-GetStorageDependencyInformation-stub.patch
+	patch_apply virtdisk-GetStorageDependencyInformation/0003-virtdisk-tests-Add-GetStorageDependencyInformation-t.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "include: Add headerfile virtdisk.h.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "virtdisk: Add GetStorageDependencyInformation stub.", 1 },';
+		printf '%s\n' '+    { "Gijs Vermeulen", "virtdisk/tests: Add GetStorageDependencyInformation tests.", 1 },';
 	) >> "$patchlist"
 fi
 

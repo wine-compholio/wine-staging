@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "11e3cf091d8ec70a9d6004ac6a51d5c827d9ddff"
+	echo "5fd3090f522a9c2a4cfb077c9b7cdc1ae1304c4c"
 }
 
 # Show version information
@@ -345,7 +345,6 @@ patch_enable_all ()
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_GetStorageDependencyInformation="$1"
-	enable_wbemdisp_ISWbemSecurity="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -369,7 +368,6 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_wined3d_CompareInterpolationMode="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
@@ -1213,9 +1211,6 @@ patch_enable ()
 		virtdisk-GetStorageDependencyInformation)
 			enable_virtdisk_GetStorageDependencyInformation="$2"
 			;;
-		wbemdisp-ISWbemSecurity)
-			enable_wbemdisp_ISWbemSecurity="$2"
-			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
 			;;
@@ -1284,9 +1279,6 @@ patch_enable ()
 			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
-			;;
-		wined3d-CompareInterpolationMode)
-			enable_wined3d_CompareInterpolationMode="$2"
 			;;
 		wined3d-DXTn)
 			enable_wined3d_DXTn="$2"
@@ -7149,18 +7141,6 @@ if test "$enable_virtdisk_GetStorageDependencyInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wbemdisp-ISWbemSecurity
-# |
-# | Modified files:
-# |   *	dlls/wbemdisp/locator.c
-# |
-if test "$enable_wbemdisp_ISWbemSecurity" -eq 1; then
-	patch_apply wbemdisp-ISWbemSecurity/0001-wbemdisp-Add-ISWbemSecurity-stub-interface.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wbemdisp: Add ISWbemSecurity stub interface.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-Palette_Images
 # |
 # | Modified files:
@@ -7686,21 +7666,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-CompareInterpolationMode
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45127] Correctly compare Interpolation mode values
-# |
-# | Modified files:
-# |   *	dlls/wined3d/glsl_shader.c
-# |
-if test "$enable_wined3d_CompareInterpolationMode" -eq 1; then
-	patch_apply wined3d-CompareInterpolationMode/0001-wined3d-Correctly-compare-Interpolation-mode-values.patch
-	(
-		printf '%s\n' '+    { "Matteo Bruni", "wined3d: Correctly compare Interpolation mode values.", 1 },';
 	) >> "$patchlist"
 fi
 

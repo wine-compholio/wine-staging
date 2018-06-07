@@ -319,6 +319,7 @@ patch_enable_all ()
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
+	enable_uianimation_stubs="$1"
 	enable_user_exe16_DlgDirList="$1"
 	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
@@ -1132,6 +1133,9 @@ patch_enable ()
 			;;
 		taskmgr-Memory_Usage)
 			enable_taskmgr_Memory_Usage="$2"
+			;;
+		uianimation-stubs)
+			enable_uianimation_stubs="$2"
 			;;
 		user.exe16-DlgDirList)
 			enable_user_exe16_DlgDirList="$2"
@@ -6696,6 +6700,24 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement basic IO stats for SystemPerformanceInformation in NtQuerySystemInformation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset uianimation-stubs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41369] Add UIAnimation and stubs interfaces
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation.spec,
+# | 	dlls/uianimation/uianimation_private.h, dlls/uianimation/uianimation_typelib.idl, include/uianimation.idl
+# |
+if test "$enable_uianimation_stubs" -eq 1; then
+	patch_apply uianimation-stubs/0001-uianimation.idl-add-more-interfaces.patch
+	patch_apply uianimation-stubs/0002-uianimation-add-stub-dll.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "uianimation.idl: Add more interfaces.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
 	) >> "$patchlist"
 fi
 

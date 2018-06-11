@@ -98,6 +98,7 @@ patch_enable_all ()
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
+	enable_bcrypt_BCryptGenerateKeyPair="$1"
 	enable_browseui_Progress_Dialog="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
@@ -470,6 +471,9 @@ patch_enable ()
 			;;
 		bcrypt-BCryptDeriveKeyPBKDF2)
 			enable_bcrypt_BCryptDeriveKeyPBKDF2="$2"
+			;;
+		bcrypt-BCryptGenerateKeyPair)
+			enable_bcrypt_BCryptGenerateKeyPair="$2"
 			;;
 		browseui-Progress_Dialog)
 			enable_browseui_Progress_Dialog="$2"
@@ -2286,6 +2290,13 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
+if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
+	if test "$enable_crypt32_ECDSA_Cert_Chains" -gt 1; then
+		abort "Patchset crypt32-ECDSA_Cert_Chains disabled, but bcrypt-BCryptGenerateKeyPair depends on that."
+	fi
+	enable_crypt32_ECDSA_Cert_Chains=1
+fi
+
 if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
 	if test "$enable_crypt32_ECDSA_Cert_Chains" -gt 1; then
 		abort "Patchset crypt32-ECDSA_Cert_Chains disabled, but bcrypt-BCryptDeriveKeyPBKDF2 depends on that."
@@ -2767,6 +2778,28 @@ if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
 	patch_apply bcrypt-BCryptDeriveKeyPBKDF2/0001-bcrypt-Implement-BCryptDeriveKeyPBKDF2-and-add-test-.patch
 	(
 		printf '%s\n' '+    { "Jack Grigg", "bcrypt: Implement BCryptDeriveKeyPBKDF2 and add test vectors.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset bcrypt-BCryptGenerateKeyPair
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	crypt32-ECDSA_Cert_Chains
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45312] Fix issue for Assassin's Creed : Syndicate
+# |
+# | Modified files:
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, include/bcrypt.h
+# |
+if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
+	patch_apply bcrypt-BCryptGenerateKeyPair/0001-Add-support-for-bcrypt-algorythm-ECDH-P256.-Necessar.patch
+	patch_apply bcrypt-BCryptGenerateKeyPair/0002-Add-support-for-bcrypt-function-BCryptGenerateKeyPai.patch
+	patch_apply bcrypt-BCryptGenerateKeyPair/0003-Add-support-for-bcrypt-function-BCryptFinalizeKeyPai.patch
+	(
+		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add support for algorythm ECDH P256.", 1 },';
+		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptGenerateKeyPair stub.", 1 },';
+		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptFinalizeKeyPair stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6710,7 +6743,7 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation.spec,
-# | 	dlls/uianimation/uianimation_private.h, dlls/uianimation/uianimation_typelib.idl, include/uianimation.idl
+# | 	dlls/uianimation/uianimation_typelib.idl, include/uianimation.idl
 # |
 if test "$enable_uianimation_stubs" -eq 1; then
 	patch_apply uianimation-stubs/0001-uianimation.idl-add-more-interfaces.patch

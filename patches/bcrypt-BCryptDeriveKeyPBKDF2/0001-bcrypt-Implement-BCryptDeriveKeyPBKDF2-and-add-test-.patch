@@ -1,4 +1,4 @@
-From d850bbb2836fa4d77c7842009901382b54f29a69 Mon Sep 17 00:00:00 2001
+From a324685a2f4f48d5d9da8c3000164800152dc297 Mon Sep 17 00:00:00 2001
 From: Jack Grigg <me@jackgrigg.com>
 Date: Sat, 17 Mar 2018 21:14:05 +1100
 Subject: [PATCH] bcrypt: Implement BCryptDeriveKeyPBKDF2 and add test vectors.
@@ -16,12 +16,12 @@ Signed-off-by: Jack Grigg <me@jackgrigg.com>
 ---
  dlls/bcrypt/bcrypt.spec    |   1 +
  dlls/bcrypt/bcrypt_main.c  | 163 +++++++++++++++++++++++++++++++++++++++++++++
- dlls/bcrypt/tests/bcrypt.c |  85 +++++++++++++++++++++++
+ dlls/bcrypt/tests/bcrypt.c |  83 +++++++++++++++++++++++
  include/bcrypt.h           |   1 +
- 4 files changed, 250 insertions(+)
+ 4 files changed, 248 insertions(+)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index 78824d73b39..f4d9a57bb08 100644
+index 78824d7..f4d9a57 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -8,6 +8,7 @@
@@ -33,10 +33,10 @@ index 78824d73b39..f4d9a57bb08 100644
  @ stdcall BCryptDestroyKey(ptr)
  @ stub BCryptDestroySecret
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 1490089cf72..4ffab1a9cf9 100644
+index 29a0a78..33c1da53 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
-@@ -2282,6 +2282,169 @@ NTSTATUS WINAPI BCryptSetProperty( BCRYPT_HANDLE handle, const WCHAR *prop, UCHA
+@@ -2315,6 +2315,169 @@ NTSTATUS WINAPI BCryptSetProperty( BCRYPT_HANDLE handle, const WCHAR *prop, UCHA
      }
  }
  
@@ -207,19 +207,10 @@ index 1490089cf72..4ffab1a9cf9 100644
  {
      switch (reason)
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index 7d59f6d4c1d..5b1b6c7e189 100644
+index 6865e87..5c4df6a 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
-@@ -26,6 +26,8 @@
- 
- #include "wine/test.h"
- 
-+#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
-+
- static NTSTATUS (WINAPI *pBCryptOpenAlgorithmProvider)(BCRYPT_ALG_HANDLE *, LPCWSTR, LPCWSTR, ULONG);
- static NTSTATUS (WINAPI *pBCryptCloseAlgorithmProvider)(BCRYPT_ALG_HANDLE, ULONG);
- static NTSTATUS (WINAPI *pBCryptGetFipsAlgorithmMode)(BOOLEAN *);
-@@ -36,6 +38,8 @@ static NTSTATUS (WINAPI *pBCryptHashData)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULO
+@@ -36,6 +36,8 @@ static NTSTATUS (WINAPI *pBCryptHashData)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULO
  static NTSTATUS (WINAPI *pBCryptDuplicateHash)(BCRYPT_HASH_HANDLE, BCRYPT_HASH_HANDLE *, UCHAR *, ULONG, ULONG);
  static NTSTATUS (WINAPI *pBCryptFinishHash)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
  static NTSTATUS (WINAPI *pBCryptDestroyHash)(BCRYPT_HASH_HANDLE);
@@ -228,7 +219,7 @@ index 7d59f6d4c1d..5b1b6c7e189 100644
  static NTSTATUS (WINAPI *pBCryptGenRandom)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
  static NTSTATUS (WINAPI *pBCryptGetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG *, ULONG);
  static NTSTATUS (WINAPI *pBCryptSetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG);
-@@ -396,6 +400,81 @@ static void test_BcryptHash(void)
+@@ -396,6 +398,81 @@ static void test_BcryptHash(void)
      ok(ret == STATUS_SUCCESS, "got %08x\n", ret);
  }
  
@@ -310,7 +301,7 @@ index 7d59f6d4c1d..5b1b6c7e189 100644
  static void test_rng(void)
  {
      BCRYPT_ALG_HANDLE alg;
-@@ -1609,6 +1688,7 @@ START_TEST(bcrypt)
+@@ -1630,6 +1707,7 @@ START_TEST(bcrypt)
      pBCryptDuplicateHash = (void *)GetProcAddress(module, "BCryptDuplicateHash");
      pBCryptFinishHash = (void *)GetProcAddress(module, "BCryptFinishHash");
      pBCryptDestroyHash = (void *)GetProcAddress(module, "BCryptDestroyHash");
@@ -318,7 +309,7 @@ index 7d59f6d4c1d..5b1b6c7e189 100644
      pBCryptGenRandom = (void *)GetProcAddress(module, "BCryptGenRandom");
      pBCryptGetProperty = (void *)GetProcAddress(module, "BCryptGetProperty");
      pBCryptSetProperty = (void *)GetProcAddress(module, "BCryptSetProperty");
-@@ -1639,5 +1719,10 @@ START_TEST(bcrypt)
+@@ -1660,5 +1738,10 @@ START_TEST(bcrypt)
      else
          win_skip("BCryptHash is not available\n");
  
@@ -330,7 +321,7 @@ index 7d59f6d4c1d..5b1b6c7e189 100644
      FreeLibrary(module);
  }
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index df54f621fa7..d3e4b9959dc 100644
+index df54f62..d3e4b99 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -217,6 +217,7 @@ typedef PVOID BCRYPT_HASH_HANDLE;
@@ -342,5 +333,5 @@ index df54f621fa7..d3e4b9959dc 100644
  NTSTATUS WINAPI BCryptDestroyKey(BCRYPT_KEY_HANDLE);
  NTSTATUS WINAPI BCryptEncrypt(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG, ULONG *, ULONG);
 -- 
-2.16.2
+1.9.1
 

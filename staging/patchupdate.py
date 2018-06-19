@@ -431,9 +431,11 @@ def check_bug_status(all_patches, sync_bugs=False):
                                                   bug['resolution'], bug['cf_staged_patchset'])
             if sync_bugs:
                 sync_bug_status(bugtracker, bug, url_map[bug['id']])
+        patchset = bug['cf_staged_patchset']
+        if '.patch' in patchset: patchset = patchset[0:patchset.rindex('/')].replace('/blob/','/tree/')
         if bug['status'] == 'STAGED' and \
-           bug['cf_staged_patchset'] != url_map[bug['id']] and \
-           bug['cf_staged_patchset'] != url_map[bug['id']].replace('github.com/wine-staging','github.com/wine-compholio'):
+           patchset != url_map[bug['id']] and \
+           patchset != url_map[bug['id']].replace('github.com/wine-staging','github.com/wine-compholio'):
             print 'Invalid staged patchset: #%d - \"%s\" - %s' %(bug['id'], bug['summary'], bug['cf_staged_patchset'])
 
     once = True

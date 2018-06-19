@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b6c7b2d322e0cd61eaeaac0d936dfc78c850f61b"
+	echo "e6fc86e4a0a8396a345ae21fbe7be9210441d307"
 }
 
 # Show version information
@@ -2679,9 +2679,6 @@ if test "$enable_advapi32_WinBuiltinAnyPackageSid" -eq 1; then
 fi
 
 # Patchset api-ms-win-Stub_DLLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40451] Add feclient dll
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/Makefile.in, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/ext-

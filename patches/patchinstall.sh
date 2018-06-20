@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e6fc86e4a0a8396a345ae21fbe7be9210441d307"
+	echo "cba24001e482fa8a8a1fbf5d5390539e2792b1aa"
 }
 
 # Show version information
@@ -2727,14 +2727,11 @@ fi
 # |   *	[#35902] Implement support for validating ECDSA certificate chains
 # |
 # | Modified files:
-# |   *	dlls/crypt32/Makefile.in, dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h,
-# | 	dlls/crypt32/decode.c, dlls/crypt32/oid.c, dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c,
-# | 	dlls/crypt32/tests/oid.c, include/wincrypt.h
+# |   *	dlls/crypt32/Makefile.in, dlls/crypt32/cert.c, dlls/crypt32/chain.c, dlls/crypt32/crypt32_private.h, dlls/crypt32/oid.c,
+# | 	dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c, dlls/crypt32/tests/oid.c, include/wincrypt.h
 # |
 if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
 	patch_apply crypt32-ECDSA_Cert_Chains/0006-crypt32-tests-Basic-tests-for-decoding-ECDSA-signed-.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0007-crypt32-Implement-decoding-of-X509_OBJECT_IDENTIFIER.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0008-crypt32-Implement-decoding-of-X509_ECC_SIGNATURE.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0009-crypt32-tests-Add-basic-test-for-ecdsa-oid.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0010-crypt32-Add-oids-for-sha256ECDSA-and-sha384ECDSA.patch
 	patch_apply crypt32-ECDSA_Cert_Chains/0011-crypt32-Correctly-return-how-the-issuer-of-a-self-si.patch
@@ -2742,8 +2739,6 @@ if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
 	patch_apply crypt32-ECDSA_Cert_Chains/0013-crypt32-Implement-verification-of-ECDSA-signatures.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Basic tests for decoding ECDSA signed certificate.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_OBJECT_IDENTIFIER.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Implement decoding of X509_ECC_SIGNATURE.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Add basic test for ecdsa oid.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Add oids for sha256ECDSA and sha384ECDSA.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Correctly return how the issuer of a self signed certificate was checked.", 1 },';

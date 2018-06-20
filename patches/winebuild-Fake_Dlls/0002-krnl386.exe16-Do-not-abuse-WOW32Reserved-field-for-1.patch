@@ -1,4 +1,4 @@
-From f95525638555933ce78d36b98ebd8bf627b05f18 Mon Sep 17 00:00:00 2001
+From 73e2cbc67a4f85480a0fb36064c8df6408405c8b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 16 May 2017 04:37:52 +0200
 Subject: krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack
@@ -12,7 +12,7 @@ Subject: krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack
  dlls/krnl386.exe16/ne_segment.c       | 20 +++++++++----------
  dlls/krnl386.exe16/task.c             | 14 +++++++-------
  dlls/krnl386.exe16/thunk.c            | 36 +++++++++++++++++------------------
- dlls/krnl386.exe16/wowthunk.c         | 16 ++++++++--------
+ dlls/krnl386.exe16/wowthunk.c         | 20 +++++++++----------
  dlls/ntdll/signal_i386.c              |  2 +-
  dlls/system.drv16/system.c            |  2 +-
  dlls/toolhelp.dll16/toolhelp.c        |  6 +++---
@@ -21,10 +21,10 @@ Subject: krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack
  dlls/user.exe16/window.c              |  2 +-
  include/winternl.h                    |  2 +-
  tools/winebuild/relay.c               |  2 +-
- 16 files changed, 76 insertions(+), 75 deletions(-)
+ 16 files changed, 78 insertions(+), 77 deletions(-)
 
 diff --git a/dlls/dbghelp/cpu_i386.c b/dlls/dbghelp/cpu_i386.c
-index 37b2e2586e1..ed8070908a1 100644
+index 37b2e25..ed80709 100644
 --- a/dlls/dbghelp/cpu_i386.c
 +++ b/dlls/dbghelp/cpu_i386.c
 @@ -213,16 +213,16 @@ static BOOL i386_stack_walk(struct cpu_stack_walk* csw, LPSTACKFRAME64 frame, CO
@@ -48,7 +48,7 @@ index 37b2e2586e1..ed8070908a1 100644
              }
              next_switch = p;
 diff --git a/dlls/krnl386.exe16/kernel.c b/dlls/krnl386.exe16/kernel.c
-index 0a66d1e611a..17b0c156c07 100644
+index 0a66d1e..17b0c15 100644
 --- a/dlls/krnl386.exe16/kernel.c
 +++ b/dlls/krnl386.exe16/kernel.c
 @@ -45,8 +45,8 @@ static void thread_attach(void)
@@ -72,7 +72,7 @@ index 0a66d1e611a..17b0c156c07 100644
  }
  
 diff --git a/dlls/krnl386.exe16/kernel16_private.h b/dlls/krnl386.exe16/kernel16_private.h
-index 1f8f730916d..2b18811aff6 100644
+index 1f8f730..2b18811 100644
 --- a/dlls/krnl386.exe16/kernel16_private.h
 +++ b/dlls/krnl386.exe16/kernel16_private.h
 @@ -168,7 +168,7 @@ extern THHOOK *pThhook DECLSPEC_HIDDEN;
@@ -119,7 +119,7 @@ index 1f8f730916d..2b18811aff6 100644
  
  static inline struct kernel_thread_data *kernel_get_thread_data(void)
 diff --git a/dlls/krnl386.exe16/ne_module.c b/dlls/krnl386.exe16/ne_module.c
-index 70f8a464673..cd706520d7d 100644
+index 14f8075..965f154 100644
 --- a/dlls/krnl386.exe16/ne_module.c
 +++ b/dlls/krnl386.exe16/ne_module.c
 @@ -1244,7 +1244,7 @@ DWORD NE_StartTask(void)
@@ -143,7 +143,7 @@ index 70f8a464673..cd706520d7d 100644
          WOWCallback16Ex( 0, WCB16_REGS, 0, NULL, (DWORD *)&context );
          ExitThread( LOWORD(context.Eax) );
 diff --git a/dlls/krnl386.exe16/ne_segment.c b/dlls/krnl386.exe16/ne_segment.c
-index 1ceb7143583..51b8261e8ee 100644
+index 1ceb714..51b8261 100644
 --- a/dlls/krnl386.exe16/ne_segment.c
 +++ b/dlls/krnl386.exe16/ne_segment.c
 @@ -378,9 +378,9 @@ BOOL NE_LoadSegment( NE_MODULE *pModule, WORD segnum )
@@ -209,7 +209,7 @@ index 1ceb7143583..51b8261e8ee 100644
          args[7] = HIWORD(dwReason);
          args[6] = LOWORD(dwReason);
 diff --git a/dlls/krnl386.exe16/task.c b/dlls/krnl386.exe16/task.c
-index 30aa8666e2c..4f82621e660 100644
+index 84d4bf3..ff69b37 100644
 --- a/dlls/krnl386.exe16/task.c
 +++ b/dlls/krnl386.exe16/task.c
 @@ -630,7 +630,7 @@ void WINAPI InitTask16( CONTEXT *context )
@@ -267,7 +267,7 @@ index 30aa8666e2c..4f82621e660 100644
      context->Esp   = OFFSETOF(pData->old_ss_sp) - sizeof(DWORD); /*ret addr*/
      pData->old_ss_sp = 0;
 diff --git a/dlls/krnl386.exe16/thunk.c b/dlls/krnl386.exe16/thunk.c
-index 737f6a80574..d464fa6e26d 100644
+index 737f6a8..d464fa6 100644
 --- a/dlls/krnl386.exe16/thunk.c
 +++ b/dlls/krnl386.exe16/thunk.c
 @@ -437,7 +437,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
@@ -413,10 +413,30 @@ index 737f6a80574..d464fa6e26d 100644
          if (OFFSETOF(frame32->frame16) > lpbuf[2])
          {
 diff --git a/dlls/krnl386.exe16/wowthunk.c b/dlls/krnl386.exe16/wowthunk.c
-index fa49a246ab8..bd69b844607 100644
+index da82995..cf9caad 100644
 --- a/dlls/krnl386.exe16/wowthunk.c
 +++ b/dlls/krnl386.exe16/wowthunk.c
-@@ -453,8 +453,8 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vp
+@@ -135,7 +135,7 @@ static DWORD call16_handler( EXCEPTION_RECORD *record, EXCEPTION_REGISTRATION_RE
+     {
+         /* unwinding: restore the stack pointer in the TEB, and leave the Win16 mutex */
+         STACK32FRAME *frame32 = CONTAINING_RECORD(frame, STACK32FRAME, frame);
+-        NtCurrentTeb()->WOW32Reserved = (void *)frame32->frame16;
++        NtCurrentTeb()->SystemReserved1[0] = (void *)frame32->frame16;
+         _LeaveWin16Lock();
+     }
+     else if (record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION ||
+@@ -420,8 +420,8 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vpfn16, DWORD dwFlags,
+             TRACE_(relay)( "\1CallTo16(func=%04x:%04x", context->SegCs, LOWORD(context->Eip) );
+             while (count) TRACE_(relay)( ",%04x", wstack[--count] );
+             TRACE_(relay)( ") ss:sp=%04x:%04x ax=%04x bx=%04x cx=%04x dx=%04x si=%04x di=%04x bp=%04x ds=%04x es=%04x\n",
+-                           SELECTOROF(NtCurrentTeb()->WOW32Reserved),
+-                           OFFSETOF(NtCurrentTeb()->WOW32Reserved),
++                           SELECTOROF(NtCurrentTeb()->SystemReserved1[0]),
++                           OFFSETOF(NtCurrentTeb()->SystemReserved1[0]),
+                            (WORD)context->Eax, (WORD)context->Ebx, (WORD)context->Ecx,
+                            (WORD)context->Edx, (WORD)context->Esi, (WORD)context->Edi,
+                            (WORD)context->Ebp, (WORD)context->SegDs, (WORD)context->SegEs );
+@@ -453,8 +453,8 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vpfn16, DWORD dwFlags,
          if (TRACE_ON(relay))
          {
              TRACE_(relay)( "\1RetFrom16() ss:sp=%04x:%04x ax=%04x bx=%04x cx=%04x dx=%04x bp=%04x sp=%04x\n",
@@ -427,7 +447,7 @@ index fa49a246ab8..bd69b844607 100644
                             (WORD)context->Eax, (WORD)context->Ebx, (WORD)context->Ecx,
                             (WORD)context->Edx, (WORD)context->Ebp, (WORD)context->Esp );
              SYSLEVEL_CheckNotLevel( 2 );
-@@ -470,9 +470,9 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vp
+@@ -470,10 +470,10 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vpfn16, DWORD dwFlags,
              WORD * wstack = (WORD *)stack;
  
              TRACE_(relay)( "\1CallTo16(func=%04x:%04x,ds=%04x",
@@ -435,11 +455,13 @@ index fa49a246ab8..bd69b844607 100644
 +                           HIWORD(vpfn16), LOWORD(vpfn16), SELECTOROF(NtCurrentTeb()->SystemReserved1[0]) );
              while (count) TRACE_(relay)( ",%04x", wstack[--count] );
 -            TRACE_(relay)( ") ss:sp=%04x:%04x\n", SELECTOROF(NtCurrentTeb()->WOW32Reserved),
+-                           OFFSETOF(NtCurrentTeb()->WOW32Reserved) );
 +            TRACE_(relay)( ") ss:sp=%04x:%04x\n", SELECTOROF(NtCurrentTeb()->SystemReserved1[0]),
-                            OFFSETOF(NtCurrentTeb()->WOW32Reserved) );
++                           OFFSETOF(NtCurrentTeb()->SystemReserved1[0]) );
              SYSLEVEL_CheckNotLevel( 2 );
          }
-@@ -496,8 +496,8 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vp
+ 
+@@ -496,8 +496,8 @@ BOOL WINAPI K32WOWCallback16Ex( DWORD vpfn16, DWORD dwFlags,
          if (TRACE_ON(relay))
          {
              TRACE_(relay)( "\1RetFrom16() ss:sp=%04x:%04x retval=%08x\n",
@@ -451,10 +473,10 @@ index fa49a246ab8..bd69b844607 100644
          }
      }
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 465ac1fd4cb..c1bf0c0827d 100644
+index 2363085..0ad5e1a 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -1019,7 +1019,7 @@ static inline void *init_handler( const ucontext_t *sigcontext, WORD *fs, WORD *
+@@ -839,7 +839,7 @@ static inline void *init_handler( const ucontext_t *sigcontext, WORD *fs, WORD *
           * SS is still non-system segment. This is why both CS and SS
           * are checked.
           */
@@ -464,7 +486,7 @@ index 465ac1fd4cb..c1bf0c0827d 100644
      return (void *)(ESP_sig(sigcontext) & ~3);
  }
 diff --git a/dlls/system.drv16/system.c b/dlls/system.drv16/system.c
-index 8bb5cf910df..ddd391344be 100644
+index 8bb5cf9..ddd3913 100644
 --- a/dlls/system.drv16/system.c
 +++ b/dlls/system.drv16/system.c
 @@ -72,7 +72,7 @@ static void CALLBACK SYSTEM_TimerTick( LPVOID arg, DWORD low, DWORD high )
@@ -477,7 +499,7 @@ index 8bb5cf910df..ddd391344be 100644
  
              WOWCallback16Ex( 0, WCB16_REGS, 0, NULL, (DWORD *)&context );
 diff --git a/dlls/toolhelp.dll16/toolhelp.c b/dlls/toolhelp.dll16/toolhelp.c
-index cf5e6ef778c..531e622be82 100644
+index cf5e6ef..531e622 100644
 --- a/dlls/toolhelp.dll16/toolhelp.c
 +++ b/dlls/toolhelp.dll16/toolhelp.c
 @@ -460,8 +460,8 @@ BOOL16 WINAPI TaskNext16( TASKENTRY *lpte )
@@ -501,10 +523,10 @@ index cf5e6ef778c..531e622be82 100644
      WORD user = LoadLibrary16( "USER.EXE" );
      WORD gdi = LoadLibrary16( "GDI.EXE" );
 diff --git a/dlls/user.exe16/message.c b/dlls/user.exe16/message.c
-index 9e07be97779..c020998b7e2 100644
+index 290f36b..7f2d4a7 100644
 --- a/dlls/user.exe16/message.c
 +++ b/dlls/user.exe16/message.c
-@@ -248,13 +248,13 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
+@@ -249,13 +249,13 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
      /* Window procedures want ax = hInstance, ds = es = ss */
  
      memset(&context, 0, sizeof(context));
@@ -520,7 +542,7 @@ index 9e07be97779..c020998b7e2 100644
  
      if (lParam)
      {
-@@ -277,7 +277,7 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
+@@ -278,7 +278,7 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
          if (size)
          {
              memcpy( &args.u, MapSL(lParam), size );
@@ -529,7 +551,7 @@ index 9e07be97779..c020998b7e2 100644
          }
      }
  
-@@ -2100,7 +2100,7 @@ static LRESULT combo_proc16( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+@@ -2103,7 +2103,7 @@ static LRESULT combo_proc16( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
  
  static void edit_lock_buffer( HWND hwnd )
  {
@@ -538,7 +560,7 @@ index 9e07be97779..c020998b7e2 100644
      HLOCAL16 hloc16 = GetWindowWord( hwnd, GWW_HANDLE16 );
      HANDLE16 oldDS;
      HLOCAL hloc32;
-@@ -2126,7 +2126,7 @@ static void edit_lock_buffer( HWND hwnd )
+@@ -2129,7 +2129,7 @@ static void edit_lock_buffer( HWND hwnd )
  
  static void edit_unlock_buffer( HWND hwnd )
  {
@@ -547,7 +569,7 @@ index 9e07be97779..c020998b7e2 100644
      HLOCAL16 hloc16 = GetWindowWord( hwnd, GWW_HANDLE16 );
      HANDLE16 oldDS;
      HLOCAL hloc32;
-@@ -2163,7 +2163,7 @@ static HLOCAL16 edit_get_handle( HWND hwnd )
+@@ -2166,7 +2166,7 @@ static HLOCAL16 edit_get_handle( HWND hwnd )
      if (!(hloc = (HLOCAL)wow_handlers32.edit_proc( hwnd, EM_GETHANDLE, 0, 0, FALSE ))) return 0;
      alloc_size = LocalSize( hloc );
  
@@ -556,7 +578,7 @@ index 9e07be97779..c020998b7e2 100644
      oldDS = stack16->ds;
      stack16->ds = GetWindowLongPtrW( hwnd, GWLP_HINSTANCE );
  
-@@ -2201,7 +2201,7 @@ done:
+@@ -2204,7 +2204,7 @@ done:
  
  static void edit_set_handle( HWND hwnd, HLOCAL16 hloc16 )
  {
@@ -565,7 +587,7 @@ index 9e07be97779..c020998b7e2 100644
      HINSTANCE16 hInstance = GetWindowLongPtrW( hwnd, GWLP_HINSTANCE );
      HANDLE16 oldDS = stack16->ds;
      HLOCAL hloc32;
-@@ -2231,7 +2231,7 @@ static void edit_destroy_handle( HWND hwnd )
+@@ -2234,7 +2234,7 @@ static void edit_destroy_handle( HWND hwnd )
      HLOCAL16 hloc16 = GetWindowWord( hwnd, GWW_HANDLE16 );
      if (hloc16)
      {
@@ -575,10 +597,10 @@ index 9e07be97779..c020998b7e2 100644
  
          stack16->ds = GetWindowLongPtrW( hwnd, GWLP_HINSTANCE );
 diff --git a/dlls/user.exe16/user.c b/dlls/user.exe16/user.c
-index 35f25859594..d473dcdebda 100644
+index 27b9279..deec596 100644
 --- a/dlls/user.exe16/user.c
 +++ b/dlls/user.exe16/user.c
-@@ -1388,7 +1388,7 @@ DWORD WINAPI GetTabbedTextExtent16( HDC16 hdc, LPCSTR lpstr, INT16 count,
+@@ -1394,7 +1394,7 @@ DWORD WINAPI GetTabbedTextExtent16( HDC16 hdc, LPCSTR lpstr, INT16 count,
   */
  DWORD WINAPI UserSeeUserDo16(WORD wReqType, WORD wParam1, WORD wParam2, WORD wParam3)
  {
@@ -587,7 +609,7 @@ index 35f25859594..d473dcdebda 100644
      HANDLE16 oldDS = stack16->ds;
      DWORD ret = (DWORD)-1;
  
-@@ -1761,7 +1761,7 @@ UINT16 WINAPI RealizePalette16( HDC16 hdc )
+@@ -1787,7 +1787,7 @@ UINT16 WINAPI RealizePalette16( HDC16 hdc )
   */
  WORD WINAPI GetFreeSystemResources16( WORD resType )
  {
@@ -597,7 +619,7 @@ index 35f25859594..d473dcdebda 100644
      int userPercent, gdiPercent;
  
 diff --git a/dlls/user.exe16/window.c b/dlls/user.exe16/window.c
-index e81d9ace3ae..afe40b2df98 100644
+index e81d9ac..afe40b2 100644
 --- a/dlls/user.exe16/window.c
 +++ b/dlls/user.exe16/window.c
 @@ -455,7 +455,7 @@ HWND16 WINAPI GetParent16( HWND16 hwnd )
@@ -610,10 +632,10 @@ index e81d9ace3ae..afe40b2df98 100644
      /* don't use WIN_Handle32 here, we don't care about the full handle */
      return IsWindow( HWND_32(hwnd) );
 diff --git a/include/winternl.h b/include/winternl.h
-index df20da58c3c..52087b1bd85 100644
+index 58c475d..f7d2f6d 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -325,7 +325,7 @@ typedef struct _TEB
+@@ -360,7 +360,7 @@ typedef struct _TEB
      PVOID                        WOW32Reserved;                     /* 0c0/0100 */
      ULONG                        CurrentLocale;                     /* 0c4/0108 */
      ULONG                        FpSoftwareStatusRegister;          /* 0c8/010c */
@@ -623,7 +645,7 @@ index df20da58c3c..52087b1bd85 100644
      ACTIVATION_CONTEXT_STACK     ActivationContextStack;            /* 1a8/02c8 */
      BYTE                         SpareBytes1[24];                   /* 1bc/02e8 */
 diff --git a/tools/winebuild/relay.c b/tools/winebuild/relay.c
-index 1cc6465f1c6..26cd347f14e 100644
+index 1adbda0..061bf03 100644
 --- a/tools/winebuild/relay.c
 +++ b/tools/winebuild/relay.c
 @@ -31,7 +31,7 @@
@@ -636,4 +658,5 @@ index 1cc6465f1c6..26cd347f14e 100644
  /* fix this if the x86_thread_data structure is changed */
  #define GS_OFFSET  0x1d8  /* FIELD_OFFSET(TEB,SystemReserved2) + FIELD_OFFSET(struct x86_thread_data,gs) */
 -- 
-2.13.1
+2.7.4
+

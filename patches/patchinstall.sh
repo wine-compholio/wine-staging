@@ -192,6 +192,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_msi_Deferral="$1"
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
@@ -753,6 +754,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		msi-Deferral)
+			enable_msi_Deferral="$2"
 			;;
 		msi-MsiGetDatabaseState)
 			enable_msi_MsiGetDatabaseState="$2"
@@ -4560,6 +4564,23 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		printf '%s\n' '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msi-Deferral
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34989] Multiple installers using Caphyon 'Advanced Installer' (AI) technology hang (Atlassian SourceTree v1.3.2,
+# | 	League of Legends 2013+) (deferred type 1 custom action executed before regular type 1 custom action)
+# |
+# | Modified files:
+# |   *	dlls/msi/action.c, dlls/msi/assembly.c, dlls/msi/classes.c, dlls/msi/custom.c, dlls/msi/files.c, dlls/msi/font.c,
+# | 	dlls/msi/msipriv.h, dlls/msi/tests/custom.c, dlls/msi/tests/install.c
+# |
+if test "$enable_msi_Deferral" -eq 1; then
+	patch_apply msi-Deferral/0001-msi-Implement-deferral-for-standard-and-custom-actio.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "msi: Implement deferral for standard and custom actions.", 1 },';
 	) >> "$patchlist"
 fi
 

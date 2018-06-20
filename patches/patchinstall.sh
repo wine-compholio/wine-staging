@@ -1884,13 +1884,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	enable_wined3d_UAV_Counters=1
 fi
 
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_User_Shared_Data=1
-fi
-
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	if test "$enable_wineboot_DriveSerial" -gt 1; then
 		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
@@ -7542,9 +7535,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 fi
 
 # Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-

@@ -1,7 +1,8 @@
-From a2f2703bd49023e395090c6ed8b7b6d2e7722680 Mon Sep 17 00:00:00 2001
+From 9d8678d25267e66aff7134f064fddb4eac5c5641 Mon Sep 17 00:00:00 2001
 From: Mark Jansen <learn0more+wine@gmail.com>
 Date: Sun, 8 Mar 2015 18:24:48 +0100
-Subject: ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend)
+Subject: [PATCH] ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5,
+ resend)
 
 Changes from try4:
 -Remove leftover comments
@@ -11,14 +12,14 @@ Changes from try3:
 -Change strict_is_different to a flag
 -Add ipv4 init function to avoid code duplication
 ---
- dlls/ntdll/tests/rtl.c | 371 ++++++++++++++++++++++++++++++++-----------------
- 1 file changed, 247 insertions(+), 124 deletions(-)
+ dlls/ntdll/tests/rtl.c | 284 ++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 246 insertions(+), 38 deletions(-)
 
 diff --git a/dlls/ntdll/tests/rtl.c b/dlls/ntdll/tests/rtl.c
-index 5d789d1..79c4974 100644
+index cf14e65..941a92c 100644
 --- a/dlls/ntdll/tests/rtl.c
 +++ b/dlls/ntdll/tests/rtl.c
-@@ -90,6 +90,7 @@ static IMAGE_BASE_RELOCATION *(WINAPI *pLdrProcessRelocationBlock)(void*,UINT,US
+@@ -92,6 +92,7 @@ static IMAGE_BASE_RELOCATION *(WINAPI *pLdrProcessRelocationBlock)(void*,UINT,US
  static CHAR *    (WINAPI *pRtlIpv4AddressToStringA)(const IN_ADDR *, LPSTR);
  static NTSTATUS  (WINAPI *pRtlIpv4AddressToStringExA)(const IN_ADDR *, USHORT, LPSTR, PULONG);
  static NTSTATUS  (WINAPI *pRtlIpv4StringToAddressA)(PCSTR, BOOLEAN, PCSTR *, IN_ADDR *);
@@ -26,7 +27,7 @@ index 5d789d1..79c4974 100644
  static NTSTATUS  (WINAPI *pRtlIpv6StringToAddressA)(PCSTR, PCSTR *, struct in6_addr *);
  static NTSTATUS  (WINAPI *pRtlIpv6StringToAddressW)(PCWSTR, PCWSTR *, struct in6_addr *);
  static NTSTATUS  (WINAPI *pRtlIpv6StringToAddressExA)(PCSTR, struct in6_addr *, PULONG, PUSHORT);
-@@ -142,6 +143,7 @@ static void InitFunctionPtrs(void)
+@@ -159,6 +160,7 @@ static void InitFunctionPtrs(void)
          pRtlIpv4AddressToStringA = (void *)GetProcAddress(hntdll, "RtlIpv4AddressToStringA");
          pRtlIpv4AddressToStringExA = (void *)GetProcAddress(hntdll, "RtlIpv4AddressToStringExA");
          pRtlIpv4StringToAddressA = (void *)GetProcAddress(hntdll, "RtlIpv4StringToAddressA");
@@ -34,7 +35,7 @@ index 5d789d1..79c4974 100644
          pRtlIpv6StringToAddressA = (void *)GetProcAddress(hntdll, "RtlIpv6StringToAddressA");
          pRtlIpv6StringToAddressW = (void *)GetProcAddress(hntdll, "RtlIpv6StringToAddressW");
          pRtlIpv6StringToAddressExA = (void *)GetProcAddress(hntdll, "RtlIpv6StringToAddressExA");
-@@ -1331,98 +1333,109 @@ static void test_RtlIpv4AddressToStringEx(void)
+@@ -1157,6 +1159,102 @@ static void test_RtlIpv4AddressToStringEx(void)
          res, size, buffer);
  }
  
@@ -137,100 +138,7 @@ index 5d789d1..79c4974 100644
  static void test_RtlIpv4StringToAddress(void)
  {
      NTSTATUS res;
-     IN_ADDR ip, expected_ip;
-     PCSTR terminator;
-     CHAR dummy;
--    struct
--    {
--        PCSTR address;
--        NTSTATUS res;
--        int terminator_offset;
--        int ip[4];
--        BOOL strict_is_different;
--        NTSTATUS res_strict;
--        int terminator_offset_strict;
--        int ip_strict[4];
--    } tests[] =
--    {
--        { "",                STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { " ",               STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { "1.1.1.1",         STATUS_SUCCESS,            7, {   1,   1,   1,   1 } },
--        { "0.0.0.0",         STATUS_SUCCESS,            7, {   0,   0,   0,   0 } },
--        { "255.255.255.255", STATUS_SUCCESS,           15, { 255, 255, 255, 255 } },
--        { "255.255.255.255:123",
--                             STATUS_SUCCESS,           15, { 255, 255, 255, 255 } },
--        { "255.255.255.256", STATUS_INVALID_PARAMETER, 15, { -1 } },
--        { "255.255.255.4294967295",
--                             STATUS_INVALID_PARAMETER, 22, { -1 } },
--        { "255.255.255.4294967296",
--                             STATUS_INVALID_PARAMETER, 21, { -1 } },
--        { "255.255.255.4294967297",
--                             STATUS_INVALID_PARAMETER, 21, { -1 } },
--        { "a",               STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { "1.1.1.0xaA",      STATUS_SUCCESS,           10, {   1,   1,   1, 170 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.0XaA",      STATUS_SUCCESS,           10, {   1,   1,   1, 170 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.0x",        STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.0xff",      STATUS_SUCCESS,           10, {   1,   1,   1, 255 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.0x100",     STATUS_INVALID_PARAMETER, 11, { -1 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.0xffffffff",STATUS_INVALID_PARAMETER, 16, { -1 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.0x100000000",
--                             STATUS_INVALID_PARAMETER, 16, { -1, 0, 0, 0 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "1.1.1.010",       STATUS_SUCCESS,            9, {   1,   1,   1,   8 },
--                       TRUE, STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "1.1.1.00",        STATUS_SUCCESS,            8, {   1,   1,   1,   0 },
--                       TRUE, STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "1.1.1.007",       STATUS_SUCCESS,            9, {   1,   1,   1,   7 },
--                       TRUE, STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "1.1.1.08",        STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "1.1.1.008",       STATUS_SUCCESS,            8, {   1,   1,   1,   0 },
--                       TRUE, STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "1.1.1.0a",        STATUS_SUCCESS,            7, {   1,   1,   1,   0 } },
--        { "1.1.1.0o10",      STATUS_SUCCESS,            7, {   1,   1,   1,   0 } },
--        { "1.1.1.0b10",      STATUS_SUCCESS,            7, {   1,   1,   1,   0 } },
--        { "1.1.1.-2",        STATUS_INVALID_PARAMETER,  6, { -1 } },
--        { "1",               STATUS_SUCCESS,            1, {   0,   0,   0,   1 },
--                       TRUE, STATUS_INVALID_PARAMETER,  1, { -1 } },
--        { "-1",              STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { "203569230",       STATUS_SUCCESS,            9, {  12,  34,  56,  78 },
--                       TRUE, STATUS_INVALID_PARAMETER,  9, { -1 } },
--        { "1.223756",        STATUS_SUCCESS,            8, {   1,   3, 106,  12 },
--                       TRUE, STATUS_INVALID_PARAMETER,  8, { -1 } },
--        { "3.4.756",         STATUS_SUCCESS,            7, {   3,   4,   2, 244 },
--                       TRUE, STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "3.4.756.1",       STATUS_INVALID_PARAMETER,  9, { -1 } },
--        { "3.4.65536",       STATUS_INVALID_PARAMETER,  9, { -1 } },
--        { "3.4.5.6.7",       STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "3.4.5.+6",        STATUS_INVALID_PARAMETER,  6, { -1 } },
--        { " 3.4.5.6",        STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { "\t3.4.5.6",       STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { "3.4.5.6 ",        STATUS_SUCCESS,            7, {   3,   4,   5,   6 } },
--        { "3. 4.5.6",        STATUS_INVALID_PARAMETER,  2, { -1 } },
--        { ".",               STATUS_INVALID_PARAMETER,  1, { -1 } },
--        { "..",              STATUS_INVALID_PARAMETER,  1, { -1 } },
--        { "1.",              STATUS_INVALID_PARAMETER,  2, { -1 } },
--        { "1..",             STATUS_INVALID_PARAMETER,  3, { -1 } },
--        { ".1",              STATUS_INVALID_PARAMETER,  1, { -1 } },
--        { ".1.",             STATUS_INVALID_PARAMETER,  1, { -1 } },
--        { ".1.2.3",          STATUS_INVALID_PARAMETER,  1, { -1 } },
--        { "0.1.2.3",         STATUS_SUCCESS,            7, {   0,   1,   2,   3 } },
--        { "0.1.2.3.",        STATUS_INVALID_PARAMETER,  7, { -1 } },
--        { "[0.1.2.3]",       STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { "::1",             STATUS_INVALID_PARAMETER,  0, { -1 } },
--        { ":1",              STATUS_INVALID_PARAMETER,  0, { -1 } },
--    };
--    const int testcount = sizeof(tests) / sizeof(tests[0]);
--    int i;
-+    unsigned int i;
- 
-     if (!pRtlIpv4StringToAddressA)
-     {
-@@ -1444,65 +1457,174 @@ static void test_RtlIpv4StringToAddress(void)
+@@ -1270,65 +1368,174 @@ static void test_RtlIpv4StringToAddress(void)
          */
      }
  
@@ -443,7 +351,7 @@ index 5d789d1..79c4974 100644
  
  /* ipv6 addresses based on the set from https://github.com/beaugunderson/javascript-ipv6/tree/master/test/data */
  static const struct
-@@ -2318,6 +2440,7 @@ START_TEST(rtl)
+@@ -3300,6 +3507,7 @@ START_TEST(rtl)
      test_RtlIpv4AddressToString();
      test_RtlIpv4AddressToStringEx();
      test_RtlIpv4StringToAddress();
@@ -452,5 +360,5 @@ index 5d789d1..79c4974 100644
      test_RtlIpv6StringToAddressEx();
      test_LdrAddRefDll();
 -- 
-2.3.1
+1.9.1
 

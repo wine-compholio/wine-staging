@@ -1,14 +1,14 @@
-From 495ba38e883f801953cc995817048c9916a86177 Mon Sep 17 00:00:00 2001
+From 257f0d7fb176f317b8c47e02bf9c4b7fb89f8dfe Mon Sep 17 00:00:00 2001
 From: Eriks Dobelis <eriks00@moon.lv>
 Date: Thu, 31 May 2018 11:38:54 +1000
-Subject: [PATCH 1/3] winex11: Implement PK_CHANGE for wintab
+Subject: [PATCH] winex11: Implement PK_CHANGE for wintab
 
 ---
- dlls/winex11.drv/wintab.c | 53 +++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 53 insertions(+)
+ dlls/winex11.drv/wintab.c | 58 +++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 58 insertions(+)
 
 diff --git a/dlls/winex11.drv/wintab.c b/dlls/winex11.drv/wintab.c
-index e4259bf..f6b89e5 100644
+index e4259bf..a9ac78a 100644
 --- a/dlls/winex11.drv/wintab.c
 +++ b/dlls/winex11.drv/wintab.c
 @@ -267,6 +267,13 @@ static int           proximity_out_type;
@@ -17,7 +17,7 @@ index e4259bf..f6b89e5 100644
  static DWORD         gSerial;
 +static DWORD         lastX = 0xffff;
 +static DWORD         lastY = 0xffff;
-+static UINT          lastNormalPressure = 0xffff;
++static UINT          lastNormalPressure = 0xffff, lastTangentPressure = 0xffff;
 +static DWORD         lastButtons = 0xffff;
 +static UINT          lastCursor = 0xffff;
 +static ORIENTATION   lastOrientation = {.orAzimuth = 0xffff, .orAltitude = 0xffff, .orTwist = 0xffff };
@@ -25,7 +25,7 @@ index e4259bf..f6b89e5 100644
  
  /* Reference: http://www.wacomeng.com/devsupport/ibmpc/gddevpc.html
   *
-@@ -839,6 +846,50 @@ static int cursor_from_device(DWORD deviceid, LPWTI_CURSORS_INFO *cursorp)
+@@ -839,6 +846,55 @@ static int cursor_from_device(DWORD deviceid, LPWTI_CURSORS_INFO *cursorp)
      return -1;
  }
  
@@ -46,6 +46,11 @@ index e4259bf..f6b89e5 100644
 +    {
 +        change |= PK_NORMAL_PRESSURE;
 +        lastNormalPressure = pkt->pkNormalPressure;
++    }
++    if (pkt->pkTangentPressure != lastTangentPressure)
++    {
++        change |= PK_TANGENT_PRESSURE;
++        lastTangentPressure = pkt->pkTangentPressure;
 +    }
 +    if (pkt->pkCursor != lastCursor)
 +    {
@@ -70,13 +75,13 @@ index e4259bf..f6b89e5 100644
 +        lastRotation = pkt->pkRotation;
 +    }
 +
-+    return change; 
++    return change;
 +}
 +
  static BOOL motion_event( HWND hwnd, XEvent *event )
  {
      XDeviceMotionEvent *motion = (XDeviceMotionEvent *)event;
-@@ -865,6 +916,7 @@ static BOOL motion_event( HWND hwnd, XEvent *event )
+@@ -865,6 +921,7 @@ static BOOL motion_event( HWND hwnd, XEvent *event )
                                             * (gMsgPacket.pkStatus & TPS_INVERT?-1:1));
      gMsgPacket.pkNormalPressure = motion->axis_data[2];
      gMsgPacket.pkButtons = get_button_state(curnum);
@@ -84,7 +89,7 @@ index e4259bf..f6b89e5 100644
      SendMessageW(hwndTabletDefault,WT_PACKET,gMsgPacket.pkSerialNumber,(LPARAM)hwnd);
      return TRUE;
  }
-@@ -895,6 +947,7 @@ static BOOL button_event( HWND hwnd, XEvent *event )
+@@ -895,6 +952,7 @@ static BOOL button_event( HWND hwnd, XEvent *event )
                                             * (gMsgPacket.pkStatus & TPS_INVERT?-1:1));
      gMsgPacket.pkNormalPressure = button->axis_data[2];
      gMsgPacket.pkButtons = get_button_state(curnum);

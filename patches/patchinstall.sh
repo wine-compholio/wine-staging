@@ -84,7 +84,6 @@ warning()
 patch_enable_all ()
 {
 	enable_Compiler_Warnings="$1"
-	enable_Coverity="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
@@ -430,9 +429,6 @@ patch_enable ()
 	case "$1" in
 		Compiler_Warnings)
 			enable_Compiler_Warnings="$2"
-			;;
-		Coverity)
-			enable_Coverity="$2"
 			;;
 		Pipelight)
 			enable_Pipelight="$2"
@@ -2401,20 +2397,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wsdapi: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "evr: Avoid implicit cast of interface pointer.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset Coverity
-# |
-# | Modified files:
-# |   *	tools/sfnt2fon/sfnt2fon.c, tools/winedump/msc.c
-# |
-if test "$enable_Coverity" -eq 1; then
-	patch_apply Coverity/0001-sfnt2fon-Don-t-leak-output-name-if-specified-multipl.patch
-	patch_apply Coverity/0002-winedump-Free-debug-string-in-case-it-was-not-freed-.patch
-	(
-		printf '%s\n' '+    { "André Hentschel", "sfnt2fon: Don'\''t leak output name if specified multiple times (Coverity).", 1 },';
-		printf '%s\n' '+    { "André Hentschel", "winedump: Free debug string in case it was not freed in for-loop (Coverity).", 1 },';
 	) >> "$patchlist"
 fi
 

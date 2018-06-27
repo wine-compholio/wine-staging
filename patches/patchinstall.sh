@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "85f1a79be8bbb9b62ad88e0d0fbf1e005fd3ba16"
+	echo "6a04cf4a69205ddf6827fb2a4b97862fd1947c62"
 }
 
 # Show version information
@@ -221,7 +221,6 @@ patch_enable_all ()
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_LdrGetDllHandle="$1"
-	enable_ntdll_LdrRegisterDllNotification="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
@@ -840,9 +839,6 @@ patch_enable ()
 			;;
 		ntdll-LdrGetDllHandle)
 			enable_ntdll_LdrGetDllHandle="$2"
-			;;
-		ntdll-LdrRegisterDllNotification)
-			enable_ntdll_LdrRegisterDllNotification="$2"
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
@@ -2128,21 +2124,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
-fi
-
-if test "$enable_ntdll_LdrRegisterDllNotification" -eq 1; then
-	if test "$enable_ntdll_HashLinks" -gt 1; then
-		abort "Patchset ntdll-HashLinks disabled, but ntdll-LdrRegisterDllNotification depends on that."
-	fi
-	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
-		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-LdrRegisterDllNotification depends on that."
-	fi
-	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
-		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-LdrRegisterDllNotification depends on that."
-	fi
-	enable_ntdll_HashLinks=1
-	enable_ntdll_Hide_Wine_Exports=1
-	enable_ntdll_RtlQueryPackageIdentity=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -5113,36 +5094,6 @@ if test "$enable_ntdll_LdrGetDllHandle" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlQueryPackageIdentity
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
-	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-LdrRegisterDllNotification
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-LDR_MODULE, ntdll-HashLinks, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-RtlQueryPackageIdentity
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44585] Implement LdrRegisterDllNotification/LdrUnregisterDllNotification
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_LdrRegisterDllNotification" -eq 1; then
-	patch_apply ntdll-LdrRegisterDllNotification/0001-ntdll-Implement-LdrRegisterDllNotification-and-LdrUn.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement LdrRegisterDllNotification and LdrUnregisterDllNotification.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtAccessCheck
 # |
 # | Modified files:
@@ -5318,6 +5269,18 @@ if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlQueryPackageIdentity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
+	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
 	) >> "$patchlist"
 fi
 

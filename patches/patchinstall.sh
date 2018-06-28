@@ -376,6 +376,7 @@ patch_enable_all ()
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
+	enable_wined3d_texture_blt_device="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1305,6 +1306,9 @@ patch_enable ()
 			;;
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
+			;;
+		wined3d-texture-blt-device)
+			enable_wined3d_texture_blt_device="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -7723,6 +7727,21 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Check MaxVertexBlendMatrixIndex capability.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Report correct number of blend matrices when software vertex processing is used.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Track updates of vertex blend matrices separately.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-texture-blt-device
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45382] Stop the Sting demo crashing
+# |
+# | Modified files:
+# |   *	dlls/wined3d/texture.c
+# |
+if test "$enable_wined3d_texture_blt_device" -eq 1; then
+	patch_apply wined3d-texture-blt-device/0001-wined3d-Dont-blt-textures-on-different-devices.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Dont blt textures on different devices.", 1 },';
 	) >> "$patchlist"
 fi
 

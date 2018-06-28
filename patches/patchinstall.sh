@@ -419,6 +419,7 @@ patch_enable_all ()
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
+	enable_xaudio2_7_WMA_support="$1"
 	enable_xaudio2_CommitChanges="$1"
 }
 
@@ -1433,6 +1434,9 @@ patch_enable ()
 			;;
 		xaudio2_7-OnVoiceProcessingPassStart)
 			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
+			;;
+		xaudio2_7-WMA_support)
+			enable_xaudio2_7_WMA_support="$2"
 			;;
 		xaudio2_CommitChanges)
 			enable_xaudio2_CommitChanges="$2"
@@ -8409,6 +8413,24 @@ if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -eq 1; then
 	patch_apply xaudio2_7-OnVoiceProcessingPassStart/0001-xaudio2_7-Use-assembly-wrapper-to-call-OnVoiceProces.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "xaudio2_7: Use assembly wrapper to call OnVoiceProcessingPassStart callback.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xaudio2_7-WMA_support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39402] Use ffmpeg 4.x to convert WMA format
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/xaudio2_0/Makefile.in, dlls/xaudio2_1/Makefile.in, dlls/xaudio2_2/Makefile.in,
+# | 	dlls/xaudio2_3/Makefile.in, dlls/xaudio2_4/Makefile.in, dlls/xaudio2_5/Makefile.in, dlls/xaudio2_6/Makefile.in,
+# | 	dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h, dlls/xaudio2_8/Makefile.in,
+# | 	dlls/xaudio2_9/Makefile.in, include/config.h.in, include/mmreg.h
+# |
+if test "$enable_xaudio2_7_WMA_support" -eq 1; then
+	patch_apply xaudio2_7-WMA_support/0001-xaudio2-Use-ffmpeg-to-convert-WMA-formats.patch
+	(
+		printf '%s\n' '+    { "Andrew Eikum", "xaudio2: Use ffmpeg to convert WMA formats.", 1 },';
 	) >> "$patchlist"
 fi
 

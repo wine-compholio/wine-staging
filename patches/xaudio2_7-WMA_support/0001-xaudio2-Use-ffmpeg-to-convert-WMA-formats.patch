@@ -1,28 +1,28 @@
-From 86489505fd9cdf61f90ba31a045f1412833517cc Mon Sep 17 00:00:00 2001
+From 71aa01e98af9c1c44a992835c93bfcddba9e9ff5 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Thu, 31 May 2018 10:58:48 -0500
 Subject: [PATCH] xaudio2: Use ffmpeg to convert WMA formats
 
 ---
  configure.ac                    |  33 ++++
- dlls/xaudio2_0/Makefile.in      |   2 +-
- dlls/xaudio2_1/Makefile.in      |   2 +-
- dlls/xaudio2_2/Makefile.in      |   2 +-
- dlls/xaudio2_3/Makefile.in      |   2 +-
- dlls/xaudio2_4/Makefile.in      |   2 +-
- dlls/xaudio2_5/Makefile.in      |   2 +-
- dlls/xaudio2_6/Makefile.in      |   2 +-
- dlls/xaudio2_7/Makefile.in      |   2 +-
+ dlls/xaudio2_0/Makefile.in      |   3 +-
+ dlls/xaudio2_1/Makefile.in      |   3 +-
+ dlls/xaudio2_2/Makefile.in      |   3 +-
+ dlls/xaudio2_3/Makefile.in      |   3 +-
+ dlls/xaudio2_4/Makefile.in      |   3 +-
+ dlls/xaudio2_5/Makefile.in      |   3 +-
+ dlls/xaudio2_6/Makefile.in      |   3 +-
+ dlls/xaudio2_7/Makefile.in      |   3 +-
  dlls/xaudio2_7/xaudio_dll.c     | 370 ++++++++++++++++++++++++++++++++++++++--
  dlls/xaudio2_7/xaudio_private.h |   9 +
- dlls/xaudio2_8/Makefile.in      |   2 +-
- dlls/xaudio2_9/Makefile.in      |   2 +-
+ dlls/xaudio2_8/Makefile.in      |   3 +-
+ dlls/xaudio2_9/Makefile.in      |   3 +-
  include/config.h.in             |   9 +
  include/mmreg.h                 |   5 +
- 15 files changed, 426 insertions(+), 20 deletions(-)
+ 15 files changed, 436 insertions(+), 20 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index e8dc9f2..ca0ad72 100644
+index 469fa8d..e753dde 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -43,6 +43,7 @@ AC_ARG_WITH(cups,      AS_HELP_STRING([--without-cups],[do not use CUPS]))
@@ -33,7 +33,7 @@ index e8dc9f2..ca0ad72 100644
  AC_ARG_WITH(float-abi, AS_HELP_STRING([--with-float-abi=abi],[specify the ABI (soft|softfp|hard) for ARM platforms]))
  AC_ARG_WITH(fontconfig,AS_HELP_STRING([--without-fontconfig],[do not use fontconfig]))
  AC_ARG_WITH(freetype,  AS_HELP_STRING([--without-freetype],[do not use the FreeType library]))
-@@ -1836,6 +1837,38 @@ WINE_NOTICE_WITH(mpg123,[test "x$ac_cv_lib_mpg123_mpg123_feed" != xyes -a x"$ac_
+@@ -1766,6 +1767,38 @@ WINE_NOTICE_WITH(mpg123,[test "x$ac_cv_lib_mpg123_mpg123_feed" != xyes -a x"$ac_
                   [enable_l3codeca_acm])
  test "x$ac_cv_lib_mpg123_mpg123_feed" = xyes || enable_mp3dmod=${enable_mp3dmod:-no}
  
@@ -73,106 +73,114 @@ index e8dc9f2..ca0ad72 100644
  if test "$ac_cv_header_AL_al_h" = "yes"
  then
 diff --git a/dlls/xaudio2_0/Makefile.in b/dlls/xaudio2_0/Makefile.in
-index cf15c7b..d1127e5 100644
+index cf15c7b..d8d282b 100644
 --- a/dlls/xaudio2_0/Makefile.in
 +++ b/dlls/xaudio2_0/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=0
  MODULE    = xaudio2_0.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_1/Makefile.in b/dlls/xaudio2_1/Makefile.in
-index 32a5a62..53d9c10 100644
+index 32a5a62..a0d7bfc 100644
 --- a/dlls/xaudio2_1/Makefile.in
 +++ b/dlls/xaudio2_1/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=1
  MODULE    = xaudio2_1.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_2/Makefile.in b/dlls/xaudio2_2/Makefile.in
-index f20de2d..d1b4384 100644
+index f20de2d..4ba7e6c 100644
 --- a/dlls/xaudio2_2/Makefile.in
 +++ b/dlls/xaudio2_2/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=2
  MODULE    = xaudio2_2.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_3/Makefile.in b/dlls/xaudio2_3/Makefile.in
-index ca749f2..c431146 100644
+index ca749f2..62c644f 100644
 --- a/dlls/xaudio2_3/Makefile.in
 +++ b/dlls/xaudio2_3/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=3
  MODULE    = xaudio2_3.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_4/Makefile.in b/dlls/xaudio2_4/Makefile.in
-index 0b74f68..69ffc69 100644
+index 0b74f68..b77753f 100644
 --- a/dlls/xaudio2_4/Makefile.in
 +++ b/dlls/xaudio2_4/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=4
  MODULE    = xaudio2_4.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_5/Makefile.in b/dlls/xaudio2_5/Makefile.in
-index 09356c9..011cc7a 100644
+index 09356c9..bd68734 100644
 --- a/dlls/xaudio2_5/Makefile.in
 +++ b/dlls/xaudio2_5/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=5
  MODULE    = xaudio2_5.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_6/Makefile.in b/dlls/xaudio2_6/Makefile.in
-index e0ef588..455c6d7 100644
+index e0ef588..1729509 100644
 --- a/dlls/xaudio2_6/Makefile.in
 +++ b/dlls/xaudio2_6/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=6
  MODULE    = xaudio2_6.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_7/Makefile.in b/dlls/xaudio2_7/Makefile.in
-index 2f2e232..3e6d595 100644
+index 2f2e232..41d307d 100644
 --- a/dlls/xaudio2_7/Makefile.in
 +++ b/dlls/xaudio2_7/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=7
  MODULE    = xaudio2_7.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  
  C_SRCS = \
  	compat.c \
@@ -655,28 +663,30 @@ index 5d3814f..9cf7f00 100644
  } XA2SourceImpl;
  
 diff --git a/dlls/xaudio2_8/Makefile.in b/dlls/xaudio2_8/Makefile.in
-index d4efc41..017bff8 100644
+index d4efc41..8ad071f 100644
 --- a/dlls/xaudio2_8/Makefile.in
 +++ b/dlls/xaudio2_8/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=8
  MODULE    = xaudio2_8.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_9/Makefile.in b/dlls/xaudio2_9/Makefile.in
-index ceb2216..cf68947 100644
+index ceb2216..0243ed6 100644
 --- a/dlls/xaudio2_9/Makefile.in
 +++ b/dlls/xaudio2_9/Makefile.in
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  EXTRADEFS = -DXAUDIO2_VER=9
  MODULE    = xaudio2_9.dll
  IMPORTS   = advapi32 ole32 user32 uuid
 -EXTRALIBS = $(OPENAL_LIBS)
 +EXTRALIBS = $(OPENAL_LIBS) $(LIBAVCODEC_LIBS) $(LIBAVUTIL_LIBS)
++EXTRAINCL = $(LIBAVCODEC_CFLAGS) $(LIBAVUTIL_CFLAGS)
  PARENTSRC = ../xaudio2_7
  
  C_SRCS = \
@@ -717,5 +727,5 @@ index 8bb581d..1214dfa 100644
  #define  WAVE_FORMAT_CREATIVE_FASTSPEECH8	0x0202	/*  Creative Labs, Inc  */
  #define  WAVE_FORMAT_CREATIVE_FASTSPEECH10	0x0203	/*  Creative Labs, Inc  */
 -- 
-1.9.1
+2.7.4
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "86864486be64a277f6edf8e66709cd0f17a4eed9"
+	echo "cba24001e482fa8a8a1fbf5d5390539e2792b1aa"
 }
 
 # Show version information
@@ -1791,6 +1791,13 @@ patch_apply()
 	patch_apply_file "$patchdir/$1"
 }
 
+
+if test "$enable_xaudio2_7_WMA_support" -eq 1; then
+	if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -gt 1; then
+		abort "Patchset xaudio2_7-OnVoiceProcessingPassStart disabled, but xaudio2_7-WMA_support depends on that."
+	fi
+	enable_xaudio2_7_OnVoiceProcessingPassStart=1
+fi
 
 if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
@@ -8383,6 +8390,9 @@ if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -eq 1; then
 fi
 
 # Patchset xaudio2_7-WMA_support
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	xaudio2_7-OnVoiceProcessingPassStart
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39402] Use ffmpeg 4.x to convert WMA format

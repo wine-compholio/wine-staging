@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "86864486be64a277f6edf8e66709cd0f17a4eed9"
+	echo "3edbb2a4fdd2fb46a7af13c921bcd4bf8b7ab718"
 }
 
 # Show version information
@@ -329,7 +329,6 @@ patch_enable_all ()
 	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_FlashWindowEx="$1"
-	enable_user32_GetAutoRotationState="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
@@ -1163,9 +1162,6 @@ patch_enable ()
 			;;
 		user32-FlashWindowEx)
 			enable_user32_FlashWindowEx="$2"
-			;;
-		user32-GetAutoRotationState)
-			enable_user32_GetAutoRotationState="$2"
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
@@ -4600,6 +4596,9 @@ fi
 
 # Patchset msvcr120-_SetWinRTOutOfMemoryExceptionCallback
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45394] Add stub for _SetWinRTOutOfMemoryExceptionCallback
+# |
 # | Modified files:
 # |   *	dlls/msvcr120/msvcr120.spec, dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/misc.c
 # |
@@ -6082,6 +6081,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
+# |   *	[#45374] Yet Another Process Monitor (.NET 2.0 app) reports System.AccessViolationException
 # |
 # | Modified files:
 # |   *	dlls/ntdll/nt.c, dlls/ntdll/om.c, dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, include/winternl.h,
@@ -6841,18 +6841,6 @@ if test "$enable_user32_FlashWindowEx" -eq 1; then
 	patch_apply user32-FlashWindowEx/0001-user32-Improve-FlashWindowEx-message-and-return-valu.patch
 	(
 		printf '%s\n' '+    { "James Coonradt", "user32: Improve FlashWindowEx message and return value.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-GetAutoRotationState
-# |
-# | Modified files:
-# |   *	dlls/user32/sysparams.c, dlls/user32/tests/sysparams.c
-# |
-if test "$enable_user32_GetAutoRotationState" -eq 1; then
-	patch_apply user32-GetAutoRotationState/0001-user32-Add-semi-stub-for-GetAutoRotationState.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "user32: Add semi-stub for GetAutoRotationState.", 1 },';
 	) >> "$patchlist"
 fi
 

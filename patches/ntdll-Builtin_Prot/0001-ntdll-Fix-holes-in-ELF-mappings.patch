@@ -1,4 +1,4 @@
-From 4c3ec3a9f0ed4523f6d6f7bcba9540803eea8a64 Mon Sep 17 00:00:00 2001
+From 7c2a302a95f6be16dbb5f6b3379e57d411a5310a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 1 Jun 2017 06:04:53 +0200
 Subject: ntdll: Fix holes in ELF mappings. (v2)
@@ -10,14 +10,13 @@ Based on a patch by Andrew Wesie.
  2 files changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 0b813d3b0e9..b10c36c3f69 100644
+index 53db698..f1869be 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -425,6 +425,16 @@ static inline BOOL is_write_watch_range( const void *addr, size_t size )
- }
+@@ -429,6 +429,16 @@ static inline BOOL is_write_watch_range( const void *addr, size_t size )
  
  
-+/***********************************************************************
+ /***********************************************************************
 + *           is_system_range
 + */
 +static inline BOOL is_system_range( const void *addr, size_t size )
@@ -27,10 +26,11 @@ index 0b813d3b0e9..b10c36c3f69 100644
 +}
 +
 +
- /***********************************************************************
++/***********************************************************************
   *           find_view_range
   *
-@@ -1822,6 +1832,19 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+  * Find the first view overlapping at least part of the specified range.
+@@ -2047,6 +2057,19 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
          if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_READ) ret = STATUS_SUCCESS;
          else update_shared_data = FALSE;
      }
@@ -51,10 +51,10 @@ index 0b813d3b0e9..b10c36c3f69 100644
  
      if (update_shared_data)
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index e35a7b694cb..e7af5bc61cc 100644
+index e61cf02..6e98754 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -152,6 +152,7 @@ static void test_EnumProcessModules(void)
+@@ -196,6 +196,7 @@ todo_wine
  static void test_GetModuleInformation(void)
  {
      HMODULE hMod = GetModuleHandleA(NULL);
@@ -62,19 +62,19 @@ index e35a7b694cb..e7af5bc61cc 100644
      MODULEINFO info;
      DWORD ret;
  
-@@ -171,10 +172,21 @@ static void test_GetModuleInformation(void)
-     pGetModuleInformation(hpQV, hMod, &info, sizeof(info)-1);
+@@ -215,10 +216,21 @@ static void test_GetModuleInformation(void)
+     GetModuleInformation(hpQV, hMod, &info, sizeof(info)-1);
      ok(GetLastError() == ERROR_INSUFFICIENT_BUFFER, "expected error=ERROR_INSUFFICIENT_BUFFER but got %d\n", GetLastError());
  
 -    SetLastError(0xdeadbeef);
-     ret = pGetModuleInformation(hpQV, hMod, &info, sizeof(info));
+     ret = GetModuleInformation(hpQV, hMod, &info, sizeof(info));
      ok(ret == 1, "failed with %d\n", GetLastError());
      ok(info.lpBaseOfDll == hMod, "lpBaseOfDll=%p hMod=%p\n", info.lpBaseOfDll, hMod);
 +
 +    hMod = LoadLibraryA("shell32.dll");
 +    ok(hMod != NULL, "Failed to load shell32.dll, error: %u\n", GetLastError());
 +
-+    ret = pGetModuleInformation(hpQV, hMod, &info, sizeof(info));
++    ret = GetModuleInformation(hpQV, hMod, &info, sizeof(info));
 +    ok(ret == 1, "failed with %d\n", GetLastError());
 +    info.SizeOfImage /= sizeof(DWORD);
 +    for (tmp = (DWORD *)hMod; info.SizeOfImage; info.SizeOfImage--)
@@ -86,5 +86,5 @@ index e35a7b694cb..e7af5bc61cc 100644
  
  static BOOL check_with_margin(SIZE_T perf, SIZE_T sysperf, int margin)
 -- 
-2.14.1
+2.7.4
 

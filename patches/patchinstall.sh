@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e7f5dc194aeb586bb516b5fd191ad6924c4fcdd3"
+	echo "cb468b682d2b7d088d0607259affe1680b558e24"
 }
 
 # Show version information
@@ -7547,11 +7547,9 @@ fi
 # | 	dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
-	patch_apply wined3d-Dual_Source_Blending/0001-wined3d-Unroll-glsl-pixel-shader-output.patch
 	patch_apply wined3d-Dual_Source_Blending/0002-d3d11-tests-Add-basic-dual-source-blend-test.patch
 	patch_apply wined3d-Dual_Source_Blending/0003-wined3d-Implement-dual-source-blending.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Unroll glsl pixel shader output.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic dual source blend test.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement dual source blending.", 1 },';
 	) >> "$patchlist"

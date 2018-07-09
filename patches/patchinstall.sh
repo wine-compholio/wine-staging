@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "80205232d3ece73d4cc6c7589cea893583aae0b1"
+	echo "8ef224fa43869a8c977921d6bec08863382d6e11"
 }
 
 # Show version information
@@ -172,7 +172,6 @@ patch_enable_all ()
 	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
-	enable_kernel32_Misalign_Workaround="$1"
 	enable_kernel32_MoveFile="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
@@ -195,7 +194,6 @@ patch_enable_all ()
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
-	enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -692,9 +690,6 @@ patch_enable ()
 		kernel32-K32GetPerformanceInfo)
 			enable_kernel32_K32GetPerformanceInfo="$2"
 			;;
-		kernel32-Misalign_Workaround)
-			enable_kernel32_Misalign_Workaround="$2"
-			;;
 		kernel32-MoveFile)
 			enable_kernel32_MoveFile="$2"
 			;;
@@ -760,9 +755,6 @@ patch_enable ()
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
-			;;
-		msvcr120-_SetWinRTOutOfMemoryExceptionCallback)
-			enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -2198,13 +2190,6 @@ if test "$enable_kernel32_Processor_Group" -eq 1; then
 		abort "Patchset api-ms-win-Stub_DLLs disabled, but kernel32-Processor_Group depends on that."
 	fi
 	enable_api_ms_win_Stub_DLLs=1
-fi
-
-if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
-	if test "$enable_kernel32_Misalign_Workaround" -gt 1; then
-		abort "Patchset kernel32-Misalign_Workaround disabled, but kernel32-PE_Loader_Fixes depends on that."
-	fi
-	enable_kernel32_Misalign_Workaround=1
 fi
 
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
@@ -4181,21 +4166,6 @@ if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-Misalign_Workaround
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24374] Fill stack with meaningful values in call_process_entry mis-align workaround
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c
-# |
-if test "$enable_kernel32_Misalign_Workaround" -eq 1; then
-	patch_apply kernel32-Misalign_Workaround/0001-kernel32-Fill-stack-with-meaningful-values-in-call_p.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Fill stack with meaningful values in call_process_entry mis-align workaround.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-MoveFile
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4244,9 +4214,6 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 fi
 
 # Patchset kernel32-PE_Loader_Fixes
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-Misalign_Workaround
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42125] Various PE loader fixes for 8k demos
@@ -4591,21 +4558,6 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcr120-_SetWinRTOutOfMemoryExceptionCallback
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45394] Add stub for _SetWinRTOutOfMemoryExceptionCallback
-# |
-# | Modified files:
-# |   *	dlls/msvcr120/msvcr120.spec, dlls/msvcr120_app/msvcr120_app.spec, dlls/msvcrt/misc.c
-# |
-if test "$enable_msvcr120__SetWinRTOutOfMemoryExceptionCallback" -eq 1; then
-	patch_apply msvcr120-_SetWinRTOutOfMemoryExceptionCallback/0001-msvcr120-Add-stub-for-_SetWinRTOutOfMemoryExceptionC.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "msvcr120: Add stub for _SetWinRTOutOfMemoryExceptionCallback.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5310,12 +5262,10 @@ fi
 # |   *	dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress_Tests/0001-ntdll-tests-Tests-for-RtlIpv6StringToAddress-try-6.patch
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
 	(
-		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddress.", 6 },';
 		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
@@ -5508,7 +5458,6 @@ fi
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
 	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
-	patch_apply ntoskrnl-Stubs/0007-ntoskrnl.exe-Improve-KeInitializeTimerEx-stub.patch
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
@@ -5517,7 +5466,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeTimerEx stub.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';

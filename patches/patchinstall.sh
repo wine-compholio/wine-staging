@@ -8330,10 +8330,13 @@ fi
 # |   *	[#39402] Use ffmpeg 4.x to convert WMA format
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/xaudio2_0/Makefile.in, dlls/xaudio2_1/Makefile.in, dlls/xaudio2_2/Makefile.in,
-# | 	dlls/xaudio2_3/Makefile.in, dlls/xaudio2_4/Makefile.in, dlls/xaudio2_5/Makefile.in, dlls/xaudio2_6/Makefile.in,
-# | 	dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h, dlls/xaudio2_8/Makefile.in,
-# | 	dlls/xaudio2_9/Makefile.in, include/config.h.in, include/mmreg.h
+# |   *	configure.ac, dlls/x3daudio1_0/Makefile.in, dlls/x3daudio1_1/Makefile.in, dlls/x3daudio1_2/Makefile.in,
+# | 	dlls/x3daudio1_3/Makefile.in, dlls/x3daudio1_4/Makefile.in, dlls/x3daudio1_5/Makefile.in, dlls/x3daudio1_6/Makefile.in,
+# | 	dlls/x3daudio1_7/Makefile.in, dlls/xapofx1_1/Makefile.in, dlls/xapofx1_2/Makefile.in, dlls/xapofx1_3/Makefile.in,
+# | 	dlls/xapofx1_4/Makefile.in, dlls/xapofx1_5/Makefile.in, dlls/xaudio2_0/Makefile.in, dlls/xaudio2_1/Makefile.in,
+# | 	dlls/xaudio2_2/Makefile.in, dlls/xaudio2_3/Makefile.in, dlls/xaudio2_4/Makefile.in, dlls/xaudio2_5/Makefile.in,
+# | 	dlls/xaudio2_6/Makefile.in, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h,
+# | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/mmreg.h
 # |
 if test "$enable_xaudio2_7_WMA_support" -eq 1; then
 	patch_apply xaudio2_7-WMA_support/0001-xaudio2-Use-ffmpeg-to-convert-WMA-formats.patch

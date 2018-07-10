@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8ef224fa43869a8c977921d6bec08863382d6e11"
+	echo "3d5d8903b89803f5b2ec12a2d20ae9a171047fdc"
 }
 
 # Show version information
@@ -5262,11 +5262,9 @@ fi
 # |   *	dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress_Tests/0002-ntdll-tests-Tests-for-RtlIpv6StringToAddressEx-try-6.patch
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
 	patch_apply ntdll-RtlIpStringToAddress_Tests/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
 	(
-		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv6StringToAddressEx.", 6 },';
 		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
 	) >> "$patchlist"

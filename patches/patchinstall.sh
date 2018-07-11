@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_ddraw_Fix_Typos="$1"
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
+	enable_ddraw_Prevent_viewport_crash="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
@@ -579,6 +580,9 @@ patch_enable ()
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
+			;;
+		ddraw-Prevent_viewport_crash)
+			enable_ddraw_Prevent_viewport_crash="$2"
 			;;
 		ddraw-Rendering_Targets)
 			enable_ddraw_Rendering_Targets="$2"
@@ -3497,6 +3501,21 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Allow size and format conversions in IDirect3DTexture2::Load.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirect3DTexture2::Load.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Prevent_viewport_crash
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36763] Prevent division by zero in viewport_activate
+# |
+# | Modified files:
+# |   *	dlls/ddraw/viewport.c
+# |
+if test "$enable_ddraw_Prevent_viewport_crash" -eq 1; then
+	patch_apply ddraw-Prevent_viewport_crash/0001-ddraw-Prevent-division-by-zero-in-viewport_acti.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "ddraw: Prevent division by zero in viewport_activate.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3d5d8903b89803f5b2ec12a2d20ae9a171047fdc"
+	echo "acb879c9d2feae69e8b5b1ede28523a29aef1b89"
 }
 
 # Show version information
@@ -234,7 +234,6 @@ patch_enable_all ()
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
-	enable_ntdll_RtlIpStringToAddress_Tests="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
@@ -877,9 +876,6 @@ patch_enable ()
 			;;
 		ntdll-RtlGetUnloadEventTraceEx)
 			enable_ntdll_RtlGetUnloadEventTraceEx="$2"
-			;;
-		ntdll-RtlIpStringToAddress_Tests)
-			enable_ntdll_RtlIpStringToAddress_Tests="$2"
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
@@ -2080,13 +2076,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 fi
 
-if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
-	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
-		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlIpStringToAddress_Tests depends on that."
-	fi
-	enable_ntdll_RtlQueryPackageIdentity=1
-fi
-
 if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
 		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlGetUnloadEventTraceEx depends on that."
@@ -2512,19 +2501,15 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c, dlls/winspool.drv/info.c, dlls/winspool.drv/winspool.drv.spec,
-# | 	include/winperf.h, include/winreg.h, loader/wine.inf.in
+# | 	loader/wine.inf.in
 # |
 if test "$enable_advapi32_Performance_Counters" -eq 1; then
-	patch_apply advapi32-Performance_Counters/0001-advapi32-tests-Add-more-tests-for-performance-counte.patch
-	patch_apply advapi32-Performance_Counters/0002-include-Add-more-definitions-for-performance-counter.patch
 	patch_apply advapi32-Performance_Counters/0003-advapi32-Add-initial-support-for-querying-performanc.patch
 	patch_apply advapi32-Performance_Counters/0004-winspool.drv-Add-performance-counters-service-stubs.patch
 	patch_apply advapi32-Performance_Counters/0005-advapi32-Performance-providers-Open-expects-to-see-t.patch
 	patch_apply advapi32-Performance_Counters/0006-advapi32-If-the-query-is-not-specified-the-default-q.patch
 	patch_apply advapi32-Performance_Counters/0007-advapi32-Read-the-configured-object-list-for-the-per.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32/tests: Add more tests for performance counters.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Add more definitions for performance counters.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Add initial support for querying performance counters data.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "winspool.drv: Add performance counters service stubs.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Performance providers'\'' Open() expects to see the configured name as its parameter.", 1 },';
@@ -2747,10 +2732,8 @@ fi
 # |   *	dlls/browseui/browseui.rc, dlls/browseui/progressdlg.c, dlls/browseui/resids.h
 # |
 if test "$enable_browseui_Progress_Dialog" -eq 1; then
-	patch_apply browseui-Progress_Dialog/0001-browseui-Implement-IProgressDialog-SetAnimation.patch
 	patch_apply browseui-Progress_Dialog/0002-browseui-Implement-PROGDLG_AUTOTIME-flag-for-IProgre.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "browseui: Implement IProgressDialog::SetAnimation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5275,23 +5258,6 @@ if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 	patch_apply ntdll-RtlGetUnloadEventTraceEx/0001-ntdll-Add-stub-for-RtlGetUnloadEventTraceEx.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlGetUnloadEventTraceEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlIpStringToAddress_Tests
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-RtlQueryPackageIdentity
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_RtlIpStringToAddress_Tests" -eq 1; then
-	patch_apply ntdll-RtlIpStringToAddress_Tests/0003-ntdll-tests-Tests-for-RtlIpv4StringToAddressEx-try-5.patch
-	patch_apply ntdll-RtlIpStringToAddress_Tests/0004-ntdll-tests-Add-tests-for-RtlIpv6AddressToString-and.patch
-	(
-		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Tests for RtlIpv4StringToAddressEx (try 5, resend).", 1 },';
-		printf '%s\n' '+    { "Mark Jansen", "ntdll/tests: Add tests for RtlIpv6AddressToString and RtlIpv6AddressToStringEx.", 1 },';
 	) >> "$patchlist"
 fi
 

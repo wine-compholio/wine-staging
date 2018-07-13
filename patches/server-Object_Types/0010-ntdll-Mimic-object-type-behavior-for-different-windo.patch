@@ -1,7 +1,8 @@
-From c157e1ed4e1a3f373471bb49f1a8c536ea0ce2cc Mon Sep 17 00:00:00 2001
+From f3f0a7694d6b6d130f569cad2f7ffc0681d9c425 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 8 Mar 2017 19:39:29 +0100
-Subject: ntdll: Mimic object type behavior for different windows versions.
+Subject: [PATCH] ntdll: Mimic object type behavior for different windows
+ versions.
 
 ---
  dlls/ntdll/nt.c       | 17 ++++++++++++--
@@ -10,12 +11,12 @@ Subject: ntdll: Mimic object type behavior for different windows versions.
  3 files changed, 83 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 211b67f98b..1dd890c4bd 100644
+index b382a48..f059c9f 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
-@@ -70,6 +70,19 @@
- 
- WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+@@ -127,6 +127,19 @@ struct smbios_chassis {
+ #define FIRM 0x4649524D
+ #define RSMB 0x52534D42
  
 +static DWORD translate_object_index(DWORD index)
 +{
@@ -33,7 +34,7 @@ index 211b67f98b..1dd890c4bd 100644
  /*
   *	Token
   */
-@@ -2280,7 +2293,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2645,7 +2658,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
                          shi->Handle[i].OwnerPid     = info[i].owner;
                          shi->Handle[i].HandleValue  = info[i].handle;
                          shi->Handle[i].AccessMask   = info[i].access;
@@ -42,7 +43,7 @@ index 211b67f98b..1dd890c4bd 100644
                          /* FIXME: Fill out HandleFlags, ObjectPointer */
                      }
                  }
-@@ -2332,7 +2345,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2697,7 +2710,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
                          shi->Handle[i].UniqueProcessId = info[i].owner;
                          shi->Handle[i].HandleValue     = info[i].handle;
                          shi->Handle[i].GrantedAccess   = info[i].access;
@@ -52,7 +53,7 @@ index 211b67f98b..1dd890c4bd 100644
                      }
                  }
 diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
-index 8f54d4f49f..92fc654448 100644
+index 629f785..060b502 100644
 --- a/dlls/ntdll/om.c
 +++ b/dlls/ntdll/om.c
 @@ -186,7 +186,10 @@ NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
@@ -68,7 +69,7 @@ index 8f54d4f49f..92fc654448 100644
                  }
              }
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index 02d83016e2..84b783b80a 100644
+index efe7d3b..be137b8 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
 @@ -69,6 +69,7 @@ static NTSTATUS (WINAPI *pNtWaitForKeyedEvent)( HANDLE, const void *, BOOLEAN, c
@@ -79,7 +80,7 @@ index 02d83016e2..84b783b80a 100644
  
  #define KEYEDEVENT_WAIT       0x0001
  #define KEYEDEVENT_WAKE       0x0002
-@@ -1539,13 +1540,31 @@ static void test_query_object(void)
+@@ -1542,13 +1543,31 @@ static void test_query_object(void)
      pRtlFreeUnicodeString( &session );
  }
  
@@ -112,7 +113,7 @@ index 02d83016e2..84b783b80a 100644
  
      buffer = HeapAlloc( GetProcessHeap(), 0, sizeof(OBJECT_TYPES_INFORMATION) );
      ok( buffer != NULL, "Failed to allocate memory\n" );
-@@ -1573,11 +1592,54 @@ static void test_query_object_types(void)
+@@ -1576,11 +1595,54 @@ static void test_query_object_types(void)
              ok( type->TypeName.Length == sizeof(typeW) && !strncmpW(typeW, type->TypeName.Buffer, 4),
                  "Expected 'Type' as first type, got %s\n", wine_dbgstr_us(&type->TypeName) );
          }
@@ -167,7 +168,7 @@ index 02d83016e2..84b783b80a 100644
  }
  
  static void test_type_mismatch(void)
-@@ -2084,6 +2146,7 @@ START_TEST(om)
+@@ -2087,6 +2149,7 @@ START_TEST(om)
      pNtReleaseKeyedEvent    =  (void *)GetProcAddress(hntdll, "NtReleaseKeyedEvent");
      pNtCreateIoCompletion   =  (void *)GetProcAddress(hntdll, "NtCreateIoCompletion");
      pNtOpenIoCompletion     =  (void *)GetProcAddress(hntdll, "NtOpenIoCompletion");
@@ -176,5 +177,5 @@ index 02d83016e2..84b783b80a 100644
      test_case_sensitive();
      test_namespace_pipe();
 -- 
-2.11.0
+1.9.1
 

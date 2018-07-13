@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "acb879c9d2feae69e8b5b1ede28523a29aef1b89"
+	echo "053a7e225c8190fd7416b3f3c3186f1ac230eeb3"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 3.12"
+	echo "Wine Staging 3.13 (Unreleased)"
 	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
 	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
 	echo ""
@@ -89,7 +89,6 @@ patch_enable_all ()
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_Performance_Counters="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_advapi32_WinBuiltinAnyPackageSid="$1"
@@ -318,7 +317,6 @@ patch_enable_all ()
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
 	enable_uianimation_stubs="$1"
-	enable_user_exe16_DlgDirList="$1"
 	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
@@ -441,9 +439,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-Performance_Counters)
-			enable_advapi32_Performance_Counters="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -1128,9 +1123,6 @@ patch_enable ()
 			;;
 		uianimation-stubs)
 			enable_uianimation_stubs="$2"
-			;;
-		user.exe16-DlgDirList)
-			enable_user_exe16_DlgDirList="$2"
 			;;
 		user32-Auto_Radio_Button)
 			enable_user32_Auto_Radio_Button="$2"
@@ -2491,30 +2483,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		printf '%s\n' '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-Performance_Counters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33037] Add support for querying performance counters data
-# |
-# | Modified files:
-# |   *	dlls/advapi32/registry.c, dlls/advapi32/tests/registry.c, dlls/winspool.drv/info.c, dlls/winspool.drv/winspool.drv.spec,
-# | 	loader/wine.inf.in
-# |
-if test "$enable_advapi32_Performance_Counters" -eq 1; then
-	patch_apply advapi32-Performance_Counters/0003-advapi32-Add-initial-support-for-querying-performanc.patch
-	patch_apply advapi32-Performance_Counters/0004-winspool.drv-Add-performance-counters-service-stubs.patch
-	patch_apply advapi32-Performance_Counters/0005-advapi32-Performance-providers-Open-expects-to-see-t.patch
-	patch_apply advapi32-Performance_Counters/0006-advapi32-If-the-query-is-not-specified-the-default-q.patch
-	patch_apply advapi32-Performance_Counters/0007-advapi32-Read-the-configured-object-list-for-the-per.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Add initial support for querying performance counters data.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "winspool.drv: Add performance counters service stubs.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Performance providers'\'' Open() expects to see the configured name as its parameter.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: If the query is not specified the default query is \"Global\".", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: Read the configured object list for the performance provider.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6631,21 +6599,6 @@ if test "$enable_uianimation_stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Louis Lenders", "uianimation.idl: Add more interfaces.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user.exe16-DlgDirList
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18734] Fix handling of DDL_DRIVES flag in user.exe16.DlgDirList
-# |
-# | Modified files:
-# |   *	dlls/user.exe16/dialog.c
-# |
-if test "$enable_user_exe16_DlgDirList" -eq 1; then
-	patch_apply user.exe16-DlgDirList/0001-user.exe16-Fix-handling-of-DDL_DRIVES-flag-in-DlgDir.patch
-	(
-		printf '%s\n' '+    { "Alex Villacís Lasso", "user.exe16: Fix handling of DDL_DRIVES flag in DlgDirList.", 1 },';
 	) >> "$patchlist"
 fi
 

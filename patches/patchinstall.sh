@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "414fe80aebe3850fd016da5cb883f4bfeab1c543"
+	echo "adb926d5a5032130d55e4d39316efdb11cc1fe1d"
 }
 
 # Show version information
@@ -151,7 +151,6 @@ patch_enable_all ()
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
-	enable_gdi32_GetCharacterPlacement="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_Path_Metafile="$1"
@@ -625,9 +624,6 @@ patch_enable ()
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
-			;;
-		gdi32-GetCharacterPlacement)
-			enable_gdi32_GetCharacterPlacement="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -3776,21 +3772,6 @@ if test "$enable_fsutil_Stub_Program" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdi32-GetCharacterPlacement
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42669] Treat lpResults as optional in gdi32.GetCharacterPlacement
-# |
-# | Modified files:
-# |   *	dlls/gdi32/font.c, dlls/gdi32/tests/font.c
-# |
-if test "$enable_gdi32_GetCharacterPlacement" -eq 1; then
-	patch_apply gdi32-GetCharacterPlacement/0001-gdi32-Treat-lpResults-as-optional-in-GetCharacterPla.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "gdi32: Treat lpResults as optional in GetCharacterPlacement.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdi32-Lazy_Font_Initialization
 # |
 # | Modified files:
@@ -4065,10 +4046,6 @@ if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
 fi
 
 # Patchset kernel32-Debugger
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35928] Crash handlers/debuggers fail to display user-interface when invoked for crashing (non-interactive) service
-# | 	processes (inherited Wine service window station/desktop)
 # |
 # | Modified files:
 # |   *	dlls/kernel32/except.c

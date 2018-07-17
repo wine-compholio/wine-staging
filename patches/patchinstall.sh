@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "adb926d5a5032130d55e4d39316efdb11cc1fe1d"
+	echo "b03718f09cfad27335b9c13f5eb1152a4794f4b3"
 }
 
 # Show version information
@@ -7698,24 +7698,21 @@ fi
 
 # Patchset winepulse-PulseAudio_Support
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37042] Implement exclusive mode in PulseAudio backend
-# |
 # | Modified files:
-# |   *	dlls/mmdevapi/tests/render.c, dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
+# |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
 # |
 if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 	patch_apply winepulse-PulseAudio_Support/0001-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
-	patch_apply winepulse-PulseAudio_Support/0002-winepulse-expose-audio-devices-directly-to-programs.patch
-	patch_apply winepulse-PulseAudio_Support/0003-winepulse-implement-exclusive-mode.patch
+	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Don-t-rely-on-pulseaudio-callbacks-for-tim.patch
+	patch_apply winepulse-PulseAudio_Support/0003-winepulse-expose-audio-devices-directly-to-programs.patch
 	patch_apply winepulse-PulseAudio_Support/0004-winepulse-fix-segfault-in-pulse_rd_loop.patch
 	patch_apply winepulse-PulseAudio_Support/0005-winepulse-implement-GetPropValue.patch
 	patch_apply winepulse-PulseAudio_Support/0006-winepulse-fetch-actual-program-name-if-possible.patch
 	patch_apply winepulse-PulseAudio_Support/0007-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
+		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t rely on pulseaudio callbacks for timing.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Expose audio devices directly to programs.", 1 },';
-		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Implement exclusive mode.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fix segfault in pulse_rd_loop.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Implement GetPropValue.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fetch actual program name if possible.", 1 },';

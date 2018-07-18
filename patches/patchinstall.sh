@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b03718f09cfad27335b9c13f5eb1152a4794f4b3"
+	echo "d265dd88cd93ce6ffe56c9cfd640b064d7c14e29"
 }
 
 # Show version information
@@ -2677,12 +2677,12 @@ fi
 # |   *	[#45312] Fix issue for Assassin's Creed : Syndicate
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, include/bcrypt.h
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, include/bcrypt.h
 # |
 if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
-	patch_apply bcrypt-BCryptGenerateKeyPair/0001-Add-support-for-bcrypt-algorithm-ECDH-P256.-Necessar.patch
-	patch_apply bcrypt-BCryptGenerateKeyPair/0002-Add-support-for-bcrypt-function-BCryptGenerateKeyPai.patch
-	patch_apply bcrypt-BCryptGenerateKeyPair/0003-Add-support-for-bcrypt-function-BCryptFinalizeKeyPai.patch
+	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Add-support-for-algorithm-ECDH-P256.patch
+	patch_apply bcrypt-BCryptGenerateKeyPair/0002-bcrypt-Add-BCryptGenerateKeyPair-stub.patch
+	patch_apply bcrypt-BCryptGenerateKeyPair/0003-bcrypt-Add-BCryptFinalizeKeyPair-stub.patch
 	(
 		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add support for algorithm ECDH P256.", 1 },';
 		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptGenerateKeyPair stub.", 1 },';
@@ -5481,11 +5481,9 @@ fi
 # |
 if test "$enable_ole32_STGPROP" -eq 1; then
 	patch_apply ole32-STGPROP/0001-ole32-Correctly-parse-unicode-property-storage-dicti.patch
-	patch_apply ole32-STGPROP/0002-ole32-Support-reading-VT_BOOL-VT_R8-and-VT_I8-into-p.patch
 	patch_apply ole32-STGPROP/0003-ole32-Implement-returning-a-name-in-IEnumSTATPROPSTG.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ole32: Correctly parse unicode property storage dictionaries.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ole32: Support reading VT_BOOL, VT_R8 and VT_I8 into propery storage.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ole32: Implement returning a name in IEnumSTATPROPSTG.", 1 },';
 	) >> "$patchlist"
 fi

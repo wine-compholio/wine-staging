@@ -1,0 +1,289 @@
+From 6a63336af94902ddc0d71d23d8e1e84260a71716 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Sat, 28 Jul 2018 10:49:59 +1000
+Subject: [PATCH] kernel32: Add AttachConsole implementation
+
+---
+ dlls/kernel32/console.c       |  19 ++++-
+ dlls/kernel32/tests/console.c | 131 +++++++++++++++++++++++++++++++---
+ server/console.c              |  43 +++++++++++
+ server/protocol.def           |  10 +++
+ 4 files changed, 193 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/kernel32/console.c b/dlls/kernel32/console.c
+index 51061de922..1637a879dc 100644
+--- a/dlls/kernel32/console.c
++++ b/dlls/kernel32/console.c
+@@ -2909,8 +2909,23 @@ BOOL WINAPI ScrollConsoleScreenBufferW(HANDLE hConsoleOutput, LPSMALL_RECT lpScr
+  */
+ BOOL WINAPI AttachConsole(DWORD dwProcessId)
+ {
+-    FIXME("stub %x\n",dwProcessId);
+-    return TRUE;
++    BOOL ret;
++
++    TRACE("(%x)\n", dwProcessId);
++
++    SERVER_START_REQ( attach_console )
++    {
++        req->pid = dwProcessId;
++        ret = !wine_server_call_err( req );
++        if (ret)
++        {
++            SetStdHandle(STD_INPUT_HANDLE,  wine_server_ptr_handle(reply->std_in));
++            SetStdHandle(STD_OUTPUT_HANDLE, wine_server_ptr_handle(reply->std_out));
++            SetStdHandle(STD_ERROR_HANDLE,  wine_server_ptr_handle(reply->std_err));
++        }
++    }
++    SERVER_END_REQ;
++    return ret;
+ }
+ 
+ /******************************************************************
+diff --git a/dlls/kernel32/tests/console.c b/dlls/kernel32/tests/console.c
+index ac77ab76b0..acd61d078b 100644
+--- a/dlls/kernel32/tests/console.c
++++ b/dlls/kernel32/tests/console.c
+@@ -208,19 +208,29 @@ static void testEmptyWrite(HANDLE hCon)
+     okCURSOR(hCon, c);
+ }
+ 
+-static void testWriteSimple(HANDLE hCon)
++static void simple_write_console(HANDLE console, const char *text)
+ {
+-    COORD		c;
+-    DWORD		len;
+-    const char*		mytest = "abcdefg";
+-    const int	mylen = strlen(mytest);
++    DWORD len;
++    COORD c = {0, 0};
++    BOOL ret;
+ 
+     /* single line write */
+     c.X = c.Y = 0;
+-    ok(SetConsoleCursorPosition(hCon, c) != 0, "Cursor in upper-left\n");
++    ok(SetConsoleCursorPosition(console, c) != 0, "Cursor in upper-left\n");
++
++    ret = WriteConsoleA(console, text, strlen(text), &len, NULL);
++    ok(ret, "WriteConsoleA failed: %u\n", GetLastError());
++    ok(len == strlen(text), "unexpected len %u\n", len);
++}
++
++static void testWriteSimple(HANDLE hCon)
++{
++    const char*	mytest = "abcdefg";
++    int mylen = strlen(mytest);
++    COORD c = {0, 0};
++
++    simple_write_console(hCon, mytest);
+ 
+-    ok(WriteConsoleA(hCon, mytest, mylen, &len, NULL) != 0 && len == mylen, "WriteConsole\n");
+-    c.Y = 0;
+     for (c.X = 0; c.X < mylen; c.X++)
+     {
+         okCHAR(hCon, c, mytest[c.X], TEST_ATTRIB);
+@@ -3019,6 +3029,98 @@ static void test_GetConsoleScreenBufferInfoEx(HANDLE std_output)
+     ok(GetLastError() == 0xdeadbeef, "got %u, expected 0xdeadbeef\n", GetLastError());
+ }
+ 
++static void test_AttachConsole_child(DWORD console_pid)
++{
++    HANDLE pipe_in, pipe_out;
++    COORD c = {0,0};
++    HANDLE console;
++    char buf[32];
++    DWORD len;
++    BOOL res;
++
++    res = CreatePipe(&pipe_in, &pipe_out, NULL, 0);
++    ok(res, "CreatePipe failed: %u\n", GetLastError());
++
++    res = AttachConsole(console_pid);
++    ok(!res && GetLastError() == ERROR_ACCESS_DENIED,
++       "AttachConsole returned: %x(%u)\n", res, GetLastError());
++
++    res = FreeConsole();
++    ok(res, "FreeConsole failed: %u\n", GetLastError());
++
++    SetStdHandle(STD_ERROR_HANDLE, pipe_out);
++
++    res = AttachConsole(console_pid);
++    ok(res, "AttachConsole failed: %u\n", GetLastError());
++
++    ok(pipe_out != GetStdHandle(STD_ERROR_HANDLE), "std handle not set to console\n");
++
++    console = CreateFileA("CONOUT$", GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
++    ok(console != INVALID_HANDLE_VALUE, "Could not open console\n");
++
++    res = ReadConsoleOutputCharacterA(console, buf, 6, c, &len);
++    ok(res, "ReadConsoleOutputCharacterA failed: %u\n", GetLastError());
++    ok(len == 6, "len = %u\n", len);
++    ok(!memcmp(buf, "Parent", 6), "Unexpected console output\n");
++
++    res = FreeConsole();
++    ok(res, "FreeConsole failed: %u\n", GetLastError());
++
++    SetStdHandle(STD_INPUT_HANDLE, pipe_in);
++    SetStdHandle(STD_OUTPUT_HANDLE, pipe_out);
++
++    res = AttachConsole(ATTACH_PARENT_PROCESS);
++    ok(res, "AttachConsole failed: %u\n", GetLastError());
++
++    ok(pipe_in != GetStdHandle(STD_INPUT_HANDLE), "std handle not set to console\n");
++    ok(pipe_out != GetStdHandle(STD_OUTPUT_HANDLE), "std handle not set to console\n");
++
++    console = CreateFileA("CONOUT$", GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
++    ok(console != INVALID_HANDLE_VALUE, "Could not open console\n");
++
++    res = ReadConsoleOutputCharacterA(console, buf, 6, c, &len);
++    ok(res, "ReadConsoleOutputCharacterA failed: %u\n", GetLastError());
++    ok(len == 6, "len = %u\n", len);
++    ok(!memcmp(buf, "Parent", 6), "Unexpected console output\n");
++
++    simple_write_console(console, "Child");
++    CloseHandle(console);
++
++    res = FreeConsole();
++    ok(res, "FreeConsole failed: %u\n", GetLastError());
++
++    res = CloseHandle(pipe_in);
++    ok(res, "pipe_in is no longer valid\n");
++    res = CloseHandle(pipe_out);
++    ok(res, "pipe_out is no longer valid\n");
++}
++
++static void test_AttachConsole(HANDLE console)
++{
++    STARTUPINFOA si = { sizeof(si) };
++    PROCESS_INFORMATION info;
++    char **argv, buf[MAX_PATH];
++    COORD c = {0,0};
++    DWORD len;
++    BOOL res;
++
++    simple_write_console(console, "Parent console");
++
++    winetest_get_mainargs(&argv);
++    sprintf(buf, "\"%s\" console attach_console %x", argv[0], GetCurrentProcessId());
++    res = CreateProcessA(NULL, buf, NULL, NULL, TRUE, 0, NULL, NULL, &si, &info);
++    ok(res, "CreateProcess failed: %u\n", GetLastError());
++    CloseHandle(info.hThread);
++
++    winetest_wait_child_process(info.hProcess);
++    CloseHandle(info.hProcess);
++
++    res = ReadConsoleOutputCharacterA(console, buf, 5, c, &len);
++    ok(res, "ReadConsoleOutputCharacterA failed: %u\n", GetLastError());
++    ok(len == 5, "len = %u\n", len);
++    ok(!memcmp(buf, "Child", 5), "Unexpected console output\n");
++}
++
+ START_TEST(console)
+ {
+     static const char font_name[] = "Lucida Console";
+@@ -3030,9 +3132,21 @@ START_TEST(console)
+     char old_font[LF_FACESIZE];
+     BOOL delete = FALSE;
+     DWORD size;
++    char **argv;
++    int argc;
+ 
+     init_function_pointers();
+ 
++    argc = winetest_get_mainargs(&argv);
++
++    if (argc > 3 && !strcmp(argv[2], "attach_console"))
++    {
++        DWORD parent_pid;
++        sscanf(argv[3], "%x", &parent_pid);
++        test_AttachConsole_child(parent_pid);
++        return;
++    }
++
+     /* be sure we have a clean console (and that's our own)
+      * FIXME: this will make the test fail (currently) if we don't run
+      * under X11
+@@ -3170,4 +3284,5 @@ START_TEST(console)
+     test_GetConsoleFontInfo(hConOut);
+     test_SetConsoleFont(hConOut);
+     test_GetConsoleScreenBufferInfoEx(hConOut);
++    test_AttachConsole(hConOut);
+ }
+diff --git a/server/console.c b/server/console.c
+index 51252e973c..a46310bb28 100644
+--- a/server/console.c
++++ b/server/console.c
+@@ -1549,6 +1549,49 @@ DECL_HANDLER(open_console)
+     else if (!get_error()) set_error( STATUS_ACCESS_DENIED );
+ }
+ 
++/* attach to a other process's console */
++DECL_HANDLER(attach_console)
++{
++    struct process *process;
++
++    if (current->process->console)
++    {
++        set_error( STATUS_ACCESS_DENIED );
++        return;
++    }
++
++    process = get_process_from_id( req->pid == ATTACH_PARENT_PROCESS
++                                   ? current->process->parent_id : req->pid );
++    if (!process) return;
++
++    if (process->console && process->console->active )
++    {
++        reply->std_in = alloc_handle( current->process, process->console, GENERIC_READ, 0 );
++        if (!reply->std_in) goto error;
++
++        reply->std_out = alloc_handle( current->process, process->console->active, GENERIC_WRITE, 0 );
++        if (!reply->std_out) goto error;
++
++        reply->std_err = alloc_handle( current->process, process->console->active, GENERIC_WRITE, 0 );
++        if (!reply->std_err) goto error;
++
++        current->process->console = (struct console_input*)grab_object( process->console );
++        current->process->console->num_proc++;
++    }
++    else
++    {
++        set_error( STATUS_INVALID_HANDLE  );
++    }
++
++    release_object( process );
++    return;
++
++error:
++    if (reply->std_in) close_handle( current->process, reply->std_in);
++    if (reply->std_out) close_handle( current->process, reply->std_out);
++    release_object( process );
++}
++
+ /* set info about a console input */
+ DECL_HANDLER(set_console_input_info)
+ {
+diff --git a/server/protocol.def b/server/protocol.def
+index f31557a57c..4cedeb66b4 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -1501,6 +1501,16 @@ struct console_renderer_event
+ @END
+ 
+ 
++/* Attach to a other process's console */
++@REQ(attach_console)
++    process_id_t pid;           /* pid of attached console process */
++@REPLY
++    obj_handle_t std_in;        /* attached stdin */
++    obj_handle_t std_out;       /* attached stdout */
++    obj_handle_t std_err;       /* attached stderr */
++@END
++
++
+ /* Get the input queue wait event */
+ @REQ(get_console_wait_event)
+ @REPLY
+-- 
+2.18.0
+

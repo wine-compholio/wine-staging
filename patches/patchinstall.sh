@@ -163,6 +163,7 @@ patch_enable_all ()
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
+	enable_kernel32_AttachConsole="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
@@ -660,6 +661,9 @@ patch_enable ()
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
+			;;
+		kernel32-AttachConsole)
+			enable_kernel32_AttachConsole="$2"
 			;;
 		kernel32-COMSPEC)
 			enable_kernel32_COMSPEC="$2"
@@ -3963,6 +3967,22 @@ if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-AttachConsole
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41573] AttachConsole implementation.
+# |   *	[#43910] "Battle.net helper.exe" [NOT BLIZZARD APP!] crashes with Win 7 or higher
+# |
+# | Modified files:
+# |   *	dlls/kernel32/console.c, dlls/kernel32/tests/console.c, server/console.c, server/protocol.def
+# |
+if test "$enable_kernel32_AttachConsole" -eq 1; then
+	patch_apply kernel32-AttachConsole/0001-kernel32-Add-AttachConsole-implementation.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "kernel32: Add AttachConsole implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

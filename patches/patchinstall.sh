@@ -5065,14 +5065,17 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31910] Add stub for NtContinue
+# |   *	[#45327] Helps League of Legends anti-cheat engine.
 # |
 # | Modified files:
-# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec
+# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c
 # |
 if test "$enable_ntdll_NtContinue" -eq 1; then
 	patch_apply ntdll-NtContinue/0001-ntdll-Add-stub-for-NtContinue.patch
+	patch_apply ntdll-NtContinue/0002-Use-NtContinue-to-continue-execution-after-exception.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for NtContinue.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "Use NtContinue to continue execution after exceptions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5112,7 +5115,7 @@ fi
 # Patchset ntdll-NtQueryInformationProcess-ProcessCookie
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#45327] Add RtlSetUnhandledExceptionFilter stub
+# |   *	[#45327] Added support ProcessCookie in NtQueryInformationProcess
 # |
 # | Modified files:
 # |   *	dlls/ntdll/process.c

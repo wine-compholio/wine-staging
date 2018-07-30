@@ -5124,7 +5124,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
-# | 	dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
+# | 	dlls/psapi/tests/psapi_main.c, include/winternl.h, server/mapping.c, server/protocol.def
 # |
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0002-ntdll-Split-logic-for-MemoryBasicInformation-into-a-.patch
@@ -5134,6 +5134,7 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
 	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0009-ntdll-Unsupported-stub-for-MemoryWorkingSetExInforma.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
@@ -5142,6 +5143,7 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Unsupported stub for MemoryWorkingSetExInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -235,6 +235,7 @@ patch_enable_all ()
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
+	enable_ntdll_RtlSetUnhandledExceptionFilter="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
 	enable_ntdll_Stack_Guard_Page="$1"
@@ -879,6 +880,9 @@ patch_enable ()
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
+			;;
+		ntdll-RtlSetUnhandledExceptionFilter)
+			enable_ntdll_RtlSetUnhandledExceptionFilter="$2"
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
@@ -5248,6 +5252,21 @@ if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 	patch_apply ntdll-RtlGetUnloadEventTraceEx/0001-ntdll-Add-stub-for-RtlGetUnloadEventTraceEx.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlGetUnloadEventTraceEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlSetUnhandledExceptionFilter
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45327] Add RtlSetUnhandledExceptionFilter stub
+# |
+# | Modified files:
+# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec
+# |
+if test "$enable_ntdll_RtlSetUnhandledExceptionFilter" -eq 1; then
+	patch_apply ntdll-RtlSetUnhandledExceptionFilter/0001-ntdll-Add-RtlSetUnhandledExceptionFilter-stub.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Add RtlSetUnhandledExceptionFilter stub.", 1 },';
 	) >> "$patchlist"
 fi
 

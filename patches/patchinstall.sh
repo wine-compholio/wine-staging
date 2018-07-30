@@ -3986,7 +3986,7 @@ fi
 if test "$enable_kernel32_AttachConsole" -eq 1; then
 	patch_apply kernel32-AttachConsole/0001-kernel32-Add-AttachConsole-implementation.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "kernel32: Add AttachConsole implementation.", 1 },';
+		printf '%s\n' '+    { "Jacek Caban", "kernel32: Add AttachConsole implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

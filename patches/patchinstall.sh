@@ -140,6 +140,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
+	enable_dinput8_shared_code="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -593,6 +594,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dinput8-shared-code)
+			enable_dinput8_shared_code="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3543,6 +3547,21 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput8-shared-code
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45327] Stop access volation in League of Legends
+# |
+# | Modified files:
+# |   *	dlls/dinput/Makefile.in, dlls/dinput/dinput_main.c, dlls/dinput8/Makefile.in, dlls/dinput8/dinput8_main.c
+# |
+if test "$enable_dinput8_shared_code" -eq 1; then
+	patch_apply dinput8-shared-code/0001-dinput8-Use-shared-source-directory.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput8: Use shared source directory.", 1 },';
 	) >> "$patchlist"
 fi
 

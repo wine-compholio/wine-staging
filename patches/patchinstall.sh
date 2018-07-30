@@ -225,6 +225,7 @@ patch_enable_all ()
 	enable_ntdll_NtContinue="$1"
 	enable_ntdll_NtDevicePath="$1"
 	enable_ntdll_NtQueryEaFile="$1"
+	enable_ntdll_NtQueryInformationProcess_ProcessCookie="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -850,6 +851,9 @@ patch_enable ()
 			;;
 		ntdll-NtQueryEaFile)
 			enable_ntdll_NtQueryEaFile="$2"
+			;;
+		ntdll-NtQueryInformationProcess-ProcessCookie)
+			enable_ntdll_NtQueryInformationProcess_ProcessCookie="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -5102,6 +5106,21 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryInformationProcess-ProcessCookie
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45327] Add RtlSetUnhandledExceptionFilter stub
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c
+# |
+if test "$enable_ntdll_NtQueryInformationProcess_ProcessCookie" -eq 1; then
+	patch_apply ntdll-NtQueryInformationProcess-ProcessCookie/0001-ntdll-Stub-for-ProcessCookie-in-NtQueryInformationPr.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Stub for ProcessCookie in NtQueryInformationProcess.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -144,6 +144,7 @@ patch_enable_all ()
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
+	enable_dwrite_layout_check="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
@@ -608,6 +609,9 @@ patch_enable ()
 			;;
 		dsound-Revert_Cleanup)
 			enable_dsound_Revert_Cleanup="$2"
+			;;
+		dwrite-layout-check)
+			enable_dwrite_layout_check="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -3247,7 +3251,7 @@ fi
 if test "$enable_wined3d_DXTn" -eq 1; then
 	patch_apply wined3d-DXTn/0001-wined3d-add-DXTn-support.patch
 	(
-		printf '%s\n' '+    { "Kyle Devir", "wined3d: Add DXTn support.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Add DXTn support.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3273,7 +3277,7 @@ fi
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
 	(
-		printf '%s\n' '+    { "Kyle Devir", "d3dx9_36: Add DXTn support.", 1 },';
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add DXTn support.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3655,6 +3659,21 @@ if test "$enable_dsound_EAX" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dwrite-layout-check
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45535] - dwrite Correct out of access
+# |
+# | Modified files:
+# |   *	dlls/dwrite/layout.c
+# |
+if test "$enable_dwrite_layout_check" -eq 1; then
+	patch_apply dwrite-layout-check/0001-dwrite-Avoid-possible-out-of-bounds-cluster-metrics-.patch
+	(
+		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Avoid possible out-of-bounds cluster metrics access.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -396,6 +396,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
+	enable_winex11_compile_vulkan="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
@@ -1366,6 +1367,9 @@ patch_enable ()
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
+			;;
+		winex11-compile-vulkan)
+			enable_winex11_compile_vulkan="$2"
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
@@ -8017,6 +8021,22 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-compile-vulkan
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45554] - Correct compile error with gcc 4.5
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/tests/info.c, dlls/winex11.drv/vulkan.c, include/wine/server_protocol.h,
+# | 	server/request.h, server/trace.c
+# |
+if test "$enable_winex11_compile_vulkan" -eq 1; then
+	patch_apply winex11-compile-vulkan/0001-winex11.drv-Correct-bBuild-fail-with-GCC-4.5.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "winex11.drv: Correct bBuild fail with GCC 4.5.", 1 },';
 	) >> "$patchlist"
 fi
 

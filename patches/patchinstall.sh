@@ -189,6 +189,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
+	enable_ml_array_size="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -746,6 +747,9 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
+			;;
+		ml-array_size)
+			enable_ml_array_size="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -2317,6 +2321,13 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	enable_server_Misc_ACL=1
 fi
 
+if test "$enable_Compiler_Warnings" -eq 1; then
+	if test "$enable_ml_array_size" -gt 1; then
+		abort "Patchset ml-array_size disabled, but Compiler_Warnings depends on that."
+	fi
+	enable_ml_array_size=1
+fi
+
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2333,7 +2344,157 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
+# Patchset ml-array_size
+# |
+# | Modified files:
+# |   *	dlls/amstream/main.c, dlls/amstream/tests/amstream.c, dlls/browseui/progressdlg.c, dlls/d3d10/effect.c,
+# | 	dlls/d3d8/device.c, dlls/d3dcompiler_43/compiler.c, dlls/d3dcompiler_43/utils.c, dlls/d3dxof/main.c,
+# | 	dlls/dnsapi/query.c, dlls/dpnet/address.c, dlls/dx8vb/main.c, dlls/dxdiagn/provider.c, dlls/evr/main.c,
+# | 	dlls/fusion/asmcache.c, dlls/fusion/fusion.c, dlls/gameux/gameexplorer.c, dlls/hhctrl.ocx/chm.c, dlls/hhctrl.ocx/help.c,
+# | 	dlls/inetcomm/mimeole.c, dlls/inetcomm/protocol.c, dlls/inetcpl.cpl/connections.c, dlls/inetcpl.cpl/general.c,
+# | 	dlls/inetcpl.cpl/security.c, dlls/inetmib1/main.c, dlls/iphlpapi/iphlpapi_main.c, dlls/iphlpapi/ipstats.c,
+# | 	dlls/itss/moniker.c, dlls/itss/protocol.c, dlls/kernel32/computername.c, dlls/kernel32/console.c, dlls/kernel32/file.c,
+# | 	dlls/kernel32/lcformat.c, dlls/kernel32/locale.c, dlls/kernel32/module.c, dlls/kernel32/path.c, dlls/kernel32/process.c,
+# | 	dlls/kernel32/profile.c, dlls/kernel32/sync.c, dlls/kernel32/term.c, dlls/kernel32/volume.c, dlls/krnl386.exe16/int21.c,
+# | 	dlls/krnl386.exe16/interrupts.c, dlls/krnl386.exe16/relay.c, dlls/krnl386.exe16/snoop.c, dlls/krnl386.exe16/vxd.c,
+# | 	dlls/localspl/localmon.c, dlls/localspl/provider.c, dlls/localui/localui.c, dlls/mapi32/sendmail.c, dlls/mapi32/util.c,
+# | 	dlls/mciwave/mciwave.c, dlls/midimap/midimap.c, dlls/mmdevapi/devenum.c, dlls/mmdevapi/main.c,
+# | 	dlls/mountmgr.sys/device.c, dlls/mpr/wnet.c, dlls/msacm32/filter.c, dlls/msacm32/format.c, dlls/msacm32/internal.c,
+# | 	dlls/msacm32/pcmconverter.c, dlls/msacm32/tests/msacm.c, dlls/mscms/profile.c, dlls/mscoree/config.c,
+# | 	dlls/mscoree/corruntimehost.c, dlls/mscoree/mscoree_main.c, dlls/msctf/documentmgr.c, dlls/msrle32/msrle32.c,
+# | 	dlls/msscript.ocx/msscript.c, dlls/msvcrt/console.c, dlls/msvcrt/ctype.c, dlls/msvcrt/errno.c, dlls/msvcrt/except.c,
+# | 	dlls/msvcrt/exit.c, dlls/msvcrt/file.c, dlls/msvcrt/locale.c, dlls/msvcrt/printf.h, dlls/msvcrt/process.c,
+# | 	dlls/msvcrt/scheduler.c, dlls/msvcrt/wcs.c, dlls/msvideo.dll16/msvideo16.c, dlls/scrobj/scrobj.c,
+# | 	dlls/storage.dll16/storage.c, dlls/urlmon/urlmon_main.c, dlls/windowscodecs/bitmap.c, dlls/windowscodecs/bmpencode.c,
+# | 	dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/metadataquery.c, dlls/windowscodecs/pngformat.c,
+# | 	dlls/windowscodecs/tiffformat.c, include/wine/server_protocol.h, programs/attrib/attrib.c, programs/clock/main.c,
+# | 	programs/clock/winclock.c, programs/hostname/hostname.c, programs/icinfo/icinfo.c, programs/ipconfig/ipconfig.c,
+# | 	programs/msiexec/msiexec.c, programs/net/net.c, programs/taskkill/taskkill.c, programs/taskmgr/about.c,
+# | 	programs/taskmgr/affinity.c, programs/taskmgr/applpage.c, programs/taskmgr/column.c, programs/taskmgr/dbgchnl.c,
+# | 	programs/taskmgr/debug.c, programs/taskmgr/endproc.c, programs/taskmgr/perfdata.c, programs/taskmgr/perfpage.c,
+# | 	programs/taskmgr/priority.c, programs/taskmgr/procpage.c, programs/taskmgr/taskmgr.c, programs/taskmgr/trayicon.c,
+# | 	programs/uninstaller/main.c, programs/wineboot/wineboot.c, programs/winetest/gui.c, programs/winetest/main.c,
+# | 	programs/wordpad/wordpad.c, server/request.h, server/trace.c
+# |
+if test "$enable_ml_array_size" -eq 1; then
+	patch_apply ml-array_size/0001-windowscodecs-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0003-localspl-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0004-mmdevapi-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0005-mapi32-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0006-krnl386.exe16-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0007-inetcpl.cpl-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0008-hhctrl.ocx-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0009-dpnet-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0010-dx8vb-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0011-fusion-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0012-evr-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0013-d3d10-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0014-d3d8-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0015-d3dcompiler-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0016-d3dxof-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0017-dnsapi-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0019-amstream-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0020-browseui-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0021-gameux-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0022-inetcomm-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0023-iphlpapi-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0024-itss-Remove-a-superfluous-variable-initialization.patch
+	patch_apply ml-array_size/0025-itss-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0026-attrib-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0027-clock-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0028-hostname-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0029-icinfo-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0030-net-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0031-taskkill-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0032-ipconfig-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0033-msiexec-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0034-taskmgr-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0035-uninstaller-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0036-wineboot-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0037-wordpad-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0038-winetest-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0039-mountmgr.sys-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0040-mpr-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0041-msacm32-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0042-msrle32-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0043-msvcrt-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0044-scrobj-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0045-storage.dll16-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0046-urlmon-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0047-msvideo.dll16-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0048-mscoree-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0049-dxdiagn-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0050-localui-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0051-inetmib1-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0052-kernel32-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0053-mciwave-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0054-midimap-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0055-mscms-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0056-msctf-Use-the-ARRAY_SIZE-macro.patch
+	patch_apply ml-array_size/0057-msscript.ocx-Use-the-ARRAY_SIZE-macro.patch
+	(
+		printf '%s\n' '+    { "Michael Stefaniuc", "windowscodecs: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "localspl: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mmdevapi: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mapi32: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "krnl386.exe16: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "inetcpl.cpl: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "hhctrl.ocx: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dpnet: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dx8vb: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "fusion: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "evr: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "d3d10: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "d3d8: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "d3dcompiler: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "d3dxof: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dnsapi: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "amstream: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "browseui: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "gameux: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "inetcomm: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "iphlpapi: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "itss: Remove a superfluous variable initialization.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "itss: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "attrib: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "clock: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "hostname: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "icinfo: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "net: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "taskkill: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "ipconfig: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msiexec: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "taskmgr: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "uninstaller: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "wineboot: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "wordpad: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "winetest: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mountmgr.sys: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mpr: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msacm32: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msrle32: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msvcrt: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "scrobj: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "storage.dll16: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "urlmon: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msvideo.dll16: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mscoree: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dxdiagn: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "localui: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "inetmib1: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "kernel32: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mciwave: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "midimap: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "mscms: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msctf: Use the ARRAY_SIZE() macro.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "msscript.ocx: Use the ARRAY_SIZE() macro.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset Compiler_Warnings
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ml-array_size
 # |
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
@@ -5536,7 +5697,7 @@ fi
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings
+# |   *	ml-array_size, Compiler_Warnings
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
@@ -7748,7 +7909,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, ml-array_size, Compiler_Warnings, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
@@ -8030,8 +8191,7 @@ fi
 # |   *	[#45554] - Correct compile error with gcc 4.5
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/tests/info.c, dlls/winex11.drv/vulkan.c, include/wine/server_protocol.h,
-# | 	server/request.h, server/trace.c
+# |   *	dlls/winex11.drv/vulkan.c
 # |
 if test "$enable_winex11_compile_vulkan" -eq 1; then
 	patch_apply winex11-compile-vulkan/0001-winex11.drv-Correct-bBuild-fail-with-GCC-4.5.patch

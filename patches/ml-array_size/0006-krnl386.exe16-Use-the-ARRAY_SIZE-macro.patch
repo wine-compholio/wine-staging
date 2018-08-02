@@ -1,0 +1,126 @@
+From d66b0e6cc5066669c5e856d4627af51f7004fead Mon Sep 17 00:00:00 2001
+From: Michael Stefaniuc <mstefani@winehq.org>
+Date: Fri, 20 Jul 2018 18:21:27 +0200
+Subject: [PATCH] krnl386.exe16: Use the ARRAY_SIZE() macro
+
+Signed-off-by: Michael Stefaniuc <mstefani@winehq.org>
+---
+ dlls/krnl386.exe16/int21.c      | 6 +++---
+ dlls/krnl386.exe16/interrupts.c | 4 ++--
+ dlls/krnl386.exe16/relay.c      | 4 ++--
+ dlls/krnl386.exe16/snoop.c      | 4 ++--
+ dlls/krnl386.exe16/vxd.c        | 6 +++---
+ 5 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/krnl386.exe16/int21.c b/dlls/krnl386.exe16/int21.c
+index f32b1a767c..f5b257b6d7 100644
+--- a/dlls/krnl386.exe16/int21.c
++++ b/dlls/krnl386.exe16/int21.c
+@@ -814,8 +814,8 @@ static HANDLE INT21_CreateMagicDeviceHandle( LPCWSTR name )
+         return 0;
+     }
+     memcpy( nameW.Buffer, prefixW, sizeof(prefixW) );
+-    MultiByteToWideChar( CP_UNIXCP, 0, dir, -1, nameW.Buffer + sizeof(prefixW)/sizeof(WCHAR), len );
+-    len += sizeof(prefixW) / sizeof(WCHAR);
++    MultiByteToWideChar( CP_UNIXCP, 0, dir, -1, nameW.Buffer + ARRAY_SIZE(prefixW), len );
++    len += ARRAY_SIZE(prefixW);
+     nameW.Buffer[len-1] = '/';
+     strcpyW( nameW.Buffer + len, name );
+ 
+@@ -3264,7 +3264,7 @@ static BOOL INT21_NetworkFunc (CONTEXT *context)
+     case 0x00: /* Get machine name. */
+         {
+             WCHAR dstW[MAX_COMPUTERNAME_LENGTH + 1];
+-            DWORD s = sizeof(dstW) / sizeof(WCHAR);
++            DWORD s = ARRAY_SIZE(dstW);
+             int len;
+ 
+             char *dst = CTX_SEG_OFF_TO_LIN (context,context->SegDs,context->Edx);
+diff --git a/dlls/krnl386.exe16/interrupts.c b/dlls/krnl386.exe16/interrupts.c
+index e1b01b7b3d..c4448c6d00 100644
+--- a/dlls/krnl386.exe16/interrupts.c
++++ b/dlls/krnl386.exe16/interrupts.c
+@@ -103,7 +103,7 @@ static void WINAPI DOSVM_DefaultHandler( CONTEXT *context )
+  */
+ static INTPROC DOSVM_GetBuiltinHandler( BYTE intnum )
+ {
+-    if (intnum < sizeof(DOSVM_VectorsBuiltin)/sizeof(INTPROC)) {
++    if (intnum < ARRAY_SIZE(DOSVM_VectorsBuiltin)) {
+         INTPROC proc = DOSVM_VectorsBuiltin[intnum];
+         if (proc)
+             return proc;
+@@ -274,7 +274,7 @@ BOOL DOSVM_EmulateInterruptPM( CONTEXT *context, BYTE intnum )
+     else if (wine_ldt_is_system(context->SegCs))
+     {
+         INTPROC proc;
+-        if (intnum >= sizeof(DOSVM_VectorsBuiltin)/sizeof(INTPROC)) return FALSE;
++        if (intnum >= ARRAY_SIZE(DOSVM_VectorsBuiltin)) return FALSE;
+         if (!(proc = DOSVM_VectorsBuiltin[intnum])) return FALSE;
+         proc( context );
+     }
+diff --git a/dlls/krnl386.exe16/relay.c b/dlls/krnl386.exe16/relay.c
+index f1fbc57a0f..264ba2c589 100644
+--- a/dlls/krnl386.exe16/relay.c
++++ b/dlls/krnl386.exe16/relay.c
+@@ -345,7 +345,7 @@ static int relay_call_from_16_no_debug( void *entry_point, unsigned char *args16
+     int args32[20];
+ 
+     /* look for the ret instruction */
+-    for (j = 0; j < sizeof(call->ret)/sizeof(call->ret[0]); j++)
++    for (j = 0; j < ARRAY_SIZE(call->ret); j++)
+         if (call->ret[j] == 0xca66 || call->ret[j] == 0xcb66) break;
+ 
+     if (call->ret[j] == 0xcb66)  /* cdecl */
+@@ -449,7 +449,7 @@ int relay_call_from_16( void *entry_point, unsigned char *args16, CONTEXT *conte
+     TRACE( "\1Call %s.%d: %s(", module, ordinal, func );
+ 
+     /* look for the ret instruction */
+-    for (j = 0; j < sizeof(call->ret)/sizeof(call->ret[0]); j++)
++    for (j = 0; j < ARRAY_SIZE(call->ret); j++)
+         if (call->ret[j] == 0xca66 || call->ret[j] == 0xcb66) break;
+ 
+     if (call->ret[j] == 0xcb66)  /* cdecl */
+diff --git a/dlls/krnl386.exe16/snoop.c b/dlls/krnl386.exe16/snoop.c
+index 95a5154a4b..4496080dad 100644
+--- a/dlls/krnl386.exe16/snoop.c
++++ b/dlls/krnl386.exe16/snoop.c
+@@ -262,10 +262,10 @@ static void WINAPI SNOOP16_Entry(FARPROC proc, LPBYTE args, CONTEXT *context) {
+ 		return; /* oops */
+ 	}
+ 	while (*rets) {
+-		for (i=0;i<sizeof((*rets)->entry)/sizeof((*rets)->entry[0]);i++)
++		for (i=0;i<ARRAY_SIZE((*rets)->entry);i++)
+ 			if (!(*rets)->entry[i].origreturn)
+ 				break;
+-		if (i!=sizeof((*rets)->entry)/sizeof((*rets)->entry[0]))
++		if (i!=ARRAY_SIZE((*rets)->entry))
+ 			break;
+ 		rets = &((*rets)->next);
+ 	}
+diff --git a/dlls/krnl386.exe16/vxd.c b/dlls/krnl386.exe16/vxd.c
+index dc14600f5d..e103b96bb9 100644
+--- a/dlls/krnl386.exe16/vxd.c
++++ b/dlls/krnl386.exe16/vxd.c
+@@ -129,8 +129,8 @@ static HANDLE open_vxd_handle( LPCWSTR name )
+         return 0;
+     }
+     memcpy( nameW.Buffer, prefixW, sizeof(prefixW) );
+-    MultiByteToWideChar( CP_UNIXCP, 0, dir, -1, nameW.Buffer + sizeof(prefixW)/sizeof(WCHAR), len );
+-    len += sizeof(prefixW) / sizeof(WCHAR);
++    MultiByteToWideChar( CP_UNIXCP, 0, dir, -1, nameW.Buffer + ARRAY_SIZE(prefixW), len );
++    len += ARRAY_SIZE(prefixW);
+     nameW.Buffer[len-1] = '/';
+     strcpyW( nameW.Buffer + len, name );
+ 
+@@ -201,7 +201,7 @@ HANDLE __wine_vxd_open( LPCWSTR filenameW, DWORD access, SECURITY_ATTRIBUTES *sa
+ 
+     /* normalize the filename */
+ 
+-    if (strlenW( filenameW ) >= sizeof(name)/sizeof(WCHAR) - 4 ||
++    if (strlenW( filenameW ) >= ARRAY_SIZE(name) - 4 ||
+         strchrW( filenameW, '/' ) || strchrW( filenameW, '\\' ))
+     {
+         SetLastError( ERROR_FILE_NOT_FOUND );
+-- 
+2.14.4
+

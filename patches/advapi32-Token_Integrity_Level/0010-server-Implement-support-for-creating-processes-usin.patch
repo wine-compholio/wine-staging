@@ -1,4 +1,4 @@
-From 23181e8cbe07ac0fd3b6effd04624122a6b0024f Mon Sep 17 00:00:00 2001
+From b534f2d905c3ba205c9a4f895149e6be8425b31e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 6 Aug 2017 02:08:05 +0200
 Subject: [PATCH] server: Implement support for creating processes using a
@@ -15,10 +15,10 @@ Subject: [PATCH] server: Implement support for creating processes using a
  7 files changed, 59 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index f9606be..c0b89f9 100644
+index e270ca7..633065b 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -2034,7 +2034,7 @@ static NTSTATUS create_struct_sd(PSECURITY_DESCRIPTOR nt_sd, struct security_des
+@@ -2036,7 +2036,7 @@ static NTSTATUS create_struct_sd(PSECURITY_DESCRIPTOR nt_sd, struct security_des
   * Create a new process. If hFile is a valid handle we have an exe
   * file, otherwise it is a Winelib app.
   */
@@ -27,7 +27,7 @@ index f9606be..c0b89f9 100644
                              LPCWSTR cur_dir, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                              BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
                              LPPROCESS_INFORMATION info, LPCSTR unixdir,
-@@ -2180,6 +2180,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -2182,6 +2182,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
          req->info_size      = startup_info_size;
          req->env_size       = (env_end - env) * sizeof(WCHAR);
          req->process_sd_size = process_sd_size;
@@ -35,7 +35,7 @@ index f9606be..c0b89f9 100644
  
          wine_server_add_data( req, startup_info, startup_info_size );
          wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
-@@ -2280,7 +2281,7 @@ error:
+@@ -2282,7 +2283,7 @@ error:
   *
   * Create a new VDM process for a 16-bit or DOS application.
   */
@@ -44,7 +44,7 @@ index f9606be..c0b89f9 100644
                                  LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                                  BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
                                  LPPROCESS_INFORMATION info, LPCSTR unixdir,
-@@ -2304,7 +2305,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
+@@ -2306,7 +2307,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
          return FALSE;
      }
      sprintfW(new_cmd_line, argsW, winevdmW, buffer, cmd_line);
@@ -53,7 +53,7 @@ index f9606be..c0b89f9 100644
                            flags, startup, info, unixdir, binary_info, exec_only );
      HeapFree( GetProcessHeap(), 0, new_cmd_line );
      return ret;
-@@ -2316,7 +2317,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
+@@ -2318,7 +2319,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
   *
   * Create a new cmd shell process for a .BAT file.
   */
@@ -62,7 +62,7 @@ index f9606be..c0b89f9 100644
                                  LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                                  BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
                                  LPPROCESS_INFORMATION info )
-@@ -2344,8 +2345,8 @@ static BOOL create_cmd_process( LPCWSTR filename, LPWSTR cmd_line, LPVOID env, L
+@@ -2346,8 +2347,8 @@ static BOOL create_cmd_process( LPCWSTR filename, LPWSTR cmd_line, LPVOID env, L
      strcatW( newcmdline, quotW );
      strcatW( newcmdline, cmd_line );
      strcatW( newcmdline, quotW );
@@ -73,7 +73,7 @@ index f9606be..c0b89f9 100644
      HeapFree( GetProcessHeap(), 0, newcmdline );
      return ret;
  }
-@@ -2455,7 +2456,9 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2457,7 +2458,9 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
  
      TRACE("app %s cmdline %s\n", debugstr_w(app_name), debugstr_w(cmd_line) );
  
@@ -83,8 +83,8 @@ index f9606be..c0b89f9 100644
 +
      if (new_token) FIXME("No support for returning created process token\n");
  
-     if (!(tidy_cmdline = get_file_name( app_name, cmd_line, name, sizeof(name)/sizeof(WCHAR),
-@@ -2513,20 +2516,20 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+     if (!(tidy_cmdline = get_file_name( app_name, cmd_line, name, ARRAY_SIZE( name ),
+@@ -2515,20 +2518,20 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                 debugstr_w(name), (binary_info.flags & BINARY_FLAG_64BIT) ? 64 : 32,
                 wine_dbgstr_longlong(binary_info.res_start), wine_dbgstr_longlong(binary_info.res_end),
                 binary_info.arch, (binary_info.flags & BINARY_FLAG_FAKEDLL) ? ", fakedll" : "" );
@@ -108,7 +108,7 @@ index f9606be..c0b89f9 100644
                                 inherit, flags, startup_info, info, unixdir, &binary_info, FALSE );
          break;
      case BINARY_UNKNOWN:
-@@ -2538,7 +2541,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2540,7 +2543,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                  TRACE( "starting %s as DOS binary\n", debugstr_w(name) );
                  binary_info.type = BINARY_DOS;
                  binary_info.arch = IMAGE_FILE_MACHINE_I386;
@@ -117,7 +117,7 @@ index f9606be..c0b89f9 100644
                                             inherit, flags, startup_info, info, unixdir,
                                             &binary_info, FALSE );
                  break;
-@@ -2546,7 +2549,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2548,7 +2551,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
              if (!strcmpiW( p, batW ) || !strcmpiW( p, cmdW ) )
              {
                  TRACE( "starting %s as batch binary\n", debugstr_w(name) );
@@ -126,7 +126,7 @@ index f9606be..c0b89f9 100644
                                             inherit, flags, startup_info, info );
                  break;
              }
-@@ -2666,12 +2669,12 @@ static void exec_process( LPCWSTR name )
+@@ -2668,12 +2671,12 @@ static void exec_process( LPCWSTR name )
                 debugstr_w(name), (binary_info.flags & BINARY_FLAG_64BIT) ? 64 : 32,
                 wine_dbgstr_longlong(binary_info.res_start), wine_dbgstr_longlong(binary_info.res_end),
                 binary_info.arch );
@@ -141,7 +141,7 @@ index f9606be..c0b89f9 100644
                          FALSE, 0, &startup_info, &info, NULL, &binary_info, TRUE );
          break;
      case BINARY_UNKNOWN:
-@@ -2685,7 +2688,7 @@ static void exec_process( LPCWSTR name )
+@@ -2687,7 +2690,7 @@ static void exec_process( LPCWSTR name )
      case BINARY_WIN16:
      case BINARY_DOS:
          TRACE( "starting %s as Win16/DOS binary\n", debugstr_w(name) );
@@ -248,7 +248,7 @@ index 78e88ec..313c36a 100644
  extern struct thread *get_process_first_thread( struct process *process );
  extern struct process *get_process_from_id( process_id_t id );
 diff --git a/server/protocol.def b/server/protocol.def
-index 5fb6e38..f0bc83b 100644
+index b29df0a..95a120e 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -748,6 +748,7 @@ struct rawinput_device

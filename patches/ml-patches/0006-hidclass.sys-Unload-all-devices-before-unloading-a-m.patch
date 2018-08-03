@@ -1,0 +1,155 @@
+From c6c0b64be4f8505a769aa08dca8fa3078831aed5 Mon Sep 17 00:00:00 2001
+From: Aric Stewart <aric@codeweavers.com>
+Date: Tue, 24 Jul 2018 08:16:45 -0500
+Subject: [PATCH 06/24] hidclass.sys: Unload all devices before unloading a
+ minidriver
+
+Signed-off-by: Aric Stewart <aric@codeweavers.com>
+---
+ dlls/hidclass.sys/hid.h  |  8 ++++++++
+ dlls/hidclass.sys/main.c |  8 ++++++++
+ dlls/hidclass.sys/pnp.c  | 35 +++++++++++++++++++++++++++++++----
+ 3 files changed, 47 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/hidclass.sys/hid.h b/dlls/hidclass.sys/hid.h
+index 1829319..4e8ba3c 100644
+--- a/dlls/hidclass.sys/hid.h
++++ b/dlls/hidclass.sys/hid.h
+@@ -70,6 +70,12 @@ void RingBuffer_Destroy(struct ReportRingBuffer *buffer) DECLSPEC_HIDDEN;
+ struct ReportRingBuffer* RingBuffer_Create(UINT buffer_size) DECLSPEC_HIDDEN;
+ NTSTATUS RingBuffer_SetSize(struct ReportRingBuffer *buffer, UINT size) DECLSPEC_HIDDEN;
+ 
++typedef struct _hiddevice
++{
++    struct list entry;
++    DEVICE_OBJECT *device;
++} hid_device;
++
+ typedef struct _minidriver
+ {
+     struct list entry;
+@@ -80,6 +86,7 @@ typedef struct _minidriver
+ 
+     pAddDevice AddDevice;
+     PDRIVER_DISPATCH PNPDispatch;
++    struct list device_list;
+ } minidriver;
+ 
+ NTSTATUS call_minidriver(ULONG code, DEVICE_OBJECT *device, void *in_buff, ULONG in_size, void *out_buff, ULONG out_size) DECLSPEC_HIDDEN;
+@@ -100,6 +107,7 @@ NTSTATUS WINAPI HID_PNP_Dispatch(DEVICE_OBJECT *device, IRP *irp) DECLSPEC_HIDDE
+ 
+ /* Pseudo-Plug and Play support*/
+ NTSTATUS WINAPI PNP_AddDevice(DRIVER_OBJECT *driver, DEVICE_OBJECT* PDO) DECLSPEC_HIDDEN;
++NTSTATUS PNP_RemoveDevice(minidriver *minidriver, DEVICE_OBJECT* device, IRP* irp) DECLSPEC_HIDDEN;
+ 
+ /* Parsing HID Report Descriptors into preparsed data */
+ WINE_HIDP_PREPARSED_DATA* ParseDescriptor(BYTE *descriptor, unsigned int length) DECLSPEC_HIDDEN;
+diff --git a/dlls/hidclass.sys/main.c b/dlls/hidclass.sys/main.c
+index 1742cfe..8bb423b 100644
+--- a/dlls/hidclass.sys/main.c
++++ b/dlls/hidclass.sys/main.c
+@@ -49,6 +49,12 @@ static VOID WINAPI UnloadDriver(DRIVER_OBJECT *driver)
+     md = find_minidriver(driver);
+     if (md)
+     {
++        hid_device *device, *next;
++        TRACE("%i devices to unload\n", list_count(&md->device_list));
++        LIST_FOR_EACH_ENTRY_SAFE(device, next, &md->device_list, hid_device, entry)
++        {
++            PNP_RemoveDevice(md, device->device, NULL);
++        }
+         if (md->DriverUnload)
+             md->DriverUnload(md->minidriver.DriverObject);
+         list_remove(&md->entry);
+@@ -82,6 +88,8 @@ NTSTATUS WINAPI HidRegisterMinidriver(HID_MINIDRIVER_REGISTRATION *registration)
+     driver->minidriver = *registration;
+     list_add_tail(&minidriver_list, &driver->entry);
+ 
++    list_init(&driver->device_list);
++
+     return STATUS_SUCCESS;
+ }
+ 
+diff --git a/dlls/hidclass.sys/pnp.c b/dlls/hidclass.sys/pnp.c
+index 30d1045..c501a74 100644
+--- a/dlls/hidclass.sys/pnp.c
++++ b/dlls/hidclass.sys/pnp.c
+@@ -75,6 +75,7 @@ static NTSTATUS get_device_id(DEVICE_OBJECT *device, BUS_QUERY_ID_TYPE type, WCH
+ 
+ NTSTATUS WINAPI PNP_AddDevice(DRIVER_OBJECT *driver, DEVICE_OBJECT *PDO)
+ {
++    hid_device *hiddev;
+     DEVICE_OBJECT *device = NULL;
+     NTSTATUS status;
+     minidriver *minidriver;
+@@ -96,13 +97,19 @@ NTSTATUS WINAPI PNP_AddDevice(DRIVER_OBJECT *driver, DEVICE_OBJECT *PDO)
+     TRACE("PDO add device(%p:%s)\n", PDO, debugstr_w(PDO_id));
+     minidriver = find_minidriver(driver);
+ 
+-    status = HID_CreateDevice(PDO, &minidriver->minidriver, &device);
++    hiddev = HeapAlloc(GetProcessHeap(), 0, sizeof(*hiddev));
++    if (!hiddev)
++        return STATUS_NO_MEMORY;
++
++    status = HID_CreateDevice(PDO, &minidriver->minidriver, &hiddev->device);
+     if (status != STATUS_SUCCESS)
+     {
+         ERR("Failed to create HID object (%x)\n",status);
+         HeapFree(GetProcessHeap(), 0, PDO_id);
++        HeapFree(GetProcessHeap(), 0, hiddev);
+         return status;
+     }
++    device = hiddev->device;
+ 
+     ext = device->DeviceExtension;
+     InitializeListHead(&ext->irp_queue);
+@@ -177,6 +184,8 @@ NTSTATUS WINAPI PNP_AddDevice(DRIVER_OBJECT *driver, DEVICE_OBJECT *PDO)
+         return STATUS_NOT_SUPPORTED;
+     }
+ 
++    list_add_tail(&(minidriver->device_list), &hiddev->entry);
++
+     ext->information.DescriptorSize = ext->preparseData->dwSize;
+ 
+     lstrcpyW(ext->instance_id, device_enumeratorW);
+@@ -200,6 +209,26 @@ NTSTATUS WINAPI PNP_AddDevice(DRIVER_OBJECT *driver, DEVICE_OBJECT *PDO)
+     return STATUS_SUCCESS;
+ }
+ 
++NTSTATUS PNP_RemoveDevice(minidriver *minidriver, DEVICE_OBJECT *device, IRP* irp)
++{
++    hid_device *hiddev;
++    NTSTATUS rc = STATUS_NOT_SUPPORTED;
++
++    if (irp)
++        rc = minidriver->PNPDispatch(device, irp);
++    HID_DeleteDevice(&minidriver->minidriver, device);
++    LIST_FOR_EACH_ENTRY(hiddev, &minidriver->device_list, hid_device, entry)
++    {
++        if (hiddev->device == device)
++        {
++            list_remove(&hiddev->entry);
++            HeapFree(GetProcessHeap(), 0, hiddev);
++            break;
++        }
++    }
++    return rc;
++}
++
+ NTSTATUS WINAPI HID_PNP_Dispatch(DEVICE_OBJECT *device, IRP *irp)
+ {
+     NTSTATUS rc = STATUS_NOT_SUPPORTED;
+@@ -255,9 +284,7 @@ NTSTATUS WINAPI HID_PNP_Dispatch(DEVICE_OBJECT *device, IRP *irp)
+         }
+         case IRP_MN_REMOVE_DEVICE:
+         {
+-            rc = minidriver->PNPDispatch(device, irp);
+-            HID_DeleteDevice(&minidriver->minidriver, device);
+-            return rc;
++            return PNP_RemoveDevice(minidriver, device, irp);
+         }
+         default:
+         {
+-- 
+1.9.1
+

@@ -190,6 +190,7 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
 	enable_ml_array_size="$1"
+	enable_ml_patches="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -750,6 +751,9 @@ patch_enable ()
 			;;
 		ml-array_size)
 			enable_ml_array_size="$2"
+			;;
+		ml-patches)
+			enable_ml_patches="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -2325,7 +2329,11 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	if test "$enable_ml_array_size" -gt 1; then
 		abort "Patchset ml-array_size disabled, but Compiler_Warnings depends on that."
 	fi
+	if test "$enable_ml_patches" -gt 1; then
+		abort "Patchset ml-patches disabled, but Compiler_Warnings depends on that."
+	fi
 	enable_ml_array_size=1
+	enable_ml_patches=1
 fi
 
 
@@ -2491,10 +2499,87 @@ if test "$enable_ml_array_size" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ml-patches
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/api-ms-win-devices-config-l1-1-0/Makefile.in, dlls/api-ms-win-devices-config-l1-1-0/api-
+# | 	ms-win-devices-config-l1-1-0.spec, dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/d3dcompiler_43/utils.c,
+# | 	dlls/ddraw/tests/ddraw7.c, dlls/dsound/sound3d.c, dlls/hidclass.sys/hid.h, dlls/hidclass.sys/main.c,
+# | 	dlls/hidclass.sys/pnp.c, dlls/kernel32/file.c, dlls/kernel32/path.c, dlls/kernel32/process.c, dlls/mpr/tests/mpr.c,
+# | 	dlls/mpr/wnet.c, dlls/msi/custom.c, dlls/msvcp60/ios.c, dlls/msvcp90/ios.c, dlls/ntoskrnl.exe/instr.c,
+# | 	dlls/odbc32/odbc32.spec, dlls/odbc32/proxyodbc.c, dlls/wbemprox/builtin.c, dlls/winebus.sys/bus.h,
+# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
+# | 	dlls/wined3d/utils.c, dlls/winevulkan/make_vulkan, dlls/winevulkan/vulkan.c, dlls/winevulkan/winevulkan.spec,
+# | 	dlls/winmm/tests/wave.c, dlls/winmm/waveform.c, dlls/wmp/player.c, dlls/wmp/tests/oleobj.c, libs/wine/loader.c,
+# | 	loader/wine.inf.in, programs/cmd/tests/test_builtins.cmd, programs/cmd/tests/test_builtins.cmd.exp,
+# | 	programs/cmd/wcmdmain.c, programs/msiexec/msiexec.c, programs/winecfg/resource.h, programs/winecfg/theme.c,
+# | 	programs/winecfg/winecfg.rc, programs/winemenubuilder/winemenubuilder.c, server/file.c, tools/make_specfiles
+# |
+if test "$enable_ml_patches" -eq 1; then
+	patch_apply ml-patches/0001-wined3d-Fix-WINED3D_MCS_COLOR2.patch
+	patch_apply ml-patches/0002-d3d9-tests-Add-a-test-for-D3DMCS_COLOR-1-2.patch
+	patch_apply ml-patches/0003-d3d8-tests-Add-a-test-for-D3DMCS_COLOR-1-2.patch
+	patch_apply ml-patches/0004-ddraw-tests-Add-a-test-for-D3DMCS_COLOR-1-2.patch
+	patch_apply ml-patches/0005-dsound-Correctly-calculate-angle-between-vectors-wit.patch
+	patch_apply ml-patches/0006-hidclass.sys-Unload-all-devices-before-unloading-a-m.patch
+	patch_apply ml-patches/0007-wine.inf-Add-Sources-key.patch
+	patch_apply ml-patches/0008-programs-Allow-to-disable-MIME-type-associations.patch
+	patch_apply ml-patches/0009-api-ms-win-devices-config-l1-1-0-Add-dll.patch
+	patch_apply ml-patches/0010-wnet-Make-WNetGetUniversalNameW-return-required-size.patch
+	patch_apply ml-patches/0011-msvcp90-Fix-EOF-delimiter-handling-in-basic_istream-.patch
+	patch_apply ml-patches/0012-ntoskrnl-Emulate-sti-cli-instructions-on-x86_64.patch
+	patch_apply ml-patches/0013-winebus.sys-Do-not-report-HID-report-read-errors-unc.patch
+	patch_apply ml-patches/0014-odbc32-Rename-functions-to-avoid-conflicts-with-nati.patch
+	patch_apply ml-patches/0015-winmm-Don-t-crash-in-waveOutOpen-when-nSamplesPerSec.patch
+	patch_apply ml-patches/0016-msi-Generate-unique-names-for-32-and-64-bit-custom-a.patch
+	patch_apply ml-patches/0017-winevulkan-Expose-driver-vkGetInstanceProcAddr-via-w.patch
+	patch_apply ml-patches/0018-winevulkan-Mark-ICD-and-thunking-functions-as-privat.patch
+	patch_apply ml-patches/0019-wmp-Make-it-possible-to-query-IUnknown-from-IWMPCont.patch
+	patch_apply ml-patches/0020-libwine-Use-getsegmentdata-3-on-Mac-OS-to-find-the-e.patch
+	patch_apply ml-patches/0021-d3dcompiler-Make-types-array-static-const.patch
+	patch_apply ml-patches/0022-kernel32-Set-environment-variable-PUBLIC-on-the-proc.patch
+	patch_apply ml-patches/0023-wbemprox-Add-Win32_NetworkAdapterConfiguration-IPAdd.patch
+	patch_apply ml-patches/0024-wbemprox-Add-Win32_NetworkAdapterConfiguration-IPSub.patch
+	patch_apply ml-patches/0025-kernel32-Add-support-for-MOVEFILE_WRITE_THROUGH-to-M.patch
+	patch_apply ml-patches/0026-server-Add-support-for-FILE_WRITE_THROUGH-to-create_.patch
+	patch_apply ml-patches/0027-kernel32-Add-support-for-FILE_FLAG_WRITE_THROUGH-to-.patch
+	patch_apply ml-patches/0028-cmd-Handle-quotes-when-parsing-the-folders-in-the-PA.patch
+	(
+		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fix WINED3D_MCS_COLOR2.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "d3d9/tests: Add a test for D3DMCS_COLOR{1/2}.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "d3d8/tests: Add a test for D3DMCS_COLOR{1/2}.", 1 },';
+		printf '%s\n' '+    { "Stefan Dösinger", "ddraw/tests: Add a test for D3DMCS_COLOR{1/2}.", 1 },';
+		printf '%s\n' '+    { "Andrew Eikum", "dsound: Correctly calculate angle between vectors with equal and opposite directions.", 1 },';
+		printf '%s\n' '+    { "Aric Stewart", "hidclass.sys: Unload all devices before unloading a minidriver.", 1 },';
+		printf '%s\n' '+    { "Gijs Vermeulen", "wine.inf: Add \"Sources\" key.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "programs: Allow to disable MIME-type associations.", 1 },';
+		printf '%s\n' '+    { "Andrey Gusev", "api-ms-win-devices-config-l1-1-0: Add dll.", 1 },';
+		printf '%s\n' '+    { "Fabian Maurer", "wnet: Make WNetGetUniversalNameW return required size when buffer is too small and add test.", 1 },';
+		printf '%s\n' '+    { "Piotr Caban", "msvcp90: Fix EOF delimiter handling in basic_istream<char>::ignore.", 1 },';
+		printf '%s\n' '+    { "Fabian Maurer", "ntoskrnl: Emulate sti/cli instructions on x86_64.", 1 },';
+		printf '%s\n' '+    { "Kai Krakow", "winebus.sys: Do not report HID report read errors unconditionally.", 1 },';
+		printf '%s\n' '+    { "Daniel Lehman", "odbc32: Rename functions to avoid conflicts with native drivers.", 1 },';
+		printf '%s\n' '+    { "Fabian Maurer", "winmm: Don'\''t crash in waveOutOpen when nSamplesPerSec is 0 and add tests.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "msi: Generate unique names for 32- and 64-bit custom action server pipes.", 1 },';
+		printf '%s\n' '+    { "Jacek Caban", "winevulkan: Expose driver vkGetInstanceProcAddr via winevulkan exports.", 1 },';
+		printf '%s\n' '+    { "Jacek Caban", "winevulkan: Mark ICD and thunking functions as private.", 1 },';
+		printf '%s\n' '+    { "Nikolay Sivov", "wmp: Make it possible to query IUnknown from IWMPControls.", 1 },';
+		printf '%s\n' '+    { "Chip Davis", "libwine: Use getsegmentdata(3) on Mac OS to find the end of the __TEXT segment.", 1 },';
+		printf '%s\n' '+    { "Matteo Bruni", "d3dcompiler: Make types array static const.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Set environment variable %PUBLIC% on the process start-up.", 1 },';
+		printf '%s\n' '+    { "Piotr Caban", "wbemprox: Add Win32_NetworkAdapterConfiguration::IPAddress property.", 1 },';
+		printf '%s\n' '+    { "Piotr Caban", "wbemprox: Add Win32_NetworkAdapterConfiguration::IPSubnet property.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add support for MOVEFILE_WRITE_THROUGH to MoveFile.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for FILE_WRITE_THROUGH to create_file() request.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add support for FILE_FLAG_WRITE_THROUGH to CreateFile.", 1 },';
+		printf '%s\n' '+    { "Fabian Maurer", "cmd: Handle quotes when parsing the folders in the PATH environment variable.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset Compiler_Warnings
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ml-array_size
+# |   *	ml-array_size, ml-patches
 # |
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
@@ -5697,7 +5782,7 @@ fi
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ml-array_size, Compiler_Warnings
+# |   *	ml-array_size, ml-patches, Compiler_Warnings
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
@@ -7909,7 +7994,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, ml-array_size, Compiler_Warnings, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, ml-array_size, ml-patches, Compiler_Warnings, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

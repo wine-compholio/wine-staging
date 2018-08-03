@@ -1,0 +1,63 @@
+From 47e5c48c7eadb3dd96d5fa3eb130f75f6c371c4b Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <zfigura@codeweavers.com>
+Date: Mon, 30 Jul 2018 14:11:11 -0500
+Subject: [PATCH 16/24] msi: Generate unique names for 32- and 64-bit custom
+ action server pipes.
+
+Signed-off-by: Zebediah Figura <zfigura@codeweavers.com>
+---
+ dlls/msi/custom.c          | 6 ++++--
+ programs/msiexec/msiexec.c | 4 ++--
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/msi/custom.c b/dlls/msi/custom.c
+index 1a8a982..51755f2 100644
+--- a/dlls/msi/custom.c
++++ b/dlls/msi/custom.c
+@@ -590,7 +590,7 @@ UINT CDECL __wine_msi_call_dll_function(const GUID *guid)
+ 
+ static DWORD custom_start_server(MSIPACKAGE *package, DWORD arch)
+ {
+-    static const WCHAR pipe_name[] = {'\\','\\','.','\\','p','i','p','e','\\','m','s','i','c','a','_','%','x',0};
++    static const WCHAR pipe_name[] = {'\\','\\','.','\\','p','i','p','e','\\','m','s','i','c','a','_','%','x','_','%','d',0};
+     static const WCHAR msiexecW[] = {'\\','m','s','i','e','x','e','c','.','e','x','e',0};
+     static const WCHAR argsW[] = {'%','s',' ','-','E','m','b','e','d','d','i','n','g',' ','%','d',0};
+ 
+@@ -606,9 +606,11 @@ static DWORD custom_start_server(MSIPACKAGE *package, DWORD arch)
+         (arch == SCS_64BIT_BINARY && package->custom_server_64_process))
+         return ERROR_SUCCESS;
+ 
+-    sprintfW(buffer, pipe_name, GetCurrentProcessId());
++    sprintfW(buffer, pipe_name, GetCurrentProcessId(), arch == SCS_32BIT_BINARY ? 32 : 64);
+     pipe = CreateNamedPipeW(buffer, PIPE_ACCESS_DUPLEX, 0, 1, sizeof(DWORD64),
+         sizeof(GUID), 0, NULL);
++    if (pipe == INVALID_HANDLE_VALUE)
++        ERR("Failed to create custom action client pipe: %u\n", GetLastError());
+ 
+     if (sizeof(void *) == 8 && arch == SCS_32BIT_BINARY)
+         GetSystemWow64DirectoryW(path, MAX_PATH - sizeof(msiexecW)/sizeof(WCHAR));
+diff --git a/programs/msiexec/msiexec.c b/programs/msiexec/msiexec.c
+index 47cef7e..ead3bfb 100644
+--- a/programs/msiexec/msiexec.c
++++ b/programs/msiexec/msiexec.c
+@@ -406,7 +406,7 @@ static DWORD CALLBACK custom_action_thread(void *arg)
+ 
+ static int custom_action_server(const WCHAR *arg)
+ {
+-    static const WCHAR pipe_name[] = {'\\','\\','.','\\','p','i','p','e','\\','m','s','i','c','a','_','%','x',0};
++    static const WCHAR pipe_name[] = {'\\','\\','.','\\','p','i','p','e','\\','m','s','i','c','a','_','%','x','_','%','d',0};
+     DWORD client_pid = atoiW(arg);
+     DWORD64 thread64;
+     WCHAR buffer[24];
+@@ -423,7 +423,7 @@ static int custom_action_server(const WCHAR *arg)
+         return 1;
+     }
+ 
+-    sprintfW(buffer, pipe_name, client_pid);
++    sprintfW(buffer, pipe_name, client_pid, sizeof(void *) * 8);
+     pipe = CreateFileW(buffer, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+     if (pipe == INVALID_HANDLE_VALUE)
+     {
+-- 
+1.9.1
+

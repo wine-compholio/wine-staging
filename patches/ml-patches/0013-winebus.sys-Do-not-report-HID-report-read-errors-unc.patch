@@ -1,0 +1,198 @@
+From 6b416c0b1c963ced6ec11ccf46b9e99650267297 Mon Sep 17 00:00:00 2001
+From: Kai Krakow <kai@kaishome.de>
+Date: Sat, 28 Jul 2018 10:24:04 +0200
+Subject: [PATCH 13/24] winebus.sys: Do not report HID report read errors
+ unconditionally
+
+Device reports may come in faster than our consumers could possibly read
+them, this is especially true for multi-axis events: When you move a
+stick across its range, it will always generate at least two events, one
+for the x axis, and one for the y axis. This is not really an error
+situation, so let's report this situation only once at most. If we
+already know the multi-event situation, let's skip logging this
+completely: We won't loose any information anyway because the report
+contains a complete device state and only axis positions were updated.
+
+Thus, this commit adds a parameter to process_hid_report() to let it
+know if we are currently processing reports that are known to be sent
+multiple times in sequence (with updated reports).
+
+Also, if our consumers are slow to respond, then report the issue only
+once and not per each occurrence during the duration of one consumer
+read cycle.
+
+Finally, this is not really an error, it's a warning at most, thus
+degrade the error message to a warning to not pollute peoples consoles
+and logs with unimportant stuff.
+
+Especially during gaming I was seeing screens over screens full of only
+this single log message. This commit fixes it.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=43125
+CC: Aric Stewart <aric@codeweavers.com>
+Signed-off-by: Aric Stewart <aric@codeweavers.com>
+Signed-off-by: Kai Krakow <kai@kaishome.de>
+---
+ dlls/winebus.sys/bus.h       |  2 +-
+ dlls/winebus.sys/bus_iohid.c |  2 +-
+ dlls/winebus.sys/bus_sdl.c   | 12 ++++++------
+ dlls/winebus.sys/bus_udev.c  |  4 ++--
+ dlls/winebus.sys/main.c      | 18 +++++++++++++++---
+ 5 files changed, 25 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/winebus.sys/bus.h b/dlls/winebus.sys/bus.h
+index bf93c04..1e2989e 100644
+--- a/dlls/winebus.sys/bus.h
++++ b/dlls/winebus.sys/bus.h
+@@ -45,7 +45,7 @@ DEVICE_OBJECT *bus_create_hid_device(DRIVER_OBJECT *driver, const WCHAR *busidW,
+ DEVICE_OBJECT *bus_find_hid_device(const platform_vtbl *vtbl, void *platform_dev) DECLSPEC_HIDDEN;
+ void bus_remove_hid_device(DEVICE_OBJECT *device) DECLSPEC_HIDDEN;
+ NTSTATUS WINAPI hid_internal_dispatch(DEVICE_OBJECT *device, IRP *irp) DECLSPEC_HIDDEN;
+-void process_hid_report(DEVICE_OBJECT *device, BYTE *report, DWORD length) DECLSPEC_HIDDEN;
++void process_hid_report(DEVICE_OBJECT *device, BYTE *report, DWORD length, BOOL warn_multi_events) DECLSPEC_HIDDEN;
+ DEVICE_OBJECT* bus_enumerate_hid_devices(const platform_vtbl *vtbl, enum_func function, void* context) DECLSPEC_HIDDEN;
+ 
+ /* General Bus Functions */
+diff --git a/dlls/winebus.sys/bus_iohid.c b/dlls/winebus.sys/bus_iohid.c
+index 501a40d..74e5d82 100644
+--- a/dlls/winebus.sys/bus_iohid.c
++++ b/dlls/winebus.sys/bus_iohid.c
+@@ -135,7 +135,7 @@ static void handle_IOHIDDeviceIOHIDReportCallback(void *context,
+         uint32_t reportID, uint8_t *report, CFIndex report_length)
+ {
+     DEVICE_OBJECT *device = (DEVICE_OBJECT*)context;
+-    process_hid_report(device, report, report_length);
++    process_hid_report(device, report, report_length, TRUE);
+ }
+ 
+ static int compare_platform_device(DEVICE_OBJECT *device, void *platform_dev)
+diff --git a/dlls/winebus.sys/bus_sdl.c b/dlls/winebus.sys/bus_sdl.c
+index 159727f..99a206c 100644
+--- a/dlls/winebus.sys/bus_sdl.c
++++ b/dlls/winebus.sys/bus_sdl.c
+@@ -683,7 +683,7 @@ static BOOL set_report_from_event(SDL_Event *event)
+ 
+             set_button_value(ie->button, ie->state, private->report_buffer);
+ 
+-            process_hid_report(device, private->report_buffer, private->buffer_length);
++            process_hid_report(device, private->report_buffer, private->buffer_length, TRUE);
+             break;
+         }
+         case SDL_JOYAXISMOTION:
+@@ -693,7 +693,7 @@ static BOOL set_report_from_event(SDL_Event *event)
+             if (ie->axis < 6)
+             {
+                 set_axis_value(private, ie->axis, ie->value);
+-                process_hid_report(device, private->report_buffer, private->buffer_length);
++                process_hid_report(device, private->report_buffer, private->buffer_length, FALSE);
+             }
+             break;
+         }
+@@ -702,7 +702,7 @@ static BOOL set_report_from_event(SDL_Event *event)
+             SDL_JoyBallEvent *ie = &event->jball;
+ 
+             set_ball_value(private, ie->ball, ie->xrel, ie->yrel);
+-            process_hid_report(device, private->report_buffer, private->buffer_length);
++            process_hid_report(device, private->report_buffer, private->buffer_length, FALSE);
+             break;
+         }
+         case SDL_JOYHATMOTION:
+@@ -710,7 +710,7 @@ static BOOL set_report_from_event(SDL_Event *event)
+             SDL_JoyHatEvent *ie = &event->jhat;
+ 
+             set_hat_value(private, ie->hat, ie->value);
+-            process_hid_report(device, private->report_buffer, private->buffer_length);
++            process_hid_report(device, private->report_buffer, private->buffer_length, TRUE);
+             break;
+         }
+         default:
+@@ -765,7 +765,7 @@ static BOOL set_mapped_report_from_event(SDL_Event *event)
+             if (usage >= 0)
+             {
+                 set_button_value(usage, ie->state, private->report_buffer);
+-                process_hid_report(device, private->report_buffer, private->buffer_length);
++                process_hid_report(device, private->report_buffer, private->buffer_length, TRUE);
+             }
+             break;
+         }
+@@ -774,7 +774,7 @@ static BOOL set_mapped_report_from_event(SDL_Event *event)
+             SDL_ControllerAxisEvent *ie = &event->caxis;
+ 
+             set_axis_value(private, ie->axis, ie->value);
+-            process_hid_report(device, private->report_buffer, private->buffer_length);
++            process_hid_report(device, private->report_buffer, private->buffer_length, FALSE);
+             break;
+         }
+         default:
+diff --git a/dlls/winebus.sys/bus_udev.c b/dlls/winebus.sys/bus_udev.c
+index d34e18c..47b9758 100644
+--- a/dlls/winebus.sys/bus_udev.c
++++ b/dlls/winebus.sys/bus_udev.c
+@@ -768,7 +768,7 @@ static DWORD CALLBACK device_report_thread(void *args)
+         else if (size == 0)
+             TRACE_(hid_report)("Failed to read report\n");
+         else
+-            process_hid_report(device, report_buffer, size);
++            process_hid_report(device, report_buffer, size, TRUE);
+     }
+     return 0;
+ }
+@@ -979,7 +979,7 @@ static DWORD CALLBACK lnxev_device_report_thread(void *args)
+         else if (size == 0)
+             TRACE_(hid_report)("Failed to read report\n");
+         else if (set_report_from_event(private, &ie))
+-            process_hid_report(device, private->current_report_buffer, private->buffer_length);
++            process_hid_report(device, private->current_report_buffer, private->buffer_length, TRUE);
+     }
+     return 0;
+ }
+diff --git a/dlls/winebus.sys/main.c b/dlls/winebus.sys/main.c
+index 2f3c05a..624ddd5 100644
+--- a/dlls/winebus.sys/main.c
++++ b/dlls/winebus.sys/main.c
+@@ -614,11 +614,12 @@ NTSTATUS WINAPI hid_internal_dispatch(DEVICE_OBJECT *device, IRP *irp)
+     return status;
+ }
+ 
+-void process_hid_report(DEVICE_OBJECT *device, BYTE *report, DWORD length)
++void process_hid_report(DEVICE_OBJECT *device, BYTE *report, DWORD length, BOOL warn_multi_events)
+ {
+     struct device_extension *ext = (struct device_extension*)device->DeviceExtension;
+     IRP *irp;
+     LIST_ENTRY *entry;
++    static int overwrite_reported;
+ 
+     if (!length || !report)
+         return;
+@@ -641,8 +642,18 @@ void process_hid_report(DEVICE_OBJECT *device, BYTE *report, DWORD length)
+             ext->buffer_size = length;
+     }
+ 
+-    if (!ext->last_report_read)
+-        ERR_(hid_report)("Device reports coming in too fast, last report not read yet!\n");
++    /*
++     * Device reports may come in faster than our consumers could possibly
++     * read them, this is especially true for multi-axis events: When you move
++     * a stick across its range, it will always generate at least two events,
++     * one for the x axis, and one for the y axis. This is not really an error
++     * situation, so let's report this situation only once at most. If we
++     * already know the multi-event situation, let's skip logging this
++     * completely: We won't loose any information anyway because the report
++     * contains a complete device state and only axis positions were updated.
++     */
++    if (warn_multi_events && !ext->last_report_read && !overwrite_reported++)
++        WARN_(hid_report)("Device reports coming in too fast, last report not read yet!\n");
+ 
+     memcpy(ext->last_report, report, length);
+     ext->last_report_size = length;
+@@ -659,6 +670,7 @@ void process_hid_report(DEVICE_OBJECT *device, BYTE *report, DWORD length)
+             irp->UserBuffer, &irp->IoStatus.Information);
+         ext->last_report_read = TRUE;
+         IoCompleteRequest(irp, IO_NO_INCREMENT);
++        overwrite_reported = 0;
+     }
+     LeaveCriticalSection(&ext->report_cs);
+ }
+-- 
+1.9.1
+

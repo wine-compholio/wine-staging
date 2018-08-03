@@ -1,0 +1,65 @@
+From 5fa2778cf0726855905b3318b115a05fd2ced4a4 Mon Sep 17 00:00:00 2001
+From: Fabian Maurer <dark.shadow4@web.de>
+Date: Thu, 2 Aug 2018 17:33:43 +0200
+Subject: [PATCH] winmm: Don't crash in waveOutOpen when nSamplesPerSec is 0
+ and add tests
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45530
+Signed-off-by: Fabian Maurer <dark.shadow4@web.de>
+---
+ dlls/winmm/tests/wave.c | 20 ++++++++++++++++++++
+ dlls/winmm/waveform.c   |  7 +++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/dlls/winmm/tests/wave.c b/dlls/winmm/tests/wave.c
+index b402e21..e490040 100644
+--- a/dlls/winmm/tests/wave.c
++++ b/dlls/winmm/tests/wave.c
+@@ -1415,6 +1415,26 @@ static void wave_out_test_device(UINT_PTR device)
+     } else
+         trace("waveOutOpen(%s): 32 bit float samples not supported\n",
+               dev_name(device));
++
++    /* Test invalid parameters */
++
++    format.wFormatTag = WAVE_FORMAT_PCM;
++    format.nChannels = 1;
++    format.nSamplesPerSec = 11025;
++    format.nBlockAlign = 1;
++    format.nAvgBytesPerSec = 11025 * 1;
++    format.wBitsPerSample = 8;
++    format.cbSize = 0;
++
++    format.nAvgBytesPerSec = 0;
++    rc = waveOutOpen(&wout, 0, &format, 0, 0, 0);
++    ok(rc == MMSYSERR_NOERROR, "Got %d\n", rc);
++    waveOutClose(wout);
++    format.nAvgBytesPerSec = 11025 * 1;
++
++    format.nSamplesPerSec = 0;
++    rc = waveOutOpen(&wout, 0, &format, 0, 0, 0);
++    ok(rc == MMSYSERR_INVALPARAM || rc == WAVERR_BADFORMAT, "Got %d\n", rc); /* XP and lower return WAVERR_BADFORMAT */
+ }
+ 
+ static void wave_out_tests(void)
+diff --git a/dlls/winmm/waveform.c b/dlls/winmm/waveform.c
+index 045bf4a..0a259c0 100644
+--- a/dlls/winmm/waveform.c
++++ b/dlls/winmm/waveform.c
+@@ -1088,6 +1088,13 @@ static LRESULT WINMM_OpenDevice(WINMM_Device *device, WINMM_OpenInfo *info,
+     }
+ 
+     if(info->format->wFormatTag == WAVE_FORMAT_PCM){
++
++        if (info->format->nSamplesPerSec == 0)
++        {
++            ret = MMSYSERR_INVALPARAM;
++            goto error;
++        }
++
+         /* we aren't guaranteed that the struct in lpFormat is a full
+          * WAVEFORMATEX struct, which IAC::IsFormatSupported requires */
+         device->orig_fmt = HeapAlloc(GetProcessHeap(), 0, sizeof(WAVEFORMATEX));
+-- 
+1.9.1
+

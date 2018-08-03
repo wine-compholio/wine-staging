@@ -1,15 +1,14 @@
-From e50ac69d04c81813a52ac8959db34c4c40f047cb Mon Sep 17 00:00:00 2001
+From 3c82febd61f706aa12dc7a183a4fed5dff4b39e4 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Tue, 24 Jul 2018 11:26:39 -0600
 Subject: [PATCH] ntdll: Add a futex-based condition variable implementation.
 
-Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
 ---
- dlls/ntdll/sync.c | 143 +++++++++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 132 insertions(+), 11 deletions(-)
+ dlls/ntdll/sync.c | 148 ++++++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 137 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
-index 8e406ce..4752543 100644
+index 8e406ce..83bf199 100644
 --- a/dlls/ntdll/sync.c
 +++ b/dlls/ntdll/sync.c
 @@ -26,6 +26,7 @@
@@ -30,7 +29,7 @@ index 8e406ce..4752543 100644
  #ifdef HAVE_UNISTD_H
  # include <unistd.h>
  #endif
-@@ -61,6 +65,102 @@ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+@@ -61,6 +65,107 @@ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  
  HANDLE keyed_event = NULL;
  
@@ -78,35 +77,40 @@ index 8e406ce..4752543 100644
 +    if (timeout && timeout->QuadPart != TIMEOUT_INFINITE)
 +    {
 +        struct timespec timespec;
-+        LONGLONG duration;
++        LONGLONG end, timeleft;
++        LARGE_INTEGER now;
 +
-+        if (timeout->QuadPart > 0)
-+        {
-+            LARGE_INTEGER now;
-+            NtQuerySystemTime( &now );
-+            duration = timeout->QuadPart - now.QuadPart;
-+        }
++        if (timeout->QuadPart >= 0)
++            end = timeout->QuadPart;
 +        else
-+            duration = -timeout->QuadPart;
++        {
++            NtQuerySystemTime( &now );
++            end = now.QuadPart - timeout->QuadPart;
++        }
 +
-+        timespec.tv_sec = duration / TICKSPERSEC;
-+        timespec.tv_nsec = (duration % TICKSPERSEC) * 100;
 +        do
++        {
 +            val = *((int *)&variable->Ptr);
++
++            NtQuerySystemTime( &now );
++            timeleft = end - now.QuadPart;
++            if (timeleft < 0) timeleft = 0;
++            timespec.tv_sec = timeleft / TICKSPERSEC;
++            timespec.tv_nsec = (timeleft % TICKSPERSEC) * 100;
++        }
 +        while (val && (ret = futex_wait( (int *)&variable->Ptr, val, &timespec )) == -1
-+               && errno == EAGAIN);
++               && errno != ETIMEDOUT);
 +    }
 +    else
 +    {
 +        do
 +            val = *((int *)&variable->Ptr);
-+        while (val && (ret = futex_wait( (int *)&variable->Ptr, val, NULL )) == -1
-+               && errno == EAGAIN);
++        while (val && (ret = futex_wait( (int *)&variable->Ptr, val, NULL )) == -1);
 +    }
 +
-+    if (ret == -1 && errno == ETIMEDOUT) return STATUS_TIMEOUT;
-+    else if (ret == -1) FIXME("got errno %d %s\n", errno, strerror(errno));
-+
++    if (!val) return STATUS_WAIT_0;
++    else if (ret == -1 && errno == ETIMEDOUT) return STATUS_TIMEOUT;
++    else if (ret == -1) ERR("wait failed: %s\n", strerror(errno));
 +    return STATUS_WAIT_0;
 +}
 +
@@ -133,7 +137,7 @@ index 8e406ce..4752543 100644
  static inline int interlocked_dec_if_nonzero( int *dest )
  {
      int val, tmp;
-@@ -1814,7 +1914,11 @@ void WINAPI RtlInitializeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+@@ -1814,7 +1919,11 @@ void WINAPI RtlInitializeConditionVariable( RTL_CONDITION_VARIABLE *variable )
  void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
  {
      if (interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
@@ -146,7 +150,7 @@ index 8e406ce..4752543 100644
  }
  
  /***********************************************************************
-@@ -1825,8 +1929,15 @@ void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+@@ -1825,8 +1934,15 @@ void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
  void WINAPI RtlWakeAllConditionVariable( RTL_CONDITION_VARIABLE *variable )
  {
      int val = interlocked_xchg( (int *)&variable->Ptr, 0 );
@@ -164,7 +168,7 @@ index 8e406ce..4752543 100644
  }
  
  /***********************************************************************
-@@ -1851,12 +1962,17 @@ NTSTATUS WINAPI RtlSleepConditionVariableCS( RTL_CONDITION_VARIABLE *variable, R
+@@ -1851,12 +1967,17 @@ NTSTATUS WINAPI RtlSleepConditionVariableCS( RTL_CONDITION_VARIABLE *variable, R
      interlocked_xchg_add( (int *)&variable->Ptr, 1 );
      RtlLeaveCriticalSection( crit );
  
@@ -186,7 +190,7 @@ index 8e406ce..4752543 100644
  
      RtlEnterCriticalSection( crit );
      return status;
-@@ -1892,12 +2008,17 @@ NTSTATUS WINAPI RtlSleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable,
+@@ -1892,12 +2013,17 @@ NTSTATUS WINAPI RtlSleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable,
      else
          RtlReleaseSRWLockExclusive( lock );
  

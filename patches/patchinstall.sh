@@ -5181,7 +5181,7 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/wow64cpu/Makefile.in,
-# | 	dlls/wow64cpu/wow64cpu.spec
+# | 	dlls/wow64cpu/wow64cpu.spec, dlls/wow64cpu/wow64cpu_main.c
 # |
 if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
 	patch_apply wow64cpu-Wow64Transition/0001-wow64cpu-Add-stub-dll.patch

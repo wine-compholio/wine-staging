@@ -1,0 +1,295 @@
+From 06289ea3c98030049e080fd3348073932898740f Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Fri, 27 Jul 2018 01:22:59 -0500
+Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
+
+League of Legends hooks NtCreateThread or NtCreateThreadEx (depending on the
+reported version), and expects it to be called whenever a thread is created.
+---
+ dlls/ntdll/ntdll.spec |   2 +-
+ dlls/ntdll/thread.c   | 177 ++++++++++++++++++++++++++++++++++++++++++--------
+ include/winternl.h    |  25 +++++++
+ 3 files changed, 175 insertions(+), 29 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 705538a..90e537e 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -154,7 +154,7 @@
+ @ stdcall NtCreateSection(ptr long ptr ptr long long long)
+ @ stdcall NtCreateSemaphore(ptr long ptr long long)
+ @ stdcall NtCreateSymbolicLinkObject(ptr long ptr ptr)
+-@ stub NtCreateThread
++@ stdcall NtCreateThread(ptr long ptr long ptr ptr ptr long)
+ @ stdcall NtCreateThreadEx(ptr long ptr long ptr ptr long long long long ptr)
+ @ stdcall NtCreateTimer(ptr long ptr long)
+ @ stub NtCreateToken
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index eda4fa7..b50524d 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -682,34 +682,18 @@ static void start_thread( struct startup_info *info )
+ /***********************************************************************
+  *              NtCreateThreadEx   (NTDLL.@)
+  */
+-NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *attr,
++NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *obj_attr,
+                                   HANDLE process, LPTHREAD_START_ROUTINE start, void *param,
+                                   ULONG flags, ULONG zero_bits, ULONG stack_commit,
+-                                  ULONG stack_reserve, void *attribute_list )
+-{
+-    FIXME( "%p, %x, %p, %p, %p, %p, %x, %x, %x, %x, %p semi-stub!\n", handle_ptr, access, attr,
+-           process, start, param, flags, zero_bits, stack_commit, stack_reserve, attribute_list );
+-
+-    return RtlCreateUserThread( process, NULL, flags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED,
+-                                NULL, stack_reserve, stack_commit, (PRTL_THREAD_START_ROUTINE)start,
+-                                param, handle_ptr, NULL );
+-}
+-
+-
+-/***********************************************************************
+- *              RtlCreateUserThread   (NTDLL.@)
+- */
+-NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *descr,
+-                                     BOOLEAN suspended, PVOID stack_addr,
+-                                     SIZE_T stack_reserve, SIZE_T stack_commit,
+-                                     PRTL_THREAD_START_ROUTINE start, void *param,
+-                                     HANDLE *handle_ptr, CLIENT_ID *id )
++                                  ULONG stack_reserve, PPS_ATTRIBUTE_LIST ps_attr_list )
+ {
+     sigset_t sigset;
+     pthread_t pthread_id;
+-    pthread_attr_t attr;
++    pthread_attr_t pthread_attr;
+     struct ntdll_thread_data *thread_data;
+     struct startup_info *info;
++    BOOLEAN suspended = !!(flags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED);
++    CLIENT_ID *id = NULL;
+     HANDLE handle = 0, actctx = 0;
+     TEB *teb = NULL;
+     DWORD tid = 0;
+@@ -717,6 +701,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+     NTSTATUS status;
+     SIZE_T extra_stack = PTHREAD_STACK_MIN;
+ 
++    TRACE("(%p, %d, %p, %p, %p, %p, %u, %u, %u, %u, %p)\n",
++          handle_ptr, access, obj_attr, process, start, param, flags,
++          zero_bits, stack_commit, stack_reserve, ps_attr_list);
++
++    if (ps_attr_list != NULL)
++    {
++        PS_ATTRIBUTE *ps_attr,
++                     *ps_attr_end = (PS_ATTRIBUTE *)((UINT_PTR)ps_attr_list + ps_attr_list->TotalLength);
++        for (ps_attr = &ps_attr_list->Attributes[0]; ps_attr < ps_attr_end; ps_attr++)
++        {
++            switch (ps_attr->Attribute)
++            {
++            case PS_ATTRIBUTE_CLIENT_ID:
++                /* TODO validate ps_attr->Size == sizeof(CLIENT_ID) */
++                /* TODO set *ps_attr->ReturnLength */
++                id = ps_attr->ValuePtr;
++                break;
++            default:
++                FIXME("Unsupported attribute %08X\n", ps_attr->Attribute);
++                break;
++            }
++        }
++    }
++
++    if (access == (ACCESS_MASK)0)
++        access = THREAD_ALL_ACCESS;
++
+     if (process != NtCurrentProcess())
+     {
+         apc_call_t call;
+@@ -747,7 +758,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+ 
+     SERVER_START_REQ( new_thread )
+     {
+-        req->access     = THREAD_ALL_ACCESS;
++        req->access     = access;
+         req->attributes = 0;  /* FIXME */
+         req->suspend    = suspended;
+         req->request_fd = request_pipe[0];
+@@ -804,19 +815,19 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+     thread_data->wait_fd[1]  = -1;
+     thread_data->start_stack = (char *)teb->Tib.StackBase;
+ 
+-    pthread_attr_init( &attr );
+-    pthread_attr_setstack( &attr, teb->DeallocationStack,
++    pthread_attr_init( &pthread_attr );
++    pthread_attr_setstack( &pthread_attr, teb->DeallocationStack,
+                          (char *)teb->Tib.StackBase + extra_stack - (char *)teb->DeallocationStack );
+-    pthread_attr_setscope( &attr, PTHREAD_SCOPE_SYSTEM ); /* force creating a kernel thread */
++    pthread_attr_setscope( &pthread_attr, PTHREAD_SCOPE_SYSTEM ); /* force creating a kernel thread */
+     interlocked_xchg_add( &nb_threads, 1 );
+-    if (pthread_create( &pthread_id, &attr, (void * (*)(void *))start_thread, info ))
++    if (pthread_create( &pthread_id, &pthread_attr, (void * (*)(void *))start_thread, info ))
+     {
+         interlocked_xchg_add( &nb_threads, -1 );
+-        pthread_attr_destroy( &attr );
++        pthread_attr_destroy( &pthread_attr );
+         status = STATUS_NO_MEMORY;
+         goto error;
+     }
+-    pthread_attr_destroy( &attr );
++    pthread_attr_destroy( &pthread_attr );
+     pthread_sigmask( SIG_SETMASK, &sigset, NULL );
+ 
+     if (id) id->UniqueThread = ULongToHandle(tid);
+@@ -833,6 +844,116 @@ error:
+     return status;
+ }
+ 
++NTSTATUS WINAPI NtCreateThread( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *attr, HANDLE process,
++                                CLIENT_ID *id, CONTEXT *context, INITIAL_TEB *teb, BOOLEAN suspended )
++{
++    LPTHREAD_START_ROUTINE entry;
++    void *arg;
++    ULONG flags = suspended ? THREAD_CREATE_FLAGS_CREATE_SUSPENDED : 0;
++    PS_ATTRIBUTE_LIST attr_list, *pattr_list = NULL;
++
++#if defined(__i386__)
++        entry = (LPTHREAD_START_ROUTINE) context->Eax;
++        arg = (void *)context->Ebx;
++#elif defined(__x86_64__)
++        entry = (LPTHREAD_START_ROUTINE) context->Rcx;
++        arg = (void *)context->Rdx;
++#elif defined(__arm__)
++        entry = (LPTHREAD_START_ROUTINE) context->R0;
++        arg = (void *)context->R1;
++#elif defined(__aarch64__)
++        entry = (LPTHREAD_START_ROUTINE) context->u.s.X0;
++        arg = (void *)context->u.s.X1;
++#elif defined(__powerpc__)
++        entry = (LPTHREAD_START_ROUTINE) context->Gpr3;
++        arg = (void *)context->Gpr4;
++#endif
++
++    if (id)
++    {
++        attr_list.TotalLength = sizeof(PS_ATTRIBUTE_LIST);
++        attr_list.Attributes[0].Attribute = PS_ATTRIBUTE_CLIENT_ID;
++        attr_list.Attributes[0].Size = sizeof(CLIENT_ID);
++        attr_list.Attributes[0].ValuePtr = id;
++        attr_list.Attributes[0].ReturnLength = NULL;
++        pattr_list = &attr_list;
++    }
++
++    return NtCreateThreadEx(handle_ptr, access, attr, process, entry, arg, flags, 0, 0, 0, pattr_list);
++}
++
++NTSTATUS WINAPI __syscall_NtCreateThread( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *attr,
++                                          HANDLE process, CLIENT_ID *id, CONTEXT *context, INITIAL_TEB *teb,
++                                          BOOLEAN suspended );
++NTSTATUS WINAPI __syscall_NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *attr,
++                                            HANDLE process, LPTHREAD_START_ROUTINE start, void *param,
++                                            ULONG flags, ULONG zero_bits, ULONG stack_commit,
++                                            ULONG stack_reserve, PPS_ATTRIBUTE_LIST ps_attr_list );
++
++/***********************************************************************
++ *              RtlCreateUserThread   (NTDLL.@)
++ */
++NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *descr,
++                                     BOOLEAN suspended, void *stack_addr,
++                                     SIZE_T stack_reserve, SIZE_T stack_commit,
++                                     PRTL_THREAD_START_ROUTINE entry, void *arg,
++                                     HANDLE *handle_ptr, CLIENT_ID *id )
++{
++    if (descr)
++        FIXME("descr != NULL is unimplemented\n");
++    if (stack_addr)
++        FIXME("stack_addr != NULL is unimplemented\n");
++
++    if (NtCurrentTeb()->Peb->OSMajorVersion < 6)
++    {
++        /* Use old API. */
++        CONTEXT context = { 0 };
++
++        if (stack_commit)
++            FIXME("stack_commit != 0 is unimplemented\n");
++        if (stack_reserve)
++            FIXME("stack_reserve != 0 is unimplemented\n");
++
++        context.ContextFlags = CONTEXT_FULL;
++#if defined(__i386__)
++        context.Eax = (DWORD)entry;
++        context.Ebx = (DWORD)arg;
++#elif defined(__x86_64__)
++        context.Rcx = (ULONG_PTR)entry;
++        context.Rdx = (ULONG_PTR)arg;
++#elif defined(__arm__)
++        context.R0 = (DWORD)entry;
++        context.R1 = (DWORD)arg;
++#elif defined(__aarch64__)
++        context.u.s.X0 = (DWORD_PTR)entry;
++        context.u.s.X1 = (DWORD_PTR)arg;
++#elif defined(__powerpc__)
++        context.Gpr3 = (DWORD)entry;
++        context.Gpr4 = (DWORD)arg;
++#endif
++
++        return __syscall_NtCreateThread(handle_ptr, (ACCESS_MASK)0, NULL, process, id, &context, NULL, suspended);
++    }
++    else
++    {
++        /* Use new API from Vista+. */
++        ULONG flags = suspended ? THREAD_CREATE_FLAGS_CREATE_SUSPENDED : 0;
++        PS_ATTRIBUTE_LIST attr_list, *pattr_list = NULL;
++
++        if (id)
++        {
++            attr_list.TotalLength = sizeof(PS_ATTRIBUTE_LIST);
++            attr_list.Attributes[0].Attribute = PS_ATTRIBUTE_CLIENT_ID;
++            attr_list.Attributes[0].Size = sizeof(CLIENT_ID);
++            attr_list.Attributes[0].ValuePtr = id;
++            attr_list.Attributes[0].ReturnLength = NULL;
++            pattr_list = &attr_list;
++        }
++
++        return __syscall_NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, NULL, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
++    }
++}
++
+ 
+ /******************************************************************************
+  *              RtlGetNtGlobalFlags   (NTDLL.@)
+diff --git a/include/winternl.h b/include/winternl.h
+index ebfe8d8..827fead 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2170,6 +2170,31 @@ typedef enum _SYSDBG_COMMAND {
+   SysDbgWriteBusData
+ } SYSDBG_COMMAND, *PSYSDBG_COMMAND;
+ 
++#define PS_ATTRIBUTE_THREAD  0x00010000
++#define PS_ATTRIBUTE_INPUT   0x00020000
++#define PS_ATTRIBUTE_UNKNOWN 0x00040000
++
++typedef enum _PS_ATTRIBUTE_NUM {
++    PsAttributeClientId = 3,
++} PS_ATTRIBUTE_NUM;
++
++#define PS_ATTRIBUTE_CLIENT_ID (PsAttributeClientId | PS_ATTRIBUTE_THREAD)
++
++typedef struct _PS_ATTRIBUTE {
++    ULONG Attribute;
++    SIZE_T Size;
++    union {
++        ULONG Value;
++        PVOID ValuePtr;
++    };
++    PSIZE_T ReturnLength;
++} PS_ATTRIBUTE;
++
++typedef struct _PS_ATTRIBUTE_LIST {
++    SIZE_T TotalLength;
++    PS_ATTRIBUTE Attributes[1];
++} PS_ATTRIBUTE_LIST, *PPS_ATTRIBUTE_LIST;
++
+ 
+ /*************************************************************************
+  * Loader structures
+-- 
+2.7.4
+

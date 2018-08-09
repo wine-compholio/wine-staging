@@ -239,6 +239,7 @@ patch_enable_all ()
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
+	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_RtlSetUnhandledExceptionFilter="$1"
@@ -900,6 +901,9 @@ patch_enable ()
 			;;
 		ntdll-RtlCaptureStackBackTrace)
 			enable_ntdll_RtlCaptureStackBackTrace="$2"
+			;;
+		ntdll-RtlCreateUserThread)
+			enable_ntdll_RtlCreateUserThread="$2"
 			;;
 		ntdll-RtlGetUnloadEventTraceEx)
 			enable_ntdll_RtlGetUnloadEventTraceEx="$2"
@@ -2117,6 +2121,13 @@ if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlGetUnloadEventTraceEx depends on that."
 	fi
 	enable_ntdll_RtlQueryPackageIdentity=1
+fi
+
+if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
+	if test "$enable_ntdll_LdrInitializeThunk" -gt 1; then
+		abort "Patchset ntdll-LdrInitializeThunk disabled, but ntdll-RtlCreateUserThread depends on that."
+	fi
+	enable_ntdll_LdrInitializeThunk=1
 fi
 
 if test "$enable_ntdll_Purist_Mode" -eq 1; then
@@ -5590,6 +5601,24 @@ if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlCreateUserThread
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-LdrInitializeThunk
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
+	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
 	) >> "$patchlist"
 fi
 

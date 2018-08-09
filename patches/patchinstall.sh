@@ -224,6 +224,7 @@ patch_enable_all ()
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_LdrGetDllHandle="$1"
+	enable_ntdll_LdrInitializeThunk="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
@@ -854,6 +855,9 @@ patch_enable ()
 			;;
 		ntdll-LdrGetDllHandle)
 			enable_ntdll_LdrGetDllHandle="$2"
+			;;
+		ntdll-LdrInitializeThunk)
+			enable_ntdll_LdrInitializeThunk="$2"
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
@@ -5370,6 +5374,24 @@ if test "$enable_ntdll_LdrGetDllHandle" -eq 1; then
 	patch_apply ntdll-LdrGetDllHandle/0001-ntdll-Improve-speed-of-LdrGetDllHandle-when-searchin.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Improve speed of LdrGetDllHandle when searching for the basename of modules that are not loaded.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-LdrInitializeThunk
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45570] League of Legends 8.12+ fails to start a game (anticheat engine, incorrect implementation of
+# | 	LdrInitializeThunk)
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c,
+# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
+# | 	dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_LdrInitializeThunk" -eq 1; then
+	patch_apply ntdll-LdrInitializeThunk/0001-ntdll-Refactor-LdrInitializeThunk.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor LdrInitializeThunk.", 1 },';
 	) >> "$patchlist"
 fi
 

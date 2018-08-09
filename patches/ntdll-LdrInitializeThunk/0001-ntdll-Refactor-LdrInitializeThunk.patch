@@ -1,0 +1,231 @@
+From 4a15b14e372df3acfe0fdf50554ec60fc8d77774 Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Fri, 27 Jul 2018 01:08:43 -0500
+Subject: [PATCH] ntdll: Refactor LdrInitializeThunk.
+
+Since LdrInitializeThunk is exported by ntdll, its semantics may be relied on
+by programs. At least one program expects that it is called whenever a new
+thread is created and that the first argument is the CONTEXT for the thread.
+Furthermore, it is expected that on i386 Eax will contain the thread's entry
+point.
+---
+ dlls/kernel32/process.c     |  4 +++-
+ dlls/ntdll/loader.c         | 22 +++++++++-------------
+ dlls/ntdll/ntdll.spec       |  3 +++
+ dlls/ntdll/ntdll_misc.h     |  1 -
+ dlls/ntdll/signal_arm.c     |  2 +-
+ dlls/ntdll/signal_arm64.c   |  2 +-
+ dlls/ntdll/signal_i386.c    |  2 +-
+ dlls/ntdll/signal_powerpc.c |  2 +-
+ dlls/ntdll/signal_x86_64.c  |  2 +-
+ dlls/ntdll/thread.c         |  4 ++--
+ include/winternl.h          |  2 +-
+ 11 files changed, 23 insertions(+), 23 deletions(-)
+
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 1b5c670..42dd7cb 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -74,6 +74,8 @@ extern char **__wine_main_environ;
+ static char **__wine_get_main_environment(void) { return __wine_main_environ; }
+ #endif
+ 
++extern void __wine_ldr_start_process(void *kernel_start);
++
+ typedef struct
+ {
+     LPSTR lpEnvAddress;
+@@ -1326,7 +1328,7 @@ void CDECL __wine_kernel_init(void)
+ 
+     if (!params->CurrentDirectory.Handle) chdir("/"); /* avoid locking removable devices */
+ 
+-    LdrInitializeThunk( start_process_wrapper, 0, 0, 0 );
++    __wine_ldr_start_process( start_process_wrapper );
+ 
+  error:
+     ExitProcess( GetLastError() );
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 09e5259..7d3720d 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -3521,21 +3521,22 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+ }
+ 
+ 
+-/***********************************************************************
+- *           attach_dlls
++/******************************************************************
++ *		LdrInitializeThunk (NTDLL.@)
+  *
+- * Attach to all the loaded dlls.
+- * If this is the first time, perform the full process initialization.
+  */
+-NTSTATUS attach_dlls( CONTEXT *context, void **entry )
++void WINAPI LdrInitializeThunk( PCONTEXT context, ULONG_PTR unknown2,
++                                ULONG_PTR unknown3, ULONG_PTR unknown4 )
+ {
+     NTSTATUS status;
+     WINE_MODREF *wm;
+     LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
++    /* For convenience, we use unknown2 to pass a pointer to the entrypoint. */
++    void **entry = (void **)unknown2;
+ 
+     pthread_sigmask( SIG_UNBLOCK, &server_block_set, NULL );
+ 
+-    if (process_detaching) return STATUS_SUCCESS;
++    if (process_detaching) return;
+ 
+     RtlEnterCriticalSection( &loader_section );
+ 
+@@ -3591,7 +3592,7 @@ NTSTATUS attach_dlls( CONTEXT *context, void **entry )
+     }
+ 
+     RtlLeaveCriticalSection( &loader_section );
+-    return STATUS_SUCCESS;
++    return;
+ }
+ 
+ 
+@@ -3704,12 +3705,7 @@ static void user_shared_data_init(void)
+ }
+ 
+ 
+-/******************************************************************
+- *		LdrInitializeThunk (NTDLL.@)
+- *
+- */
+-void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+-                                ULONG_PTR unknown3, ULONG_PTR unknown4 )
++void __wine_ldr_start_process( void *kernel_start )
+ {
+     static const WCHAR globalflagW[] = {'G','l','o','b','a','l','F','l','a','g',0};
+     ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION runlevel;
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index b2551ca..0da51e0 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1491,6 +1491,9 @@
+ @ cdecl wine_server_send_fd(long)
+ @ cdecl __wine_make_process_system()
+ 
++# Loader
++@ cdecl __wine_ldr_start_process(ptr)
++
+ # Virtual memory
+ @ cdecl __wine_locked_recvmsg(long ptr long)
+ 
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 8fa86b7..aeab3d4 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -110,7 +110,6 @@ extern NTSTATUS validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr )
+ 
+ /* module handling */
+ extern LIST_ENTRY tls_links DECLSPEC_HIDDEN;
+-extern NTSTATUS attach_dlls( CONTEXT *context, void **entry ) DECLSPEC_HIDDEN;
+ extern FARPROC RELAY_GetProcAddress( HMODULE module, const IMAGE_EXPORT_DIRECTORY *exports,
+                                      DWORD exp_size, FARPROC proc, DWORD ordinal, const WCHAR *user ) DECLSPEC_HIDDEN;
+ extern FARPROC SNOOP_GetProcAddress( HMODULE hmod, const IMAGE_EXPORT_DIRECTORY *exports, DWORD exp_size,
+diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
+index 5e35907..397a7c6 100644
+--- a/dlls/ntdll/signal_arm.c
++++ b/dlls/ntdll/signal_arm.c
+@@ -1301,7 +1301,7 @@ PCONTEXT DECLSPEC_HIDDEN attach_thread( LPTHREAD_START_ROUTINE entry, void *arg,
+         init_thread_context( ctx, entry, arg, relay );
+     }
+     ctx->ContextFlags = CONTEXT_FULL;
+-    attach_dlls( ctx, (void **)&ctx->R0 );
++    LdrInitializeThunk( ctx, (ULONG_PTR *)&ctx->R0, 0, 0 );
+     return ctx;
+ }
+ 
+diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
+index 55a7110..893e1eb 100644
+--- a/dlls/ntdll/signal_arm64.c
++++ b/dlls/ntdll/signal_arm64.c
+@@ -1032,7 +1032,7 @@ static void thread_startup( void *param )
+     context.Pc = (DWORD_PTR)info->start;
+ 
+     if (info->suspend) wait_suspend( &context );
+-    attach_dlls( &context, (void **)&context.u.s.X0 );
++    LdrInitializeThunk( &context, (ULONG_PTR *)&context.u.s.X0, 0, 0 );
+ 
+     ((thread_start_func)context.Pc)( (LPTHREAD_START_ROUTINE)context.u.s.X0, (void *)context.u.s.X1 );
+ }
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index b2f7d22..e25fadd 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -2719,7 +2719,7 @@ PCONTEXT DECLSPEC_HIDDEN attach_thread( LPTHREAD_START_ROUTINE entry, void *arg,
+         init_thread_context( ctx, entry, arg, relay );
+     }
+     ctx->ContextFlags = CONTEXT_FULL;
+-    attach_dlls( ctx, (void **)&ctx->Eax );
++    LdrInitializeThunk( ctx, (ULONG_PTR)&ctx->Eax, 0, 0 );
+     return ctx;
+ }
+ 
+diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
+index f88beec..2fb6820 100644
+--- a/dlls/ntdll/signal_powerpc.c
++++ b/dlls/ntdll/signal_powerpc.c
+@@ -1194,7 +1194,7 @@ static void thread_startup( void *param )
+     context.Iar  = (DWORD)info->start;
+ 
+     if (info->suspend) wait_suspend( &context );
+-    attach_dlls( &context, (void **)&context.Gpr3 );
++    LdrInitializeThunk( &context, (ULONG_PTR *)&context.Gpr3, 0, 0 );
+ 
+     ((thread_start_func)context.Iar)( (LPTHREAD_START_ROUTINE)context.Gpr3, (void *)context.Gpr4 );
+ }
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index e751082..269cc92 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -4474,7 +4474,7 @@ PCONTEXT DECLSPEC_HIDDEN attach_thread( LPTHREAD_START_ROUTINE entry, void *arg,
+         init_thread_context( ctx, entry, arg, relay );
+     }
+     ctx->ContextFlags = CONTEXT_FULL;
+-    attach_dlls( ctx, (void **)&ctx->Rcx );
++    LdrInitializeThunk( ctx, (ULONG_PTR)&ctx->Rcx, 0, 0 );
+     return ctx;
+ }
+ 
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index f6bb603..eda4fa7 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -67,7 +67,7 @@ void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
+ struct startup_info
+ {
+     TEB                            *teb;
+-    PRTL_THREAD_START_ROUTINE       entry_point;
++    LPTHREAD_START_ROUTINE          entry_point;
+     void                           *entry_arg;
+ };
+ 
+@@ -675,7 +675,7 @@ static void start_thread( struct startup_info *info )
+ 
+     signal_init_thread( teb );
+     server_init_thread( info->entry_point, &suspend );
+-    signal_start_thread( (LPTHREAD_START_ROUTINE)info->entry_point, info->entry_arg, suspend );
++    signal_start_thread( info->entry_point, info->entry_arg, suspend );
+ }
+ 
+ 
+diff --git a/include/winternl.h b/include/winternl.h
+index 4ea9314..a881480 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -2299,7 +2299,7 @@ NTSYSAPI NTSTATUS  WINAPI LdrDisableThreadCalloutsForDll(HMODULE);
+ NTSYSAPI NTSTATUS  WINAPI LdrFindEntryForAddress(const void*, PLDR_MODULE*);
+ NTSYSAPI NTSTATUS  WINAPI LdrGetDllHandle(LPCWSTR, ULONG, const UNICODE_STRING*, HMODULE*);
+ NTSYSAPI NTSTATUS  WINAPI LdrGetProcedureAddress(HMODULE, const ANSI_STRING*, ULONG, void**);
+-NTSYSAPI void      WINAPI LdrInitializeThunk(void*,ULONG_PTR,ULONG_PTR,ULONG_PTR);
++NTSYSAPI void      WINAPI LdrInitializeThunk(PCONTEXT,ULONG_PTR,ULONG_PTR,ULONG_PTR);
+ NTSYSAPI NTSTATUS  WINAPI LdrLoadDll(LPCWSTR, DWORD, const UNICODE_STRING*, HMODULE*);
+ NTSYSAPI NTSTATUS  WINAPI LdrLockLoaderLock(ULONG,ULONG*,ULONG_PTR*);
+ IMAGE_BASE_RELOCATION * WINAPI LdrProcessRelocationBlock(void*,UINT,USHORT*,INT_PTR);
+-- 
+2.7.4
+

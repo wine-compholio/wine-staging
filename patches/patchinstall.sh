@@ -410,6 +410,7 @@ patch_enable_all ()
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
+	enable_wow64cpu_Wow64Transition="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
@@ -1412,6 +1413,9 @@ patch_enable ()
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
 			;;
+		wow64cpu-Wow64Transition)
+			enable_wow64cpu_Wow64Transition="$2"
+			;;
 		wpcap-Dynamic_Linking)
 			enable_wpcap_Dynamic_Linking="$2"
 			;;
@@ -2167,8 +2171,12 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	if test "$enable_ntdll_Loader_Machine_Type" -gt 1; then
 		abort "Patchset ntdll-Loader_Machine_Type disabled, but ntdll-DllRedirects depends on that."
 	fi
+	if test "$enable_wow64cpu_Wow64Transition" -gt 1; then
+		abort "Patchset wow64cpu-Wow64Transition disabled, but ntdll-DllRedirects depends on that."
+	fi
 	enable_ntdll_DllOverrides_WOW64=1
 	enable_ntdll_Loader_Machine_Type=1
+	enable_wow64cpu_Wow64Transition=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -5151,10 +5159,28 @@ if test "$enable_ntdll_Loader_Machine_Type" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wow64cpu-Wow64Transition
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/wow64cpu/Makefile.in,
+# | 	dlls/wow64cpu/wow64cpu.spec
+# |
+if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
+	patch_apply wow64cpu-Wow64Transition/0001-wow64cpu-Add-stub-dll.patch
+	patch_apply wow64cpu-Wow64Transition/0002-ntdll-Add-a-stub-implementation-of-Wow64Transition.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "wow64cpu: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add a stub implementation of Wow64Transition.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-DllRedirects
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type
+# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, wow64cpu-Wow64Transition
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
@@ -5518,7 +5544,7 @@ fi
 # Patchset ntdll-Purist_Mode
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
+# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, wow64cpu-Wow64Transition, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loadorder.c
@@ -7277,7 +7303,7 @@ fi
 # Patchset uxtheme-GTK_Theming
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, ntdll-DllRedirects
+# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, wow64cpu-Wow64Transition, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/button.c, dlls/uxtheme-gtk/combobox.c, dlls

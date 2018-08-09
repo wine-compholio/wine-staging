@@ -1,14 +1,15 @@
-From b516bff83076eaa682fc741e84874cd588be693f Mon Sep 17 00:00:00 2001
+From 6fa6beeb94f2c8b2d98706ac1b428b1be5a44597 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Tue, 24 Jul 2018 11:26:39 -0600
 Subject: [PATCH] ntdll: Add a futex-based condition variable implementation.
 
+With significant contributions from Andrew Wesie.
 ---
- dlls/ntdll/sync.c | 148 ++++++++++++++++++++++++++++++++++++++++++----
- 1 file changed, 137 insertions(+), 11 deletions(-)
+ dlls/ntdll/sync.c | 212 ++++++++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 184 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
-index 8e406ceaeb..05dc715848 100644
+index 8e406ce..09ecec5 100644
 --- a/dlls/ntdll/sync.c
 +++ b/dlls/ntdll/sync.c
 @@ -26,6 +26,7 @@
@@ -29,7 +30,7 @@ index 8e406ceaeb..05dc715848 100644
  #ifdef HAVE_UNISTD_H
  # include <unistd.h>
  #endif
-@@ -61,6 +65,107 @@ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+@@ -61,6 +65,138 @@ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  
  HANDLE keyed_event = NULL;
  
@@ -68,67 +69,98 @@ index 8e406ceaeb..05dc715848 100644
 +    return supported;
 +}
 +
-+static inline NTSTATUS fast_wait( RTL_CONDITION_VARIABLE *variable, const LARGE_INTEGER *timeout)
++static inline NTSTATUS fast_wait( RTL_CONDITION_VARIABLE *variable, int val,
++    const LARGE_INTEGER *timeout)
 +{
-+    int val, ret;
++    struct timespec timespec;
++    LONGLONG timeleft;
++    LARGE_INTEGER now;
++    int ret;
 +
 +    if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
 +
 +    if (timeout && timeout->QuadPart != TIMEOUT_INFINITE)
 +    {
-+        struct timespec timespec;
-+        LONGLONG end, timeleft;
-+        LARGE_INTEGER now;
-+
 +        if (timeout->QuadPart >= 0)
-+            end = timeout->QuadPart;
-+        else
 +        {
 +            NtQuerySystemTime( &now );
-+            end = now.QuadPart - timeout->QuadPart;
-+        }
-+
-+        do
-+        {
-+            val = *((int *)&variable->Ptr);
-+
-+            NtQuerySystemTime( &now );
-+            timeleft = end - now.QuadPart;
++            timeleft = timeout->QuadPart - now.QuadPart;
 +            if (timeleft < 0) timeleft = 0;
-+            timespec.tv_sec = timeleft / TICKSPERSEC;
-+            timespec.tv_nsec = (timeleft % TICKSPERSEC) * 100;
 +        }
-+        while (val && (ret = futex_wait( (int *)&variable->Ptr, val, &timespec )) == -1
-+               && errno != ETIMEDOUT);
++        else
++            timeleft = -timeout->QuadPart;
++
++        timespec.tv_sec = timeleft / TICKSPERSEC;
++        timespec.tv_nsec = (timeleft % TICKSPERSEC) * 100;
++
++        ret = futex_wait( (int *)&variable->Ptr, val, &timespec );
 +    }
 +    else
-+    {
-+        do
-+            val = *((int *)&variable->Ptr);
-+        while (val && (ret = futex_wait( (int *)&variable->Ptr, val, NULL )) == -1);
-+    }
++        ret = futex_wait( (int *)&variable->Ptr, val, NULL );
 +
-+    if (!val) return STATUS_WAIT_0;
-+    else if (ret == -1 && errno == ETIMEDOUT) return STATUS_TIMEOUT;
-+    else if (ret == -1) ERR("wait failed: %s\n", strerror(errno));
++    if (ret == -1 && errno == ETIMEDOUT) return STATUS_TIMEOUT;
 +    return STATUS_WAIT_0;
++}
++
++static inline NTSTATUS fast_sleep_cs( RTL_CONDITION_VARIABLE *variable,
++    RTL_CRITICAL_SECTION *crit, const LARGE_INTEGER *timeout )
++{
++    int val = *(int *)&variable->Ptr;
++    NTSTATUS ret;
++
++    RtlLeaveCriticalSection( crit );
++
++    ret = fast_wait( variable, val, timeout );
++
++    RtlEnterCriticalSection( crit );
++
++    return ret;
++}
++
++static inline NTSTATUS fast_sleep_srw( RTL_CONDITION_VARIABLE *variable,
++    RTL_SRWLOCK *lock, const LARGE_INTEGER *timeout, ULONG flags )
++{
++    int val = *(int *)&variable->Ptr;
++    NTSTATUS ret;
++
++    if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
++        RtlReleaseSRWLockShared( lock );
++    else
++        RtlReleaseSRWLockExclusive( lock );
++
++    ret = fast_wait( variable, val, timeout );
++
++    if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
++        RtlAcquireSRWLockShared( lock );
++    else
++        RtlAcquireSRWLockExclusive( lock );
++
++    return ret;
 +}
 +
 +static inline NTSTATUS fast_wake( RTL_CONDITION_VARIABLE *variable, int val )
 +{
 +    if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
 +
++    interlocked_xchg_add( (int *)&variable->Ptr, 1 );
 +    futex_wake( (int *)&variable->Ptr, val );
 +    return STATUS_SUCCESS;
 +}
 +
 +#else
-+static inline NTSTATUS fast_wait( RTL_CONDITION_VARIABLE *variable, const LARGE_INTEGER *timeout )
++static inline NTSTATUS fast_sleep_cs( RTL_CONDITION_VARIABLE *variable,
++    RTL_CRITICAL_SECTION *crit, const LARGE_INTEGER *timeout )
 +{
 +    return STATUS_NOT_IMPLEMENTED;
 +}
 +
-+static inline NTSTATUS fast_wake( RTL_CONDITION_VARIABLE *variable, int val )
++static inline NTSTATUS fast_sleep_srw( RTL_CONDITION_VARIABLE *variable,
++    RTL_SRWLOCK *lock, const LARGE_INTEGER *timeout, ULONG flags )
++{
++    return STATUS_NOT_IMPLEMENTED;
++}
++
++static inline NTSTATUS fast_wake( RTL_CRITICAL_SECTION *crit )
 +{
 +    return STATUS_NOT_IMPLEMENTED;
 +}
@@ -137,81 +169,115 @@ index 8e406ceaeb..05dc715848 100644
  static inline int interlocked_dec_if_nonzero( int *dest )
  {
      int val, tmp;
-@@ -1814,7 +1919,11 @@ void WINAPI RtlInitializeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+@@ -1813,8 +1949,11 @@ void WINAPI RtlInitializeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+  */
  void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
  {
-     if (interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
+-    if (interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
 -        NtReleaseKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
++    if (fast_wake( variable, 1 ) == STATUS_NOT_IMPLEMENTED)
 +    {
-+        NTSTATUS ret;
-+        if ((ret = fast_wake( variable, 1 )) == STATUS_NOT_IMPLEMENTED)
++        if (interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
 +            NtReleaseKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
 +    }
  }
  
  /***********************************************************************
-@@ -1825,8 +1934,15 @@ void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+@@ -1824,9 +1963,12 @@ void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+  */
  void WINAPI RtlWakeAllConditionVariable( RTL_CONDITION_VARIABLE *variable )
  {
-     int val = interlocked_xchg( (int *)&variable->Ptr, 0 );
+-    int val = interlocked_xchg( (int *)&variable->Ptr, 0 );
 -    while (val-- > 0)
 -        NtReleaseKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
-+    if (val)
++    if (fast_wake( variable, INT_MAX ) == STATUS_NOT_IMPLEMENTED)
 +    {
-+        NTSTATUS ret;
-+        if ((ret = fast_wake( variable, INT_MAX )) == STATUS_NOT_IMPLEMENTED)
-+        {
-+            while (val-- > 0)
-+                NtReleaseKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
-+        }
++        int val = interlocked_xchg( (int *)&variable->Ptr, 0 );
++        while (val-- > 0)
++            NtReleaseKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
 +    }
  }
  
  /***********************************************************************
-@@ -1851,12 +1967,17 @@ NTSTATUS WINAPI RtlSleepConditionVariableCS( RTL_CONDITION_VARIABLE *variable, R
-     interlocked_xchg_add( (int *)&variable->Ptr, 1 );
-     RtlLeaveCriticalSection( crit );
+@@ -1848,17 +1990,24 @@ NTSTATUS WINAPI RtlSleepConditionVariableCS( RTL_CONDITION_VARIABLE *variable, R
+                                              const LARGE_INTEGER *timeout )
+ {
+     NTSTATUS status;
+-    interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+-    RtlLeaveCriticalSection( crit );
  
 -    status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, timeout );
 -    if (status != STATUS_SUCCESS)
-+    if ((status = fast_wait( variable, timeout )) == STATUS_NOT_IMPLEMENTED)
++    if ((status = fast_sleep_cs( variable, crit, timeout )) == STATUS_NOT_IMPLEMENTED)
      {
 -        if (!interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
 -            status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
+-    }
++        interlocked_xchg_add( (int *)&variable->Ptr, 1 );
++        RtlLeaveCriticalSection( crit );
+ 
+-    RtlEnterCriticalSection( crit );
 +        status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, timeout );
 +        if (status != STATUS_SUCCESS)
 +        {
 +            if (!interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
 +                status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
 +        }
-     }
-+    else if (status != STATUS_SUCCESS)
-+        interlocked_dec_if_nonzero( (int *)&variable->Ptr );
- 
-     RtlEnterCriticalSection( crit );
++
++        else if (status != STATUS_SUCCESS)
++            interlocked_dec_if_nonzero( (int *)&variable->Ptr );
++
++        RtlEnterCriticalSection( crit );
++    }
      return status;
-@@ -1892,12 +2013,17 @@ NTSTATUS WINAPI RtlSleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable,
-     else
-         RtlReleaseSRWLockExclusive( lock );
+ }
  
+@@ -1885,23 +2034,30 @@ NTSTATUS WINAPI RtlSleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable,
+                                               const LARGE_INTEGER *timeout, ULONG flags )
+ {
+     NTSTATUS status;
+-    interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+ 
+-    if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
+-        RtlReleaseSRWLockShared( lock );
+-    else
+-        RtlReleaseSRWLockExclusive( lock );
+-
 -    status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, timeout );
 -    if (status != STATUS_SUCCESS)
-+    if ((status = fast_wait( variable, timeout )) == STATUS_NOT_IMPLEMENTED)
++    if ((status = fast_sleep_srw( variable, lock, timeout, flags )) == STATUS_NOT_IMPLEMENTED)
      {
 -        if (!interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
 -            status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
+-    }
++        interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+ 
+-    if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
+-        RtlAcquireSRWLockShared( lock );
+-    else
+-        RtlAcquireSRWLockExclusive( lock );
++        if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
++            RtlReleaseSRWLockShared( lock );
++        else
++            RtlReleaseSRWLockExclusive( lock );
++
 +        status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, timeout );
 +        if (status != STATUS_SUCCESS)
 +        {
 +            if (!interlocked_dec_if_nonzero( (int *)&variable->Ptr ))
 +                status = NtWaitForKeyedEvent( keyed_event, &variable->Ptr, FALSE, NULL );
 +        }
-     }
-+    else if (status != STATUS_SUCCESS)
-+        interlocked_dec_if_nonzero( (int *)&variable->Ptr );
- 
-     if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
-         RtlAcquireSRWLockShared( lock );
++
++        else if (status != STATUS_SUCCESS)
++            interlocked_dec_if_nonzero( (int *)&variable->Ptr );
++
++        if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
++            RtlAcquireSRWLockShared( lock );
++        else
++            RtlAcquireSRWLockExclusive( lock );
++    }
+     return status;
+ }
 -- 
-2.18.0
+2.7.4
 

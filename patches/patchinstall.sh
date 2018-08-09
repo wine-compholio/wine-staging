@@ -8106,6 +8106,7 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 	patch_apply winepulse-PulseAudio_Support/0005-winepulse-implement-GetPropValue.patch
 	patch_apply winepulse-PulseAudio_Support/0006-winepulse-fetch-actual-program-name-if-possible.patch
 	patch_apply winepulse-PulseAudio_Support/0007-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
+	patch_apply winepulse-PulseAudio_Support/0008-winepulse-Fix-up-recording.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t rely on pulseaudio callbacks for timing.", 1 },';
@@ -8114,6 +8115,7 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Implement GetPropValue.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fetch actual program name if possible.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
+		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Fix up recording.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -249,6 +249,7 @@ patch_enable_all ()
 	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
+	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
@@ -931,6 +932,9 @@ patch_enable ()
 			;;
 		ntdll-SystemInterruptInformation)
 			enable_ntdll_SystemInterruptInformation="$2"
+			;;
+		ntdll-SystemModuleInformation)
+			enable_ntdll_SystemModuleInformation="$2"
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
@@ -5772,6 +5776,22 @@ if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
 	patch_apply ntdll-SystemInterruptInformation/0001-ntdll-Return-buffer-filled-with-random-values-from-S.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return buffer filled with random values from SystemInterruptInformation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemModuleInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45550] League of Legends 8.15+ anticheat fails due to incorrect implementation of
+# | 	NtQuerySystemInformation(SystemModuleInformation)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
+	patch_apply ntdll-SystemModuleInformation/0001-ntdll-Don-t-call-LdrQueryProcessModuleInformation-in.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t call LdrQueryProcessModuleInformation in NtQuerySystemInformation(SystemModuleInformation).", 1 },';
 	) >> "$patchlist"
 fi
 

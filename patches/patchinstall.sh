@@ -2532,15 +2532,15 @@ fi
 # |   *	configure, configure.ac, dlls/api-ms-win-devices-config-l1-1-0/Makefile.in, dlls/api-ms-win-devices-config-l1-1-0/api-
 # | 	ms-win-devices-config-l1-1-0.spec, dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/d3dcompiler_43/utils.c,
 # | 	dlls/ddraw/tests/ddraw7.c, dlls/dsound/sound3d.c, dlls/hidclass.sys/hid.h, dlls/hidclass.sys/main.c,
-# | 	dlls/hidclass.sys/pnp.c, dlls/kernel32/file.c, dlls/kernel32/path.c, dlls/kernel32/process.c, dlls/mpr/tests/mpr.c,
-# | 	dlls/mpr/wnet.c, dlls/msi/custom.c, dlls/msvcp60/ios.c, dlls/msvcp90/ios.c, dlls/ntoskrnl.exe/instr.c,
-# | 	dlls/odbc32/odbc32.spec, dlls/odbc32/proxyodbc.c, dlls/wbemprox/builtin.c, dlls/winebus.sys/bus.h,
-# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
-# | 	dlls/wined3d/utils.c, dlls/winevulkan/make_vulkan, dlls/winevulkan/vulkan.c, dlls/winevulkan/winevulkan.spec,
-# | 	dlls/winmm/tests/wave.c, dlls/winmm/waveform.c, dlls/wmp/player.c, dlls/wmp/tests/oleobj.c, libs/wine/loader.c,
-# | 	loader/wine.inf.in, programs/cmd/tests/test_builtins.cmd, programs/cmd/tests/test_builtins.cmd.exp,
-# | 	programs/cmd/wcmdmain.c, programs/msiexec/msiexec.c, programs/winecfg/resource.h, programs/winecfg/theme.c,
-# | 	programs/winecfg/winecfg.rc, programs/winemenubuilder/winemenubuilder.c, server/file.c, tools/make_specfiles
+# | 	dlls/hidclass.sys/pnp.c, dlls/kernel32/process.c, dlls/mpr/tests/mpr.c, dlls/mpr/wnet.c, dlls/msi/custom.c,
+# | 	dlls/msvcp60/ios.c, dlls/msvcp90/ios.c, dlls/ntoskrnl.exe/instr.c, dlls/odbc32/odbc32.spec, dlls/odbc32/proxyodbc.c,
+# | 	dlls/wbemprox/builtin.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c,
+# | 	dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/wined3d/utils.c, dlls/winevulkan/make_vulkan,
+# | 	dlls/winevulkan/vulkan.c, dlls/winevulkan/winevulkan.spec, dlls/winmm/tests/wave.c, dlls/winmm/waveform.c,
+# | 	dlls/wmp/player.c, dlls/wmp/tests/oleobj.c, libs/wine/loader.c, loader/wine.inf.in,
+# | 	programs/cmd/tests/test_builtins.cmd, programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c,
+# | 	programs/msiexec/msiexec.c, programs/winecfg/resource.h, programs/winecfg/theme.c, programs/winecfg/winecfg.rc,
+# | 	programs/winemenubuilder/winemenubuilder.c, tools/make_specfiles
 # |
 if test "$enable_ml_patches" -eq 1; then
 	patch_apply ml-patches/0001-wined3d-Fix-WINED3D_MCS_COLOR2.patch
@@ -2567,9 +2567,6 @@ if test "$enable_ml_patches" -eq 1; then
 	patch_apply ml-patches/0022-kernel32-Set-environment-variable-PUBLIC-on-the-proc.patch
 	patch_apply ml-patches/0023-wbemprox-Add-Win32_NetworkAdapterConfiguration-IPAdd.patch
 	patch_apply ml-patches/0024-wbemprox-Add-Win32_NetworkAdapterConfiguration-IPSub.patch
-	patch_apply ml-patches/0025-kernel32-Add-support-for-MOVEFILE_WRITE_THROUGH-to-M.patch
-	patch_apply ml-patches/0026-server-Add-support-for-FILE_WRITE_THROUGH-to-create_.patch
-	patch_apply ml-patches/0027-kernel32-Add-support-for-FILE_FLAG_WRITE_THROUGH-to-.patch
 	patch_apply ml-patches/0028-cmd-Handle-quotes-when-parsing-the-folders-in-the-PA.patch
 	(
 		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fix WINED3D_MCS_COLOR2.", 1 },';
@@ -2596,9 +2593,6 @@ if test "$enable_ml_patches" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Set environment variable %PUBLIC% on the process start-up.", 1 },';
 		printf '%s\n' '+    { "Piotr Caban", "wbemprox: Add Win32_NetworkAdapterConfiguration::IPAddress property.", 1 },';
 		printf '%s\n' '+    { "Piotr Caban", "wbemprox: Add Win32_NetworkAdapterConfiguration::IPSubnet property.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add support for MOVEFILE_WRITE_THROUGH to MoveFile.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for FILE_WRITE_THROUGH to create_file() request.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Add support for FILE_FLAG_WRITE_THROUGH to CreateFile.", 1 },';
 		printf '%s\n' '+    { "Fabian Maurer", "cmd: Handle quotes when parsing the folders in the PATH environment variable.", 1 },';
 	) >> "$patchlist"
 fi

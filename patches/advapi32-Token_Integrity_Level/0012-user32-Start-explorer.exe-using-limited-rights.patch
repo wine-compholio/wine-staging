@@ -1,7 +1,7 @@
-From 31a5f689a12c1db6edcc86dcd8e81f38a5f19fc5 Mon Sep 17 00:00:00 2001
+From baff5c160cf7f1ac0011bf8f55d506bf0346e1fd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 7 Aug 2017 02:53:06 +0200
-Subject: user32: Start explorer.exe using limited rights.
+Subject: [PATCH] user32: Start explorer.exe using limited rights.
 
 ---
  dlls/advapi32/tests/security.c |  4 ++--
@@ -9,10 +9,10 @@ Subject: user32: Start explorer.exe using limited rights.
  2 files changed, 12 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index f1a64e29dea..52524ee6fe2 100644
+index f27642e7a7..0271cd72e0 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -7387,7 +7387,7 @@ static void test_token_security_descriptor(void)
+@@ -7313,7 +7313,7 @@ static void test_token_security_descriptor(void)
              ret = GetTokenInformation(token4, TokenIntegrityLevel, buffer_integrity, sizeof(buffer_integrity), &size);
              ok(ret, "GetTokenInformation failed with error %u\n", GetLastError());
              tml = (TOKEN_MANDATORY_LABEL *)buffer_integrity;
@@ -21,7 +21,7 @@ index f1a64e29dea..52524ee6fe2 100644
  
              size = 0;
              ret = GetKernelObjectSecurity(token4, LABEL_SECURITY_INFORMATION, NULL, 0, &size);
-@@ -7841,7 +7841,7 @@ static void test_child_token_sd_medium(void)
+@@ -7768,7 +7768,7 @@ static void test_child_token_sd_medium(void)
      ret = GetTokenInformation(token, TokenIntegrityLevel, buffer_integrity, sizeof(buffer_integrity), &size);
      ok(ret, "GetTokenInformation failed with error %u\n", GetLastError());
      tml = (TOKEN_MANDATORY_LABEL *)buffer_integrity;
@@ -31,7 +31,7 @@ index f1a64e29dea..52524ee6fe2 100644
      HeapFree(GetProcessHeap(), 0, sd);
  }
 diff --git a/dlls/user32/win.c b/dlls/user32/win.c
-index cbf22374374..ea116b9d139 100644
+index cbfd8bb14a..8039f54fb0 100644
 --- a/dlls/user32/win.c
 +++ b/dlls/user32/win.c
 @@ -43,6 +43,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(win);
@@ -43,15 +43,15 @@ index cbf22374374..ea116b9d139 100644
  static DWORD process_layout = ~0u;
  
  static struct list window_surfaces = LIST_INIT( window_surfaces );
-@@ -2067,6 +2069,7 @@ HWND WINAPI GetDesktopWindow(void)
-         WCHAR app[MAX_PATH + sizeof(explorer)/sizeof(WCHAR)];
-         WCHAR cmdline[MAX_PATH + (sizeof(explorer) + sizeof(args))/sizeof(WCHAR)];
+@@ -2052,6 +2054,7 @@ HWND WINAPI GetDesktopWindow(void)
+         WCHAR app[MAX_PATH + ARRAY_SIZE( explorer )];
+         WCHAR cmdline[MAX_PATH + ARRAY_SIZE( explorer ) + ARRAY_SIZE( args )];
          WCHAR desktop[MAX_PATH];
 +        HANDLE token;
          void *redir;
  
          SERVER_START_REQ( set_user_object_info )
-@@ -2099,9 +2102,12 @@ HWND WINAPI GetDesktopWindow(void)
+@@ -2084,9 +2087,12 @@ HWND WINAPI GetDesktopWindow(void)
          strcpyW( cmdline, app );
          strcatW( cmdline, args );
  
@@ -66,7 +66,7 @@ index cbf22374374..ea116b9d139 100644
          {
              TRACE( "started explorer pid %04x tid %04x\n", pi.dwProcessId, pi.dwThreadId );
              WaitForInputIdle( pi.hProcess, 10000 );
-@@ -2111,6 +2117,8 @@ HWND WINAPI GetDesktopWindow(void)
+@@ -2096,6 +2102,8 @@ HWND WINAPI GetDesktopWindow(void)
          else WARN( "failed to start explorer, err %d\n", GetLastError() );
          Wow64RevertWow64FsRedirection( redir );
  
@@ -76,5 +76,5 @@ index cbf22374374..ea116b9d139 100644
          {
              req->force = 1;
 -- 
-2.13.1
+2.18.0
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "25cc380b8ed41652b135657ef7651beef2f20ae4"
+	echo "ba9f3dc198dfc81bb40159077b73b797006bb73c"
 }
 
 # Show version information
@@ -115,7 +115,6 @@ patch_enable_all ()
 	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
-	enable_d3dx9_36_D3DXCreateTeapot="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
 	enable_d3dx9_36_D3DXOptimizeVertices="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
@@ -145,7 +144,6 @@ patch_enable_all ()
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
 	enable_dwrite_FontFallback="$1"
-	enable_dwrite_layout_check="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
@@ -189,13 +187,11 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
-	enable_ml_array_size="$1"
 	enable_ml_patches="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
-	enable_msi_Deferral="$1"
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
@@ -381,7 +377,6 @@ patch_enable_all ()
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
-	enable_wined3d_texture_blt_device="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -401,7 +396,6 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
-	enable_winex11_compile_vulkan="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
@@ -531,9 +525,6 @@ patch_enable ()
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
 			;;
-		d3dx9_36-D3DXCreateTeapot)
-			enable_d3dx9_36_D3DXCreateTeapot="$2"
-			;;
 		d3dx9_36-D3DXDisassembleShader)
 			enable_d3dx9_36_D3DXDisassembleShader="$2"
 			;;
@@ -620,9 +611,6 @@ patch_enable ()
 			;;
 		dwrite-FontFallback)
 			enable_dwrite_FontFallback="$2"
-			;;
-		dwrite-layout-check)
-			enable_dwrite_layout_check="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -753,9 +741,6 @@ patch_enable ()
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
 			;;
-		ml-array_size)
-			enable_ml_array_size="$2"
-			;;
 		ml-patches)
 			enable_ml_patches="$2"
 			;;
@@ -770,9 +755,6 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
-			;;
-		msi-Deferral)
-			enable_msi_Deferral="$2"
 			;;
 		msi-MsiGetDatabaseState)
 			enable_msi_MsiGetDatabaseState="$2"
@@ -1329,9 +1311,6 @@ patch_enable ()
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
 			;;
-		wined3d-texture-blt-device)
-			enable_wined3d_texture_blt_device="$2"
-			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
 			;;
@@ -1388,9 +1367,6 @@ patch_enable ()
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
-			;;
-		winex11-compile-vulkan)
-			enable_winex11_compile_vulkan="$2"
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
@@ -2353,13 +2329,9 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 fi
 
 if test "$enable_Compiler_Warnings" -eq 1; then
-	if test "$enable_ml_array_size" -gt 1; then
-		abort "Patchset ml-array_size disabled, but Compiler_Warnings depends on that."
-	fi
 	if test "$enable_ml_patches" -gt 1; then
 		abort "Patchset ml-patches disabled, but Compiler_Warnings depends on that."
 	fi
-	enable_ml_array_size=1
 	enable_ml_patches=1
 fi
 
@@ -2379,220 +2351,28 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
-# Patchset ml-array_size
-# |
-# | Modified files:
-# |   *	dlls/amstream/main.c, dlls/amstream/tests/amstream.c, dlls/browseui/progressdlg.c, dlls/d3d10/effect.c,
-# | 	dlls/d3d8/device.c, dlls/d3dcompiler_43/compiler.c, dlls/d3dcompiler_43/utils.c, dlls/d3dxof/main.c,
-# | 	dlls/dnsapi/query.c, dlls/dpnet/address.c, dlls/dx8vb/main.c, dlls/dxdiagn/provider.c, dlls/evr/main.c,
-# | 	dlls/fusion/asmcache.c, dlls/fusion/fusion.c, dlls/gameux/gameexplorer.c, dlls/hhctrl.ocx/chm.c, dlls/hhctrl.ocx/help.c,
-# | 	dlls/inetcomm/mimeole.c, dlls/inetcomm/protocol.c, dlls/inetcpl.cpl/connections.c, dlls/inetcpl.cpl/general.c,
-# | 	dlls/inetcpl.cpl/security.c, dlls/inetmib1/main.c, dlls/iphlpapi/iphlpapi_main.c, dlls/iphlpapi/ipstats.c,
-# | 	dlls/itss/moniker.c, dlls/itss/protocol.c, dlls/kernel32/computername.c, dlls/kernel32/console.c, dlls/kernel32/file.c,
-# | 	dlls/kernel32/lcformat.c, dlls/kernel32/locale.c, dlls/kernel32/module.c, dlls/kernel32/path.c, dlls/kernel32/process.c,
-# | 	dlls/kernel32/profile.c, dlls/kernel32/sync.c, dlls/kernel32/term.c, dlls/kernel32/volume.c, dlls/krnl386.exe16/int21.c,
-# | 	dlls/krnl386.exe16/interrupts.c, dlls/krnl386.exe16/relay.c, dlls/krnl386.exe16/snoop.c, dlls/krnl386.exe16/vxd.c,
-# | 	dlls/localspl/localmon.c, dlls/localspl/provider.c, dlls/localui/localui.c, dlls/mapi32/sendmail.c, dlls/mapi32/util.c,
-# | 	dlls/mciwave/mciwave.c, dlls/midimap/midimap.c, dlls/mmdevapi/devenum.c, dlls/mmdevapi/main.c,
-# | 	dlls/mountmgr.sys/device.c, dlls/mpr/wnet.c, dlls/msacm32/filter.c, dlls/msacm32/format.c, dlls/msacm32/internal.c,
-# | 	dlls/msacm32/pcmconverter.c, dlls/msacm32/tests/msacm.c, dlls/mscms/profile.c, dlls/mscoree/config.c,
-# | 	dlls/mscoree/corruntimehost.c, dlls/mscoree/mscoree_main.c, dlls/msctf/documentmgr.c, dlls/msrle32/msrle32.c,
-# | 	dlls/msscript.ocx/msscript.c, dlls/msvcrt/console.c, dlls/msvcrt/ctype.c, dlls/msvcrt/errno.c, dlls/msvcrt/except.c,
-# | 	dlls/msvcrt/exit.c, dlls/msvcrt/file.c, dlls/msvcrt/locale.c, dlls/msvcrt/printf.h, dlls/msvcrt/process.c,
-# | 	dlls/msvcrt/scheduler.c, dlls/msvcrt/wcs.c, dlls/msvideo.dll16/msvideo16.c, dlls/scrobj/scrobj.c,
-# | 	dlls/storage.dll16/storage.c, dlls/urlmon/urlmon_main.c, dlls/windowscodecs/bitmap.c, dlls/windowscodecs/bmpencode.c,
-# | 	dlls/windowscodecs/jpegformat.c, dlls/windowscodecs/metadataquery.c, dlls/windowscodecs/pngformat.c,
-# | 	dlls/windowscodecs/tiffformat.c, include/wine/server_protocol.h, programs/attrib/attrib.c, programs/clock/main.c,
-# | 	programs/clock/winclock.c, programs/hostname/hostname.c, programs/icinfo/icinfo.c, programs/ipconfig/ipconfig.c,
-# | 	programs/msiexec/msiexec.c, programs/net/net.c, programs/taskkill/taskkill.c, programs/taskmgr/about.c,
-# | 	programs/taskmgr/affinity.c, programs/taskmgr/applpage.c, programs/taskmgr/column.c, programs/taskmgr/dbgchnl.c,
-# | 	programs/taskmgr/debug.c, programs/taskmgr/endproc.c, programs/taskmgr/perfdata.c, programs/taskmgr/perfpage.c,
-# | 	programs/taskmgr/priority.c, programs/taskmgr/procpage.c, programs/taskmgr/taskmgr.c, programs/taskmgr/trayicon.c,
-# | 	programs/uninstaller/main.c, programs/wineboot/wineboot.c, programs/winetest/gui.c, programs/winetest/main.c,
-# | 	programs/wordpad/wordpad.c, server/request.h, server/trace.c
-# |
-if test "$enable_ml_array_size" -eq 1; then
-	patch_apply ml-array_size/0001-windowscodecs-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0003-localspl-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0004-mmdevapi-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0005-mapi32-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0006-krnl386.exe16-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0007-inetcpl.cpl-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0008-hhctrl.ocx-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0009-dpnet-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0010-dx8vb-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0011-fusion-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0012-evr-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0013-d3d10-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0014-d3d8-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0015-d3dcompiler-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0016-d3dxof-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0017-dnsapi-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0019-amstream-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0020-browseui-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0021-gameux-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0022-inetcomm-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0023-iphlpapi-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0024-itss-Remove-a-superfluous-variable-initialization.patch
-	patch_apply ml-array_size/0025-itss-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0026-attrib-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0027-clock-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0028-hostname-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0029-icinfo-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0030-net-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0031-taskkill-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0032-ipconfig-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0033-msiexec-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0034-taskmgr-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0035-uninstaller-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0036-wineboot-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0037-wordpad-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0038-winetest-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0039-mountmgr.sys-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0040-mpr-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0041-msacm32-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0042-msrle32-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0043-msvcrt-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0044-scrobj-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0045-storage.dll16-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0046-urlmon-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0047-msvideo.dll16-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0048-mscoree-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0049-dxdiagn-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0050-localui-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0051-inetmib1-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0052-kernel32-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0053-mciwave-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0054-midimap-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0055-mscms-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0056-msctf-Use-the-ARRAY_SIZE-macro.patch
-	patch_apply ml-array_size/0057-msscript.ocx-Use-the-ARRAY_SIZE-macro.patch
-	(
-		printf '%s\n' '+    { "Michael Stefaniuc", "windowscodecs: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "localspl: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mmdevapi: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mapi32: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "krnl386.exe16: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "inetcpl.cpl: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "hhctrl.ocx: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "dpnet: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "dx8vb: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "fusion: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "evr: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "d3d10: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "d3d8: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "d3dcompiler: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "d3dxof: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "dnsapi: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "amstream: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "browseui: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "gameux: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "inetcomm: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "iphlpapi: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "itss: Remove a superfluous variable initialization.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "itss: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "attrib: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "clock: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "hostname: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "icinfo: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "net: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "taskkill: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "ipconfig: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msiexec: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "taskmgr: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "uninstaller: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "wineboot: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "wordpad: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "winetest: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mountmgr.sys: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mpr: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msacm32: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msrle32: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msvcrt: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "scrobj: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "storage.dll16: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "urlmon: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msvideo.dll16: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mscoree: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "dxdiagn: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "localui: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "inetmib1: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "kernel32: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mciwave: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "midimap: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "mscms: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msctf: Use the ARRAY_SIZE() macro.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "msscript.ocx: Use the ARRAY_SIZE() macro.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ml-patches
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/api-ms-win-devices-config-l1-1-0/Makefile.in, dlls/api-ms-win-devices-config-l1-1-0/api-
-# | 	ms-win-devices-config-l1-1-0.spec, dlls/d3d8/tests/visual.c, dlls/d3d9/tests/visual.c, dlls/d3dcompiler_43/utils.c,
-# | 	dlls/ddraw/tests/ddraw7.c, dlls/dsound/sound3d.c, dlls/hidclass.sys/hid.h, dlls/hidclass.sys/main.c,
-# | 	dlls/hidclass.sys/pnp.c, dlls/kernel32/process.c, dlls/mpr/tests/mpr.c, dlls/mpr/wnet.c, dlls/msi/custom.c,
-# | 	dlls/msvcp60/ios.c, dlls/msvcp90/ios.c, dlls/ntoskrnl.exe/instr.c, dlls/odbc32/odbc32.spec, dlls/odbc32/proxyodbc.c,
-# | 	dlls/wbemprox/builtin.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c,
-# | 	dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/wined3d/utils.c, dlls/winevulkan/make_vulkan,
-# | 	dlls/winevulkan/vulkan.c, dlls/winevulkan/winevulkan.spec, dlls/winmm/tests/wave.c, dlls/winmm/waveform.c,
-# | 	dlls/wmp/player.c, dlls/wmp/tests/oleobj.c, libs/wine/loader.c, loader/wine.inf.in,
-# | 	programs/cmd/tests/test_builtins.cmd, programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c,
-# | 	programs/msiexec/msiexec.c, programs/winecfg/resource.h, programs/winecfg/theme.c, programs/winecfg/winecfg.rc,
-# | 	programs/winemenubuilder/winemenubuilder.c, tools/make_specfiles
+# |   *	dlls/hidclass.sys/hid.h, dlls/hidclass.sys/main.c, dlls/hidclass.sys/pnp.c, dlls/kernel32/process.c,
+# | 	dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c,
+# | 	dlls/winebus.sys/main.c, libs/wine/loader.c, programs/cmd/tests/test_builtins.cmd,
+# | 	programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c, programs/winecfg/resource.h,
+# | 	programs/winecfg/theme.c, programs/winecfg/winecfg.rc, programs/winemenubuilder/winemenubuilder.c
 # |
 if test "$enable_ml_patches" -eq 1; then
-	patch_apply ml-patches/0001-wined3d-Fix-WINED3D_MCS_COLOR2.patch
-	patch_apply ml-patches/0002-d3d9-tests-Add-a-test-for-D3DMCS_COLOR-1-2.patch
-	patch_apply ml-patches/0003-d3d8-tests-Add-a-test-for-D3DMCS_COLOR-1-2.patch
-	patch_apply ml-patches/0004-ddraw-tests-Add-a-test-for-D3DMCS_COLOR-1-2.patch
-	patch_apply ml-patches/0005-dsound-Correctly-calculate-angle-between-vectors-wit.patch
 	patch_apply ml-patches/0006-hidclass.sys-Unload-all-devices-before-unloading-a-m.patch
-	patch_apply ml-patches/0007-wine.inf-Add-Sources-key.patch
 	patch_apply ml-patches/0008-programs-Allow-to-disable-MIME-type-associations.patch
-	patch_apply ml-patches/0009-api-ms-win-devices-config-l1-1-0-Add-dll.patch
-	patch_apply ml-patches/0010-wnet-Make-WNetGetUniversalNameW-return-required-size.patch
-	patch_apply ml-patches/0011-msvcp90-Fix-EOF-delimiter-handling-in-basic_istream-.patch
-	patch_apply ml-patches/0012-ntoskrnl-Emulate-sti-cli-instructions-on-x86_64.patch
 	patch_apply ml-patches/0013-winebus.sys-Do-not-report-HID-report-read-errors-unc.patch
-	patch_apply ml-patches/0014-odbc32-Rename-functions-to-avoid-conflicts-with-nati.patch
-	patch_apply ml-patches/0015-winmm-Don-t-crash-in-waveOutOpen-when-nSamplesPerSec.patch
-	patch_apply ml-patches/0016-msi-Generate-unique-names-for-32-and-64-bit-custom-a.patch
-	patch_apply ml-patches/0017-winevulkan-Expose-driver-vkGetInstanceProcAddr-via-w.patch
-	patch_apply ml-patches/0018-winevulkan-Mark-ICD-and-thunking-functions-as-privat.patch
-	patch_apply ml-patches/0019-wmp-Make-it-possible-to-query-IUnknown-from-IWMPCont.patch
 	patch_apply ml-patches/0020-libwine-Use-getsegmentdata-3-on-Mac-OS-to-find-the-e.patch
-	patch_apply ml-patches/0021-d3dcompiler-Make-types-array-static-const.patch
 	patch_apply ml-patches/0022-kernel32-Set-environment-variable-PUBLIC-on-the-proc.patch
-	patch_apply ml-patches/0023-wbemprox-Add-Win32_NetworkAdapterConfiguration-IPAdd.patch
-	patch_apply ml-patches/0024-wbemprox-Add-Win32_NetworkAdapterConfiguration-IPSub.patch
 	patch_apply ml-patches/0028-cmd-Handle-quotes-when-parsing-the-folders-in-the-PA.patch
 	(
-		printf '%s\n' '+    { "Stefan Dösinger", "wined3d: Fix WINED3D_MCS_COLOR2.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "d3d9/tests: Add a test for D3DMCS_COLOR{1/2}.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "d3d8/tests: Add a test for D3DMCS_COLOR{1/2}.", 1 },';
-		printf '%s\n' '+    { "Stefan Dösinger", "ddraw/tests: Add a test for D3DMCS_COLOR{1/2}.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "dsound: Correctly calculate angle between vectors with equal and opposite directions.", 1 },';
 		printf '%s\n' '+    { "Aric Stewart", "hidclass.sys: Unload all devices before unloading a minidriver.", 1 },';
-		printf '%s\n' '+    { "Gijs Vermeulen", "wine.inf: Add \"Sources\" key.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "programs: Allow to disable MIME-type associations.", 1 },';
-		printf '%s\n' '+    { "Andrey Gusev", "api-ms-win-devices-config-l1-1-0: Add dll.", 1 },';
-		printf '%s\n' '+    { "Fabian Maurer", "wnet: Make WNetGetUniversalNameW return required size when buffer is too small and add test.", 1 },';
-		printf '%s\n' '+    { "Piotr Caban", "msvcp90: Fix EOF delimiter handling in basic_istream<char>::ignore.", 1 },';
-		printf '%s\n' '+    { "Fabian Maurer", "ntoskrnl: Emulate sti/cli instructions on x86_64.", 1 },';
 		printf '%s\n' '+    { "Kai Krakow", "winebus.sys: Do not report HID report read errors unconditionally.", 1 },';
-		printf '%s\n' '+    { "Daniel Lehman", "odbc32: Rename functions to avoid conflicts with native drivers.", 1 },';
-		printf '%s\n' '+    { "Fabian Maurer", "winmm: Don'\''t crash in waveOutOpen when nSamplesPerSec is 0 and add tests.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "msi: Generate unique names for 32- and 64-bit custom action server pipes.", 1 },';
-		printf '%s\n' '+    { "Jacek Caban", "winevulkan: Expose driver vkGetInstanceProcAddr via winevulkan exports.", 1 },';
-		printf '%s\n' '+    { "Jacek Caban", "winevulkan: Mark ICD and thunking functions as private.", 1 },';
-		printf '%s\n' '+    { "Nikolay Sivov", "wmp: Make it possible to query IUnknown from IWMPControls.", 1 },';
 		printf '%s\n' '+    { "Chip Davis", "libwine: Use getsegmentdata(3) on Mac OS to find the end of the __TEXT segment.", 1 },';
-		printf '%s\n' '+    { "Matteo Bruni", "d3dcompiler: Make types array static const.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Set environment variable %PUBLIC% on the process start-up.", 1 },';
-		printf '%s\n' '+    { "Piotr Caban", "wbemprox: Add Win32_NetworkAdapterConfiguration::IPAddress property.", 1 },';
-		printf '%s\n' '+    { "Piotr Caban", "wbemprox: Add Win32_NetworkAdapterConfiguration::IPSubnet property.", 1 },';
 		printf '%s\n' '+    { "Fabian Maurer", "cmd: Handle quotes when parsing the folders in the PATH environment variable.", 1 },';
 	) >> "$patchlist"
 fi
@@ -2600,7 +2380,7 @@ fi
 # Patchset Compiler_Warnings
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ml-array_size, ml-patches
+# |   *	ml-patches
 # |
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
@@ -3425,21 +3205,6 @@ if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-D3DXCreateTeapot
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36884] Return a valid mesh in D3DXCreateTeapot
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/mesh.c
-# |
-if test "$enable_d3dx9_36_D3DXCreateTeapot" -eq 1; then
-	patch_apply d3dx9_36-D3DXCreateTeapot/0001-d3dx9_36-Return-a-mesh-in-D3DXCreateTeapot.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Return a mesh in D3DXCreateTeapot.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-D3DXDisassembleShader
 # |
 # | Modified files:
@@ -3959,21 +3724,6 @@ if test "$enable_dwrite_FontFallback" -eq 1; then
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use font fallback when mapping characters.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use MapCharacters for non-visual characters.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use MapCharacters for dummy line metrics.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dwrite-layout-check
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45535] - dwrite Correct out of access
-# |
-# | Modified files:
-# |   *	dlls/dwrite/layout.c
-# |
-if test "$enable_dwrite_layout_check" -eq 1; then
-	patch_apply dwrite-layout-check/0001-dwrite-Avoid-possible-out-of-bounds-cluster-metrics-.patch
-	(
-		printf '%s\n' '+    { "Nikolay Sivov", "dwrite: Avoid possible out-of-bounds cluster metrics access.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4808,23 +4558,6 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msi-Deferral
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34989] Multiple installers using Caphyon 'Advanced Installer' (AI) technology hang (Atlassian SourceTree v1.3.2,
-# | 	League of Legends 2013+) (deferred type 1 custom action executed before regular type 1 custom action)
-# |
-# | Modified files:
-# |   *	dlls/msi/action.c, dlls/msi/assembly.c, dlls/msi/classes.c, dlls/msi/custom.c, dlls/msi/files.c, dlls/msi/font.c,
-# | 	dlls/msi/msipriv.h, dlls/msi/tests/custom.c, dlls/msi/tests/install.c
-# |
-if test "$enable_msi_Deferral" -eq 1; then
-	patch_apply msi-Deferral/0001-msi-Implement-deferral-for-standard-and-custom-actio.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "msi: Implement deferral for standard and custom actions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset msi-MsiGetDatabaseState
 # |
 # | Modified files:
@@ -4907,21 +4640,13 @@ fi
 # |   *	[#14695] Implement support for converting 16 bit depth to 24 bit in msvidc32
 # |
 # | Modified files:
-# |   *	dlls/iccvid/iccvid.c, dlls/msvfw32/msvideo_main.c, dlls/msvfw32/tests/msvfw.c, dlls/msvidc32/msvideo1.c
+# |   *	dlls/iccvid/iccvid.c, dlls/msvfw32/tests/msvfw.c, dlls/msvidc32/msvideo1.c
 # |
 if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
-	patch_apply msvfw32-ICGetDisplayFormat/0001-msvfw32-Try-different-formarts-in-ICGetDisplayFormat.patch
-	patch_apply msvfw32-ICGetDisplayFormat/0002-msvfw32-Add-test-for-negative-width-height-values-pa.patch
-	patch_apply msvfw32-ICGetDisplayFormat/0003-msvfw32-Set-biSizeImage-correctly-in-ICGetDisplayFor.patch
-	patch_apply msvfw32-ICGetDisplayFormat/0004-msvfw32-Take-stride-into-account-and-ask-for-palette.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0005-iccvid-Fix-calculation-of-stride-and-size.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0006-msvidc32-Add-support-for-converting-16-bit-depth-to-.patch
 	patch_apply msvfw32-ICGetDisplayFormat/0007-msvidc32-Fix-calculation-of-stride-and-size.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "msvfw32: Try different formarts in ICGetDisplayFormat.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "msvfw32: Add test for negative width/height values passed to ICGetDisplayFormat.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "msvfw32: Set biSizeImage correctly in ICGetDisplayFormat.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "msvfw32: Take stride into account and ask for palette in ICGetDisplayFormat.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
@@ -5873,7 +5598,7 @@ fi
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ml-array_size, ml-patches, Compiler_Warnings
+# |   *	ml-patches, Compiler_Warnings
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
@@ -8040,21 +7765,6 @@ if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-texture-blt-device
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45382] Stop the Sting demo crashing
-# |
-# | Modified files:
-# |   *	dlls/wined3d/texture.c
-# |
-if test "$enable_wined3d_texture_blt_device" -eq 1; then
-	patch_apply wined3d-texture-blt-device/0001-wined3d-Dont-blt-textures-on-different-devices.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Dont blt textures on different devices.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-wined3d_guess_gl_vendor
 # |
 # | This patchset fixes the following Wine bugs:
@@ -8085,7 +7795,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, ml-array_size, ml-patches, Compiler_Warnings, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, ml-patches, Compiler_Warnings, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
@@ -8360,21 +8070,6 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-compile-vulkan
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45554] - Correct compile error with gcc 4.5
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/vulkan.c
-# |
-if test "$enable_winex11_compile_vulkan" -eq 1; then
-	patch_apply winex11-compile-vulkan/0001-winex11.drv-Correct-bBuild-fail-with-GCC-4.5.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "winex11.drv: Correct bBuild fail with GCC 4.5.", 1 },';
 	) >> "$patchlist"
 fi
 

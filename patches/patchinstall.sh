@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ba9f3dc198dfc81bb40159077b73b797006bb73c"
+	echo "d744f367d263a131feee96e103fb8220e8400b53"
 }
 
 # Show version information
@@ -2354,23 +2354,17 @@ fi
 # Patchset ml-patches
 # |
 # | Modified files:
-# |   *	dlls/hidclass.sys/hid.h, dlls/hidclass.sys/main.c, dlls/hidclass.sys/pnp.c, dlls/kernel32/process.c,
-# | 	dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c,
-# | 	dlls/winebus.sys/main.c, libs/wine/loader.c, programs/cmd/tests/test_builtins.cmd,
+# |   *	dlls/kernel32/process.c, libs/wine/loader.c, programs/cmd/tests/test_builtins.cmd,
 # | 	programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c, programs/winecfg/resource.h,
 # | 	programs/winecfg/theme.c, programs/winecfg/winecfg.rc, programs/winemenubuilder/winemenubuilder.c
 # |
 if test "$enable_ml_patches" -eq 1; then
-	patch_apply ml-patches/0006-hidclass.sys-Unload-all-devices-before-unloading-a-m.patch
 	patch_apply ml-patches/0008-programs-Allow-to-disable-MIME-type-associations.patch
-	patch_apply ml-patches/0013-winebus.sys-Do-not-report-HID-report-read-errors-unc.patch
 	patch_apply ml-patches/0020-libwine-Use-getsegmentdata-3-on-Mac-OS-to-find-the-e.patch
 	patch_apply ml-patches/0022-kernel32-Set-environment-variable-PUBLIC-on-the-proc.patch
 	patch_apply ml-patches/0028-cmd-Handle-quotes-when-parsing-the-folders-in-the-PA.patch
 	(
-		printf '%s\n' '+    { "Aric Stewart", "hidclass.sys: Unload all devices before unloading a minidriver.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "programs: Allow to disable MIME-type associations.", 1 },';
-		printf '%s\n' '+    { "Kai Krakow", "winebus.sys: Do not report HID report read errors unconditionally.", 1 },';
 		printf '%s\n' '+    { "Chip Davis", "libwine: Use getsegmentdata(3) on Mac OS to find the end of the __TEXT segment.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Set environment variable %PUBLIC% on the process start-up.", 1 },';
 		printf '%s\n' '+    { "Fabian Maurer", "cmd: Handle quotes when parsing the folders in the PATH environment variable.", 1 },';

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d744f367d263a131feee96e103fb8220e8400b53"
+	echo "ccf6211c0ae6e86218f7e6c1f2fe725a23e568b9"
 }
 
 # Show version information
@@ -164,7 +164,6 @@ patch_enable_all ()
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
-	enable_kernel32_AttachConsole="$1"
 	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
@@ -187,7 +186,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
-	enable_ml_patches="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -289,7 +287,6 @@ patch_enable_all ()
 	enable_server_Misc_ACL="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
-	enable_server_Pipe_ObjectName="$1"
 	enable_server_Realtime_Priority="$1"
 	enable_server_Registry_Notifications="$1"
 	enable_server_Shared_Memory="$1"
@@ -299,7 +296,6 @@ patch_enable_all ()
 	enable_server_device_manager_destroy="$1"
 	enable_server_send_hardware_message="$1"
 	enable_setupapi_DiskSpaceList="$1"
-	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
@@ -672,9 +668,6 @@ patch_enable ()
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
 			;;
-		kernel32-AttachConsole)
-			enable_kernel32_AttachConsole="$2"
-			;;
 		kernel32-COMSPEC)
 			enable_kernel32_COMSPEC="$2"
 			;;
@@ -740,9 +733,6 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
-			;;
-		ml-patches)
-			enable_ml_patches="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -1047,9 +1037,6 @@ patch_enable ()
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
 			;;
-		server-Pipe_ObjectName)
-			enable_server_Pipe_ObjectName="$2"
-			;;
 		server-Realtime_Priority)
 			enable_server_Realtime_Priority="$2"
 			;;
@@ -1076,9 +1063,6 @@ patch_enable ()
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
-			;;
-		setupapi-Display_Device)
-			enable_setupapi_Display_Device="$2"
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
@@ -1988,13 +1972,6 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	enable_ntdll_ThreadTime=1
 fi
 
-if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	if test "$enable_server_Desktop_Refcount" -gt 1; then
-		abort "Patchset server-Desktop_Refcount disabled, but server-Pipe_ObjectName depends on that."
-	fi
-	enable_server_Desktop_Refcount=1
-fi
-
 if test "$enable_server_Object_Types" -eq 1; then
 	if test "$enable_server_Misc_ACL" -gt 1; then
 		abort "Patchset server-Misc_ACL disabled, but server-Object_Types depends on that."
@@ -2138,6 +2115,13 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	enable_ntdll_Pipe_SpecialCharacters=1
 fi
 
+if test "$enable_ntdll_LdrInitializeThunk" -eq 1; then
+	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
+		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-LdrInitializeThunk depends on that."
+	fi
+	enable_advapi32_Token_Integrity_Level=1
+fi
+
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	if test "$enable_ntdll_NtQueryEaFile" -gt 1; then
 		abort "Patchset ntdll-NtQueryEaFile disabled, but ntdll-Junction_Points depends on that."
@@ -2266,6 +2250,13 @@ if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	enable_wined3d_DXTn=1
 fi
 
+if test "$enable_wined3d_DXTn" -eq 1; then
+	if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -gt 1; then
+		abort "Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM disabled, but wined3d-DXTn depends on that."
+	fi
+	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM=1
+fi
+
 if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	if test "$enable_nvapi_Stub_DLL" -gt 1; then
 		abort "Patchset nvapi-Stub_DLL disabled, but d3d11-Deferred_Context depends on that."
@@ -2328,13 +2319,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	enable_server_Misc_ACL=1
 fi
 
-if test "$enable_Compiler_Warnings" -eq 1; then
-	if test "$enable_ml_patches" -gt 1; then
-		abort "Patchset ml-patches disabled, but Compiler_Warnings depends on that."
-	fi
-	enable_ml_patches=1
-fi
-
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2351,30 +2335,7 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
-# Patchset ml-patches
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, libs/wine/loader.c, programs/cmd/tests/test_builtins.cmd,
-# | 	programs/cmd/tests/test_builtins.cmd.exp, programs/cmd/wcmdmain.c, programs/winecfg/resource.h,
-# | 	programs/winecfg/theme.c, programs/winecfg/winecfg.rc, programs/winemenubuilder/winemenubuilder.c
-# |
-if test "$enable_ml_patches" -eq 1; then
-	patch_apply ml-patches/0008-programs-Allow-to-disable-MIME-type-associations.patch
-	patch_apply ml-patches/0020-libwine-Use-getsegmentdata-3-on-Mac-OS-to-find-the-e.patch
-	patch_apply ml-patches/0022-kernel32-Set-environment-variable-PUBLIC-on-the-proc.patch
-	patch_apply ml-patches/0028-cmd-Handle-quotes-when-parsing-the-folders-in-the-PA.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "programs: Allow to disable MIME-type associations.", 1 },';
-		printf '%s\n' '+    { "Chip Davis", "libwine: Use getsegmentdata(3) on Mac OS to find the end of the __TEXT segment.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Set environment variable %PUBLIC% on the process start-up.", 1 },';
-		printf '%s\n' '+    { "Fabian Maurer", "cmd: Handle quotes when parsing the folders in the PATH environment variable.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset Compiler_Warnings
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ml-patches
 # |
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
@@ -3271,7 +3232,25 @@ if test "$enable_d3dx9_36_DDS" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44888] Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
+	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
+	(
+		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-DXTn
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-WINED3DFMT_B8G8R8X8_UNORM
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
@@ -3280,7 +3259,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/dxtn.h, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
-# | 	dlls/wined3d/wined3d_main.c, include/wine/wined3d.h
+# | 	include/wine/wined3d.h
 # |
 if test "$enable_wined3d_DXTn" -eq 1; then
 	patch_apply wined3d-DXTn/0001-wined3d-add-DXTn-support.patch
@@ -3292,7 +3271,7 @@ fi
 # Patchset d3dx9_36-DXTn
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-DXTn
+# |   *	wined3d-WINED3DFMT_B8G8R8X8_UNORM, wined3d-DXTn
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
@@ -3599,7 +3578,7 @@ fi
 # Patchset dinput8-shared-code
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#45327] Stop access volation in League of Legends
+# |   *	[#45568] League of Legends 8.12+ fails to start a game (anticheat engine, validation of loaded DLLs)
 # |
 # | Modified files:
 # |   *	dlls/dinput/Makefile.in, dlls/dinput/dinput_main.c, dlls/dinput8/Makefile.in, dlls/dinput8/dinput8_main.c
@@ -4040,7 +4019,7 @@ fi
 # |   *	[#8332] Fallback to system ping command when CAP_NET_RAW is not available
 # |
 # | Modified files:
-# |   *	dlls/iphlpapi/icmp.c, dlls/iphlpapi/tests/iphlpapi.c
+# |   *	dlls/iphlpapi/icmp.c
 # |
 if test "$enable_iphlpapi_System_Ping" -eq 1; then
 	patch_apply iphlpapi-System_Ping/0001-iphlpapi-Fallback-to-system-ping-when-ICMP-permissio.patch
@@ -4061,22 +4040,6 @@ if test "$enable_iphlpapi_TCP_Table" -eq 1; then
 	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-AttachConsole
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41573] AttachConsole implementation.
-# |   *	[#43910] "Battle.net helper.exe" [NOT BLIZZARD APP!] crashes with Win 7 or higher
-# |
-# | Modified files:
-# |   *	dlls/kernel32/console.c, dlls/kernel32/tests/console.c, server/console.c, server/protocol.def
-# |
-if test "$enable_kernel32_AttachConsole" -eq 1; then
-	patch_apply kernel32-AttachConsole/0001-kernel32-Add-AttachConsole-implementation.patch
-	(
-		printf '%s\n' '+    { "Jacek Caban", "kernel32: Add AttachConsole implementation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5107,6 +5070,10 @@ fi
 
 # Patchset ntdll-LdrInitializeThunk
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, server-CreateProcess_ACLs, server-Misc_ACL,
+# | 	advapi32-Token_Integrity_Level
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45570] League of Legends 8.12+ fails to start a game (anticheat engine, incorrect implementation of
 # | 	LdrInitializeThunk)
@@ -5139,7 +5106,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31910] Add stub for NtContinue
-# |   *	[#45327] Helps League of Legends anti-cheat engine.
+# |   *	[#45572] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtContinue)
 # |
 # | Modified files:
 # |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c
@@ -5189,7 +5156,7 @@ fi
 # Patchset ntdll-NtQueryInformationProcess-ProcessCookie
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#45327] Added support ProcessCookie in NtQueryInformationProcess
+# |   *	[#45569] League of Legends 8.12+ needs NtQueryInformationProcess(ProcessCookie) stub
 # |
 # | Modified files:
 # |   *	dlls/ntdll/process.c
@@ -5324,7 +5291,8 @@ fi
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-LdrInitializeThunk
+# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, server-CreateProcess_ACLs, server-Misc_ACL,
+# | 	advapi32-Token_Integrity_Level, ntdll-LdrInitializeThunk
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
@@ -5372,7 +5340,7 @@ fi
 # Patchset ntdll-RtlSetUnhandledExceptionFilter
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#45327] Add RtlSetUnhandledExceptionFilter stub
+# |   *	[#45566] League of Legends 8.12+ needs ntdll.RtlSetUnhandledExceptionFilter stub
 # |
 # | Modified files:
 # |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec
@@ -5592,7 +5560,7 @@ fi
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ml-patches, Compiler_Warnings
+# |   *	Compiler_Warnings
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
@@ -6204,21 +6172,6 @@ if test "$enable_server_Object_Types" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Pipe_ObjectName
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/om.c, server/named_pipe.c, server/object.c, server/object.h
-# |
-if test "$enable_server_Pipe_ObjectName" -eq 1; then
-	patch_apply server-Pipe_ObjectName/0001-server-Store-a-reference-to-the-parent-object-for-pi.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a reference to the parent object for pipe servers.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Realtime_Priority
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6307,25 +6260,6 @@ if test "$enable_setupapi_DiskSpaceList" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Ignore deletion of added files in SetupAddToDiskSpaceList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi: ImplementSetupAddSectionToDiskSpaceList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SetupAddInstallSectionToDiskSpaceList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-Display_Device
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35345] Fix enumeration of display driver properties using setupapi
-# |
-# | Modified files:
-# |   *	dlls/setupapi/devinst.c, dlls/setupapi/tests/devinst.c, loader/wine.inf.in
-# |
-if test "$enable_setupapi_Display_Device" -eq 1; then
-	patch_apply setupapi-Display_Device/0001-setupapi-Create-registry-keys-for-display-devices-an.patch
-	patch_apply setupapi-Display_Device/0002-setupapi-Handle-the-case-that-a-full-driver-path-is-.patch
-	patch_apply setupapi-Display_Device/0003-setupapi-Also-create-HardwareId-registry-key-for-dis.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7675,8 +7609,9 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-DXTn, wined3d-
-# | 	Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
+# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-
+# | 	WINED3DFMT_B8G8R8X8_UNORM, wined3d-DXTn, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs,
+# | 	wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h
@@ -7744,21 +7679,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44888] Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
-	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
-	(
-		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-wined3d_guess_gl_vendor
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7789,7 +7709,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, ml-patches, Compiler_Warnings, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

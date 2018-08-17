@@ -387,8 +387,11 @@ def read_patch(filename, fp=None):
 
 def apply_patch(original, patchfile, reverse=False, fuzz=2):
     """Apply a patch with optional fuzz - uses the commandline 'patch' utility."""
+    if original is None:
+        raise PatchApplyError("Failed to apply patch - file was deleted (exitcode %d)." % exitcode)
 
-    result = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+    result = tempfile.NamedTemporaryFile(prefix="apply_patch", mode='w+', delete=False)
+
     try:
         # We open the file again to avoid race-conditions with multithreaded reads
         with open(original.name) as fp:
@@ -403,6 +406,9 @@ def apply_patch(original, patchfile, reverse=False, fuzz=2):
         exitcode = subprocess.call(cmdline, stdout=_devnull, stderr=_devnull)
         if exitcode != 0:
             raise PatchApplyError("Failed to apply patch (exitcode %d)." % exitcode)
+
+        if not os.path.exists(result.name):
+            return None
 
         # Hack - we can't keep the file open while patching ('patch' might rename/replace
         # the file), so create a new _TemporaryFileWrapper object for the existing path.

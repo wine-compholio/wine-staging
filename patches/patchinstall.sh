@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ccf6211c0ae6e86218f7e6c1f2fe725a23e568b9"
+	echo "c698682b3286d72cc7c4c4624b4d14b03dbe6908"
 }
 
 # Show version information
@@ -296,6 +296,7 @@ patch_enable_all ()
 	enable_server_device_manager_destroy="$1"
 	enable_server_send_hardware_message="$1"
 	enable_setupapi_DiskSpaceList="$1"
+	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
@@ -1063,6 +1064,9 @@ patch_enable ()
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
+			;;
+		setupapi-Display_Device)
+			enable_setupapi_Display_Device="$2"
 			;;
 		setupapi-HSPFILEQ_Check_Type)
 			enable_setupapi_HSPFILEQ_Check_Type="$2"
@@ -2842,17 +2846,12 @@ fi
 # |   *	[#44052] - Add ID2D1Bitmap1/ID2D1Factory1 support
 # |
 # | Modified files:
-# |   *	dlls/d2d1/Makefile.in, dlls/d2d1/d2d1_private.h, dlls/d2d1/device.c, dlls/d2d1/device_context.c, dlls/d2d1/factory.c,
-# | 	dlls/d2d1/geometry.c
+# |   *	dlls/d2d1/d2d1_private.h, dlls/d2d1/factory.c, dlls/d2d1/geometry.c
 # |
 if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
 	patch_apply d2d1-ID2D1Factory1/0003-d2d1-Use-ID2D1Factory1-in-d2d_geometry.patch
-	patch_apply d2d1-ID2D1Factory1/0005-d2d1-Stub-ID2D1DeviceContext.patch
-	patch_apply d2d1-ID2D1Factory1/0006-d2d1-Implement-ID2D1DeviceContext.patch
 	(
 		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory1 in d2d_geometry.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Stub ID2D1DeviceContext.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Implement ID2D1DeviceContext.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3061,7 +3060,7 @@ fi
 # |   *	[#43848] Implement support for depth bias clamping
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/directx.c, dlls/wined3d/state.c,
+# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c, dlls/wined3d/state.c,
 # | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
@@ -6263,6 +6262,25 @@ if test "$enable_setupapi_DiskSpaceList" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset setupapi-Display_Device
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35345] Fix enumeration of display driver properties using setupapi
+# |
+# | Modified files:
+# |   *	dlls/setupapi/devinst.c, dlls/setupapi/tests/devinst.c, loader/wine.inf.in
+# |
+if test "$enable_setupapi_Display_Device" -eq 1; then
+	patch_apply setupapi-Display_Device/0001-setupapi-Create-registry-keys-for-display-devices-an.patch
+	patch_apply setupapi-Display_Device/0002-setupapi-Handle-the-case-that-a-full-driver-path-is-.patch
+	patch_apply setupapi-Display_Device/0003-setupapi-Also-create-HardwareId-registry-key-for-dis.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset setupapi-HSPFILEQ_Check_Type
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7539,7 +7557,8 @@ fi
 # Patchset wined3d-Accounting
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/device.c, dlls/wined3d/device.c, dlls/wined3d/directx.c, dlls/wined3d/wined3d_gl.h
+# |   *	dlls/d3d9/tests/device.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/wined3d_gl.h
 # |
 if test "$enable_wined3d_Accounting" -eq 1; then
 	patch_apply wined3d-Accounting/0001-wined3d-Use-real-values-for-memory-accounting-on-NVI.patch
@@ -7551,7 +7570,7 @@ fi
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/context.c, dlls/wined3d/directx.c, dlls/wined3d/glsl_shader.c,
+# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/context.c, dlls/wined3d/glsl_shader.c,
 # | 	dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
@@ -7685,7 +7704,7 @@ fi
 # |   *	[#42538] Add check for GL_VENDOR = "Brian Paul" to detect Mesa
 # |
 # | Modified files:
-# |   *	dlls/wined3d/directx.c
+# |   *	dlls/wined3d/adapter_gl.c
 # |
 if test "$enable_wined3d_wined3d_guess_gl_vendor" -eq 1; then
 	patch_apply wined3d-wined3d_guess_gl_vendor/0001-wined3d-Also-check-for-Brian-Paul-to-detect-Mesa-gl_.patch

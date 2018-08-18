@@ -1,4 +1,4 @@
-From b078695fc13099df9edf2eaba974f6535808f4a3 Mon Sep 17 00:00:00 2001
+From f244bd251e05597fa57e8088c3196e0b17726d5f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 6 Jun 2015 06:53:34 +0200
 Subject: [PATCH] wined3d: Use real values for memory accounting on NVIDIA
@@ -8,16 +8,16 @@ FIXME: Reimplement wined3d_device_get_available_texture_mem
        without using the context on the main thread.
 ---
  dlls/d3d9/tests/device.c  | 11 +++++++----
+ dlls/wined3d/adapter_gl.c | 10 ++++++++++
  dlls/wined3d/device.c     | 25 +++++++++++++++++++++++++
- dlls/wined3d/directx.c    | 10 ++++++++++
  dlls/wined3d/wined3d_gl.h |  1 +
  4 files changed, 43 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
-index 0ffc1ae..0c3937e 100644
+index 66bf5b0..b9ff69c 100644
 --- a/dlls/d3d9/tests/device.c
 +++ b/dlls/d3d9/tests/device.c
-@@ -9470,10 +9470,13 @@ static void test_vidmem_accounting(void)
+@@ -9496,10 +9496,13 @@ static void test_vidmem_accounting(void)
      }
      vidmem_end = IDirect3DDevice9_GetAvailableTextureMem(device);
  
@@ -35,11 +35,39 @@ index 0ffc1ae..0c3937e 100644
  
      for (i = 0; i < ARRAY_SIZE(textures); i++)
      {
+diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
+index 686c79a..15593ce 100644
+--- a/dlls/wined3d/adapter_gl.c
++++ b/dlls/wined3d/adapter_gl.c
+@@ -220,6 +220,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
+     {"GL_NV_vertex_program2",               NV_VERTEX_PROGRAM2            },
+     {"GL_NV_vertex_program2_option",        NV_VERTEX_PROGRAM2_OPTION     },
+     {"GL_NV_vertex_program3",               NV_VERTEX_PROGRAM3            },
++    {"GL_NVX_gpu_memory_info",              NVX_GPU_MEMORY_INFO           },
+ };
+ 
+ static const struct wined3d_extension_map wgl_extension_map[] =
+@@ -1002,6 +1003,15 @@ static const struct wined3d_gpu_description *query_gpu_description(const struct
+         TRACE("Card reports vendor PCI ID 0x%04x, device PCI ID 0x%04x, 0x%s bytes of video memory.\n",
+                 vendor, device, wine_dbgstr_longlong(*vram_bytes));
+     }
++    else if (gl_info->supported[NVX_GPU_MEMORY_INFO])
++    {
++        GLint vram_kb;
++        gl_info->gl_ops.gl.p_glGetIntegerv(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &vram_kb);
++
++        *vram_bytes = (UINT64)vram_kb * 1024;
++        TRACE("Got 0x%s as video memory from NVX_GPU_MEMORY_INFO extension.\n",
++                wine_dbgstr_longlong(*vram_bytes));
++    }
+ 
+     if (wined3d_settings.pci_vendor_id != PCI_VENDOR_NONE)
+     {
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 17103cc..bce8936 100644
+index 5079113..2788320 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -1284,8 +1284,33 @@ void CDECL wined3d_device_set_multithreaded(struct wined3d_device *device)
+@@ -1301,8 +1301,33 @@ void CDECL wined3d_device_set_multithreaded(struct wined3d_device *device)
  
  UINT CDECL wined3d_device_get_available_texture_mem(const struct wined3d_device *device)
  {
@@ -73,39 +101,11 @@ index 17103cc..bce8936 100644
      TRACE("Emulating 0x%s bytes. 0x%s used, returning 0x%s left.\n",
              wine_dbgstr_longlong(device->adapter->vram_bytes),
              wine_dbgstr_longlong(device->adapter->vram_bytes_used),
-diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index f7f6452..ec5d8d8 100644
---- a/dlls/wined3d/directx.c
-+++ b/dlls/wined3d/directx.c
-@@ -270,6 +270,7 @@ static const struct wined3d_extension_map gl_extension_map[] =
-     {"GL_NV_vertex_program2",               NV_VERTEX_PROGRAM2            },
-     {"GL_NV_vertex_program2_option",        NV_VERTEX_PROGRAM2_OPTION     },
-     {"GL_NV_vertex_program3",               NV_VERTEX_PROGRAM3            },
-+    {"GL_NVX_gpu_memory_info",              NVX_GPU_MEMORY_INFO           },
- };
- 
- static const struct wined3d_extension_map wgl_extension_map[] =
-@@ -1578,6 +1579,15 @@ static const struct gpu_description *query_gpu_description(const struct wined3d_
-         TRACE("Card reports vendor PCI ID 0x%04x, device PCI ID 0x%04x, 0x%s bytes of video memory.\n",
-                 vendor, device, wine_dbgstr_longlong(*vram_bytes));
-     }
-+    else if (gl_info->supported[NVX_GPU_MEMORY_INFO])
-+    {
-+        GLint vram_kb;
-+        gl_info->gl_ops.gl.p_glGetIntegerv(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &vram_kb);
-+
-+        *vram_bytes = (UINT64)vram_kb * 1024;
-+        TRACE("Got 0x%s as video memory from NVX_GPU_MEMORY_INFO extension.\n",
-+                wine_dbgstr_longlong(*vram_bytes));
-+    }
- 
-     if (wined3d_settings.pci_vendor_id != PCI_VENDOR_NONE)
-     {
 diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
-index cc6f888..daed891 100644
+index 525c298..2fc3348 100644
 --- a/dlls/wined3d/wined3d_gl.h
 +++ b/dlls/wined3d/wined3d_gl.h
-@@ -199,6 +199,7 @@ enum wined3d_gl_extension
+@@ -202,6 +202,7 @@ enum wined3d_gl_extension
      NV_VERTEX_PROGRAM2,
      NV_VERTEX_PROGRAM2_OPTION,
      NV_VERTEX_PROGRAM3,

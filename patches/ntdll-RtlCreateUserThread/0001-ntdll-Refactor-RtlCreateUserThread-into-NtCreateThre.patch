@@ -1,4 +1,4 @@
-From 06289ea3c98030049e080fd3348073932898740f Mon Sep 17 00:00:00 2001
+From 095a6032a9ba158b4e203d1c56f92d40de9172ae Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:22:59 -0500
 Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
@@ -7,12 +7,12 @@ League of Legends hooks NtCreateThread or NtCreateThreadEx (depending on the
 reported version), and expects it to be called whenever a thread is created.
 ---
  dlls/ntdll/ntdll.spec |   2 +-
- dlls/ntdll/thread.c   | 177 ++++++++++++++++++++++++++++++++++++++++++--------
+ dlls/ntdll/thread.c   | 185 ++++++++++++++++++++++++++++++++++++++++++--------
  include/winternl.h    |  25 +++++++
- 3 files changed, 175 insertions(+), 29 deletions(-)
+ 3 files changed, 183 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 705538a..90e537e 100644
+index 003e4f9..f62942c 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
 @@ -154,7 +154,7 @@
@@ -25,10 +25,10 @@ index 705538a..90e537e 100644
  @ stdcall NtCreateTimer(ptr long ptr long)
  @ stub NtCreateToken
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index eda4fa7..b50524d 100644
+index 59d64e1..99f312f 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -682,34 +682,18 @@ static void start_thread( struct startup_info *info )
+@@ -527,34 +527,18 @@ static void start_thread( struct startup_info *info )
  /***********************************************************************
   *              NtCreateThreadEx   (NTDLL.@)
   */
@@ -68,7 +68,7 @@ index eda4fa7..b50524d 100644
      HANDLE handle = 0, actctx = 0;
      TEB *teb = NULL;
      DWORD tid = 0;
-@@ -717,6 +701,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+@@ -562,6 +546,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
      NTSTATUS status;
      SIZE_T extra_stack = PTHREAD_STACK_MIN;
  
@@ -102,7 +102,7 @@ index eda4fa7..b50524d 100644
      if (process != NtCurrentProcess())
      {
          apc_call_t call;
-@@ -747,7 +758,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+@@ -592,7 +603,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
  
      SERVER_START_REQ( new_thread )
      {
@@ -111,7 +111,7 @@ index eda4fa7..b50524d 100644
          req->attributes = 0;  /* FIXME */
          req->suspend    = suspended;
          req->request_fd = request_pipe[0];
-@@ -804,19 +815,19 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+@@ -649,19 +660,19 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
  
@@ -137,7 +137,7 @@ index eda4fa7..b50524d 100644
      pthread_sigmask( SIG_SETMASK, &sigset, NULL );
  
      if (id) id->UniqueThread = ULongToHandle(tid);
-@@ -833,6 +844,116 @@ error:
+@@ -678,6 +689,124 @@ error:
      return status;
  }
  
@@ -159,8 +159,8 @@ index eda4fa7..b50524d 100644
 +        entry = (LPTHREAD_START_ROUTINE) context->R0;
 +        arg = (void *)context->R1;
 +#elif defined(__aarch64__)
-+        entry = (LPTHREAD_START_ROUTINE) context->u.s.X0;
-+        arg = (void *)context->u.s.X1;
++        entry = (LPTHREAD_START_ROUTINE) context->u.X0;
++        arg = (void *)context->u.X1;
 +#elif defined(__powerpc__)
 +        entry = (LPTHREAD_START_ROUTINE) context->Gpr3;
 +        arg = (void *)context->Gpr4;
@@ -229,7 +229,11 @@ index eda4fa7..b50524d 100644
 +        context.Gpr4 = (DWORD)arg;
 +#endif
 +
++#if defined(__i386__) || defined(__x86_64__)
 +        return __syscall_NtCreateThread(handle_ptr, (ACCESS_MASK)0, NULL, process, id, &context, NULL, suspended);
++#else
++        return NtCreateThread(handle_ptr, (ACCESS_MASK)0, NULL, process, id, &context, NULL, suspended);
++#endif
 +    }
 +    else
 +    {
@@ -247,7 +251,11 @@ index eda4fa7..b50524d 100644
 +            pattr_list = &attr_list;
 +        }
 +
++#if defined(__i386__) || defined(__x86_64__)
 +        return __syscall_NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, NULL, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
++#else
++        return NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, NULL, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
++#endif
 +    }
 +}
 +
@@ -255,10 +263,10 @@ index eda4fa7..b50524d 100644
  /******************************************************************************
   *              RtlGetNtGlobalFlags   (NTDLL.@)
 diff --git a/include/winternl.h b/include/winternl.h
-index ebfe8d8..827fead 100644
+index dca8ff3..6617974 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2170,6 +2170,31 @@ typedef enum _SYSDBG_COMMAND {
+@@ -2173,6 +2173,31 @@ typedef enum _SYSDBG_COMMAND {
    SysDbgWriteBusData
  } SYSDBG_COMMAND, *PSYSDBG_COMMAND;
  

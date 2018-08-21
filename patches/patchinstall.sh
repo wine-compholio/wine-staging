@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8204d04b7fd416c1b6296708937e3c06e058809b"
+	echo "83e481fee20bc5c6598e65f8295be1b3f11fb70b"
 }
 
 # Show version information
@@ -139,7 +139,6 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
-	enable_dinput8_shared_code="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dsound_Revert_Cleanup="$1"
@@ -593,9 +592,6 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
-			;;
-		dinput8-shared-code)
-			enable_dinput8_shared_code="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3060,8 +3056,8 @@ fi
 # |   *	[#43848] Implement support for depth bias clamping
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/device.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
+# |   *	dlls/d3d10core/tests/d3d10core.c, dlls/d3d11/device.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c,
+# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Depth_Bias" -eq 1; then
 	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
@@ -3574,21 +3570,6 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput8-shared-code
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45568] League of Legends 8.12+ fails to start a game (anticheat engine, validation of loaded DLLs)
-# |
-# | Modified files:
-# |   *	dlls/dinput/Makefile.in, dlls/dinput/dinput_main.c, dlls/dinput8/Makefile.in, dlls/dinput8/dinput8_main.c
-# |
-if test "$enable_dinput8_shared_code" -eq 1; then
-	patch_apply dinput8-shared-code/0001-dinput8-Use-shared-source-directory.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput8: Use shared source directory.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3738,7 +3719,7 @@ fi
 # |   *	[#43584] Implement DXGI GammaControl methods
 # |
 # | Modified files:
-# |   *	dlls/dxgi/output.c, dlls/dxgi/tests/device.c
+# |   *	dlls/dxgi/output.c, dlls/dxgi/tests/dxgi.c
 # |
 if test "$enable_dxgi_GammaRamp" -eq 1; then
 	patch_apply dxgi-GammaRamp/0001-dxgi-Implement-setting-and-querying-the-gamma-value-.patch
@@ -4326,7 +4307,6 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 	patch_apply kernel32-SetFileCompletionNotificationModes/0002-ntdll-Allow-to-query-file-IO-completion-notification.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0003-ws2_32-tests-Add-test-for-completion-notification-fl.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0004-ntdll-tests-Add-more-tests-for-FileIoCompletionNotif.patch
-	patch_apply kernel32-SetFileCompletionNotificationModes/0005-ntdll-Do-not-require-unix-fd-for-FileIoCompletionNot.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0006-server-Skip-async-completion-when-possible.patch
 	patch_apply kernel32-SetFileCompletionNotificationModes/0007-ws2_32-Don-t-skip-completion-in-AcceptEx.patch
 	(
@@ -4334,7 +4314,6 @@ if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query file IO completion notification mode.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Add test for completion notification flags.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add more tests for FileIoCompletionNotificationInformation.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Do not require unix fd for FileIoCompletionNotificationInformation.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
 	) >> "$patchlist"

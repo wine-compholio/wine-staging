@@ -1,18 +1,18 @@
-From de26db5e899f92d2477c49fcfc57e673a3048205 Mon Sep 17 00:00:00 2001
+From 23044a3ed53cfe0c8a35c5cc19d51913e1523c51 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Thu, 17 May 2018 09:29:08 -0500
-Subject: d3d10core/tests: Add test for depth bias clamp.
+Subject: [PATCH] d3d10core/tests: Add test for depth bias clamp.
 
 Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
 ---
- dlls/d3d10core/tests/device.c | 120 +++++++++++++++++++++++++-----------------
- 1 file changed, 71 insertions(+), 49 deletions(-)
+ dlls/d3d10core/tests/d3d10core.c | 126 ++++++++++++++++++-------------
+ 1 file changed, 74 insertions(+), 52 deletions(-)
 
-diff --git a/dlls/d3d10core/tests/device.c b/dlls/d3d10core/tests/device.c
-index 50521bd..6e92c77 100644
---- a/dlls/d3d10core/tests/device.c
-+++ b/dlls/d3d10core/tests/device.c
-@@ -14697,10 +14697,10 @@ static void test_depth_bias(void)
+diff --git a/dlls/d3d10core/tests/d3d10core.c b/dlls/d3d10core/tests/d3d10core.c
+index e675c12a39e..2100a6611e5 100644
+--- a/dlls/d3d10core/tests/d3d10core.c
++++ b/dlls/d3d10core/tests/d3d10core.c
+@@ -14957,10 +14957,10 @@ static void test_depth_bias(void)
      struct resource_readback rb;
      ID3D10DepthStencilView *dsv;
      unsigned int expected_value;
@@ -24,7 +24,7 @@ index 50521bd..6e92c77 100644
      unsigned int shift = 0;
      ID3D10Device *device;
      float *depth_values;
-@@ -14727,6 +14727,10 @@ static void test_depth_bias(void)
+@@ -14987,6 +14987,10 @@ static void test_depth_bias(void)
          -10000, -1000, -100, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 200, 500, 1000, 10000,
      };
@@ -35,7 +35,7 @@ index 50521bd..6e92c77 100644
      static const float quad_slopes[] =
      {
          0.0f, 0.5f, 1.0f
-@@ -14819,68 +14823,86 @@ static void test_depth_bias(void)
+@@ -15079,68 +15083,86 @@ static void test_depth_bias(void)
              for (j = 0; j < ARRAY_SIZE(bias_tests); ++j)
              {
                  rasterizer_desc.DepthBias = bias_tests[j];
@@ -45,12 +45,25 @@ index 50521bd..6e92c77 100644
 -                ID3D10Device_ClearDepthStencilView(device, dsv, D3D10_CLEAR_DEPTH, 1.0f, 0);
 -                draw_quad(&test_context);
 -                switch (format)
-+
-+                for (k = 0; k < ARRAY_SIZE(bias_clamp_tests); ++k)
-                 {
+-                {
 -                    case DXGI_FORMAT_D32_FLOAT:
 -                        bias = rasterizer_desc.DepthBias * pow(2.0f, quads[i].exponent - 23.0f);
 -                        depth = min(max(0.0f, quads[i].z + bias), 1.0f);
+-
+-                        check_texture_float(texture, depth, 2);
+-                        break;
+-                    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+-                        r = 1.0f / 16777215.0f;
+-                        bias = rasterizer_desc.DepthBias * r;
+-                        depth = min(max(0.0f, quads[i].z + bias), 1.0f);
+ 
+-                        get_texture_readback(texture, 0, &rb);
+-                        for (y = 0; y < texture_desc.Height; ++y)
+-                        {
+-                            expected_value = depth * 16777215.0f + 0.5f;
+-                            for (x = 0; x < texture_desc.Width; ++x)
++                for (k = 0; k < ARRAY_SIZE(bias_clamp_tests); ++k)
++                {
 +                    rasterizer_desc.DepthBiasClamp = bias_clamp_tests[k];
 +                    ID3D10Device_CreateRasterizerState(device, &rasterizer_desc, &rs);
 +                    ok(SUCCEEDED(hr), "Failed to create rasterizer state, hr %#x.\n", hr);
@@ -66,13 +79,7 @@ index 50521bd..6e92c77 100644
 +                            if (rasterizer_desc.DepthBiasClamp < 0)
 +                                bias = max(bias, rasterizer_desc.DepthBiasClamp);
 +                            depth = min(max(0.0f, quads[i].z + bias), 1.0f);
- 
--                        check_texture_float(texture, depth, 2);
--                        break;
--                    case DXGI_FORMAT_D24_UNORM_S8_UINT:
--                        r = 1.0f / 16777215.0f;
--                        bias = rasterizer_desc.DepthBias * r;
--                        depth = min(max(0.0f, quads[i].z + bias), 1.0f);
++
 +                            check_texture_float(texture, depth, 2);
 +                            break;
 +                        case DXGI_FORMAT_D24_UNORM_S8_UINT:
@@ -83,12 +90,7 @@ index 50521bd..6e92c77 100644
 +                            if (rasterizer_desc.DepthBiasClamp < 0)
 +                                bias = max(bias, rasterizer_desc.DepthBiasClamp);
 +                            depth = min(max(0.0f, quads[i].z + bias), 1.0f);
- 
--                        get_texture_readback(texture, 0, &rb);
--                        for (y = 0; y < texture_desc.Height; ++y)
--                        {
--                            expected_value = depth * 16777215.0f + 0.5f;
--                            for (x = 0; x < texture_desc.Width; ++x)
++
 +                            get_texture_readback(texture, 0, &rb);
 +                            for (y = 0; y < texture_desc.Height; ++y)
                              {
@@ -116,6 +118,12 @@ index 50521bd..6e92c77 100644
 -                        r = 1.0f / 65535.0f;
 -                        bias = rasterizer_desc.DepthBias * r;
 -                        depth = min(max(0.0f, quads[i].z + bias), 1.0f);
+-
+-                        get_texture_readback(texture, 0, &rb);
+-                        for (y = 0; y < texture_desc.Height; ++y)
+-                        {
+-                            expected_value = depth * 65535.0f + 0.5f;
+-                            for (x = 0; x < texture_desc.Width; ++x)
 +                            release_resource_readback(&rb);
 +                            break;
 +                        case DXGI_FORMAT_D16_UNORM:
@@ -126,12 +134,7 @@ index 50521bd..6e92c77 100644
 +                            if (rasterizer_desc.DepthBiasClamp < 0)
 +                                bias = max(bias, rasterizer_desc.DepthBiasClamp);
 +                            depth = min(max(0.0f, quads[i].z + bias), 1.0f);
- 
--                        get_texture_readback(texture, 0, &rb);
--                        for (y = 0; y < texture_desc.Height; ++y)
--                        {
--                            expected_value = depth * 65535.0f + 0.5f;
--                            for (x = 0; x < texture_desc.Width; ++x)
++
 +                            get_texture_readback(texture, 0, &rb);
 +                            for (y = 0; y < texture_desc.Height; ++y)
                              {
@@ -171,5 +174,5 @@ index 50521bd..6e92c77 100644
          {
              for (j = 0; j < ARRAY_SIZE(vertices); ++j)
 -- 
-2.7.4
+2.18.0
 

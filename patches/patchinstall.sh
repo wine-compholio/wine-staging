@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c698682b3286d72cc7c4c4624b4d14b03dbe6908"
+	echo "8204d04b7fd416c1b6296708937e3c06e058809b"
 }
 
 # Show version information
@@ -6485,7 +6485,7 @@ fi
 # |   *	[#30185] Add shell32 placeholder icons to match offsets with Windows
 # |
 # | Modified files:
-# |   *	dlls/shell32/placeholder.ico, dlls/shell32/shell32.rc, dlls/shell32/shresdef.h
+# |   *	dlls/shell32/resources/placeholder.ico, dlls/shell32/shell32.rc, dlls/shell32/shresdef.h
 # |
 if test "$enable_shell32_Placeholder_Icons" -eq 1; then
 	patch_apply shell32-Placeholder_Icons/0001-shell32-Add-placeholder-icons-to-match-icon-offset-w.patch
@@ -6529,8 +6529,8 @@ fi
 # |   *	[#40236] Add missing resources for IE6 buttons
 # |
 # | Modified files:
-# |   *	dlls/shell32/Makefile.in, dlls/shell32/ietoolbar.bmp, dlls/shell32/ietoolbar.svg, dlls/shell32/ietoolbar_small.bmp,
-# | 	dlls/shell32/ietoolbar_small.svg, dlls/shell32/shell32.rc
+# |   *	dlls/shell32/Makefile.in, dlls/shell32/resources/ietoolbar.bmp, dlls/shell32/resources/ietoolbar.svg,
+# | 	dlls/shell32/resources/ietoolbar_small.bmp, dlls/shell32/resources/ietoolbar_small.svg, dlls/shell32/shell32.rc
 # |
 if test "$enable_shell32_Toolbar_Bitmaps" -eq 1; then
 	patch_apply shell32-Toolbar_Bitmaps/0001-shell32-Add-toolbar-bitmaps-compatible-with-IE6.patch

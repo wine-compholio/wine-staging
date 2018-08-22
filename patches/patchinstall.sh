@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "83e481fee20bc5c6598e65f8295be1b3f11fb70b"
+	echo "18564c76fc613f61a3e13b7497dde4b29b35194e"
 }
 
 # Show version information
@@ -7566,7 +7566,7 @@ fi
 # |   *	[#20776] Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW
 # |
 # | Modified files:
-# |   *	dlls/d3d10core/tests/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c
+# |   *	dlls/d3d10core/tests/d3d10core.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c
 # |
 if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
 	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch

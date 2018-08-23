@@ -1,4 +1,4 @@
-From 095a6032a9ba158b4e203d1c56f92d40de9172ae Mon Sep 17 00:00:00 2001
+From 0a59489fdff7d99e5c2b268117e63319c9df53b8 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:22:59 -0500
 Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
@@ -12,7 +12,7 @@ reported version), and expects it to be called whenever a thread is created.
  3 files changed, 183 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 003e4f9..f62942c 100644
+index 61d55da..638fbcf 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
 @@ -154,7 +154,7 @@
@@ -25,7 +25,7 @@ index 003e4f9..f62942c 100644
  @ stdcall NtCreateTimer(ptr long ptr long)
  @ stub NtCreateToken
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 59d64e1..99f312f 100644
+index e24a9e1..1664032 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -527,34 +527,18 @@ static void start_thread( struct startup_info *info )
@@ -222,8 +222,8 @@ index 59d64e1..99f312f 100644
 +        context.R0 = (DWORD)entry;
 +        context.R1 = (DWORD)arg;
 +#elif defined(__aarch64__)
-+        context.u.s.X0 = (DWORD_PTR)entry;
-+        context.u.s.X1 = (DWORD_PTR)arg;
++        context.u.X0 = (DWORD_PTR)entry;
++        context.u.X1 = (DWORD_PTR)arg;
 +#elif defined(__powerpc__)
 +        context.Gpr3 = (DWORD)entry;
 +        context.Gpr4 = (DWORD)arg;
@@ -263,7 +263,7 @@ index 59d64e1..99f312f 100644
  /******************************************************************************
   *              RtlGetNtGlobalFlags   (NTDLL.@)
 diff --git a/include/winternl.h b/include/winternl.h
-index dca8ff3..6617974 100644
+index a10310c..5559be4 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -2173,6 +2173,31 @@ typedef enum _SYSDBG_COMMAND {

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "18564c76fc613f61a3e13b7497dde4b29b35194e"
+	echo "f0ad5b5c546d17b281aef13fde996cda08d0c14e"
 }
 
 # Show version information
@@ -102,7 +102,6 @@ patch_enable_all ()
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
-	enable_crypt32_Certificate_Check="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_crypt32_ECDSA_Cert_Chains="$1"
 	enable_crypt32_MS_Root_Certs="$1"
@@ -481,9 +480,6 @@ patch_enable ()
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
-			;;
-		crypt32-Certificate_Check)
-			enable_crypt32_Certificate_Check="$2"
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
@@ -2794,21 +2790,6 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		printf '%s\n' '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset crypt32-Certificate_Check
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41652] Fix root certificate check in CERT_CHAIN_REVOCATION_CHECK_CHAIN
-# |
-# | Modified files:
-# |   *	dlls/crypt32/chain.c
-# |
-if test "$enable_crypt32_Certificate_Check" -eq 1; then
-	patch_apply crypt32-Certificate_Check/0001-crypt32-Properly-check-root-certificate-in-CERT_CHAI.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Properly check root certificate in CERT_CHAIN_REVOCATION_CHECK_CHAIN.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 695882d5939c00095d4ff903316dc56cc94b44f2 Mon Sep 17 00:00:00 2001
+From 07121577f503da242db989c9c78cffb7a86aafd6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 5 Nov 2015 14:33:48 +0100
 Subject: winex11.drv: Allow to select default display frequency in registry
@@ -11,13 +11,13 @@ registry key (of type STRING) to select the default display frequency:
 
 HKCU\Software\Wine\X11 Driver\DefaultDisplayFrequency
 ---
- dlls/winex11.drv/settings.c    | 51 +++++++++++++++++++++++++++++-------------
+ dlls/winex11.drv/settings.c    | 58 +++++++++++++++++++++++++++---------------
  dlls/winex11.drv/x11drv.h      |  1 +
- dlls/winex11.drv/x11drv_main.c |  4 ++++
- 3 files changed, 40 insertions(+), 16 deletions(-)
+ dlls/winex11.drv/x11drv_main.c |  4 +++
+ 3 files changed, 43 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/winex11.drv/settings.c b/dlls/winex11.drv/settings.c
-index afa26cf5433..33bcddc35c6 100644
+index 800b65d..fc9d29c 100644
 --- a/dlls/winex11.drv/settings.c
 +++ b/dlls/winex11.drv/settings.c
 @@ -342,7 +342,7 @@ static const char * _DM_fields(DWORD fields)
@@ -28,8 +28,8 @@ index afa26cf5433..33bcddc35c6 100644
 +    DWORD i, mode, dwBpp = 0;
      DEVMODEW dm;
      BOOL def_mode = TRUE;
- 
-@@ -387,6 +387,7 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+     char bpp_buffer[16], freq_buffer[18];
+@@ -388,6 +388,7 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
          return DISP_CHANGE_BADMODE;
      }
  
@@ -37,7 +37,7 @@ index afa26cf5433..33bcddc35c6 100644
      for (i = 0; i < dd_mode_count; i++)
      {
          if (devmode->dmFields & DM_BITSPERPEL)
-@@ -404,27 +405,45 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+@@ -405,32 +406,49 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
              if (devmode->dmPelsHeight != dd_modes[i].height)
                  continue;
          }
@@ -75,18 +75,25 @@ index afa26cf5433..33bcddc35c6 100644
 -        return DISP_CHANGE_SUCCESSFUL;
 +    if (mode == ENUM_CURRENT_SETTINGS)
 +    {
-+        /* no valid modes found */
-+        ERR("No matching mode found %ux%ux%u @%u! (%s)\n",
-+            devmode->dmPelsWidth, devmode->dmPelsHeight,
-+            devmode->dmBitsPerPel, devmode->dmDisplayFrequency, handler_name);
++        /* no valid modes found, only print the fields we were trying to matching against */
++        bpp_buffer[0] = freq_buffer[0] = 0;
++        if (devmode->dmFields & DM_BITSPERPEL)
++            sprintf(bpp_buffer, "bpp=%u ",  devmode->dmBitsPerPel);
++        if ((devmode->dmFields & DM_DISPLAYFREQUENCY) && (devmode->dmDisplayFrequency != 0))
++            sprintf(freq_buffer, "freq=%u ", devmode->dmDisplayFrequency);
++        ERR("No matching mode found: width=%d height=%d %s%s(%s)\n",
++            devmode->dmPelsWidth, devmode->dmPelsHeight, bpp_buffer, freq_buffer, handler_name);
 +        return DISP_CHANGE_BADMODE;
      }
  
--    /* no valid modes found */
--    ERR("No matching mode found %ux%ux%u @%u! (%s)\n",
--        devmode->dmPelsWidth, devmode->dmPelsHeight,
--        devmode->dmBitsPerPel, devmode->dmDisplayFrequency, handler_name);
--    return DISP_CHANGE_BADMODE;
+-    /* no valid modes found, only print the fields we were trying to matching against */
+-    bpp_buffer[0] = freq_buffer[0] = 0;
+-    if (devmode->dmFields & DM_BITSPERPEL)
+-        sprintf(bpp_buffer, "bpp=%u ",  devmode->dmBitsPerPel);
+-    if ((devmode->dmFields & DM_DISPLAYFREQUENCY) && (devmode->dmDisplayFrequency != 0))
+-        sprintf(freq_buffer, "freq=%u ", devmode->dmDisplayFrequency);
+-    ERR("No matching mode found: width=%d height=%d %s%s(%s)\n",
+-        devmode->dmPelsWidth, devmode->dmPelsHeight, bpp_buffer, freq_buffer, handler_name);
 +    /* we have a valid mode */
 +    TRACE("Requested display settings match mode %d (%s)\n", mode, handler_name);
 +
@@ -95,14 +102,15 @@ index afa26cf5433..33bcddc35c6 100644
 +
 +    if (!(flags & (CDS_TEST | CDS_NORESET)))
 +        return pSetCurrentMode(mode);
-+
+ 
+-    return DISP_CHANGE_BADMODE;
 +    return DISP_CHANGE_SUCCESSFUL;
  }
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 721c082ed10..0e31c337212 100644
+index a0308b0..0e932e4 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
-@@ -393,6 +393,7 @@ extern BOOL private_color_map DECLSPEC_HIDDEN;
+@@ -400,6 +400,7 @@ extern BOOL private_color_map DECLSPEC_HIDDEN;
  extern int primary_monitor DECLSPEC_HIDDEN;
  extern int copy_default_colors DECLSPEC_HIDDEN;
  extern int alloc_system_colors DECLSPEC_HIDDEN;
@@ -111,7 +119,7 @@ index 721c082ed10..0e31c337212 100644
  extern HMODULE x11drv_module DECLSPEC_HIDDEN;
  extern char *process_name DECLSPEC_HIDDEN;
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index 65ef59b0c1b..8244abf1bef 100644
+index e67a3c0..9ff285e 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
 @@ -82,6 +82,7 @@ BOOL client_side_with_render = TRUE;
@@ -122,7 +130,7 @@ index 65ef59b0c1b..8244abf1bef 100644
  DWORD thread_data_tls_index = TLS_OUT_OF_INDEXES;
  int xrender_error_base = 0;
  HMODULE x11drv_module = 0;
-@@ -412,6 +413,9 @@ static void setup_options(void)
+@@ -413,6 +414,9 @@ static void setup_options(void)
      if (!get_config_key( hkey, appkey, "AllocSystemColors", buffer, sizeof(buffer) ))
          alloc_system_colors = atoi(buffer);
  
@@ -133,5 +141,5 @@ index 65ef59b0c1b..8244abf1bef 100644
  
      if (appkey) RegCloseKey( appkey );
 -- 
-2.13.1
+2.7.4
 

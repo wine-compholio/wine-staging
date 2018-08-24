@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f0ad5b5c546d17b281aef13fde996cda08d0c14e"
+	echo "70fbfa2cb8198f86efa19eda91cf769056b7da2c"
 }
 
 # Show version information
@@ -304,7 +304,6 @@ patch_enable_all ()
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
 	enable_shell32_NewMenu_Interface="$1"
-	enable_shell32_Placeholder_Icons="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHELL_execute="$1"
@@ -1086,9 +1085,6 @@ patch_enable ()
 			;;
 		shell32-NewMenu_Interface)
 			enable_shell32_NewMenu_Interface="$2"
-			;;
-		shell32-Placeholder_Icons)
-			enable_shell32_Placeholder_Icons="$2"
 			;;
 		shell32-Progress_Dialog)
 			enable_shell32_Progress_Dialog="$2"
@@ -6436,21 +6432,6 @@ if test "$enable_shell32_NewMenu_Interface" -eq 1; then
 	patch_apply shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Implement NewMenu with new folder item.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-Placeholder_Icons
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30185] Add shell32 placeholder icons to match offsets with Windows
-# |
-# | Modified files:
-# |   *	dlls/shell32/resources/placeholder.ico, dlls/shell32/shell32.rc, dlls/shell32/shresdef.h
-# |
-if test "$enable_shell32_Placeholder_Icons" -eq 1; then
-	patch_apply shell32-Placeholder_Icons/0001-shell32-Add-placeholder-icons-to-match-icon-offset-w.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "shell32: Add placeholder icons to match icon offset with XP.", 1 },';
 	) >> "$patchlist"
 fi
 

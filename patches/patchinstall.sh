@@ -184,6 +184,7 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
 	enable_mfplat_MFCreateMFByteStreamOnStream="$1"
+	enable_mfplat_MFCreateSample="$1"
 	enable_mfplat_MFTRegisterLocal="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -727,6 +728,9 @@ patch_enable ()
 			;;
 		mfplat-MFCreateMFByteStreamOnStream)
 			enable_mfplat_MFCreateMFByteStreamOnStream="$2"
+			;;
+		mfplat-MFCreateSample)
+			enable_mfplat_MFCreateSample="$2"
 			;;
 		mfplat-MFTRegisterLocal)
 			enable_mfplat_MFTRegisterLocal="$2"
@@ -4391,6 +4395,25 @@ if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
 	patch_apply mfplat-MFCreateMFByteStreamOnStream/0001-mfplat-Add-MFCreateMFByteStreamOnStream-stub.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Add MFCreateMFByteStreamOnStream stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFCreateSample
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45617] Implement MFCreateSample
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfapi.h
+# |
+if test "$enable_mfplat_MFCreateSample" -eq 1; then
+	patch_apply mfplat-MFCreateSample/0001-mfplat-Forward-IMFMediaType-to-IMFAttributes.patch
+	patch_apply mfplat-MFCreateSample/0002-mfplat-Forward-IMFStreamDescriptor-to-IMFAttributes.patch
+	patch_apply mfplat-MFCreateSample/0003-mfplat-Implement-MFCreateSample.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFMediaType to IMFAttributes.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFStreamDescriptor to IMFAttributes.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateSample.", 1 },';
 	) >> "$patchlist"
 fi
 

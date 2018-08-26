@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_CryptUnprotectMemory="$1"
-	enable_crypt32_ECDSA_Cert_Chains="$1"
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
@@ -482,9 +481,6 @@ patch_enable ()
 			;;
 		crypt32-CryptUnprotectMemory)
 			enable_crypt32_CryptUnprotectMemory="$2"
-			;;
-		crypt32-ECDSA_Cert_Chains)
-			enable_crypt32_ECDSA_Cert_Chains="$2"
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
@@ -2263,20 +2259,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
-if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
-	if test "$enable_crypt32_ECDSA_Cert_Chains" -gt 1; then
-		abort "Patchset crypt32-ECDSA_Cert_Chains disabled, but bcrypt-BCryptGenerateKeyPair depends on that."
-	fi
-	enable_crypt32_ECDSA_Cert_Chains=1
-fi
-
-if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
-	if test "$enable_crypt32_ECDSA_Cert_Chains" -gt 1; then
-		abort "Patchset crypt32-ECDSA_Cert_Chains disabled, but bcrypt-BCryptDeriveKeyPBKDF2 depends on that."
-	fi
-	enable_crypt32_ECDSA_Cert_Chains=1
-fi
-
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but advapi32-Token_Integrity_Level depends on that."
@@ -2659,27 +2641,7 @@ if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset crypt32-ECDSA_Cert_Chains
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35902] Implement support for validating ECDSA certificate chains
-# |
-# | Modified files:
-# |   *	dlls/crypt32/tests/chain.c, dlls/crypt32/tests/encode.c
-# |
-if test "$enable_crypt32_ECDSA_Cert_Chains" -eq 1; then
-	patch_apply crypt32-ECDSA_Cert_Chains/0006-crypt32-tests-Basic-tests-for-decoding-ECDSA-signed-.patch
-	patch_apply crypt32-ECDSA_Cert_Chains/0012-crypt32-tets-Add-test-for-verifying-an-ecdsa-chain.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "crypt32/tests: Basic tests for decoding ECDSA signed certificate.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "crypt32/tets: Add test for verifying an ecdsa chain.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset bcrypt-BCryptDeriveKeyPBKDF2
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	crypt32-ECDSA_Cert_Chains
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42704] Implement BCryptDeriveKeyPBKDF2
@@ -2695,9 +2657,6 @@ if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
 fi
 
 # Patchset bcrypt-BCryptGenerateKeyPair
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	crypt32-ECDSA_Cert_Chains
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45312] Fix issue for Assassin's Creed : Syndicate

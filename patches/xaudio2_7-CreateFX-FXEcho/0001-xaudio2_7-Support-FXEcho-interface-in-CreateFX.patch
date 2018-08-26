@@ -1,0 +1,261 @@
+From ba0cddfbd617e00818836e0ac7af5984b0e51e84 Mon Sep 17 00:00:00 2001
+From: Thomas Crider <gloriouseggroll@gmail.com>
+Date: Mon, 27 Aug 2018 08:52:00 +1000
+Subject: [PATCH] xaudio2_7: Support FXEcho interface in CreateFX.
+
+---
+ dlls/xaudio2_7/xapofx.c | 223 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 221 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/xaudio2_7/xapofx.c b/dlls/xaudio2_7/xapofx.c
+index e450851..017a3c5 100644
+--- a/dlls/xaudio2_7/xapofx.c
++++ b/dlls/xaudio2_7/xapofx.c
+@@ -650,6 +650,207 @@ static const IXAPOParametersVtbl EQXAPOParameters_Vtbl = {
+     EQXAPOParams_GetParameters
+ };
+ 
++typedef struct _echoimpl {
++    IXAPO IXAPO_iface;
++    IXAPOParameters IXAPOParameters_iface;
++
++    LONG ref;
++} echoimpl;
++
++static echoimpl *echoimpl_from_IXAPO(IXAPO *iface)
++{
++    return CONTAINING_RECORD(iface, echoimpl, IXAPO_iface);
++}
++
++static echoimpl *echoimpl_from_IXAPOParameters(IXAPOParameters *iface)
++{
++    return CONTAINING_RECORD(iface, echoimpl, IXAPOParameters_iface);
++}
++
++static HRESULT WINAPI echxapo_QueryInterface(IXAPO *iface, REFIID riid, void **ppvObject)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++
++    TRACE("%p, %s, %p\n", This, wine_dbgstr_guid(riid), ppvObject);
++
++    if(IsEqualGUID(riid, &IID_IUnknown) ||
++            IsEqualGUID(riid, &IID_IXAPO) ||
++            IsEqualGUID(riid, &IID_IXAPO27))
++        *ppvObject = &This->IXAPO_iface;
++    else if(IsEqualGUID(riid, &IID_IXAPOParameters))
++        *ppvObject = &This->IXAPOParameters_iface;
++    else
++        *ppvObject = NULL;
++
++    if(*ppvObject){
++        IUnknown_AddRef((IUnknown*)*ppvObject);
++        return S_OK;
++    }
++
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI echxapo_AddRef(IXAPO *iface)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++    TRACE("(%p)->(): Refcount now %u\n", This, ref);
++    return ref;
++}
++
++static ULONG WINAPI echxapo_Release(IXAPO *iface)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p)->(): Refcount now %u\n", This, ref);
++
++    if(!ref)
++        HeapFree(GetProcessHeap(), 0, This);
++
++    return ref;
++}
++
++static HRESULT WINAPI echxapo_GetRegistrationProperties(IXAPO *iface,
++    XAPO_REGISTRATION_PROPERTIES **props)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %p\n", This, props);
++    /* TODO: check for version == 20 and use XAPO20_REGISTRATION_PROPERTIES */
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI echxapo_IsInputFormatSupported(IXAPO *iface,
++        const WAVEFORMATEX *output_fmt, const WAVEFORMATEX *input_fmt,
++        WAVEFORMATEX **supported_fmt)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %p, %p, %p\n", This, output_fmt, input_fmt, supported_fmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI echxapo_IsOutputFormatSupported(IXAPO *iface,
++        const WAVEFORMATEX *input_fmt, const WAVEFORMATEX *output_fmt,
++        WAVEFORMATEX **supported_fmt)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %p, %p, %p\n", This, input_fmt, output_fmt, supported_fmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI echxapo_Initialize(IXAPO *iface, const void *data,
++        UINT32 data_len)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %p, %u\n", This, data, data_len);
++    return E_NOTIMPL;
++}
++
++static void WINAPI echxapo_Reset(IXAPO *iface)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p\n", This);
++}
++
++static HRESULT WINAPI echxapo_LockForProcess(IXAPO *iface, UINT32 in_params_count,
++        const XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS *in_params,
++        UINT32 out_params_count,
++        const XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS *out_params)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %u, %p, %u, %p\n", This, in_params_count, in_params,
++            out_params_count, out_params);
++    return E_NOTIMPL;
++}
++
++static void WINAPI echxapo_UnlockForProcess(IXAPO *iface)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p\n", This);
++}
++
++static void WINAPI echxapo_Process(IXAPO *iface, UINT32 in_params_count,
++        const XAPO_PROCESS_BUFFER_PARAMETERS *in_params,
++        UINT32 out_params_count,
++        const XAPO_PROCESS_BUFFER_PARAMETERS *out_params, BOOL enabled)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %u, %p, %u, %p, %u\n", This, in_params_count, in_params,
++            out_params_count, out_params, enabled);
++}
++
++static UINT32 WINAPI echxapo_CalcInputFrames(IXAPO *iface, UINT32 output_frames)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %u\n", This, output_frames);
++    return 0;
++}
++
++static UINT32 WINAPI echxapo_CalcOutputFrames(IXAPO *iface, UINT32 input_frames)
++{
++    echoimpl *This = echoimpl_from_IXAPO(iface);
++    TRACE("%p, %u\n", This, input_frames);
++    return 0;
++}
++
++
++static const IXAPOVtbl echxapo_Vtbl = {
++    echxapo_QueryInterface,
++    echxapo_AddRef,
++    echxapo_Release,
++    echxapo_GetRegistrationProperties,
++    echxapo_IsInputFormatSupported,
++    echxapo_IsOutputFormatSupported,
++    echxapo_Initialize,
++    echxapo_Reset,
++    echxapo_LockForProcess,
++    echxapo_UnlockForProcess,
++    echxapo_Process,
++    echxapo_CalcInputFrames,
++    echxapo_CalcOutputFrames
++};
++
++static HRESULT WINAPI echxapoparams_QueryInterface(IXAPOParameters *iface,
++        REFIID riid, void **ppvObject)
++{
++    echoimpl *This = echoimpl_from_IXAPOParameters(iface);
++    return RVBXAPO_QueryInterface(&This->IXAPO_iface, riid, ppvObject);
++}
++
++static ULONG WINAPI echxapoparams_AddRef(IXAPOParameters *iface)
++{
++    echoimpl *This = echoimpl_from_IXAPOParameters(iface);
++    return RVBXAPO_AddRef(&This->IXAPO_iface);
++}
++
++static ULONG WINAPI echxapoparams_Release(IXAPOParameters *iface)
++{
++    echoimpl *This = echoimpl_from_IXAPOParameters(iface);
++    return RVBXAPO_Release(&This->IXAPO_iface);
++}
++
++static void WINAPI echxapoparams_SetParameters(IXAPOParameters *iface,
++        const void *params, UINT32 params_len)
++{
++    echoimpl *This = echoimpl_from_IXAPOParameters(iface);
++    TRACE("%p, %p, %u\n", This, params, params_len);
++}
++
++static void WINAPI echxapoparams_GetParameters(IXAPOParameters *iface, void *params,
++        UINT32 params_len)
++{
++    echoimpl *This = echoimpl_from_IXAPOParameters(iface);
++    TRACE("%p, %p, %u\n", This, params, params_len);
++}
++
++static const IXAPOParametersVtbl ECHXAPOParameters_Vtbl = {
++    echxapoparams_QueryInterface,
++    echxapoparams_AddRef,
++    echxapoparams_Release,
++    echxapoparams_SetParameters,
++    echxapoparams_GetParameters
++};
++
+ struct xapo_cf {
+     IClassFactory IClassFactory_iface;
+     LONG ref;
+@@ -752,8 +953,23 @@ static HRESULT WINAPI xapocf_CreateInstance(IClassFactory *iface, IUnknown *pOut
+             HeapFree(GetProcessHeap(), 0, object);
+             return hr;
+         }
++    }else if(IsEqualGUID(This->class, &CLSID_FXEcho)){
++        EQImpl *object;
++
++        object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object));
++        if(!object)
++            return E_OUTOFMEMORY;
++
++        object->IXAPO_iface.lpVtbl = &echxapo_Vtbl;
++        object->IXAPOParameters_iface.lpVtbl = &ECHXAPOParameters_Vtbl;
++
++        hr = IXAPO_QueryInterface(&object->IXAPO_iface, riid, ppobj);
++        if(FAILED(hr)){
++            HeapFree(GetProcessHeap(), 0, object);
++            return hr;
++        }
+     }else
+-        /* TODO FXECHO, FXMasteringLimiter, */
++        /* TODO FXMasteringLimiter, */
+         return E_INVALIDARG;
+ 
+     return S_OK;
+@@ -895,7 +1111,10 @@ HRESULT CDECL CreateFX(REFCLSID clsid, IUnknown **out)
+     else if(IsEqualGUID(clsid, &CLSID_FXEQ27) ||
+             IsEqualGUID(clsid, &CLSID_FXEQ))
+         class = &CLSID_FXEQ;
+-    /* TODO FXECHO, FXMasteringLimiter, */
++    else if(IsEqualGUID(clsid, &CLSID_FXEcho27) ||
++            IsEqualGUID(clsid, &CLSID_FXEcho))
++        class = &CLSID_FXEQ;
++    /* TODO FXMasteringLimiter, */
+ 
+     if(class){
+         hr = make_xapo_factory(class, &IID_IClassFactory, (void**)&cf);
+-- 
+1.9.1
+

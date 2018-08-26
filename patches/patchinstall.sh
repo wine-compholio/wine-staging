@@ -413,6 +413,7 @@ patch_enable_all ()
 	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
+	enable_xaudio2_7_CreateFX_FXEcho="$1"
 	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
 	enable_xaudio2_7_WMA_support="$1"
 	enable_xaudio2_CommitChanges="$1"
@@ -1411,6 +1412,9 @@ patch_enable ()
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
+			;;
+		xaudio2_7-CreateFX-FXEcho)
+			enable_xaudio2_7_CreateFX_FXEcho="$2"
 			;;
 		xaudio2_7-OnVoiceProcessingPassStart)
 			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
@@ -8268,6 +8272,21 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xaudio2_7-CreateFX-FXEcho
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39402] Support FXEcho interface in CreateFX
+# |
+# | Modified files:
+# |   *	dlls/xaudio2_7/xapofx.c
+# |
+if test "$enable_xaudio2_7_CreateFX_FXEcho" -eq 1; then
+	patch_apply xaudio2_7-CreateFX-FXEcho/0001-xaudio2_7-Support-FXEcho-interface-in-CreateFX.patch
+	(
+		printf '%s\n' '+    { "Thomas Crider", "xaudio2_7: Support FXEcho interface in CreateFX.", 1 },';
 	) >> "$patchlist"
 fi
 

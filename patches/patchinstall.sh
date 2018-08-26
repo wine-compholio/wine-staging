@@ -183,6 +183,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
+	enable_mfplat_MFCreateMFByteStreamOnStream="$1"
 	enable_mfplat_MFTRegisterLocal="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -723,6 +724,9 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
+			;;
+		mfplat-MFCreateMFByteStreamOnStream)
+			enable_mfplat_MFCreateMFByteStreamOnStream="$2"
 			;;
 		mfplat-MFTRegisterLocal)
 			enable_mfplat_MFTRegisterLocal="$2"
@@ -4372,6 +4376,21 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "libs/wine: Do not restrict base address of main thread on 64 bit mac os.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFCreateMFByteStreamOnStream
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45372] Add MFCreateMFByteStreamOnStream stu
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfidl.idl
+# |
+if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
+	patch_apply mfplat-MFCreateMFByteStreamOnStream/0001-mfplat-Add-MFCreateMFByteStreamOnStream-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Add MFCreateMFByteStreamOnStream stub.", 1 },';
 	) >> "$patchlist"
 fi
 

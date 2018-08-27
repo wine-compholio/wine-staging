@@ -1,4 +1,4 @@
-From 8d68c50ae8593769c5f5281b4895fae0b467a890 Mon Sep 17 00:00:00 2001
+From bd18d7e21494557615c398244a4e180e44a11e25 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 17 May 2017 23:55:55 +0800
 Subject: [PATCH] server: Add support for a layered window region. (v3)
@@ -106,10 +106,10 @@ index 0343d96..b07c9be 100644
  #endif
  }
 diff --git a/server/protocol.def b/server/protocol.def
-index b87c69e..506d2e2 100644
+index f48fd00..f3aa6f1 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -2762,6 +2762,13 @@ enum coords_relative
+@@ -2775,6 +2775,13 @@ enum coords_relative
  @END
  
  
@@ -124,7 +124,7 @@ index b87c69e..506d2e2 100644
  @REQ(get_update_region)
      user_handle_t  window;        /* handle to the window */
 diff --git a/server/window.c b/server/window.c
-index e58d7e4..682c7db 100644
+index c9b131c..766bf51 100644
 --- a/server/window.c
 +++ b/server/window.c
 @@ -73,6 +73,7 @@ struct window
@@ -143,9 +143,9 @@ index e58d7e4..682c7db 100644
      win->update_region  = NULL;
      win->style          = 0;
      win->ex_style       = 0;
-@@ -671,6 +673,9 @@ static inline int is_point_in_window( struct window *win, int x, int y )
+@@ -723,6 +725,9 @@ static int is_point_in_window( struct window *win, int *x, int *y, unsigned int
      if (win->win_region &&
-         !point_in_region( win->win_region, x - win->window_rect.left, y - win->window_rect.top ))
+         !point_in_region( win->win_region, *x - win->window_rect.left, *y - win->window_rect.top ))
          return 0;  /* not in window region */
 +    if (win->layer_region &&
 +        !point_in_region( win->layer_region, x - win->window_rect.left, y - win->window_rect.top ))
@@ -153,7 +153,7 @@ index e58d7e4..682c7db 100644
      return 1;
  }
  
-@@ -1820,6 +1825,14 @@ static void set_window_region( struct window *win, struct region *region, int re
+@@ -1868,6 +1873,14 @@ static void set_window_region( struct window *win, struct region *region, int re
  }
  
  
@@ -168,7 +168,7 @@ index e58d7e4..682c7db 100644
  /* destroy a window */
  void destroy_window( struct window *win )
  {
-@@ -1868,6 +1881,7 @@ void destroy_window( struct window *win )
+@@ -1916,6 +1929,7 @@ void destroy_window( struct window *win )
  
      detach_window_thread( win );
      if (win->win_region) free_region( win->win_region );
@@ -176,7 +176,7 @@ index e58d7e4..682c7db 100644
      if (win->update_region) free_region( win->update_region );
      if (win->class) release_class( win->class );
      free( win->text );
-@@ -2527,6 +2541,24 @@ DECL_HANDLER(set_window_region)
+@@ -2569,6 +2583,24 @@ DECL_HANDLER(set_window_region)
  }
  
  

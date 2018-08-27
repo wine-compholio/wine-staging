@@ -1,0 +1,328 @@
+From 5a5a686df602a66a5211bee21e127011456e6491 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Fri, 24 Aug 2018 11:20:54 +1000
+Subject: [PATCH] mfplat: Implement MFCreateMFByteStreamOnStream
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45372
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/mfplat/main.c         | 240 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/mfplat/mfplat.spec    |   2 +-
+ dlls/mfplat/tests/mfplat.c |  17 ++++
+ include/mfidl.idl          |   1 +
+ 4 files changed, 259 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/mfplat/main.c b/dlls/mfplat/main.c
+index e429324..2209924 100644
+--- a/dlls/mfplat/main.c
++++ b/dlls/mfplat/main.c
+@@ -424,6 +424,246 @@ HRESULT WINAPI MFShutdown(void)
+     return S_OK;
+ }
+ 
++
++typedef struct _mfbytestream
++{
++    IMFByteStream IMFByteStream_iface;
++    LONG ref;
++} mfbytestream;
++
++static inline mfbytestream *impl_from_IMFByteStream(IMFByteStream *iface)
++{
++    return CONTAINING_RECORD(iface, mfbytestream, IMFByteStream_iface);
++}
++
++static HRESULT WINAPI mfbytestream_QueryInterface(IMFByteStream *iface, REFIID riid, void **out)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), out);
++
++    if(IsEqualGUID(riid, &IID_IUnknown) ||
++       IsEqualGUID(riid, &IID_IMFByteStream))
++    {
++        *out = &This->IMFByteStream_iface;
++    }
++    else
++    {
++        FIXME("(%s, %p)\n", debugstr_guid(riid), out);
++        *out = NULL;
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown*)*out);
++    return S_OK;
++}
++
++static ULONG WINAPI mfbytestream_AddRef(IMFByteStream *iface)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    return ref;
++}
++
++static ULONG  WINAPI mfbytestream_Release(IMFByteStream *iface)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    if (!ref)
++    {
++        HeapFree(GetProcessHeap(), 0, This);
++    }
++
++    return ref;
++}
++
++static HRESULT WINAPI mfbytestream_GetCapabilities(IMFByteStream *iface, DWORD *capabilities)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p\n", This, capabilities);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_GetLength(IMFByteStream *iface, QWORD *length)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p\n", This, length);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_SetLength(IMFByteStream *iface, QWORD length)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %s\n", This, wine_dbgstr_longlong(length));
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_GetCurrentPosition(IMFByteStream *iface, QWORD *position)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p\n", This, position);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_SetCurrentPosition(IMFByteStream *iface, QWORD position)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %s\n", This, wine_dbgstr_longlong(position));
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_IsEndOfStream(IMFByteStream *iface, BOOL *endstream)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p\n", This, endstream);
++
++    if(endstream)
++        *endstream = TRUE;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI mfbytestream_Read(IMFByteStream *iface, BYTE *data, ULONG count, ULONG *byte_read)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p, %u, %p\n", This, data, count, byte_read);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_BeginRead(IMFByteStream *iface, BYTE *data, ULONG count,
++                        IMFAsyncCallback *callback, IUnknown *state)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p, %u, %p, %p\n", This, data, count, callback, state);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_EndRead(IMFByteStream *iface, IMFAsyncResult *result, ULONG *byte_read)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p, %p\n", This, result, byte_read);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_Write(IMFByteStream *iface, const BYTE *data, ULONG count, ULONG *written)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p, %u, %p\n", This, data, count, written);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_BeginWrite(IMFByteStream *iface, const BYTE *data, ULONG count,
++                        IMFAsyncCallback *callback, IUnknown *state)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p, %u, %p, %p\n", This, data, count, callback, state);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_EndWrite(IMFByteStream *iface, IMFAsyncResult *result, ULONG *written)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %p, %p\n", This, result, written);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_Seek(IMFByteStream *iface, MFBYTESTREAM_SEEK_ORIGIN seek, LONGLONG offset,
++                        DWORD flags, QWORD *current)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p, %u, %s, 0x%08x, %p\n", This, seek, wine_dbgstr_longlong(offset), flags, current);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_Flush(IMFByteStream *iface)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p\n", This);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI mfbytestream_Close(IMFByteStream *iface)
++{
++    mfbytestream *This = impl_from_IMFByteStream(iface);
++
++    FIXME("%p\n", This);
++
++    return E_NOTIMPL;
++}
++
++static const IMFByteStreamVtbl mfbytesteam_vtbl =
++{
++    mfbytestream_QueryInterface,
++    mfbytestream_AddRef,
++    mfbytestream_Release,
++    mfbytestream_GetCapabilities,
++    mfbytestream_GetLength,
++    mfbytestream_SetLength,
++    mfbytestream_GetCurrentPosition,
++    mfbytestream_SetCurrentPosition,
++    mfbytestream_IsEndOfStream,
++    mfbytestream_Read,
++    mfbytestream_BeginRead,
++    mfbytestream_EndRead,
++    mfbytestream_Write,
++    mfbytestream_BeginWrite,
++    mfbytestream_EndWrite,
++    mfbytestream_Seek,
++    mfbytestream_Flush,
++    mfbytestream_Close
++};
++
++HRESULT WINAPI MFCreateMFByteStreamOnStream(IStream *stream, IMFByteStream **bytestream)
++{
++    mfbytestream *object;
++
++    TRACE("(%p, %p): stub\n", stream, bytestream);
++
++    object = HeapAlloc( GetProcessHeap(), 0, sizeof(*object) );
++    if(!object)
++        return E_OUTOFMEMORY;
++
++    object->ref = 1;
++    object->IMFByteStream_iface.lpVtbl = &mfbytesteam_vtbl;
++
++    *bytestream = &object->IMFByteStream_iface;
++
++    return S_OK;
++}
++
+ static HRESULT WINAPI MFPluginControl_QueryInterface(IMFPluginControl *iface, REFIID riid, void **ppv)
+ {
+     if(IsEqualGUID(riid, &IID_IUnknown)) {
+diff --git a/dlls/mfplat/mfplat.spec b/dlls/mfplat/mfplat.spec
+index 0ad15a5..b98e24a 100644
+--- a/dlls/mfplat/mfplat.spec
++++ b/dlls/mfplat/mfplat.spec
+@@ -45,7 +45,7 @@
+ @ stdcall MFCreateEventQueue(ptr)
+ @ stub MFCreateFile
+ @ stub MFCreateLegacyMediaBufferOnMFMediaBuffer
+-@ stub MFCreateMFByteStreamOnStream
++@ stdcall MFCreateMFByteStreamOnStream(ptr ptr)
+ @ stub MFCreateMFVideoFormatFromMFMediaType
+ @ stub MFCreateMediaBufferWrapper
+ @ stub MFCreateMediaEvent
+diff --git a/dlls/mfplat/tests/mfplat.c b/dlls/mfplat/tests/mfplat.c
+index f5a3197..c59f0cc 100644
+--- a/dlls/mfplat/tests/mfplat.c
++++ b/dlls/mfplat/tests/mfplat.c
+@@ -266,6 +266,22 @@ static void test_MFSample(void)
+     IMFSample_Release(sample);
+ }
+ 
++static void test_MFCreateMFByteStreamOnStream(void)
++{
++    IMFByteStream *bytestream;
++    IStream *stream;
++    HRESULT hr;
++
++    hr = CreateStreamOnHGlobal(NULL, TRUE, &stream);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = MFCreateMFByteStreamOnStream(stream, &bytestream );
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    IStream_Release(stream);
++    IMFByteStream_Release(bytestream);
++}
++
+ START_TEST(mfplat)
+ {
+     CoInitialize(NULL);
+@@ -277,6 +293,7 @@ START_TEST(mfplat)
+     test_MFCreateMediaType();
+     test_MFCreateAttributes();
+     test_MFSample();
++    test_MFCreateMFByteStreamOnStream();
+ 
+     CoUninitialize();
+ }
+diff --git a/include/mfidl.idl b/include/mfidl.idl
+index 12b351d..84be055 100644
+--- a/include/mfidl.idl
++++ b/include/mfidl.idl
+@@ -251,6 +251,7 @@ interface IMFGetService : IUnknown
+ }
+ 
+ cpp_quote("HRESULT WINAPI MFCreateMediaSession(IMFAttributes *config, IMFMediaSession **session);")
++cpp_quote("HRESULT WINAPI MFCreateMFByteStreamOnStream(IStream *stream, IMFByteStream **bytestream);" )
+ cpp_quote("HRESULT WINAPI MFCreateSourceResolver(IMFSourceResolver **resolver);")
+ cpp_quote("HRESULT WINAPI MFCreateStreamDescriptor(DWORD identifier, DWORD cMediaTypes,")
+ cpp_quote("     IMFMediaType **types, IMFStreamDescriptor **descriptor);")
+-- 
+1.9.1
+

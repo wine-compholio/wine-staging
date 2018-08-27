@@ -2190,6 +2190,13 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	enable_ntdll_ThreadTime=1
 fi
 
+if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
+	if test "$enable_mfplat_MFCreateSample" -gt 1; then
+		abort "Patchset mfplat-MFCreateSample disabled, but mfplat-MFCreateMFByteStreamOnStream depends on that."
+	fi
+	enable_mfplat_MFCreateSample=1
+fi
+
 if test "$enable_loader_OSX_Preloader" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but loader-OSX_Preloader depends on that."
@@ -4383,21 +4390,6 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mfplat-MFCreateMFByteStreamOnStream
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45372] Add MFCreateMFByteStreamOnStream stu
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfidl.idl
-# |
-if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
-	patch_apply mfplat-MFCreateMFByteStreamOnStream/0001-mfplat-Add-MFCreateMFByteStreamOnStream-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Add MFCreateMFByteStreamOnStream stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mfplat-MFCreateSample
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4414,6 +4406,24 @@ if test "$enable_mfplat_MFCreateSample" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFMediaType to IMFAttributes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFStreamDescriptor to IMFAttributes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateSample.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFCreateMFByteStreamOnStream
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	mfplat-MFCreateSample
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45372] Implement MFCreateMFByteStreamOnStream.
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfidl.idl
+# |
+if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
+	patch_apply mfplat-MFCreateMFByteStreamOnStream/0001-mfplat-Implement-MFCreateMFByteStreamOnStream.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateMFByteStreamOnStream.", 1 },';
 	) >> "$patchlist"
 fi
 

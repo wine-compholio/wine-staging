@@ -1,0 +1,324 @@
+From 612778028be2aa70c35f4b86bcc39ec1baeacd6c Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 28 Aug 2018 10:16:45 +1000
+Subject: [PATCH] mfplat: Implement MFCreateMemoryBuffer
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45715
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/mfplat/main.c         | 176 +++++++++++++++++++++++++++++++++++++++++++++
+ dlls/mfplat/mfplat.spec    |   2 +-
+ dlls/mfplat/tests/mfplat.c |  80 +++++++++++++++++++++
+ include/mfapi.h            |   1 +
+ 4 files changed, 258 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/mfplat/main.c b/dlls/mfplat/main.c
+index 2209924..648a782 100644
+--- a/dlls/mfplat/main.c
++++ b/dlls/mfplat/main.c
+@@ -2603,3 +2603,179 @@ HRESULT WINAPI MFCreateSample(IMFSample **sample)
+ 
+     return S_OK;
+ }
++
++
++typedef struct _mfbuffer
++{
++    IMFMediaBuffer IMFMediaBuffer_iface;
++    LONG ref;
++
++    BYTE *buffer;
++    DWORD max_length;
++    DWORD current;
++} mfbuffer;
++
++static inline mfbuffer *impl_from_IMFMediaBuffer(IMFMediaBuffer *iface)
++{
++    return CONTAINING_RECORD(iface, mfbuffer, IMFMediaBuffer_iface);
++}
++
++static HRESULT WINAPI mfbuffer_QueryInterface(IMFMediaBuffer *iface, REFIID riid, void **out)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), out);
++
++    if(IsEqualGUID(riid, &IID_IUnknown) ||
++       IsEqualGUID(riid, &IID_IMFMediaBuffer))
++    {
++        *out = &This->IMFMediaBuffer_iface;
++    }
++    else
++    {
++        FIXME("(%s, %p)\n", debugstr_guid(riid), out);
++        *out = NULL;
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown*)*out);
++    return S_OK;
++}
++
++static ULONG WINAPI mfbuffer_AddRef(IMFMediaBuffer *iface)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI mfbuffer_Release(IMFMediaBuffer *iface)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    if (!ref)
++    {
++        heap_free(This->buffer);
++        heap_free(This);
++    }
++
++    return ref;
++}
++
++static HRESULT WINAPI mfbuffer_Lock(IMFMediaBuffer *iface, BYTE **buffer, DWORD *max, DWORD *current)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++
++    TRACE("%p, %p %p, %p\n", This, buffer, max, current);
++
++    if(!buffer)
++        return E_INVALIDARG;
++
++    *buffer = This->buffer;
++    if(max)
++        *max = This->max_length;
++    if(current)
++        *current = This->current;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI mfbuffer_Unlock(IMFMediaBuffer *iface)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++
++    TRACE("%p\n", This);
++
++    return S_OK;
++}
++
++static HRESULT WINAPI mfbuffer_GetCurrentLength(IMFMediaBuffer *iface, DWORD *current)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++
++    TRACE("%p\n", This);
++
++    if(!current)
++        return E_INVALIDARG;
++
++    *current = This->current;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI mfbuffer_SetCurrentLength(IMFMediaBuffer *iface, DWORD current)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++
++    TRACE("%p, %u\n", This, current);
++
++    if(current > This->max_length)
++        return E_INVALIDARG;
++
++    This->current = current;
++
++    return S_OK;
++}
++
++static HRESULT WINAPI mfbuffer_GetMaxLength(IMFMediaBuffer *iface, DWORD *max)
++{
++    mfbuffer *This = impl_from_IMFMediaBuffer(iface);
++
++    TRACE("%p, %p\n", This, max);
++
++    if(!max)
++        return E_INVALIDARG;
++
++    *max = This->max_length;
++
++    return S_OK;
++}
++
++static const IMFMediaBufferVtbl mfbuffer_vtbl =
++{
++    mfbuffer_QueryInterface,
++    mfbuffer_AddRef,
++    mfbuffer_Release,
++    mfbuffer_Lock,
++    mfbuffer_Unlock,
++    mfbuffer_GetCurrentLength,
++    mfbuffer_SetCurrentLength,
++    mfbuffer_GetMaxLength
++};
++
++HRESULT WINAPI MFCreateMemoryBuffer(DWORD max_length, IMFMediaBuffer **buffer)
++{
++    mfbuffer *object;
++    BYTE *bytes;
++
++    TRACE("%u, %p\n", max_length, buffer);
++
++    if(!buffer)
++        return E_INVALIDARG;
++
++    object = heap_alloc( sizeof(*object) );
++    if(!object)
++        return E_OUTOFMEMORY;
++
++    bytes = heap_alloc( max_length );
++    if(!bytes)
++    {
++        heap_free(object);
++        return E_OUTOFMEMORY;
++    }
++
++    object->ref = 1;
++    object->max_length = max_length;
++    object->current = 0;
++    object->buffer = bytes;
++    object->IMFMediaBuffer_iface.lpVtbl = &mfbuffer_vtbl;
++    *buffer = &object->IMFMediaBuffer_iface;
++
++    return S_OK;
++}
+diff --git a/dlls/mfplat/mfplat.spec b/dlls/mfplat/mfplat.spec
+index b98e24a..8503b20 100644
+--- a/dlls/mfplat/mfplat.spec
++++ b/dlls/mfplat/mfplat.spec
+@@ -51,7 +51,7 @@
+ @ stub MFCreateMediaEvent
+ @ stdcall MFCreateMediaType(ptr)
+ @ stub MFCreateMediaTypeFromRepresentation
+-@ stub MFCreateMemoryBuffer
++@ stdcall MFCreateMemoryBuffer(long ptr)
+ @ stub MFCreateMemoryStream
+ @ stub MFCreatePathFromURL
+ @ stub MFCreatePresentationDescriptor
+diff --git a/dlls/mfplat/tests/mfplat.c b/dlls/mfplat/tests/mfplat.c
+index c59f0cc..9fd3bbe 100644
+--- a/dlls/mfplat/tests/mfplat.c
++++ b/dlls/mfplat/tests/mfplat.c
+@@ -282,6 +282,85 @@ static void test_MFCreateMFByteStreamOnStream(void)
+     IMFByteStream_Release(bytestream);
+ }
+ 
++static void test_MFCreateMemoryBuffer(void)
++{
++    IMFMediaBuffer *buffer;
++    HRESULT hr;
++    DWORD length, max;
++    BYTE data;
++
++    hr = MFCreateMemoryBuffer(1024, NULL);
++    ok(hr == E_INVALIDARG, "got 0x%08x\n", hr);
++
++    hr = MFCreateMemoryBuffer(0, &buffer);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++    if(buffer)
++    {
++        hr = IMFMediaBuffer_GetMaxLength(buffer, &length);
++        ok(hr == S_OK, "got 0x%08x\n", hr);
++        ok(length == 0, "got %u\n", length);
++
++        IMFMediaBuffer_Release(buffer);
++    }
++
++    hr = MFCreateMemoryBuffer(1024, &buffer);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_GetMaxLength(buffer, NULL);
++    ok(hr == E_INVALIDARG, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_GetMaxLength(buffer, &length);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++    ok(length == 1024, "got %u\n", length);
++
++    hr = IMFMediaBuffer_SetCurrentLength(buffer, 1025);
++    ok(hr == E_INVALIDARG, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_SetCurrentLength(buffer, 10);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_GetCurrentLength(buffer, NULL);
++    ok(hr == E_INVALIDARG, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_GetCurrentLength(buffer, &length);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++    ok(length == 10, "got %u\n", length);
++
++    length = 0;
++    max = 0;
++    hr = IMFMediaBuffer_Lock(buffer, NULL, &length, &max);
++    ok(hr == E_INVALIDARG, "got 0x%08x\n", hr);
++    ok(length == 0, "got %u\n", length);
++    ok(max == 0, "got %u\n", length);
++
++    hr = IMFMediaBuffer_Lock(buffer, (BYTE**)&data, &max, &length);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++    ok(length == 10, "got %u\n", length);
++    ok(max == 1024, "got %u\n", max);
++
++    /* Attempt to lock the bufer twice */
++    hr = IMFMediaBuffer_Lock(buffer, (BYTE**)&data, &max, &length);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_Unlock(buffer);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_Unlock(buffer);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_Lock(buffer, (BYTE**)&data, NULL, NULL);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = IMFMediaBuffer_Unlock(buffer);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    /* Extra Unlock */
++    hr = IMFMediaBuffer_Unlock(buffer);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    IMFMediaBuffer_Release(buffer);
++}
++
+ START_TEST(mfplat)
+ {
+     CoInitialize(NULL);
+@@ -294,6 +373,7 @@ START_TEST(mfplat)
+     test_MFCreateAttributes();
+     test_MFSample();
+     test_MFCreateMFByteStreamOnStream();
++    test_MFCreateMemoryBuffer();
+ 
+     CoUninitialize();
+ }
+diff --git a/include/mfapi.h b/include/mfapi.h
+index 978726b..a4f0dfe 100644
+--- a/include/mfapi.h
++++ b/include/mfapi.h
+@@ -67,6 +67,7 @@ HRESULT WINAPI MFCancelWorkItem(MFWORKITEM_KEY key);
+ HRESULT WINAPI MFCreateAttributes(IMFAttributes **attributes, UINT32 size);
+ HRESULT WINAPI MFCreateEventQueue(IMFMediaEventQueue **queue);
+ HRESULT WINAPI MFCreateMediaType(IMFMediaType **type);
++HRESULT WINAPI MFCreateMemoryBuffer(DWORD max_length, IMFMediaBuffer **buffer);
+ HRESULT WINAPI MFCreateSample(IMFSample **sample);
+ HRESULT WINAPI MFGetTimerPeriodicity(DWORD *periodicity);
+ HRESULT WINAPI MFTEnum(GUID category, UINT32 flags, MFT_REGISTER_TYPE_INFO *input_type,
+-- 
+1.9.1
+

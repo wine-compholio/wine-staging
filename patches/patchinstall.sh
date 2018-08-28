@@ -184,6 +184,7 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
 	enable_mfplat_MFCreateMFByteStreamOnStream="$1"
+	enable_mfplat_MFCreateMemoryBuffer="$1"
 	enable_mfplat_MFCreateSample="$1"
 	enable_mfplat_MFTRegisterLocal="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
@@ -728,6 +729,9 @@ patch_enable ()
 			;;
 		mfplat-MFCreateMFByteStreamOnStream)
 			enable_mfplat_MFCreateMFByteStreamOnStream="$2"
+			;;
+		mfplat-MFCreateMemoryBuffer)
+			enable_mfplat_MFCreateMemoryBuffer="$2"
 			;;
 		mfplat-MFCreateSample)
 			enable_mfplat_MFCreateSample="$2"
@@ -2188,6 +2192,13 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
 	fi
 	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_mfplat_MFCreateMemoryBuffer" -eq 1; then
+	if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -gt 1; then
+		abort "Patchset mfplat-MFCreateMFByteStreamOnStream disabled, but mfplat-MFCreateMemoryBuffer depends on that."
+	fi
+	enable_mfplat_MFCreateMFByteStreamOnStream=1
 fi
 
 if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
@@ -4424,6 +4435,24 @@ if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
 	patch_apply mfplat-MFCreateMFByteStreamOnStream/0001-mfplat-Implement-MFCreateMFByteStreamOnStream.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateMFByteStreamOnStream.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFCreateMemoryBuffer
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	mfplat-MFCreateSample, mfplat-MFCreateMFByteStreamOnStream
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45715] Implement MFCreateMemoryBuffer.
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfapi.h
+# |
+if test "$enable_mfplat_MFCreateMemoryBuffer" -eq 1; then
+	patch_apply mfplat-MFCreateMemoryBuffer/0001-mfplat-Implement-MFCreateMemoryBuffer.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateMemoryBuffer.", 1 },';
 	) >> "$patchlist"
 fi
 

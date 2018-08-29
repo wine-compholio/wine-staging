@@ -1,4 +1,4 @@
-From 95d5fbf3bf582fb219d2de40c829a5c18fb27726 Mon Sep 17 00:00:00 2001
+From 36bd8e4497945604cda44057c9dbb500080700a7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 23:42:56 +0200
 Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
@@ -11,10 +11,10 @@ Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
  4 files changed, 127 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index 343033d..9fd7231 100644
+index 0fea91b..4bd0ff7 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
-@@ -1814,7 +1814,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
+@@ -2029,7 +2029,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
                                              ULONG Tag,
                                              USHORT Depth)
  {
@@ -41,7 +41,7 @@ index 343033d..9fd7231 100644
  
  /***********************************************************************
 diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
-index f4bdb0b..f56e2dd 100644
+index 57aaa28..ab55b48 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.c
 @@ -22,6 +22,9 @@
@@ -54,8 +54,8 @@ index f4bdb0b..f56e2dd 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -216,6 +219,33 @@ static void test_version(void)
-     return;
+@@ -238,6 +241,33 @@ static void test_version(void)
+     ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
  }
  
 +static void test_lookaside_list(void)
@@ -88,15 +88,15 @@ index f4bdb0b..f56e2dd 100644
  static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
  {
      ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
-@@ -243,6 +273,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
-     test_mdl_map();
+@@ -266,6 +296,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
      test_init_funcs();
+     test_load_driver();
      test_version();
 +    test_lookaside_list();
  
      /* print process report */
      if (test_input->winetest_debug)
-@@ -277,7 +308,7 @@ static NTSTATUS test_basic_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *
+@@ -317,7 +348,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
  
  static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
  {
@@ -105,7 +105,7 @@ index f4bdb0b..f56e2dd 100644
      IoCompleteRequest(irp, IO_NO_INCREMENT);
      return STATUS_SUCCESS;
  }
-@@ -299,14 +330,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+@@ -342,14 +373,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
              break;
      }
  
@@ -123,7 +123,7 @@ index f4bdb0b..f56e2dd 100644
      return STATUS_SUCCESS;
  }
 diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
-index 5abe18b..175c07d 100644
+index 0cd1673..ed27180 100644
 --- a/include/ddk/wdm.h
 +++ b/include/ddk/wdm.h
 @@ -144,20 +144,18 @@ typedef enum _KWAIT_REASON
@@ -232,7 +232,7 @@ index 5abe18b..175c07d 100644
  typedef NTSTATUS (NTAPI EX_CALLBACK_FUNCTION)(void *CallbackContext, void *Argument1, void *Argument2);
  typedef EX_CALLBACK_FUNCTION *PEX_CALLBACK_FUNCTION;
  
-@@ -1372,8 +1440,10 @@ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
+@@ -1373,8 +1441,10 @@ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
  PVOID     WINAPI ExAllocatePoolWithQuota(POOL_TYPE,SIZE_T);
  PVOID     WINAPI ExAllocatePoolWithTag(POOL_TYPE,SIZE_T,ULONG);
  PVOID     WINAPI ExAllocatePoolWithQuotaTag(POOL_TYPE,SIZE_T,ULONG);
@@ -244,7 +244,7 @@ index 5abe18b..175c07d 100644
  PSLIST_ENTRY WINAPI ExInterlockedPushEntrySList(PSLIST_HEADER,PSLIST_ENTRY,PKSPIN_LOCK);
  void      WINAPI ExReleaseFastMutexUnsafe(PFAST_MUTEX);
 diff --git a/include/winnt.h b/include/winnt.h
-index 45c3222..719cf84 100644
+index f1c49f2..90efd6a 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
 @@ -755,6 +755,8 @@ typedef struct _MEMORY_BASIC_INFORMATION

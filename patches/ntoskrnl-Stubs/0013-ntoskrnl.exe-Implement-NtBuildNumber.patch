@@ -1,4 +1,4 @@
-From 44e38cce5a02a0a5db60316270f33974f8d89400 Mon Sep 17 00:00:00 2001
+From b91595f9086dae3db6c37067fc31b31a6120c3ba Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 21:08:51 +0200
 Subject: [PATCH] ntoskrnl.exe: Implement NtBuildNumber.
@@ -6,14 +6,14 @@ Subject: [PATCH] ntoskrnl.exe: Implement NtBuildNumber.
 ---
  dlls/ntoskrnl.exe/ntoskrnl.c        | 11 +++++++++--
  dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
- dlls/ntoskrnl.exe/tests/driver.c    | 30 ++++++++++++++++++++++++++++++
- 3 files changed, 40 insertions(+), 3 deletions(-)
+ dlls/ntoskrnl.exe/tests/driver.c    | 29 +++++++++++++++++++++++++++++
+ 3 files changed, 39 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index 958bcdf..343033d 100644
+index 466962a..0fea91b 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
-@@ -52,6 +52,7 @@ WINE_DECLARE_DEBUG_CHANNEL(plugplay);
+@@ -57,6 +57,7 @@ WINE_DECLARE_DEBUG_CHANNEL(plugplay);
  
  BOOLEAN KdDebuggerEnabled = FALSE;
  ULONG InitSafeBootMode = 0;
@@ -21,7 +21,7 @@ index 958bcdf..343033d 100644
  
  extern LONG CALLBACK vectored_handler( EXCEPTION_POINTERS *ptrs );
  
-@@ -2724,6 +2725,13 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
+@@ -2939,6 +2940,13 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
      return STATUS_NOT_IMPLEMENTED;
  }
  
@@ -35,7 +35,7 @@ index 958bcdf..343033d 100644
  
  /*****************************************************
   *           DllMain
-@@ -2731,7 +2739,6 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
+@@ -2946,7 +2954,6 @@ NTSTATUS WINAPI IoAcquireRemoveLockEx(PIO_REMOVE_LOCK lock, PVOID tag,
  BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
  {
      static void *handler;
@@ -43,7 +43,7 @@ index 958bcdf..343033d 100644
  
      switch(reason)
      {
-@@ -2740,7 +2747,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
+@@ -2955,7 +2962,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
  #if defined(__i386__) || defined(__x86_64__)
          handler = RtlAddVectoredExceptionHandler( TRUE, vectored_handler );
  #endif
@@ -53,7 +53,7 @@ index 958bcdf..343033d 100644
      case DLL_PROCESS_DETACH:
          if (reserved) break;
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-index 5df4ae3..00d09dd 100644
+index 63c1b8e..72a9f7f 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 @@ -743,7 +743,7 @@
@@ -66,7 +66,7 @@ index 5df4ae3..00d09dd 100644
  @ stdcall NtConnectPort(ptr ptr ptr ptr ptr ptr ptr ptr)
  @ stdcall NtCreateEvent(ptr long ptr long long)
 diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
-index cde78e5..f4bdb0b 100644
+index d424396..57aaa28 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.c
 @@ -143,6 +143,22 @@ static void winetest_end_todo(void)
@@ -92,8 +92,8 @@ index cde78e5..f4bdb0b 100644
  static void test_currentprocess(void)
  {
      PEPROCESS current;
-@@ -187,6 +203,19 @@ static void test_init_funcs(void)
-     ok(timer2.Header.SignalState == 0, "got: %u\n", timer2.Header.SignalState);
+@@ -210,6 +226,18 @@ static void test_load_driver(void)
+     ok(!ret, "got %#x\n", ret);
  }
  
 +static void test_version(void)
@@ -106,16 +106,15 @@ index cde78e5..f4bdb0b 100644
 +
 +    PsGetVersion(NULL, NULL, &build, NULL);
 +    ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
-+    return;
 +}
 +
  static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
  {
      ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
-@@ -213,6 +242,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
-     test_currentprocess();
+@@ -237,6 +265,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
      test_mdl_map();
      test_init_funcs();
+     test_load_driver();
 +    test_version();
  
      /* print process report */

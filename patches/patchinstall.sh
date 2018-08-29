@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "96a6053feda4e16480c21d01b3688a8d38e5ad6d"
+	echo "a1e0a029b0ce80e6561e0656ae4530fb1a8d4316"
 }
 
 # Show version information
@@ -377,7 +377,6 @@ patch_enable_all ()
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
-	enable_winedevice_Fix_Relocation="$1"
 	enable_winemapi_user_xdg_mail="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_winemp3_acm_MPEG3_StreamOpen="$1"
@@ -1308,9 +1307,6 @@ patch_enable ()
 			;;
 		winedevice-Default_Drivers)
 			enable_winedevice_Default_Drivers="$2"
-			;;
-		winedevice-Fix_Relocation)
-			enable_winedevice_Fix_Relocation="$2"
 			;;
 		winemapi-user-xdg-mail)
 			enable_winemapi_user_xdg_mail="$2"
@@ -7751,21 +7747,6 @@ if test "$enable_winedevice_Default_Drivers" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "dxgkrnl.sys: Add stub driver.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxgmms1.sys: Add stub driver.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "programs/winedevice: Load some common drivers and fix ldr order.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winedevice-Fix_Relocation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28254] Fix crash of winedevice when relocation entry crosses page boundary
-# |
-# | Modified files:
-# |   *	programs/winedevice/device.c
-# |
-if test "$enable_winedevice_Fix_Relocation" -eq 1; then
-	patch_apply winedevice-Fix_Relocation/0001-winedevice-Avoid-invalid-memory-access-when-relocati.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winedevice: Avoid invalid memory access when relocation block addresses memory outside of the current page.", 1 },';
 	) >> "$patchlist"
 fi
 

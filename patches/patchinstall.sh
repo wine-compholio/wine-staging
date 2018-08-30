@@ -392,6 +392,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
+	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
@@ -1352,6 +1353,9 @@ patch_enable ()
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
+			;;
+		winex11-mouse-movements)
+			enable_winex11_mouse_movements="$2"
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
@@ -7993,6 +7997,21 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-mouse-movements
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42631] Mouse drift, jump or don't react to small slow movements in Unity-engine games
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h
+# |
+if test "$enable_winex11_mouse_movements" -eq 1; then
+	patch_apply winex11-mouse-movements/0001-winex11-Don-t-react-to-small-slow-mouse-movements.patch
+	(
+		printf '%s\n' '+    { "Jordan Galby", "winex11: Don'\''t react to small slow mouse movements.", 1 },';
 	) >> "$patchlist"
 fi
 

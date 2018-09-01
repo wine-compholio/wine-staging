@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a1e0a029b0ce80e6561e0656ae4530fb1a8d4316"
+	echo "2346a4012aed5a150cd971ca1e929528722a4d12"
 }
 
 # Show version information
@@ -255,6 +255,7 @@ patch_enable_all ()
 	enable_ntdll_futex_condition_var="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
+	enable_ntoskrnl_exe_Fix_Relocation="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -942,6 +943,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
+			;;
+		ntoskrnl.exe-Fix_Relocation)
+			enable_ntoskrnl_exe_Fix_Relocation="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -5602,6 +5606,21 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl.exe-Fix_Relocation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28254] Fix crash of winedevice when relocation entry crosses page boundary
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
+# |
+if test "$enable_ntoskrnl_exe_Fix_Relocation" -eq 1; then
+	patch_apply ntoskrnl.exe-Fix_Relocation/0001-ntoskrnl.exe-Avoid-invalid-memory-access-when-reloca.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe: Avoid invalid memory access when relocation block addresses memory outside of the current page.", 1 },';
 	) >> "$patchlist"
 fi
 

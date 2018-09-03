@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2346a4012aed5a150cd971ca1e929528722a4d12"
+	echo "279ac253e5aa7132ec4960af175115befcdfefd0"
 }
 
 # Show version information
@@ -161,7 +161,6 @@ patch_enable_all ()
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
-	enable_kernel32_COMSPEC="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_Debugger="$1"
@@ -661,9 +660,6 @@ patch_enable ()
 			;;
 		iphlpapi-TCP_Table)
 			enable_iphlpapi_TCP_Table="$2"
-			;;
-		kernel32-COMSPEC)
-			enable_kernel32_COMSPEC="$2"
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
@@ -2304,9 +2300,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_advapi32_CreateRestrictedToken" -gt 1; then
 		abort "Patchset advapi32-CreateRestrictedToken disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_kernel32_COMSPEC" -gt 1; then
-		abort "Patchset kernel32-COMSPEC disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
 		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
@@ -2315,7 +2308,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	fi
 	enable_Staging=1
 	enable_advapi32_CreateRestrictedToken=1
-	enable_kernel32_COMSPEC=1
 	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
@@ -2545,25 +2537,10 @@ if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-COMSPEC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19801] Fallback to default comspec when %COMSPEC% is not set
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, programs/cmd/wcmdmain.c
-# |
-if test "$enable_kernel32_COMSPEC" -eq 1; then
-	patch_apply kernel32-COMSPEC/0001-kernel32-Fallback-to-default-comspec-when-COMSPEC-is.patch
-	(
-		printf '%s\n' '+    { "Qian Hong", "kernel32: Fallback to default comspec when %COMSPEC% is not set.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, server-CreateProcess_ACLs, server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken, server-CreateProcess_ACLs, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -5095,8 +5072,7 @@ fi
 # Patchset ntdll-LdrInitializeThunk
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, server-CreateProcess_ACLs, server-Misc_ACL,
-# | 	advapi32-Token_Integrity_Level
+# |   *	Staging, advapi32-CreateRestrictedToken, server-CreateProcess_ACLs, server-Misc_ACL, advapi32-Token_Integrity_Level
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45570] League of Legends 8.12+ fails to start a game (anticheat engine, incorrect implementation of
@@ -5315,8 +5291,8 @@ fi
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, kernel32-COMSPEC, server-CreateProcess_ACLs, server-Misc_ACL,
-# | 	advapi32-Token_Integrity_Level, ntdll-LdrInitializeThunk
+# |   *	Staging, advapi32-CreateRestrictedToken, server-CreateProcess_ACLs, server-Misc_ACL, advapi32-Token_Integrity_Level,
+# | 	ntdll-LdrInitializeThunk
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)

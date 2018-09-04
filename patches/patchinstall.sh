@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "279ac253e5aa7132ec4960af175115befcdfefd0"
+	echo "c4131f69d3b5fde9954cc11609e6f19196399d46"
 }
 
 # Show version information
@@ -408,7 +408,6 @@ patch_enable_all ()
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
-	enable_ws2_32_Tests="$1"
 	enable_ws2_32_TransmitFile="$1"
 	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_getaddrinfo="$1"
@@ -1401,9 +1400,6 @@ patch_enable ()
 			;;
 		ws2_32-Connect_Time)
 			enable_ws2_32_Connect_Time="$2"
-			;;
-		ws2_32-Tests)
-			enable_ws2_32_Tests="$2"
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
@@ -7734,7 +7730,7 @@ fi
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
 # | 	dlls/dxgmms1.sys/Makefile.in, dlls/dxgmms1.sys/dxgmms1.sys.spec, dlls/dxgmms1.sys/main.c,
 # | 	dlls/ntoskrnl.exe/tests/driver.c, dlls/win32k.sys/Makefile.in, dlls/win32k.sys/main.c, dlls/win32k.sys/win32k.sys.spec,
-# | 	include/ddk/ntddk.h, loader/wine.inf.in, programs/winedevice/device.c, tools/make_specfiles
+# | 	loader/wine.inf.in, programs/winedevice/device.c, tools/make_specfiles
 # |
 if test "$enable_winedevice_Default_Drivers" -eq 1; then
 	patch_apply winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch
@@ -8224,18 +8220,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 	patch_apply ws2_32-Connect_Time/0001-ws2_32-Implement-returning-the-proper-time-with-SO_C.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Implement returning the proper time with SO_CONNECT_TIME.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-Tests
-# |
-# | Modified files:
-# |   *	dlls/ws2_32/tests/sock.c
-# |
-if test "$enable_ws2_32_Tests" -eq 1; then
-	patch_apply ws2_32-Tests/0001-ws2_32-tests-Hide-random-test-failures-in-socket-tests.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Hide random test failures in socket tests.", 1 },';
 	) >> "$patchlist"
 fi
 

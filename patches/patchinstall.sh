@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d99f6821183ef16457f5cedb13289bc715d11f09"
+	echo "bfe8510ec0c7bcef0be1f6990c56ad235d8bccd6"
 }
 
 # Show version information
@@ -398,7 +398,6 @@ patch_enable_all ()
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
-	enable_wininet_InternetCrackUrlW="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintab32_improvements="$1"
@@ -1370,9 +1369,6 @@ patch_enable ()
 			;;
 		wininet-Http_Decoding)
 			enable_wininet_Http_Decoding="$2"
-			;;
-		wininet-InternetCrackUrlW)
-			enable_wininet_InternetCrackUrlW="$2"
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
@@ -8078,21 +8074,6 @@ if test "$enable_wininet_Http_Decoding" -eq 1; then
 	patch_apply wininet-Http_Decoding/0001-wininet-Allow-to-set-INTERNET_OPTION_HTTP_DECODING-o.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wininet: Allow to set INTERNET_OPTION_HTTP_DECODING on sessions and connections.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-InternetCrackUrlW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40598] Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW
-# |
-# | Modified files:
-# |   *	dlls/wininet/internet.c, dlls/wininet/tests/url.c
-# |
-if test "$enable_wininet_InternetCrackUrlW" -eq 1; then
-	patch_apply wininet-InternetCrackUrlW/0002-wininet-Resize-buffer-when-call-to-InternetCanonical.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wininet: Resize buffer when call to InternetCanonicalizeUrlW fails in InternetCrackUrlW.", 1 },';
 	) >> "$patchlist"
 fi
 

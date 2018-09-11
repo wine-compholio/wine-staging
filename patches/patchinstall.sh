@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bfe8510ec0c7bcef0be1f6990c56ad235d8bccd6"
+	echo "18e2df401eb545f0ce490daaaf12a6c1c248119f"
 }
 
 # Show version information
@@ -102,7 +102,6 @@ patch_enable_all ()
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
-	enable_crypt32_CryptUnprotectMemory="$1"
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
@@ -182,10 +181,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
-	enable_mfplat_MFCreateMFByteStreamOnStream="$1"
-	enable_mfplat_MFCreateMemoryBuffer="$1"
 	enable_mfplat_MFCreateSample="$1"
-	enable_mfplat_MFTRegisterLocal="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -482,9 +478,6 @@ patch_enable ()
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
 			;;
-		crypt32-CryptUnprotectMemory)
-			enable_crypt32_CryptUnprotectMemory="$2"
-			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
 			;;
@@ -722,17 +715,8 @@ patch_enable ()
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
 			;;
-		mfplat-MFCreateMFByteStreamOnStream)
-			enable_mfplat_MFCreateMFByteStreamOnStream="$2"
-			;;
-		mfplat-MFCreateMemoryBuffer)
-			enable_mfplat_MFCreateMemoryBuffer="$2"
-			;;
 		mfplat-MFCreateSample)
 			enable_mfplat_MFCreateSample="$2"
-			;;
-		mfplat-MFTRegisterLocal)
-			enable_mfplat_MFTRegisterLocal="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -2186,20 +2170,6 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	enable_ntdll_ThreadTime=1
 fi
 
-if test "$enable_mfplat_MFCreateMemoryBuffer" -eq 1; then
-	if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -gt 1; then
-		abort "Patchset mfplat-MFCreateMFByteStreamOnStream disabled, but mfplat-MFCreateMemoryBuffer depends on that."
-	fi
-	enable_mfplat_MFCreateMFByteStreamOnStream=1
-fi
-
-if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
-	if test "$enable_mfplat_MFCreateSample" -gt 1; then
-		abort "Patchset mfplat-MFCreateSample disabled, but mfplat-MFCreateMFByteStreamOnStream depends on that."
-	fi
-	enable_mfplat_MFCreateSample=1
-fi
-
 if test "$enable_loader_OSX_Preloader" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but loader-OSX_Preloader depends on that."
@@ -2752,18 +2722,6 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		printf '%s\n' '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset crypt32-CryptUnprotectMemory
-# |
-# | Modified files:
-# |   *	dlls/crypt32/main.c
-# |
-if test "$enable_crypt32_CryptUnprotectMemory" -eq 1; then
-	patch_apply crypt32-CryptUnprotectMemory/0001-crypt32-Print-CryptUnprotectMemory-FIXME-only-once.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "crypt32: Print CryptUnprotectMemory FIXME only once.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4390,59 +4348,6 @@ if test "$enable_mfplat_MFCreateSample" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFMediaType to IMFAttributes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFStreamDescriptor to IMFAttributes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateSample.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-MFCreateMFByteStreamOnStream
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	mfplat-MFCreateSample
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45372] Implement MFCreateMFByteStreamOnStream.
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfidl.idl
-# |
-if test "$enable_mfplat_MFCreateMFByteStreamOnStream" -eq 1; then
-	patch_apply mfplat-MFCreateMFByteStreamOnStream/0001-mfplat-Implement-MFCreateMFByteStreamOnStream.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateMFByteStreamOnStream.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-MFCreateMemoryBuffer
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	mfplat-MFCreateSample, mfplat-MFCreateMFByteStreamOnStream
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45715] Implement MFCreateMemoryBuffer.
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfapi.h
-# |
-if test "$enable_mfplat_MFCreateMemoryBuffer" -eq 1; then
-	patch_apply mfplat-MFCreateMemoryBuffer/0001-mfplat-Implement-MFCreateMemoryBuffer.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateMemoryBuffer.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-MFTRegisterLocal
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45622] Add MFTRegisterLocal stub
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfapi.h
-# |
-if test "$enable_mfplat_MFTRegisterLocal" -eq 1; then
-	patch_apply mfplat-MFTRegisterLocal/0001-mfplat-Add-MFTRegisterLocal-stub.patch
-	patch_apply mfplat-MFTRegisterLocal/0002-mfplat-Add-MFTUnregisterLocal-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Add MFTRegisterLocal stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Add MFTUnregisterLocal stub.", 1 },';
 	) >> "$patchlist"
 fi
 

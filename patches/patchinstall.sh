@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b29cdbd5f23548d9631e5c98ec923b6d2d16a3f8"
+	echo "f274a198d21e5c89ea1dc6abdb5de5ad730c1233"
 }
 
 # Show version information
@@ -4325,11 +4325,9 @@ fi
 # |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfapi.h
 # |
 if test "$enable_mfplat_MFCreateSample" -eq 1; then
-	patch_apply mfplat-MFCreateSample/0001-mfplat-Forward-IMFMediaType-to-IMFAttributes.patch
 	patch_apply mfplat-MFCreateSample/0002-mfplat-Forward-IMFStreamDescriptor-to-IMFAttributes.patch
 	patch_apply mfplat-MFCreateSample/0003-mfplat-Implement-MFCreateSample.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFMediaType to IMFAttributes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFStreamDescriptor to IMFAttributes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateSample.", 1 },';
 	) >> "$patchlist"
@@ -6984,14 +6982,12 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/virtdisk/tests/Makefile.in, dlls/virtdisk/tests/virtdisk.c, dlls/virtdisk/virtdisk.spec,
-# | 	dlls/virtdisk/virtdisk_main.c, include/Makefile.in, include/virtdisk.h
+# | 	dlls/virtdisk/virtdisk_main.c
 # |
 if test "$enable_virtdisk_GetStorageDependencyInformation" -eq 1; then
-	patch_apply virtdisk-GetStorageDependencyInformation/0001-include-add-headerfile-virtdisk.h.patch
 	patch_apply virtdisk-GetStorageDependencyInformation/0002-virtdisk-Add-GetStorageDependencyInformation-stub.patch
 	patch_apply virtdisk-GetStorageDependencyInformation/0003-virtdisk-tests-Add-GetStorageDependencyInformation-t.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "include: Add headerfile virtdisk.h.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "virtdisk: Add GetStorageDependencyInformation stub.", 1 },';
 		printf '%s\n' '+    { "Gijs Vermeulen", "virtdisk/tests: Add GetStorageDependencyInformation tests.", 1 },';
 	) >> "$patchlist"

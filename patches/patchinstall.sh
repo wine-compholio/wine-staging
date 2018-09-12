@@ -152,6 +152,7 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
+	enable_hnetcfg_NATUPnP="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -626,6 +627,9 @@ patch_enable ()
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
+			;;
+		hnetcfg-NATUPnP)
+			enable_hnetcfg_NATUPnP="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -3798,6 +3802,31 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change multiplications by additions in the x/y scaler loops.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Remove ceilf/floorf calls from bilinear scaler.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Prefer using pre-multiplied ARGB data in the scaler.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset hnetcfg-NATUPnP
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34711] hnetcfg: Add Support for interface UPnPNAT
+# |
+# | Modified files:
+# |   *	dlls/hnetcfg/Makefile.in, dlls/hnetcfg/apps.c, dlls/hnetcfg/hnetcfg.c, dlls/hnetcfg/hnetcfg_private.h,
+# | 	dlls/hnetcfg/hnetcfg_tlb.idl, dlls/hnetcfg/manager.c, dlls/hnetcfg/port.c, dlls/hnetcfg/tests/policy.c,
+# | 	dlls/uuid/uuid.c, include/Makefile.in, include/natupnp.idl
+# |
+if test "$enable_hnetcfg_NATUPnP" -eq 1; then
+	patch_apply hnetcfg-NATUPnP/0001-include-Add-natupnp.idl.patch
+	patch_apply hnetcfg-NATUPnP/0002-hnetcfg-Register-NATUPnP-interface.patch
+	patch_apply hnetcfg-NATUPnP/0003-hnetcfg-Support-IUPnPNAT-interface.patch
+	patch_apply hnetcfg-NATUPnP/0004-hnetcfg-Linked-to-uuid.patch
+	patch_apply hnetcfg-NATUPnP/0005-hnetcfg-tests-Add-IUPnPNAT-interface-tests.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add natupnp.idl.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg: Register NATUPnP interface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg: Support IUPnPNAT interface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg: Linked to uuid.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg/tests: Add IUPnPNAT interface tests.", 1 },';
 	) >> "$patchlist"
 fi
 

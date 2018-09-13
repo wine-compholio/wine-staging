@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f274a198d21e5c89ea1dc6abdb5de5ad730c1233"
+	echo "0799550075654094a3bed080aac722b9bea01307"
 }
 
 # Show version information
@@ -181,7 +181,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_OSX_Preloader="$1"
-	enable_mfplat_MFCreateSample="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -338,7 +337,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
-	enable_virtdisk_GetStorageDependencyInformation="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -714,9 +712,6 @@ patch_enable ()
 			;;
 		loader-OSX_Preloader)
 			enable_loader_OSX_Preloader="$2"
-			;;
-		mfplat-MFCreateSample)
-			enable_mfplat_MFCreateSample="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -1185,9 +1180,6 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
-			;;
-		virtdisk-GetStorageDependencyInformation)
-			enable_virtdisk_GetStorageDependencyInformation="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -4345,23 +4337,6 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mfplat-MFCreateSample
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45617] Implement MFCreateSample
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, dlls/mfplat/tests/mfplat.c, include/mfapi.h
-# |
-if test "$enable_mfplat_MFCreateSample" -eq 1; then
-	patch_apply mfplat-MFCreateSample/0002-mfplat-Forward-IMFStreamDescriptor-to-IMFAttributes.patch
-	patch_apply mfplat-MFCreateSample/0003-mfplat-Implement-MFCreateSample.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Forward IMFStreamDescriptor to IMFAttributes.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFCreateSample.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mmsystem.dll16-MIDIHDR_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7001,24 +6976,6 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset virtdisk-GetStorageDependencyInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42577] Add stub for virtdisk.GetStorageDependencyInformation
-# |
-# | Modified files:
-# |   *	configure, configure.ac, dlls/virtdisk/tests/Makefile.in, dlls/virtdisk/tests/virtdisk.c, dlls/virtdisk/virtdisk.spec,
-# | 	dlls/virtdisk/virtdisk_main.c
-# |
-if test "$enable_virtdisk_GetStorageDependencyInformation" -eq 1; then
-	patch_apply virtdisk-GetStorageDependencyInformation/0002-virtdisk-Add-GetStorageDependencyInformation-stub.patch
-	patch_apply virtdisk-GetStorageDependencyInformation/0003-virtdisk-tests-Add-GetStorageDependencyInformation-t.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "virtdisk: Add GetStorageDependencyInformation stub.", 1 },';
-		printf '%s\n' '+    { "Gijs Vermeulen", "virtdisk/tests: Add GetStorageDependencyInformation tests.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,50 @@
+From ee3f09c31baedd50ab53179249b482eb51fcb0f3 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Mon, 6 Aug 2018 21:32:56 -0500
+Subject: [PATCH] ntdll: Don't call LdrQueryProcessModuleInformation in
+ NtQuerySystemInformation(SystemModuleInformation).
+
+Based on a patch by Andrew Wesie.
+
+This is simply incorrect; this function should only list kernel drivers.
+
+This makes the anticheat engine in League of Legends 8.15+ happy.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45550
+---
+ dlls/ntdll/nt.c | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index af22e58..80d3ef8 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2493,9 +2493,22 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+         }
+         break;
+     case SystemModuleInformation:
+-        /* FIXME: should be system-wide */
+-        if (!SystemInformation) ret = STATUS_ACCESS_VIOLATION;
+-        else ret = LdrQueryProcessModuleInformation( SystemInformation, Length, &len );
++        if (!SystemInformation)
++            ret = STATUS_ACCESS_VIOLATION;
++        else if (Length < FIELD_OFFSET( SYSTEM_MODULE_INFORMATION, Modules[1] ))
++        {
++            len = FIELD_OFFSET( SYSTEM_MODULE_INFORMATION, Modules[1] );
++            ret = STATUS_INFO_LENGTH_MISMATCH;
++        }
++        else
++        {
++            SYSTEM_MODULE_INFORMATION *smi = SystemInformation;
++
++            FIXME("returning fake driver list\n");
++            smi->ModulesCount = 1;
++            memset(&smi->Modules[0], 0, sizeof(smi->Modules[0]));
++            ret = STATUS_SUCCESS;
++        }
+         break;
+     case SystemHandleInformation:
+         {
+-- 
+2.7.4
+

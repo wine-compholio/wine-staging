@@ -1,14 +1,14 @@
-From eab748f0faa9adfb18eec8a6d7b92b5d517581da Mon Sep 17 00:00:00 2001
+From e9e4f687334712d9e63ffbd1727b485d6ed6059b Mon Sep 17 00:00:00 2001
 From: Johannes Specht <jojos_band@gmx.net>
 Date: Thu, 31 Aug 2017 20:24:35 +0200
-Subject: d3d11: Implement CopyResource for deferred contexts.
+Subject: [PATCH] d3d11: Implement CopyResource for deferred contexts.
 
 ---
  dlls/d3d11/device.c | 37 ++++++++++++++++++++++++++++++++++++-
  1 file changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
-index 15935b4e7aa..2e6126b434f 100644
+index 67feab6..242a758 100644
 --- a/dlls/d3d11/device.c
 +++ b/dlls/d3d11/device.c
 @@ -40,6 +40,8 @@ enum deferred_cmd
@@ -20,18 +20,18 @@ index 15935b4e7aa..2e6126b434f 100644
      DEFERRED_CSSETSHADER,               /* cs_info */
      DEFERRED_DSSETSHADER,               /* ds_info */
      DEFERRED_GSSETSHADER,               /* gs_info */
-@@ -140,6 +142,11 @@ struct deferred_call
-             ID3D11DepthStencilView *depth_stencil;
+@@ -141,6 +143,11 @@ struct deferred_call
          } render_target_info;
          struct
-+        {
+         {
 +            ID3D11Resource *dst_resource;
 +            ID3D11Resource *src_resource;
 +        } copy_resource_info;
 +        struct
-         {
++        {
              ID3D11ComputeShader *shader;
              /* FIXME: add class instances */
+         } cs_info;
 @@ -416,6 +423,14 @@ static void free_deferred_calls(struct list *commands)
                      ID3D11DepthStencilView_Release(call->render_target_info.depth_stencil);
                  break;
@@ -47,21 +47,21 @@ index 15935b4e7aa..2e6126b434f 100644
              case DEFERRED_CSSETSHADER:
              {
                  if (call->cs_info.shader)
-@@ -613,6 +628,13 @@ static void exec_deferred_calls(ID3D11DeviceContext *iface, struct list *command
+@@ -613,6 +628,13 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
                          call->render_target_info.render_targets, call->render_target_info.depth_stencil);
                  break;
              }
 +            case DEFERRED_COPYRESOURCE:
 +            {
-+                ID3D11DeviceContext_CopyResource(iface,
++                ID3D11DeviceContext1_CopyResource(iface,
 +                        call->copy_resource_info.dst_resource,
 +                        call->copy_resource_info.src_resource);
 +                break;
 +            }
              case DEFERRED_CSSETSHADER:
              {
-                 ID3D11DeviceContext_CSSetShader(iface, call->cs_info.shader, NULL, 0);
-@@ -4343,7 +4365,20 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_CopySubresourceRegion(ID3D1
+                 ID3D11DeviceContext1_CSSetShader(iface, call->cs_info.shader, NULL, 0);
+@@ -4523,7 +4545,20 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_CopySubresourceRegion(ID3D1
  static void STDMETHODCALLTYPE d3d11_deferred_context_CopyResource(ID3D11DeviceContext *iface,
          ID3D11Resource *dst_resource, ID3D11Resource *src_resource)
  {
@@ -84,5 +84,5 @@ index 15935b4e7aa..2e6126b434f 100644
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_UpdateSubresource(ID3D11DeviceContext *iface,
 -- 
-2.14.1
+1.9.1
 

@@ -1,21 +1,21 @@
-From 2a08bedec6070b9001315dc6a7505de150c48a88 Mon Sep 17 00:00:00 2001
+From cbff2078d971bf23a0a6b289f544cd13fbb26873 Mon Sep 17 00:00:00 2001
 From: Matt Durgavich <mattdurgavich@gmail.com>
 Date: Sun, 30 Aug 2015 11:04:08 -0400
-Subject: ws2_32: Proper WSACleanup implementation using wineserver function
- (try 2)
+Subject: [PATCH] ws2_32: Proper WSACleanup implementation using wineserver
+ function (try 2)
 
 ---
  dlls/ws2_32/socket.c     | 22 ++++++++++++++++------
- dlls/ws2_32/tests/sock.c | 14 +++++++-------
+ dlls/ws2_32/tests/sock.c | 15 +++++++--------
  server/protocol.def      |  3 +++
  server/sock.c            |  9 +++++++++
- 4 files changed, 35 insertions(+), 13 deletions(-)
+ 4 files changed, 35 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index d31f0b4..ea45397 100644
+index e39901d..c013258 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -1487,13 +1487,23 @@ int WINAPI WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
+@@ -1663,13 +1663,23 @@ int WINAPI WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
   */
  INT WINAPI WSACleanup(void)
  {
@@ -46,10 +46,10 @@ index d31f0b4..ea45397 100644
  
  
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 00fac77..ccd5790 100644
+index 7c55c21..f61df89f 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -1149,18 +1149,17 @@ static void test_WithWSAStartup(void)
+@@ -1218,18 +1218,17 @@ static void test_WithWSAStartup(void)
      ok(res == 0, "WSAStartup() failed unexpectedly: %d\n", res);
  
      /* show that sockets are destroyed automatically after WSACleanup */
@@ -70,12 +70,13 @@ index 00fac77..ccd5790 100644
  
      /* Check that all sockets were destroyed */
      for (i = 0; i < socks; i++)
-@@ -1180,13 +1179,14 @@ static void test_WithWSAStartup(void)
+@@ -1249,14 +1248,14 @@ static void test_WithWSAStartup(void)
              SetLastError(0xdeadbeef);
              res = getsockname(sock, (struct sockaddr *)&saddr, &size);
              error = WSAGetLastError();
 -            ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
--            ok(error == WSAENOTSOCK, "Test[%d]: expected 10038, got %d\n", i, error);
+-            if (res == SOCKET_ERROR)
+-                ok(error == WSAENOTSOCK, "Test[%d]: expected 10038, got %d\n", i, error);
 +            if (j == 2 || (j == 0 && i == 0))
 +                todo_wine ok(res == SOCKET_ERROR, "Test[%d]: getsockname should have failed\n", i);
 +            else
@@ -90,10 +91,10 @@ index 00fac77..ccd5790 100644
      for (i = 0; i < socks; i++)
      {
 diff --git a/server/protocol.def b/server/protocol.def
-index 04814c9..cfd40a0 100644
+index 35824ae..199f470 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -942,6 +942,9 @@ struct rawinput_device
+@@ -987,6 +987,9 @@ struct rawinput_device
      obj_handle_t handle;       /* handle to close */
  @END
  
@@ -104,10 +105,10 @@ index 04814c9..cfd40a0 100644
  /* Set a handle information */
  @REQ(set_handle_info)
 diff --git a/server/sock.c b/server/sock.c
-index 57d3d93..4e95911 100644
+index 84f54f6..9ad4e87 100644
 --- a/server/sock.c
 +++ b/server/sock.c
-@@ -1390,3 +1390,12 @@ DECL_HANDLER(get_socket_info)
+@@ -1355,3 +1355,12 @@ DECL_HANDLER(get_socket_info)
  
      release_object( &sock->obj );
  }
@@ -121,5 +122,5 @@ index 57d3d93..4e95911 100644
 +        close_handle(current->process, sock);
 +}
 -- 
-2.6.2
+1.9.1
 

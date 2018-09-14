@@ -1,0 +1,177 @@
+From f6619eb1fb100c8f6f39b4828030434f0aab9a38 Mon Sep 17 00:00:00 2001
+From: Mark Harmstone <mark@harmstone.com>
+Date: Sun, 21 Dec 2014 23:49:41 +0000
+Subject: winepulse: fetch actual program name if possible
+
+Changes by Sebastian Lackner <sebastian@fds-team.de>:
+* Improved error handling, fix memory leak
+* Remove check for UTF16, there are several examples where this doesn't work
+  (for example with VLC media player)
+* Simplify algorithm to choose best translation.
+---
+ dlls/winepulse.drv/Makefile.in |   2 +-
+ dlls/winepulse.drv/mmdevdrv.c  | 123 ++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 116 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/winepulse.drv/Makefile.in b/dlls/winepulse.drv/Makefile.in
+index d660063..2448789 100644
+--- a/dlls/winepulse.drv/Makefile.in
++++ b/dlls/winepulse.drv/Makefile.in
+@@ -1,5 +1,5 @@
+ MODULE    = winepulse.drv
+-IMPORTS   = dxguid uuid winmm user32 advapi32 ole32
++IMPORTS   = dxguid uuid winmm user32 advapi32 ole32 version
+ EXTRALIBS = $(PULSE_LIBS) $(PTHREAD_LIBS)
+ EXTRAINCL = $(PULSE_CFLAGS)
+ 
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index bf9f3c0..2f20873 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -43,6 +43,7 @@
+ #include "wine/list.h"
+ 
+ #include "ole2.h"
++#include "mimeole.h"
+ #include "dshow.h"
+ #include "dsound.h"
+ #include "propsys.h"
+@@ -468,6 +469,109 @@ static void pulse_probe_settings(pa_mainloop *ml, pa_context *ctx, int render, W
+     fmt->dwChannelMask = pulse_channel_map_to_channel_mask(&map);
+ }
+ 
++typedef struct tagLANGANDCODEPAGE
++{
++  WORD wLanguage;
++  WORD wCodePage;
++} LANGANDCODEPAGE;
++
++static BOOL query_productname(void *data, LANGANDCODEPAGE *lang, LPVOID *buffer, DWORD *len)
++{
++    static const WCHAR productnameW[] = {'\\','S','t','r','i','n','g','F','i','l','e','I','n','f','o',
++                                         '\\','%','0','4','x','%','0','4','x',
++                                         '\\','P','r','o','d','u','c','t','N','a','m','e',0};
++    WCHAR pn[37];
++    sprintfW(pn, productnameW, lang->wLanguage, lang->wCodePage);
++    return VerQueryValueW(data, pn, buffer, len) && *len;
++}
++
++static char* get_programname(WCHAR *path)
++{
++    static const WCHAR translationW[] = {'\\','V','a','r','F','i','l','e','I','n','f','o',
++                                         '\\','T','r','a','n','s','l','a','t','i','o','n',0};
++    UINT translate_size, productname_size;
++    LANGANDCODEPAGE *translate;
++    LPVOID productname;
++    BOOL found = FALSE;
++    void *data = NULL;
++    char *ret = NULL;
++    unsigned int i;
++    LCID locale;
++    DWORD size;
++
++    size = GetFileVersionInfoSizeW(path, NULL);
++    if (!size)
++        goto out;
++
++    data = HeapAlloc(GetProcessHeap(), 0, size);
++    if (!data)
++        goto out;
++
++    if (!GetFileVersionInfoW(path, 0, size, data))
++        goto out;
++
++    if (!VerQueryValueW(data, translationW, (LPVOID *)&translate, &translate_size))
++        goto out;
++
++    /* no translations found */
++    if (translate_size < sizeof(LANGANDCODEPAGE))
++        goto out;
++
++    /* The following code will try to find the best translation. We first search for an
++     * exact match of the language, then a match of the language PRIMARYLANGID, then we
++     * search for a LANG_NEUTRAL match, and if that still doesn't work we pick the
++     * first entry which contains a proper productname. */
++
++    locale = GetThreadLocale();
++
++    for (i = 0; i < translate_size / sizeof(LANGANDCODEPAGE); i++) {
++        if (translate[i].wLanguage == locale &&
++                query_productname(data, &translate[i], &productname, &productname_size)) {
++            found = TRUE;
++            break;
++        }
++    }
++
++    if (!found) {
++        for (i = 0; i < translate_size / sizeof(LANGANDCODEPAGE); i++) {
++            if (PRIMARYLANGID(translate[i].wLanguage) == PRIMARYLANGID(locale) &&
++                    query_productname(data, &translate[i], &productname, &productname_size)) {
++                found = TRUE;
++                break;
++            }
++        }
++    }
++
++    if (!found) {
++        for (i = 0; i < translate_size / sizeof(LANGANDCODEPAGE); i++) {
++            if (PRIMARYLANGID(translate[i].wLanguage) == LANG_NEUTRAL &&
++                    query_productname(data, &translate[i], &productname, &productname_size)) {
++                found = TRUE;
++                break;
++            }
++        }
++    }
++
++    if (!found) {
++        for (i = 0; i < translate_size / sizeof(LANGANDCODEPAGE); i++) {
++            if (query_productname(data, &translate[i], &productname, &productname_size)) {
++                found = TRUE;
++                break;
++            }
++        }
++    }
++
++    if (found) {
++        int len = WideCharToMultiByte(CP_UTF8, 0, productname, -1, NULL, 0, NULL, NULL);
++        ret = pa_xmalloc(len);
++        if (ret) WideCharToMultiByte(CP_UTF8, 0, productname, -1, ret, len, NULL, NULL);
++    }
++
++out:
++    HeapFree(GetProcessHeap(), 0, data);
++    return ret;
++}
++
+ static HRESULT pulse_connect(void)
+ {
+     int len;
+@@ -491,14 +595,17 @@ static HRESULT pulse_connect(void)
+         pa_context_unref(pulse_ctx);
+ 
+     GetModuleFileNameW(NULL, path, sizeof(path)/sizeof(*path));
+-    name = strrchrW(path, '\\');
+-    if (!name)
+-        name = path;
+-    else
+-        name++;
+-    len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
+-    str = pa_xmalloc(len);
+-    WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++    str = get_programname(path);
++    if (!str) {
++        name = strrchrW(path, '\\');
++        if (!name)
++            name = path;
++        else
++            name++;
++        len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
++        str = pa_xmalloc(len);
++        WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++    }
+     TRACE("Name: %s\n", str);
+     pulse_ctx = pa_context_new(pa_mainloop_get_api(pulse_ml), str);
+     pa_xfree(str);
+-- 
+2.7.1
+

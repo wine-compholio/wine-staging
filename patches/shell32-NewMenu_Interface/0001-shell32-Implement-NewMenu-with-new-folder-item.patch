@@ -1,20 +1,27 @@
-From e412429964c86aabcea561e5eca9b625fe2e094b Mon Sep 17 00:00:00 2001
+From 7ea5a3f6c925a51a19ba51726d82dac1ffd76f55 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 16 Aug 2015 17:34:22 +0200
-Subject: shell32: Implement NewMenu with new folder item.
+Subject: [PATCH] shell32: Implement NewMenu with new folder item.
 
+v2:
+Added and Correct tests
+Use IContextMenu3 for all IContextMenu* interfaces.
+Use heap_alloc/free functions
+
+v3:
+Correct header issue when compiling i386 (var_arg)
 ---
  dlls/shell32/Makefile.in         |   1 +
  dlls/shell32/shell32_classes.idl |   5 +
  dlls/shell32/shell32_main.h      |   1 +
- dlls/shell32/shellnew.c          | 558 +++++++++++++++++++++++++++++++++++++++
+ dlls/shell32/shellnew.c          | 498 +++++++++++++++++++++++++++++++
  dlls/shell32/shellole.c          |   1 +
- include/shlguid.h                |   2 +
- 6 files changed, 568 insertions(+)
+ dlls/shell32/tests/shlview.c     |   9 +-
+ 6 files changed, 514 insertions(+), 1 deletion(-)
  create mode 100644 dlls/shell32/shellnew.c
 
 diff --git a/dlls/shell32/Makefile.in b/dlls/shell32/Makefile.in
-index 970ecba4f65..25d9ebd541b 100644
+index 970ecba4f6..25d9ebd541 100644
 --- a/dlls/shell32/Makefile.in
 +++ b/dlls/shell32/Makefile.in
 @@ -32,6 +32,7 @@ C_SRCS = \
@@ -26,26 +33,26 @@ index 970ecba4f65..25d9ebd541b 100644
  	shellord.c \
  	shellpath.c \
 diff --git a/dlls/shell32/shell32_classes.idl b/dlls/shell32/shell32_classes.idl
-index cc57b2bab57..e8476a03cb3 100644
+index 6ed497fea5..60de627be3 100644
 --- a/dlls/shell32/shell32_classes.idl
 +++ b/dlls/shell32/shell32_classes.idl
-@@ -76,6 +76,11 @@ coclass KnownFolderManager { interface IKnownFolderManager; }
+@@ -80,6 +80,11 @@ coclass KnownFolderManager { interface IKnownFolderManager; }
+     uuid(4657278a-411b-11d2-839a-00c04fd918d0)
+ ] coclass DragDropHelper { interface IDropTargetHelper; }
  
- [
-     threading(apartment),
++[
++    threading(apartment),
 +    uuid(d969a300-e7ff-11d0-a93b-00a0c90f2719)
 +] coclass NewMenu { interface IShellExtInit; }
 +
-+[
-+    threading(apartment),
+ [
+     threading(apartment),
      uuid(00bb2763-6a77-11d0-a535-00c04fd7d062)
- ] coclass AutoComplete { interface IAutoComplete2; }
- 
 diff --git a/dlls/shell32/shell32_main.h b/dlls/shell32/shell32_main.h
-index bdebcba0e39..ececaa77ef8 100644
+index d1b0e01cf1..fd5d207f37 100644
 --- a/dlls/shell32/shell32_main.h
 +++ b/dlls/shell32/shell32_main.h
-@@ -101,6 +101,7 @@ HRESULT WINAPI RecycleBin_Constructor(IUnknown * pUnkOuter, REFIID riif, LPVOID
+@@ -105,6 +105,7 @@ HRESULT WINAPI RecycleBin_Constructor(IUnknown * pUnkOuter, REFIID riif, LPVOID
  HRESULT WINAPI QueryAssociations_Constructor(IUnknown *pUnkOuter, REFIID riid, LPVOID *ppOutput) DECLSPEC_HIDDEN;
  HRESULT WINAPI ExplorerBrowser_Constructor(IUnknown *pUnkOuter, REFIID riid, LPVOID *ppv) DECLSPEC_HIDDEN;
  HRESULT WINAPI KnownFolderManager_Constructor(IUnknown *pUnkOuter, REFIID riid, LPVOID *ppv) DECLSPEC_HIDDEN;
@@ -55,10 +62,10 @@ index bdebcba0e39..ececaa77ef8 100644
  HRESULT WINAPI CPanel_ExtractIconW(LPITEMIDLIST pidl, LPCWSTR pszFile, UINT nIconIndex, HICON *phiconLarge, HICON *phiconSmall, UINT nIconSize) DECLSPEC_HIDDEN;
 diff --git a/dlls/shell32/shellnew.c b/dlls/shell32/shellnew.c
 new file mode 100644
-index 00000000000..59e18d6d228
+index 0000000000..89be091e03
 --- /dev/null
 +++ b/dlls/shell32/shellnew.c
-@@ -0,0 +1,558 @@
+@@ -0,0 +1,498 @@
 +/*
 + * Copyright 2015 Michael Müller
 + *
@@ -76,11 +83,13 @@ index 00000000000..59e18d6d228
 + * License along with this library; if not, write to the Free Software
 + * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 + */
++#include "config.h"
 +
 +#define COBJMACROS
 +#define NONAMELESSUNION
 +
-+#include "wine/debug.h"
++#include <stdarg.h>
++
 +#include "winerror.h"
 +#include "windef.h"
 +#include "winbase.h"
@@ -99,12 +108,14 @@ index 00000000000..59e18d6d228
 +#include "shresdef.h"
 +#include "shellfolder.h"
 +
++#include "wine/heap.h"
++#include "wine/debug.h"
++
 +WINE_DEFAULT_DEBUG_CHANNEL(shell);
 +
 +typedef struct
 +{
 +    IShellExtInit   IShellExtInit_iface;
-+    IContextMenu    IContextMenu_iface;
 +    IContextMenu3   IContextMenu3_iface;
 +    IObjectWithSite IObjectWithSite_iface;
 +
@@ -119,11 +130,6 @@ index 00000000000..59e18d6d228
 +static inline NewMenuImpl *impl_from_IShellExtInit(IShellExtInit *iface)
 +{
 +    return CONTAINING_RECORD(iface, NewMenuImpl, IShellExtInit_iface);
-+}
-+
-+static inline NewMenuImpl *impl_from_IContextMenu(IContextMenu *iface)
-+{
-+    return CONTAINING_RECORD(iface, NewMenuImpl, IContextMenu_iface);
 +}
 +
 +static inline NewMenuImpl *impl_from_IContextMenu3(IContextMenu3 *iface)
@@ -144,7 +150,8 @@ index 00000000000..59e18d6d228
 +
 +    *ppv = NULL;
 +
-+    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_IShellExtInit))
++    if (IsEqualIID(riid, &IID_IUnknown) ||
++        IsEqualIID(riid, &IID_IShellExtInit))
 +    {
 +        *ppv = &This->IShellExtInit_iface;
 +    }
@@ -152,11 +159,9 @@ index 00000000000..59e18d6d228
 +    {
 +        *ppv = &This->IObjectWithSite_iface;
 +    }
-+    else if (IsEqualIID(riid, &IID_IContextMenu))
-+    {
-+        *ppv = &This->IContextMenu_iface;
-+    }
-+    else if (IsEqualIID(riid, &IID_IContextMenu3))
++    else if (IsEqualIID(riid, &IID_IContextMenu)  ||
++             IsEqualIID(riid, &IID_IContextMenu2) ||
++             IsEqualIID(riid, &IID_IContextMenu3))
 +    {
 +        *ppv = &This->IContextMenu3_iface;
 +    }
@@ -178,7 +183,7 @@ index 00000000000..59e18d6d228
 +    NewMenuImpl *This = impl_from_IShellExtInit(iface);
 +    ULONG ref = InterlockedIncrement(&This->ref);
 +
-+    TRACE("(%p), new refcount=%i\n", iface, ref);
++    TRACE("(%p), refcount=%i\n", iface, ref);
 +
 +    return ref;
 +}
@@ -189,13 +194,13 @@ index 00000000000..59e18d6d228
 +    NewMenuImpl *This = impl_from_IShellExtInit(iface);
 +    ULONG ref = InterlockedDecrement(&This->ref);
 +
-+    TRACE("(%p), new refcount=%i\n", iface, ref);
++    TRACE("(%p), refcount=%i\n", iface, ref);
 +
 +    if (!ref)
 +    {
 +        if (This->site) IUnknown_Release(This->site);
 +        if (This->pidl) ILFree(This->pidl);
-+        HeapFree(GetProcessHeap(), 0, This);
++        heap_free(This);
 +    }
 +
 +    return ref;
@@ -533,63 +538,6 @@ index 00000000000..59e18d6d228
 +    NewMenu_ContextMenu3_HandleMenuMsg2
 +};
 +
-+
-+static HRESULT WINAPI
-+NewMenu_ContextMenu_QueryInterface(IContextMenu *iface, REFIID riid, void **ppv)
-+{
-+    NewMenuImpl *This = impl_from_IContextMenu(iface);
-+    return NewMenu_ExtInit_QueryInterface(&This->IShellExtInit_iface, riid, ppv);
-+}
-+
-+static ULONG WINAPI
-+NewMenu_ContextMenu_AddRef(IContextMenu *iface)
-+{
-+    NewMenuImpl *This = impl_from_IContextMenu(iface);
-+    return NewMenu_ExtInit_AddRef(&This->IShellExtInit_iface);
-+}
-+
-+static ULONG WINAPI
-+NewMenu_ContextMenu_Release(IContextMenu *iface)
-+{
-+    NewMenuImpl *This = impl_from_IContextMenu(iface);
-+    return NewMenu_ExtInit_Release(&This->IShellExtInit_iface);
-+}
-+
-+static HRESULT WINAPI
-+NewMenu_ContextMenu_QueryContextMenu(IContextMenu *iface, HMENU menu, UINT index,
-+                                     UINT cmd_first, UINT cmd_last, UINT flags)
-+{
-+    NewMenuImpl *This = impl_from_IContextMenu(iface);
-+    return NewMenu_ContextMenu3_QueryContextMenu(&This->IContextMenu3_iface, menu, index,
-+                                                 cmd_first, cmd_last, flags);
-+}
-+
-+static HRESULT WINAPI
-+NewMenu_ContextMenu_InvokeCommand(IContextMenu *iface, LPCMINVOKECOMMANDINFO info)
-+{
-+    NewMenuImpl *This = impl_from_IContextMenu(iface);
-+    return NewMenu_ContextMenu3_InvokeCommand(&This->IContextMenu3_iface, info);
-+}
-+
-+static HRESULT WINAPI
-+NewMenu_ContextMenu_GetCommandString(IContextMenu *iface, UINT_PTR cmd, UINT type,
-+                                     UINT *reserved, LPSTR name, UINT max_len)
-+{
-+    NewMenuImpl *This = impl_from_IContextMenu(iface);
-+    return NewMenu_ContextMenu3_GetCommandString(&This->IContextMenu3_iface, cmd, type, reserved, name, max_len);
-+}
-+
-+static const IContextMenuVtbl cmvt =
-+{
-+    NewMenu_ContextMenu_QueryInterface,
-+    NewMenu_ContextMenu_AddRef,
-+    NewMenu_ContextMenu_Release,
-+    NewMenu_ContextMenu_QueryContextMenu,
-+    NewMenu_ContextMenu_InvokeCommand,
-+    NewMenu_ContextMenu_GetCommandString
-+};
-+
-+
 +HRESULT WINAPI NewMenu_Constructor(IUnknown *outer, REFIID riid, void **obj)
 +{
 +    NewMenuImpl *menu;
@@ -602,12 +550,11 @@ index 00000000000..59e18d6d228
 +    if (outer)
 +        return CLASS_E_NOAGGREGATION;
 +
-+    menu = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(NewMenuImpl));
++    menu = heap_alloc_zero(sizeof(NewMenuImpl));
 +    if (!menu) return E_OUTOFMEMORY;
 +
 +    menu->ref = 1;
 +    menu->IShellExtInit_iface.lpVtbl    = &eivt;
-+    menu->IContextMenu_iface.lpVtbl     = &cmvt;
 +    menu->IContextMenu3_iface.lpVtbl    = &cmvt3;
 +    menu->IObjectWithSite_iface.lpVtbl  = &owsvt;
 +
@@ -618,10 +565,10 @@ index 00000000000..59e18d6d228
 +    return hr;
 +}
 diff --git a/dlls/shell32/shellole.c b/dlls/shell32/shellole.c
-index d3d972b96d1..88dfdeca461 100644
+index 3fe96801aa..649e6460cf 100644
 --- a/dlls/shell32/shellole.c
 +++ b/dlls/shell32/shellole.c
-@@ -88,6 +88,7 @@ static const struct {
+@@ -89,6 +89,7 @@ static const struct {
  	{&CLSID_Shell,          IShellDispatch_Constructor},
  	{&CLSID_DestinationList, CustomDestinationList_Constructor},
  	{&CLSID_ShellImageDataFactory, ShellImageDataFactory_Constructor},
@@ -629,19 +576,33 @@ index d3d972b96d1..88dfdeca461 100644
  	{NULL, NULL}
  };
  
-diff --git a/include/shlguid.h b/include/shlguid.h
-index 2279defb1db..09aacc58e66 100644
---- a/include/shlguid.h
-+++ b/include/shlguid.h
-@@ -146,6 +146,8 @@ DEFINE_GUID(CLSID_ProgressDialog, 0xf8383852, 0xfcd3, 0x11d1, 0xa6, 0xb9, 0x0, 0
+diff --git a/dlls/shell32/tests/shlview.c b/dlls/shell32/tests/shlview.c
+index f5d96c8d44..dbb24d9356 100644
+--- a/dlls/shell32/tests/shlview.c
++++ b/dlls/shell32/tests/shlview.c
+@@ -1479,7 +1479,6 @@ static void test_newmenu(void)
+     HRESULT hr;
  
- DEFINE_GUID(CLSID_ShellItem,      0x2fe352ea, 0xfd1f, 0x11d2, 0xb1, 0xf4, 0x00, 0xc0, 0x4f, 0x8e, 0xeb, 0x3e);
+     hr = CoCreateInstance(&CLSID_NewMenu, NULL, CLSCTX_INPROC_SERVER, &IID_IUnknown, (void **)&unk);
+-todo_wine
+     ok(hr == S_OK, "Failed to create NewMenu object, hr %#x.\n", hr);
+     if (hr != S_OK)
+     {
+@@ -1491,6 +1490,14 @@ todo_wine
+     ok(hr == S_OK, "Failed to get IShellExtInit, hr %#x.\n", hr);
+     IUnknown_Release(unk2);
  
-+DEFINE_GUID(CLSID_NewMenu,        0xd969a300, 0xe7ff, 0x11d0, 0xa9, 0x3b, 0x0, 0xa0, 0xc9, 0xf, 0x27, 0x19);
++    hr = IUnknown_QueryInterface(unk, &IID_IContextMenu, (void **)&unk2);
++    ok(hr == S_OK, "Failed to get IContextMenu, hr %#x.\n", hr);
++    IUnknown_Release(unk2);
 +
- #define PSGUID_SHELLDETAILS     {0x28636aa6, 0x953d, 0x11d2, 0xb5, 0xd6, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0}
- DEFINE_GUID(FMTID_ShellDetails,  0x28636aa6, 0x953d, 0x11d2, 0xb5, 0xd6, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0xd0);
- #define PID_FINDDATA        0
++    hr = IUnknown_QueryInterface(unk, &IID_IContextMenu2, (void **)&unk2);
++    ok(hr == S_OK, "Failed to get IContextMenu2, hr %#x.\n", hr);
++    IUnknown_Release(unk2);
++
+     hr = IUnknown_QueryInterface(unk, &IID_IContextMenu3, (void **)&unk2);
+     ok(hr == S_OK, "Failed to get IContextMenu3, hr %#x.\n", hr);
+     IUnknown_Release(unk2);
 -- 
-2.11.0
+2.17.0
 

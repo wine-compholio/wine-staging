@@ -1,20 +1,21 @@
-From 8bffcd9ad57c8c1b13f38045585043b7003c7c0c Mon Sep 17 00:00:00 2001
+From 2ea454b0c058d14647bb55593d1021454a3c09a4 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 25 Jun 2014 11:49:12 -0600
-Subject: server: Add default security descriptor ownership for processes.
+Subject: [PATCH] server: Add default security descriptor ownership for
+ processes.
 
 ---
  dlls/advapi32/tests/security.c | 35 +++++++++++++++++++++++++++++++++++
  server/process.c               | 26 +++++++++++++++++++++++++-
  server/security.h              |  1 +
- server/token.c                 |  8 ++++++++
- 4 files changed, 69 insertions(+), 1 deletion(-)
+ server/token.c                 |  2 ++
+ 4 files changed, 63 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index ca5edffae5..acbf124be8 100644
+index c472491..6f7a7f1 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -4542,11 +4542,15 @@ static void test_acls(void)
+@@ -4665,11 +4665,15 @@ static void test_acls(void)
  
  static void test_GetSecurityInfo(void)
  {
@@ -30,7 +31,7 @@ index ca5edffae5..acbf124be8 100644
      ACL_SIZE_INFORMATION acl_size;
      PSECURITY_DESCRIPTOR pSD;
      ACCESS_ALLOWED_ACE *ace;
-@@ -4673,6 +4677,37 @@ static void test_GetSecurityInfo(void)
+@@ -4796,6 +4800,37 @@ static void test_GetSecurityInfo(void)
      }
      LocalFree(pSD);
      CloseHandle(obj);
@@ -69,7 +70,7 @@ index ca5edffae5..acbf124be8 100644
  
  static void test_GetSidSubAuthority(void)
 diff --git a/server/process.c b/server/process.c
-index 2327a2664b..de6b1ed020 100644
+index 651ecdf..9a11e0a 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -62,6 +62,7 @@ static int shutdown_stage;  /* current stage in the shutdown process */
@@ -89,7 +90,7 @@ index 2327a2664b..de6b1ed020 100644
      default_set_sd,              /* set_sd */
      no_lookup_name,              /* lookup_name */
      no_link_name,                /* link_name */
-@@ -671,6 +672,29 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
+@@ -672,6 +673,29 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
      return access & ~(GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE | GENERIC_ALL);
  }
  
@@ -120,7 +121,7 @@ index 2327a2664b..de6b1ed020 100644
  {
      struct process *process = get_fd_user( fd );
 diff --git a/server/security.h b/server/security.h
-index 873bbc6afd..606dbb2ab2 100644
+index bc4a8f6..6c33714 100644
 --- a/server/security.h
 +++ b/server/security.h
 @@ -47,6 +47,7 @@ extern const PSID security_local_user_sid;
@@ -132,24 +133,18 @@ index 873bbc6afd..606dbb2ab2 100644
  
  
 diff --git a/server/token.c b/server/token.c
-index 532d7b7405..1aa1c993df 100644
+index b0849ad..9228e46 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -92,6 +92,13 @@ static const struct /* same fields as struct SID */
-     SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
-     DWORD SubAuthority[2];
- } builtin_users_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS } };
-+static const struct /* same fields as struct SID */
-+{
-+    BYTE Revision;
-+    BYTE SubAuthorityCount;
-+    SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
-+    DWORD SubAuthority[5];
-+} domain_users_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORITY }, { SECURITY_NT_NON_UNIQUE, 0, 0, 0, DOMAIN_GROUP_RID_USERS } };
+@@ -83,6 +83,7 @@ static const SID_N(5) local_user_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORIT
+ static const SID_N(2) builtin_admins_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS } };
+ static const SID_N(2) builtin_users_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS } };
+ static const SID_N(3) builtin_logon_sid = { SID_REVISION, 3, { SECURITY_NT_AUTHORITY }, { SECURITY_LOGON_IDS_RID, 0, 0 } };
++static const SID_N(5) domain_users_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORITY }, { SECURITY_NT_NON_UNIQUE, 0, 0, 0, DOMAIN_GROUP_RID_USERS } };
  
  const PSID security_world_sid = (PSID)&world_sid;
  static const PSID security_local_sid = (PSID)&local_sid;
-@@ -101,6 +108,7 @@ const PSID security_local_system_sid = (PSID)&local_system_sid;
+@@ -92,6 +93,7 @@ const PSID security_local_system_sid = (PSID)&local_system_sid;
  const PSID security_local_user_sid = (PSID)&local_user_sid;
  const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
  const PSID security_builtin_users_sid = (PSID)&builtin_users_sid;
@@ -158,5 +153,5 @@ index 532d7b7405..1aa1c993df 100644
  
  static luid_t prev_luid_value = { 1000, 0 };
 -- 
-2.13.1
+1.9.1
 

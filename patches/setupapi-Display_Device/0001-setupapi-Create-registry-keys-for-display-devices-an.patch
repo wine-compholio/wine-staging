@@ -1,4 +1,4 @@
-From 79cc09b9e1b952772d33335518267dcabb927b01 Mon Sep 17 00:00:00 2001
+From 9fb320afdf57221eb32d51a03971ad3d13cf773e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 Feb 2016 03:17:09 +0100
 Subject: setupapi: Create registry keys for display devices and display
@@ -10,12 +10,12 @@ Subject: setupapi: Create registry keys for display devices and display
  2 files changed, 101 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
-index 318dcdf..fc53c31 100644
+index 4d53bd7..6415298 100644
 --- a/dlls/setupapi/devinst.c
 +++ b/dlls/setupapi/devinst.c
-@@ -90,6 +90,15 @@ static const WCHAR LowerFilters[] = {'L','o','w','e','r','F','i','l','t','e','r'
- static const WCHAR Phantom[] = {'P','h','a','n','t','o','m',0};
- static const WCHAR SymbolicLink[] = {'S','y','m','b','o','l','i','c','L','i','n','k',0};
+@@ -94,6 +94,15 @@ static const WCHAR SymbolicLink[] = {'S','y','m','b','o','l','i','c','L','i','n'
+ static const WCHAR Control[] = {'C','o','n','t','r','o','l',0};
+ static const WCHAR Linked[] = {'L','i','n','k','e','d',0};
  
 +/* GUIDs */
 +static const WCHAR displayGUIDW[] = {'{','4','d','3','6','e','9','6','8','-','e','3','2','5','-',
@@ -29,8 +29,8 @@ index 318dcdf..fc53c31 100644
  /* is used to identify if a DeviceInfoSet pointer is
  valid or not */
  #define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056
-@@ -140,6 +149,90 @@ struct DeviceInfo
-     struct list           interfaces;
+@@ -129,6 +138,90 @@ struct device_iface
+     struct list      entry;
  };
  
 +static void create_display_keys(HKEY enumKey, int index, DISPLAY_DEVICEW *disp)
@@ -117,10 +117,10 @@ index 318dcdf..fc53c31 100644
 +    return ERROR_SUCCESS;
 +}
 +
- static void SETUPDI_GuidToString(const GUID *guid, LPWSTR guidStr)
+ static inline void copy_device_data(SP_DEVINFO_DATA *data, const struct device *device)
  {
-     static const WCHAR fmt[] = {'{','%','0','8','X','-','%','0','4','X','-',
-@@ -420,8 +513,7 @@ static HKEY SETUPDI_CreateDevKey(struct DeviceInfo *devInfo)
+     data->ClassGuid = device->class;
+@@ -418,8 +511,7 @@ static HKEY SETUPDI_CreateDevKey(struct device *device)
      HKEY enumKey, key = INVALID_HANDLE_VALUE;
      LONG l;
  
@@ -129,8 +129,8 @@ index 318dcdf..fc53c31 100644
 +    l = open_enum_key(&enumKey);
      if (!l)
      {
-         RegCreateKeyExW(enumKey, devInfo->instanceId, 0, NULL, 0,
-@@ -509,8 +601,7 @@ static void SETUPDI_FreeDeviceInfo(struct DeviceInfo *devInfo)
+         RegCreateKeyExW(enumKey, device->instanceId, 0, NULL, 0,
+@@ -511,8 +603,7 @@ static void SETUPDI_RemoveDevice(struct device *device)
          HKEY enumKey;
          LONG l;
  
@@ -139,8 +139,8 @@ index 318dcdf..fc53c31 100644
 +        l = open_enum_key(&enumKey);
          if (!l)
          {
-             RegDeleteTreeW(enumKey, devInfo->instanceId);
-@@ -2036,8 +2127,7 @@ static void SETUPDI_EnumerateMatchingInterfaces(HDEVINFO DeviceInfoSet,
+             RegDeleteTreeW(enumKey, device->instanceId);
+@@ -2042,8 +2133,7 @@ static void SETUPDI_EnumerateMatchingInterfaces(HDEVINFO DeviceInfoSet,
  
      TRACE("%s\n", debugstr_w(enumstr));
  
@@ -150,7 +150,7 @@ index 318dcdf..fc53c31 100644
      for (i = 0; !l; i++)
      {
          len = sizeof(subKeyName) / sizeof(subKeyName[0]);
-@@ -2265,8 +2355,7 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
+@@ -2269,8 +2359,7 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
      TRACE("%p, %s, %s, %08x\n", DeviceInfoSet, debugstr_guid(class),
              debugstr_w(enumstr), flags);
  
@@ -160,7 +160,7 @@ index 318dcdf..fc53c31 100644
      if (enumKey != INVALID_HANDLE_VALUE)
      {
          if (enumstr)
-@@ -3717,8 +3806,7 @@ static HKEY SETUPDI_OpenDevKey(struct DeviceInfo *devInfo, REGSAM samDesired)
+@@ -3609,8 +3698,7 @@ static HKEY SETUPDI_OpenDevKey(struct device *device, REGSAM samDesired)
      HKEY enumKey, key = INVALID_HANDLE_VALUE;
      LONG l;
  
@@ -169,8 +169,8 @@ index 318dcdf..fc53c31 100644
 +    l = open_enum_key(&enumKey);
      if (!l)
      {
-         RegOpenKeyExW(enumKey, devInfo->instanceId, 0, samDesired, &key);
-@@ -3834,8 +3922,7 @@ static BOOL SETUPDI_DeleteDevKey(struct DeviceInfo *devInfo)
+         RegOpenKeyExW(enumKey, device->instanceId, 0, samDesired, &key);
+@@ -3726,8 +3814,7 @@ static BOOL SETUPDI_DeleteDevKey(struct device *device)
      BOOL ret = FALSE;
      LONG l;
  
@@ -179,12 +179,12 @@ index 318dcdf..fc53c31 100644
 +    l = open_enum_key(&enumKey);
      if (!l)
      {
-         ret = RegDeleteTreeW(enumKey, devInfo->instanceId);
+         ret = RegDeleteTreeW(enumKey, device->instanceId);
 diff --git a/loader/wine.inf.in b/loader/wine.inf.in
-index d22b29b..48083b8 100644
+index 79ac6c5..2a2313e 100644
 --- a/loader/wine.inf.in
 +++ b/loader/wine.inf.in
-@@ -443,6 +443,8 @@ HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"Locale",0x1
+@@ -465,6 +465,8 @@ HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"Locale",0x1
  [ControlClass]
  HKLM,System\CurrentControlSet\Control\Class\{4d36e967-e325-11ce-bfc1-08002be10318},,,"Disk drives"
  HKLM,System\CurrentControlSet\Control\Class\{4d36e967-e325-11ce-bfc1-08002be10318},"Class",,"DiskDrive"
@@ -194,5 +194,5 @@ index d22b29b..48083b8 100644
  HKLM,System\CurrentControlSet\Control\Class\{4d36e978-e325-11ce-bfc1-08002be10318},"Class",,"Ports"
  HKLM,System\CurrentControlSet\Control\Class\{6bdd1fc6-810f-11d0-bec7-08002be2092f},,,"Imaging devices"
 -- 
-2.7.1
+2.7.4
 

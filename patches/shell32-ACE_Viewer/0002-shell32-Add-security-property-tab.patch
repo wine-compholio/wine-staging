@@ -1,4 +1,4 @@
-From 4bfacb4f36a83c5b9cd5826742da89d305d1c1b3 Mon Sep 17 00:00:00 2001
+From 10282216ac965075a8bf43734bfdaabd24fedf25 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 8 May 2017 23:33:45 +0200
 Subject: shell32: Add security property tab.
@@ -11,7 +11,7 @@ Subject: shell32: Add security property tab.
  4 files changed, 438 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/shell32/Makefile.in b/dlls/shell32/Makefile.in
-index b12d6169fb5..fd0b49a26d7 100644
+index 970ecba..d6d6eca 100644
 --- a/dlls/shell32/Makefile.in
 +++ b/dlls/shell32/Makefile.in
 @@ -1,7 +1,7 @@
@@ -24,10 +24,10 @@ index b12d6169fb5..fd0b49a26d7 100644
  EXTRALIBS = $(CORESERVICES_LIBS)
  # AUTHORS file is in the top-level directory
 diff --git a/dlls/shell32/shell32.rc b/dlls/shell32/shell32.rc
-index e11002db92e..11deef73f93 100644
+index 826e291..d7129b6 100644
 --- a/dlls/shell32/shell32.rc
 +++ b/dlls/shell32/shell32.rc
-@@ -205,6 +205,33 @@ the folder?"
+@@ -204,6 +204,33 @@ the folder?"
          IDS_RUNDLG_BROWSE_FILTER_EXE "Executable files (*.exe)"
          IDS_RUNDLG_BROWSE_FILTER_ALL "All files (*.*)"
  
@@ -62,19 +62,22 @@ index e11002db92e..11deef73f93 100644
  	/* FIXME: Some will be unused until desktop.ini support is implemented */
  	IDS_PROGRAMS                "Programs"
 diff --git a/dlls/shell32/shlview_cmenu.c b/dlls/shell32/shlview_cmenu.c
-index 50b4da11014..7545c598b39 100644
+index fc761e1..0bdb85e 100644
 --- a/dlls/shell32/shlview_cmenu.c
 +++ b/dlls/shell32/shlview_cmenu.c
-@@ -40,9 +40,128 @@
+@@ -39,12 +39,131 @@
  
  #include "shresdef.h"
  #include "shlwapi.h"
 +#include "aclui.h"
 +#include "aclapi.h"
-+
+ 
+ #include "wine/heap.h"
+ #include "wine/debug.h"
+ 
 +/* Small hack: We need to remove DECLSPEC_HIDDEN from the aclui export. */
 +const GUID IID_ISecurityInformation = {0x965fc360, 0x16ff, 0x11d0, {0x91, 0xcb, 0x0, 0xaa, 0x0, 0xbb, 0xb7, 0x23}};
- 
++
  WINE_DEFAULT_DEBUG_CHANNEL(shell);
  
 +/* According to https://blogs.msdn.microsoft.com/oldnewthing/20070726-00/?p=25833 */
@@ -194,8 +197,8 @@ index 50b4da11014..7545c598b39 100644
  typedef struct
  {
      IContextMenu3 IContextMenu3_iface;
-@@ -684,6 +803,269 @@ error:
-     HeapFree(GetProcessHeap(), 0, props);
+@@ -615,6 +734,269 @@ error:
+     heap_free(props);
  }
  
 +static HRESULT WINAPI filesecurity_QueryInterface(ISecurityInformation *iface, REFIID riid, void **ppv)
@@ -464,16 +467,16 @@ index 50b4da11014..7545c598b39 100644
  #define MAX_PROP_PAGES 99
  
  static void DoOpenProperties(ContextMenu *This, HWND hwnd)
-@@ -766,6 +1148,7 @@ static void DoOpenProperties(ContextMenu *This, HWND hwnd)
-     if (SUCCEEDED(ret))
-     {
-         init_file_properties_pages(lpDo, Properties_AddPropSheetCallback, (LPARAM)&psh);
-+        init_security_properties_pages(lpDo, Properties_AddPropSheetCallback, (LPARAM)&psh);
+@@ -697,6 +1079,7 @@ static void DoOpenProperties(ContextMenu *This, HWND hwnd)
+ 	if (SUCCEEDED(ret))
+ 	{
+             init_file_properties_pages(lpDo, Properties_AddPropSheetCallback, (LPARAM)&psh);
++            init_security_properties_pages(lpDo, Properties_AddPropSheetCallback, (LPARAM)&psh);
  
-         hpsxa = SHCreatePropSheetExtArrayEx(HKEY_CLASSES_ROOT, wszFiletype, MAX_PROP_PAGES - psh.nPages, lpDo);
-         if (hpsxa != NULL)
+ 	    hpsxa = SHCreatePropSheetExtArrayEx(HKEY_CLASSES_ROOT, wszFiletype, MAX_PROP_PAGES - psh.nPages, lpDo);
+ 	    if (hpsxa != NULL)
 diff --git a/dlls/shell32/shresdef.h b/dlls/shell32/shresdef.h
-index 1445077b86e..974da3c7ab5 100644
+index ed76ac8..26fc4cd 100644
 --- a/dlls/shell32/shresdef.h
 +++ b/dlls/shell32/shresdef.h
 @@ -157,6 +157,33 @@
@@ -511,5 +514,5 @@ index 1445077b86e..974da3c7ab5 100644
  #define IDS_RECYCLEBIN_FOLDER_NAME   8964
  
 -- 
-2.12.2
+2.7.4
 

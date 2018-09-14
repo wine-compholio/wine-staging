@@ -1,7 +1,8 @@
-From 6444094c9ef4f30a253bcee9e873ed511bda222c Mon Sep 17 00:00:00 2001
+From d67d7293a17592b580d284fa68881a613e61f591 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 01:45:29 +0200
-Subject: ntdll: Add function to create new tokens for elevation purposes.
+Subject: [PATCH] ntdll: Add function to create new tokens for elevation
+ purposes.
 
 ---
  dlls/ntdll/ntdll.spec   |  3 ++
@@ -13,10 +14,10 @@ Subject: ntdll: Add function to create new tokens for elevation purposes.
  6 files changed, 117 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index c814f405017..eb84cc97bf8 100644
+index dbead5e..586b504 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1483,6 +1483,9 @@
+@@ -1482,6 +1482,9 @@
  # Virtual memory
  @ cdecl __wine_locked_recvmsg(long ptr long)
  
@@ -27,10 +28,10 @@ index c814f405017..eb84cc97bf8 100644
  @ cdecl wine_get_version() NTDLL_wine_get_version
  @ cdecl wine_get_patches() NTDLL_wine_get_patches
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 907bbdd2d95..a7810f716ad 100644
+index 8a64338..137a22d 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -77,6 +77,9 @@ extern void virtual_init_threading(void) DECLSPEC_HIDDEN;
+@@ -80,6 +80,9 @@ extern void virtual_init_threading(void) DECLSPEC_HIDDEN;
  extern void fill_cpu_info(void) DECLSPEC_HIDDEN;
  extern void heap_set_debug_flags( HANDLE handle ) DECLSPEC_HIDDEN;
  
@@ -41,7 +42,7 @@ index 907bbdd2d95..a7810f716ad 100644
  extern timeout_t server_start_time DECLSPEC_HIDDEN;
  extern unsigned int server_cpus DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index f615ce2fea7..77048003ace 100644
+index 40034b4..1ebbb79 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
 @@ -99,6 +99,24 @@ HANDLE CDECL __wine_make_process_system(void)
@@ -70,10 +71,10 @@ index f615ce2fea7..77048003ace 100644
  
  #define UNIMPLEMENTED_INFO_CLASS(c) \
 diff --git a/server/protocol.def b/server/protocol.def
-index c8ab4bf8c36..59fe9aec7a8 100644
+index 0bb04cd..f2deca6 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3628,6 +3628,14 @@ struct handle_info
+@@ -3641,6 +3641,14 @@ struct handle_info
  @END
  
  
@@ -89,7 +90,7 @@ index c8ab4bf8c36..59fe9aec7a8 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/security.h b/server/security.h
-index 6c337143c3d..21e90ccf23f 100644
+index 6c33714..21e90cc 100644
 --- a/server/security.h
 +++ b/server/security.h
 @@ -49,6 +49,7 @@ extern const PSID security_builtin_users_sid;
@@ -101,18 +102,18 @@ index 6c337143c3d..21e90ccf23f 100644
  
  /* token functions */
 diff --git a/server/token.c b/server/token.c
-index 3301283ee25..7abd92386ea 100644
+index 7776cbe..64ab565 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -71,6 +71,7 @@ static const SID anonymous_logon_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORIT
+@@ -79,6 +79,7 @@ static const SID anonymous_logon_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORIT
  static const SID authenticated_user_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_AUTHENTICATED_USER_RID } };
  static const SID local_system_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_LOCAL_SYSTEM_RID } };
  static const SID high_label_sid = { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY }, { SECURITY_MANDATORY_HIGH_RID } };
 +static const SID medium_label_sid = { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY }, { SECURITY_MANDATORY_MEDIUM_RID } };
- static const struct /* same fields as struct SID */
- {
-     BYTE Revision;
-@@ -110,6 +111,7 @@ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
+ static const SID_N(5) local_user_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORITY }, { SECURITY_NT_NON_UNIQUE, 0, 0, 0, 1000 } };
+ static const SID_N(2) builtin_admins_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS } };
+ static const SID_N(2) builtin_users_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS } };
+@@ -95,6 +96,7 @@ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
  const PSID security_builtin_users_sid = (PSID)&builtin_users_sid;
  const PSID security_domain_users_sid = (PSID)&domain_users_sid;
  const PSID security_high_label_sid = (PSID)&high_label_sid;
@@ -120,7 +121,7 @@ index 3301283ee25..7abd92386ea 100644
  
  static luid_t prev_luid_value = { 1000, 0 };
  
-@@ -915,6 +917,64 @@ struct token *token_create_admin( void )
+@@ -901,6 +903,64 @@ struct token *token_create_admin( void )
      return token;
  }
  
@@ -185,7 +186,7 @@ index 3301283ee25..7abd92386ea 100644
  static struct privilege *token_find_privilege( struct token *token, const LUID *luid, int enabled_only )
  {
      struct privilege *privilege;
-@@ -1729,3 +1789,27 @@ DECL_HANDLER(set_token_default_dacl)
+@@ -1718,3 +1778,27 @@ DECL_HANDLER(set_token_default_dacl)
          release_object( token );
      }
  }
@@ -214,5 +215,5 @@ index 3301283ee25..7abd92386ea 100644
 +    }
 +}
 -- 
-2.14.1
+1.9.1
 

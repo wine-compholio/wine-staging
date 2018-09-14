@@ -1,0 +1,73 @@
+From d2238287ffb1db3ebde4339548019920c694abbc Mon Sep 17 00:00:00 2001
+From: Zhiyi Zhang <zzhang@codeweavers.com>
+Date: Mon, 27 Aug 2018 08:20:17 -0500
+Subject: winepulse.drv: Fix getting the same timing info.
+To: wine-devel <wine-devel@winehq.org>
+Reply-To: wine-devel <wine-devel@winehq.org>,Andrew Eikum <aeikum@codeweavers.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="------------2.18.0"
+
+This is a multi-part message in MIME format.
+--------------2.18.0
+Content-Type: text/plain; charset=UTF-8; format=fixed
+Content-Transfer-Encoding: 8bit
+
+
+pa_stream_get_time would return the same time if pa_stream_update_timing_info
+is not called before, causing wrong delay. Since we're updating the timing
+info by ourselves, no need to use PA_STREAM_AUTO_TIMING_UPDATE. Also
+PA_STREAM_INTERPOLATE_TIMING is removed because we want the real time.
+---
+ dlls/winepulse.drv/mmdevdrv.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+
+--------------2.18.0
+Content-Type: text/x-patch; name="0009-winepulse.drv-Fix-getting-the-same-timing-info.patch"
+Content-Transfer-Encoding: 8bit
+Content-Disposition: inline; filename="0009-winepulse.drv-Fix-getting-the-same-timing-info.patch"
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 5d74ce093d..48ed585cc1 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -1082,6 +1082,8 @@ static DWORD WINAPI pulse_timer_cb(void *user)
+     DWORD delay;
+     UINT32 adv_bytes;
+     ACImpl *This = user;
++    int success;
++    pa_operation *o;
+ 
+     pthread_mutex_lock(&pulse_lock);
+     delay = This->mmdev_period_usec / 1000;
+@@ -1098,6 +1100,13 @@ static DWORD WINAPI pulse_timer_cb(void *user)
+ 
+         delay = This->mmdev_period_usec / 1000;
+ 
++        o = pa_stream_update_timing_info(This->stream, pulse_op_cb, &success);
++        if (o)
++        {
++            while (pa_operation_get_state(o) == PA_OPERATION_RUNNING)
++                pthread_cond_wait(&pulse_cond, &pulse_lock);
++            pa_operation_unref(o);
++        }
+         err = pa_stream_get_time(This->stream, &now);
+         if(err == 0){
+             TRACE("got now: %s, last time: %s\n", wine_dbgstr_longlong(now), wine_dbgstr_longlong(This->last_time));
+@@ -1194,10 +1203,10 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+ 
+     if (This->dataflow == eRender)
+         ret = pa_stream_connect_playback(This->stream, NULL, &attr,
+-        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_AUTO_TIMING_UPDATE|PA_STREAM_INTERPOLATE_TIMING|PA_STREAM_ADJUST_LATENCY|moving, NULL, NULL);
++        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_ADJUST_LATENCY|moving, NULL, NULL);
+     else
+         ret = pa_stream_connect_record(This->stream, NULL, &attr,
+-        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_AUTO_TIMING_UPDATE|PA_STREAM_INTERPOLATE_TIMING|PA_STREAM_ADJUST_LATENCY|moving);
++        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_ADJUST_LATENCY|moving);
+     if (ret < 0) {
+         WARN("Returns %i\n", ret);
+         return AUDCLNT_E_ENDPOINT_CREATE_FAILED;
+
+--------------2.18.0--
+
+

@@ -1,18 +1,18 @@
-From abf362b37a3424926d233b8997cb6c7b6a42b0c4 Mon Sep 17 00:00:00 2001
+From 7b3dee95d9c9cd181dd17ea5c34f5b7746885763 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Thu, 19 Mar 2015 02:07:24 +0100
 Subject: user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.
 
 ---
  dlls/user32/message.c      | 13 +++++++++++++
- dlls/user32/user_private.h |  3 ++-
- 2 files changed, 15 insertions(+), 1 deletion(-)
+ dlls/user32/user_private.h |  7 ++++++-
+ 2 files changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/user32/message.c b/dlls/user32/message.c
-index 5a76523..d47fee4 100644
+index d2e6a75..7c6d04b 100644
 --- a/dlls/user32/message.c
 +++ b/dlls/user32/message.c
-@@ -2740,6 +2740,18 @@ static BOOL peek_message( MSG *msg, HWND hwnd, UINT first, UINT last, UINT flags
+@@ -2739,6 +2739,18 @@ static BOOL peek_message( MSG *msg, HWND hwnd, UINT first, UINT last, UINT flags
      unsigned int hw_id = 0;  /* id of previous hardware message */
      void *buffer;
      size_t buffer_size = 256;
@@ -31,7 +31,7 @@ index 5a76523..d47fee4 100644
  
      if (!(buffer = HeapAlloc( GetProcessHeap(), 0, buffer_size ))) return FALSE;
  
-@@ -2752,6 +2764,7 @@ static BOOL peek_message( MSG *msg, HWND hwnd, UINT first, UINT last, UINT flags
+@@ -2751,6 +2763,7 @@ static BOOL peek_message( MSG *msg, HWND hwnd, UINT first, UINT last, UINT flags
          size_t size = 0;
          const message_data_t *msg_data = buffer;
  
@@ -40,10 +40,19 @@ index 5a76523..d47fee4 100644
          {
              req->flags     = flags;
 diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
-index d3affb0..4de34c7 100644
+index 7d33d9d..3690a88 100644
 --- a/dlls/user32/user_private.h
 +++ b/dlls/user32/user_private.h
-@@ -176,7 +176,7 @@ struct user_thread_info
+@@ -165,6 +165,8 @@ struct wm_char_mapping_data
+     MSG  get_msg;
+ };
+ 
++#include <pshpack1.h>
++
+ /* this is the structure stored in TEB->Win32ClientInfo */
+ /* no attempt is made to keep the layout compatible with the Windows one */
+ struct user_thread_info
+@@ -176,7 +178,7 @@ struct user_thread_info
      WORD                          recursion_count;        /* SendMessage recursion counter */
      WORD                          message_count;          /* Get/PeekMessage loop counter */
      WORD                          hook_call_depth;        /* Number of recursively called hook procs */
@@ -52,7 +61,7 @@ index d3affb0..4de34c7 100644
      HHOOK                         hook;                   /* Current hook */
      struct received_message_info *receive_info;           /* Message being currently received */
      struct wm_char_mapping_data  *wmchar_data;            /* Data for WM_CHAR mappings */
-@@ -184,6 +184,7 @@ struct user_thread_info
+@@ -184,6 +186,7 @@ struct user_thread_info
      DWORD                         GetMessagePosVal;       /* Value for GetMessagePos */
      ULONG_PTR                     GetMessageExtraInfoVal; /* Value for GetMessageExtraInfo */
      UINT                          active_hooks;           /* Bitmap of active hooks */
@@ -60,6 +69,15 @@ index d3affb0..4de34c7 100644
      struct user_key_state_info   *key_state;              /* Cache of global key state */
      HWND                          top_window;             /* Desktop window */
      HWND                          msg_window;             /* HWND_MESSAGE parent window */
+@@ -192,6 +195,8 @@ struct user_thread_info
+ 
+ C_ASSERT( sizeof(struct user_thread_info) <= sizeof(((TEB *)0)->Win32ClientInfo) );
+ 
++#include <poppack.h>
++
+ extern INT global_key_state_counter DECLSPEC_HIDDEN;
+ extern BOOL (WINAPI *imm_register_window)(HWND) DECLSPEC_HIDDEN;
+ extern void (WINAPI *imm_unregister_window)(HWND) DECLSPEC_HIDDEN;
 -- 
-2.4.4
+2.7.4
 

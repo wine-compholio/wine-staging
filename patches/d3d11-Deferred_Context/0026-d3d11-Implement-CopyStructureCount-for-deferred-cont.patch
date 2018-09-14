@@ -1,14 +1,14 @@
-From 02b50e3745fdbff6e9a16ae9ff5674b86d98fe52 Mon Sep 17 00:00:00 2001
+From 2b6928fe7faa40ff4e18508cffcea60d5156735f Mon Sep 17 00:00:00 2001
 From: Johannes Specht <jojos_band@gmx.net>
 Date: Mon, 4 Sep 2017 02:33:19 +0200
-Subject: d3d11: Implement CopyStructureCount for deferred contexts.
+Subject: [PATCH] d3d11: Implement CopyStructureCount for deferred contexts.
 
 ---
  dlls/d3d11/device.c | 41 +++++++++++++++++++++++++++++++++++++++--
  1 file changed, 39 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/d3d11/device.c b/dlls/d3d11/device.c
-index 65e729030a9..9413f9c77f7 100644
+index 5709bf0..4241b5a 100644
 --- a/dlls/d3d11/device.c
 +++ b/dlls/d3d11/device.c
 @@ -44,6 +44,7 @@ enum deferred_cmd
@@ -19,19 +19,19 @@ index 65e729030a9..9413f9c77f7 100644
  
      DEFERRED_CSSETSHADER,               /* cs_info */
      DEFERRED_DSSETSHADER,               /* ds_info */
-@@ -174,6 +175,12 @@ struct deferred_call
-             DXGI_FORMAT format;
+@@ -175,6 +176,12 @@ struct deferred_call
          } resolve_subresource_info;
          struct
-+        {
+         {
 +            ID3D11Buffer *dst_buffer;
 +            UINT dst_offset;
 +            ID3D11UnorderedAccessView *src_view;
 +        } copy_structure_count_info;
 +        struct
-         {
++        {
              ID3D11ComputeShader *shader;
              /* FIXME: add class instances */
+         } cs_info;
 @@ -480,6 +487,14 @@ static void free_deferred_calls(struct list *commands)
                      ID3D11Resource_Release(call->resolve_subresource_info.src_resource);
                  break;
@@ -47,13 +47,13 @@ index 65e729030a9..9413f9c77f7 100644
              case DEFERRED_CSSETSHADER:
              {
                  if (call->cs_info.shader)
-@@ -714,6 +729,14 @@ static void exec_deferred_calls(ID3D11DeviceContext *iface, struct list *command
+@@ -714,6 +729,14 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
                          call->resolve_subresource_info.format);
                  break;
              }
 +            case DEFERRED_COPYSTRUCTURECOUNT:
 +            {
-+                ID3D11DeviceContext_CopyStructureCount(iface,
++                ID3D11DeviceContext1_CopyStructureCount(iface,
 +                        call->copy_structure_count_info.dst_buffer,
 +                        call->copy_structure_count_info.dst_offset,
 +                        call->copy_structure_count_info.src_view);
@@ -61,8 +61,8 @@ index 65e729030a9..9413f9c77f7 100644
 +            }
              case DEFERRED_CSSETSHADER:
              {
-                 ID3D11DeviceContext_CSSetShader(iface, call->cs_info.shader, NULL, 0);
-@@ -4498,8 +4521,22 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_UpdateSubresource(ID3D11Dev
+                 ID3D11DeviceContext1_CSSetShader(iface, call->cs_info.shader, NULL, 0);
+@@ -4678,8 +4701,22 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_UpdateSubresource(ID3D11Dev
  static void STDMETHODCALLTYPE d3d11_deferred_context_CopyStructureCount(ID3D11DeviceContext *iface,
          ID3D11Buffer *dst_buffer, UINT dst_offset, ID3D11UnorderedAccessView *src_view)
  {
@@ -88,5 +88,5 @@ index 65e729030a9..9413f9c77f7 100644
  
  static void STDMETHODCALLTYPE d3d11_deferred_context_ClearRenderTargetView(ID3D11DeviceContext *iface,
 -- 
-2.14.1
+1.9.1
 

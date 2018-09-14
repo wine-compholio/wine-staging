@@ -1,17 +1,17 @@
-From 9f96f35a269a9d1c905f6334e64021a76bc7dc60 Mon Sep 17 00:00:00 2001
+From 79f6535315f6c60b302025b53ca6a66dd4f36603 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 18 Jul 2015 04:52:55 +0200
-Subject: ntdll: Check architecture before loading module.
+Subject: [PATCH] ntdll: Check architecture before loading module.
 
 ---
- dlls/ntdll/loader.c | 139 +++++++++++++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 131 insertions(+), 8 deletions(-)
+ dlls/ntdll/loader.c | 161 +++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 154 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index bf1d365..86c88ef 100644
+index 1a3dd80..c7b3761 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -2078,6 +2078,108 @@ done:
+@@ -2198,6 +2198,131 @@ done:
      return status;
  }
  
@@ -117,20 +117,42 @@ index bf1d365..86c88ef 100644
 +
 +    return 0;
 +}
++
++static BOOL is_resource_dll( HANDLE hfile )
++{
++    SECTION_IMAGE_INFORMATION info;
++    SIZE_T ret;
++    HANDLE mapping;
++    LARGE_INTEGER size;
++    NTSTATUS status;
++
++    size.QuadPart = 0;
++    status = NtCreateSection( &mapping, STANDARD_RIGHTS_REQUIRED | SECTION_QUERY |
++                              SECTION_MAP_READ | SECTION_MAP_EXECUTE,
++                              NULL, &size, PAGE_EXECUTE_READ, SEC_IMAGE, hfile );
++
++    status = NtQuerySection(mapping, SectionImageInformation, &info, sizeof(info), &ret);
++    NtClose( mapping );
++    if(status == STATUS_SUCCESS)
++    {
++        return !info.ImageContainsCode;
++    }
++
++    return FALSE;
++}
  
  /***********************************************************************
-  *	find_dll_file
-@@ -2085,7 +2187,8 @@ done:
-  * Find the file (or already loaded module) for a given dll name.
+  *	open_dll_file
+@@ -2244,7 +2369,7 @@ static HANDLE open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm, struct
   */
  static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
--                               WCHAR *filename, ULONG *size, WINE_MODREF **pwm, HANDLE *handle )
-+                               WCHAR *filename, ULONG *size, WINE_MODREF **pwm, HANDLE *handle,
-+                               BOOL check_arch)
+                                WCHAR *filename, ULONG *size, WINE_MODREF **pwm,
+-                               HANDLE *handle, struct stat *st )
++                               HANDLE *handle, struct stat *st, BOOL check_arch )
  {
-     OBJECT_ATTRIBUTES attr;
-     IO_STATUS_BLOCK io;
-@@ -2131,12 +2234,15 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
+     UNICODE_STRING nt_name;
+     WCHAR *file_part, *ext, *dllname;
+@@ -2289,20 +2414,41 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
  
      if (RtlDetermineDosPathNameType_U( libname ) == RELATIVE_PATH)
      {
@@ -144,19 +166,20 @@ index bf1d365..86c88ef 100644
 +            if (!len) break;
 +
              if (len >= *size) goto overflow;
--            if ((*pwm = find_fullname_module( filename )) || !handle) goto found;
-+            if ((*pwm = find_fullname_module( filename ))) goto found;
+             if ((*pwm = find_fullname_module( filename ))) goto found;
 +            if (!handle) goto next;
  
              if (!RtlDosPathNameToNtPathName_U( filename, &nt_name, NULL, NULL ))
              {
-@@ -2150,7 +2256,23 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
-             attr.SecurityDescriptor = NULL;
-             attr.SecurityQualityOfService = NULL;
-             if (NtOpenFile( handle, GENERIC_READ|SYNCHRONIZE, &attr, &io, FILE_SHARE_READ|FILE_SHARE_DELETE, FILE_SYNCHRONOUS_IO_NONALERT|FILE_NON_DIRECTORY_FILE )) *handle = 0;
+                 RtlFreeHeap( GetProcessHeap(), 0, dllname );
+                 return STATUS_NO_MEMORY;
+             }
++
+             *handle = open_dll_file( &nt_name, pwm, st );
 -            goto found;
++
 +        #ifdef CURRENT_ARCH
-+            if (*handle && check_arch)
++            if (*handle && check_arch && !is_resource_dll( *handle ))
 +            {
 +                WORD machine_type = get_machine_type( *handle );
 +                if (machine_type && machine_type != CURRENT_ARCH)
@@ -175,7 +198,7 @@ index bf1d365..86c88ef 100644
          }
  
          /* not found */
-@@ -2207,6 +2329,7 @@ overflow:
+@@ -2352,6 +2498,7 @@ overflow:
   */
  static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_MODREF** pwm )
  {
@@ -183,24 +206,24 @@ index bf1d365..86c88ef 100644
      enum loadorder loadorder;
      WCHAR buffer[64];
      WCHAR *filename;
-@@ -2222,7 +2345,7 @@ static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_
+@@ -2368,7 +2515,7 @@ static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_
      size = sizeof(buffer);
      for (;;)
      {
--        nts = find_dll_file( load_path, libname, filename, &size, pwm, &handle );
-+        nts = find_dll_file( load_path, libname, filename, &size, pwm, &handle, !data );
+-        nts = find_dll_file( load_path, libname, filename, &size, pwm, &handle, &st );
++        nts = find_dll_file( load_path, libname, filename, &size, pwm, &handle, &st, !data );
          if (nts == STATUS_SUCCESS) break;
          if (filename != buffer) RtlFreeHeap( GetProcessHeap(), 0, filename );
          if (nts != STATUS_BUFFER_TOO_SMALL) return nts;
-@@ -2359,7 +2482,7 @@ NTSTATUS WINAPI LdrGetDllHandle( LPCWSTR load_path, ULONG flags, const UNICODE_S
+@@ -2507,7 +2654,7 @@ NTSTATUS WINAPI LdrGetDllHandle( LPCWSTR load_path, ULONG flags, const UNICODE_S
      size = sizeof(buffer);
      for (;;)
      {
--        status = find_dll_file( load_path, name->Buffer, filename, &size, &wm, NULL );
-+        status = find_dll_file( load_path, name->Buffer, filename, &size, &wm, NULL, TRUE );
+-        status = find_dll_file( load_path, name->Buffer, filename, &size, &wm, &handle, &st );
++        status = find_dll_file( load_path, name->Buffer, filename, &size, &wm, &handle, &st, TRUE );
+         if (handle) NtClose( handle );
          if (filename != buffer) RtlFreeHeap( GetProcessHeap(), 0, filename );
          if (status != STATUS_BUFFER_TOO_SMALL) break;
-         /* grow the buffer and retry */
 -- 
-2.7.0
+1.9.1
 

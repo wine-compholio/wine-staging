@@ -1,4 +1,4 @@
-From 3f314cc8251f62f592013abe7b1c3b977de0699a Mon Sep 17 00:00:00 2001
+From 1eb8acd819f9eee8fdf154d0ef43881008265916 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 4 Aug 2017 02:33:14 +0200
 Subject: ntdll: Implement NtFilterToken.
@@ -15,10 +15,10 @@ Subject: ntdll: Implement NtFilterToken.
  8 files changed, 162 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 93554e929be..5822dec9b15 100644
+index c3f5df3..59a08de 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
-@@ -136,6 +136,65 @@ NTSTATUS WINAPI NtDuplicateToken(
+@@ -119,6 +119,65 @@ NTSTATUS WINAPI NtDuplicateToken(
  }
  
  /******************************************************************************
@@ -85,10 +85,10 @@ index 93554e929be..5822dec9b15 100644
   *  ZwOpenProcessToken		[NTDLL.@]
   */
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 4f7ee496437..275fda57970 100644
+index c260b0d..3c5e69c 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -179,7 +179,7 @@
+@@ -176,7 +176,7 @@
  # @ stub NtEnumerateSystemEnvironmentValuesEx
  @ stdcall NtEnumerateValueKey(long long long ptr long ptr)
  @ stub NtExtendSection
@@ -98,10 +98,10 @@ index 4f7ee496437..275fda57970 100644
  @ stdcall NtFlushBuffersFile(long ptr)
  @ stdcall NtFlushInstructionCache(long ptr long)
 diff --git a/include/winnt.h b/include/winnt.h
-index f91f81eb559..891c9b6d4bb 100644
+index 16d96d8..4e238f9 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
-@@ -3844,6 +3844,11 @@ typedef enum _TOKEN_INFORMATION_CLASS {
+@@ -3904,6 +3904,11 @@ typedef enum _TOKEN_INFORMATION_CLASS {
  					TOKEN_ADJUST_SESSIONID | \
  					TOKEN_ADJUST_DEFAULT )
  
@@ -114,10 +114,10 @@ index f91f81eb559..891c9b6d4bb 100644
  #define _SECURITY_DEFINED
  
 diff --git a/include/winternl.h b/include/winternl.h
-index 140669b0105..899e8324d67 100644
+index c84e6d7..288f93e 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2348,6 +2348,7 @@ NTSYSAPI NTSTATUS  WINAPI NtDuplicateToken(HANDLE,ACCESS_MASK,POBJECT_ATTRIBUTES
+@@ -2303,6 +2303,7 @@ NTSYSAPI NTSTATUS  WINAPI NtDuplicateToken(HANDLE,ACCESS_MASK,POBJECT_ATTRIBUTES
  NTSYSAPI NTSTATUS  WINAPI NtEnumerateKey(HANDLE,ULONG,KEY_INFORMATION_CLASS,void *,DWORD,DWORD *);
  NTSYSAPI NTSTATUS  WINAPI NtEnumerateValueKey(HANDLE,ULONG,KEY_VALUE_INFORMATION_CLASS,PVOID,ULONG,PULONG);
  NTSYSAPI NTSTATUS  WINAPI NtExtendSection(HANDLE,PLARGE_INTEGER);
@@ -126,10 +126,10 @@ index 140669b0105..899e8324d67 100644
  NTSYSAPI NTSTATUS  WINAPI NtFlushBuffersFile(HANDLE,IO_STATUS_BLOCK*);
  NTSYSAPI NTSTATUS  WINAPI NtFlushInstructionCache(HANDLE,LPCVOID,SIZE_T);
 diff --git a/server/process.c b/server/process.c
-index cbe726afe81..f0f60edcd3f 100644
+index f8739d0..71d9d6d 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -571,7 +571,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+@@ -566,7 +566,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
                                         : alloc_handle_table( process, 0 );
          /* Note: for security reasons, starting a new process does not attempt
           * to use the current impersonation token for the new process */
@@ -139,10 +139,10 @@ index cbe726afe81..f0f60edcd3f 100644
      }
      if (!process->handles || !process->token) goto error;
 diff --git a/server/protocol.def b/server/protocol.def
-index fc6e343af52..b3dce66eb9c 100644
+index 35824ae..6ee6d28 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3391,6 +3391,16 @@ enum caret_state
+@@ -3356,6 +3356,16 @@ enum caret_state
      obj_handle_t  new_handle; /* duplicated handle */
  @END
  
@@ -160,10 +160,10 @@ index fc6e343af52..b3dce66eb9c 100644
      obj_handle_t    handle; /* handle to the token */
      unsigned int    desired_access; /* desired access to the object */
 diff --git a/server/security.h b/server/security.h
-index 606dbb2ab2c..6c337143c3d 100644
+index 873bbc6..bc4a8f6 100644
 --- a/server/security.h
 +++ b/server/security.h
-@@ -56,7 +56,9 @@ extern const PSID security_high_label_sid;
+@@ -55,7 +55,9 @@ extern const PSID security_high_label_sid;
  extern struct token *token_create_admin(void);
  extern int token_assign_label( struct token *token, PSID label );
  extern struct token *token_duplicate( struct token *src_token, unsigned primary,
@@ -175,10 +175,10 @@ index 606dbb2ab2c..6c337143c3d 100644
                                     const LUID_AND_ATTRIBUTES *reqprivs,
                                     unsigned int count, LUID_AND_ATTRIBUTES *usedprivs);
 diff --git a/server/token.c b/server/token.c
-index 74db66e1e24..acd7a4dedb5 100644
+index 0810a61..2f6a467 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -299,6 +299,19 @@ static int acl_is_valid( const ACL *acl, data_size_t size )
+@@ -276,6 +276,19 @@ static int acl_is_valid( const ACL *acl, data_size_t size )
      return TRUE;
  }
  
@@ -198,7 +198,7 @@ index 74db66e1e24..acd7a4dedb5 100644
  /* checks whether all members of a security descriptor fit inside the size
   * of memory specified */
  int sd_is_valid( const struct security_descriptor *sd, data_size_t size )
-@@ -639,8 +652,36 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -619,8 +632,36 @@ static struct token *create_token( unsigned primary, const SID *user,
      return token;
  }
  
@@ -236,7 +236,7 @@ index 74db66e1e24..acd7a4dedb5 100644
  {
      const luid_t *modified_id =
          primary || (impersonation_level == src_token->impersonation_level) ?
-@@ -676,6 +717,12 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+@@ -656,6 +697,12 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
              return NULL;
          }
          memcpy( newgroup, group, size );
@@ -248,8 +248,8 @@ index 74db66e1e24..acd7a4dedb5 100644
 +        }
          list_add_tail( &token->groups, &newgroup->entry );
          if (src_token->primary_group == &group->sid)
-             token->primary_group = &newgroup->sid;
-@@ -684,11 +731,14 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+         {
+@@ -667,11 +714,14 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
  
      /* copy privileges */
      LIST_FOR_EACH_ENTRY( privilege, &src_token->privileges, struct privilege, entry )
@@ -264,7 +264,7 @@ index 74db66e1e24..acd7a4dedb5 100644
  
      if (sd) default_set_sd( &token->obj, sd, OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
                              DACL_SECURITY_INFORMATION | SACL_SECURITY_INFORMATION );
-@@ -1322,7 +1372,7 @@ DECL_HANDLER(duplicate_token)
+@@ -1304,7 +1354,7 @@ DECL_HANDLER(duplicate_token)
                                                       TOKEN_DUPLICATE,
                                                       &token_ops )))
      {
@@ -273,7 +273,7 @@ index 74db66e1e24..acd7a4dedb5 100644
          if (token)
          {
              reply->new_handle = alloc_handle_no_access_check( current->process, token, req->access, objattr->attributes );
-@@ -1332,6 +1382,36 @@ DECL_HANDLER(duplicate_token)
+@@ -1314,6 +1364,36 @@ DECL_HANDLER(duplicate_token)
      }
  }
  
@@ -311,5 +311,5 @@ index 74db66e1e24..acd7a4dedb5 100644
  DECL_HANDLER(check_token_privileges)
  {
 -- 
-2.13.1
+2.7.4
 

@@ -1,0 +1,67 @@
+From ad754e544f3f9238fc93d9003b4d96f7924d0fca Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Fri, 1 Jun 2018 14:03:26 +1000
+Subject: [PATCH] winex11: Specify a default vulkan driver if one not found at
+ build time
+
+We cannot specify it as a dependency since Debian Jessie has the
+vulkan library in backports and not everybody will have this mapped.
+---
+ dlls/winex11.drv/vulkan.c | 29 +++++++++++++----------------
+ 1 file changed, 13 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index 063281d..9f51270 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -43,7 +43,9 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(vulkan);
+ WINE_DECLARE_DEBUG_CHANNEL(fps);
+ 
+-#ifdef SONAME_LIBVULKAN
++#ifndef SONAME_LIBVULKAN
++#define SONAME_LIBVULKAN ""
++#endif
+ 
+ static CRITICAL_SECTION context_section;
+ static CRITICAL_SECTION_DEBUG critsect_debug =
+@@ -105,9 +107,17 @@ static void *vulkan_handle;
+ 
+ static BOOL WINAPI wine_vk_init(INIT_ONCE *once, void *param, void **context)
+ {
+-    if (!(vulkan_handle = wine_dlopen(SONAME_LIBVULKAN, RTLD_NOW, NULL, 0)))
++    const char *libvulkan_candidates[] = {SONAME_LIBVULKAN,
++                                          "libvulkan.so.1",
++                                          "libvulkan.so",
++                                          NULL};
++    int i;
++    for (i=0; libvulkan_candidates[i] && !vulkan_handle; i++)
++        vulkan_handle = wine_dlopen(libvulkan_candidates[i], RTLD_NOW, NULL, 0);
++
++    if (!vulkan_handle)
+     {
+-        ERR("Failed to load %s.\n", SONAME_LIBVULKAN);
++        ERR("Failed to load vulkan library\n");
+         return TRUE;
+     }
+ 
+@@ -593,16 +603,3 @@ const struct vulkan_funcs *get_vulkan_driver(UINT version)
+     return NULL;
+ }
+ 
+-#else /* No vulkan */
+-
+-const struct vulkan_funcs *get_vulkan_driver(UINT version)
+-{
+-    ERR("Wine was built without Vulkan support.\n");
+-    return NULL;
+-}
+-
+-void wine_vk_surface_destroy(HWND hwnd)
+-{
+-}
+-
+-#endif /* SONAME_LIBVULKAN */
+-- 
+1.9.1
+

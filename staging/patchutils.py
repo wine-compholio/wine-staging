@@ -398,7 +398,7 @@ def apply_patch(original, patchfile, reverse=False, fuzz=2):
             shutil.copyfileobj(fp, result)
         result.close()
 
-        cmdline = ["patch", "--no-backup-if-mismatch", "--force", "-r", "-"]
+        cmdline = ["patch", "--no-backup-if-mismatch", "--force", "--silent", "-r", "-"]
         if reverse:   cmdline.append("--reverse")
         if fuzz != 2: cmdline.append("--fuzz=%d" % fuzz)
         cmdline += [result.name, patchfile.name]

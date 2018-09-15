@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0799550075654094a3bed080aac722b9bea01307"
+	echo "64d9f309b7f74d4154e685c5d1d78c1b8335c0bc"
 }
 
 # Show version information
@@ -193,7 +193,6 @@ patch_enable_all ()
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"
-	enable_ntdll_ApiSetQueryApiSetPresence="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CriticalSection="$1"
 	enable_ntdll_DOS_Attributes="$1"
@@ -748,9 +747,6 @@ patch_enable ()
 			;;
 		ntdll-ApiSetMap)
 			enable_ntdll_ApiSetMap="$2"
-			;;
-		ntdll-ApiSetQueryApiSetPresence)
-			enable_ntdll_ApiSetQueryApiSetPresence="$2"
 			;;
 		ntdll-Builtin_Prot)
 			enable_ntdll_Builtin_Prot="$2"
@@ -4559,18 +4555,6 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	patch_apply ntdll-ApiSetMap/0001-ntdll-Add-dummy-apiset-to-PEB.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add dummy apiset to PEB.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ApiSetQueryApiSetPresence
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-apiquery-l1-1-0/api-ms-win-core-apiquery-l1-1-0.spec, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec
-# |
-if test "$enable_ntdll_ApiSetQueryApiSetPresence" -eq 1; then
-	patch_apply ntdll-ApiSetQueryApiSetPresence/0001-ntdll-Add-stub-for-ApiSetQueryApiSetPresence.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for ApiSetQueryApiSetPresence.", 1 },';
 	) >> "$patchlist"
 fi
 

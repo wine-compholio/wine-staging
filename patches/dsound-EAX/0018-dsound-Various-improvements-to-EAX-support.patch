@@ -1,7 +1,7 @@
-From de001ceaf5bab22bacfd14c927bfa8c0f29c74a1 Mon Sep 17 00:00:00 2001
+From 630c89c7e41eb1cde6dd99bf5c3462d173236b3a Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 4 Apr 2015 21:09:18 +0200
-Subject: dsound: Various improvements to EAX support.
+Subject: [PATCH] dsound: Various improvements to EAX support.
 
 The previous version had several problems (see wine-staging bug 195):
 * IDirectSoundBufferImpl_Duplicate doesn't initialize EAX properties
@@ -16,18 +16,18 @@ update it later when necessary (-> much faster). Moreover, to avoid unnecessary
 locking, we initialize the EAX-specific properties always (for both the device and
 the buffers).
 ---
- dlls/dsound/buffer.c         | 11 ++++---
+ dlls/dsound/buffer.c         |  6 ++--
  dlls/dsound/dsound.c         |  2 ++
  dlls/dsound/dsound_eax.h     |  1 +
  dlls/dsound/dsound_private.h |  1 +
  dlls/dsound/eax.c            | 68 +++++++++++++++++++-------------------------
- 5 files changed, 39 insertions(+), 44 deletions(-)
+ 5 files changed, 37 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
-index c098043..3641e32 100644
+index 7e9e478..088a5e7 100644
 --- a/dlls/dsound/buffer.c
 +++ b/dlls/dsound/buffer.c
-@@ -1092,8 +1092,6 @@ HRESULT IDirectSoundBufferImpl_Create(
+@@ -1078,8 +1078,6 @@ HRESULT secondarybuffer_create(DirectSoundDevice *device, const DSBUFFERDESC *ds
  	/* calculate fragment size and write lead */
  	DSOUND_RecalcFormat(dsb);
  
@@ -36,26 +36,7 @@ index c098043..3641e32 100644
  	if (dsb->dsbd.dwFlags & DSBCAPS_CTRL3D) {
  		dsb->ds3db_ds3db.dwSize = sizeof(DS3DBUFFER);
  		dsb->ds3db_ds3db.vPosition.x = 0.0;
-@@ -1121,6 +1119,8 @@ HRESULT IDirectSoundBufferImpl_Create(
- 
- 	/* register buffer if not primary */
- 	if (!(dsbd->dwFlags & DSBCAPS_PRIMARYBUFFER)) {
-+        init_eax_buffer(dsb);
-+
- 		err = DirectSoundDevice_AddBuffer(device, dsb);
- 		if (err != DS_OK) {
- 			HeapFree(GetProcessHeap(),0,dsb->buffer->memory);
-@@ -1130,9 +1130,6 @@ HRESULT IDirectSoundBufferImpl_Create(
- 			HeapFree(GetProcessHeap(),0,dsb);
- 			dsb = NULL;
- 		}
--
--		if (dsb->device->eax.using_eax)
--			init_eax_buffer(dsb);
- 	}
- 
-         IDirectSoundBuffer8_AddRef(&dsb->IDirectSoundBuffer8_iface);
-@@ -1188,7 +1185,7 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
+@@ -1165,7 +1163,7 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
      HRESULT hres = DS_OK;
      TRACE("(%p,%p,%p)\n", device, ppdsb, pdsb);
  
@@ -64,7 +45,7 @@ index c098043..3641e32 100644
      if (dsb == NULL) {
          WARN("out of memory\n");
          *ppdsb = NULL;
-@@ -1225,6 +1222,8 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
+@@ -1202,6 +1200,8 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
  
      RtlInitializeResource(&dsb->lock);
  
@@ -74,10 +55,10 @@ index c098043..3641e32 100644
      hres = DirectSoundDevice_AddBuffer(device, dsb);
      if (hres != DS_OK) {
 diff --git a/dlls/dsound/dsound.c b/dlls/dsound/dsound.c
-index 551c40a..4abb142 100644
+index 59e2fcd..13cda26 100644
 --- a/dlls/dsound/dsound.c
 +++ b/dlls/dsound/dsound.c
-@@ -186,6 +186,8 @@ static HRESULT DirectSoundDevice_Create(DirectSoundDevice ** ppDevice)
+@@ -181,6 +181,8 @@ static HRESULT DirectSoundDevice_Create(DirectSoundDevice ** ppDevice)
  
      RtlInitializeResource(&(device->buffer_list_lock));
  
@@ -99,10 +80,10 @@ index a650108..a555a75 100644
  
      float *SampleBuffer;
 diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
-index cc55d70..a9987d0 100644
+index 6f8dddd..039154a 100644
 --- a/dlls/dsound/dsound_private.h
 +++ b/dlls/dsound/dsound_private.h
-@@ -240,6 +240,7 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
+@@ -235,6 +235,7 @@ HRESULT WINAPI EAX_Get(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
  HRESULT WINAPI EAX_Set(IDirectSoundBufferImpl *buf, REFGUID guidPropSet,
          ULONG dwPropID, void *pInstanceData, ULONG cbInstanceData, void *pPropData,
          ULONG cbPropData) DECLSPEC_HIDDEN;
@@ -272,5 +253,5 @@ index a05b00e..e10156e 100644
          switch (dwPropID) {
              case DSPROPERTY_EAXBUFFER_ALL:
 -- 
-2.4.0
+1.9.1
 

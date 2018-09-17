@@ -137,7 +137,6 @@ patch_enable_all ()
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
-	enable_dsound_Revert_Cleanup="$1"
 	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -578,9 +577,6 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
-			;;
-		dsound-Revert_Cleanup)
-			enable_dsound_Revert_Cleanup="$2"
 			;;
 		dwrite-FontFallback)
 			enable_dwrite_FontFallback="$2"
@@ -2204,11 +2200,7 @@ if test "$enable_dsound_EAX" -eq 1; then
 	if test "$enable_dsound_Fast_Mixer" -gt 1; then
 		abort "Patchset dsound-Fast_Mixer disabled, but dsound-EAX depends on that."
 	fi
-	if test "$enable_dsound_Revert_Cleanup" -gt 1; then
-		abort "Patchset dsound-Revert_Cleanup disabled, but dsound-EAX depends on that."
-	fi
 	enable_dsound_Fast_Mixer=1
-	enable_dsound_Revert_Cleanup=1
 fi
 
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
@@ -3458,24 +3450,10 @@ if test "$enable_dsound_Fast_Mixer" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dsound-Revert_Cleanup
-# |
-# | Modified files:
-# |   *	dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_private.h
-# |
-if test "$enable_dsound_Revert_Cleanup" -eq 1; then
-	patch_apply dsound-Revert_Cleanup/0001-Revert-dsound-Use-a-better-name-for-IDirectSoundBuff.patch
-	patch_apply dsound-Revert_Cleanup/0002-Revert-dsound-Simplify-error-handling-when-creating-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"dsound: Use a better name for IDirectSoundBufferImpl_Create().\".", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"dsound: Simplify error handling when creating a sound buffer.\".", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-EAX
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dsound-Fast_Mixer, dsound-Revert_Cleanup
+# |   *	dsound-Fast_Mixer
 # |
 # | Modified files:
 # |   *	dlls/dsound/Makefile.in, dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_eax.h,

@@ -264,7 +264,6 @@ patch_enable_all ()
 	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
-	enable_opengl32_Revert_Disable_Ext="$1"
 	enable_opengl32_glDebugMessageCallback="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
@@ -960,9 +959,6 @@ patch_enable ()
 			;;
 		oleaut32-x86_64_Marshaller)
 			enable_oleaut32_x86_64_Marshaller="$2"
-			;;
-		opengl32-Revert_Disable_Ext)
-			enable_opengl32_Revert_Disable_Ext="$2"
 			;;
 		opengl32-glDebugMessageCallback)
 			enable_opengl32_glDebugMessageCallback="$2"
@@ -5700,18 +5696,6 @@ if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset opengl32-Revert_Disable_Ext
-# |
-# | Modified files:
-# |   *	dlls/opengl32/wgl.c
-# |
-if test "$enable_opengl32_Revert_Disable_Ext" -eq 1; then
-	patch_apply opengl32-Revert_Disable_Ext/0001-Revert-opengl32-Return-a-NULL-pointer-for-functions-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "Revert \"opengl32: Return a NULL pointer for functions requiring unsupported or disabled extensions.\".", 1 },';
 	) >> "$patchlist"
 fi
 

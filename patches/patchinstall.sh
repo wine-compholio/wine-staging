@@ -2285,14 +2285,11 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
-# | 	dlls/d3d9/tests/visual.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c,
-# | 	dlls/evr/evr.c, dlls/msxml3/schema.c, dlls/netapi32/netapi32.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c,
-# | 	dlls/vbscript/vbdisp.c, dlls/wined3d/glsl_shader.c, dlls/ws2_32/tests/sock.c, dlls/wsdapi/msgparams.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h, tools/makedep.c
+# | 	dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/evr/evr.c,
+# | 	dlls/msxml3/schema.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/wsdapi/msgparams.c,
+# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
-	patch_apply Compiler_Warnings/0009-ws2_32-tests-Work-around-an-incorrect-detection-in-G.patch
-	patch_apply Compiler_Warnings/0018-Appease-the-blessed-version-of-gcc-4.5-when-Werror-i.patch
 	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0021-d2d1-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0022-d3d11-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2308,8 +2305,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0033-evr-Avoid-implicit-cast-of-interface-pointer.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Work around an incorrect detection in GCC 7.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "Appease the blessed version of gcc (4.5) when -Werror is enabled.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Avoid implicit cast of interface pointer.", 1 },';

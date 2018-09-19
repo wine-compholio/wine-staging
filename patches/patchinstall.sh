@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8a985174ebc1b041d9a4f1abbdc184fe692d25bf"
+	echo "93994dfc0b99789e3a9c1490b4d93082f34b8dcc"
 }
 
 # Show version information
@@ -2402,11 +2402,9 @@ fi
 if test "$enable_server_CreateProcess_ACLs" -eq 1; then
 	patch_apply server-CreateProcess_ACLs/0001-server-Support-for-thread-and-process-security-descr.patch
 	patch_apply server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch
-	patch_apply server-CreateProcess_ACLs/0003-advapi32-tests-Add-additional-tests-for-passing-a-th.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
-		printf '%s\n' '+    { "Joris van der Wel", "advapi32/tests: Add additional tests for passing a thread sd to CreateProcess.", 1 },';
 	) >> "$patchlist"
 fi
 

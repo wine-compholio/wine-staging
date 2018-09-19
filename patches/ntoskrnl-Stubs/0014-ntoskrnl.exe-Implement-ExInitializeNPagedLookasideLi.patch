@@ -1,4 +1,4 @@
-From 36bd8e4497945604cda44057c9dbb500080700a7 Mon Sep 17 00:00:00 2001
+From 7b85e96f6dbced2fa2bb4c8f73b26abfd442dfef Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 23:42:56 +0200
 Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
@@ -11,7 +11,7 @@ Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
  4 files changed, 127 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index 0fea91b..4bd0ff7 100644
+index 14a6e82..6123a45 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
 @@ -2029,7 +2029,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
@@ -41,7 +41,7 @@ index 0fea91b..4bd0ff7 100644
  
  /***********************************************************************
 diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
-index 57aaa28..ab55b48 100644
+index 2e1107b..4f32c30 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.c
 @@ -22,6 +22,9 @@
@@ -54,7 +54,7 @@ index 57aaa28..ab55b48 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -238,6 +241,33 @@ static void test_version(void)
+@@ -525,6 +528,33 @@ static void test_version(void)
      ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
  }
  
@@ -88,15 +88,15 @@ index 57aaa28..ab55b48 100644
  static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
  {
      ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
-@@ -266,6 +296,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
-     test_init_funcs();
+@@ -555,6 +585,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
      test_load_driver();
+     test_sync();
      test_version();
 +    test_lookaside_list();
  
      /* print process report */
      if (test_input->winetest_debug)
-@@ -317,7 +348,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
+@@ -606,7 +637,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
  
  static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
  {
@@ -105,7 +105,7 @@ index 57aaa28..ab55b48 100644
      IoCompleteRequest(irp, IO_NO_INCREMENT);
      return STATUS_SUCCESS;
  }
-@@ -342,14 +373,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+@@ -631,14 +662,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
              break;
      }
  
@@ -123,12 +123,12 @@ index 57aaa28..ab55b48 100644
      return STATUS_SUCCESS;
  }
 diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
-index 0cd1673..ed27180 100644
+index b5e4424..9ff245e 100644
 --- a/include/ddk/wdm.h
 +++ b/include/ddk/wdm.h
-@@ -144,20 +144,18 @@ typedef enum _KWAIT_REASON
-     MaximumWaitReason,
- } KWAIT_REASON;
+@@ -153,20 +153,18 @@ typedef struct _KWAIT_BLOCK {
+     USHORT WaitType;
+ } KWAIT_BLOCK, *PKWAIT_BLOCK, *RESTRICTED_POINTER PRKWAIT_BLOCK;
  
 -typedef struct _ALLOCATE_FUNCTION *PALLOCATE_FUNCTION;
  typedef struct _IO_TIMER *PIO_TIMER;
@@ -148,7 +148,7 @@ index 0cd1673..ed27180 100644
  
  typedef struct _FAST_MUTEX
  {
-@@ -182,6 +180,11 @@ typedef struct _VPB {
+@@ -191,6 +189,11 @@ typedef struct _VPB {
    WCHAR  VolumeLabel[MAXIMUM_VOLUME_LABEL_LENGTH / sizeof(WCHAR)];
  } VPB, *PVPB;
  
@@ -160,7 +160,7 @@ index 0cd1673..ed27180 100644
  typedef enum _POOL_TYPE {
    NonPagedPool,
    PagedPool,
-@@ -1221,6 +1224,71 @@ typedef struct _KLOCK_QUEUE_HANDLE {
+@@ -1230,6 +1233,71 @@ typedef struct _KLOCK_QUEUE_HANDLE {
      KIRQL OldIrql;
  } KLOCK_QUEUE_HANDLE, *PKLOCK_QUEUE_HANDLE;
  
@@ -232,7 +232,7 @@ index 0cd1673..ed27180 100644
  typedef NTSTATUS (NTAPI EX_CALLBACK_FUNCTION)(void *CallbackContext, void *Argument1, void *Argument2);
  typedef EX_CALLBACK_FUNCTION *PEX_CALLBACK_FUNCTION;
  
-@@ -1373,8 +1441,10 @@ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
+@@ -1382,8 +1450,10 @@ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
  PVOID     WINAPI ExAllocatePoolWithQuota(POOL_TYPE,SIZE_T);
  PVOID     WINAPI ExAllocatePoolWithTag(POOL_TYPE,SIZE_T,ULONG);
  PVOID     WINAPI ExAllocatePoolWithQuotaTag(POOL_TYPE,SIZE_T,ULONG);
@@ -244,7 +244,7 @@ index 0cd1673..ed27180 100644
  PSLIST_ENTRY WINAPI ExInterlockedPushEntrySList(PSLIST_HEADER,PSLIST_ENTRY,PKSPIN_LOCK);
  void      WINAPI ExReleaseFastMutexUnsafe(PFAST_MUTEX);
 diff --git a/include/winnt.h b/include/winnt.h
-index f1c49f2..90efd6a 100644
+index 66720a2..2b15c8c 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
 @@ -755,6 +755,8 @@ typedef struct _MEMORY_BASIC_INFORMATION
@@ -257,5 +257,5 @@ index f1c49f2..90efd6a 100644
  #ifdef __GNUC__
  # define CONTAINING_RECORD(address, type, field) ({     \
 -- 
-1.9.1
+2.7.4
 

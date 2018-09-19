@@ -246,6 +246,7 @@ patch_enable_all ()
 	enable_ntdll_futex_condition_var="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
+	enable_ntoskrnl_Synchronization="$1"
 	enable_ntoskrnl_exe_Fix_Relocation="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -903,6 +904,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
+			;;
+		ntoskrnl-Synchronization)
+			enable_ntoskrnl_Synchronization="$2"
 			;;
 		ntoskrnl.exe-Fix_Relocation)
 			enable_ntoskrnl_exe_Fix_Relocation="$2"
@@ -2009,7 +2013,11 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	if test "$enable_Compiler_Warnings" -gt 1; then
 		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
 	fi
+	if test "$enable_ntoskrnl_Synchronization" -gt 1; then
+		abort "Patchset ntoskrnl-Synchronization disabled, but ntoskrnl-Stubs depends on that."
+	fi
 	enable_Compiler_Warnings=1
+	enable_ntoskrnl_Synchronization=1
 fi
 
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
@@ -5377,28 +5385,71 @@ if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntoskrnl-Synchronization
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44588] Multiple kernel drivers need ntoskrnl.exe.KeWaitForMultipleObjects semi-stub (Franson VSerial service
+# | 	'bizvserialnt.sys')
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/Makefile.in, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec,
+# | 	dlls/ntoskrnl.exe/sync.c, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/ntddk.h, include/ddk/wdm.h
+# |
+if test "$enable_ntoskrnl_Synchronization" -eq 1; then
+	patch_apply ntoskrnl-Synchronization/0001-ntoskrnl.exe-Implement-KeWaitForMultipleObjects.patch
+	patch_apply ntoskrnl-Synchronization/0002-ntoskrnl.exe-Implement-KeInitializeEvent.patch
+	patch_apply ntoskrnl-Synchronization/0003-ntoskrnl.exe-Implement-KeSetEvent.patch
+	patch_apply ntoskrnl-Synchronization/0004-ntoskrnl.exe-Implement-KeResetEvent.patch
+	patch_apply ntoskrnl-Synchronization/0005-ntoskrnl.exe-Implement-KeClearEvent.patch
+	patch_apply ntoskrnl-Synchronization/0006-ntoskrnl.exe-Implement-KeWaitForSingleObject.patch
+	patch_apply ntoskrnl-Synchronization/0007-ntoskrnl.exe-tests-Add-some-tests-for-synchronizatio.patch
+	patch_apply ntoskrnl-Synchronization/0008-ntoskrnl.exe-Implement-KeInitializeSemaphore.patch
+	patch_apply ntoskrnl-Synchronization/0009-ntoskrnl.exe-Implement-KeReleaseSemaphore-and-waitin.patch
+	patch_apply ntoskrnl-Synchronization/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
+	patch_apply ntoskrnl-Synchronization/0011-ntoskrnl.exe-Implement-KeReleaseMutex-and-waiting-on.patch
+	patch_apply ntoskrnl-Synchronization/0012-ntoskrnl.exe-Implement-KeWaitForMutexObject.patch
+	patch_apply ntoskrnl-Synchronization/0013-ntoskrnl.exe-Implement-KeInitializeTimerEx.patch
+	patch_apply ntoskrnl-Synchronization/0014-ntoskrnl.exe-Implement-KeSetTimerEx-and-waiting-on-t.patch
+	patch_apply ntoskrnl-Synchronization/0015-ntoskrnl.exe-Implement-KeCancelTimer.patch
+	patch_apply ntoskrnl-Synchronization/0016-ntoskrnl.exe-tests-Add-tests-for-waiting-on-timers.patch
+	patch_apply ntoskrnl-Synchronization/0017-ntoskrnl.exe-Implement-KeDelayExecutionThread.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeWaitForMultipleObjects().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeSetEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeResetEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeClearEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeWaitForSingleObject().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe/tests: Add some tests for synchronization functions.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeSemaphore().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeReleaseSemaphore() and waiting on semaphores.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeMutex().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeReleaseMutex() and waiting on mutexes.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeWaitForMutexObject().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeTimerEx().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeSetTimerEx() and waiting on timers.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeCancelTimer().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe/tests: Add tests for waiting on timers.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeDelayExecutionThread().", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings
+# |   *	Compiler_Warnings, ntoskrnl-Synchronization
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
 # | 	include/winnt.h
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	patch_apply ntoskrnl-Stubs/0005-ntoskrnl.exe-Improve-KeReleaseMutex-stub.patch
-	patch_apply ntoskrnl-Stubs/0006-ntoskrnl.exe-Improve-KeInitializeSemaphore-stub.patch
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
-	patch_apply ntoskrnl-Stubs/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
 	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
 	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
 	(
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeReleaseMutex stub.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Improve KeInitializeSemaphore stub.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
-		printf '%s\n' '+    { "Alexander Morozov", "ntoskrnl.exe: Implement KeInitializeMutex.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
@@ -7516,7 +7567,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Synchronization, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

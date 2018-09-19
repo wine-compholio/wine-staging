@@ -1,0 +1,64 @@
+From 5ed6dd1e495351cb271ea302ad90689c76790f03 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Sun, 19 Aug 2018 23:26:07 -0500
+Subject: [PATCH 15/17] ntoskrnl.exe: Implement KeCancelTimer().
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
+ dlls/ntoskrnl.exe/sync.c            | 16 ++++++++++++++++
+ include/ddk/wdm.h                   |  1 +
+ 3 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+index f089f41..a22acf6 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
++++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+@@ -517,7 +517,7 @@
+ @ stub KeAttachProcess
+ @ stub KeBugCheck
+ @ stub KeBugCheckEx
+-@ stub KeCancelTimer
++@ stdcall KeCancelTimer(ptr)
+ @ stub KeCapturePersistentThreadState
+ @ stdcall KeClearEvent(ptr)
+ @ stub KeConnectInterrupt
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index 46c214c..1b7650d 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -348,3 +348,19 @@ BOOLEAN WINAPI KeSetTimerEx( KTIMER *timer, LARGE_INTEGER duetime, LONG period,
+ 
+     return ret;
+ }
++
++BOOLEAN WINAPI KeCancelTimer( KTIMER *timer )
++{
++    BOOL ret;
++
++    TRACE("timer %p.\n", timer);
++
++    EnterCriticalSection( &sync_cs );
++    ret = timer->Header.Inserted;
++    timer->Header.Inserted = FALSE;
++    CloseHandle(timer->Header.WaitListHead.Blink);
++    timer->Header.WaitListHead.Blink = NULL;
++    LeaveCriticalSection( &sync_cs );
++
++    return ret;
++}
+diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
+index 483ee9f..6be07b2 100644
+--- a/include/ddk/wdm.h
++++ b/include/ddk/wdm.h
+@@ -1418,6 +1418,7 @@ void      WINAPI IoReleaseCancelSpinLock(KIRQL);
+ NTSTATUS  WINAPI IoSetDeviceInterfaceState(UNICODE_STRING*,BOOLEAN);
+ NTSTATUS  WINAPI IoWMIRegistrationControl(PDEVICE_OBJECT,ULONG);
+ 
++BOOLEAN   WINAPI KeCancelTimer(KTIMER*);
+ void      WINAPI KeClearEvent(PRKEVENT);
+ PKTHREAD  WINAPI KeGetCurrentThread(void);
+ void      WINAPI KeInitializeEvent(PRKEVENT,EVENT_TYPE,BOOLEAN);
+-- 
+2.7.4
+

@@ -1,0 +1,101 @@
+From fc0b6eb91c49485a5f85e1df4f78e58e5e92fc93 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Sun, 19 Aug 2018 22:52:48 -0500
+Subject: [PATCH 14/17] ntoskrnl.exe: Implement KeSetTimerEx() and waiting on
+ timers.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.c |  9 ---------
+ dlls/ntoskrnl.exe/sync.c     | 31 +++++++++++++++++++++++++++++++
+ include/ddk/wdm.h            |  1 +
+ 3 files changed, 32 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
+index 24afdb6..a7638c9 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/ntoskrnl.c
+@@ -3625,15 +3625,6 @@ void WINAPI IoInvalidateDeviceRelations( DEVICE_OBJECT *device_object, DEVICE_RE
+ }
+ 
+ /***********************************************************************
+- *           KeSetTimerEx (NTOSKRNL.EXE.@)
+- */
+-BOOL WINAPI KeSetTimerEx( KTIMER *timer, LARGE_INTEGER duetime, LONG period, KDPC *dpc )
+-{
+-    FIXME("stub: %p %s %u %p\n", timer, wine_dbgstr_longlong(duetime.QuadPart), period, dpc);
+-    return TRUE;
+-}
+-
+-/***********************************************************************
+  *           IoCreateFile (NTOSKRNL.EXE.@)
+  */
+ NTSTATUS WINAPI IoCreateFile(HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBUTES *attr,
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index 998cdf1..46c214c 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -96,6 +96,9 @@ NTSTATUS WINAPI KeWaitForMultipleObjects(ULONG count, void *pobjs[],
+                     semaphore->Header.SignalState, semaphore->Limit, NULL );
+                 break;
+             }
++            case TYPE_MANUAL_TIMER:
++            case TYPE_AUTO_TIMER:
++                break;
+             }
+         }
+ 
+@@ -113,6 +116,7 @@ NTSTATUS WINAPI KeWaitForMultipleObjects(ULONG count, void *pobjs[],
+             switch (objs[i]->Type)
+             {
+             case TYPE_AUTO_EVENT:
++            case TYPE_AUTO_TIMER:
+                 objs[i]->SignalState = FALSE;
+                 break;
+             case TYPE_MUTEX:
+@@ -317,3 +321,30 @@ void WINAPI KeInitializeTimer( KTIMER *timer )
+ {
+     KeInitializeTimerEx(timer, NotificationTimer);
+ }
++
++/***********************************************************************
++ *           KeSetTimerEx (NTOSKRNL.EXE.@)
++ */
++BOOLEAN WINAPI KeSetTimerEx( KTIMER *timer, LARGE_INTEGER duetime, LONG period, KDPC *dpc )
++{
++    BOOL manual = timer->Header.Type == TYPE_MANUAL_TIMER;
++    BOOL ret;
++
++    TRACE("timer %p, duetime %s, period %d, dpc %p.\n",
++        timer, wine_dbgstr_longlong(duetime.QuadPart), period, dpc);
++
++    if (dpc)
++    {
++        FIXME("Unhandled DPC %p.\n", dpc);
++        return FALSE;
++    }
++
++    EnterCriticalSection( &sync_cs );
++    ret = timer->Header.Inserted;
++    timer->Header.Inserted = TRUE;
++    timer->Header.WaitListHead.Blink = CreateWaitableTimerW( NULL, manual, NULL );
++    SetWaitableTimer( timer->Header.WaitListHead.Blink, &duetime, period, NULL, NULL, FALSE );
++    LeaveCriticalSection( &sync_cs );
++
++    return ret;
++}
+diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
+index c8adc7d..483ee9f 100644
+--- a/include/ddk/wdm.h
++++ b/include/ddk/wdm.h
+@@ -1433,6 +1433,7 @@ LONG      WINAPI KeResetEvent(PRKEVENT);
+ LONG      WINAPI KeSetEvent(PRKEVENT,KPRIORITY,BOOLEAN);
+ KPRIORITY WINAPI KeSetPriorityThread(PKTHREAD,KPRIORITY);
+ void      WINAPI KeSetSystemAffinityThread(KAFFINITY);
++BOOLEAN   WINAPI KeSetTimerEx(KTIMER*,LARGE_INTEGER,LONG,KDPC*);
+ NTSTATUS  WINAPI KeWaitForMultipleObjects(ULONG,void*[],WAIT_TYPE,KWAIT_REASON,KPROCESSOR_MODE,BOOLEAN,LARGE_INTEGER*,KWAIT_BLOCK*);
+ NTSTATUS  WINAPI KeWaitForSingleObject(void*,KWAIT_REASON,KPROCESSOR_MODE,BOOLEAN,LARGE_INTEGER*);
+ 
+-- 
+2.7.4
+

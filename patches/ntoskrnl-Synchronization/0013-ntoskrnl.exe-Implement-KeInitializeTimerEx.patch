@@ -1,0 +1,86 @@
+From c0897350d30abc3cfa7ee691ff99be58eb5c7456 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Sun, 19 Aug 2018 22:30:05 -0500
+Subject: [PATCH 13/17] ntoskrnl.exe: Implement KeInitializeTimerEx().
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.c | 21 ---------------------
+ dlls/ntoskrnl.exe/sync.c     | 25 +++++++++++++++++++++++++
+ 2 files changed, 25 insertions(+), 21 deletions(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
+index 5034c5d..24afdb6 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/ntoskrnl.c
+@@ -2093,27 +2093,6 @@ void WINAPI KeInitializeSpinLock( PKSPIN_LOCK SpinLock )
+     FIXME( "stub: %p\n", SpinLock );
+ }
+ 
+-
+-/***********************************************************************
+- *           KeInitializeTimerEx   (NTOSKRNL.EXE.@)
+- */
+-void WINAPI KeInitializeTimerEx( PKTIMER Timer, TIMER_TYPE Type )
+-{
+-    FIXME( "stub: %p %d\n", Timer, Type );
+-
+-    RtlZeroMemory(Timer, sizeof(KTIMER));
+-    Timer->Header.Type = Type ? 9 : 8;
+-}
+-
+-
+-/***********************************************************************
+- *           KeInitializeTimer   (NTOSKRNL.EXE.@)
+- */
+-void WINAPI KeInitializeTimer( PKTIMER Timer )
+-{
+-    KeInitializeTimerEx(Timer, NotificationTimer);
+-}
+-
+ /***********************************************************************
+  *           KeInsertQueue   (NTOSKRNL.EXE.@)
+  */
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index acbbe3b..998cdf1 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -40,6 +40,8 @@ enum object_type
+     TYPE_AUTO_EVENT = 1,
+     TYPE_MUTEX = 2,
+     TYPE_SEMAPHORE = 5,
++    TYPE_MANUAL_TIMER = 8,
++    TYPE_AUTO_TIMER = 9,
+ };
+ 
+ static CRITICAL_SECTION sync_cs;
+@@ -292,3 +294,26 @@ LONG WINAPI KeReleaseMutex( PRKMUTEX mutex, BOOLEAN wait )
+ 
+     return ret;
+ }
++
++/***********************************************************************
++ *           KeInitializeTimerEx   (NTOSKRNL.EXE.@)
++ */
++void WINAPI KeInitializeTimerEx( KTIMER *timer, TIMER_TYPE type )
++{
++    TRACE("timer %p, type %u.\n", timer, type);
++
++    RtlZeroMemory(timer, sizeof(KTIMER));
++    timer->Header.Type = (type == NotificationTimer) ? TYPE_MANUAL_TIMER : TYPE_AUTO_TIMER;
++    timer->Header.SignalState = FALSE;
++    timer->Header.Inserted = FALSE;
++    timer->Header.WaitListHead.Blink = NULL;
++    timer->Header.WaitListHead.Flink = NULL;
++}
++
++/***********************************************************************
++ *           KeInitializeTimer   (NTOSKRNL.EXE.@)
++ */
++void WINAPI KeInitializeTimer( KTIMER *timer )
++{
++    KeInitializeTimerEx(timer, NotificationTimer);
++}
+-- 
+2.7.4
+

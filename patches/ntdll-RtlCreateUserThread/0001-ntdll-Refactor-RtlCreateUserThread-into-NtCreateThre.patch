@@ -1,4 +1,4 @@
-From 0a59489fdff7d99e5c2b268117e63319c9df53b8 Mon Sep 17 00:00:00 2001
+From 8e50c5f3175aa3df7387e8eb409a3bfc9e889c6e Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:22:59 -0500
 Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
@@ -7,15 +7,15 @@ League of Legends hooks NtCreateThread or NtCreateThreadEx (depending on the
 reported version), and expects it to be called whenever a thread is created.
 ---
  dlls/ntdll/ntdll.spec |   2 +-
- dlls/ntdll/thread.c   | 185 ++++++++++++++++++++++++++++++++++++++++++--------
+ dlls/ntdll/thread.c   | 192 +++++++++++++++++++++++++++++++++++++++++---------
  include/winternl.h    |  25 +++++++
- 3 files changed, 183 insertions(+), 29 deletions(-)
+ 3 files changed, 184 insertions(+), 35 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 61d55da..638fbcf 100644
+index e36b1bd..7e19e76 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -154,7 +154,7 @@
+@@ -155,7 +155,7 @@
  @ stdcall NtCreateSection(ptr long ptr ptr long long long)
  @ stdcall NtCreateSemaphore(ptr long ptr long long)
  @ stdcall NtCreateSymbolicLinkObject(ptr long ptr ptr)
@@ -25,7 +25,7 @@ index 61d55da..638fbcf 100644
  @ stdcall NtCreateTimer(ptr long ptr long)
  @ stub NtCreateToken
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index e24a9e1..1664032 100644
+index fbae5cc..f7cf80f 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -527,34 +527,18 @@ static void start_thread( struct startup_info *info )
@@ -33,7 +33,7 @@ index e24a9e1..1664032 100644
   *              NtCreateThreadEx   (NTDLL.@)
   */
 -NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *attr,
-+NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *obj_attr,
++NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT_ATTRIBUTES *thread_attr,
                                    HANDLE process, LPTHREAD_START_ROUTINE start, void *param,
                                    ULONG flags, ULONG zero_bits, ULONG stack_commit,
 -                                  ULONG stack_reserve, void *attribute_list )
@@ -50,7 +50,7 @@ index e24a9e1..1664032 100644
 -/***********************************************************************
 - *              RtlCreateUserThread   (NTDLL.@)
 - */
--NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *descr,
+-NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
 -                                     BOOLEAN suspended, PVOID stack_addr,
 -                                     SIZE_T stack_reserve, SIZE_T stack_commit,
 -                                     PRTL_THREAD_START_ROUTINE start, void *param,
@@ -68,12 +68,12 @@ index e24a9e1..1664032 100644
      HANDLE handle = 0, actctx = 0;
      TEB *teb = NULL;
      DWORD tid = 0;
-@@ -562,6 +546,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
-     NTSTATUS status;
-     SIZE_T extra_stack = PTHREAD_STACK_MIN;
+@@ -564,6 +548,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+     data_size_t len = 0;
+     struct object_attributes *objattr = NULL;
  
 +    TRACE("(%p, %d, %p, %p, %p, %p, %u, %u, %u, %u, %p)\n",
-+          handle_ptr, access, obj_attr, process, start, param, flags,
++          handle_ptr, access, thread_attr, process, start, param, flags,
 +          zero_bits, stack_commit, stack_reserve, ps_attr_list);
 +
 +    if (ps_attr_list != NULL)
@@ -102,16 +102,30 @@ index e24a9e1..1664032 100644
      if (process != NtCurrentProcess())
      {
          apc_call_t call;
-@@ -592,7 +603,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+@@ -589,12 +600,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+         return result.create_thread.status;
+     }
  
+-    if (descr)
+-    {
+-        OBJECT_ATTRIBUTES thread_attr;
+-        InitializeObjectAttributes( &thread_attr, NULL, 0, NULL, descr );
+-        if ((status = alloc_object_attributes( &thread_attr, &objattr, &len ))) return status;
+-    }
++    if ((status = alloc_object_attributes( thread_attr, &objattr, &len ))) return status;
+ 
+     if (server_pipe( request_pipe ) == -1)
+     {
+@@ -606,7 +612,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      SERVER_START_REQ( new_thread )
      {
+         req->process    = wine_server_obj_handle( process );
 -        req->access     = THREAD_ALL_ACCESS;
 +        req->access     = access;
-         req->attributes = 0;  /* FIXME */
          req->suspend    = suspended;
          req->request_fd = request_pipe[0];
-@@ -649,19 +660,19 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *
+         wine_server_add_data( req, objattr, len );
+@@ -664,19 +670,19 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
  
@@ -137,7 +151,7 @@ index e24a9e1..1664032 100644
      pthread_sigmask( SIG_SETMASK, &sigset, NULL );
  
      if (id) id->UniqueThread = ULongToHandle(tid);
-@@ -678,6 +689,124 @@ error:
+@@ -693,6 +699,124 @@ error:
      return status;
  }
  
@@ -190,14 +204,14 @@ index e24a9e1..1664032 100644
 +/***********************************************************************
 + *              RtlCreateUserThread   (NTDLL.@)
 + */
-+NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, const SECURITY_DESCRIPTOR *descr,
++NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
 +                                     BOOLEAN suspended, void *stack_addr,
 +                                     SIZE_T stack_reserve, SIZE_T stack_commit,
 +                                     PRTL_THREAD_START_ROUTINE entry, void *arg,
 +                                     HANDLE *handle_ptr, CLIENT_ID *id )
 +{
-+    if (descr)
-+        FIXME("descr != NULL is unimplemented\n");
++    OBJECT_ATTRIBUTES thread_attr;
++    InitializeObjectAttributes( &thread_attr, NULL, 0, NULL, descr );
 +    if (stack_addr)
 +        FIXME("stack_addr != NULL is unimplemented\n");
 +
@@ -230,9 +244,9 @@ index e24a9e1..1664032 100644
 +#endif
 +
 +#if defined(__i386__) || defined(__x86_64__)
-+        return __syscall_NtCreateThread(handle_ptr, (ACCESS_MASK)0, NULL, process, id, &context, NULL, suspended);
++        return __syscall_NtCreateThread(handle_ptr, (ACCESS_MASK)0, &thread_attr, process, id, &context, NULL, suspended);
 +#else
-+        return NtCreateThread(handle_ptr, (ACCESS_MASK)0, NULL, process, id, &context, NULL, suspended);
++        return NtCreateThread(handle_ptr, (ACCESS_MASK)0, &thread_attr, process, id, &context, NULL, suspended);
 +#endif
 +    }
 +    else
@@ -252,9 +266,9 @@ index e24a9e1..1664032 100644
 +        }
 +
 +#if defined(__i386__) || defined(__x86_64__)
-+        return __syscall_NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, NULL, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
++        return __syscall_NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, &thread_attr, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
 +#else
-+        return NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, NULL, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
++        return NtCreateThreadEx(handle_ptr, (ACCESS_MASK)0, &thread_attr, process, (LPTHREAD_START_ROUTINE)entry, arg, flags, 0, stack_commit, stack_reserve, pattr_list);
 +#endif
 +    }
 +}
@@ -263,7 +277,7 @@ index e24a9e1..1664032 100644
  /******************************************************************************
   *              RtlGetNtGlobalFlags   (NTDLL.@)
 diff --git a/include/winternl.h b/include/winternl.h
-index a10310c..5559be4 100644
+index 064293b..9d12d2f 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -2173,6 +2173,31 @@ typedef enum _SYSDBG_COMMAND {

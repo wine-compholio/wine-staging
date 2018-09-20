@@ -1,4 +1,4 @@
-From b534f2d905c3ba205c9a4f895149e6be8425b31e Mon Sep 17 00:00:00 2001
+From 378f910689602e3367cc72a0248f38ab76cea7d3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 6 Aug 2017 02:08:05 +0200
 Subject: [PATCH] server: Implement support for creating processes using a
@@ -15,10 +15,10 @@ Subject: [PATCH] server: Implement support for creating processes using a
  7 files changed, 59 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index e270ca7..633065b 100644
+index 5fc0d8b..b189036 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -2036,7 +2036,7 @@ static NTSTATUS create_struct_sd(PSECURITY_DESCRIPTOR nt_sd, struct security_des
+@@ -2027,7 +2027,7 @@ static NTSTATUS alloc_object_attributes( const SECURITY_ATTRIBUTES *attr, struct
   * Create a new process. If hFile is a valid handle we have an exe
   * file, otherwise it is a Winelib app.
   */
@@ -27,15 +27,15 @@ index e270ca7..633065b 100644
                              LPCWSTR cur_dir, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                              BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
                              LPPROCESS_INFORMATION info, LPCSTR unixdir,
-@@ -2182,6 +2182,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+@@ -2140,6 +2140,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+         req->access         = PROCESS_ALL_ACCESS;
+         req->cpu            = cpu;
          req->info_size      = startup_info_size;
-         req->env_size       = (env_end - env) * sizeof(WCHAR);
-         req->process_sd_size = process_sd_size;
 +        req->token          = wine_server_obj_handle( token );
- 
+         wine_server_add_data( req, objattr, attr_len );
          wine_server_add_data( req, startup_info, startup_info_size );
          wine_server_add_data( req, env, (env_end - env) * sizeof(WCHAR) );
-@@ -2282,7 +2283,7 @@ error:
+@@ -2256,7 +2257,7 @@ error:
   *
   * Create a new VDM process for a 16-bit or DOS application.
   */
@@ -44,7 +44,7 @@ index e270ca7..633065b 100644
                                  LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                                  BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
                                  LPPROCESS_INFORMATION info, LPCSTR unixdir,
-@@ -2306,7 +2307,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
+@@ -2280,7 +2281,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
          return FALSE;
      }
      sprintfW(new_cmd_line, argsW, winevdmW, buffer, cmd_line);
@@ -53,7 +53,7 @@ index e270ca7..633065b 100644
                            flags, startup, info, unixdir, binary_info, exec_only );
      HeapFree( GetProcessHeap(), 0, new_cmd_line );
      return ret;
-@@ -2318,7 +2319,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
+@@ -2292,7 +2293,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
   *
   * Create a new cmd shell process for a .BAT file.
   */
@@ -62,7 +62,7 @@ index e270ca7..633065b 100644
                                  LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                                  BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
                                  LPPROCESS_INFORMATION info )
-@@ -2346,8 +2347,8 @@ static BOOL create_cmd_process( LPCWSTR filename, LPWSTR cmd_line, LPVOID env, L
+@@ -2320,8 +2321,8 @@ static BOOL create_cmd_process( LPCWSTR filename, LPWSTR cmd_line, LPVOID env, L
      strcatW( newcmdline, quotW );
      strcatW( newcmdline, cmd_line );
      strcatW( newcmdline, quotW );
@@ -73,7 +73,7 @@ index e270ca7..633065b 100644
      HeapFree( GetProcessHeap(), 0, newcmdline );
      return ret;
  }
-@@ -2457,7 +2458,9 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2431,7 +2432,9 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
  
      TRACE("app %s cmdline %s\n", debugstr_w(app_name), debugstr_w(cmd_line) );
  
@@ -84,7 +84,7 @@ index e270ca7..633065b 100644
      if (new_token) FIXME("No support for returning created process token\n");
  
      if (!(tidy_cmdline = get_file_name( app_name, cmd_line, name, ARRAY_SIZE( name ),
-@@ -2515,20 +2518,20 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2489,20 +2492,20 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                 debugstr_w(name), (binary_info.flags & BINARY_FLAG_64BIT) ? 64 : 32,
                 wine_dbgstr_longlong(binary_info.res_start), wine_dbgstr_longlong(binary_info.res_end),
                 binary_info.arch, (binary_info.flags & BINARY_FLAG_FAKEDLL) ? ", fakedll" : "" );
@@ -108,7 +108,7 @@ index e270ca7..633065b 100644
                                 inherit, flags, startup_info, info, unixdir, &binary_info, FALSE );
          break;
      case BINARY_UNKNOWN:
-@@ -2540,7 +2543,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2514,7 +2517,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                  TRACE( "starting %s as DOS binary\n", debugstr_w(name) );
                  binary_info.type = BINARY_DOS;
                  binary_info.arch = IMAGE_FILE_MACHINE_I386;
@@ -117,7 +117,7 @@ index e270ca7..633065b 100644
                                             inherit, flags, startup_info, info, unixdir,
                                             &binary_info, FALSE );
                  break;
-@@ -2548,7 +2551,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2522,7 +2525,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
              if (!strcmpiW( p, batW ) || !strcmpiW( p, cmdW ) )
              {
                  TRACE( "starting %s as batch binary\n", debugstr_w(name) );
@@ -126,7 +126,7 @@ index e270ca7..633065b 100644
                                             inherit, flags, startup_info, info );
                  break;
              }
-@@ -2668,12 +2671,12 @@ static void exec_process( LPCWSTR name )
+@@ -2642,12 +2645,12 @@ static void exec_process( LPCWSTR name )
                 debugstr_w(name), (binary_info.flags & BINARY_FLAG_64BIT) ? 64 : 32,
                 wine_dbgstr_longlong(binary_info.res_start), wine_dbgstr_longlong(binary_info.res_end),
                 binary_info.arch );
@@ -141,7 +141,7 @@ index e270ca7..633065b 100644
                          FALSE, 0, &startup_info, &info, NULL, &binary_info, TRUE );
          break;
      case BINARY_UNKNOWN:
-@@ -2687,7 +2690,7 @@ static void exec_process( LPCWSTR name )
+@@ -2661,7 +2664,7 @@ static void exec_process( LPCWSTR name )
      case BINARY_WIN16:
      case BINARY_DOS:
          TRACE( "starting %s as Win16/DOS binary\n", debugstr_w(name) );
@@ -151,19 +151,19 @@ index e270ca7..633065b 100644
          break;
      default:
 diff --git a/server/process.c b/server/process.c
-index 81cea2f..7d2206f 100644
+index 00462cf..b7c9da3 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -496,7 +496,7 @@ static void start_sigkill_timer( struct process *process )
- 
- /* create a new process and its main thread */
+@@ -487,7 +487,7 @@ static void start_sigkill_timer( struct process *process )
+ /* create a new process */
  /* if the function fails the fd is closed */
--struct thread *create_process( int fd, struct thread *parent_thread, int inherit_all )
-+struct thread *create_process( int fd, struct thread *parent_thread, int inherit_all, struct token *token )
+ struct process *create_process( int fd, struct thread *parent_thread, int inherit_all,
+-                                const struct security_descriptor *sd )
++                                const struct security_descriptor *sd, struct token *token )
  {
      struct process *process;
-     struct thread *thread = NULL;
-@@ -567,7 +567,7 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+ 
+@@ -562,7 +562,7 @@ struct process *create_process( int fd, struct thread *parent_thread, int inheri
                                         : alloc_handle_table( process, 0 );
          /* Note: for security reasons, starting a new process does not attempt
           * to use the current impersonation token for the new process */
@@ -172,15 +172,15 @@ index 81cea2f..7d2206f 100644
          process->affinity = parent->affinity;
      }
      if (!process->handles || !process->token) goto error;
-@@ -1147,6 +1147,7 @@ DECL_HANDLER(new_process)
-     struct startup_info *info;
-     struct thread *thread;
-     struct process *process;
+@@ -1129,6 +1129,7 @@ DECL_HANDLER(new_process)
+     const struct security_descriptor *sd;
+     const struct object_attributes *objattr = get_req_object_attributes( &sd, &name, NULL );
+     struct process *process = NULL;
 +    struct token *token = NULL;
      struct process *parent = current->process;
      int socket_fd = thread_get_inflight_fd( current, req->socket_fd );
-     const struct security_descriptor *process_sd = NULL, *thread_sd = NULL;
-@@ -1182,9 +1183,27 @@ DECL_HANDLER(new_process)
+ 
+@@ -1169,13 +1170,31 @@ DECL_HANDLER(new_process)
          return;
      }
  
@@ -203,13 +203,17 @@ index 81cea2f..7d2206f 100644
 +
      if (!req->info_size)  /* create an orphaned process */
      {
--        create_process( socket_fd, NULL, 0 );
-+        create_process( socket_fd, NULL, 0, token );
+-        if ((process = create_process( socket_fd, NULL, 0, sd )))
++        if ((process = create_process( socket_fd, NULL, 0, sd, token )))
+         {
+             create_thread( -1, process, NULL );
+             release_object( process );
+         }
 +        if (token) release_object( token );
          return;
      }
  
-@@ -1192,6 +1211,7 @@ DECL_HANDLER(new_process)
+@@ -1183,6 +1202,7 @@ DECL_HANDLER(new_process)
      if (!(info = alloc_object( &startup_info_ops )))
      {
          close( socket_fd );
@@ -217,61 +221,61 @@ index 81cea2f..7d2206f 100644
          return;
      }
      info->exe_file = NULL;
-@@ -1274,7 +1294,7 @@ DECL_HANDLER(new_process)
-         }
+@@ -1237,7 +1257,7 @@ DECL_HANDLER(new_process)
+ #undef FIXUP_LEN
      }
  
--    if (!(thread = create_process( socket_fd, current, req->inherit_all ))) goto done;
-+    if (!(thread = create_process( socket_fd, current, req->inherit_all, token ))) goto done;
-     process = thread->process;
+-    if (!(process = create_process( socket_fd, current, req->inherit_all, sd ))) goto done;
++    if (!(process = create_process( socket_fd, current, req->inherit_all, sd, token ))) goto done;
+ 
      process->startup_info = (struct startup_info *)grab_object( info );
  
-@@ -1356,6 +1376,7 @@ DECL_HANDLER(new_process)
-     }
+@@ -1295,6 +1315,7 @@ DECL_HANDLER(new_process)
+     reply->handle = alloc_handle_no_access_check( parent, process, req->access, objattr->attributes );
  
   done:
 +    if (token) release_object( token );
+     if (process) release_object( process );
      release_object( info );
  }
- 
 diff --git a/server/process.h b/server/process.h
-index 78e88ec..313c36a 100644
+index f45a427..65196a9 100644
 --- a/server/process.h
 +++ b/server/process.h
-@@ -114,7 +114,7 @@ struct process_snapshot
- extern unsigned int alloc_ptid( void *ptr );
+@@ -115,7 +115,7 @@ extern unsigned int alloc_ptid( void *ptr );
  extern void free_ptid( unsigned int id );
  extern void *get_ptid_entry( unsigned int id );
--extern struct thread *create_process( int fd, struct thread *parent_thread, int inherit_all );
-+extern struct thread *create_process( int fd, struct thread *parent_thread, int inherit_all, struct token *token );
+ extern struct process *create_process( int fd, struct thread *parent_thread, int inherit_all,
+-                                       const struct security_descriptor *sd );
++                                       const struct security_descriptor *sd, struct token *token );
  extern data_size_t init_process( struct thread *thread );
  extern struct thread *get_process_first_thread( struct process *process );
  extern struct process *get_process_from_id( process_id_t id );
 diff --git a/server/protocol.def b/server/protocol.def
-index b29df0a..95a120e 100644
+index 49337ce..a20baf8 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -748,6 +748,7 @@ struct rawinput_device
+@@ -743,6 +743,7 @@ struct rawinput_device
+     unsigned int access;         /* access rights for process object */
+     cpu_type_t   cpu;            /* CPU that the new process will use */
      data_size_t  info_size;      /* size of startup info */
-     data_size_t  env_size;       /* size of the environment */
-     data_size_t  process_sd_size;/* size of the process security descriptor */
 +    obj_handle_t token;          /* token for the new process */
+     VARARG(objattr,object_attributes);   /* object attributes */
      VARARG(info,startup_info,info_size); /* startup information */
-     VARARG(env,unicode_str,env_size);                       /* environment for new process */
-     VARARG(process_sd,security_descriptor,process_sd_size); /* security descriptor to set on the process */
+     VARARG(env,unicode_str);     /* environment for new process */
 diff --git a/server/request.c b/server/request.c
-index 6120bc5..a648c30 100644
+index c10c4e6..86f293f 100644
 --- a/server/request.c
 +++ b/server/request.c
-@@ -570,7 +570,7 @@ static void master_socket_poll_event( struct fd *fd, int event )
+@@ -577,7 +577,7 @@ static void master_socket_poll_event( struct fd *fd, int event )
          int client = accept( get_unix_fd( master_socket->fd ), (struct sockaddr *) &dummy, &len );
          if (client == -1) return;
          fcntl( client, F_SETFL, O_NONBLOCK );
--        create_process( client, NULL, 0 );
-+        create_process( client, NULL, 0, NULL );
-     }
- }
- 
+-        if ((process = create_process( client, NULL, 0, NULL )))
++        if ((process = create_process( client, NULL, 0, NULL, NULL )))
+         {
+             create_thread( -1, process, NULL );
+             release_object( process );
 diff --git a/server/security.h b/server/security.h
 index 21e90cc..32dfe5f 100644
 --- a/server/security.h
@@ -286,7 +290,7 @@ index 21e90cc..32dfe5f 100644
  static inline const ACE_HEADER *ace_next( const ACE_HEADER *ace )
  {
 diff --git a/server/token.c b/server/token.c
-index de1d624..2804247 100644
+index 1184241..5db97b4 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -836,6 +836,12 @@ int token_assign_label( struct token *token, PSID label )
@@ -302,7 +306,7 @@ index de1d624..2804247 100644
  struct token *token_create_admin( void )
  {
      struct token *token = NULL;
-@@ -1263,6 +1269,11 @@ const SID *token_get_primary_group( struct token *token )
+@@ -1262,6 +1268,11 @@ const SID *token_get_primary_group( struct token *token )
      return token->primary_group;
  }
  
@@ -315,5 +319,5 @@ index de1d624..2804247 100644
  {
      GENERIC_MAPPING mapping;
 -- 
-1.9.1
+2.7.4
 

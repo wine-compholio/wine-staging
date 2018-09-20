@@ -1,20 +1,20 @@
-From b14282d138ff6a5ad1d5c152d0a556c9ca648c36 Mon Sep 17 00:00:00 2001
+From 6d8fd34cabbcbc64062675be610fb8704fcdc3ec Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 7 Aug 2017 03:33:26 +0200
 Subject: [PATCH] server: Correctly assign security labels for tokens.
 
 ---
- dlls/advapi32/tests/security.c | 21 +++++++++--------
- server/process.c               |  8 +------
+ dlls/advapi32/tests/security.c | 21 ++++++++++-----------
+ server/process.c               |  8 +-------
  server/security.h              |  2 +-
- server/token.c                 | 41 ++++++++++++++++++++--------------
+ server/token.c                 | 41 ++++++++++++++++++++++++-----------------
  4 files changed, 36 insertions(+), 36 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 0271cd72e0..3b07e7cd2f 100644
+index bf4161c..0610ec7 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -7215,7 +7215,6 @@ static void test_token_security_descriptor(void)
+@@ -7186,7 +7186,6 @@ static void test_token_security_descriptor(void)
      defaulted = TRUE;
      ret = GetSecurityDescriptorDacl(sd2, &present, &acl2, &defaulted);
      ok(ret, "GetSecurityDescriptorDacl failed with error %u\n", GetLastError());
@@ -22,7 +22,7 @@ index 0271cd72e0..3b07e7cd2f 100644
      ok(present, "DACL not present\n");
  
      if (present)
-@@ -7336,7 +7335,7 @@ static void test_token_security_descriptor(void)
+@@ -7307,7 +7306,7 @@ static void test_token_security_descriptor(void)
                  ok(ret, "GetAce failed with error %u\n", GetLastError());
                  ok(ace->Header.AceType == SYSTEM_MANDATORY_LABEL_ACE_TYPE,
                     "Unexpected ACE type %#x\n", ace->Header.AceType);
@@ -31,7 +31,7 @@ index 0271cd72e0..3b07e7cd2f 100644
                     "Expected medium integrity level\n");
              }
  
-@@ -7389,8 +7388,8 @@ static void test_token_security_descriptor(void)
+@@ -7360,8 +7359,8 @@ static void test_token_security_descriptor(void)
              sacl = NULL;
              ret = GetSecurityDescriptorSacl(sd3, &present, &sacl, &defaulted);
              ok(ret, "GetSecurityDescriptorSacl failed with error %u\n", GetLastError());
@@ -42,7 +42,7 @@ index 0271cd72e0..3b07e7cd2f 100644
  
              if (sacl)
              {
-@@ -7439,8 +7438,8 @@ static void test_token_security_descriptor(void)
+@@ -7410,8 +7409,8 @@ static void test_token_security_descriptor(void)
              sacl = NULL;
              ret = GetSecurityDescriptorSacl(sd3, &present, &sacl, &defaulted);
              ok(ret, "GetSecurityDescriptorSacl failed with error %u\n", GetLastError());
@@ -53,7 +53,7 @@ index 0271cd72e0..3b07e7cd2f 100644
  
              if (sacl)
              {
-@@ -7504,8 +7503,8 @@ static void test_token_security_descriptor(void)
+@@ -7475,8 +7474,8 @@ static void test_token_security_descriptor(void)
  
          ret = GetSecurityDescriptorSacl(sd3, &present, &sacl, &defaulted);
          ok(ret, "GetSecurityDescriptorSacl failed with error %u\n", GetLastError());
@@ -64,7 +64,7 @@ index 0271cd72e0..3b07e7cd2f 100644
  
          if (sacl)
          {
-@@ -7542,8 +7541,8 @@ static void test_token_security_descriptor(void)
+@@ -7513,8 +7512,8 @@ static void test_token_security_descriptor(void)
          sacl = NULL;
          ret = GetSecurityDescriptorSacl(sd3, &present, &sacl, &defaulted);
          ok(ret, "GetSecurityDescriptorSacl failed with error %u\n", GetLastError());
@@ -75,7 +75,7 @@ index 0271cd72e0..3b07e7cd2f 100644
  
          if (sacl)
          {
-@@ -7761,7 +7760,7 @@ static void test_child_token_sd_medium(void)
+@@ -7732,7 +7731,7 @@ static void test_child_token_sd_medium(void)
      ok(ret, "GetAce failed with error %u\n", GetLastError());
      ok(ace_label->Header.AceType == SYSTEM_MANDATORY_LABEL_ACE_TYPE,
         "Unexpected ACE type %#x\n", ace_label->Header.AceType);
@@ -85,10 +85,10 @@ index 0271cd72e0..3b07e7cd2f 100644
  
      memset(buffer_integrity, 0, sizeof(buffer_integrity));
 diff --git a/server/process.c b/server/process.c
-index 7d2206f274..74cc320f44 100644
+index b7c9da3..250f777 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -567,17 +567,11 @@ struct thread *create_process( int fd, struct thread *parent_thread, int inherit
+@@ -562,17 +562,11 @@ struct process *create_process( int fd, struct thread *parent_thread, int inheri
                                         : alloc_handle_table( process, 0 );
          /* Note: for security reasons, starting a new process does not attempt
           * to use the current impersonation token for the new process */
@@ -104,11 +104,11 @@ index 7d2206f274..74cc320f44 100644
 -    if (!token_assign_label( process->token, security_high_label_sid ))
 -        goto error;
 -
-     /* create the main thread */
-     if (pipe( request_pipe ) == -1)
-     {
+     set_fd_events( process->msg_fd, POLLIN );  /* start listening to events */
+     return process;
+ 
 diff --git a/server/security.h b/server/security.h
-index 32dfe5f8db..87377ccd67 100644
+index 32dfe5f..87377cc 100644
 --- a/server/security.h
 +++ b/server/security.h
 @@ -59,7 +59,7 @@ extern int token_assign_label( struct token *token, PSID label );
@@ -121,7 +121,7 @@ index 32dfe5f8db..87377ccd67 100644
                                     const LUID_AND_ATTRIBUTES *reqprivs,
                                     unsigned int count, LUID_AND_ATTRIBUTES *usedprivs);
 diff --git a/server/token.c b/server/token.c
-index 28042471b0..e5639fc0d5 100644
+index 5db97b4..bd251c7 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -668,7 +668,7 @@ static int filter_privilege( struct privilege *privilege, const LUID_AND_ATTRIBU
@@ -146,7 +146,7 @@ index 28042471b0..e5639fc0d5 100644
      return token;
  }
  
-@@ -907,6 +913,12 @@ struct token *token_create_admin( void )
+@@ -906,6 +912,12 @@ struct token *token_create_admin( void )
                                admin_source, NULL, -1, TokenElevationTypeFull, &high_label_sid );
          /* we really need a primary group */
          assert( token->primary_group );
@@ -159,7 +159,7 @@ index 28042471b0..e5639fc0d5 100644
      }
  
      free( logon_sid );
-@@ -965,6 +977,12 @@ static struct token *token_create_limited( void )
+@@ -964,6 +976,12 @@ static struct token *token_create_limited( void )
                                admin_source, NULL, -1, TokenElevationTypeLimited, &medium_label_sid );
          /* we really need a primary group */
          assert( token->primary_group );
@@ -172,7 +172,7 @@ index 28042471b0..e5639fc0d5 100644
      }
  
      free( logon_sid );
-@@ -1433,7 +1451,8 @@ DECL_HANDLER(duplicate_token)
+@@ -1432,7 +1450,8 @@ DECL_HANDLER(duplicate_token)
                                                       TOKEN_DUPLICATE,
                                                       &token_ops )))
      {
@@ -182,7 +182,7 @@ index 28042471b0..e5639fc0d5 100644
          if (token)
          {
              unsigned int access = req->access ? req->access : get_handle_access( current->process, req->handle );
-@@ -1463,7 +1482,7 @@ DECL_HANDLER(filter_token)
+@@ -1462,7 +1481,7 @@ DECL_HANDLER(filter_token)
          group_count = get_sid_count( filter_groups, get_req_data_size() - priv_count * sizeof(LUID_AND_ATTRIBUTES) );
  
          token = token_duplicate( src_token, src_token->primary, src_token->impersonation_level, NULL,
@@ -191,7 +191,7 @@ index 28042471b0..e5639fc0d5 100644
          if (token)
          {
              unsigned int access = get_handle_access( current->process, req->handle );
-@@ -1789,23 +1808,11 @@ DECL_HANDLER(set_token_default_dacl)
+@@ -1788,23 +1807,11 @@ DECL_HANDLER(set_token_default_dacl)
  DECL_HANDLER(create_token)
  {
      struct token *token;
@@ -218,5 +218,5 @@ index 28042471b0..e5639fc0d5 100644
      }
  }
 -- 
-2.18.0
+2.7.4
 

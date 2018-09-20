@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "93994dfc0b99789e3a9c1490b4d93082f34b8dcc"
+	echo "b1a3b9e5ce74990777fca94658833802cb7b7a09"
 }
 
 # Show version information
@@ -271,7 +271,6 @@ patch_enable_all ()
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_server_ClipCursor="$1"
-	enable_server_CreateProcess_ACLs="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -979,9 +978,6 @@ patch_enable ()
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
-			;;
-		server-CreateProcess_ACLs)
-			enable_server_CreateProcess_ACLs="$2"
 			;;
 		server-Desktop_Refcount)
 			enable_server_Desktop_Refcount="$2"
@@ -2242,26 +2238,18 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_advapi32_CreateRestrictedToken" -gt 1; then
 		abort "Patchset advapi32-CreateRestrictedToken disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
-		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	if test "$enable_server_Misc_ACL" -gt 1; then
 		abort "Patchset server-Misc_ACL disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
 	enable_Staging=1
 	enable_advapi32_CreateRestrictedToken=1
-	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
 
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
-	if test "$enable_server_CreateProcess_ACLs" -gt 1; then
-		abort "Patchset server-CreateProcess_ACLs disabled, but advapi32-LsaLookupSids depends on that."
-	fi
 	if test "$enable_server_Misc_ACL" -gt 1; then
 		abort "Patchset server-Misc_ACL disabled, but advapi32-LsaLookupSids depends on that."
 	fi
-	enable_server_CreateProcess_ACLs=1
 	enable_server_Misc_ACL=1
 fi
 
@@ -2394,23 +2382,6 @@ if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-CreateProcess_ACLs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22006] Support for process ACLs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/process.c, server/process.c, server/protocol.def
-# |
-if test "$enable_server_CreateProcess_ACLs" -eq 1; then
-	patch_apply server-CreateProcess_ACLs/0001-server-Support-for-thread-and-process-security-descr.patch
-	patch_apply server-CreateProcess_ACLs/0002-kernel32-Implement-passing-security-descriptors-from.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Support for thread and process security descriptors in new_process wineserver call.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Implement passing security descriptors from CreateProcess to the wineserver.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2431,7 +2402,7 @@ fi
 # Patchset advapi32-LsaLookupSids
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-CreateProcess_ACLs, server-Misc_ACL
+# |   *	server-Misc_ACL
 # |
 # | Modified files:
 # |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/token.c
@@ -2475,7 +2446,7 @@ fi
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-CreateProcess_ACLs, server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -4910,7 +4881,7 @@ fi
 # Patchset ntdll-LdrInitializeThunk
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-CreateProcess_ACLs, server-Misc_ACL, advapi32-Token_Integrity_Level
+# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45570] League of Legends 8.12+ fails to start a game (anticheat engine, incorrect implementation of
@@ -5114,8 +5085,7 @@ fi
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-CreateProcess_ACLs, server-Misc_ACL, advapi32-Token_Integrity_Level,
-# | 	ntdll-LdrInitializeThunk
+# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level, ntdll-LdrInitializeThunk
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
@@ -6310,9 +6280,9 @@ fi
 # |   *	[#34321] Fix Cut/Copy/Paste keyboard shortcuts in Total Commander
 # |
 # | Modified files:
-# |   *	dlls/shell32/clipboard.c, dlls/shell32/dataobject.c, dlls/shell32/recyclebin.c, dlls/shell32/shell32.rc,
-# | 	dlls/shell32/shell32_main.h, dlls/shell32/shellfolder.h, dlls/shell32/shfldr_fs.c, dlls/shell32/shfldr_unixfs.c,
-# | 	dlls/shell32/shlview.c, dlls/shell32/shlview_cmenu.c
+# |   *	dlls/shell32/brsfolder.c, dlls/shell32/clipboard.c, dlls/shell32/dataobject.c, dlls/shell32/recyclebin.c,
+# | 	dlls/shell32/shell32.rc, dlls/shell32/shell32_main.h, dlls/shell32/shellfolder.h, dlls/shell32/shfldr_fs.c,
+# | 	dlls/shell32/shfldr_unixfs.c, dlls/shell32/shlview.c, dlls/shell32/shlview_cmenu.c
 # |
 if test "$enable_shell32_Context_Menu" -eq 1; then
 	patch_apply shell32-Context_Menu/0001-shell32-Fix-copying-of-files-when-using-a-context-me.patch

@@ -1,4 +1,4 @@
-From 378f910689602e3367cc72a0248f38ab76cea7d3 Mon Sep 17 00:00:00 2001
+From 099905c587744bd3d4830e75d6183a068ac5bbba Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 6 Aug 2017 02:08:05 +0200
 Subject: [PATCH] server: Implement support for creating processes using a
@@ -151,10 +151,10 @@ index 5fc0d8b..b189036 100644
          break;
      default:
 diff --git a/server/process.c b/server/process.c
-index 00462cf..b7c9da3 100644
+index 653e513..2bb49e2 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -487,7 +487,7 @@ static void start_sigkill_timer( struct process *process )
+@@ -486,7 +486,7 @@ static void start_sigkill_timer( struct process *process )
  /* create a new process */
  /* if the function fails the fd is closed */
  struct process *create_process( int fd, struct thread *parent_thread, int inherit_all,
@@ -172,7 +172,7 @@ index 00462cf..b7c9da3 100644
          process->affinity = parent->affinity;
      }
      if (!process->handles || !process->token) goto error;
-@@ -1129,6 +1129,7 @@ DECL_HANDLER(new_process)
+@@ -1128,6 +1128,7 @@ DECL_HANDLER(new_process)
      const struct security_descriptor *sd;
      const struct object_attributes *objattr = get_req_object_attributes( &sd, &name, NULL );
      struct process *process = NULL;
@@ -180,7 +180,7 @@ index 00462cf..b7c9da3 100644
      struct process *parent = current->process;
      int socket_fd = thread_get_inflight_fd( current, req->socket_fd );
  
-@@ -1169,13 +1170,31 @@ DECL_HANDLER(new_process)
+@@ -1168,13 +1169,31 @@ DECL_HANDLER(new_process)
          return;
      }
  
@@ -213,15 +213,15 @@ index 00462cf..b7c9da3 100644
          return;
      }
  
-@@ -1183,6 +1202,7 @@ DECL_HANDLER(new_process)
+@@ -1182,6 +1201,7 @@ DECL_HANDLER(new_process)
      if (!(info = alloc_object( &startup_info_ops )))
      {
          close( socket_fd );
 +        if (token) release_object( token );
          return;
      }
-     info->exe_file = NULL;
-@@ -1237,7 +1257,7 @@ DECL_HANDLER(new_process)
+     info->process  = NULL;
+@@ -1228,7 +1248,7 @@ DECL_HANDLER(new_process)
  #undef FIXUP_LEN
      }
  
@@ -230,7 +230,7 @@ index 00462cf..b7c9da3 100644
  
      process->startup_info = (struct startup_info *)grab_object( info );
  
-@@ -1295,6 +1315,7 @@ DECL_HANDLER(new_process)
+@@ -1290,6 +1310,7 @@ DECL_HANDLER(new_process)
      reply->handle = alloc_handle_no_access_check( parent, process, req->access, objattr->attributes );
  
   done:
@@ -239,10 +239,10 @@ index 00462cf..b7c9da3 100644
      release_object( info );
  }
 diff --git a/server/process.h b/server/process.h
-index f45a427..65196a9 100644
+index 1128dba..ec44e02 100644
 --- a/server/process.h
 +++ b/server/process.h
-@@ -115,7 +115,7 @@ extern unsigned int alloc_ptid( void *ptr );
+@@ -116,7 +116,7 @@ extern unsigned int alloc_ptid( void *ptr );
  extern void free_ptid( unsigned int id );
  extern void *get_ptid_entry( unsigned int id );
  extern struct process *create_process( int fd, struct thread *parent_thread, int inherit_all,
@@ -252,7 +252,7 @@ index f45a427..65196a9 100644
  extern struct thread *get_process_first_thread( struct process *process );
  extern struct process *get_process_from_id( process_id_t id );
 diff --git a/server/protocol.def b/server/protocol.def
-index 49337ce..a20baf8 100644
+index 2ddc62f..897aa2b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -743,6 +743,7 @@ struct rawinput_device

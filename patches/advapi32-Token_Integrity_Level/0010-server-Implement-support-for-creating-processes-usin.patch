@@ -1,4 +1,4 @@
-From 099905c587744bd3d4830e75d6183a068ac5bbba Mon Sep 17 00:00:00 2001
+From 17a372b226e57f859162779010ff2bec5bddec0f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 6 Aug 2017 02:08:05 +0200
 Subject: [PATCH] server: Implement support for creating processes using a
@@ -15,7 +15,7 @@ Subject: [PATCH] server: Implement support for creating processes using a
  7 files changed, 59 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 5fc0d8b..b189036 100644
+index 8acf921..5129dce 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
 @@ -2027,7 +2027,7 @@ static NTSTATUS alloc_object_attributes( const SECURITY_ATTRIBUTES *attr, struct
@@ -84,7 +84,7 @@ index 5fc0d8b..b189036 100644
      if (new_token) FIXME("No support for returning created process token\n");
  
      if (!(tidy_cmdline = get_file_name( app_name, cmd_line, name, ARRAY_SIZE( name ),
-@@ -2489,20 +2492,20 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2489,18 +2492,18 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                 debugstr_w(name), (binary_info.flags & BINARY_FLAG_64BIT) ? 64 : 32,
                 wine_dbgstr_longlong(binary_info.res_start), wine_dbgstr_longlong(binary_info.res_end),
                 binary_info.arch, (binary_info.flags & BINARY_FLAG_FAKEDLL) ? ", fakedll" : "" );
@@ -92,9 +92,7 @@ index 5fc0d8b..b189036 100644
 +        retv = create_process( token, hFile, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
                                 inherit, flags, startup_info, info, unixdir, &binary_info, FALSE );
          break;
-     case BINARY_OS216:
      case BINARY_WIN16:
-     case BINARY_DOS:
          TRACE( "starting %s as Win16/DOS binary\n", debugstr_w(name) );
 -        retv = create_vdm_process( name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
 +        retv = create_vdm_process( token, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
@@ -108,16 +106,16 @@ index 5fc0d8b..b189036 100644
                                 inherit, flags, startup_info, info, unixdir, &binary_info, FALSE );
          break;
      case BINARY_UNKNOWN:
-@@ -2514,7 +2517,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2512,7 +2515,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                  TRACE( "starting %s as DOS binary\n", debugstr_w(name) );
-                 binary_info.type = BINARY_DOS;
+                 binary_info.type = BINARY_WIN16;
                  binary_info.arch = IMAGE_FILE_MACHINE_I386;
 -                retv = create_vdm_process( name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
 +                retv = create_vdm_process( token, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
                                             inherit, flags, startup_info, info, unixdir,
                                             &binary_info, FALSE );
                  break;
-@@ -2522,7 +2525,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2520,7 +2523,7 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
              if (!strcmpiW( p, batW ) || !strcmpiW( p, cmdW ) )
              {
                  TRACE( "starting %s as batch binary\n", debugstr_w(name) );
@@ -126,7 +124,7 @@ index 5fc0d8b..b189036 100644
                                             inherit, flags, startup_info, info );
                  break;
              }
-@@ -2642,12 +2645,12 @@ static void exec_process( LPCWSTR name )
+@@ -2640,12 +2643,12 @@ static void exec_process( LPCWSTR name )
                 debugstr_w(name), (binary_info.flags & BINARY_FLAG_64BIT) ? 64 : 32,
                 wine_dbgstr_longlong(binary_info.res_start), wine_dbgstr_longlong(binary_info.res_end),
                 binary_info.arch );
@@ -141,9 +139,9 @@ index 5fc0d8b..b189036 100644
                          FALSE, 0, &startup_info, &info, NULL, &binary_info, TRUE );
          break;
      case BINARY_UNKNOWN:
-@@ -2661,7 +2664,7 @@ static void exec_process( LPCWSTR name )
+@@ -2657,7 +2660,7 @@ static void exec_process( LPCWSTR name )
+         /* fall through */
      case BINARY_WIN16:
-     case BINARY_DOS:
          TRACE( "starting %s as Win16/DOS binary\n", debugstr_w(name) );
 -        create_vdm_process( name, GetCommandLineW(), NULL, NULL, NULL, NULL,
 +        create_vdm_process( NULL, name, GetCommandLineW(), NULL, NULL, NULL, NULL,

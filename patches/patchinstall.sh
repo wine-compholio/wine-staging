@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d8f3f1b71726b793f2f9a86225a73a7d286e62b3"
+	echo "f11563c65fa50e2f8b7e39cade34bb7a998b26f7"
 }
 
 # Show version information
@@ -4844,8 +4844,7 @@ fi
 # |   *	[#12401] Support for Junction Points
 # |
 # | Modified files:
-# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/Makefile.in,
-# | 	include/ntifs.h
+# |   *	dlls/kernel32/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/ddk/ntifs.h
 # |
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch

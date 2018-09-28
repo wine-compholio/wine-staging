@@ -1,4 +1,4 @@
-From 97655d49034368dde4a9565f15692ae9416b8bc8 Mon Sep 17 00:00:00 2001
+From 204020058c317ff7180f3d637da102526751ac29 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -6,20 +6,18 @@ Subject: [PATCH] ntdll: Add support for junction point creation.
 ---
  dlls/ntdll/file.c       | 91 +++++++++++++++++++++++++++++++++++++++++++++++
  dlls/ntdll/tests/file.c | 94 +++++++++++++++++++++++++++++++++++++++++++++++++
- include/Makefile.in     |  1 +
- include/ntifs.h         | 50 ++++++++++++++++++++++++++
- 4 files changed, 236 insertions(+)
- create mode 100644 include/ntifs.h
+ include/ddk/ntifs.h     | 26 ++++++++++++++
+ 3 files changed, 211 insertions(+)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index c4528fe..8cd673a 100644
+index 348a6b6..d34a28d 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -108,12 +108,14 @@
  #include "winioctl.h"
  #include "ddk/ntddk.h"
  #include "ddk/ntddser.h"
-+#include "ntifs.h"
++#include "ddk/ntifs.h"
  
  WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
@@ -107,7 +105,7 @@ index c4528fe..8cd673a 100644
  /**************************************************************************
   *              NtFsControlFile                 [NTDLL.@]
   *              ZwFsControlFile                 [NTDLL.@]
-@@ -1738,11 +1810,30 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1728,11 +1800,30 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
          }
          break;
      }
@@ -139,18 +137,18 @@ index c4528fe..8cd673a 100644
          return server_ioctl_file( handle, event, apc, apc_context, io, code,
                                    in_buffer, in_size, out_buffer, out_size );
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index bf87000..198e415 100644
+index 6d5ce72..60b32f5 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -37,6 +37,7 @@
- #include "winternl.h"
+@@ -38,6 +38,7 @@
  #include "winuser.h"
  #include "winioctl.h"
-+#include "ntifs.h"
+ #include "winnls.h"
++#include "ddk/ntifs.h"
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -4335,6 +4336,98 @@ static void test_query_ea(void)
+@@ -4540,6 +4541,98 @@ static void test_query_ea(void)
      #undef EA_BUFFER_SIZE
  }
  
@@ -249,53 +247,20 @@ index bf87000..198e415 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -4401,4 +4494,5 @@ START_TEST(file)
+@@ -4607,4 +4700,5 @@ START_TEST(file)
      test_ioctl();
      test_flush_buffers_file();
      test_query_ea();
 +    test_junction_points();
  }
-diff --git a/include/Makefile.in b/include/Makefile.in
-index 78ab095..dc2bede 100644
---- a/include/Makefile.in
-+++ b/include/Makefile.in
-@@ -469,6 +469,7 @@ SOURCES = \
- 	ntddstor.h \
- 	ntdef.h \
- 	ntdsapi.h \
-+	ntifs.h \
- 	ntlsa.h \
- 	ntquery.h \
- 	ntsecapi.h \
-diff --git a/include/ntifs.h b/include/ntifs.h
-new file mode 100644
-index 0000000..85100fe
---- /dev/null
-+++ b/include/ntifs.h
-@@ -0,0 +1,50 @@
-+/*
-+ * Win32 definitions for Windows NT
-+ *
-+ * Copyright 2012 Erich Hoover
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
-+
-+#ifndef __WINE_NTIFS_H
-+#define __WINE_NTIFS_H
-+
+diff --git a/include/ddk/ntifs.h b/include/ddk/ntifs.h
+index a1ed847..ccbd2a7 100644
+--- a/include/ddk/ntifs.h
++++ b/include/ddk/ntifs.h
+@@ -132,4 +132,30 @@ typedef struct _FS_FILTER_CALLBACKS
+ BOOLEAN WINAPI FsRtlIsNameInExpression(PUNICODE_STRING, PUNICODE_STRING, BOOLEAN, PWCH);
+ NTSTATUS WINAPI ObQueryNameString(PVOID,POBJECT_NAME_INFORMATION,ULONG,PULONG);
+ 
 +typedef struct _REPARSE_DATA_BUFFER {
 +    ULONG  ReparseTag;
 +    USHORT ReparseDataLength;
@@ -322,7 +287,7 @@ index 0000000..85100fe
 +    };
 +} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
 +
-+#endif /* __WINE_NTIFS_H */
+ #endif
 -- 
-1.9.1
+2.7.4
 

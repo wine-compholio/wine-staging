@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f11563c65fa50e2f8b7e39cade34bb7a998b26f7"
+	echo "d8249c638c9e5bac2869c850d1449bddad01f404"
 }
 
 # Show version information
@@ -328,7 +328,6 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
-	enable_user32_lpCreateParams="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerFindFileA="$1"
@@ -1150,9 +1149,6 @@ patch_enable ()
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
 			;;
-		user32-lpCreateParams)
-			enable_user32_lpCreateParams="$2"
-			;;
 		uxtheme-CloseThemeClass)
 			enable_uxtheme_CloseThemeClass="$2"
 			;;
@@ -1891,13 +1887,6 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		abort "Patchset ntdll-DllRedirects disabled, but uxtheme-GTK_Theming depends on that."
 	fi
 	enable_ntdll_DllRedirects=1
-fi
-
-if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
-	if test "$enable_user32_lpCreateParams" -gt 1; then
-		abort "Patchset user32-lpCreateParams disabled, but user32-MessageBox_WS_EX_TOPMOST depends on that."
-	fi
-	enable_user32_lpCreateParams=1
 fi
 
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
@@ -6739,29 +6728,7 @@ if test "$enable_user32_ListBox_Size" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-lpCreateParams
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40303] Fix pointer to custom dialog control data
-# |
-# | Modified files:
-# |   *	dlls/user32/dialog.c, dlls/user32/tests/dialog.c, dlls/user32/tests/resource.rc, tools/wrc/genres.c
-# |
-if test "$enable_user32_lpCreateParams" -eq 1; then
-	patch_apply user32-lpCreateParams/0001-user32-tests-Add-a-test-for-custom-dialog-control-da.patch
-	patch_apply user32-lpCreateParams/0002-tools-wrc-Fix-generation-of-custom-dialog-control-da.patch
-	patch_apply user32-lpCreateParams/0003-user32-Fix-the-pointer-to-custom-dialog-control-data.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for custom dialog control data.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "tools/wrc: Fix generation of custom dialog control data.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Fix the pointer to custom dialog control data.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-MessageBox_WS_EX_TOPMOST
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	user32-lpCreateParams
 # |
 # | Modified files:
 # |   *	dlls/user32/msgbox.c, dlls/user32/tests/dialog.c

@@ -22,7 +22,7 @@ parallel. If this is the case for your distribution, you will have to type
 `/opt/wine-staging/bin/wine` instead of just `wine`. The same also applies for
 other wine-specific programs like `winecfg`. To learn more about how to use
 Wine Staging, please take a look at the
-[usage instructions](https://github.com/wine-compholio/wine-staging/wiki/Usage).
+[usage instructions](https://github.com/wine-staging/wine-staging/wiki/Usage).
 
 Building
 --------
@@ -73,7 +73,7 @@ Before you proceed with the compilation, please make sure that you installed all
 additional build dependencies required for the Wine Staging features you are
 interested in (check output of `./configure`). More information about building
 Wine Staging, optional build dependencies, and hints for packagers are collected
-in our [Wiki](https://github.com/wine-compholio/wine-staging/wiki/Packaging).
+in our [Wiki](https://github.com/wine-staging/wine-staging/wiki/Packaging).
 
 Contributing
 ------------

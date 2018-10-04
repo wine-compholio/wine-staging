@@ -287,6 +287,7 @@ patch_enable_all ()
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_server_send_hardware_message="$1"
+	enable_setupapi_CM_Request_Device_Eject="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
@@ -1026,6 +1027,9 @@ patch_enable ()
 			;;
 		server-send_hardware_message)
 			enable_server_send_hardware_message="$2"
+			;;
+		setupapi-CM_Request_Device_Eject)
+			enable_setupapi_CM_Request_Device_Eject="$2"
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
@@ -6071,6 +6075,21 @@ if test "$enable_server_send_hardware_message" -eq 1; then
 	patch_apply server-send_hardware_message/0001-server-Improve-handling-of-hooks-for-normal-non-inje.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Improve handling of hooks for normal (non-injected) hardware messages.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset setupapi-CM_Request_Device_Eject
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45879] Added CM_Request_Device_EjectA/W stub
+# |
+# | Modified files:
+# |   *	dlls/setupapi/setupapi.spec, dlls/setupapi/stubs.c, include/cfgmgr32.h
+# |
+if test "$enable_setupapi_CM_Request_Device_Eject" -eq 1; then
+	patch_apply setupapi-CM_Request_Device_Eject/0001-setupapi-Added-CM_Request_Device_EjectA-W-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "setupapi: Added CM_Request_Device_EjectA/W stub.", 1 },';
 	) >> "$patchlist"
 fi
 

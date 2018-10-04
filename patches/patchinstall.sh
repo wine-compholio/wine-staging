@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c96eba60e347e9ce79f8b60e0fac9bf69c165ced"
+	echo "adf451279837743a3b19787eb1e1b9c2b239bcd7"
 }
 
 # Show version information
@@ -2261,12 +2261,14 @@ fi
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
-# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/brush.c, dlls/d2d1/geometry.c, dlls/d3d11/view.c, dlls/d3d8/texture.c,
-# | 	dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/evr/evr.c,
-# | 	dlls/msxml3/schema.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/wsdapi/msgparams.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h
+# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/dc_render_target.c,
+# | 	dlls/d2d1/device.c, dlls/d2d1/geometry.c, dlls/d2d1/hwnd_render_target.c, dlls/d2d1/state_block.c, dlls/d3d11/view.c,
+# | 	dlls/d3d8/texture.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c,
+# | 	dlls/evr/evr.c, dlls/msxml3/schema.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
+# | 	dlls/windowscodecs/info.c, dlls/wsdapi/msgparams.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
+	patch_apply Compiler_Warnings/0001-windowscodecs-Avoid-implicit-cast-of-interface-point.patch
 	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0021-d2d1-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0022-d3d11-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2282,6 +2284,7 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0033-evr-Avoid-implicit-cast-of-interface-pointer.patch
 	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Avoid implicit cast of interface pointer.", 1 },';

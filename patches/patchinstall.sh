@@ -328,6 +328,7 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
+	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerFindFileA="$1"
@@ -1148,6 +1149,9 @@ patch_enable ()
 			;;
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
+			;;
+		user32-msgbox-Support-WM_COPY-mesg)
+			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
 			;;
 		uxtheme-CloseThemeClass)
 			enable_uxtheme_CloseThemeClass="$2"
@@ -6812,6 +6816,21 @@ if test "$enable_user32_ShowWindow" -eq 1; then
 	patch_apply user32-ShowWindow/0001-user32-ShowWindow-should-not-send-message-when-windo.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "user32: ShowWindow should not send message when window is already visible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-msgbox-Support-WM_COPY-mesg
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#17205] Support WM_COPY in MessageBox dialogs.
+# |
+# | Modified files:
+# |   *	dlls/user32/msgbox.c, dlls/user32/tests/dialog.c
+# |
+if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
+	patch_apply user32-msgbox-Support-WM_COPY-mesg/0001-user32-msgbox-Support-WM_COPY-Message.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32/msgbox: Support WM_COPY Message.", 1 },';
 	) >> "$patchlist"
 fi
 

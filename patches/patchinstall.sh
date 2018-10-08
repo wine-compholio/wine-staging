@@ -364,6 +364,7 @@ patch_enable_all ()
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
+	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1257,6 +1258,9 @@ patch_enable ()
 			;;
 		wined3d-WINED3D_RS_COLORWRITEENABLE)
 			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
+			;;
+		wined3d-mesa_texture_download)
+			enable_wined3d_mesa_texture_download="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -7485,6 +7489,21 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-mesa_texture_download
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45901] Avoid GPU synchronization due to GPU-CPU transfer (Overwatch)
+# |
+# | Modified files:
+# |   *	dlls/wined3d/texture.c
+# |
+if test "$enable_wined3d_mesa_texture_download" -eq 1; then
+	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-wined3d_guess_gl_vendor
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7600,6 +7619,10 @@ if test "$enable_wineps_drv_PostScript_Fixes" -eq 1; then
 fi
 
 # Patchset winepulse-PulseAudio_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37042] Implement exclusive mode in PulseAudio backend
+# |   *	[#28282] Sound constantly crackling in a lot of games
 # |
 # | Modified files:
 # |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c

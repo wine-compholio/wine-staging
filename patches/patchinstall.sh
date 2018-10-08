@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2e754a652725c067bc44445cebe8b96487ec4a6e"
+	echo "cc4b28a99df649d2885c14fd28c2ad2f0c2abdad"
 }
 
 # Show version information
@@ -91,7 +91,6 @@ patch_enable_all ()
 	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
-	enable_advapi32_WinBuiltinAnyPackageSid="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
@@ -105,7 +104,6 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
-	enable_d3d11_Depth_Bias="$1"
 	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
@@ -441,9 +439,6 @@ patch_enable ()
 		advapi32-Token_Integrity_Level)
 			enable_advapi32_Token_Integrity_Level="$2"
 			;;
-		advapi32-WinBuiltinAnyPackageSid)
-			enable_advapi32_WinBuiltinAnyPackageSid="$2"
-			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
 			;;
@@ -482,9 +477,6 @@ patch_enable ()
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
-			;;
-		d3d11-Depth_Bias)
-			enable_d3d11_Depth_Bias="$2"
 			;;
 		d3d8-ValidateShader)
 			enable_d3d8_ValidateShader="$2"
@@ -1809,13 +1801,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
 
-if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
-	if test "$enable_d3d11_Depth_Bias" -gt 1; then
-		abort "Patchset d3d11-Depth_Bias disabled, but wined3d-WINED3D_RS_COLORWRITEENABLE depends on that."
-	fi
-	enable_d3d11_Depth_Bias=1
-fi
-
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_d3d11_Deferred_Context" -gt 1; then
 		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Main depends on that."
@@ -2506,23 +2491,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset advapi32-WinBuiltinAnyPackageSid
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41934] Assigns the AC abbreviation to WinBuiltinAnyPackageSid
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c
-# |
-if test "$enable_advapi32_WinBuiltinAnyPackageSid" -eq 1; then
-	patch_apply advapi32-WinBuiltinAnyPackageSid/0001-advapi32-SDDL-assigns-the-AC-abbreviation-to-WinBuil.patch
-	patch_apply advapi32-WinBuiltinAnyPackageSid/0002-advapi32-tests-Add-a-test-that-compares-a-well-known.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32: SDDL assigns the \"AC\" abbreviation to WinBuiltinAnyPackageSid.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "advapi32/tests: Add a test that compares a well-known SID to a SID created from a SDDL abbreviation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset api-ms-win-Stub_DLLs
 # |
 # | Modified files:
@@ -2903,24 +2871,6 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement restoring of state after executing a command list.", 1 },';
 		printf '%s\n' '+    { "Steve Melenchuk", "d3d11: Allow NULL pointer for initial count in d3d11_deferred_context_CSSetUnorderedAccessViews.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Correctly align map info buffer.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d11-Depth_Bias
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43848] Implement support for depth bias clamping
-# |
-# | Modified files:
-# |   *	dlls/d3d10core/tests/d3d10core.c, dlls/d3d11/device.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c,
-# | 	dlls/wined3d/state.c, dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_gl.h, include/wine/wined3d.h
-# |
-if test "$enable_d3d11_Depth_Bias" -eq 1; then
-	patch_apply d3d11-Depth_Bias/0006-wined3d-Add-support-for-depth-bias-clamping.patch
-	patch_apply d3d11-Depth_Bias/0007-d3d10core-tests-Add-test-for-depth-bias-clamp.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add support for depth bias clamping.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "d3d10core/tests: Add test for depth bias clamp.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7488,9 +7438,6 @@ fi
 
 # Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias
-# |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/state.c,
 # | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h,
@@ -7506,7 +7453,7 @@ fi
 # Patchset wined3d-Indexed_Vertex_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	d3d11-Depth_Bias, wined3d-WINED3D_RS_COLORWRITEENABLE
+# |   *	wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39057] Support for indexed vertex blending

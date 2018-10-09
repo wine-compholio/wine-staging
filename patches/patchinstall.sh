@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cc4b28a99df649d2885c14fd28c2ad2f0c2abdad"
+	echo "9f0534301321c9192c9e3a705b2bae84a2081745"
 }
 
 # Show version information
@@ -226,7 +226,6 @@ patch_enable_all ()
 	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
-	enable_ntdll_RtlSetUnhandledExceptionFilter="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
 	enable_ntdll_Stack_Guard_Page="$1"
@@ -261,7 +260,6 @@ patch_enable_all ()
 	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_oleaut32_x86_64_Marshaller="$1"
-	enable_opengl32_glDebugMessageCallback="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -845,9 +843,6 @@ patch_enable ()
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
 			;;
-		ntdll-RtlSetUnhandledExceptionFilter)
-			enable_ntdll_RtlSetUnhandledExceptionFilter="$2"
-			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
 			;;
@@ -949,9 +944,6 @@ patch_enable ()
 			;;
 		oleaut32-x86_64_Marshaller)
 			enable_oleaut32_x86_64_Marshaller="$2"
-			;;
-		opengl32-glDebugMessageCallback)
-			enable_opengl32_glDebugMessageCallback="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -5094,21 +5086,6 @@ if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlSetUnhandledExceptionFilter
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45566] League of Legends 8.12+ needs ntdll.RtlSetUnhandledExceptionFilter stub
-# |
-# | Modified files:
-# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec
-# |
-if test "$enable_ntdll_RtlSetUnhandledExceptionFilter" -eq 1; then
-	patch_apply ntdll-RtlSetUnhandledExceptionFilter/0001-ntdll-Add-RtlSetUnhandledExceptionFilter-stub.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Add RtlSetUnhandledExceptionFilter stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Serial_Port_Detection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5633,21 +5610,6 @@ if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset opengl32-glDebugMessageCallback
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38402] Fix calling convention of glDebugMessageCallback callback function
-# |
-# | Modified files:
-# |   *	dlls/opengl32/make_opengl, dlls/opengl32/opengl_ext.c, dlls/opengl32/tests/opengl.c, dlls/opengl32/wgl.c
-# |
-if test "$enable_opengl32_glDebugMessageCallback" -eq 1; then
-	patch_apply opengl32-glDebugMessageCallback/0002-opengl32-Add-wrappers-for-glDebugMessageCallback-to-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "opengl32: Add wrappers for glDebugMessageCallback to handle calling convention differences.", 1 },';
 	) >> "$patchlist"
 fi
 

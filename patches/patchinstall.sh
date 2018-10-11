@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9f0534301321c9192c9e3a705b2bae84a2081745"
+	echo "b0c5a77e26c51f60b7d5e4df557f969a044b7fd4"
 }
 
 # Show version information
@@ -158,7 +158,6 @@ patch_enable_all ()
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CopyFileEx="$1"
-	enable_kernel32_Cwd_Startup_Info="$1"
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_GetShortPathName="$1"
@@ -638,9 +637,6 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
-			;;
-		kernel32-Cwd_Startup_Info)
-			enable_kernel32_Cwd_Startup_Info="$2"
 			;;
 		kernel32-Debugger)
 			enable_kernel32_Debugger="$2"
@@ -3888,18 +3884,6 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Cwd_Startup_Info
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c
-# |
-if test "$enable_kernel32_Cwd_Startup_Info" -eq 1; then
-	patch_apply kernel32-Cwd_Startup_Info/0001-kernel32-Allow-non-nullterminated-string-as-working-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Allow non-nullterminated string as working directory in create_startup_info.", 1 },';
 	) >> "$patchlist"
 fi
 

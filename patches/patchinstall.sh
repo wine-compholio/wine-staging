@@ -318,6 +318,7 @@ patch_enable_all ()
 	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetPointerType="$1"
 	enable_user32_GetSystemMetrics="$1"
+	enable_user32_Implement_CascadeWindows="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
@@ -1117,6 +1118,9 @@ patch_enable ()
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
+			;;
+		user32-Implement-CascadeWindows)
+			enable_user32_Implement_CascadeWindows="$2"
 			;;
 		user32-LR_LOADFROMFILE)
 			enable_user32_LR_LOADFROMFILE="$2"
@@ -6675,6 +6679,21 @@ if test "$enable_user32_GetSystemMetrics" -eq 1; then
 	patch_apply user32-GetSystemMetrics/0001-user32-Allow-changing-the-tablet-media-center-status.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "user32: Allow changing the tablet / media center status via wine registry key.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Implement-CascadeWindows
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45968] user32: Implement CascadeWindows
+# |
+# | Modified files:
+# |   *	dlls/user32/mdi.c
+# |
+if test "$enable_user32_Implement_CascadeWindows" -eq 1; then
+	patch_apply user32-Implement-CascadeWindows/0001-user32-Implement-CascadeWindows.patch
+	(
+		printf '%s\n' '+    { "katahiromz", "user32: Implement CascadeWindows.", 1 },';
 	) >> "$patchlist"
 fi
 

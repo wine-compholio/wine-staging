@@ -359,6 +359,7 @@ patch_enable_all ()
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_QUERY_Stubs="$1"
+	enable_wined3d_Restore_DirectX10_Support="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
@@ -1242,6 +1243,9 @@ patch_enable ()
 			;;
 		wined3d-QUERY_Stubs)
 			enable_wined3d_QUERY_Stubs="$2"
+			;;
+		wined3d-Restore-DirectX10-Support)
+			enable_wined3d_Restore_DirectX10_Support="$2"
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
@@ -7470,6 +7474,21 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Check MaxVertexBlendMatrixIndex capability.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Report correct number of blend matrices when software vertex processing is used.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Track updates of vertex blend matrices separately.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Restore-DirectX10-Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45975] Allow Direct 10 to work with legacy nVidia drivers.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/adapter_gl.c
+# |
+if test "$enable_wined3d_Restore_DirectX10_Support" -eq 1; then
+	patch_apply wined3d-Restore-DirectX10-Support/0001-wined3d-Remove-check-for-Polygon-offset-clamping.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wined3d: Remove check for Polygon offset clamping.", 1 },';
 	) >> "$patchlist"
 fi
 

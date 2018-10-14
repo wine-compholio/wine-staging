@@ -2581,6 +2581,9 @@ fi
 
 # Patchset browseui-Progress_Dialog
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45970] - browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog
+# |
 # | Modified files:
 # |   *	dlls/browseui/browseui.rc, dlls/browseui/progressdlg.c, dlls/browseui/resids.h
 # |
@@ -3914,7 +3917,7 @@ fi
 # Patchset kernel32-Disable-GetQueuedCompletionStatusEx
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#45948] Disbale export GetQueuedCompletionStatusEx to stop regression with Steam.
+# |   *	[#45948] Disable export GetQueuedCompletionStatusEx to stop regression with Steam.
 # |
 # | Modified files:
 # |   *	dlls/kernel32/kernel32.spec

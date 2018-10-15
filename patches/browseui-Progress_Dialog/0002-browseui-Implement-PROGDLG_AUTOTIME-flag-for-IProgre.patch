@@ -1,16 +1,20 @@
-From 61fce27e29e7e61b76916d0e1014a3294217fb54 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
-Date: Sat, 28 Feb 2015 02:28:08 +0100
-Subject: browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Subject: [PATCH] browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.
+Message-Id: <PS2P216MB0066C805C2E0BB70A2AA95E593E00@PS2P216MB0066.KORP216.PROD.OUTLOOK.COM>
+Date: Wed, 10 Oct 2018 05:38:30 +0000
 
+From: Michael Müller <michael@fds-team.de>
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45970
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
 ---
- dlls/browseui/browseui.rc   |  5 ++++
- dlls/browseui/progressdlg.c | 64 +++++++++++++++++++++++++++++++++++++++++----
- dlls/browseui/resids.h      |  5 ++++
- 3 files changed, 69 insertions(+), 5 deletions(-)
+ dlls/browseui/browseui.rc   |  5 +++
+ dlls/browseui/progressdlg.c | 65 ++++++++++++++++++++++++++++++++++---
+ dlls/browseui/resids.h      |  5 +++
+ 3 files changed, 70 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/browseui/browseui.rc b/dlls/browseui/browseui.rc
-index 833b139..64b859d 100644
+index 4c612e93e3..6a152d7bcf 100644
 --- a/dlls/browseui/browseui.rc
 +++ b/dlls/browseui/browseui.rc
 @@ -25,6 +25,11 @@ LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
@@ -26,10 +30,10 @@ index 833b139..64b859d 100644
  
  IDD_PROGRESS_DLG DIALOG 0, 0, 260, 85
 diff --git a/dlls/browseui/progressdlg.c b/dlls/browseui/progressdlg.c
-index 598197b..d632860 100644
+index 2355b0cfa0..88c629099a 100644
 --- a/dlls/browseui/progressdlg.c
 +++ b/dlls/browseui/progressdlg.c
-@@ -73,6 +73,9 @@ typedef struct tagProgressDialog {
+@@ -74,6 +74,9 @@ typedef struct tagProgressDialog {
      ULONGLONG ullCompleted;
      ULONGLONG ullTotal;
      HWND hwndDisabledParent;    /* For modal dialog: the parent that need to be re-enabled when the dialog ends */
@@ -39,7 +43,30 @@ index 598197b..d632860 100644
  } ProgressDialog;
  
  static inline ProgressDialog *impl_from_IProgressDialog(IProgressDialog *iface)
-@@ -257,14 +260,18 @@ static DWORD WINAPI dialog_thread(LPVOID lpParameter)
+@@ -158,6 +161,22 @@ static void update_dialog(ProgressDialog *This, DWORD dwUpdate)
+     }
+ }
+ 
++static void load_time_strings(ProgressDialog *This)
++{
++    int i;
++
++    for (i = 0; i < 2; i++)
++    {
++        if (!This->remainingMsg[i])
++            This->remainingMsg[i] = load_string(BROWSEUI_hinstance, IDS_REMAINING1 + i);
++    }
++    for (i = 0; i < 3; i++)
++    {
++        if (!This->timeMsg[i])
++            This->timeMsg[i] = load_string(BROWSEUI_hinstance, IDS_SECONDS + i);
++    }
++}
++
+ static void end_dialog(ProgressDialog *This)
+ {
+     SendMessageW(This->hwnd, WM_DLG_DESTROY, 0, 0);
+@@ -260,14 +279,18 @@ static DWORD WINAPI dialog_thread(LPVOID lpParameter)
  
  static void ProgressDialog_Destructor(ProgressDialog *This)
  {
@@ -61,7 +88,7 @@ index 598197b..d632860 100644
      This->cs.DebugInfo->Spare[0] = 0;
      DeleteCriticalSection(&This->cs);
      heap_free(This);
-@@ -326,8 +333,6 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
+@@ -329,8 +352,6 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
      TRACE("(%p, %p, %x, %p)\n", iface, punkEnableModeless, dwFlags, reserved);
      if (punkEnableModeless || reserved)
          FIXME("Reserved parameters not null (%p, %p)\n", punkEnableModeless, reserved);
@@ -70,34 +97,21 @@ index 598197b..d632860 100644
      if (dwFlags & PROGDLG_NOTIME)
          FIXME("Flags PROGDLG_NOTIME not supported\n");
  
-@@ -358,6 +363,7 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
+@@ -365,6 +386,10 @@ static HRESULT WINAPI ProgressDialog_StartProgressDialog(IProgressDialog *iface,
              This->hwndDisabledParent = hwndDisable;
      }
  
++    if (dwFlags & PROGDLG_AUTOTIME)
++        load_time_strings(This);
++
 +    This->startTime = GetTickCount64();
      LeaveCriticalSection(&This->cs);
  
      return S_OK;
-@@ -406,6 +412,52 @@ static BOOL WINAPI ProgressDialog_HasUserCancelled(IProgressDialog *iface)
+@@ -422,6 +447,34 @@ static BOOL WINAPI ProgressDialog_HasUserCancelled(IProgressDialog *iface)
      return This->isCancelled;
  }
  
-+static void load_time_strings(ProgressDialog *This)
-+{
-+    int i;
-+
-+    for (i = 0; i < 2; i++)
-+    {
-+        if (!This->remainingMsg[i])
-+            This->remainingMsg[i] = load_string(BROWSEUI_hinstance, IDS_REMAINING1 + i);
-+    }
-+    for (i = 0; i < 3; i++)
-+    {
-+        if (!This->timeMsg[i])
-+            This->timeMsg[i] = load_string(BROWSEUI_hinstance, IDS_SECONDS + i);
-+    }
-+}
-+
 +static void update_time_remaining(ProgressDialog *This, ULONGLONG ullCompleted, ULONGLONG ullTotal)
 +{
 +    unsigned int remaining, remainder = 0;
@@ -107,8 +121,6 @@ index 598197b..d632860 100644
 +
 +    if (!This->startTime || !ullCompleted || !ullTotal)
 +        return;
-+
-+    load_time_strings(This);
 +
 +    elapsed = GetTickCount64() - This->startTime;
 +    remaining = (elapsed * ullTotal / ullCompleted - elapsed) / 1000;
@@ -131,7 +143,7 @@ index 598197b..d632860 100644
  static HRESULT WINAPI ProgressDialog_SetProgress64(IProgressDialog *iface, ULONGLONG ullCompleted, ULONGLONG ullTotal)
  {
      ProgressDialog *This = impl_from_IProgressDialog(iface);
-@@ -418,6 +470,8 @@ static HRESULT WINAPI ProgressDialog_SetProgress64(IProgressDialog *iface, ULONG
+@@ -434,6 +487,8 @@ static HRESULT WINAPI ProgressDialog_SetProgress64(IProgressDialog *iface, ULONG
      This->ullCompleted = ullCompleted;
      This->dwUpdate |= UPDATE_PROGRESS;
      hwnd = This->hwnd;
@@ -141,7 +153,7 @@ index 598197b..d632860 100644
  
      if (hwnd)
 diff --git a/dlls/browseui/resids.h b/dlls/browseui/resids.h
-index cd44a8e..865cdd1 100644
+index cd44a8ebd9..865cdd1a5e 100644
 --- a/dlls/browseui/resids.h
 +++ b/dlls/browseui/resids.h
 @@ -21,6 +21,11 @@
@@ -156,6 +168,8 @@ index cd44a8e..865cdd1 100644
  
  #define IDC_ANIMATION           100
  #define IDC_PROGRESS_BAR        102
+
 -- 
-2.3.0
+2.19.1
+
 

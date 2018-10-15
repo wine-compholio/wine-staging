@@ -6129,14 +6129,19 @@ fi
 
 # Patchset setupapi-SetupDiGetDeviceInterfaceDetail
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45963] - Add SetupDiInstallDeviceInterfaces/SetupDiRegisterCoDeviceInstallers stubs
+# |
 # | Modified files:
 # |   *	dlls/setupapi/devinst.c, dlls/setupapi/setupapi.spec, dlls/setupapi/tests/devinst.c
 # |
 if test "$enable_setupapi_SetupDiGetDeviceInterfaceDetail" -eq 1; then
-	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0001-setupapi-Add-spec-file-stub-entry-for-SetupDiInstall.patch
-	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0002-setupapi-SetupDiGetDeviceInterfaceDetail-should-fill.patch
+	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0001-setupapi-Add-SetupDiInstallDeviceInterfaces.patch
+	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0002-setupapi-Add-SetupDiRegisterCoDeviceInstallers-stub.patch
+	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0003-setupapi-SetupDiGetDeviceInterfaceDetail-should-fill.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Add spec file stub entry for SetupDiInstallDeviceInterfaces and SetupDiRegisterCoDeviceInstallers.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "setupapi: Add SetupDiInstallDeviceInterfaces.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "setupapi: Add SetupDiRegisterCoDeviceInstallers stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi: SetupDiGetDeviceInterfaceDetail should fill out DeviceInfoData even if the buffer for DeviceInterfaceData is too small.", 1 },';
 	) >> "$patchlist"
 fi

@@ -1,4 +1,4 @@
-From 5128e0ff8263d52792c16c465869a90736ec76de Mon Sep 17 00:00:00 2001
+From 166e7927af7f75184c6a785eb82626282830fc75 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 6 Aug 2017 02:08:05 +0200
 Subject: [PATCH] server: Implement support for creating processes using a
@@ -15,19 +15,19 @@ Subject: [PATCH] server: Implement support for creating processes using a
  7 files changed, 59 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index c2042b0..5e94fb0 100644
+index 95e50e9..699f214 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -2207,7 +2207,7 @@ static NTSTATUS alloc_object_attributes( const SECURITY_ATTRIBUTES *attr, struct
+@@ -2184,7 +2184,7 @@ static NTSTATUS alloc_object_attributes( const SECURITY_ATTRIBUTES *attr, struct
   * Create a new process. If hFile is a valid handle we have an exe
   * file, otherwise it is a Winelib app.
   */
--static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPWSTR env,
-+static BOOL create_process( HANDLE token, HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPWSTR env,
-                             LPCWSTR cur_dir, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
-                             BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
+-static BOOL create_process( HANDLE hFile, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
++static BOOL create_process( HANDLE token, HANDLE hFile, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
+                             BOOL inherit, DWORD flags, const RTL_USER_PROCESS_PARAMETERS *params,
                              LPPROCESS_INFORMATION info, LPCSTR unixdir,
-@@ -2314,6 +2314,7 @@ static BOOL create_process( HANDLE hFile, LPCWSTR filename, LPWSTR cmd_line, LPW
+                             const pe_image_info_t *pe_info, int exec_only )
+@@ -2285,6 +2285,7 @@ static BOOL create_process( HANDLE hFile, LPSECURITY_ATTRIBUTES psa, LPSECURITY_
          req->access         = PROCESS_ALL_ACCESS;
          req->cpu            = pe_info->cpu;
          req->info_size      = startup_info_size;
@@ -35,45 +35,46 @@ index c2042b0..5e94fb0 100644
          wine_server_add_data( req, objattr, attr_len );
          wine_server_add_data( req, startup_info, startup_info_size );
          wine_server_add_data( req, params->Environment, (env_end - params->Environment) * sizeof(WCHAR) );
-@@ -2431,7 +2432,7 @@ error:
+@@ -2401,7 +2402,7 @@ error:
   *
   * Create a new VDM process for a 16-bit or DOS application.
   */
--static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, LPCWSTR cur_dir,
-+static BOOL create_vdm_process( HANDLE token, LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, LPCWSTR cur_dir,
-                                 LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
-                                 BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
+-static BOOL create_vdm_process( LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
++static BOOL create_vdm_process( HANDLE token, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
+                                 BOOL inherit, DWORD flags, const RTL_USER_PROCESS_PARAMETERS *params,
                                  LPPROCESS_INFORMATION info, LPCSTR unixdir, int exec_only )
-@@ -2456,7 +2457,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
-     sprintfW(new_cmd_line, argsW, winevdm, buffer, cmd_line);
+ {
+@@ -2450,7 +2451,7 @@ static BOOL create_vdm_process( LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES
+ 
      memset( &pe_info, 0, sizeof(pe_info) );
      pe_info.cpu = CPU_x86;
--    ret = create_process( 0, winevdm, new_cmd_line, env, cur_dir, psa, tsa, inherit,
-+    ret = create_process( token, 0, winevdm, new_cmd_line, env, cur_dir, psa, tsa, inherit,
-                           flags, startup, info, unixdir, &pe_info, exec_only );
+-    ret = create_process( 0, psa, tsa, inherit, flags, new_params, info, unixdir, &pe_info, exec_only );
++    ret = create_process( token, 0, psa, tsa, inherit, flags, new_params, info, unixdir, &pe_info, exec_only );
+     RtlDestroyProcessParameters( new_params );
      HeapFree( GetProcessHeap(), 0, new_cmd_line );
      return ret;
-@@ -2468,7 +2469,7 @@ static BOOL create_vdm_process( LPCWSTR filename, LPWSTR cmd_line, LPWSTR env, L
+@@ -2462,7 +2463,7 @@ static BOOL create_vdm_process( LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES
   *
   * Create a new cmd shell process for a .BAT file.
   */
--static BOOL create_cmd_process( LPCWSTR filename, LPWSTR cmd_line, LPVOID env, LPCWSTR cur_dir,
-+static BOOL create_cmd_process( HANDLE token, LPCWSTR filename, LPWSTR cmd_line, LPVOID env, LPCWSTR cur_dir,
-                                 LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
+-static BOOL create_cmd_process( LPCWSTR cur_dir, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
++static BOOL create_cmd_process( HANDLE token, LPCWSTR cur_dir, LPSECURITY_ATTRIBUTES psa, LPSECURITY_ATTRIBUTES tsa,
                                  BOOL inherit, DWORD flags, LPSTARTUPINFOW startup,
+                                 const RTL_USER_PROCESS_PARAMETERS *params,
                                  LPPROCESS_INFORMATION info )
-@@ -2496,8 +2497,8 @@ static BOOL create_cmd_process( LPCWSTR filename, LPWSTR cmd_line, LPVOID env, L
+@@ -2491,9 +2492,9 @@ static BOOL create_cmd_process( LPCWSTR cur_dir, LPSECURITY_ATTRIBUTES psa, LPSE
      strcatW( newcmdline, quotW );
-     strcatW( newcmdline, cmd_line );
+     strcatW( newcmdline, params->CommandLine.Buffer );
      strcatW( newcmdline, quotW );
 -    ret = CreateProcessW( comspec, newcmdline, psa, tsa, inherit,
--                          flags, env, cur_dir, startup, info );
 +    ret = CreateProcessInternalW( token, comspec, newcmdline, psa, tsa, inherit,
-+                                  flags, env, cur_dir, startup, info, NULL );
+                           flags, params->Environment, cur_dir,
+-                          startup, info );
++                          startup, info, NULL );
      HeapFree( GetProcessHeap(), 0, newcmdline );
      return ret;
  }
-@@ -2609,7 +2610,9 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2606,7 +2607,9 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
  
      TRACE("app %s cmdline %s\n", debugstr_w(app_name), debugstr_w(cmd_line) );
  
@@ -84,69 +85,68 @@ index c2042b0..5e94fb0 100644
      if (new_token) FIXME("No support for returning created process token\n");
  
      if (!(tidy_cmdline = get_file_name( app_name, cmd_line, name, ARRAY_SIZE( name ), &hFile, &is_64bit )))
-@@ -2696,18 +2699,18 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2699,18 +2702,18 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
                 debugstr_w(name), is_64bit_arch(pe_info.cpu) ? 64 : 32,
                 wine_dbgstr_longlong(pe_info.base), wine_dbgstr_longlong(pe_info.base + pe_info.map_size),
                 cpu_names[pe_info.cpu] );
--        retv = create_process( hFile, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-+        retv = create_process( NULL, hFile, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-                                inherit, flags, startup_info, info, unixdir, &pe_info, FALSE );
+-        retv = create_process( hFile, process_attr, thread_attr,
++        retv = create_process( NULL, hFile, process_attr, thread_attr,
+                                inherit, flags, params, info, unixdir, &pe_info, FALSE );
          break;
      case BINARY_WIN16:
          TRACE( "starting %s as Win16/DOS binary\n", debugstr_w(name) );
--        retv = create_vdm_process( name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-+        retv = create_vdm_process( token, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-                                    inherit, flags, startup_info, info, unixdir, FALSE );
+-        retv = create_vdm_process( process_attr, thread_attr,
++        retv = create_vdm_process( token, process_attr, thread_attr,
+                                    inherit, flags, params, info, unixdir, FALSE );
          break;
      case BINARY_UNIX_LIB:
          TRACE( "starting %s as %d-bit Winelib app\n",
                 debugstr_w(name), is_64bit_arch(pe_info.cpu) ? 64 : 32 );
--        retv = create_process( hFile, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-+        retv = create_process( token, hFile, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-                                inherit, flags, startup_info, info, unixdir, &pe_info, FALSE );
+-        retv = create_process( hFile, process_attr, thread_attr,
++        retv = create_process( token, hFile, process_attr, thread_attr,
+                                inherit, flags, params, info, unixdir, &pe_info, FALSE );
          break;
      case BINARY_UNKNOWN:
-@@ -2717,14 +2720,14 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
+@@ -2720,14 +2723,14 @@ BOOL WINAPI CreateProcessInternalW( HANDLE token, LPCWSTR app_name, LPWSTR cmd_l
              if (!strcmpiW( p, comW ) || !strcmpiW( p, pifW ))
              {
                  TRACE( "starting %s as DOS binary\n", debugstr_w(name) );
--                retv = create_vdm_process( name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-+                retv = create_vdm_process( token, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-                                            inherit, flags, startup_info, info, unixdir, FALSE );
+-                retv = create_vdm_process( process_attr, thread_attr,
++                retv = create_vdm_process( token, process_attr, thread_attr,
+                                            inherit, flags, params, info, unixdir, FALSE );
                  break;
              }
              if (!strcmpiW( p, batW ) || !strcmpiW( p, cmdW ) )
              {
                  TRACE( "starting %s as batch binary\n", debugstr_w(name) );
--                retv = create_cmd_process( name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-+                retv = create_cmd_process( token, name, tidy_cmdline, envW, cur_dir, process_attr, thread_attr,
-                                            inherit, flags, startup_info, info );
+-                retv = create_cmd_process( cur_dir, process_attr, thread_attr,
++                retv = create_cmd_process( token, cur_dir, process_attr, thread_attr,
+                                            inherit, flags, startup_info, params, info );
                  break;
              }
-@@ -2840,12 +2843,12 @@ static void exec_process( LPCWSTR name )
+@@ -2836,11 +2839,11 @@ static void exec_process( LPCWSTR name )
                 debugstr_w(name), is_64bit_arch(pe_info.cpu) ? 64 : 32,
                 wine_dbgstr_longlong(pe_info.base), wine_dbgstr_longlong(pe_info.base + pe_info.map_size),
                 cpu_names[pe_info.cpu] );
--        create_process( hFile, name, GetCommandLineW(), NULL, NULL, NULL, NULL,
-+        create_process( NULL, hFile, name, GetCommandLineW(), NULL, NULL, NULL, NULL,
-                         FALSE, 0, &startup_info, &info, NULL, &pe_info, TRUE );
+-        create_process( hFile, NULL, NULL, FALSE, 0, params, &info, NULL, &pe_info, TRUE );
++        create_process( NULL, hFile, NULL, NULL, FALSE, 0, params, &info, NULL, &pe_info, TRUE );
          break;
      case BINARY_UNIX_LIB:
          TRACE( "%s is a Unix library, starting as Winelib app\n", debugstr_w(name) );
--        create_process( hFile, name, GetCommandLineW(), NULL, NULL, NULL, NULL,
-+        create_process( NULL, hFile, name, GetCommandLineW(), NULL, NULL, NULL, NULL,
-                         FALSE, 0, &startup_info, &info, NULL, &pe_info, TRUE );
+-        create_process( hFile, NULL, NULL, FALSE, 0, params, &info, NULL, &pe_info, TRUE );
++        create_process( NULL, hFile, NULL, NULL, FALSE, 0, params, &info, NULL, &pe_info, TRUE );
          break;
      case BINARY_UNKNOWN:
-@@ -2855,7 +2858,7 @@ static void exec_process( LPCWSTR name )
+         /* check for .com or .pif extension */
+@@ -2849,7 +2852,7 @@ static void exec_process( LPCWSTR name )
          /* fall through */
      case BINARY_WIN16:
          TRACE( "starting %s as Win16/DOS binary\n", debugstr_w(name) );
--        create_vdm_process( name, GetCommandLineW(), NULL, NULL, NULL, NULL,
-+        create_vdm_process( NULL, name, GetCommandLineW(), NULL, NULL, NULL, NULL,
-                             FALSE, 0, &startup_info, &info, NULL, TRUE );
+-        create_vdm_process( NULL, NULL, FALSE, 0, params, &info, NULL, TRUE );
++        create_vdm_process( NULL, NULL, NULL, FALSE, 0, params, &info, NULL, TRUE );
          break;
      default:
+         break;
 diff --git a/server/process.c b/server/process.c
 index 653e513..2bb49e2 100644
 --- a/server/process.c
@@ -287,7 +287,7 @@ index 21e90cc..32dfe5f 100644
  static inline const ACE_HEADER *ace_next( const ACE_HEADER *ace )
  {
 diff --git a/server/token.c b/server/token.c
-index de1d624..2804247 100644
+index 1184241..5db97b4 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -836,6 +836,12 @@ int token_assign_label( struct token *token, PSID label )
@@ -303,7 +303,7 @@ index de1d624..2804247 100644
  struct token *token_create_admin( void )
  {
      struct token *token = NULL;
-@@ -1263,6 +1269,11 @@ const SID *token_get_primary_group( struct token *token )
+@@ -1262,6 +1268,11 @@ const SID *token_get_primary_group( struct token *token )
      return token->primary_group;
  }
  

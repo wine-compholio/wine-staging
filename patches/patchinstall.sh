@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3f4455c0f043650151873d899e6f7526b994fa93"
+	echo "a303f9cd101a06b7baf6302a90c8b3f6eb29a03c"
 }
 
 # Show version information
@@ -3995,23 +3995,12 @@ fi
 # |   *	[#14901] MoveFile with source == dest should succeed.
 # |
 # | Modified files:
-# |   *	dlls/appwiz.cpl/addons.c, dlls/kernel32/path.c, dlls/kernel32/tests/file.c, dlls/msvcp120/tests/msvcp120.c,
-# | 	dlls/urlmon/tests/url.c, programs/cmd/tests/test_builtins.cmd.exp
+# |   *	dlls/appwiz.cpl/addons.c, dlls/urlmon/tests/url.c
 # |
 if test "$enable_kernel32_MoveFile" -eq 1; then
-	patch_apply kernel32-MoveFile/0001-kernel32-tests-Fix-compilation-with-PSDK.patch
-	patch_apply kernel32-MoveFile/0002-kernel32-tests-Fix-a-bunch-of-access-denied-errors-b.patch
-	patch_apply kernel32-MoveFile/0003-kernel32-tests-Move-the-MoveFile-test-where-it-belon.patch
-	patch_apply kernel32-MoveFile/0004-kernel32-MoveFile-source-source-should-succeed.patch
-	patch_apply kernel32-MoveFile/0005-kernel32-MoveFile-should-make-sure-that-it-has-the-d.patch
 	patch_apply kernel32-MoveFile/0006-urlmon-tests-Add-test-for-opening-cache-file-with-DE.patch
 	patch_apply kernel32-MoveFile/0007-appwiz.cpl-Copy-addons-to-cache-instead-of-moving.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix compilation with PSDK.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Fix a bunch of access denied errors by using a dedicated TEMP directory.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Move the MoveFile test where it belongs.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: MoveFile(source, source) should succeed.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: MoveFile should make sure that it has the delete access to the source file.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "urlmon/tests: Add test for opening cache file with DELETE access.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "appwiz.cpl: Copy addons to cache instead of moving.", 1 },';
 	) >> "$patchlist"

@@ -409,6 +409,7 @@ patch_enable_all ()
 	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
 	enable_xaudio2_7_WMA_support="$1"
 	enable_xaudio2_CommitChanges="$1"
+	enable_xinput1_3_XInputSetState="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1392,6 +1393,9 @@ patch_enable ()
 			;;
 		xaudio2_CommitChanges)
 			enable_xaudio2_CommitChanges="$2"
+			;;
+		xinput1_3-XInputSetState)
+			enable_xinput1_3_XInputSetState="$2"
 			;;
 		*)
 			return 1
@@ -8199,6 +8203,21 @@ if test "$enable_xaudio2_CommitChanges" -eq 1; then
 	patch_apply xaudio2_CommitChanges/0001-xaudio2-Return-S_OK-in-IXAudio2-in-CommitChanges.patch
 	(
 		printf '%s\n' '+    { "Thomas Crider", "xaudio2: Return S_OK in IXAudio2 in CommitChanges.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xinput1_3-XInputSetState
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45992] Report SUCCESS from XInputSetState when FFB isn't available.
+# |
+# | Modified files:
+# |   *	dlls/xinput1_3/hid.c
+# |
+if test "$enable_xinput1_3_XInputSetState" -eq 1; then
+	patch_apply xinput1_3-XInputSetState/0001-xinput1_3-Report-SUCCESS-from-XInputSetState-when-FF.patch
+	(
+		printf '%s\n' '+    { "Beren Minor", "xinput1_3: Report SUCCESS from XInputSetState when FFB isn'\''t available.", 1 },';
 	) >> "$patchlist"
 fi
 

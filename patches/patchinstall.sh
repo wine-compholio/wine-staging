@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a303f9cd101a06b7baf6302a90c8b3f6eb29a03c"
+	echo "e55aca8f498536af974a031c2e9a4d905de9a7cf"
 }
 
 # Show version information
@@ -149,7 +149,6 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
-	enable_hnetcfg_NATUPnP="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -297,7 +296,6 @@ patch_enable_all ()
 	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
-	enable_shell32_SHELL_execute="$1"
 	enable_shell32_SHFileOperation_Move="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
@@ -613,9 +611,6 @@ patch_enable ()
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
-			;;
-		hnetcfg-NATUPnP)
-			enable_hnetcfg_NATUPnP="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -1057,9 +1052,6 @@ patch_enable ()
 			;;
 		shell32-SFGAO_HASSUBFOLDER)
 			enable_shell32_SFGAO_HASSUBFOLDER="$2"
-			;;
-		shell32-SHELL_execute)
-			enable_shell32_SHELL_execute="$2"
 			;;
 		shell32-SHFileOperation_Move)
 			enable_shell32_SHFileOperation_Move="$2"
@@ -3703,31 +3695,6 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset hnetcfg-NATUPnP
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34711] hnetcfg: Add Support for interface UPnPNAT
-# |
-# | Modified files:
-# |   *	dlls/hnetcfg/Makefile.in, dlls/hnetcfg/apps.c, dlls/hnetcfg/hnetcfg.c, dlls/hnetcfg/hnetcfg_private.h,
-# | 	dlls/hnetcfg/hnetcfg_tlb.idl, dlls/hnetcfg/manager.c, dlls/hnetcfg/port.c, dlls/hnetcfg/tests/policy.c,
-# | 	dlls/uuid/uuid.c, include/Makefile.in, include/natupnp.idl
-# |
-if test "$enable_hnetcfg_NATUPnP" -eq 1; then
-	patch_apply hnetcfg-NATUPnP/0001-include-Add-natupnp.idl.patch
-	patch_apply hnetcfg-NATUPnP/0002-hnetcfg-Register-NATUPnP-interface.patch
-	patch_apply hnetcfg-NATUPnP/0003-hnetcfg-Support-IUPnPNAT-interface.patch
-	patch_apply hnetcfg-NATUPnP/0004-hnetcfg-Linked-to-uuid.patch
-	patch_apply hnetcfg-NATUPnP/0005-hnetcfg-tests-Add-IUPnPNAT-interface-tests.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add natupnp.idl.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg: Register NATUPnP interface.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg: Support IUPnPNAT interface.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg: Linked to uuid.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hnetcfg/tests: Add IUPnPNAT interface tests.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset imagehlp-BindImageEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6282,18 +6249,6 @@ if test "$enable_shell32_SFGAO_HASSUBFOLDER" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for unixfs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset shell32-SHELL_execute
-# |
-# | Modified files:
-# |   *	dlls/shell32/shlexec.c, dlls/shell32/tests/shlexec.c
-# |
-if test "$enable_shell32_SHELL_execute" -eq 1; then
-	patch_apply shell32-SHELL_execute/0001-shell32-Properly-fail-when-a-data-object-cannot-be-i.patch
-	(
-		printf '%s\n' '+    { "Mark Jansen", "shell32: Properly fail when a data object cannot be instantiated and expand environment strings in ShellExecute.", 1 },';
 	) >> "$patchlist"
 fi
 

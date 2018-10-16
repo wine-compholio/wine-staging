@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_gdi32_Path_Metafile="$1"
 	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
+	enable_hid_HidD_FlushQueue="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -611,6 +612,9 @@ patch_enable ()
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
+			;;
+		hid-HidD_FlushQueue)
+			enable_hid_HidD_FlushQueue="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -3695,6 +3699,21 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset hid-HidD_FlushQueue
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45878] Implement HidD_FlushQueue
+# |
+# | Modified files:
+# |   *	dlls/hid/hid.spec, dlls/hid/hidd.c
+# |
+if test "$enable_hid_HidD_FlushQueue" -eq 1; then
+	patch_apply hid-HidD_FlushQueue/0001-hid-Implement-HidD_FlushQueue.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hid: Implement HidD_FlushQueue.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset imagehlp-BindImageEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6352,7 +6371,7 @@ fi
 # Patchset widl-SLTG_Typelib_Support
 # |
 # | Modified files:
-# |   *	dlls/oleaut32/typelib.c, dlls/oleaut32/typelib.h, tools/widl/Makefile.in, tools/widl/typelib.c, tools/widl/typelib.h,
+# |   *	dlls/oleaut32/typelib.c, dlls/oleaut32/typelib.h, tools/widl/Makefile.in, tools/widl/register.c, tools/widl/typelib.h,
 # | 	tools/widl/widl.c, tools/widl/widl.h, tools/widl/write_sltg.c
 # |
 if test "$enable_widl_SLTG_Typelib_Support" -eq 1; then

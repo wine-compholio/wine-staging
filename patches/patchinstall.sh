@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "417e94f19936c738a274a2ae879fc6c17db113e1"
+	echo "e52a20f5bf86d156e1130e8268c65e04032e8caa"
 }
 
 # Show version information
@@ -161,7 +161,6 @@ patch_enable_all ()
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_Disable_GetQueuedCompletionStatusEx="$1"
 	enable_kernel32_FindFirstFile="$1"
-	enable_kernel32_GetShortPathName="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_MoveFile="$1"
@@ -649,9 +648,6 @@ patch_enable ()
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
-			;;
-		kernel32-GetShortPathName)
-			enable_kernel32_GetShortPathName="$2"
 			;;
 		kernel32-Job_Tests)
 			enable_kernel32_Job_Tests="$2"
@@ -3933,25 +3929,6 @@ if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Strip invalid characters from mask in FindFirstFileExW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add tests for FindFirstFileA with invalid characters.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-GetShortPathName
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39355] Fix handling of wildcard paths in GetShortPathName and GetLongPathName
-# |
-# | Modified files:
-# |   *	dlls/kernel32/path.c, dlls/kernel32/tests/path.c
-# |
-if test "$enable_kernel32_GetShortPathName" -eq 1; then
-	patch_apply kernel32-GetShortPathName/0001-kernel32-tests-Add-some-tests-for-GetLongPathName-Ge.patch
-	patch_apply kernel32-GetShortPathName/0002-kernel32-GetShortPathName-should-fail-when-called-wi.patch
-	patch_apply kernel32-GetShortPathName/0003-kernel32-GetLongPathName-should-fail-when-called-wit.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add some tests for GetLongPathName/GetShortPathName called with a wildcard.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetShortPathName should fail when called with a wildcard.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: GetLongPathName should fail when called with a wildcard.", 1 },';
 	) >> "$patchlist"
 fi
 

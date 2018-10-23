@@ -1,4 +1,4 @@
-From 971789f2af6149998e54382522569b3790309cf2 Mon Sep 17 00:00:00 2001
+From 7d07ac217db0b5226fed0b7233fdb21ef70b0cc9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 7 Aug 2017 02:28:35 +0200
 Subject: [PATCH] server: Implement token integrity level.
@@ -10,10 +10,10 @@ Subject: [PATCH] server: Implement token integrity level.
  3 files changed, 48 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 9e60196..59c6e49 100644
+index b1dd999cf5..249b715da3 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
-@@ -340,7 +340,7 @@ NTSTATUS WINAPI NtQueryInformationToken(
+@@ -400,7 +400,7 @@ NTSTATUS WINAPI NtQueryInformationToken(
          0,    /* TokenAccessInformation */
          0,    /* TokenVirtualizationAllowed */
          0,    /* TokenVirtualizationEnabled */
@@ -22,7 +22,7 @@ index 9e60196..59c6e49 100644
          0,    /* TokenUIAccess */
          0,    /* TokenMandatoryPolicy */
          0,    /* TokenLogonSid */
-@@ -593,18 +593,23 @@ NTSTATUS WINAPI NtQueryInformationToken(
+@@ -653,18 +653,23 @@ NTSTATUS WINAPI NtQueryInformationToken(
          }
          break;
      case TokenIntegrityLevel:
@@ -55,10 +55,10 @@ index 9e60196..59c6e49 100644
      case TokenAppContainerSid:
          {
 diff --git a/server/protocol.def b/server/protocol.def
-index c961eaf..0bb04cd 100644
+index 93afaabca1..685f69f4e2 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3388,6 +3388,13 @@ enum caret_state
+@@ -3405,6 +3405,13 @@ enum caret_state
      VARARG(sid,SID);              /* the sid specified by which_sid from the token */
  @END
  
@@ -73,10 +73,10 @@ index c961eaf..0bb04cd 100644
      obj_handle_t    handle;       /* handle to the token */
  @REPLY
 diff --git a/server/token.c b/server/token.c
-index 355a523..1ed994a 100644
+index e97c460ae0..fb40c1b551 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -112,6 +112,7 @@ struct token
+@@ -113,6 +113,7 @@ struct token
      TOKEN_SOURCE   source;          /* source of the token */
      int            impersonation_level; /* impersonation level this token is capable of if non-primary token */
      TOKEN_ELEVATION_TYPE elevation; /* elevation level */
@@ -84,7 +84,7 @@ index 355a523..1ed994a 100644
  };
  
  struct privilege
-@@ -544,7 +545,8 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -546,7 +547,8 @@ static struct token *create_token( unsigned primary, const SID *user,
                                     const LUID_AND_ATTRIBUTES *privs, unsigned int priv_count,
                                     const ACL *default_dacl, TOKEN_SOURCE source,
                                     const luid_t *modified_id,
@@ -94,7 +94,7 @@ index 355a523..1ed994a 100644
  {
      struct token *token = alloc_object( &token_ops );
      if (token)
-@@ -625,6 +627,7 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -630,6 +632,7 @@ static struct token *create_token( unsigned primary, const SID *user,
          }
  
          token->source = source;
@@ -102,7 +102,7 @@ index 355a523..1ed994a 100644
      }
      return token;
  }
-@@ -680,7 +683,8 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+@@ -685,7 +688,8 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
                            NULL, 0, src_token->default_dacl,
                            src_token->source, modified_id,
                            impersonation_level,
@@ -112,16 +112,16 @@ index 355a523..1ed994a 100644
      if (!token) return token;
  
      /* copy groups */
-@@ -884,7 +888,7 @@ struct token *token_create_admin( void )
+@@ -891,7 +895,7 @@ struct token *token_create_admin( void )
          static const TOKEN_SOURCE admin_source = {"SeMgr", {0, 0}};
-         token = create_token( TRUE, user_sid, admin_groups, sizeof(admin_groups)/sizeof(admin_groups[0]),
-                               admin_privs, sizeof(admin_privs)/sizeof(admin_privs[0]), default_dacl,
+         token = create_token( TRUE, user_sid, admin_groups, ARRAY_SIZE( admin_groups ),
+                               admin_privs, ARRAY_SIZE( admin_privs ), default_dacl,
 -                              admin_source, NULL, -1, TokenElevationTypeFull );
 +                              admin_source, NULL, -1, TokenElevationTypeFull, &high_label_sid );
          /* we really need a primary group */
          assert( token->primary_group );
      }
-@@ -1530,6 +1534,26 @@ DECL_HANDLER(get_token_sid)
+@@ -1525,6 +1529,26 @@ DECL_HANDLER(get_token_sid)
      }
  }
  
@@ -149,5 +149,5 @@ index 355a523..1ed994a 100644
  DECL_HANDLER(get_token_groups)
  {
 -- 
-1.9.1
+2.19.1
 

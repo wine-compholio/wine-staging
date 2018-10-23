@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e52a20f5bf86d156e1130e8268c65e04032e8caa"
+	echo "82dbf75dc064bb03b5dfc5d8a82b9782a7272ce2"
 }
 
 # Show version information
@@ -96,7 +96,6 @@ patch_enable_all ()
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
 	enable_bcrypt_BCryptGenerateKeyPair="$1"
-	enable_browseui_Progress_Dialog="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -453,9 +452,6 @@ patch_enable ()
 			;;
 		bcrypt-BCryptGenerateKeyPair)
 			enable_bcrypt_BCryptGenerateKeyPair="$2"
-			;;
-		browseui-Progress_Dialog)
-			enable_browseui_Progress_Dialog="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -2572,21 +2568,6 @@ if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
 		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add support for algorithm ECDH P256.", 1 },';
 		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptGenerateKeyPair stub.", 1 },';
 		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptFinalizeKeyPair stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset browseui-Progress_Dialog
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45970] - browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog
-# |
-# | Modified files:
-# |   *	dlls/browseui/browseui.rc, dlls/browseui/progressdlg.c, dlls/browseui/resids.h
-# |
-if test "$enable_browseui_Progress_Dialog" -eq 1; then
-	patch_apply browseui-Progress_Dialog/0002-browseui-Implement-PROGDLG_AUTOTIME-flag-for-IProgre.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "browseui: Implement PROGDLG_AUTOTIME flag for IProgressDialog.", 1 },';
 	) >> "$patchlist"
 fi
 

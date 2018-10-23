@@ -1,7 +1,7 @@
-From 4b428e09733605affb987d369f56ec09d2525858 Mon Sep 17 00:00:00 2001
+From c8dc0ec6406e8449b59c219ede2e9bd88d8a56fa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 00:26:03 +0200
-Subject: server: Implement token elevation information.
+Subject: [PATCH] server: Implement token elevation information.
 
 ---
  dlls/ntdll/nt.c     | 16 ++++++++++++----
@@ -10,10 +10,10 @@ Subject: server: Implement token elevation information.
  3 files changed, 39 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 5822dec9b15..dda6cabe1cf 100644
+index cd271fde9c..b1dd999cf5 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
-@@ -597,18 +597,26 @@ NTSTATUS WINAPI NtQueryInformationToken(
+@@ -625,18 +625,26 @@ NTSTATUS WINAPI NtQueryInformationToken(
          SERVER_END_REQ;
          break;
      case TokenElevationType:
@@ -45,10 +45,10 @@ index 5822dec9b15..dda6cabe1cf 100644
      case TokenSessionId:
          {
 diff --git a/server/protocol.def b/server/protocol.def
-index b3dce66eb9c..33f1d5f0ab8 100644
+index 90af9df7f4..93afaabca1 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3673,6 +3673,14 @@ struct handle_info
+@@ -3643,6 +3643,14 @@ struct handle_info
  @END
  
  
@@ -64,10 +64,10 @@ index b3dce66eb9c..33f1d5f0ab8 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/token.c b/server/token.c
-index 7ab0f634c05..6a1085bae12 100644
+index 6d193603b4..64f20e1b57 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -126,6 +126,7 @@ struct token
+@@ -112,6 +112,7 @@ struct token
      ACL           *default_dacl;    /* the default DACL to assign to objects created by this user */
      TOKEN_SOURCE   source;          /* source of the token */
      int            impersonation_level; /* impersonation level this token is capable of if non-primary token */
@@ -75,7 +75,7 @@ index 7ab0f634c05..6a1085bae12 100644
  };
  
  struct privilege
-@@ -566,7 +567,7 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -545,7 +546,7 @@ static struct token *create_token( unsigned primary, const SID *user,
                                     const LUID_AND_ATTRIBUTES *privs, unsigned int priv_count,
                                     const ACL *default_dacl, TOKEN_SOURCE source,
                                     const luid_t *modified_id,
@@ -84,7 +84,7 @@ index 7ab0f634c05..6a1085bae12 100644
  {
      struct token *token = alloc_object( &token_ops );
      if (token)
-@@ -588,6 +589,7 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -567,6 +568,7 @@ static struct token *create_token( unsigned primary, const SID *user,
              token->impersonation_level = impersonation_level;
          token->default_dacl = NULL;
          token->primary_group = NULL;
@@ -92,7 +92,7 @@ index 7ab0f634c05..6a1085bae12 100644
  
          /* copy user */
          token->user = memdup( user, security_sid_len( user ));
-@@ -700,7 +702,8 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+@@ -682,7 +684,8 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
      token = create_token( primary, src_token->user, NULL, 0,
                            NULL, 0, src_token->default_dacl,
                            src_token->source, modified_id,
@@ -102,16 +102,16 @@ index 7ab0f634c05..6a1085bae12 100644
      if (!token) return token;
  
      /* copy groups */
-@@ -904,7 +907,7 @@ struct token *token_create_admin( void )
+@@ -888,7 +891,7 @@ struct token *token_create_admin( void )
          static const TOKEN_SOURCE admin_source = {"SeMgr", {0, 0}};
-         token = create_token( TRUE, user_sid, admin_groups, sizeof(admin_groups)/sizeof(admin_groups[0]),
-                               admin_privs, sizeof(admin_privs)/sizeof(admin_privs[0]), default_dacl,
+         token = create_token( TRUE, user_sid, admin_groups, ARRAY_SIZE( admin_groups ),
+                               admin_privs, ARRAY_SIZE( admin_privs ), default_dacl,
 -                              admin_source, NULL, -1 );
 +                              admin_source, NULL, -1, TokenElevationTypeFull );
          /* we really need a primary group */
          assert( token->primary_group );
      }
-@@ -1652,6 +1655,19 @@ DECL_HANDLER(get_token_statistics)
+@@ -1627,6 +1630,19 @@ DECL_HANDLER(get_token_statistics)
      }
  }
  
@@ -132,5 +132,5 @@ index 7ab0f634c05..6a1085bae12 100644
  {
      struct token *token;
 -- 
-2.13.1
+2.19.1
 

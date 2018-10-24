@@ -164,6 +164,7 @@ patch_enable_all ()
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_MoveFile="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
+	enable_kernel32_NormalizeString="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_Profile="$1"
@@ -656,6 +657,9 @@ patch_enable ()
 			;;
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
+			;;
+		kernel32-NormalizeString)
+			enable_kernel32_NormalizeString="$2"
 			;;
 		kernel32-PE_Loader_Fixes)
 			enable_kernel32_PE_Loader_Fixes="$2"
@@ -2148,6 +2152,13 @@ if test "$enable_loader_OSX_Preloader" -eq 1; then
 	fi
 	enable_Staging=1
 	enable_configure_Absolute_RPATH=1
+fi
+
+if test "$enable_libs_Unicode_Collation" -eq 1; then
+	if test "$enable_kernel32_NormalizeString" -gt 1; then
+		abort "Patchset kernel32-NormalizeString disabled, but libs-Unicode_Collation depends on that."
+	fi
+	enable_kernel32_NormalizeString=1
 fi
 
 if test "$enable_kernel32_Processor_Group" -eq 1; then
@@ -3973,6 +3984,28 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-NormalizeString
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42734] Implement NormalizeString
+# |
+# | Modified files:
+# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/locale.c, libs/port/compose.c, libs/port/decompose.c, libs/port/mbtowc.c,
+# | 	tools/make_unicode
+# |
+if test "$enable_kernel32_NormalizeString" -eq 1; then
+	patch_apply kernel32-NormalizeString/0001-tools-make_unicode-Implement-full-Unicode-character-.patch
+	patch_apply kernel32-NormalizeString/0002-tools-make_unicode-Implement-canonical-composition-f.patch
+	patch_apply kernel32-NormalizeString/0003-kernel32-Implement-NormalizeString-API-function.patch
+	patch_apply kernel32-NormalizeString/0004-libs-Generated-make_unicode-files.patch
+	(
+		printf '%s\n' '+    { "Sergio Gómez Del Real", "tools/make_unicode: Implement full Unicode character decomposition.", 1 },';
+		printf '%s\n' '+    { "Sergio Gómez Del Real", "tools/make_unicode: Implement canonical composition for use in normalization.", 1 },';
+		printf '%s\n' '+    { "Sergio Gómez Del Real", "kernel32: Implement NormalizeString API function.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "libs: Generated make_unicode files.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-PE_Loader_Fixes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4147,6 +4180,9 @@ if test "$enable_libs_Debug_Channel" -eq 1; then
 fi
 
 # Patchset libs-Unicode_Collation
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-NormalizeString
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#10767] Fix comparison of punctuation characters in lstrcmp

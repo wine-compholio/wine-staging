@@ -1,4 +1,4 @@
-From f3f0a7694d6b6d130f569cad2f7ffc0681d9c425 Mon Sep 17 00:00:00 2001
+From 1fe3ee5e7cc9efd49203f9b9b67354823f4fe66b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 8 Mar 2017 19:39:29 +0100
 Subject: [PATCH] ntdll: Mimic object type behavior for different windows
@@ -11,7 +11,7 @@ Subject: [PATCH] ntdll: Mimic object type behavior for different windows
  3 files changed, 83 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index b382a48..f059c9f 100644
+index 14c2435..b9a2b93 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -127,6 +127,19 @@ struct smbios_chassis {
@@ -34,7 +34,7 @@ index b382a48..f059c9f 100644
  /*
   *	Token
   */
-@@ -2645,7 +2658,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2658,7 +2671,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
                          shi->Handle[i].OwnerPid     = info[i].owner;
                          shi->Handle[i].HandleValue  = info[i].handle;
                          shi->Handle[i].AccessMask   = info[i].access;
@@ -43,7 +43,7 @@ index b382a48..f059c9f 100644
                          /* FIXME: Fill out HandleFlags, ObjectPointer */
                      }
                  }
-@@ -2697,7 +2710,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2710,7 +2723,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
                          shi->Handle[i].UniqueProcessId = info[i].owner;
                          shi->Handle[i].HandleValue     = info[i].handle;
                          shi->Handle[i].GrantedAccess   = info[i].access;
@@ -69,18 +69,18 @@ index 629f785..060b502 100644
                  }
              }
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index efe7d3b..be137b8 100644
+index d22ef05..6c039ba 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
-@@ -69,6 +69,7 @@ static NTSTATUS (WINAPI *pNtWaitForKeyedEvent)( HANDLE, const void *, BOOLEAN, c
- static NTSTATUS (WINAPI *pNtReleaseKeyedEvent)( HANDLE, const void *, BOOLEAN, const LARGE_INTEGER * );
+@@ -70,6 +70,7 @@ static NTSTATUS (WINAPI *pNtReleaseKeyedEvent)( HANDLE, const void *, BOOLEAN, c
  static NTSTATUS (WINAPI *pNtCreateIoCompletion)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, ULONG);
  static NTSTATUS (WINAPI *pNtOpenIoCompletion)( PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES );
+ static NTSTATUS (WINAPI *pNtQueryInformationFile)(HANDLE, PIO_STATUS_BLOCK, void *, ULONG, FILE_INFORMATION_CLASS);
 +static NTSTATUS (WINAPI *pNtQuerySystemInformation)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
  
  #define KEYEDEVENT_WAIT       0x0001
  #define KEYEDEVENT_WAKE       0x0002
-@@ -1542,13 +1543,31 @@ static void test_query_object(void)
+@@ -1620,13 +1621,31 @@ static void test_query_object(void)
      pRtlFreeUnicodeString( &session );
  }
  
@@ -113,7 +113,7 @@ index efe7d3b..be137b8 100644
  
      buffer = HeapAlloc( GetProcessHeap(), 0, sizeof(OBJECT_TYPES_INFORMATION) );
      ok( buffer != NULL, "Failed to allocate memory\n" );
-@@ -1576,11 +1595,54 @@ static void test_query_object_types(void)
+@@ -1654,11 +1673,54 @@ static void test_query_object_types(void)
              ok( type->TypeName.Length == sizeof(typeW) && !strncmpW(typeW, type->TypeName.Buffer, 4),
                  "Expected 'Type' as first type, got %s\n", wine_dbgstr_us(&type->TypeName) );
          }
@@ -168,10 +168,10 @@ index efe7d3b..be137b8 100644
  }
  
  static void test_type_mismatch(void)
-@@ -2087,6 +2149,7 @@ START_TEST(om)
-     pNtReleaseKeyedEvent    =  (void *)GetProcAddress(hntdll, "NtReleaseKeyedEvent");
+@@ -2173,6 +2235,7 @@ START_TEST(om)
      pNtCreateIoCompletion   =  (void *)GetProcAddress(hntdll, "NtCreateIoCompletion");
      pNtOpenIoCompletion     =  (void *)GetProcAddress(hntdll, "NtOpenIoCompletion");
+     pNtQueryInformationFile =  (void *)GetProcAddress(hntdll, "NtQueryInformationFile");
 +    pNtQuerySystemInformation = (void *)GetProcAddress(hntdll, "NtQuerySystemInformation");
  
      test_case_sensitive();

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "363326678cd2f473b6fcf3d141846fa79007837d"
+	echo "13cdcdae1a9e58f2eec9cd99b7b7f7899b4d111b"
 }
 
 # Show version information
@@ -169,7 +169,6 @@ patch_enable_all ()
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
-	enable_kernel32_SetFileCompletionNotificationModes="$1"
 	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -672,9 +671,6 @@ patch_enable ()
 			;;
 		kernel32-SCSI_Sysfs)
 			enable_kernel32_SCSI_Sysfs="$2"
-			;;
-		kernel32-SetFileCompletionNotificationModes)
-			enable_kernel32_SetFileCompletionNotificationModes="$2"
 			;;
 		kernelbase-PathCchCombineEx)
 			enable_kernelbase_PathCchCombineEx="$2"
@@ -2084,13 +2080,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		abort "Patchset ntdll-NtQueryEaFile disabled, but ntdll-Junction_Points depends on that."
 	fi
 	enable_ntdll_NtQueryEaFile=1
-fi
-
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	if test "$enable_kernel32_SetFileCompletionNotificationModes" -gt 1; then
-		abort "Patchset kernel32-SetFileCompletionNotificationModes disabled, but ntdll-NtQueryEaFile depends on that."
-	fi
-	enable_kernel32_SetFileCompletionNotificationModes=1
 fi
 
 if test "$enable_ntdll_HashLinks" -eq 1; then
@@ -4078,32 +4067,6 @@ if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-SetFileCompletionNotificationModes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38960] Add support for kernel32.SetFileCompletionNotificationModes
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ntdll/tests/pipe.c, dlls/ws2_32/socket.c,
-# | 	dlls/ws2_32/tests/sock.c, server/async.c, server/fd.c, server/file.h, server/protocol.def
-# |
-if test "$enable_kernel32_SetFileCompletionNotificationModes" -eq 1; then
-	patch_apply kernel32-SetFileCompletionNotificationModes/0001-ntdll-Implement-FileIoCompletionNotificationInformat.patch
-	patch_apply kernel32-SetFileCompletionNotificationModes/0002-ntdll-Allow-to-query-file-IO-completion-notification.patch
-	patch_apply kernel32-SetFileCompletionNotificationModes/0003-ws2_32-tests-Add-test-for-completion-notification-fl.patch
-	patch_apply kernel32-SetFileCompletionNotificationModes/0004-ntdll-tests-Add-more-tests-for-FileIoCompletionNotif.patch
-	patch_apply kernel32-SetFileCompletionNotificationModes/0006-server-Skip-async-completion-when-possible.patch
-	patch_apply kernel32-SetFileCompletionNotificationModes/0007-ws2_32-Don-t-skip-completion-in-AcceptEx.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement FileIoCompletionNotificationInformation info class.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query file IO completion notification mode.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32/tests: Add test for completion notification flags.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add more tests for FileIoCompletionNotificationInformation.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Skip async completion when possible.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Don'\''t skip completion in AcceptEx.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernelbase-PathCchCombineEx
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4766,9 +4729,6 @@ fi
 
 # Patchset ntdll-NtQueryEaFile
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileCompletionNotificationModes
-# |
 # | Modified files:
 # |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
 # |
@@ -4782,7 +4742,7 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-SetFileCompletionNotificationModes, ntdll-NtQueryEaFile
+# |   *	ntdll-NtQueryEaFile
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#12401] Support for Junction Points

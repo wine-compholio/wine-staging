@@ -296,6 +296,7 @@ patch_enable_all ()
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
 	enable_shell32_SHFileOperation_Move="$1"
+	enable_shell32_SHGetStockIconInfo="$1"
 	enable_shell32_Toolbar_Bitmaps="$1"
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
@@ -1052,6 +1053,9 @@ patch_enable ()
 			;;
 		shell32-SHFileOperation_Move)
 			enable_shell32_SHFileOperation_Move="$2"
+			;;
+		shell32-SHGetStockIconInfo)
+			enable_shell32_SHGetStockIconInfo="$2"
 			;;
 		shell32-Toolbar_Bitmaps)
 			enable_shell32_Toolbar_Bitmaps="$2"
@@ -6221,6 +6225,21 @@ if test "$enable_shell32_SFGAO_HASSUBFOLDER" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for unixfs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Set SFGAO_HASSUBFOLDER correctly for normal shellfolders.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-SHGetStockIconInfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45868] Improve semi-stub SHGetStockIconInfo
+# |
+# | Modified files:
+# |   *	dlls/shell32/iconcache.c, dlls/shell32/tests/shelllink.c
+# |
+if test "$enable_shell32_SHGetStockIconInfo" -eq 1; then
+	patch_apply shell32-SHGetStockIconInfo/0001-shell32-Improve-semi-stub-SHGetStockIconInfo-try-fin.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "shell32: Improve semi-stub SHGetStockIconInfo, try find existing iconhandle.", 1 },';
 	) >> "$patchlist"
 fi
 

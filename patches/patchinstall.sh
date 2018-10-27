@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "13cdcdae1a9e58f2eec9cd99b7b7f7899b4d111b"
+	echo "d279bc24934fd1b68324017ae1b9e70975640a0a"
 }
 
 # Show version information
@@ -2445,10 +2445,9 @@ fi
 # |   *	[#39262] Run explorer.exe as unevaluated process
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/advapi32/security.c, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c,
-# | 	dlls/kernel32/kernel32.spec, dlls/kernel32/process.c, dlls/kernelbase/kernelbase.spec, dlls/ntdll/loader.c,
-# | 	dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/shell32/shlexec.c,
-# | 	dlls/user32/win.c, include/winbase.h, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
+# |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernel32/process.c,
+# | 	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c,
+# | 	dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
 # | 	programs/runas/runas.rc, server/process.c, server/process.h, server/protocol.def, server/request.c, server/security.h,
 # | 	server/token.c
 # |
@@ -2461,9 +2460,7 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	patch_apply advapi32-Token_Integrity_Level/0006-ntdll-Add-function-to-create-new-tokens-for-elevatio.patch
 	patch_apply advapi32-Token_Integrity_Level/0007-shell32-Implement-process-elevation-using-runas-verb.patch
 	patch_apply advapi32-Token_Integrity_Level/0008-ntdll-Implement-process-token-elevation-through-mani.patch
-	patch_apply advapi32-Token_Integrity_Level/0009-kernel32-Implement-CreateProcessInternalW.patch
 	patch_apply advapi32-Token_Integrity_Level/0010-server-Implement-support-for-creating-processes-usin.patch
-	patch_apply advapi32-Token_Integrity_Level/0011-advapi32-Use-token-in-CreateProcessAsUserW-and-Creat.patch
 	patch_apply advapi32-Token_Integrity_Level/0012-user32-Start-explorer.exe-using-limited-rights.patch
 	patch_apply advapi32-Token_Integrity_Level/0013-server-Correctly-assign-security-labels-for-tokens.patch
 	patch_apply advapi32-Token_Integrity_Level/0014-programs-runas-Basic-implementation-for-starting-pro.patch
@@ -2477,9 +2474,7 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add function to create new tokens for elevation purposes.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Implement process elevation using runas verb.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement process token elevation through manifests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement CreateProcessInternalW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "server: Implement support for creating processes using a token.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "advapi32: Use token in CreateProcessAsUserW and CreateProcessWithTokenW.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Start explorer.exe using limited rights.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "server: Correctly assign security labels for tokens.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "programs/runas: Basic implementation for starting processes with a different trustlevel.", 1 },';

@@ -1,4 +1,4 @@
-From 7d07ac217db0b5226fed0b7233fdb21ef70b0cc9 Mon Sep 17 00:00:00 2001
+From ae503e8e7eb8f4fcb9bf3e642458c2a1bba6ccaa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 7 Aug 2017 02:28:35 +0200
 Subject: [PATCH] server: Implement token integrity level.
@@ -10,19 +10,19 @@ Subject: [PATCH] server: Implement token integrity level.
  3 files changed, 48 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index b1dd999cf5..249b715da3 100644
+index ca26ab15..8aab0a48 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
 @@ -400,7 +400,7 @@ NTSTATUS WINAPI NtQueryInformationToken(
          0,    /* TokenAccessInformation */
          0,    /* TokenVirtualizationAllowed */
-         0,    /* TokenVirtualizationEnabled */
+         sizeof(DWORD), /* TokenVirtualizationEnabled */
 -        sizeof(TOKEN_MANDATORY_LABEL) + sizeof(SID), /* TokenIntegrityLevel [sizeof(SID) includes one SubAuthority] */
 +        0,    /* TokenIntegrityLevel */
          0,    /* TokenUIAccess */
          0,    /* TokenMandatoryPolicy */
          0,    /* TokenLogonSid */
-@@ -653,18 +653,23 @@ NTSTATUS WINAPI NtQueryInformationToken(
+@@ -659,18 +659,23 @@ NTSTATUS WINAPI NtQueryInformationToken(
          }
          break;
      case TokenIntegrityLevel:
@@ -55,7 +55,7 @@ index b1dd999cf5..249b715da3 100644
      case TokenAppContainerSid:
          {
 diff --git a/server/protocol.def b/server/protocol.def
-index 93afaabca1..685f69f4e2 100644
+index 11221d7d..1bfe3234 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -3405,6 +3405,13 @@ enum caret_state
@@ -73,7 +73,7 @@ index 93afaabca1..685f69f4e2 100644
      obj_handle_t    handle;       /* handle to the token */
  @REPLY
 diff --git a/server/token.c b/server/token.c
-index e97c460ae0..fb40c1b551 100644
+index ccde0c2d..2d81118a 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -113,6 +113,7 @@ struct token
@@ -112,7 +112,7 @@ index e97c460ae0..fb40c1b551 100644
      if (!token) return token;
  
      /* copy groups */
-@@ -891,7 +895,7 @@ struct token *token_create_admin( void )
+@@ -890,7 +894,7 @@ struct token *token_create_admin( void )
          static const TOKEN_SOURCE admin_source = {"SeMgr", {0, 0}};
          token = create_token( TRUE, user_sid, admin_groups, ARRAY_SIZE( admin_groups ),
                                admin_privs, ARRAY_SIZE( admin_privs ), default_dacl,
@@ -121,7 +121,7 @@ index e97c460ae0..fb40c1b551 100644
          /* we really need a primary group */
          assert( token->primary_group );
      }
-@@ -1525,6 +1529,26 @@ DECL_HANDLER(get_token_sid)
+@@ -1524,6 +1528,26 @@ DECL_HANDLER(get_token_sid)
      }
  }
  

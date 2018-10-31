@@ -1,4 +1,4 @@
-From 231b7707b5a3f79c63ac3542ba58bf39fc04e972 Mon Sep 17 00:00:00 2001
+From a38788ceb03df268149adad0c74b300220003eca Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 4 Dec 2015 10:36:47 +0100
 Subject: [PATCH] server: Introduce a new alloc_handle object callback. (v2)
@@ -22,7 +22,7 @@ Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
  server/mailslot.c   |  3 +++
  server/mapping.c    |  3 +++
  server/mutex.c      |  1 +
- server/named_pipe.c |  4 ++++
+ server/named_pipe.c |  7 ++++++-
  server/object.c     |  4 ++++
  server/object.h     |  5 ++++-
  server/process.c    |  3 +++
@@ -39,10 +39,10 @@ Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
  server/timer.c      |  1 +
  server/token.c      |  1 +
  server/winstation.c |  2 ++
- 34 files changed, 75 insertions(+), 3 deletions(-)
+ 34 files changed, 77 insertions(+), 4 deletions(-)
 
 diff --git a/server/async.c b/server/async.c
-index f2674bb..4828bcb 100644
+index cadeda3..aab4085 100644
 --- a/server/async.c
 +++ b/server/async.c
 @@ -79,6 +79,7 @@ static const struct object_ops async_ops =
@@ -234,7 +234,7 @@ index cfc0f6a..608fafb 100644
      no_destroy                   /* destroy */
  };
 diff --git a/server/fd.c b/server/fd.c
-index e2d6143..52f70a3 100644
+index 119fae6..5dcd382 100644
 --- a/server/fd.c
 +++ b/server/fd.c
 @@ -218,6 +218,7 @@ static const struct object_ops fd_ops =
@@ -270,7 +270,7 @@ index e2d6143..52f70a3 100644
      no_destroy                  /* destroy */
  };
 diff --git a/server/file.c b/server/file.c
-index 6840223..5eb5e65 100644
+index 8d39f30..2d9134c 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -95,6 +95,7 @@ static const struct object_ops file_ops =
@@ -367,7 +367,7 @@ index 95308c4..bc9089b 100644
      mailslot_device_destroy         /* destroy */
  };
 diff --git a/server/mapping.c b/server/mapping.c
-index 1be6680..fb58376 100644
+index bc59b21..ca803a4 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -77,6 +77,7 @@ static const struct object_ops ranges_ops =
@@ -407,7 +407,7 @@ index d1887e4..a2a0a24 100644
      mutex_destroy              /* destroy */
  };
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 19a5426..bc4d28f 100644
+index 19a5426..8bb2283 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -134,6 +134,7 @@ static const struct object_ops named_pipe_ops =
@@ -434,14 +434,24 @@ index 19a5426..bc4d28f 100644
      fd_close_handle,              /* close_handle */
      pipe_end_destroy              /* destroy */
  };
-@@ -263,6 +266,7 @@ static const struct object_ops named_pipe_device_ops =
+@@ -262,7 +265,8 @@ static const struct object_ops named_pipe_device_ops =
+     directory_link_name,              /* link_name */
      default_unlink_name,              /* unlink_name */
      named_pipe_device_open_file,      /* open_file */
-     no_close_handle,                  /* close_handle */
+-    no_close_handle,                  /* close_handle */
++    no_alloc_handle,                  /* alloc_handle */
 +    fd_close_handle,                  /* close_handle */
      named_pipe_device_destroy         /* destroy */
  };
  
+@@ -290,6 +294,7 @@ static const struct object_ops named_pipe_device_file_ops =
+     no_link_name,                            /* link_name */
+     NULL,                                    /* unlink_name */
+     no_open_file,                            /* open_file */
++    no_alloc_handle,                         /* alloc_handle */
+     fd_close_handle,                         /* close_handle */
+     named_pipe_device_file_destroy           /* destroy */
+ };
 diff --git a/server/object.c b/server/object.c
 index 4455718..14cd38e 100644
 --- a/server/object.c
@@ -482,10 +492,10 @@ index b5c50e1..72ad852 100644
  extern void no_destroy( struct object *obj );
  #ifdef DEBUG_OBJECTS
 diff --git a/server/process.c b/server/process.c
-index 5938fb4..c0a0113 100644
+index 3bd545a..5274dc3 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -85,6 +85,7 @@ static const struct object_ops process_ops =
+@@ -84,6 +84,7 @@ static const struct object_ops process_ops =
      no_link_name,                /* link_name */
      NULL,                        /* unlink_name */
      no_open_file,                /* open_file */
@@ -493,7 +503,7 @@ index 5938fb4..c0a0113 100644
      no_close_handle,             /* close_handle */
      process_destroy              /* destroy */
  };
-@@ -134,6 +135,7 @@ static const struct object_ops startup_info_ops =
+@@ -133,6 +134,7 @@ static const struct object_ops startup_info_ops =
      no_link_name,                  /* link_name */
      NULL,                          /* unlink_name */
      no_open_file,                  /* open_file */
@@ -501,7 +511,7 @@ index 5938fb4..c0a0113 100644
      no_close_handle,               /* close_handle */
      startup_info_destroy           /* destroy */
  };
-@@ -177,6 +179,7 @@ static const struct object_ops job_ops =
+@@ -176,6 +178,7 @@ static const struct object_ops job_ops =
      directory_link_name,           /* link_name */
      default_unlink_name,           /* unlink_name */
      no_open_file,                  /* open_file */
@@ -510,7 +520,7 @@ index 5938fb4..c0a0113 100644
      job_destroy                    /* destroy */
  };
 diff --git a/server/queue.c b/server/queue.c
-index f5d3b19..f51a8f0 100644
+index f274dfb..ca9d677 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -181,6 +181,7 @@ static const struct object_ops msg_queue_ops =
@@ -542,7 +552,7 @@ index 9e6815d..21a6be5 100644
      key_destroy              /* destroy */
  };
 diff --git a/server/request.c b/server/request.c
-index 86f293f..f75f21e 100644
+index c10c4e6..4d0e673 100644
 --- a/server/request.c
 +++ b/server/request.c
 @@ -107,6 +107,7 @@ static const struct object_ops master_socket_ops =
@@ -590,7 +600,7 @@ index 74416fa..4b2b8c4 100644
      handler_destroy           /* destroy */
  };
 diff --git a/server/snapshot.c b/server/snapshot.c
-index a32207c..47316d0 100644
+index e35588a..6e788ab 100644
 --- a/server/snapshot.c
 +++ b/server/snapshot.c
 @@ -71,6 +71,7 @@ static const struct object_ops snapshot_ops =
@@ -634,7 +644,7 @@ index 9199bc5..ecc0e43 100644
      symlink_destroy               /* destroy */
  };
 diff --git a/server/thread.c b/server/thread.c
-index 79e7e1a..b52649e 100644
+index 7162fc3..7e9419b 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -120,6 +120,7 @@ static const struct object_ops thread_apc_ops =
@@ -666,10 +676,10 @@ index 3a786fb..95df28f 100644
      timer_destroy              /* destroy */
  };
 diff --git a/server/token.c b/server/token.c
-index e7b64b2..5df4e35 100644
+index d88f16c..57c2267 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -161,6 +161,7 @@ static const struct object_ops token_ops =
+@@ -155,6 +155,7 @@ static const struct object_ops token_ops =
      no_link_name,              /* link_name */
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */

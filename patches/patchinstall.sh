@@ -4602,6 +4602,9 @@ fi
 
 # Patchset ntdll-Exception
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
+# |
 # | Modified files:
 # |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
 # |

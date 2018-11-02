@@ -1,4 +1,4 @@
-From 50b6f30c9b8c310d0fcc93c7dea04f5e4c781bc3 Mon Sep 17 00:00:00 2001
+From 4289f2b83b6c6c4b3579501deb4b210ff0b28e1d Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 23 Dec 2015 19:37:37 +0800
 Subject: [PATCH] widl: Add initial implementation of SLTG typelib generator.
@@ -7,12 +7,12 @@ Subject: [PATCH] widl: Add initial implementation of SLTG typelib generator.
  tools/widl/Makefile.in  |   3 +-
  tools/widl/typelib.h    |   1 +
  tools/widl/widl.c       |   8 +-
- tools/widl/write_sltg.c | 557 ++++++++++++++++++++++++++++++++++++++++++++++++
+ tools/widl/write_sltg.c | 557 ++++++++++++++++++++++++++++++++++++++++
  4 files changed, 567 insertions(+), 2 deletions(-)
  create mode 100644 tools/widl/write_sltg.c
 
 diff --git a/tools/widl/Makefile.in b/tools/widl/Makefile.in
-index e06d6cc..e7a41c3 100644
+index e06d6cc5b3..e7a41c3082 100644
 --- a/tools/widl/Makefile.in
 +++ b/tools/widl/Makefile.in
 @@ -14,7 +14,8 @@ C_SRCS = \
@@ -26,7 +26,7 @@ index e06d6cc..e7a41c3 100644
  LEX_SRCS   = parser.l
  BISON_SRCS = parser.y
 diff --git a/tools/widl/typelib.h b/tools/widl/typelib.h
-index 7df7d29..5d9f45a 100644
+index 7df7d29082..5d9f45a7c3 100644
 --- a/tools/widl/typelib.h
 +++ b/tools/widl/typelib.h
 @@ -83,4 +83,5 @@ enum VARENUM {
@@ -36,20 +36,20 @@ index 7df7d29..5d9f45a 100644
 +extern int create_sltg_typelib(typelib_t *typelib);
  #endif
 diff --git a/tools/widl/widl.c b/tools/widl/widl.c
-index a38f917..1180e65 100644
+index 96fb2403dd..2f3ac42ed3 100644
 --- a/tools/widl/widl.c
 +++ b/tools/widl/widl.c
-@@ -163,7 +163,8 @@ enum {
-     WIN64_OPTION,
+@@ -165,7 +165,8 @@ enum {
      WIN32_ALIGN_OPTION,
      WIN64_ALIGN_OPTION,
--    APP_CONFIG_OPTION
-+    APP_CONFIG_OPTION,
+     APP_CONFIG_OPTION,
+-    ROBUST_OPTION
++    ROBUST_OPTION,
 +    OLD_TYPELIB_OPTION
  };
  
  static const char short_options[] =
-@@ -185,6 +186,7 @@ static const struct option long_options[] = {
+@@ -188,6 +189,7 @@ static const struct option long_options[] = {
      { "win32-align", 1, NULL, WIN32_ALIGN_OPTION },
      { "win64-align", 1, NULL, WIN64_ALIGN_OPTION },
      { "app_config", 0, NULL, APP_CONFIG_OPTION },
@@ -57,7 +57,7 @@ index a38f917..1180e65 100644
      { NULL, 0, NULL, 0 }
  };
  
-@@ -679,6 +681,10 @@ int main(int argc,char *argv[])
+@@ -685,6 +687,10 @@ int main(int argc,char *argv[])
        do_everything = 0;
        do_typelib = 1;
        break;
@@ -70,7 +70,7 @@ index a38f917..1180e65 100644
        break;
 diff --git a/tools/widl/write_sltg.c b/tools/widl/write_sltg.c
 new file mode 100644
-index 0000000..c4ddaed
+index 0000000000..c4ddaed944
 --- /dev/null
 +++ b/tools/widl/write_sltg.c
 @@ -0,0 +1,557 @@
@@ -632,5 +632,5 @@ index 0000000..c4ddaed
 +    return 1;
 +}
 -- 
-1.9.1
+2.19.1
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3056f9beb95f66e598ab51d5d37b21a548b3e5f8"
+	echo "09a81b30f8ca458db22d73c33545f02fd510702a"
 }
 
 # Show version information
@@ -405,7 +405,6 @@ patch_enable_all ()
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 	enable_xaudio2_7_CreateFX_FXEcho="$1"
-	enable_xaudio2_7_OnVoiceProcessingPassStart="$1"
 	enable_xaudio2_7_WMA_support="$1"
 	enable_xaudio2_CommitChanges="$1"
 	enable_xinput1_3_XInputSetState="$1"
@@ -1381,9 +1380,6 @@ patch_enable ()
 		xaudio2_7-CreateFX-FXEcho)
 			enable_xaudio2_7_CreateFX_FXEcho="$2"
 			;;
-		xaudio2_7-OnVoiceProcessingPassStart)
-			enable_xaudio2_7_OnVoiceProcessingPassStart="$2"
-			;;
 		xaudio2_7-WMA_support)
 			enable_xaudio2_7_WMA_support="$2"
 			;;
@@ -1747,13 +1743,6 @@ patch_apply()
 	patch_apply_file "$patchdir/$1"
 }
 
-
-if test "$enable_xaudio2_7_WMA_support" -eq 1; then
-	if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -gt 1; then
-		abort "Patchset xaudio2_7-OnVoiceProcessingPassStart disabled, but xaudio2_7-WMA_support depends on that."
-	fi
-	enable_xaudio2_7_OnVoiceProcessingPassStart=1
-fi
 
 if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	if test "$enable_server_Desktop_Refcount" -gt 1; then
@@ -8120,25 +8109,7 @@ if test "$enable_xaudio2_7_CreateFX_FXEcho" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset xaudio2_7-OnVoiceProcessingPassStart
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43358] Use assembly wrapper to call OnVoiceProcessingPassStart callback
-# |
-# | Modified files:
-# |   *	dlls/xaudio2_7/xaudio_dll.c
-# |
-if test "$enable_xaudio2_7_OnVoiceProcessingPassStart" -eq 1; then
-	patch_apply xaudio2_7-OnVoiceProcessingPassStart/0001-xaudio2_7-Use-assembly-wrapper-to-call-OnVoiceProces.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "xaudio2_7: Use assembly wrapper to call OnVoiceProcessingPassStart callback.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset xaudio2_7-WMA_support
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	xaudio2_7-OnVoiceProcessingPassStart
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39402] Use ffmpeg 4.x to convert WMA format

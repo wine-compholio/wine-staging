@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "09a81b30f8ca458db22d73c33545f02fd510702a"
+	echo "b618a6c6a73deb78fa4d823b805fe03b99621cfd"
 }
 
 # Show version information
@@ -127,7 +127,6 @@ patch_enable_all ()
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Prevent_viewport_crash="$1"
-	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Deadlock="$1"
@@ -280,7 +279,6 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
-	enable_server_send_hardware_message="$1"
 	enable_setupapi_CM_Request_Device_Eject="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
@@ -545,9 +543,6 @@ patch_enable ()
 			;;
 		ddraw-Prevent_viewport_crash)
 			enable_ddraw_Prevent_viewport_crash="$2"
-			;;
-		ddraw-Rendering_Targets)
-			enable_ddraw_Rendering_Targets="$2"
 			;;
 		ddraw-Silence_FIXMEs)
 			enable_ddraw_Silence_FIXMEs="$2"
@@ -1004,9 +999,6 @@ patch_enable ()
 			;;
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
-			;;
-		server-send_hardware_message)
-			enable_server_send_hardware_message="$2"
 			;;
 		setupapi-CM_Request_Device_Eject)
 			enable_setupapi_CM_Request_Device_Eject="$2"
@@ -3264,21 +3256,6 @@ if test "$enable_ddraw_Prevent_viewport_crash" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ddraw-Rendering_Targets
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34906] Use video memory for rendering targets if possible
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/ddraw_private.h, dlls/ddraw/device.c, dlls/ddraw/surface.c
-# |
-if test "$enable_ddraw_Rendering_Targets" -eq 1; then
-	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-Silence_FIXMEs
 # |
 # | Modified files:
@@ -3418,14 +3395,12 @@ fi
 if test "$enable_dwrite_FontFallback" -eq 1; then
 	patch_apply dwrite-FontFallback/0001-dwrite-Test-IDWriteTextFormat-with-nonexistent-font.patch
 	patch_apply dwrite-FontFallback/0002-dwrite-Test-GetMetrics-with-custom-fontcollection.patch
-	patch_apply dwrite-FontFallback/0003-dwrite-Skip-failing-font-metrics-test-for-Goha.patch
 	patch_apply dwrite-FontFallback/0004-dwrite-Use-font-fallback-when-mapping-characters.patch
 	patch_apply dwrite-FontFallback/0005-dwrite-Use-MapCharacters-for-non-visual-characters.patch
 	patch_apply dwrite-FontFallback/0006-dwrite-Use-MapCharacters-for-dummy-line-metrics.patch
 	(
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Test IDWriteTextFormat with nonexistent font.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Test GetMetrics with custom fontcollection.", 1 },';
-		printf '%s\n' '+    { "Lucian Poston", "dwrite: Skip failing font metrics test for Goha.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use font fallback when mapping characters.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use MapCharacters for non-visual characters.", 1 },';
 		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use MapCharacters for dummy line metrics.", 1 },';
@@ -5819,7 +5794,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
 	patch_apply server-Shared_Memory/0007-server-Store-a-list-of-associated-queues-for-each-th.patch
 	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
-	patch_apply server-Shared_Memory/0009-user32-Cache-the-result-of-GetForegroundWindow.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
@@ -5829,7 +5803,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Cache the result of GetForegroundWindow.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5925,21 +5898,6 @@ if test "$enable_server_device_manager_destroy" -eq 1; then
 	patch_apply server-device_manager_destroy/0001-server-Fix-crash-when-a-device-driver-segfaults-duri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "server: Fix crash when a device driver segfaults during an open file request.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-send_hardware_message
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43102] Improve handling of hooks for normal (non-injected) hardware messages
-# |
-# | Modified files:
-# |   *	server/queue.c
-# |
-if test "$enable_server_send_hardware_message" -eq 1; then
-	patch_apply server-send_hardware_message/0001-server-Improve-handling-of-hooks-for-normal-non-inje.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "server: Improve handling of hooks for normal (non-injected) hardware messages.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7317,14 +7275,12 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/resource.c, dlls/wined3d/surface.c, dlls/wined3d/texture.c
+# |   *	dlls/wined3d/surface.c, dlls/wined3d/texture.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
-	patch_apply wined3d-Silence_FIXMEs/0003-wined3d-Silence-repeated-resource_check_usage-FIXME.patch
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
 	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
 	(
-		printf '%s\n' '+    { "Erich E. Hoover", "wined3d: Silence repeated resource_check_usage FIXME.", 2 },';
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
 	) >> "$patchlist"

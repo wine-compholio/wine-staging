@@ -352,6 +352,7 @@ patch_enable_all ()
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
+	enable_wined3d_Improved_RCP_Support="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Restore_DirectX10_Support="$1"
@@ -1217,6 +1218,9 @@ patch_enable ()
 			;;
 		wined3d-Dual_Source_Blending)
 			enable_wined3d_Dual_Source_Blending="$2"
+			;;
+		wined3d-Improved-RCP_Support)
+			enable_wined3d_Improved_RCP_Support="$2"
 			;;
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
@@ -7289,6 +7293,22 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Improved-RCP_Support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36089] Improve dirt rendering in SpinTires
+# |   *	[#45375] Halo online black display problems
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c
+# |
+if test "$enable_wined3d_Improved_RCP_Support" -eq 1; then
+	patch_apply wined3d-Improved-RCP_Support/0001-wined3d-Improve-dirt-rendering-in-SpinTires.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "wined3d: Improve dirt rendering in SpinTires.", 1 },';
 	) >> "$patchlist"
 fi
 

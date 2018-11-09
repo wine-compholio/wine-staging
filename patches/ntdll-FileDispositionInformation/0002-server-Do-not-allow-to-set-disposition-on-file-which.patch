@@ -1,4 +1,4 @@
-From 28df8b2cf6f5a038f3449f78e8809ae0cf10d345 Mon Sep 17 00:00:00 2001
+From 3a361998b65a72b219bc342cc88d6fe66cc9e45b Mon Sep 17 00:00:00 2001
 From: Qian Hong <qhong@codeweavers.com>
 Date: Fri, 17 Apr 2015 18:39:59 +0800
 Subject: [PATCH] server: Do not allow to set disposition on file which has a
@@ -10,10 +10,10 @@ Subject: [PATCH] server: Do not allow to set disposition on file which has a
  2 files changed, 12 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index cafafa1..5dbf6d5 100644
+index c8979f6f..49c2de22 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -3059,7 +3059,6 @@ todo_wine
+@@ -3060,7 +3060,6 @@ todo_wine
      ok( mapping != NULL, "failed to create file mapping\n");
      fdi.DoDeleteFile = TRUE;
      res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
@@ -21,7 +21,7 @@ index cafafa1..5dbf6d5 100644
      ok( res == STATUS_CANNOT_DELETE, "unexpected FileDispositionInformation result (expected STATUS_CANNOT_DELETE, got %x)\n", res );
      CloseHandle( handle );
      fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
-@@ -3093,7 +3092,6 @@ todo_wine
+@@ -3094,7 +3093,6 @@ todo_wine
      CloseHandle( mapping );
      fdi.DoDeleteFile = TRUE;
      res = pNtSetInformationFile( handle, &io, &fdi, sizeof fdi, FileDispositionInformation );
@@ -30,10 +30,10 @@ index cafafa1..5dbf6d5 100644
      CloseHandle( handle );
      fileDeleted = GetFileAttributesA( buffer ) == INVALID_FILE_ATTRIBUTES && GetLastError() == ERROR_FILE_NOT_FOUND;
 diff --git a/server/fd.c b/server/fd.c
-index 6118f52..25bb24d 100644
+index b700f235..34939d05 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2221,6 +2221,7 @@ static struct fd *get_handle_fd_obj( struct process *process, obj_handle_t handl
+@@ -2309,6 +2309,7 @@ static struct fd *get_handle_fd_obj( struct process *process, obj_handle_t handl
  static void set_fd_disposition( struct fd *fd, int unlink )
  {
      struct stat st;
@@ -41,7 +41,7 @@ index 6118f52..25bb24d 100644
  
      if (!fd->inode)
      {
-@@ -2254,6 +2255,17 @@ static void set_fd_disposition( struct fd *fd, int unlink )
+@@ -2342,6 +2343,17 @@ static void set_fd_disposition( struct fd *fd, int unlink )
          return;
      }
  
@@ -56,9 +56,9 @@ index 6118f52..25bb24d 100644
 +        }
 +    }
 +
-     fd->closed->unlink = unlink || (fd->options & FILE_DELETE_ON_CLOSE);
- }
- 
+     fd->closed->unlink = unlink ? 1 : 0;
+     if (fd->options & FILE_DELETE_ON_CLOSE)
+         fd->closed->unlink = -1;
 -- 
-1.9.1
+2.19.1
 

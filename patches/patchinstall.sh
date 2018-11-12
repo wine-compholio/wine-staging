@@ -391,6 +391,7 @@ patch_enable_all ()
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wmvcore_WMCheckURlExtension="$1"
+	enable_wmvcore_WMCreateSyncReaderPriv="$1"
 	enable_wow64cpu_Wow64Transition="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -1336,6 +1337,9 @@ patch_enable ()
 			;;
 		wmvcore-WMCheckURlExtension)
 			enable_wmvcore_WMCheckURlExtension="$2"
+			;;
+		wmvcore-WMCreateSyncReaderPriv)
+			enable_wmvcore_WMCreateSyncReaderPriv="$2"
 			;;
 		wow64cpu-Wow64Transition)
 			enable_wow64cpu_Wow64Transition="$2"
@@ -7883,6 +7887,21 @@ if test "$enable_wmvcore_WMCheckURlExtension" -eq 1; then
 	patch_apply wmvcore-WMCheckURlExtension/0001-wmvcore-Add-stub-for-WMCheckURlExtension.patch
 	(
 		printf '%s\n' '+    { "Vijay Kiran Kamuju", "wmvcore: Add stub for WMCheckURlExtension.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wmvcore-WMCreateSyncReaderPriv
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37327] wmvcore: Implement WMCreateSyncReaderPriv
+# |
+# | Modified files:
+# |   *	dlls/wmvcore/wmvcore.spec, dlls/wmvcore/wmvcore_main.c
+# |
+if test "$enable_wmvcore_WMCreateSyncReaderPriv" -eq 1; then
+	patch_apply wmvcore-WMCreateSyncReaderPriv/0001-wmvcore-Implement-WMCreateSyncReaderPriv.patch
+	(
+		printf '%s\n' '+    { "Andrey Gusev", "wmvcore: Implement WMCreateSyncReaderPriv.", 1 },';
 	) >> "$patchlist"
 fi
 

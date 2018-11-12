@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e9e12bda62fee68e9fbac5849f7ad1e199ee38b7"
+	echo "ebae298aa4d2711fef35d4ac60c6012438f36d61"
 }
 
 # Show version information
@@ -126,7 +126,6 @@ patch_enable_all ()
 	enable_ddraw_Fix_Typos="$1"
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
-	enable_ddraw_Prevent_viewport_crash="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Deadlock="$1"
@@ -255,7 +254,6 @@ patch_enable_all ()
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_oleaut32_TKIND_COCLASS="$1"
-	enable_oleaut32_x86_64_Marshaller="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -540,9 +538,6 @@ patch_enable ()
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
-			;;
-		ddraw-Prevent_viewport_crash)
-			enable_ddraw_Prevent_viewport_crash="$2"
 			;;
 		ddraw-Silence_FIXMEs)
 			enable_ddraw_Silence_FIXMEs="$2"
@@ -927,9 +922,6 @@ patch_enable ()
 			;;
 		oleaut32-TKIND_COCLASS)
 			enable_oleaut32_TKIND_COCLASS="$2"
-			;;
-		oleaut32-x86_64_Marshaller)
-			enable_oleaut32_x86_64_Marshaller="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -3241,21 +3233,6 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ddraw-Prevent_viewport_crash
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36763] Prevent division by zero in viewport_activate
-# |
-# | Modified files:
-# |   *	dlls/ddraw/viewport.c
-# |
-if test "$enable_ddraw_Prevent_viewport_crash" -eq 1; then
-	patch_apply ddraw-Prevent_viewport_crash/0001-ddraw-Prevent-division-by-zero-in-viewport_acti.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "ddraw: Prevent division by zero in viewport_activate.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-Silence_FIXMEs
 # |
 # | Modified files:
@@ -5469,37 +5446,16 @@ fi
 # |   *	[#39799] Implement ITypeInfo_fnInvoke for TKIND_COCLASS
 # |
 # | Modified files:
-# |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/tmarshal.c, dlls/oleaut32/typelib.c
+# |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/typelib.c
 # |
 if test "$enable_oleaut32_TKIND_COCLASS" -eq 1; then
 	patch_apply oleaut32-TKIND_COCLASS/0001-oleaut32-Pass-a-HREFTYPE-to-get_iface_guid.patch
 	patch_apply oleaut32-TKIND_COCLASS/0002-oleaut32-Implement-ITypeInfo_fnInvoke-for-TKIND_COCL.patch
-	patch_apply oleaut32-TKIND_COCLASS/0003-oleaut32-Handle-TKIND_COCLASS-in-proxy-stub-marshall.patch
 	patch_apply oleaut32-TKIND_COCLASS/0004-oleaut32-tests-Add-a-test-for-TKIND_COCLASS-in-proxy.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Pass a HREFTYPE to get_iface_guid.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Handle TKIND_COCLASS in proxy/stub marshalling.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-x86_64_Marshaller
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26768] Implement stubless proxies on x86_64
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tmarshal.c, dlls/oleaut32/typelib.c, dlls/oleaut32/typelib.h
-# |
-if test "$enable_oleaut32_x86_64_Marshaller" -eq 1; then
-	patch_apply oleaut32-x86_64_Marshaller/0001-oleaut32-Initial-preparation-to-make-marshalling-com.patch
-	patch_apply oleaut32-x86_64_Marshaller/0002-oleaut32-Implement-TMStubImpl_Invoke-on-x86_64.patch
-	patch_apply oleaut32-x86_64_Marshaller/0003-oleaut32-Implement-asm-proxys-for-x86_64.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Initial preparation to make marshalling compatible with x86_64.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement TMStubImpl_Invoke on x86_64.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement asm proxys for x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

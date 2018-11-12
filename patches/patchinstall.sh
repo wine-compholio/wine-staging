@@ -390,6 +390,7 @@ patch_enable_all ()
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
+	enable_wmvcore_WMCheckURlExtension="$1"
 	enable_wow64cpu_Wow64Transition="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -1332,6 +1333,9 @@ patch_enable ()
 			;;
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
+			;;
+		wmvcore-WMCheckURlExtension)
+			enable_wmvcore_WMCheckURlExtension="$2"
 			;;
 		wow64cpu-Wow64Transition)
 			enable_wow64cpu_Wow64Transition="$2"
@@ -7864,6 +7868,21 @@ if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
 	patch_apply wintrust-WTHelperGetProvCertFromChain/0001-wintrust-Add-parameter-check-in-WTHelperGetProvCertF.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintrust: Add parameter check in WTHelperGetProvCertFromChain.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wmvcore-WMCheckURlExtension
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44300] wmvcore: Add stub for WMCheckURlExtension
+# |
+# | Modified files:
+# |   *	dlls/wmvcore/wmvcore.spec, dlls/wmvcore/wmvcore_main.c, include/wmsdkidl.idl
+# |
+if test "$enable_wmvcore_WMCheckURlExtension" -eq 1; then
+	patch_apply wmvcore-WMCheckURlExtension/0001-wmvcore-Add-stub-for-WMCheckURlExtension.patch
+	(
+		printf '%s\n' '+    { "Vijay Kiran Kamuju", "wmvcore: Add stub for WMCheckURlExtension.", 1 },';
 	) >> "$patchlist"
 fi
 

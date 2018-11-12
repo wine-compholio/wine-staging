@@ -110,6 +110,7 @@ patch_enable_all ()
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
+	enable_d3dx9_36_D3DXMatrixTransformation="$1"
 	enable_d3dx9_36_D3DXOptimizeVertices="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
@@ -490,6 +491,9 @@ patch_enable ()
 			;;
 		d3dx9_36-D3DXDisassembleShader)
 			enable_d3dx9_36_D3DXDisassembleShader="$2"
+			;;
+		d3dx9_36-D3DXMatrixTransformation)
+			enable_d3dx9_36_D3DXMatrixTransformation="$2"
 			;;
 		d3dx9_36-D3DXOptimizeVertices)
 			enable_d3dx9_36_D3DXOptimizeVertices="$2"
@@ -2930,6 +2934,21 @@ if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement D3DXDisassembleShader.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36/tests: Add initial tests for D3DXDisassembleShader.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36/tests: Add additional tests for special cases.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-D3DXMatrixTransformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33456] d3dx9_36: D3DXMatrixTransformation support NULL scaling matrix
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/math.c, dlls/d3dx9_36/tests/math.c
+# |
+if test "$enable_d3dx9_36_D3DXMatrixTransformation" -eq 1; then
+	patch_apply d3dx9_36-D3DXMatrixTransformation/0001-d3dx9_36-tests-Fix-D3DXMatrixTransformation-when-the.patch
+	(
+		printf '%s\n' '+    { "David Adam", "d3dx9_36/tests: Fix D3DXMatrixTransformation when the scaling matrix is NULL.", 1 },';
 	) >> "$patchlist"
 fi
 

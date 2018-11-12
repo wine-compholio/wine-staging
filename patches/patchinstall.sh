@@ -326,6 +326,7 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
+	enable_virtdisk_OpenVirtualDisk="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -1139,6 +1140,9 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
+			;;
+		virtdisk-OpenVirtualDisk)
+			enable_virtdisk_OpenVirtualDisk="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -6740,6 +6744,21 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset virtdisk-OpenVirtualDisk
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45947] virtdisk: Stub OpenVirtualDisk
+# |
+# | Modified files:
+# |   *	dlls/virtdisk/virtdisk.spec, dlls/virtdisk/virtdisk_main.c, include/virtdisk.h
+# |
+if test "$enable_virtdisk_OpenVirtualDisk" -eq 1; then
+	patch_apply virtdisk-OpenVirtualDisk/0001-virtdisk-Add-stub-for-OpenVirtualDisk.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "virtdisk: Add stub for OpenVirtualDisk.", 1 },';
 	) >> "$patchlist"
 fi
 

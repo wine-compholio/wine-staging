@@ -1,18 +1,18 @@
-From 6599895d37972742aa9a5709972af934e9c0800f Mon Sep 17 00:00:00 2001
+From 11fa0f222539e2dedaed99783ad6af4577eae250 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Fri, 18 Aug 2017 12:17:52 +0800
-Subject: [PATCH] windowscodecs: Move JPEG frame image data initialization from
- Frame::CopyPixels to Decoder::Initialize. (v2)
+Subject: [PATCH 714/851] windowscodecs: Move JPEG frame image data
+ initialization from Frame::CopyPixels to Decoder::Initialize. (v2)
 
 This is how PNG decoder does things, and it avoids image data corruption
 in some cases (presumably when libjpeg reuses existing scanline data).
 ---
  dlls/windowscodecs/converter.c  |   1 +
- dlls/windowscodecs/jpegformat.c | 152 +++++++++++++++-------------------------
+ dlls/windowscodecs/jpegformat.c | 152 ++++++++++++--------------------
  2 files changed, 57 insertions(+), 96 deletions(-)
 
 diff --git a/dlls/windowscodecs/converter.c b/dlls/windowscodecs/converter.c
-index 42ba260..ad2b3de 100644
+index d23c26250c..39c926c5ca 100644
 --- a/dlls/windowscodecs/converter.c
 +++ b/dlls/windowscodecs/converter.c
 @@ -30,6 +30,7 @@
@@ -24,7 +24,7 @@ index 42ba260..ad2b3de 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(wincodecs);
 diff --git a/dlls/windowscodecs/jpegformat.c b/dlls/windowscodecs/jpegformat.c
-index 27cd880..1feff69 100644
+index c846e6191c..3fb52661a8 100644
 --- a/dlls/windowscodecs/jpegformat.c
 +++ b/dlls/windowscodecs/jpegformat.c
 @@ -50,6 +50,7 @@
@@ -108,7 +108,7 @@ index 27cd880..1feff69 100644
      This->initialized = TRUE;
  
      LeaveCriticalSection(&This->lock);
-@@ -597,104 +650,11 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
+@@ -590,104 +643,11 @@ static HRESULT WINAPI JpegDecoder_Frame_CopyPixels(IWICBitmapFrameDecode *iface,
      const WICRect *prc, UINT cbStride, UINT cbBufferSize, BYTE *pbBuffer)
  {
      JpegDecoder *This = impl_from_IWICBitmapFrameDecode(iface);
@@ -118,7 +118,7 @@ index 27cd880..1feff69 100644
 -    UINT max_row_needed;
 -    jmp_buf jmpbuf;
 -    WICRect rect;
--    TRACE("(%p,%p,%u,%u,%p)\n", iface, prc, cbStride, cbBufferSize, pbBuffer);
+-    TRACE("(%p,%s,%u,%u,%p)\n", iface, debug_wic_rect(prc), cbStride, cbBufferSize, pbBuffer);
 -
 -    if (!prc)
 -    {
@@ -207,7 +207,7 @@ index 27cd880..1feff69 100644
 -    }
 -
 -    LeaveCriticalSection(&This->lock);
-+    TRACE("(%p,%p,%u,%u,%p)\n", iface, prc, cbStride, cbBufferSize, pbBuffer);
++    TRACE("(%p,%s,%u,%u,%p)\n", iface, debug_wic_rect(prc), cbStride, cbBufferSize, pbBuffer);
  
 -    return copy_pixels(bpp, This->image_data,
 -        This->cinfo.output_width, This->cinfo.output_height, stride,
@@ -217,5 +217,5 @@ index 27cd880..1feff69 100644
  }
  
 -- 
-1.9.1
+2.19.1
 

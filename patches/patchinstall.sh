@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ebae298aa4d2711fef35d4ac60c6012438f36d61"
+	echo "ead7e637c0d18760acd446d686ad18526e76e0f0"
 }
 
 # Show version information
@@ -250,7 +250,6 @@ patch_enable_all ()
 	enable_ole32_HGLOBALStream="$1"
 	enable_ole32_STGPROP="$1"
 	enable_oleaut32_CreateTypeLib="$1"
-	enable_oleaut32_DispCallFunc="$1"
 	enable_oleaut32_ITypeInfo_fnInvoke="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
@@ -916,9 +915,6 @@ patch_enable ()
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
-			;;
-		oleaut32-DispCallFunc)
-			enable_oleaut32_DispCallFunc="$2"
 			;;
 		oleaut32-ITypeInfo_fnInvoke)
 			enable_oleaut32_ITypeInfo_fnInvoke="$2"
@@ -2427,7 +2423,7 @@ fi
 # | Modified files:
 # |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/registry.c, dlls/api-ms-win-core-registry-l1-1-0/api-ms-win-core-
 # | 	registry-l1-1-0.spec, dlls/api-ms-win-downlevel-advapi32-l1-1-0/api-ms-win-downlevel-advapi32-l1-1-0.spec,
-# | 	dlls/kernelbase/kernelbase.spec
+# | 	dlls/kernelbase/kernelbase.spec, include/winreg.h
 # |
 if test "$enable_advapi32_RegLoadAppKey" -eq 1; then
 	patch_apply advapi32-RegLoadAppKey/0001-advapi32-Add-RegLoadAppKeyA-RegLoadAppKeyW-stubs.patch
@@ -5410,21 +5406,6 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset oleaut32-DispCallFunc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40160] Fix calling function with instance and VARIANT return type in DispCallFunc
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/typelib.c, dlls/oleaut32/typelib.c
-# |
-if test "$enable_oleaut32_DispCallFunc" -eq 1; then
-	patch_apply oleaut32-DispCallFunc/0001-oleaut32-Fix-calling-function-with-instance-and-VARI.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Fix calling function with instance and VARIANT return type.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset oleaut32-ITypeInfo_fnInvoke
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7325,14 +7306,12 @@ fi
 # | 	wined3d-UAV_Counters
 # |
 # | Modified files:
-# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/view.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/0001-wined3d-Add-additional-synchronization-CS-ops.patch
 	patch_apply wined3d-CSMT_Main/0042-wined3d-Reset-context-before-destruction.patch
 	patch_apply wined3d-CSMT_Main/0045-wined3d-Improve-wined3d_cs_emit_update_sub_resource.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Add additional synchronization CS ops.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 	) >> "$patchlist"

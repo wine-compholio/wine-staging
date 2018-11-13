@@ -207,6 +207,7 @@ patch_enable_all ()
 	enable_ntdll_LdrGetDllHandle="$1"
 	enable_ntdll_LdrInitializeThunk="$1"
 	enable_ntdll_Loader_Machine_Type="$1"
+	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
 	enable_ntdll_NtDevicePath="$1"
@@ -785,6 +786,9 @@ patch_enable ()
 			;;
 		ntdll-Loader_Machine_Type)
 			enable_ntdll_Loader_Machine_Type="$2"
+			;;
+		ntdll-Manifest_Range)
+			enable_ntdll_Manifest_Range="$2"
 			;;
 		ntdll-NtAccessCheck)
 			enable_ntdll_NtAccessCheck="$2"
@@ -4750,6 +4754,21 @@ if test "$enable_ntdll_LdrInitializeThunk" -eq 1; then
 	patch_apply ntdll-LdrInitializeThunk/0001-ntdll-Refactor-LdrInitializeThunk.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor LdrInitializeThunk.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Manifest_Range
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18889] ntdll: Support ISOLATIONAWARE_MANIFEST_RESOURCE_ID range
+# |
+# | Modified files:
+# |   *	dlls/ntdll/actctx.c
+# |
+if test "$enable_ntdll_Manifest_Range" -eq 1; then
+	patch_apply ntdll-Manifest_Range/0001-ntdll-Support-ISOLATIONAWARE_MANIFEST_RESOURCE_ID-ra.patch
+	(
+		printf '%s\n' '+    { "André Hentschel", "ntdll: Support ISOLATIONAWARE_MANIFEST_RESOURCE_ID range.", 1 },';
 	) >> "$patchlist"
 fi
 

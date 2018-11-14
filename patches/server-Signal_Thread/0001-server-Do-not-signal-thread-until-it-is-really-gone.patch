@@ -1,15 +1,33 @@
-From 3c34bb2ce1988fbd772c19339ef10df3df700e2d Mon Sep 17 00:00:00 2001
+From 2be2e3e30d2052362f31e95d1368b67250c0dbac Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
-Date: Mon, 19 Oct 2015 00:34:01 +0200
-Subject: server: Do not signal thread until it is really gone.
+Date: Mon, 12 Nov 2018 18:10:32 +0200
+Subject: [PATCH] server: Do not signal violently terminated threads until they
+ are really gone
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
+When a thread is terminated violently (such as by using TerminateThread)
+that is not the current thread, the server sends a signal to the thread to
+terminate it, but it immediately wakes up anything waiting on it. The caller
+can expect WaitForSingleObject (or similar) to return when the thread is
+really gone and doesn't execute anything anymore, and this is exactly what
+happens on Windows.
+
+If that thread was altering global state, and the thread that was waiting
+on it will read (or alter) the global state *after* waiting for it and
+expecting it to not change (because it assumes the thread is terminated by
+that point, as on Windows), the result will be a race condition, since there's
+no guarantee currently that the terminated thread really stopped executing.
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
 ---
- server/thread.c | 25 +++++++++++++++++++++++--
+ server/thread.c | 32 +++++++++++++++++++++++++++++---
  server/thread.h |  1 +
- 2 files changed, 24 insertions(+), 2 deletions(-)
+ 2 files changed, 30 insertions(+), 3 deletions(-)
 
 diff --git a/server/thread.c b/server/thread.c
-index 5f8405b..7de022b 100644
+index 7162fc3..372882f 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -199,6 +199,7 @@ static inline void init_thread_structure( struct thread *thread )
@@ -20,7 +38,7 @@ index 5f8405b..7de022b 100644
  
      thread->creation_time = current_time;
      thread->exit_time     = 0;
-@@ -320,6 +321,7 @@ static void destroy_thread( struct object *obj )
+@@ -347,6 +348,7 @@ static void destroy_thread( struct object *obj )
      list_remove( &thread->entry );
      cleanup_thread( thread );
      release_object( thread->process );
@@ -28,16 +46,16 @@ index 5f8405b..7de022b 100644
      if (thread->id) free_ptid( thread->id );
      if (thread->token) release_object( thread->token );
  }
-@@ -337,7 +339,7 @@ static void dump_thread( struct object *obj, int verbose )
+@@ -364,7 +366,7 @@ static void dump_thread( struct object *obj, int verbose )
  static int thread_signaled( struct object *obj, struct wait_queue_entry *entry )
  {
      struct thread *mythread = (struct thread *)obj;
 -    return (mythread->state == TERMINATED);
-+    return (mythread->state == TERMINATED && !mythread->exit_poll);
++    return mythread->state == TERMINATED && !mythread->exit_poll;
  }
  
  static unsigned int thread_map_access( struct object *obj, unsigned int access )
-@@ -1095,6 +1097,25 @@ int thread_get_inflight_fd( struct thread *thread, int client )
+@@ -1125,6 +1127,26 @@ int thread_get_inflight_fd( struct thread *thread, int client )
      return -1;
  }
  
@@ -47,6 +65,7 @@ index 5f8405b..7de022b 100644
 +    assert( thread->obj.ops == &thread_ops );
 +    assert( thread->state == TERMINATED );
 +
++    /* don't wake up until the thread is really dead, to avoid race conditions */
 +    if (thread->unix_tid != -1 && !kill( thread->unix_tid, 0 ))
 +    {
 +        thread->exit_poll = add_timeout_user( -TICKS_PER_SEC / 1000, check_terminated, thread );
@@ -63,21 +82,26 @@ index 5f8405b..7de022b 100644
  /* kill a thread on the spot */
  void kill_thread( struct thread *thread, int violent_death )
  {
-@@ -1115,8 +1136,8 @@ void kill_thread( struct thread *thread, int violent_death )
+@@ -1145,8 +1167,12 @@ void kill_thread( struct thread *thread, int violent_death )
      kill_console_processes( thread, 0 );
      debug_exit_thread( thread );
      abandon_mutexes( thread );
 -    wake_up( &thread->obj, 0 );
-     if (violent_death) send_thread_signal( thread, SIGQUIT );
-+    check_terminated( thread );
+-    if (violent_death) send_thread_signal( thread, SIGQUIT );
++    if (violent_death)
++    {
++        send_thread_signal( thread, SIGQUIT );
++        check_terminated( thread );
++    }
++    else wake_up( &thread->obj, 0 );
      cleanup_thread( thread );
      remove_process_thread( thread->process, thread );
      release_object( thread );
 diff --git a/server/thread.h b/server/thread.h
-index 2821991..ac9af24 100644
+index e4332df..1b01c68 100644
 --- a/server/thread.h
 +++ b/server/thread.h
-@@ -88,6 +88,7 @@ struct thread
+@@ -89,6 +89,7 @@ struct thread
      timeout_t              creation_time; /* Thread creation time */
      timeout_t              exit_time;     /* Thread exit time */
      struct token          *token;         /* security token associated with this thread */
@@ -86,5 +110,5 @@ index 2821991..ac9af24 100644
  
  struct thread_snapshot
 -- 
-2.9.0
+1.9.1
 

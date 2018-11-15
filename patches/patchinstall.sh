@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d9c7d4147b569553bc97ef57c6200002fe81565e"
+	echo "ad576b6965fe9ce695bbf91ac229b04459af02d3"
 }
 
 # Show version information
@@ -407,7 +407,6 @@ patch_enable_all ()
 	enable_xaudio2_7_CreateFX_FXEcho="$1"
 	enable_xaudio2_7_WMA_support="$1"
 	enable_xaudio2_CommitChanges="$1"
-	enable_xinput1_3_XInputSetState="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1385,9 +1384,6 @@ patch_enable ()
 			;;
 		xaudio2_CommitChanges)
 			enable_xaudio2_CommitChanges="$2"
-			;;
-		xinput1_3-XInputSetState)
-			enable_xinput1_3_XInputSetState="$2"
 			;;
 		*)
 			return 1
@@ -5738,7 +5734,7 @@ fi
 if test "$enable_server_Signal_Thread" -eq 1; then
 	patch_apply server-Signal_Thread/0001-server-Do-not-signal-thread-until-it-is-really-gone.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not signal thread until it is really gone.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not signal violently terminated threads until they are really gone.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -8131,21 +8127,6 @@ if test "$enable_xaudio2_CommitChanges" -eq 1; then
 	patch_apply xaudio2_CommitChanges/0001-xaudio2-Return-S_OK-in-IXAudio2-in-CommitChanges.patch
 	(
 		printf '%s\n' '+    { "Thomas Crider", "xaudio2: Return S_OK in IXAudio2 in CommitChanges.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xinput1_3-XInputSetState
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45992] Report SUCCESS from XInputSetState when FFB isn't available.
-# |
-# | Modified files:
-# |   *	dlls/xinput1_3/hid.c
-# |
-if test "$enable_xinput1_3_XInputSetState" -eq 1; then
-	patch_apply xinput1_3-XInputSetState/0001-xinput1_3-Report-SUCCESS-from-XInputSetState-when-FF.patch
-	(
-		printf '%s\n' '+    { "Beren Minor", "xinput1_3: Report SUCCESS from XInputSetState when FFB isn'\''t available.", 1 },';
 	) >> "$patchlist"
 fi
 

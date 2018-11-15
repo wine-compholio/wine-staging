@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ead7e637c0d18760acd446d686ad18526e76e0f0"
+	echo "d9c7d4147b569553bc97ef57c6200002fe81565e"
 }
 
 # Show version information
@@ -255,7 +255,6 @@ patch_enable_all ()
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
-	enable_oleaut32_TKIND_COCLASS="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -930,9 +929,6 @@ patch_enable ()
 			;;
 		oleaut32-OleLoadPictureFile)
 			enable_oleaut32_OleLoadPictureFile="$2"
-			;;
-		oleaut32-TKIND_COCLASS)
-			enable_oleaut32_TKIND_COCLASS="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -1760,6 +1756,13 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
 	fi
 	enable_server_Desktop_Refcount=1
+fi
+
+if test "$enable_wmvcore_WMCreateSyncReaderPriv" -eq 1; then
+	if test "$enable_wmvcore_WMCheckURlExtension" -gt 1; then
+		abort "Patchset wmvcore-WMCheckURlExtension disabled, but wmvcore-WMCreateSyncReaderPriv depends on that."
+	fi
+	enable_wmvcore_WMCheckURlExtension=1
 fi
 
 if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
@@ -5491,26 +5494,6 @@ if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset oleaut32-TKIND_COCLASS
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19016] Implement marshalling for TKIND_COCLASS
-# |   *	[#39799] Implement ITypeInfo_fnInvoke for TKIND_COCLASS
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/typelib.c
-# |
-if test "$enable_oleaut32_TKIND_COCLASS" -eq 1; then
-	patch_apply oleaut32-TKIND_COCLASS/0001-oleaut32-Pass-a-HREFTYPE-to-get_iface_guid.patch
-	patch_apply oleaut32-TKIND_COCLASS/0002-oleaut32-Implement-ITypeInfo_fnInvoke-for-TKIND_COCL.patch
-	patch_apply oleaut32-TKIND_COCLASS/0004-oleaut32-tests-Add-a-test-for-TKIND_COCLASS-in-proxy.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Pass a HREFTYPE to get_iface_guid.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32: Implement ITypeInfo_fnInvoke for TKIND_COCLASS in arguments.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "oleaut32/tests: Add a test for TKIND_COCLASS in proxy/stub marshalling.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset opengl32-wglChoosePixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7910,6 +7893,9 @@ if test "$enable_wmvcore_WMCheckURlExtension" -eq 1; then
 fi
 
 # Patchset wmvcore-WMCreateSyncReaderPriv
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wmvcore-WMCheckURlExtension
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37327] wmvcore: Implement WMCreateSyncReaderPriv

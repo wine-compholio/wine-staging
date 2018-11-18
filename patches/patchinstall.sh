@@ -93,6 +93,7 @@ patch_enable_all ()
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
+	enable_atl_AtlAxDialogBox="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
@@ -443,6 +444,9 @@ patch_enable ()
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
+			;;
+		atl-AtlAxDialogBox)
+			enable_atl_AtlAxDialogBox="$2"
 			;;
 		avifil32-IGetFrame_fnSetFormat)
 			enable_avifil32_IGetFrame_fnSetFormat="$2"
@@ -2527,6 +2531,21 @@ if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-appmodel-usercontext-l1-1-0: Add dll and add stub for UserContextExtInitialize.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ext-ms-win-xaml-pal-l1-1-0: Add stub for GetThemeServices.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uiautomationcore: Add dll and stub some functions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset atl-AtlAxDialogBox
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#32749] atl: Implemented AtlAxDialogBox[A,W]
+# |
+# | Modified files:
+# |   *	dlls/atl/atl_ax.c
+# |
+if test "$enable_atl_AtlAxDialogBox" -eq 1; then
+	patch_apply atl-AtlAxDialogBox/0001-atl-Implement-AtlAxDialogBox-A-W.patch
+	(
+		printf '%s\n' '+    { "Qian Hong", "atl: Implement AtlAxDialogBox[A,W].", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2ef62f90853d9903cdded2442e382b89a4c3a55f"
+	echo "63ef9854fb6fc91a8c956a9d91abc07e906a4a33"
 }
 
 # Show version information
@@ -158,7 +158,6 @@ patch_enable_all ()
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Debugger="$1"
-	enable_kernel32_Disable_GetQueuedCompletionStatusEx="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
@@ -638,9 +637,6 @@ patch_enable ()
 			;;
 		kernel32-Debugger)
 			enable_kernel32_Debugger="$2"
-			;;
-		kernel32-Disable-GetQueuedCompletionStatusEx)
-			enable_kernel32_Disable_GetQueuedCompletionStatusEx="$2"
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
@@ -3872,21 +3868,6 @@ if test "$enable_kernel32_Debugger" -eq 1; then
 	patch_apply kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Always start debugger on WinSta0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Disable-GetQueuedCompletionStatusEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45948] Disable export GetQueuedCompletionStatusEx to stop regression with Steam.
-# |
-# | Modified files:
-# |   *	dlls/kernel32/kernel32.spec
-# |
-if test "$enable_kernel32_Disable_GetQueuedCompletionStatusEx" -eq 1; then
-	patch_apply kernel32-Disable-GetQueuedCompletionStatusEx/0001-kernel32-Disable-export-GetQueuedCompletionStatusEx.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "kernel32: Disable export GetQueuedCompletionStatusEx.", 1 },';
 	) >> "$patchlist"
 fi
 

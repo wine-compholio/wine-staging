@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "488432317206bc816432af0dd740e18979e37e58"
+	echo "55bcfea8f011c7f31df81a0f05f11a1d5c0d11b1"
 }
 
 # Show version information
@@ -354,7 +354,6 @@ patch_enable_all ()
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
-	enable_wined3d_QUERY_Stubs="$1"
 	enable_wined3d_Restore_DirectX10_Support="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
@@ -1226,9 +1225,6 @@ patch_enable ()
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
 			;;
-		wined3d-QUERY_Stubs)
-			enable_wined3d_QUERY_Stubs="$2"
-			;;
 		wined3d-Restore-DirectX10-Support)
 			enable_wined3d_Restore_DirectX10_Support="$2"
 			;;
@@ -1809,9 +1805,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
 		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-CSMT_Main depends on that."
 	fi
-	if test "$enable_wined3d_QUERY_Stubs" -gt 1; then
-		abort "Patchset wined3d-QUERY_Stubs disabled, but wined3d-CSMT_Main depends on that."
-	fi
 	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
 		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Main depends on that."
 	fi
@@ -1823,7 +1816,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	enable_wined3d_Accounting=1
 	enable_wined3d_DXTn=1
 	enable_wined3d_Dual_Source_Blending=1
-	enable_wined3d_QUERY_Stubs=1
 	enable_wined3d_Silence_FIXMEs=1
 	enable_wined3d_UAV_Counters=1
 fi
@@ -7263,21 +7255,6 @@ if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-QUERY_Stubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#20776] Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW
-# |
-# | Modified files:
-# |   *	dlls/d3d10core/tests/d3d10core.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/query.c
-# |
-if test "$enable_wined3d_QUERY_Stubs" -eq 1; then
-	patch_apply wined3d-QUERY_Stubs/0001-wined3d-Add-stubs-for-QUERY_TYPE_SO_STATISTICS-and-Q.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Add stubs for QUERY_TYPE_SO_STATISTICS and QUERY_TYPE_SO_OVERFLOW.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
@@ -7308,8 +7285,7 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-
-# | 	WINED3DFMT_B8G8R8X8_UNORM, wined3d-DXTn, wined3d-Dual_Source_Blending, wined3d-QUERY_Stubs, wined3d-Silence_FIXMEs,
-# | 	wined3d-UAV_Counters
+# | 	WINED3DFMT_B8G8R8X8_UNORM, wined3d-DXTn, wined3d-Dual_Source_Blending, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
 # |
 # | Modified files:
 # |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h

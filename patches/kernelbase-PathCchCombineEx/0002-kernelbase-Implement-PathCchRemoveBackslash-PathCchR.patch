@@ -1,56 +1,55 @@
-From 0dc009c4320a9cb72dc96bb60bd55970cf6d4345 Mon Sep 17 00:00:00 2001
+From 64f1f3000c1ef0a6211ace3fd361dcfebd000757 Mon Sep 17 00:00:00 2001
 From: Julien Schueller <schueller@phimeca.com>
 Date: Wed, 4 Jul 2018 22:35:16 +0200
 Subject: [PATCH] kernelbase: Implement
  PathCchRemoveBackslash()/PathCchRemoveBackslashEx().
 
 ---
- .../api-ms-win-core-path-l1-1-0.spec          |   4 +-
- dlls/kernelbase/kernelbase.spec               |   4 +-
- dlls/kernelbase/path.c                        |  31 +++++
- dlls/kernelbase/tests/path.c                  | 127 ++++++++++++++++++
- include/pathcch.h                             |   2 +
- 5 files changed, 164 insertions(+), 4 deletions(-)
+ .../api-ms-win-core-path-l1-1-0.spec               |   4 +-
+ dlls/kernelbase/kernelbase.spec                    |   4 +-
+ dlls/kernelbase/path.c                             |  31 +++++
+ dlls/kernelbase/tests/path.c                       | 128 +++++++++++++++++++++
+ include/pathcch.h                                  |   2 +
+ 5 files changed, 165 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec b/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec
-index 9895b1b8e23..591ee7d882f 100644
+index c11746e..c899fd9 100644
 --- a/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec
 +++ b/dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec
 @@ -11,8 +11,8 @@
  @ stdcall PathCchCombineEx(ptr long ptr ptr long) kernelbase.PathCchCombineEx
- @ stub PathCchFindExtension
+ @ stdcall PathCchFindExtension(wstr long ptr) kernelbase.PathCchFindExtension
  @ stub PathCchIsRoot
 -@ stub PathCchRemoveBackslash
 -@ stub PathCchRemoveBackslashEx
 +@ stdcall PathCchRemoveBackslash(wstr long) kernelbase.PathCchRemoveBackslash
 +@ stdcall PathCchRemoveBackslashEx(wstr long ptr ptr) kernelbase.PathCchRemoveBackslashEx
- @ stub PathCchRemoveExtension
+ @ stdcall PathCchRemoveExtension(wstr long) kernelbase.PathCchRemoveExtension
  @ stub PathCchRemoveFileSpec
- @ stub PathCchRenameExtension
+ @ stdcall PathCchRenameExtension(wstr long wstr) kernelbase.PathCchRenameExtension
 diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
-index 1f75b080378..c4a75bc1694 100644
+index fc5ddfd..9863d9f 100644
 --- a/dlls/kernelbase/kernelbase.spec
 +++ b/dlls/kernelbase/kernelbase.spec
 @@ -1040,8 +1040,8 @@
  @ stdcall PathCchCombineEx(ptr long ptr ptr long)
- # @ stub PathCchFindExtension
+ @ stdcall PathCchFindExtension(wstr long ptr)
  # @ stub PathCchIsRoot
 -# @ stub PathCchRemoveBackslash
 -# @ stub PathCchRemoveBackslashEx
 +@ stdcall PathCchRemoveBackslash(wstr long)
 +@ stdcall PathCchRemoveBackslashEx(wstr long ptr ptr)
- # @ stub PathCchRemoveExtension
+ @ stdcall PathCchRemoveExtension(wstr long)
  # @ stub PathCchRemoveFileSpec
- # @ stub PathCchRenameExtension
+ @ stdcall PathCchRenameExtension(wstr long wstr)
 diff --git a/dlls/kernelbase/path.c b/dlls/kernelbase/path.c
-index 52ef7d97654..3113bfe1255 100644
+index 598229a..68c8dcb 100644
 --- a/dlls/kernelbase/path.c
 +++ b/dlls/kernelbase/path.c
-@@ -91,3 +91,34 @@ HRESULT WINAPI PathCchCombineEx(WCHAR *out, SIZE_T size, const WCHAR *path1, con
-     strcpyW(out, result);
+@@ -210,3 +210,34 @@ HRESULT WINAPI PathCchCombineEx(WCHAR *out, SIZE_T size, const WCHAR *path1, con
      return S_OK;
  }
-+
+ 
 +HRESULT WINAPI PathCchRemoveBackslash(WCHAR *path, SIZE_T size)
 +{
 +    return PathCchRemoveBackslashEx(path, size, NULL, NULL);
@@ -81,20 +80,21 @@ index 52ef7d97654..3113bfe1255 100644
 +
 +    return needs_trim ? S_OK : S_FALSE;
 +}
++
 diff --git a/dlls/kernelbase/tests/path.c b/dlls/kernelbase/tests/path.c
-index cdba51bf3f6..20f8852faca 100644
+index 1d6f44e..61d2232 100644
 --- a/dlls/kernelbase/tests/path.c
 +++ b/dlls/kernelbase/tests/path.c
-@@ -31,6 +31,8 @@
- 
+@@ -33,6 +33,8 @@
  HRESULT (WINAPI *pPathCchAddBackslash)(WCHAR *out, SIZE_T size);
  HRESULT (WINAPI *pPathCchAddBackslashEx)(WCHAR *out, SIZE_T size, WCHAR **endptr, SIZE_T *remaining);
+ HRESULT (WINAPI *pPathCchAddExtension)(WCHAR *path, SIZE_T size, const WCHAR *extension);
 +HRESULT (WINAPI *pPathCchRemoveBackslash)(WCHAR *out, SIZE_T size);
 +HRESULT (WINAPI *pPathCchRemoveBackslashEx)(WCHAR *out, SIZE_T size, WCHAR **endptr, SIZE_T *remaining);
  HRESULT (WINAPI *pPathCchCombineEx)(WCHAR *out, SIZE_T size, const WCHAR *path1, const WCHAR *path2, DWORD flags);
- 
- static const struct
-@@ -245,6 +247,127 @@ static void test_PathCchAddBackslashEx(void)
+ HRESULT (WINAPI *pPathCchFindExtension)(const WCHAR *path, SIZE_T size, const WCHAR **extension);
+ HRESULT (WINAPI *pPathCchRemoveExtension)(WCHAR *path, SIZE_T size);
+@@ -632,6 +634,127 @@ static void test_PathCchRenameExtension(void)
      }
  }
  
@@ -222,30 +222,36 @@ index cdba51bf3f6..20f8852faca 100644
  START_TEST(path)
  {
      HMODULE hmod = LoadLibraryA("kernelbase.dll");
-@@ -252,8 +375,12 @@ START_TEST(path)
-     pPathCchCombineEx = (void *)GetProcAddress(hmod, "PathCchCombineEx");
-     pPathCchAddBackslash = (void *)GetProcAddress(hmod, "PathCchAddBackslash");
-     pPathCchAddBackslashEx = (void *)GetProcAddress(hmod, "PathCchAddBackslashEx");
+@@ -644,6 +767,9 @@ START_TEST(path)
+     pPathCchRemoveExtension = (void *)GetProcAddress(hmod, "PathCchRemoveExtension");
+     pPathCchRenameExtension = (void *)GetProcAddress(hmod, "PathCchRenameExtension");
+ 
 +    pPathCchRemoveBackslash = (void *)GetProcAddress(hmod, "PathCchRemoveBackslash");
 +    pPathCchRemoveBackslashEx = (void *)GetProcAddress(hmod, "PathCchRemoveBackslashEx");
- 
++
      test_PathCchCombineEx();
      test_PathCchAddBackslash();
      test_PathCchAddBackslashEx();
+@@ -651,4 +777,6 @@ START_TEST(path)
+     test_PathCchFindExtension();
+     test_PathCchRemoveExtension();
+     test_PathCchRenameExtension();
 +    test_PathCchRemoveBackslash();
 +    test_PathCchRemoveBackslashEx();
  }
 diff --git a/include/pathcch.h b/include/pathcch.h
-index 2b2aed4c8f9..c19ed1d9306 100644
+index 3057b6c..dd92b83 100644
 --- a/include/pathcch.h
 +++ b/include/pathcch.h
-@@ -25,4 +25,6 @@
- 
+@@ -28,6 +28,8 @@
  HRESULT WINAPI PathCchAddBackslash(WCHAR *path, SIZE_T size);
  HRESULT WINAPI PathCchAddBackslashEx(WCHAR *path, SIZE_T size, WCHAR **end, SIZE_T *remaining);
+ HRESULT WINAPI PathCchAddExtension(WCHAR *path, SIZE_T size, const WCHAR *extension);
 +HRESULT WINAPI PathCchRemoveBackslash(WCHAR *path, SIZE_T size);
 +HRESULT WINAPI PathCchRemoveBackslashEx(WCHAR *path, SIZE_T size, WCHAR **end, SIZE_T *remaining);
  HRESULT WINAPI PathCchCombineEx(WCHAR *out, SIZE_T size, const WCHAR *path1, const WCHAR *path2, DWORD flags);
+ HRESULT WINAPI PathCchFindExtension(const WCHAR *path, SIZE_T size, const WCHAR **extension);
+ HRESULT WINAPI PathCchRemoveExtension(WCHAR *path, SIZE_T size);
 -- 
-2.18.0
+1.9.1
 

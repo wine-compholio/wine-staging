@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "55bcfea8f011c7f31df81a0f05f11a1d5c0d11b1"
+	echo "0c5ce58505e24bf07cbd4c09752ef2f949d64fd0"
 }
 
 # Show version information
@@ -2565,7 +2565,8 @@ fi
 # |   *	[#42704] Implement BCryptDeriveKeyPBKDF2
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, include/bcrypt.h
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
+# | 	include/bcrypt.h
 # |
 if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
 	patch_apply bcrypt-BCryptDeriveKeyPBKDF2/0001-bcrypt-Implement-BCryptDeriveKeyPBKDF2-and-add-test-.patch
@@ -2580,7 +2581,8 @@ fi
 # |   *	[#45312] Fix issue for Assassin's Creed : Syndicate
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, include/bcrypt.h
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/ncrypt/ncrypt.spec,
+# | 	include/bcrypt.h
 # |
 if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
 	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Add-support-for-algorithm-ECDH-P256.patch
@@ -3989,8 +3991,9 @@ fi
 # |   *	api-ms-win-Stub_DLLs
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/kernel32/cpu.c,
-# | 	dlls/kernel32/kernel32.spec, dlls/kernel32/tests/process.c, dlls/kernel32/thread.c, include/winnt.h
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec, dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec,
+# | 	dlls/kernel32/tests/process.c, dlls/kernel32/thread.c, include/winnt.h
 # |
 if test "$enable_kernel32_Processor_Group" -eq 1; then
 	patch_apply kernel32-Processor_Group/0001-kernel32-Implement-some-processor-group-functions.patch
@@ -4994,7 +4997,7 @@ fi
 # |   *	[#42255] ntdll: Add RtlAddGrowableFunctionTable stub
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_x86_64.c
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_x86_64.c, include/winnt.h
 # |
 if test "$enable_ntdll_RtlAddGrowableFunctionTable" -eq 1; then
 	patch_apply ntdll-RtlAddGrowableFunctionTable/0001-ntdll-Add-RtlAddGrowableFunctionTable-stub.patch
@@ -6557,7 +6560,8 @@ fi
 # |   *	[#45765] Added GetPointerType stub
 # |
 # | Modified files:
-# |   *	dlls/user32/misc.c, dlls/user32/tests/input.c, dlls/user32/user32.spec, include/winuser.h
+# |   *	dlls/api-ms-win-rtcore-ntuser-wmpointer-l1-1-0/api-ms-win-rtcore-ntuser-wmpointer-l1-1-0.spec, dlls/user32/misc.c,
+# | 	dlls/user32/tests/input.c, dlls/user32/user32.spec, include/winuser.h
 # |
 if test "$enable_user32_GetPointerType" -eq 1; then
 	patch_apply user32-GetPointerType/0001-user32-Added-GetPointerType-stub.patch

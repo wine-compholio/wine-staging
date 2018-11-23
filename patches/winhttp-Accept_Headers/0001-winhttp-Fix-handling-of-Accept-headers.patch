@@ -1,4 +1,4 @@
-From 70361946ecd7e0b78ac89f97a37c862e4473b928 Mon Sep 17 00:00:00 2001
+From ef3957d5000837c27a9623768b2f90df8b80b465 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 21 Dec 2016 00:54:37 +0100
 Subject: [PATCH] winhttp: Fix handling of Accept headers.
@@ -10,20 +10,20 @@ Subject: [PATCH] winhttp: Fix handling of Accept headers.
  3 files changed, 7 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/winhttp/request.c b/dlls/winhttp/request.c
-index 7f3ef4c..301dc2f 100644
+index 27628c3..54f7214 100644
 --- a/dlls/winhttp/request.c
 +++ b/dlls/winhttp/request.c
-@@ -398,7 +398,7 @@ static BOOL delete_header( request_t *request, DWORD index )
+@@ -398,7 +398,7 @@ static BOOL delete_header( struct request *request, DWORD index )
      return TRUE;
  }
  
--static BOOL process_header( request_t *request, LPCWSTR field, LPCWSTR value, DWORD flags, BOOL request_only )
-+BOOL process_header( request_t *request, LPCWSTR field, LPCWSTR value, DWORD flags, BOOL request_only )
+-static BOOL process_header( struct request *request, const WCHAR *field, const WCHAR *value, DWORD flags,
++BOOL process_header( struct request *request, const WCHAR *field, const WCHAR *value, DWORD flags,
+                             BOOL request_only )
  {
      int index;
-     struct header hdr;
-@@ -2179,16 +2179,11 @@ static BOOL send_request( request_t *request, LPCWSTR headers, DWORD headers_len
-     session_t *session = connect->session;
+@@ -2181,16 +2181,11 @@ static BOOL send_request( struct request *request, const WCHAR *headers, DWORD h
+     struct session *session = connect->session;
      char *wire_req;
      int bytes_sent;
 -    DWORD len, i, flags;
@@ -41,10 +41,10 @@ index 7f3ef4c..301dc2f 100644
          process_header( request, attr_user_agent, session->agent, WINHTTP_ADDREQ_FLAG_ADD_IF_NEW, TRUE );
  
 diff --git a/dlls/winhttp/session.c b/dlls/winhttp/session.c
-index 8804346..87413ca 100644
+index 2051d42..d528659 100644
 --- a/dlls/winhttp/session.c
 +++ b/dlls/winhttp/session.c
-@@ -641,8 +641,6 @@ static void request_destroy( struct object_header *hdr )
+@@ -629,8 +629,6 @@ static void request_destroy( struct object_header *hdr )
          heap_free( request->headers[i].value );
      }
      heap_free( request->headers );
@@ -53,9 +53,9 @@ index 8804346..87413ca 100644
      for (i = 0; i < TARGET_MAX; i++)
      {
          for (j = 0; j < SCHEME_MAX; j++)
-@@ -1059,32 +1057,14 @@ static const struct object_vtbl request_vtbl =
+@@ -1047,32 +1045,14 @@ static const struct object_vtbl request_vtbl =
  
- static BOOL store_accept_types( request_t *request, const WCHAR **accept_types )
+ static BOOL store_accept_types( struct request *request, const WCHAR **accept_types )
  {
 +    static const WCHAR attr_accept[] = {'A','c','c','e','p','t',0};
 +    static const DWORD flags = WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_COALESCE_WITH_COMMA;
@@ -90,10 +90,10 @@ index 8804346..87413ca 100644
      }
      return TRUE;
 diff --git a/dlls/winhttp/winhttp_private.h b/dlls/winhttp/winhttp_private.h
-index 999f3d7..e10b052 100644
+index 2ee868c..3ac7f4a 100644
 --- a/dlls/winhttp/winhttp_private.h
 +++ b/dlls/winhttp/winhttp_private.h
-@@ -198,8 +198,6 @@ typedef struct
+@@ -198,8 +198,6 @@ struct request
      char  read_buf[8192]; /* buffer for already read but not returned data */
      struct header *headers;
      DWORD num_headers;
@@ -102,11 +102,11 @@ index 999f3d7..e10b052 100644
      struct authinfo *authinfo;
      struct authinfo *proxy_authinfo;
      HANDLE task_wait;
-@@ -292,6 +290,8 @@ void destroy_authinfo( struct authinfo * ) DECLSPEC_HIDDEN;
+@@ -290,6 +288,8 @@ void destroy_authinfo( struct authinfo * ) DECLSPEC_HIDDEN;
  
  void release_host( struct hostdata *host ) DECLSPEC_HIDDEN;
  
-+BOOL process_header( request_t *request, LPCWSTR field, LPCWSTR value, DWORD flags, BOOL request_only ) DECLSPEC_HIDDEN;
++BOOL process_header( struct request *request, LPCWSTR field, LPCWSTR value, DWORD flags, BOOL request_only ) DECLSPEC_HIDDEN;
 +
  extern HRESULT WinHttpRequest_create( void ** ) DECLSPEC_HIDDEN;
  void release_typelib( void ) DECLSPEC_HIDDEN;

@@ -1,4 +1,4 @@
-From ff076f32b12e12ad59b82a96133c6080022ce25b Mon Sep 17 00:00:00 2001
+From 3a66d16e9d18f441382862124e2f8721dfb5d6a1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 31 Aug 2017 01:00:04 +0200
 Subject: wined3d: Fix calculation of normal when vertex blending is enabled.
@@ -9,10 +9,10 @@ Subject: wined3d: Fix calculation of normal when vertex blending is enabled.
  2 files changed, 36 insertions(+), 42 deletions(-)
 
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index ae5d76c..517f6c0 100644
+index 388e876cce..c27be6beec 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
-@@ -20580,7 +20580,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
+@@ -20693,7 +20693,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
          while (point->x != -1 && point->y != -1)
          {
              color = getPixelColor(device, point->x, point->y);
@@ -22,11 +22,11 @@ index ae5d76c..517f6c0 100644
          }
  
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 2cad436..ca92f56 100644
+index 8828749f5a..c916ecff19 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -144,8 +144,8 @@ struct glsl_vs_program
-     GLint pos_fixup_location;
+@@ -158,8 +158,8 @@ struct glsl_vs_program
+     GLint base_vertex_id_location;
  
      GLint modelview_matrix_location[MAX_VERTEX_INDEX_BLENDS];
 +    GLint normal_matrix_location[MAX_VERTEX_INDEX_BLENDS];
@@ -35,7 +35,7 @@ index 2cad436..ca92f56 100644
      GLint texture_matrix_location[MAX_TEXTURES];
      GLint material_ambient_location;
      GLint material_diffuse_location;
-@@ -1523,33 +1523,6 @@ static void transpose_matrix(struct wined3d_matrix *out, const struct wined3d_ma
+@@ -1548,33 +1548,6 @@ static void transpose_matrix(struct wined3d_matrix *out, const struct wined3d_ma
      *out = temp;
  }
  
@@ -69,7 +69,7 @@ index 2cad436..ca92f56 100644
  static void shader_glsl_ffp_vertex_texmatrix_uniform(const struct wined3d_context *context,
          const struct wined3d_state *state, unsigned int tex, struct glsl_shader_prog_link *prog)
  {
-@@ -1747,6 +1720,23 @@ static void shader_glsl_load_color_key_constant(const struct glsl_ps_program *ps
+@@ -1772,6 +1745,23 @@ static void shader_glsl_load_color_key_constant(const struct glsl_ps_program *ps
      GL_EXTCALL(glUniform4fv(ps->color_key_location, 2, &float_key[0].r));
  }
  
@@ -93,15 +93,15 @@ index 2cad436..ca92f56 100644
  /* Context activation is done by the caller (state handler). */
  static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context *context,
          const struct wined3d_state *state)
-@@ -1757,6 +1747,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
-     const struct wined3d_gl_info *gl_info = context->gl_info;
-     struct shader_glsl_priv *priv = shader_priv;
+@@ -1784,6 +1774,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
      float position_fixup[4 * WINED3D_MAX_VIEWPORTS];
+     struct shader_glsl_priv *priv = shader_priv;
+     unsigned int constant_version;
 +    float normal[3 * 3];
      DWORD update_mask;
+     int i;
  
-     struct glsl_shader_prog_link *prog = ctx_data->glsl_program;
-@@ -1813,7 +1804,9 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1843,7 +1834,9 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
          GL_EXTCALL(glUniformMatrix4fv(prog->vs.modelview_matrix_location[0], 1, FALSE, &mat._11));
          checkGLcall("glUniformMatrix4fv");
  
@@ -112,7 +112,7 @@ index 2cad436..ca92f56 100644
      }
  
      if (update_mask & WINED3D_SHADER_CONST_FFP_VERTEXBLEND)
-@@ -1828,6 +1821,10 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1858,6 +1851,10 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
              get_modelview_matrix(context, state, i, &mat);
              GL_EXTCALL(glUniformMatrix4fv(prog->vs.modelview_matrix_location[i], 1, FALSE, &mat._11));
              checkGLcall("glUniformMatrix4fv");
@@ -123,7 +123,7 @@ index 2cad436..ca92f56 100644
          }
      }
  
-@@ -8818,8 +8815,8 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+@@ -9142,8 +9139,8 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
      shader_addline(buffer, "\n");
  
      shader_addline(buffer, "uniform mat4 ffp_modelview_matrix[%u];\n", MAX_VERTEX_INDEX_BLENDS);
@@ -133,7 +133,7 @@ index 2cad436..ca92f56 100644
      shader_addline(buffer, "uniform mat4 ffp_texture_matrix[%u];\n", MAX_TEXTURES);
  
      shader_addline(buffer, "uniform struct\n{\n");
-@@ -8929,17 +8926,10 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+@@ -9253,17 +9250,10 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
      shader_addline(buffer, "vec3 normal = vec3(0.0);\n");
      if (settings->normal)
      {
@@ -154,7 +154,7 @@ index 2cad436..ca92f56 100644
          }
  
          if (settings->normalize)
-@@ -9814,8 +9804,12 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
+@@ -10142,8 +10132,12 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
          string_buffer_sprintf(name, "ffp_modelview_matrix[%u]", i);
          vs->modelview_matrix_location[i] = GL_EXTCALL(glGetUniformLocation(program_id, name->buffer));
      }
@@ -169,5 +169,5 @@ index 2cad436..ca92f56 100644
      {
          string_buffer_sprintf(name, "ffp_texture_matrix[%u]", i);
 -- 
-2.7.4
+2.14.1
 

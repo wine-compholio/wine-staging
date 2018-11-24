@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0c5ce58505e24bf07cbd4c09752ef2f949d64fd0"
+	echo "ea9253d6d3c9bb60d98b0d917292fc0b4babb3dd"
 }
 
 # Show version information
@@ -4048,14 +4048,12 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
-# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/path.c, dlls/kernelbase/tests/path.c, include/pathcch.h
+# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/path.c
 # |
 if test "$enable_kernelbase_PathCchCombineEx" -eq 1; then
 	patch_apply kernelbase-PathCchCombineEx/0001-kernelbase-Add-semi-stub-for-PathCchCombineEx.patch
-	patch_apply kernelbase-PathCchCombineEx/0002-kernelbase-Implement-PathCchRemoveBackslash-PathCchR.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add semi-stub for PathCchCombineEx.", 1 },';
-		printf '%s\n' '+    { "Julien Schueller", "kernelbase: Implement PathCchRemoveBackslash()/PathCchRemoveBackslashEx().", 1 },';
 	) >> "$patchlist"
 fi
 

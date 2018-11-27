@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "92f38bc8790cbfb31badf97a211ed890ac00c1db"
+	echo "00b08fad99745db326ef060627c3e9dc668a734a"
 }
 
 # Show version information
@@ -305,7 +305,6 @@ patch_enable_all ()
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
 	enable_uianimation_stubs="$1"
-	enable_user32_Auto_Radio_Button="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Focus="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -1076,9 +1075,6 @@ patch_enable ()
 			;;
 		uianimation-stubs)
 			enable_uianimation_stubs="$2"
-			;;
-		user32-Auto_Radio_Button)
-			enable_user32_Auto_Radio_Button="$2"
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
@@ -5258,24 +5254,12 @@ fi
 # | 	dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
 # |
 if test "$enable_ntoskrnl_Synchronization" -eq 1; then
-	patch_apply ntoskrnl-Synchronization/0005-ntoskrnl.exe-Implement-KeClearEvent.patch
-	patch_apply ntoskrnl-Synchronization/0008-ntoskrnl.exe-Implement-KeInitializeSemaphore.patch
-	patch_apply ntoskrnl-Synchronization/0009-ntoskrnl.exe-Implement-KeReleaseSemaphore-and-waitin.patch
-	patch_apply ntoskrnl-Synchronization/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
-	patch_apply ntoskrnl-Synchronization/0011-ntoskrnl.exe-Implement-KeReleaseMutex-and-waiting-on.patch
-	patch_apply ntoskrnl-Synchronization/0012-ntoskrnl.exe-Implement-KeWaitForMutexObject.patch
 	patch_apply ntoskrnl-Synchronization/0013-ntoskrnl.exe-Implement-KeInitializeTimerEx.patch
 	patch_apply ntoskrnl-Synchronization/0014-ntoskrnl.exe-Implement-KeSetTimerEx-and-waiting-on-t.patch
 	patch_apply ntoskrnl-Synchronization/0015-ntoskrnl.exe-Implement-KeCancelTimer.patch
 	patch_apply ntoskrnl-Synchronization/0016-ntoskrnl.exe-tests-Add-tests-for-waiting-on-timers.patch
 	patch_apply ntoskrnl-Synchronization/0017-ntoskrnl.exe-Implement-KeDelayExecutionThread.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeClearEvent().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeSemaphore().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeReleaseSemaphore() and waiting on semaphores.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeMutex().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeReleaseMutex() and waiting on mutexes.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeWaitForMutexObject().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeTimerEx().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeSetTimerEx() and waiting on timers.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeCancelTimer().", 1 },';
@@ -6395,26 +6379,6 @@ if test "$enable_uianimation_stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Louis Lenders", "uianimation.idl: Add more interfaces.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Auto_Radio_Button
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42010] Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler
-# |   *	[#16845] Add support for navigating a group of radio buttons using a keyboard.
-# |
-# | Modified files:
-# |   *	dlls/user32/dialog.c, dlls/user32/tests/msg.c, dlls/user32/tests/resource.rc
-# |
-if test "$enable_user32_Auto_Radio_Button" -eq 1; then
-	patch_apply user32-Auto_Radio_Button/0003-user32-tests-Simplify-the-test-for-BM_CLICK-on-autor.patch
-	patch_apply user32-Auto_Radio_Button/0004-user32-tests-Add-a-test-for-navigating-a-group-of-bu.patch
-	patch_apply user32-Auto_Radio_Button/0005-user32-Add-support-for-navigating-a-group-of-radio-b.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
 	) >> "$patchlist"
 fi
 

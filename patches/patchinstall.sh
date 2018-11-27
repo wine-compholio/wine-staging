@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
+	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_GammaRamp="$1"
@@ -565,6 +566,9 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
+			;;
+		dwrite-FontFallback)
+			enable_dwrite_FontFallback="$2"
 			;;
 		dxdiagn-Enumerate_DirectSound)
 			enable_dxdiagn_Enumerate_DirectSound="$2"
@@ -3420,6 +3424,29 @@ if test "$enable_dsound_EAX" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dwrite-FontFallback
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44052] - Support for font fallback.
+# |
+# | Modified files:
+# |   *	dlls/dwrite/analyzer.c, dlls/dwrite/layout.c, dlls/dwrite/tests/layout.c
+# |
+if test "$enable_dwrite_FontFallback" -eq 1; then
+	patch_apply dwrite-FontFallback/0001-dwrite-Test-IDWriteTextFormat-with-nonexistent-font.patch
+	patch_apply dwrite-FontFallback/0002-dwrite-Test-GetMetrics-with-custom-fontcollection.patch
+	patch_apply dwrite-FontFallback/0004-dwrite-Use-font-fallback-when-mapping-characters.patch
+	patch_apply dwrite-FontFallback/0005-dwrite-Use-MapCharacters-for-non-visual-characters.patch
+	patch_apply dwrite-FontFallback/0006-dwrite-Use-MapCharacters-for-dummy-line-metrics.patch
+	(
+		printf '%s\n' '+    { "Lucian Poston", "dwrite: Test IDWriteTextFormat with nonexistent font.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "dwrite: Test GetMetrics with custom fontcollection.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use font fallback when mapping characters.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use MapCharacters for non-visual characters.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "dwrite: Use MapCharacters for dummy line metrics.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dxdiagn-Enumerate_DirectSound
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5542,7 +5569,7 @@ fi
 # |   *	[#46174] qwave: Added QOSCreateHandle stub
 # |
 # | Modified files:
-# |   *	dlls/qwave/main.c, include/qos2.h
+# |   *	dlls/qwave/main.c, dlls/qwave/qwave.spec, include/qos2.h
 # |
 if test "$enable_qwave_QOSCreateHandle" -eq 1; then
 	patch_apply qwave-QOSCreateHandle/0001-qwave-Added-QOSCreateHandle-stub.patch

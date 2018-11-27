@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ea9253d6d3c9bb60d98b0d917292fc0b4babb3dd"
+	echo "92f38bc8790cbfb31badf97a211ed890ac00c1db"
 }
 
 # Show version information
@@ -168,7 +168,6 @@ patch_enable_all ()
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
-	enable_kernelbase_PathCchCombineEx="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_krnl386_exe16__lclose16="$1"
@@ -306,7 +305,6 @@ patch_enable_all ()
 	enable_taskmgr_Memory_Usage="$1"
 	enable_uianimation_stubs="$1"
 	enable_user32_Auto_Radio_Button="$1"
-	enable_user32_Combobox_WM_SIZE="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Focus="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -381,7 +379,6 @@ patch_enable_all ()
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
-	enable_winhttp_Accept_Headers="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
@@ -667,9 +664,6 @@ patch_enable ()
 			;;
 		kernel32-SCSI_Sysfs)
 			enable_kernel32_SCSI_Sysfs="$2"
-			;;
-		kernelbase-PathCchCombineEx)
-			enable_kernelbase_PathCchCombineEx="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -1082,9 +1076,6 @@ patch_enable ()
 		user32-Auto_Radio_Button)
 			enable_user32_Auto_Radio_Button="$2"
 			;;
-		user32-Combobox_WM_SIZE)
-			enable_user32_Combobox_WM_SIZE="$2"
-			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
 			;;
@@ -1306,9 +1297,6 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
-			;;
-		winhttp-Accept_Headers)
-			enable_winhttp_Accept_Headers="$2"
 			;;
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
@@ -4041,22 +4029,6 @@ if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernelbase-PathCchCombineEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42474] Implement kernelbase.PathCchCombineEx
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-path-l1-1-0/api-ms-win-core-path-l1-1-0.spec, dlls/kernelbase/Makefile.in,
-# | 	dlls/kernelbase/kernelbase.spec, dlls/kernelbase/path.c
-# |
-if test "$enable_kernelbase_PathCchCombineEx" -eq 1; then
-	patch_apply kernelbase-PathCchCombineEx/0001-kernelbase-Add-semi-stub-for-PathCchCombineEx.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add semi-stub for PathCchCombineEx.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset krnl386.exe16-GDT_LDT_Emulation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5255,17 +5227,11 @@ fi
 # | 	'bizvserialnt.sys')
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/Makefile.in, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec,
-# | 	dlls/ntoskrnl.exe/sync.c, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/ntddk.h, include/ddk/wdm.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/sync.c,
+# | 	dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
 # |
 if test "$enable_ntoskrnl_Synchronization" -eq 1; then
-	patch_apply ntoskrnl-Synchronization/0001-ntoskrnl.exe-Implement-KeWaitForMultipleObjects.patch
-	patch_apply ntoskrnl-Synchronization/0002-ntoskrnl.exe-Implement-KeInitializeEvent.patch
-	patch_apply ntoskrnl-Synchronization/0003-ntoskrnl.exe-Implement-KeSetEvent.patch
-	patch_apply ntoskrnl-Synchronization/0004-ntoskrnl.exe-Implement-KeResetEvent.patch
 	patch_apply ntoskrnl-Synchronization/0005-ntoskrnl.exe-Implement-KeClearEvent.patch
-	patch_apply ntoskrnl-Synchronization/0006-ntoskrnl.exe-Implement-KeWaitForSingleObject.patch
-	patch_apply ntoskrnl-Synchronization/0007-ntoskrnl.exe-tests-Add-some-tests-for-synchronizatio.patch
 	patch_apply ntoskrnl-Synchronization/0008-ntoskrnl.exe-Implement-KeInitializeSemaphore.patch
 	patch_apply ntoskrnl-Synchronization/0009-ntoskrnl.exe-Implement-KeReleaseSemaphore-and-waitin.patch
 	patch_apply ntoskrnl-Synchronization/0010-ntoskrnl.exe-Implement-KeInitializeMutex.patch
@@ -5277,13 +5243,7 @@ if test "$enable_ntoskrnl_Synchronization" -eq 1; then
 	patch_apply ntoskrnl-Synchronization/0016-ntoskrnl.exe-tests-Add-tests-for-waiting-on-timers.patch
 	patch_apply ntoskrnl-Synchronization/0017-ntoskrnl.exe-Implement-KeDelayExecutionThread.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeWaitForMultipleObjects().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeEvent().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeSetEvent().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeResetEvent().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeClearEvent().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeWaitForSingleObject().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe/tests: Add some tests for synchronization functions.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeSemaphore().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeReleaseSemaphore() and waiting on semaphores.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeMutex().", 1 },';
@@ -6418,35 +6378,16 @@ fi
 # |   *	[#16845] Add support for navigating a group of radio buttons using a keyboard.
 # |
 # | Modified files:
-# |   *	dlls/user32/button.c, dlls/user32/dialog.c, dlls/user32/tests/msg.c, dlls/user32/tests/resource.rc
+# |   *	dlls/user32/dialog.c, dlls/user32/tests/msg.c, dlls/user32/tests/resource.rc
 # |
 if test "$enable_user32_Auto_Radio_Button" -eq 1; then
-	patch_apply user32-Auto_Radio_Button/0001-user32-Move-the-auto-radio-button-group-logic-from-B.patch
-	patch_apply user32-Auto_Radio_Button/0002-user32-tests-Add-a-message-test-for-group-of-radio-b.patch
 	patch_apply user32-Auto_Radio_Button/0003-user32-tests-Simplify-the-test-for-BM_CLICK-on-autor.patch
 	patch_apply user32-Auto_Radio_Button/0004-user32-tests-Add-a-test-for-navigating-a-group-of-bu.patch
 	patch_apply user32-Auto_Radio_Button/0005-user32-Add-support-for-navigating-a-group-of-radio-b.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Move the auto radio button group logic from BM_SETCHECK to WM_LBUTTONUP handler.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a message test for group of radio buttons.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Simplify the test for BM_CLICK on autoradio button by using a dialog.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a test for navigating a group of buttons using keyboard events.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add support for navigating a group of radio buttons using a keyboard.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-Combobox_WM_SIZE
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41404] Don't force a combobox repaint on WM_SIZE
-# |
-# | Modified files:
-# |   *	dlls/user32/combo.c
-# |
-if test "$enable_user32_Combobox_WM_SIZE" -eq 1; then
-	patch_apply user32-Combobox_WM_SIZE/0001-user32-Don-t-force-a-combobox-repaint-on-WM_SIZE.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Don'\''t force a combobox repaint on WM_SIZE.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7728,18 +7669,6 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winhttp-Accept_Headers
-# |
-# | Modified files:
-# |   *	dlls/winhttp/request.c, dlls/winhttp/session.c, dlls/winhttp/winhttp_private.h
-# |
-if test "$enable_winhttp_Accept_Headers" -eq 1; then
-	patch_apply winhttp-Accept_Headers/0001-winhttp-Fix-handling-of-Accept-headers.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winhttp: Fix handling of Accept headers.", 1 },';
 	) >> "$patchlist"
 fi
 

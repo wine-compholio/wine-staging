@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "00b08fad99745db326ef060627c3e9dc668a734a"
+	echo "1582ae6b045bb1658f6d5bc83efc5f6ce042c06e"
 }
 
 # Show version information
@@ -242,7 +242,6 @@ patch_enable_all ()
 	enable_ntdll_futex_condition_var="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
-	enable_ntoskrnl_Synchronization="$1"
 	enable_ntoskrnl_exe_Fix_Relocation="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -306,7 +305,6 @@ patch_enable_all ()
 	enable_taskmgr_Memory_Usage="$1"
 	enable_uianimation_stubs="$1"
 	enable_user32_DM_SETDEFID="$1"
-	enable_user32_Dialog_Focus="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
@@ -887,9 +885,6 @@ patch_enable ()
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
 			;;
-		ntoskrnl-Synchronization)
-			enable_ntoskrnl_Synchronization="$2"
-			;;
 		ntoskrnl.exe-Fix_Relocation)
 			enable_ntoskrnl_exe_Fix_Relocation="$2"
 			;;
@@ -1078,9 +1073,6 @@ patch_enable ()
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
-			;;
-		user32-Dialog_Focus)
-			enable_user32_Dialog_Focus="$2"
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
@@ -1978,11 +1970,7 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	if test "$enable_Compiler_Warnings" -gt 1; then
 		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
 	fi
-	if test "$enable_ntoskrnl_Synchronization" -gt 1; then
-		abort "Patchset ntoskrnl-Synchronization disabled, but ntoskrnl-Stubs depends on that."
-	fi
 	enable_Compiler_Warnings=1
-	enable_ntoskrnl_Synchronization=1
 fi
 
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
@@ -5243,35 +5231,10 @@ if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl-Synchronization
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44588] Multiple kernel drivers need ntoskrnl.exe.KeWaitForMultipleObjects semi-stub (Franson VSerial service
-# | 	'bizvserialnt.sys')
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/sync.c,
-# | 	dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
-# |
-if test "$enable_ntoskrnl_Synchronization" -eq 1; then
-	patch_apply ntoskrnl-Synchronization/0013-ntoskrnl.exe-Implement-KeInitializeTimerEx.patch
-	patch_apply ntoskrnl-Synchronization/0014-ntoskrnl.exe-Implement-KeSetTimerEx-and-waiting-on-t.patch
-	patch_apply ntoskrnl-Synchronization/0015-ntoskrnl.exe-Implement-KeCancelTimer.patch
-	patch_apply ntoskrnl-Synchronization/0016-ntoskrnl.exe-tests-Add-tests-for-waiting-on-timers.patch
-	patch_apply ntoskrnl-Synchronization/0017-ntoskrnl.exe-Implement-KeDelayExecutionThread.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeInitializeTimerEx().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeSetTimerEx() and waiting on timers.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeCancelTimer().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe/tests: Add tests for waiting on timers.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement KeDelayExecutionThread().", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntoskrnl-Stubs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings, ntoskrnl-Synchronization
+# |   *	Compiler_Warnings
 # |
 # | Modified files:
 # |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
@@ -6401,23 +6364,6 @@ if test "$enable_user32_DM_SETDEFID" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-Dialog_Focus
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#5402] Set focus to dialog itself when it has no controls
-# |
-# | Modified files:
-# |   *	dlls/user32/dialog.c, dlls/user32/tests/msg.c
-# |
-if test "$enable_user32_Dialog_Focus" -eq 1; then
-	patch_apply user32-Dialog_Focus/0001-user32-tests-Add-a-focus-test-for-an-empty-dialog-th.patch
-	patch_apply user32-Dialog_Focus/0002-user32-If-there-is-no-dialog-controls-to-set-focus-t.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add a focus test for an empty dialog that returns TRUE in WM_INITDIALOG.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: If there is no dialog controls to set focus to then set focus to dialog itself.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-Dialog_Paint_Event
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7361,7 +7307,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Synchronization, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

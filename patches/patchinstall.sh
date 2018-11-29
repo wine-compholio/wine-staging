@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1582ae6b045bb1658f6d5bc83efc5f6ce042c06e"
+	echo "20e5920135476cc4e380823a694537fca7fdf7e1"
 }
 
 # Show version information
@@ -146,8 +146,6 @@ patch_enable_all ()
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
-	enable_gdi32_Path_Metafile="$1"
-	enable_gdi32_Symbol_Truetype_Font="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_hid_HidD_FlushQueue="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -596,12 +594,6 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
-			;;
-		gdi32-Path_Metafile)
-			enable_gdi32_Path_Metafile="$2"
-			;;
-		gdi32-Symbol_Truetype_Font)
-			enable_gdi32_Symbol_Truetype_Font="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -3618,37 +3610,6 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdi32-Path_Metafile
-# |
-# | Modified files:
-# |   *	dlls/gdi32/path.c, dlls/gdi32/tests/metafile.c
-# |
-if test "$enable_gdi32_Path_Metafile" -eq 1; then
-	patch_apply gdi32-Path_Metafile/0001-gdi32-tests-Add-some-additional-tests-for-ExtExtOut-.patch
-	patch_apply gdi32-Path_Metafile/0002-gdi32-ExtTextOut-on-a-path-with-bitmap-font-selected.patch
-	patch_apply gdi32-Path_Metafile/0003-gdi32-tests-Explicitly-test-BeginPath-return-value-i.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32/tests: Add some additional tests for ExtExtOut on a path for an EMF DC.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32: ExtTextOut on a path with bitmap font selected shouldn'\''t fail.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32/tests: Explicitly test BeginPath() return value in the metafile path tests.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdi32-Symbol_Truetype_Font
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33117] Improve detection of symbol charset for old truetype fonts
-# |
-# | Modified files:
-# |   *	dlls/gdi32/freetype.c
-# |
-if test "$enable_gdi32_Symbol_Truetype_Font" -eq 1; then
-	patch_apply gdi32-Symbol_Truetype_Font/0001-gdi32-Improve-detection-of-symbol-charset-for-old-tr.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32: Improve detection of symbol charset for old truetype fonts.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdiplus-Performance-Improvements
 # |
 # | Modified files:
@@ -4125,14 +4086,12 @@ fi
 # |   *	[#33159] Implement preloader for Mac OS
 # |
 # | Modified files:
-# |   *	Makefile.in, configure.ac, dlls/ntdll/virtual.c, libs/wine/config.c, libs/wine/loader.c, loader/Makefile.in,
-# | 	loader/main.c, loader/preloader.c
+# |   *	Makefile.in, configure.ac, dlls/ntdll/virtual.c, libs/wine/config.c, loader/Makefile.in, loader/main.c,
+# | 	loader/preloader.c
 # |
 if test "$enable_loader_OSX_Preloader" -eq 1; then
-	patch_apply loader-OSX_Preloader/0001-libs-wine-Do-not-restrict-base-address-of-main-threa.patch
 	patch_apply loader-OSX_Preloader/0002-loader-Implement-preloader-for-Mac-OS.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "libs/wine: Do not restrict base address of main thread on 64 bit mac os.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
 	) >> "$patchlist"
 fi

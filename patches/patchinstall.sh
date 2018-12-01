@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "20e5920135476cc4e380823a694537fca7fdf7e1"
+	echo "400dd1596ab7946e68278b3f8dc7c87b898c7e9f"
 }
 
 # Show version information
@@ -138,7 +138,6 @@ patch_enable_all ()
 	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
-	enable_dxgi_GammaRamp="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
@@ -570,9 +569,6 @@ patch_enable ()
 			;;
 		dxdiagn-GetChildContainer_Leaf_Nodes)
 			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
-			;;
-		dxgi-GammaRamp)
-			enable_dxgi_GammaRamp="$2"
 			;;
 		dxgi-MakeWindowAssociation)
 			enable_dxgi_MakeWindowAssociation="$2"
@@ -3453,21 +3449,6 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxgi-GammaRamp
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43584] Implement DXGI GammaControl methods
-# |
-# | Modified files:
-# |   *	dlls/dxgi/output.c, dlls/dxgi/tests/dxgi.c
-# |
-if test "$enable_dxgi_GammaRamp" -eq 1; then
-	patch_apply dxgi-GammaRamp/0001-dxgi-Implement-setting-and-querying-the-gamma-value-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "dxgi: Implement setting and querying the gamma value of an output.", 1 },';
 	) >> "$patchlist"
 fi
 

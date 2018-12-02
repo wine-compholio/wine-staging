@@ -129,6 +129,7 @@ patch_enable_all ()
 	enable_ddraw_Fix_Typos="$1"
 	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
+	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Deadlock="$1"
@@ -542,6 +543,9 @@ patch_enable ()
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
+			;;
+		ddraw-Rendering_Targets)
+			enable_ddraw_Rendering_Targets="$2"
 			;;
 		ddraw-Silence_FIXMEs)
 			enable_ddraw_Silence_FIXMEs="$2"
@@ -3265,6 +3269,21 @@ if test "$enable_ddraw_IDirect3DTexture2_Load" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Allow size and format conversions in IDirect3DTexture2::Load.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirect3DTexture2::Load.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Rendering_Targets
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34906] Use video memory for rendering targets if possible
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/ddraw_private.h, dlls/ddraw/device.c, dlls/ddraw/surface.c
+# |
+if test "$enable_ddraw_Rendering_Targets" -eq 1; then
+	patch_apply ddraw-Rendering_Targets/0001-ddraw-Create-rendering-targets-in-video-memory-if-po.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ddraw: Create rendering targets in video memory if possible.", 1 },';
 	) >> "$patchlist"
 fi
 

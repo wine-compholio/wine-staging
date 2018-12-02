@@ -287,6 +287,7 @@ patch_enable_all ()
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
+	enable_shell32_IconCache="$1"
 	enable_shell32_NewMenu_Interface="$1"
 	enable_shell32_Progress_Dialog="$1"
 	enable_shell32_SFGAO_HASSUBFOLDER="$1"
@@ -1017,6 +1018,9 @@ patch_enable ()
 			;;
 		shell32-Context_Menu)
 			enable_shell32_Context_Menu="$2"
+			;;
+		shell32-IconCache)
+			enable_shell32_IconCache="$2"
 			;;
 		shell32-NewMenu_Interface)
 			enable_shell32_NewMenu_Interface="$2"
@@ -6038,6 +6042,21 @@ if test "$enable_shell32_Context_Menu" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "shell32: Add parameter to ISFHelper::DeleteItems to allow deleting files without confirmation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Remove source files when using cut in the context menu.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Recognize cut/copy/paste string verbs in item menu context menu.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shell32-IconCache
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45696] shell32: Generate icons from available icons if required.
+# |
+# | Modified files:
+# |   *	dlls/shell32/iconcache.c
+# |
+if test "$enable_shell32_IconCache" -eq 1; then
+	patch_apply shell32-IconCache/0001-shell32-iconcache-Generate-icons-from-available-icons-.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "shell32/iconcache: Generate icons from available icons if some icon sizes failed to load.", 1 },';
 	) >> "$patchlist"
 fi
 

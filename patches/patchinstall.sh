@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "400dd1596ab7946e68278b3f8dc7c87b898c7e9f"
+	echo "0cc6233e2077c1ef679ecb8bd815d31484868294"
 }
 
 # Show version information
@@ -218,7 +218,6 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_Purist_Mode="$1"
-	enable_ntdll_RtlAddGrowableFunctionTable="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
@@ -248,7 +247,6 @@ patch_enable_all ()
 	enable_ole32_HGLOBALStream="$1"
 	enable_ole32_STGPROP="$1"
 	enable_oleaut32_CreateTypeLib="$1"
-	enable_oleaut32_ITypeInfo_fnInvoke="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
@@ -812,9 +810,6 @@ patch_enable ()
 		ntdll-Purist_Mode)
 			enable_ntdll_Purist_Mode="$2"
 			;;
-		ntdll-RtlAddGrowableFunctionTable)
-			enable_ntdll_RtlAddGrowableFunctionTable="$2"
-			;;
 		ntdll-RtlCaptureStackBackTrace)
 			enable_ntdll_RtlCaptureStackBackTrace="$2"
 			;;
@@ -901,9 +896,6 @@ patch_enable ()
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
-			;;
-		oleaut32-ITypeInfo_fnInvoke)
-			enable_oleaut32_ITypeInfo_fnInvoke="$2"
 			;;
 		oleaut32-Load_Save_EMF)
 			enable_oleaut32_Load_Save_EMF="$2"
@@ -1990,25 +1982,18 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 fi
 
-if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
-	if test "$enable_ntdll_LdrInitializeThunk" -gt 1; then
-		abort "Patchset ntdll-LdrInitializeThunk disabled, but ntdll-RtlCreateUserThread depends on that."
-	fi
-	enable_ntdll_LdrInitializeThunk=1
-fi
-
-if test "$enable_ntdll_RtlAddGrowableFunctionTable" -eq 1; then
-	if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -gt 1; then
-		abort "Patchset ntdll-RtlGetUnloadEventTraceEx disabled, but ntdll-RtlAddGrowableFunctionTable depends on that."
-	fi
-	enable_ntdll_RtlGetUnloadEventTraceEx=1
-fi
-
 if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
 	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
 		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlGetUnloadEventTraceEx depends on that."
 	fi
 	enable_ntdll_RtlQueryPackageIdentity=1
+fi
+
+if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
+	if test "$enable_ntdll_LdrInitializeThunk" -gt 1; then
+		abort "Patchset ntdll-LdrInitializeThunk disabled, but ntdll-RtlCreateUserThread depends on that."
+	fi
+	enable_ntdll_LdrInitializeThunk=1
 fi
 
 if test "$enable_ntdll_Purist_Mode" -eq 1; then
@@ -4906,56 +4891,6 @@ if test "$enable_ntdll_Purist_Mode" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlQueryPackageIdentity
-# |
-# | Modified files:
-# |   *	dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c
-# |
-if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
-	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlGetUnloadEventTraceEx
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-RtlQueryPackageIdentity
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44897] Implement stub for ntdll.RtlGetUnloadEventTraceEx
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c
-# |
-if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
-	patch_apply ntdll-RtlGetUnloadEventTraceEx/0001-ntdll-Add-stub-for-RtlGetUnloadEventTraceEx.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlGetUnloadEventTraceEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlAddGrowableFunctionTable
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-RtlQueryPackageIdentity, ntdll-RtlGetUnloadEventTraceEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42255] ntdll: Add RtlAddGrowableFunctionTable stub
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_x86_64.c, include/winnt.h
-# |
-if test "$enable_ntdll_RtlAddGrowableFunctionTable" -eq 1; then
-	patch_apply ntdll-RtlAddGrowableFunctionTable/0001-ntdll-Add-RtlAddGrowableFunctionTable-stub.patch
-	patch_apply ntdll-RtlAddGrowableFunctionTable/0002-ntdll-Add-RtlGrowFunctionTable-stub.patch
-	(
-		printf '%s\n' '+    { "Austin English", "ntdll: Add RtlAddGrowableFunctionTable stub.", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Add RtlGrowFunctionTable stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-RtlCaptureStackBackTrace
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4986,6 +4921,36 @@ if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlQueryPackageIdentity
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/rtl.c
+# |
+if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
+	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlGetUnloadEventTraceEx
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-RtlQueryPackageIdentity
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44897] Implement stub for ntdll.RtlGetUnloadEventTraceEx
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c
+# |
+if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
+	patch_apply ntdll-RtlGetUnloadEventTraceEx/0001-ntdll-Add-stub-for-RtlGetUnloadEventTraceEx.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlGetUnloadEventTraceEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5323,21 +5288,6 @@ if test "$enable_oleaut32_CreateTypeLib" -eq 1; then
 	patch_apply oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "oleaut32: Implement semi-stub for CreateTypeLib.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset oleaut32-ITypeInfo_fnInvoke
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41488] Accept DISP_E_PARAMNOTFOUND for missing optional param in typelib implementation
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/tmarshal.c, dlls/oleaut32/typelib.c
-# |
-if test "$enable_oleaut32_ITypeInfo_fnInvoke" -eq 1; then
-	patch_apply oleaut32-ITypeInfo_fnInvoke/0001-oleaut32-Accept-DISP_E_PARAMNOTFOUND-for-missing-opt.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Accept DISP_E_PARAMNOTFOUND for missing optional parameters in ITypeInfo::Invoke implementation.", 3 },';
 	) >> "$patchlist"
 fi
 

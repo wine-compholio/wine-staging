@@ -1,4 +1,4 @@
-From 844c14bf47f1e3361e5524a6529f39f635e0f7ba Mon Sep 17 00:00:00 2001
+From 399a3ac66f9d3ff2ce9d3357d19989fa97378cfe Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Mar 2015 01:22:34 +0100
 Subject: [PATCH] server: Implement support for global and local shared memory
@@ -6,36 +6,36 @@ Subject: [PATCH] server: Implement support for global and local shared memory
 
 ---
  dlls/ntdll/ntdll_misc.h |  1 +
- dlls/ntdll/server.c     | 64 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/server.c     | 64 +++++++++++++++++++++++++++++++++++
  dlls/ntdll/thread.c     |  4 +++
- include/wine/server.h   | 11 ++++++++
+ include/wine/server.h   | 11 ++++++
  include/winternl.h      |  2 +-
- server/fd.c             | 27 ++++++++++++++++++
- server/file.h           |  8 ++++++
+ server/fd.c             | 27 +++++++++++++++
+ server/file.h           |  8 +++++
  server/main.c           |  1 +
- server/mapping.c        | 74 +++++++++++++++++++++++++++++++++++++++++++++++++
- server/protocol.def     | 15 ++++++++++
- server/thread.c         |  7 +++++
+ server/mapping.c        | 74 +++++++++++++++++++++++++++++++++++++++++
+ server/protocol.def     | 15 +++++++++
+ server/thread.c         |  7 ++++
  server/thread.h         |  2 ++
  12 files changed, 215 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index fe0a37eebd..4e8cbbfcce 100644
+index 0c0f219cac8..0fd9d7b416e 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -106,6 +106,7 @@ extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct o
+@@ -111,6 +111,7 @@ extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct o
  extern NTSTATUS validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr ) DECLSPEC_HIDDEN;
  extern int wait_select_reply( void *cookie ) DECLSPEC_HIDDEN;
- extern BOOL invoke_apc( const apc_call_t *call, apc_result_t *result ) DECLSPEC_HIDDEN;
+ extern BOOL invoke_apc( const apc_call_t *call, apc_result_t *result, sigset_t *user_sigset ) DECLSPEC_HIDDEN;
 +extern void *server_get_shared_memory( HANDLE thread ) DECLSPEC_HIDDEN;
  
  /* module handling */
  extern LIST_ENTRY tls_links DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 38356f4674..dd8c862a39 100644
+index add4d9e665e..56dc55dbbb3 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -981,6 +981,66 @@ done:
+@@ -1003,6 +1003,66 @@ done:
  }
  
  
@@ -102,7 +102,7 @@ index 38356f4674..dd8c862a39 100644
  /***********************************************************************
   *           wine_server_fd_to_handle   (NTDLL.@)
   *
-@@ -1517,6 +1577,10 @@ size_t server_init_thread( void *entry_point, BOOL *suspend )
+@@ -1539,6 +1599,10 @@ size_t server_init_thread( void *entry_point, BOOL *suspend )
      }
      SERVER_END_REQ;
  
@@ -114,10 +114,10 @@ index 38356f4674..dd8c862a39 100644
      ntdll_get_thread_data()->wow64_redir = is_wow64;
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 75b43dd653..d2b74a9cd4 100644
+index 48672454e83..d1ab168adc9 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -456,6 +456,7 @@ void exit_thread( int status )
+@@ -612,6 +612,7 @@ void exit_thread( int status )
  void WINAPI RtlExitUserThread( ULONG status )
  {
      static void *prev_teb;
@@ -125,7 +125,7 @@ index 75b43dd653..d2b74a9cd4 100644
      sigset_t sigset;
      TEB *teb;
  
-@@ -480,6 +481,9 @@ void WINAPI RtlExitUserThread( ULONG status )
+@@ -636,6 +637,9 @@ void WINAPI RtlExitUserThread( ULONG status )
      LdrShutdownThread();
      RtlFreeThreadActivationContextStack();
  
@@ -136,7 +136,7 @@ index 75b43dd653..d2b74a9cd4 100644
  
      if ((teb = interlocked_xchg_ptr( &prev_teb, NtCurrentTeb() )))
 diff --git a/include/wine/server.h b/include/wine/server.h
-index d573d1f7ad..9889b95aaf 100644
+index d573d1f7ad4..9889b95aaff 100644
 --- a/include/wine/server.h
 +++ b/include/wine/server.h
 @@ -120,6 +120,17 @@ static inline void *wine_server_get_ptr( client_ptr_t ptr )
@@ -158,10 +158,10 @@ index d573d1f7ad..9889b95aaf 100644
  /* macros for server requests */
  
 diff --git a/include/winternl.h b/include/winternl.h
-index 9c8861334a..e7f09681af 100644
+index d01b7997901..ae0bfa85671 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -401,7 +401,7 @@ typedef struct _TEB
+@@ -402,7 +402,7 @@ typedef struct _TEB
      PVOID                        Spare4;                            /* f7c/1750 */
      PVOID                        ReservedForOle;                    /* f80/1758 */
      ULONG                        WaitingOnLoaderLock;               /* f84/1760 */
@@ -171,10 +171,10 @@ index 9c8861334a..e7f09681af 100644
  #ifdef _WIN64
      PVOID                        DeallocationBStore;                /*    /1788 */
 diff --git a/server/fd.c b/server/fd.c
-index f2d83b4d58..223bd84626 100644
+index 688a5cf45bd..52518d67126 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -2564,6 +2564,33 @@ DECL_HANDLER(write)
+@@ -2669,6 +2669,33 @@ DECL_HANDLER(write)
      release_object( fd );
  }
  
@@ -209,10 +209,10 @@ index f2d83b4d58..223bd84626 100644
  DECL_HANDLER(ioctl)
  {
 diff --git a/server/file.h b/server/file.h
-index 6b67866d3f..4db2479eae 100644
+index a9435e7eae9..e8d932effd7 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -165,6 +165,14 @@ extern struct object *create_mailslot_device( struct object *root, const struct
+@@ -169,6 +169,14 @@ extern struct object *create_mailslot_device( struct object *root, const struct
  extern struct object *create_unix_device( struct object *root, const struct unicode_str *name,
                                            const char *unix_path );
  
@@ -228,7 +228,7 @@ index 6b67866d3f..4db2479eae 100644
  
  extern void do_change_notify( int unix_fd );
 diff --git a/server/main.c b/server/main.c
-index 7aed338e96..f984bfc1e3 100644
+index 7aed338e968..f984bfc1e30 100644
 --- a/server/main.c
 +++ b/server/main.c
 @@ -145,6 +145,7 @@ int main( int argc, char *argv[] )
@@ -240,7 +240,7 @@ index 7aed338e96..f984bfc1e3 100644
      return 0;
  }
 diff --git a/server/mapping.c b/server/mapping.c
-index bc59b21b96..e8cbb7ce10 100644
+index fb583761ade..d7910d5f26a 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -29,8 +29,32 @@
@@ -276,7 +276,7 @@ index bc59b21b96..e8cbb7ce10 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -187,6 +211,10 @@ static const struct fd_ops mapping_fd_ops =
+@@ -190,6 +214,10 @@ static const struct fd_ops mapping_fd_ops =
  
  static size_t page_mask;
  
@@ -287,7 +287,7 @@ index bc59b21b96..e8cbb7ce10 100644
  #define ROUND_SIZE(size)  (((size) + page_mask) & ~page_mask)
  
  
-@@ -258,6 +286,52 @@ static int check_current_dir_for_exec(void)
+@@ -261,6 +289,52 @@ static int check_current_dir_for_exec(void)
      return (ret != MAP_FAILED);
  }
  
@@ -341,7 +341,7 @@ index bc59b21b96..e8cbb7ce10 100644
  static int create_temp_file( file_pos_t size )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 73e0868bed..805abecba6 100644
+index 5fa9401cf6c..7eddd5eb292 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -69,6 +69,15 @@ struct request_max_size
@@ -360,7 +360,7 @@ index 73e0868bed..805abecba6 100644
  
  /* debug event data */
  typedef union
-@@ -1274,6 +1283,12 @@ enum server_fd_type
+@@ -1277,6 +1286,12 @@ enum server_fd_type
  @END
  
  
@@ -374,10 +374,10 @@ index 73e0868bed..805abecba6 100644
  @REQ(flush)
      async_data_t   async;       /* async I/O parameters */
 diff --git a/server/thread.c b/server/thread.c
-index 372882f7ae..1200cc1316 100644
+index e4824d59e2d..cd3952cd2e3 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -200,6 +200,8 @@ static inline void init_thread_structure( struct thread *thread )
+@@ -202,6 +202,8 @@ static inline void init_thread_structure( struct thread *thread )
      thread->desktop_users   = 0;
      thread->token           = NULL;
      thread->exit_poll       = NULL;
@@ -386,7 +386,7 @@ index 372882f7ae..1200cc1316 100644
  
      thread->creation_time = current_time;
      thread->exit_time     = 0;
-@@ -328,6 +330,8 @@ static void cleanup_thread( struct thread *thread )
+@@ -330,6 +332,8 @@ static void cleanup_thread( struct thread *thread )
              thread->inflight[i].client = thread->inflight[i].server = -1;
          }
      }
@@ -395,7 +395,7 @@ index 372882f7ae..1200cc1316 100644
      thread->req_data = NULL;
      thread->reply_data = NULL;
      thread->request_fd = NULL;
-@@ -336,6 +340,9 @@ static void cleanup_thread( struct thread *thread )
+@@ -338,6 +342,9 @@ static void cleanup_thread( struct thread *thread )
      thread->context = NULL;
      thread->suspend_context = NULL;
      thread->desktop = 0;
@@ -406,7 +406,7 @@ index 372882f7ae..1200cc1316 100644
  
  /* destroy a thread when its refcount is 0 */
 diff --git a/server/thread.h b/server/thread.h
-index 1b01c689b3..0fc4c8318b 100644
+index 25dd8763169..301abdba390 100644
 --- a/server/thread.h
 +++ b/server/thread.h
 @@ -90,6 +90,8 @@ struct thread
@@ -419,5 +419,5 @@ index 1b01c689b3..0fc4c8318b 100644
  
  struct thread_snapshot
 -- 
-2.14.1
+2.19.2
 

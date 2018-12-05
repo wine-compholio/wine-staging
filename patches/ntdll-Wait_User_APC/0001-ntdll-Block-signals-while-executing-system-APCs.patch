@@ -1,4 +1,4 @@
-From e923a9b76bc2b65422bff7953be5628b6a2a93d5 Mon Sep 17 00:00:00 2001
+From ed9fbc71ad357fe633abb5da5aba1ffddcd09a33 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 4 Nov 2015 07:30:36 +0100
 Subject: ntdll: Block signals while executing system APCs. (v2)
@@ -19,14 +19,16 @@ other process will wait on the result.
 Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
  dlls/kernel32/tests/sync.c | 11 ++---------
+ dlls/ntdll/ntdll_misc.h    |  2 +-
  dlls/ntdll/server.c        | 21 +++++++++++++++++----
- 2 files changed, 19 insertions(+), 13 deletions(-)
+ dlls/ntdll/sync.c          |  2 +-
+ 4 files changed, 21 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/kernel32/tests/sync.c b/dlls/kernel32/tests/sync.c
-index 4ac6a99..53e4f81 100644
+index f7be51e972..982a6ae105 100644
 --- a/dlls/kernel32/tests/sync.c
 +++ b/dlls/kernel32/tests/sync.c
-@@ -2460,21 +2460,14 @@ static void test_apc_deadlock(void)
+@@ -2604,21 +2604,14 @@ static void test_apc_deadlock(void)
      result = WaitForSingleObject(event, 1000);
      ok(result == WAIT_OBJECT_0, "expected WAIT_OBJECT_0, got %u\n", result);
  
@@ -50,22 +52,35 @@ index 4ac6a99..53e4f81 100644
  
          result = ResumeThread(pi.hThread);
          ok(result == 1, "expected 1, got %u\n", result);
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 1630978f0a..3c7411e6d6 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -105,7 +105,7 @@ extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct o
+                                          data_size_t *ret_len ) DECLSPEC_HIDDEN;
+ extern NTSTATUS validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr ) DECLSPEC_HIDDEN;
+ extern int wait_select_reply( void *cookie ) DECLSPEC_HIDDEN;
+-extern BOOL invoke_apc( const apc_call_t *call, apc_result_t *result ) DECLSPEC_HIDDEN;
++extern BOOL invoke_apc( const apc_call_t *call, apc_result_t *result, sigset_t *user_sigset ) DECLSPEC_HIDDEN;
+ 
+ /* module handling */
+ extern LIST_ENTRY tls_links DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 356d631..0450d85 100644
+index 38356f4674..8944508f85 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -374,8 +374,9 @@ static int wait_select_reply( void *cookie )
+@@ -385,8 +385,9 @@ int wait_select_reply( void *cookie )
   *              invoke_apc
   *
   * Invoke a single APC. Return TRUE if a user APC has been run.
 + * Optionally unblock signals while executing user APCs.
   */
--static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
-+static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result, sigset_t *user_sigset )
+-BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
++BOOL invoke_apc( const apc_call_t *call, apc_result_t *result, sigset_t *user_sigset )
  {
      BOOL user_apc = FALSE;
      SIZE_T size;
-@@ -390,15 +391,19 @@ static BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
+@@ -401,15 +402,19 @@ BOOL invoke_apc( const apc_call_t *call, apc_result_t *result )
      case APC_USER:
      {
          void (WINAPI *func)(ULONG_PTR,ULONG_PTR,ULONG_PTR) = wine_server_get_ptr( call->user.func );
@@ -85,7 +100,7 @@ index 356d631..0450d85 100644
          user_apc = TRUE;
          break;
      }
-@@ -590,10 +595,12 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
+@@ -595,10 +600,12 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
      obj_handle_t apc_handle = 0;
      apc_call_t call;
      apc_result_t result;
@@ -98,7 +113,7 @@ index 356d631..0450d85 100644
      for (;;)
      {
          SERVER_START_REQ( select )
-@@ -610,9 +617,14 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
+@@ -615,9 +622,14 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
              call        = reply->call;
          }
          SERVER_END_REQ;
@@ -115,7 +130,7 @@ index 356d631..0450d85 100644
          {
              /* if we ran a user apc we have to check once more if additional apcs are queued,
               * but we don't want to wait */
-@@ -625,6 +637,7 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
+@@ -630,6 +642,7 @@ unsigned int server_select( const select_op_t *select_op, data_size_t size, UINT
          if (size >= sizeof(select_op->signal_and_wait) && select_op->op == SELECT_SIGNAL_AND_WAIT)
              size = offsetof( select_op_t, signal_and_wait.signal );
      }
@@ -123,7 +138,7 @@ index 356d631..0450d85 100644
  
      if (ret == STATUS_TIMEOUT && user_apc) ret = STATUS_USER_APC;
  
-@@ -663,7 +676,7 @@ unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *call, a
+@@ -668,7 +681,7 @@ unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *call, a
  
          if (self)
          {
@@ -132,6 +147,19 @@ index 356d631..0450d85 100644
          }
          else
          {
+diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
+index 62cb3cd5ec..a304c9dee4 100644
+--- a/dlls/ntdll/sync.c
++++ b/dlls/ntdll/sync.c
+@@ -2039,7 +2039,7 @@ NTSTATUS WINAPI RtlWaitOnAddress( const void *addr, const void *cmp, SIZE_T size
+ 
+         if (ret == STATUS_PENDING) ret = wait_select_reply( &cookie );
+         if (ret != STATUS_USER_APC) break;
+-        if (invoke_apc( &call, &result ))
++        if (invoke_apc( &call, &result, NULL ))
+         {
+             /* if we ran a user apc we have to check once more if additional apcs are queued,
+              * but we don't want to wait */
 -- 
-2.6.2
+2.14.1
 

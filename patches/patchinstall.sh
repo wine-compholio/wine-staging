@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0cc6233e2077c1ef679ecb8bd815d31484868294"
+	echo "e9231beb865da13941d19eca016a6ccac07cb3f4"
 }
 
 # Show version information
@@ -172,7 +172,6 @@ patch_enable_all ()
 	enable_krnl386_exe16__lclose16="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
-	enable_loader_OSX_Preloader="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -220,7 +219,6 @@ patch_enable_all ()
 	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
-	enable_ntdll_RtlGetUnloadEventTraceEx="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
@@ -672,9 +670,6 @@ patch_enable ()
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
 			;;
-		loader-OSX_Preloader)
-			enable_loader_OSX_Preloader="$2"
-			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
 			;;
@@ -815,9 +810,6 @@ patch_enable ()
 			;;
 		ntdll-RtlCreateUserThread)
 			enable_ntdll_RtlCreateUserThread="$2"
-			;;
-		ntdll-RtlGetUnloadEventTraceEx)
-			enable_ntdll_RtlGetUnloadEventTraceEx="$2"
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
@@ -1982,13 +1974,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 fi
 
-if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
-	if test "$enable_ntdll_RtlQueryPackageIdentity" -gt 1; then
-		abort "Patchset ntdll-RtlQueryPackageIdentity disabled, but ntdll-RtlGetUnloadEventTraceEx depends on that."
-	fi
-	enable_ntdll_RtlQueryPackageIdentity=1
-fi
-
 if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 	if test "$enable_ntdll_LdrInitializeThunk" -gt 1; then
 		abort "Patchset ntdll-LdrInitializeThunk disabled, but ntdll-RtlCreateUserThread depends on that."
@@ -2086,17 +2071,6 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
 	fi
 	enable_ntdll_ThreadTime=1
-fi
-
-if test "$enable_loader_OSX_Preloader" -eq 1; then
-	if test "$enable_Staging" -gt 1; then
-		abort "Patchset Staging disabled, but loader-OSX_Preloader depends on that."
-	fi
-	if test "$enable_configure_Absolute_RPATH" -gt 1; then
-		abort "Patchset configure-Absolute_RPATH disabled, but loader-OSX_Preloader depends on that."
-	fi
-	enable_Staging=1
-	enable_configure_Absolute_RPATH=1
 fi
 
 if test "$enable_libs_Unicode_Collation" -eq 1; then
@@ -4066,25 +4040,6 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset loader-OSX_Preloader
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, configure-Absolute_RPATH
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33159] Implement preloader for Mac OS
-# |
-# | Modified files:
-# |   *	Makefile.in, configure.ac, dlls/ntdll/virtual.c, libs/wine/config.c, loader/Makefile.in, loader/main.c,
-# | 	loader/preloader.c
-# |
-if test "$enable_loader_OSX_Preloader" -eq 1; then
-	patch_apply loader-OSX_Preloader/0002-loader-Implement-preloader-for-Mac-OS.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "loader: Implement preloader for Mac OS.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mmsystem.dll16-MIDIHDR_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4936,24 +4891,6 @@ if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlGetUnloadEventTraceEx
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-RtlQueryPackageIdentity
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44897] Implement stub for ntdll.RtlGetUnloadEventTraceEx
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c
-# |
-if test "$enable_ntdll_RtlGetUnloadEventTraceEx" -eq 1; then
-	patch_apply ntdll-RtlGetUnloadEventTraceEx/0001-ntdll-Add-stub-for-RtlGetUnloadEventTraceEx.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for RtlGetUnloadEventTraceEx.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Serial_Port_Detection
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5111,7 +5048,7 @@ fi
 # |   *	[#14697] Do not allow interruption of system APC in server_select
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/server.c
+# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/sync.c
 # |
 if test "$enable_ntdll_Wait_User_APC" -eq 1; then
 	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
@@ -6619,26 +6556,17 @@ fi
 # Patchset windowscodecs-Palette_Images
 # |
 # | Modified files:
-# |   *	dlls/windowscodecs/bmpdecode.c, dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/imgfactory.c,
-# | 	dlls/windowscodecs/info.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
-# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tests/pngformat.c, dlls/windowscodecs/tiffformat.c
+# |   *	dlls/windowscodecs/bmpencode.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_Palette_Images" -eq 1; then
 	patch_apply windowscodecs-Palette_Images/0012-windowscodecs-tests-Add-tests-for-encoding-2bpp-4bpp.patch
-	patch_apply windowscodecs-Palette_Images/0013-windowscodecs-Use-V_UI1-instead-of-V_UNION-to-assign.patch
 	patch_apply windowscodecs-Palette_Images/0014-windowscodecs-Add-support-for-palette-image-formats-.patch
-	patch_apply windowscodecs-Palette_Images/0016-windowscodecs-Limit-number-of-colors-in-a-palette-in.patch
 	patch_apply windowscodecs-Palette_Images/0017-windowscodecs-Add-support-for-palette-image-formats-.patch
-	patch_apply windowscodecs-Palette_Images/0020-windowscodecs-find_decoder-should-return-an-error-it.patch
-	patch_apply windowscodecs-Palette_Images/0021-windowscodecs-PNG-decoder-should-return-WINCODEC_ERR.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add tests for encoding 2bpp/4bpp images with a palette.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Use V_UI1() instead of V_UNION() to assign a VT_UI1 variant member.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to TIFF encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Limit number of colors in a palette in BMP decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for palette image formats to BMP encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Find_decoder() should return an error it received from the decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: PNG decoder should return WINCODEC_ERR_UNKNOWNIMAGEFORMAT when image loading fails.", 1 },';
 	) >> "$patchlist"
 fi
 

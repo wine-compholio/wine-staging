@@ -1,18 +1,18 @@
-From 77f6fbe85432f4bc61b1b9b27a0992a1f6269344 Mon Sep 17 00:00:00 2001
+From 28112782ac7279d42d539671a4e181264559b93d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 10 Nov 2014 04:05:38 +0100
-Subject: ntoskrnl.exe: Avoid invalid memory access when relocation block
- addresses memory outside of the current page.
+Subject: [PATCH] ntoskrnl.exe: Avoid invalid memory access when relocation
+ block addresses memory outside of the current page.
 
 ---
  dlls/ntoskrnl.exe/ntoskrnl.c | 49 ++++++++++++++++++++++++++++++++++++++------
  1 file changed, 43 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index 577f5b3..8649863 100644
+index ace79a8..97def67 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
-@@ -3208,6 +3208,39 @@ static LDR_MODULE *find_ldr_module( HMODULE module )
+@@ -3349,6 +3349,39 @@ static LDR_MODULE *find_ldr_module( HMODULE module )
      return ldr;
  }
  
@@ -52,7 +52,7 @@ index 577f5b3..8649863 100644
  /* load the driver module file */
  static HMODULE load_driver_module( const WCHAR *name )
  {
-@@ -3231,7 +3264,7 @@ static HMODULE load_driver_module( const WCHAR *name )
+@@ -3372,27 +3405,31 @@ static HMODULE load_driver_module( const WCHAR *name )
      if (nt->OptionalHeader.SectionAlignment < info.PageSize ||
          !(nt->FileHeader.Characteristics & IMAGE_FILE_DLL))
      {
@@ -61,9 +61,8 @@ index 577f5b3..8649863 100644
          IMAGE_BASE_RELOCATION *rel, *end;
  
          if ((rel = RtlImageDirectoryEntryToData( module, TRUE, IMAGE_DIRECTORY_ENTRY_BASERELOC, &size )))
-@@ -3239,20 +3272,24 @@ static HMODULE load_driver_module( const WCHAR *name )
-             WINE_TRACE( "%s: relocating from %p to %p\n",
-                         wine_dbgstr_w(name), (char *)module - delta, module );
+         {
+             TRACE( "%s: relocating from %p to %p\n", wine_dbgstr_w(name), (char *)module - delta, module );
              end = (IMAGE_BASE_RELOCATION *)((char *)rel + size);
 -            while (rel < end && rel->SizeOfBlock)
 +            while (rel < end - 1 && rel->SizeOfBlock)
@@ -92,5 +91,5 @@ index 577f5b3..8649863 100644
      }
  
 -- 
-2.7.4
+1.9.1
 

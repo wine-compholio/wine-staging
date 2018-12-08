@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5cc5b102c1b0a66aa63b66f43f2da9a1a9d15ab6"
+	echo "ae5e029d2227b3a8024f597591f76fe0f37d52e3"
 }
 
 # Show version information
@@ -314,6 +314,7 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
+	enable_user32_dialog_focus="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1094,6 +1095,9 @@ patch_enable ()
 			;;
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
+			;;
+		user32-dialog_focus)
+			enable_user32_dialog_focus="$2"
 			;;
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
@@ -6436,6 +6440,21 @@ if test "$enable_user32_ShowWindow" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset user32-dialog_focus
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46215] File Open Dialog fails to set focus to Filename text box
+# |
+# | Modified files:
+# |   *	dlls/user32/dialog.c
+# |
+if test "$enable_user32_dialog_focus" -eq 1; then
+	patch_apply user32-dialog_focus/0001-user32-Dont-reset-focus-if-current-control-is-a-chil.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Dont reset focus if current control is a child of our parent.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset user32-msgbox-Support-WM_COPY-mesg
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6544,7 +6563,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/tests/image.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/converter.c,
-# | 	dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c, dlls/windowscodecs/pngformat.c, dlls/windowscodecs/regsvr.c,
+# | 	dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
 # | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/wincodecs_private.h,
 # | 	dlls/windowscodecs/windowscodecs_wincodec.idl
 # |
@@ -6552,35 +6571,33 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
-	patch_apply windowscodecs-GIF_Encoder/0011-windowscodecs-Add-registration-for-GUID_WICPixelForm.patch
-	patch_apply windowscodecs-GIF_Encoder/0012-windowscodecs-Implement-IWICBitmapDecoder-GetMetadat.patch
 	patch_apply windowscodecs-GIF_Encoder/0014-windowscodecs-Fix-the-buffer-size-check-in-the-TIFF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0015-windowscodecs-Add-support-for-converting-to-8bppInde.patch
 	patch_apply windowscodecs-GIF_Encoder/0016-windowscodecs-WICConvertBitmapSource-should-ask-IWIC.patch
-	patch_apply windowscodecs-GIF_Encoder/0019-windowscodecs-Improve-stub-for-IWICBitmapDecoder-Get.patch
 	patch_apply windowscodecs-GIF_Encoder/0020-windowscodecs-Add-registration-of-the-GIF-encoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0021-windowscodecs-Fix-IWICBitmapDecoder-CopyPalette-for-.patch
 	patch_apply windowscodecs-GIF_Encoder/0022-windowscodecs-Better-follow-the-GIF-spec-and-don-t-s.patch
 	patch_apply windowscodecs-GIF_Encoder/0023-windowscodecs-Fix-behaviour-of-format-converter-for-.patch
+	patch_apply windowscodecs-GIF_Encoder/0024-windowscodecs-tests-Add-a-bunch-of-new-tests-for-ind.patch
 	patch_apply windowscodecs-GIF_Encoder/0025-windowscodecs-tests-Add-some-tests-for-converting-24.patch
 	patch_apply windowscodecs-GIF_Encoder/0026-windowscodecs-tests-Add-the-tests-for-GIF-encoder-an.patch
+	patch_apply windowscodecs-GIF_Encoder/0027-windowscodecs-tests-Add-a-missing-check-for-IWICBitm.patch
 	patch_apply windowscodecs-GIF_Encoder/0028-windowscodecs-Correctly-indicate-that-the-global-inf.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs/tests: Add IWICBitmapEncoderInfo test.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration for GUID_WICPixelFormat32bppGrayFloat pixel format.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICBitmapDecoder::GetMetadataQueryReader in the TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the buffer size check in the TIFF decoder'\''s IWICBitmapFrameDecode::CopyPixels implementation.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bppIndexed format to IWICFormatConverter.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve stub for IWICBitmapDecoder::GetMetadataQueryReader in the PNG decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Better follow the GIF spec and don'\''t specify the local color table size if there is no local palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix behaviour of format converter for indexed formats when NULL or empty palette has been provided.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a bunch of new tests for indexed format conversions.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for converting 24bppBGR to 8bppIndexed format.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a missing check for IWICBitmapFrameDecode::GetPixelFormat return value.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6595,12 +6612,10 @@ fi
 # | 	dlls/windowscodecs/tests/palette.c, include/gdiplusflat.h
 # |
 if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
-	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0001-windowscodecs-tests-Add-some-tests-for-IWICPalette-I.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0002-windowscodecs-Implement-IWICPalette-InitializeFromBi.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0003-gdiplus-Implement-GdipInitializePalette.-v2.patch
 	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0004-gdiplus-tests-Add-some-tests-for-GdipInitializePalet.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for IWICPalette::InitializeFromBitmap.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';

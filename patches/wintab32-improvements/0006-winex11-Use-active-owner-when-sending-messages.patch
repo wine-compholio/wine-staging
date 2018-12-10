@@ -1,0 +1,67 @@
+From 9099a135c1200d398e4a22e0c87bf7b494b82416 Mon Sep 17 00:00:00 2001
+From: Robert Walker <bob.mt.wya@gmail.com>
+Date: Tue, 11 Dec 2018 09:22:18 +1100
+Subject: [PATCH] winex11: Use active owner when sending messages
+
+---
+ dlls/winex11.drv/wintab.c | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/winex11.drv/wintab.c b/dlls/winex11.drv/wintab.c
+index 3517bd53cef..440c8f5d249 100644
+--- a/dlls/winex11.drv/wintab.c
++++ b/dlls/winex11.drv/wintab.c
+@@ -265,6 +265,7 @@ static int           proximity_in_type;
+ static int           proximity_out_type;
+ 
+ static HWND          hwndTabletDefault;
++static HWND          gActiveOwner;
+ static WTPACKET      gMsgPacket;
+ static DWORD         gSerial;
+ static DWORD         lastX = 0xffff;
+@@ -928,7 +929,7 @@ static BOOL motion_event( HWND hwnd, XEvent *event )
+     gMsgPacket.pkNormalPressure = motion->axis_data[2];
+     gMsgPacket.pkButtons = get_button_state(curnum);
+     gMsgPacket.pkChanged = get_changed_state(&gMsgPacket);
+-    SendMessageW(hwndTabletDefault,WT_PACKET,gMsgPacket.pkSerialNumber,(LPARAM)hwnd);
++    SendMessageW(hwndTabletDefault,WT_PACKET,gMsgPacket.pkSerialNumber,(LPARAM)gActiveOwner);
+     return TRUE;
+ }
+ 
+@@ -965,7 +966,7 @@ static BOOL button_event( HWND hwnd, XEvent *event )
+     gMsgPacket.pkNormalPressure = button->axis_data[2];
+     gMsgPacket.pkButtons = get_button_state(curnum);
+     gMsgPacket.pkChanged = get_changed_state(&gMsgPacket);
+-    SendMessageW(hwndTabletDefault,WT_PACKET,gMsgPacket.pkSerialNumber,(LPARAM)hwnd);
++    SendMessageW(hwndTabletDefault,WT_PACKET,gMsgPacket.pkSerialNumber,(LPARAM)gActiveOwner);
+     return TRUE;
+ }
+ 
+@@ -1021,7 +1022,7 @@ static BOOL proximity_event( HWND hwnd, XEvent *event )
+      */
+     proximity_info = MAKELPARAM((event->type == proximity_in_type),
+                      (event->type == proximity_in_type) || (event->type == proximity_out_type));
+-    SendMessageW(hwndTabletDefault, WT_PROXIMITY, (WPARAM)hwnd, proximity_info);
++    SendMessageW(hwndTabletDefault, WT_PROXIMITY, (WPARAM)gActiveOwner, proximity_info);
+     return TRUE;
+ }
+ 
+@@ -1038,12 +1039,12 @@ int CDECL X11DRV_AttachEventQueueToTablet(HWND hOwner)
+     XDeviceInfo     *target = NULL;
+     XDevice         *the_device;
+     XEventClass     event_list[7];
+-    Window          win = X11DRV_get_whole_window( hOwner );
+-
+-    if (!win || !xinput_handle) return 0;
++    Window          win = X11DRV_get_whole_window(GetDesktopWindow());
+ 
+     TRACE("Creating context for window %p (%lx)  %i cursors\n", hOwner, win, gNumCursors);
+ 
++    gActiveOwner = hOwner;
++
+     devices = pXListInputDevices(data->display, &num_devices);
+ 
+     X11DRV_expect_error(data->display,Tablet_ErrorHandler,NULL);
+-- 
+2.19.2
+

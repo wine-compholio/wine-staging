@@ -371,6 +371,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
+	enable_winex11_key_translation="$1"
 	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
@@ -1267,6 +1268,9 @@ patch_enable ()
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
+			;;
+		winex11-key_translation)
+			enable_winex11_key_translation="$2"
 			;;
 		winex11-mouse-movements)
 			enable_winex11_mouse_movements="$2"
@@ -7415,6 +7419,23 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-key_translation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30984] Improve key translation.
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/keyboard.c
+# |
+if test "$enable_winex11_key_translation" -eq 1; then
+	patch_apply winex11-key_translation/0001-winex11-Match-keyboard-in-Unicode.patch
+	patch_apply winex11-key_translation/0002-winex11-Fix-more-key-translation.patch
+	(
+		printf '%s\n' '+    { "Ken Thomases", "winex11: Match keyboard in Unicode.", 1 },';
+		printf '%s\n' '+    { "Philippe Valembois", "winex11: Fix more key translation.", 1 },';
 	) >> "$patchlist"
 fi
 

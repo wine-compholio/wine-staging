@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ae5e029d2227b3a8024f597591f76fe0f37d52e3"
+	echo "76bc23d8c6c1b2857cb7a4d14c5931094a12a82a"
 }
 
 # Show version information
@@ -7193,18 +7193,13 @@ fi
 # |   *	[#4836] Various improvements for wineps.drv for Adobe PageMaker compatibility
 # |
 # | Modified files:
-# |   *	dlls/gdi32/printdrv.c, dlls/gdi32/tests/dc.c, dlls/wineps.drv/download.c, dlls/wineps.drv/escape.c,
-# | 	dlls/wineps.drv/psdrv.h
+# |   *	dlls/gdi32/tests/dc.c, dlls/wineps.drv/download.c, dlls/wineps.drv/escape.c, dlls/wineps.drv/psdrv.h
 # |
 if test "$enable_wineps_drv_PostScript_Fixes" -eq 1; then
-	patch_apply wineps.drv-PostScript_Fixes/0001-gdi32-tests-Add-a-simple-test-for-printing-to-a-Post.patch
-	patch_apply wineps.drv-PostScript_Fixes/0002-gdi32-Trace-full-contents-of-DOCINFO-in-StartDoc.patch
 	patch_apply wineps.drv-PostScript_Fixes/0003-wineps.drv-Add-stubs-for-escapes-required-by-Adobe-P.patch
 	patch_apply wineps.drv-PostScript_Fixes/0004-wineps.drv-Add-support-for-GETFACENAME-and-DOWNLOADF.patch
 	patch_apply wineps.drv-PostScript_Fixes/0005-wineps.drv-PostScript-header-should-be-written-by-St.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32/tests: Add a simple test for printing to a PostScript device.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdi32: Trace full contents of DOCINFO in StartDoc.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: Add stubs for escapes required by Adobe PageMaker.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: Add support for GETFACENAME and DOWNLOADFACE escapes.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: PostScript header should be written by StartDoc instead of StartPage.", 1 },';

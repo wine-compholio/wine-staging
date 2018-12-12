@@ -7414,9 +7414,11 @@ fi
 if test "$enable_winex11_key_translation" -eq 1; then
 	patch_apply winex11-key_translation/0001-winex11-Match-keyboard-in-Unicode.patch
 	patch_apply winex11-key_translation/0002-winex11-Fix-more-key-translation.patch
+	patch_apply winex11-key_translation/0003-winex11.drv-Fix-main-Russian-keyboard-layout.patch
 	(
 		printf '%s\n' '+    { "Ken Thomases", "winex11: Match keyboard in Unicode.", 1 },';
 		printf '%s\n' '+    { "Philippe Valembois", "winex11: Fix more key translation.", 1 },';
+		printf '%s\n' '+    { "Ondrej Kraus", "winex11.drv: Fix main Russian keyboard layout.", 1 },';
 	) >> "$patchlist"
 fi
 

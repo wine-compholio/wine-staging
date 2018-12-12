@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "76bc23d8c6c1b2857cb7a4d14c5931094a12a82a"
+	echo "f760079a717042d436a693df59fa1d4416a0e352"
 }
 
 # Show version information
@@ -134,7 +134,6 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
-	enable_dinput_map_dik_codes="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwrite_FontFallback="$1"
@@ -557,9 +556,6 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
-			;;
-		dinput-map_dik_codes)
-			enable_dinput_map_dik_codes="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3305,21 +3301,6 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dinput-map_dik_codes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45605] Map scan codes to DIK code
-# |
-# | Modified files:
-# |   *	dlls/dinput/keyboard.c
-# |
-if test "$enable_dinput_map_dik_codes" -eq 1; then
-	patch_apply dinput-map_dik_codes/0001-dinput-Map-scan-codes-to-DIK-code.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Map scan codes to DIK code.", 1 },';
 	) >> "$patchlist"
 fi
 

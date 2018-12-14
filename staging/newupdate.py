@@ -88,6 +88,7 @@ def main():
     subprocess.call(['autoreconf','-f'],cwd=winedir)
     print 'Calling tools/make_requests...'
     subprocess.call(['./tools/make_requests'],cwd=winedir)
+    subprocess.call(['./staging/patchupdate.sh','--skip-checks','--skip-bugs'])
     sys.exit(0)
 
 if __name__ == '__main__':

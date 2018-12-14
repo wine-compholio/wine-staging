@@ -169,7 +169,6 @@ patch_enable_all ()
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
-	enable_krnl386_exe16__lclose16="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
@@ -661,9 +660,6 @@ patch_enable ()
 			;;
 		krnl386.exe16-Invalid_Console_Handles)
 			enable_krnl386_exe16_Invalid_Console_Handles="$2"
-			;;
-		krnl386.exe16-_lclose16)
-			enable_krnl386_exe16__lclose16="$2"
 			;;
 		libs-Debug_Channel)
 			enable_libs_Debug_Channel="$2"
@@ -3988,21 +3984,6 @@ if test "$enable_krnl386_exe16_Invalid_Console_Handles" -eq 1; then
 	patch_apply krnl386.exe16-Invalid_Console_Handles/0001-krnl386.exe16-Really-translate-all-invalid-console-h.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "krnl386.exe16: Really translate all invalid console handles into usable DOS handles.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset krnl386.exe16-_lclose16
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#19184] Do not reassign default handles after they got closed
-# |
-# | Modified files:
-# |   *	dlls/krnl386.exe16/file.c
-# |
-if test "$enable_krnl386_exe16__lclose16" -eq 1; then
-	patch_apply krnl386.exe16-_lclose16/0001-krnl386.exe16-Do-not-reassign-default-handles-after-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "krnl386.exe16: Do not reassign default handles after they got closed.", 1 },';
 	) >> "$patchlist"
 fi
 

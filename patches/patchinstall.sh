@@ -298,6 +298,7 @@ patch_enable_all ()
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
+	enable_ucrtbase__o_="$1"
 	enable_uianimation_stubs="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -1048,6 +1049,9 @@ patch_enable ()
 			;;
 		taskmgr-Memory_Usage)
 			enable_taskmgr_Memory_Usage="$2"
+			;;
+		ucrtbase-_o_)
+			enable_ucrtbase__o_="$2"
 			;;
 		uianimation-stubs)
 			enable_uianimation_stubs="$2"
@@ -6188,6 +6192,24 @@ if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement basic IO stats for SystemPerformanceInformation in NtQuerySystemInformation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ucrtbase-_o_
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44469] Multiple apps using Windows 10 v1507+ UCRT crash due to multiple missing api-ms-win-crt-
+# | 	private-l1-1-0.dll._o__xxx stubs/forwards (Win10 DISM pkgmgr.exe, MS DirectX Shader Compiler)
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-crt-private-l1-1-0/api-ms-win-crt-private-l1-1-0.spec, dlls/ucrtbase/ucrtbase.spec
+# |
+if test "$enable_ucrtbase__o_" -eq 1; then
+	patch_apply ucrtbase-_o_/0001-api-ms-win-crt-private-l1-1-0-Update-to-10.0.17134.1.patch
+	patch_apply ucrtbase-_o_/0002-ucrtbase-Forward-a-few-functions-for-dxil.dll-and-pk.patch
+	(
+		printf '%s\n' '+    { "Fabian Maurer", "api-ms-win-crt-private-l1-1-0: Update to 10.0.17134.12 (WinBuild.160101.0800).", 1 },';
+		printf '%s\n' '+    { "Fabian Maurer", "ucrtbase: Forward a few functions for dxil.dll and pkgmgr.exe.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f760079a717042d436a693df59fa1d4416a0e352"
+	echo "4397d9497608a3df45a5c519a37f5dcde5cc2301"
 }
 
 # Show version information
@@ -6431,12 +6431,12 @@ fi
 # |   *	[#46215] File Open Dialog fails to set focus to Filename text box
 # |
 # | Modified files:
-# |   *	dlls/user32/dialog.c
+# |   *	dlls/user32/dialog.c, dlls/user32/tests/dialog.c
 # |
 if test "$enable_user32_dialog_focus" -eq 1; then
 	patch_apply user32-dialog_focus/0001-user32-Dont-reset-focus-if-current-control-is-a-chil.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Dont reset focus if current control is a child of our parent.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Dont reset focus if current dialog is a child.", 2 },';
 	) >> "$patchlist"
 fi
 

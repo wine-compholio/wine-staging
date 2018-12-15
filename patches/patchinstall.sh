@@ -136,6 +136,7 @@ patch_enable_all ()
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
+	enable_dwmapi_DwmGetTransportAttributes="$1"
 	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
@@ -561,6 +562,9 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
+			;;
+		dwmapi-DwmGetTransportAttributes)
+			enable_dwmapi_DwmGetTransportAttributes="$2"
 			;;
 		dwrite-FontFallback)
 			enable_dwrite_FontFallback="$2"
@@ -3368,6 +3372,25 @@ if test "$enable_dsound_EAX" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dwmapi-DwmGetTransportAttributes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31350] T-Online Mediencenter Assistent (.NET 3.5 WPF app) installer fails ('dwmapi.dll' stubs insufficient in
+# | 	Vista/Win7 mode)
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/dwmapi/dwmapi_main.c, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c,
+# | 	include/dwmapi.h, include/winerror.h
+# |
+if test "$enable_dwmapi_DwmGetTransportAttributes" -eq 1; then
+	patch_apply dwmapi-DwmGetTransportAttributes/0001-dwmapi-return-DWM_E_COMPOSITIONDISABLED-instead-of-ENOTIMPL-in-DwmGetTransportAttributes.patch
+	patch_apply dwmapi-DwmGetTransportAttributes/0002-dwmapi-add-initial-tests.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "dwmapi: Return DWM_E_COMPOSITIONDISABLED instead of E_NOTIMPL in DwmGetTransportAttributes.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "dwampi: Add initial tests.", 1 },';
 	) >> "$patchlist"
 fi
 

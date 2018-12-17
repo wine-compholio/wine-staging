@@ -152,6 +152,7 @@ patch_enable_all ()
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
+	enable_imm32_message_on_focus="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
@@ -613,6 +614,9 @@ patch_enable ()
 			;;
 		imagehlp-ImageLoad)
 			enable_imagehlp_ImageLoad="$2"
+			;;
+		imm32-message_on_focus)
+			enable_imm32_message_on_focus="$2"
 			;;
 		include-winsock)
 			enable_include_winsock="$2"
@@ -3680,6 +3684,21 @@ if test "$enable_imagehlp_ImageLoad" -eq 1; then
 	patch_apply imagehlp-ImageLoad/0001-imagehlp-tests-Add-tests-for-ImageLoad-ImageUnload-G.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset imm32-message_on_focus
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31157] imm32: Only generate 'WM_IME_SETCONTEXT' message if window has focus.
+# |
+# | Modified files:
+# |   *	dlls/imm32/imm.c
+# |
+if test "$enable_imm32_message_on_focus" -eq 1; then
+	patch_apply imm32-message_on_focus/0001-imm32-Only-generate-WM_IME_SETCONTEXT-message-if-win.patch
+	(
+		printf '%s\n' '+    { "Gijs Vermeulen", "imm32: Only generate '\''WM_IME_SETCONTEXT'\'' message if window has focus.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4397d9497608a3df45a5c519a37f5dcde5cc2301"
+	echo "5a8e430b96ab429a85f82f26ba9d2de4729954c2"
 }
 
 # Show version information
@@ -317,7 +317,6 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
-	enable_user32_dialog_focus="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1110,9 +1109,6 @@ patch_enable ()
 			;;
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
-			;;
-		user32-dialog_focus)
-			enable_user32_dialog_focus="$2"
 			;;
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
@@ -6517,21 +6513,6 @@ if test "$enable_user32_ShowWindow" -eq 1; then
 	patch_apply user32-ShowWindow/0001-user32-ShowWindow-should-not-send-message-when-windo.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "user32: ShowWindow should not send message when window is already visible.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-dialog_focus
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46215] File Open Dialog fails to set focus to Filename text box
-# |
-# | Modified files:
-# |   *	dlls/user32/dialog.c, dlls/user32/tests/dialog.c
-# |
-if test "$enable_user32_dialog_focus" -eq 1; then
-	patch_apply user32-dialog_focus/0001-user32-Dont-reset-focus-if-current-control-is-a-chil.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Dont reset focus if current dialog is a child.", 2 },';
 	) >> "$patchlist"
 fi
 

@@ -1,27 +1,28 @@
-From 1f72ae3bb68ea11fab39e3b30205ea613f77876e Mon Sep 17 00:00:00 2001
+From e95f5c6de6b725baabf59a4767c722b4589bd7cc Mon Sep 17 00:00:00 2001
 From: Louis Lenders <xerox.xerox2000x@gmail.com>
 Date: Thu, 7 Jun 2018 11:51:01 +0200
-Subject: [PATCH] uianimation: add stub dll
+Subject: [PATCH] uianimation: Add stub dll
 
 Reordered code to stop the need of forwards declare.
 Removed private header.
+Split into multiple changes.
 
 Signed-off-by: Louis Lenders <xerox.xerox2000x@gmail.com>
 ---
- configure                                |    2 +
- configure.ac                             |    1 +
- dlls/uianimation/Makefile.in             |    7 +
- dlls/uianimation/main.c                  | 1393 ++++++++++++++++++++++
- dlls/uianimation/uianimation.spec        |    4 +
- dlls/uianimation/uianimation_typelib.idl |   23 +
- 6 files changed, 1430 insertions(+)
+ configure                                |   2 +
+ configure.ac                             |   1 +
+ dlls/uianimation/Makefile.in             |   7 +
+ dlls/uianimation/main.c                  | 959 +++++++++++++++++++++++++++++++
+ dlls/uianimation/uianimation.spec        |   4 +
+ dlls/uianimation/uianimation_typelib.idl |  23 +
+ 6 files changed, 996 insertions(+)
  create mode 100644 dlls/uianimation/Makefile.in
  create mode 100644 dlls/uianimation/main.c
  create mode 100644 dlls/uianimation/uianimation.spec
  create mode 100644 dlls/uianimation/uianimation_typelib.idl
 
 diff --git a/configure b/configure
-index 4807d0a2..6f73764c 100755
+index dd1d347..bb4025c 100755
 --- a/configure
 +++ b/configure
 @@ -1547,6 +1547,7 @@ enable_traffic
@@ -32,7 +33,7 @@ index 4807d0a2..6f73764c 100755
  enable_uiautomationcore
  enable_uiribbon
  enable_unicows
-@@ -19876,6 +19877,7 @@ wine_fn_config_makefile dlls/typelib.dll16 enable_win16
+@@ -19983,6 +19984,7 @@ wine_fn_config_makefile dlls/typelib.dll16 enable_win16
  wine_fn_config_makefile dlls/tzres enable_tzres
  wine_fn_config_makefile dlls/ucrtbase enable_ucrtbase
  wine_fn_config_makefile dlls/ucrtbase/tests enable_tests
@@ -41,10 +42,10 @@ index 4807d0a2..6f73764c 100755
  wine_fn_config_makefile dlls/uiribbon enable_uiribbon
  wine_fn_config_makefile dlls/unicows enable_unicows
 diff --git a/configure.ac b/configure.ac
-index 08fbc3c1..9d98005c 100644
+index 119c4ce..584a2d7 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -3714,6 +3714,7 @@ WINE_CONFIG_MAKEFILE(dlls/typelib.dll16,enable_win16)
+@@ -3722,6 +3722,7 @@ WINE_CONFIG_MAKEFILE(dlls/typelib.dll16,enable_win16)
  WINE_CONFIG_MAKEFILE(dlls/tzres)
  WINE_CONFIG_MAKEFILE(dlls/ucrtbase)
  WINE_CONFIG_MAKEFILE(dlls/ucrtbase/tests)
@@ -54,7 +55,7 @@ index 08fbc3c1..9d98005c 100644
  WINE_CONFIG_MAKEFILE(dlls/unicows)
 diff --git a/dlls/uianimation/Makefile.in b/dlls/uianimation/Makefile.in
 new file mode 100644
-index 00000000..bc303b30
+index 0000000..bc303b3
 --- /dev/null
 +++ b/dlls/uianimation/Makefile.in
 @@ -0,0 +1,7 @@
@@ -67,10 +68,10 @@ index 00000000..bc303b30
 +	uianimation_typelib.idl
 diff --git a/dlls/uianimation/main.c b/dlls/uianimation/main.c
 new file mode 100644
-index 00000000..28687b63
+index 0000000..6101827
 --- /dev/null
 +++ b/dlls/uianimation/main.c
-@@ -0,0 +1,1393 @@
+@@ -0,0 +1,959 @@
 +/*
 + * Uianimation main file.
 + *
@@ -179,418 +180,6 @@ index 00000000..28687b63
 +};
 +
 +/***********************************************************************
-+ *          IUIAnimationVariable
-+ */
-+struct animation_var
-+{
-+    IUIAnimationVariable IUIAnimationVariable_iface;
-+    LONG ref;
-+};
-+
-+struct animation_var *impl_from_IUIAnimationVariable( IUIAnimationVariable *iface )
-+{
-+    return CONTAINING_RECORD( iface, struct animation_var, IUIAnimationVariable_iface );
-+}
-+
-+static HRESULT WINAPI WINAPI animation_var_QueryInterface( IUIAnimationVariable *iface,
-+                                                 REFIID iid, void **obj )
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+
-+    TRACE( "(%p)->(%s %p)\n", This, debugstr_guid( iid ), obj );
-+
-+    if (IsEqualIID( iid, &IID_IUnknown ) ||
-+        IsEqualIID( iid, &IID_IUIAnimationVariable ))
-+    {
-+        IUIAnimationVariable_AddRef( iface );
-+        *obj = iface;
-+        return S_OK;
-+    }
-+
-+    FIXME( "interface %s not implemented\n", debugstr_guid( iid ) );
-+    *obj = NULL;
-+    return E_NOINTERFACE;
-+}
-+
-+static ULONG WINAPI animation_var_AddRef( IUIAnimationVariable *iface )
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    ULONG ref = InterlockedIncrement( &This->ref );
-+
-+    TRACE( "(%p) ref = %u\n", This, ref );
-+    return ref;
-+}
-+
-+static ULONG WINAPI animation_var_Release( IUIAnimationVariable *iface )
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    ULONG ref = InterlockedDecrement(&This->ref);
-+
-+    TRACE( "(%p) ref = %u\n", This, ref );
-+
-+    if (!ref)
-+        heap_free( This );
-+
-+    return ref;
-+}
-+
-+static HRESULT WINAPI animation_var_GetValue ( IUIAnimationVariable *iface, DOUBLE *value)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This);
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetFinalValue ( IUIAnimationVariable *iface, DOUBLE *value)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetPreviousValue ( IUIAnimationVariable *iface, DOUBLE *value)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetIntegerValue ( IUIAnimationVariable *iface, INT32 *value)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetFinalIntegerValue ( IUIAnimationVariable *iface, INT32 *value)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetPreviousIntegerValue ( IUIAnimationVariable *iface, INT32 *value)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetCurrentStoryboard ( IUIAnimationVariable *iface, IUIAnimationStoryboard **storyboard)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_SetLowerBound ( IUIAnimationVariable *iface, DOUBLE bound)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_SetUpperBound ( IUIAnimationVariable *iface, DOUBLE bound)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_SetRoundingMode ( IUIAnimationVariable *iface,UI_ANIMATION_ROUNDING_MODE mode)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+static HRESULT WINAPI animation_var_SetTag ( IUIAnimationVariable *iface, IUnknown *object, UINT32 id)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_GetTag ( IUIAnimationVariable *iface, IUnknown **object, UINT32 *id)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_var_SetVariableChangeHandler ( IUIAnimationVariable *iface, IUIAnimationVariableChangeHandler *handler)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+static HRESULT WINAPI animation_var_SetVariableIntegerChangeHandler ( IUIAnimationVariable *iface,
-+        IUIAnimationVariableIntegerChangeHandler *handler)
-+{
-+    struct animation_var *This = impl_from_IUIAnimationVariable( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+const struct IUIAnimationVariableVtbl animation_var_vtbl =
-+{
-+    animation_var_QueryInterface,
-+    animation_var_AddRef,
-+    animation_var_Release,
-+    animation_var_GetValue,
-+    animation_var_GetFinalValue,
-+    animation_var_GetPreviousValue,
-+    animation_var_GetIntegerValue,
-+    animation_var_GetFinalIntegerValue,
-+    animation_var_GetPreviousIntegerValue,
-+    animation_var_GetCurrentStoryboard,
-+    animation_var_SetLowerBound,
-+    animation_var_SetUpperBound,
-+    animation_var_SetRoundingMode,
-+    animation_var_SetTag,
-+    animation_var_GetTag,
-+    animation_var_SetVariableChangeHandler,
-+    animation_var_SetVariableIntegerChangeHandler,
-+};
-+
-+HRESULT animation_var_create( IUnknown *outer, REFIID iid, void **obj )
-+{
-+    struct animation_var *This = heap_alloc( sizeof(*This) );
-+    HRESULT hr;
-+
-+    if (!This) return E_OUTOFMEMORY;
-+    This->IUIAnimationVariable_iface.lpVtbl = &animation_var_vtbl;
-+    This->ref = 1;
-+
-+    hr = IUIAnimationVariable_QueryInterface( &This->IUIAnimationVariable_iface, iid, obj );
-+
-+    IUIAnimationVariable_Release( &This->IUIAnimationVariable_iface );
-+    return hr;
-+}
-+
-+/***********************************************************************
-+ *          IUIAnimationStoryboard
-+ */
-+struct animation_storyboard
-+{
-+    IUIAnimationStoryboard IUIAnimationStoryboard_iface;
-+    LONG ref;
-+};
-+
-+struct animation_storyboard *impl_from_IUIAnimationStoryboard( IUIAnimationStoryboard *iface )
-+{
-+    return CONTAINING_RECORD( iface, struct animation_storyboard, IUIAnimationStoryboard_iface );
-+}
-+
-+static HRESULT WINAPI WINAPI animation_storyboard_QueryInterface( IUIAnimationStoryboard *iface,
-+                                                 REFIID iid, void **obj )
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+
-+    TRACE( "(%p)->(%s %p)\n", This, debugstr_guid( iid ), obj );
-+
-+    if (IsEqualIID( iid, &IID_IUnknown ) ||
-+        IsEqualIID( iid, &IID_IUIAnimationStoryboard ))
-+    {
-+        IUIAnimationStoryboard_AddRef( iface );
-+        *obj = iface;
-+        return S_OK;
-+    }
-+
-+    FIXME( "interface %s not implemented\n", debugstr_guid( iid ) );
-+    *obj = NULL;
-+    return E_NOINTERFACE;
-+}
-+
-+static ULONG WINAPI animation_storyboard_AddRef( IUIAnimationStoryboard *iface )
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    ULONG ref = InterlockedIncrement( &This->ref );
-+
-+    TRACE( "(%p) ref = %u\n", This, ref );
-+    return ref;
-+}
-+
-+static ULONG WINAPI animation_storyboard_Release( IUIAnimationStoryboard *iface )
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    ULONG ref = InterlockedDecrement(&This->ref);
-+
-+    TRACE( "(%p) ref = %u\n", This, ref );
-+
-+    if (!ref)
-+        heap_free( This );
-+
-+    return ref;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_AddTransition (IUIAnimationStoryboard *iface, IUIAnimationVariable *variable,
-+        IUIAnimationTransition *transition)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_AddKeyframeAtOffset (IUIAnimationStoryboard *iface, UI_ANIMATION_KEYFRAME existingframe,
-+        UI_ANIMATION_SECONDS offset, UI_ANIMATION_KEYFRAME *keyframe)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_AddKeyframeAfterTransition (IUIAnimationStoryboard *iface,IUIAnimationTransition *transition,
-+        UI_ANIMATION_KEYFRAME *keyframe)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_AddTransitionAtKeyframe (IUIAnimationStoryboard *iface, IUIAnimationVariable *variable,
-+        IUIAnimationTransition *transition, UI_ANIMATION_KEYFRAME start_key)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_AddTransitionBetweenKeyframes (IUIAnimationStoryboard *iface, IUIAnimationVariable *variable,
-+        IUIAnimationTransition *transition, UI_ANIMATION_KEYFRAME start_key, UI_ANIMATION_KEYFRAME end_key)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_RepeatBetweenKeyframes (IUIAnimationStoryboard *iface, UI_ANIMATION_KEYFRAME start_key,
-+        UI_ANIMATION_KEYFRAME end_key, INT32 count)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_HoldVariable (IUIAnimationStoryboard *iface,  IUIAnimationVariable *variable)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_SetLongestAcceptableDelay (IUIAnimationStoryboard *iface,  UI_ANIMATION_SECONDS delay)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_Schedule (IUIAnimationStoryboard *iface, UI_ANIMATION_SECONDS now,
-+        UI_ANIMATION_SCHEDULING_RESULT *result)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return 0;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_Conclude (IUIAnimationStoryboard *iface)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_Finish (IUIAnimationStoryboard *iface,  UI_ANIMATION_SECONDS deadline)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_Abandon (IUIAnimationStoryboard *iface)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_SetTag(IUIAnimationStoryboard *iface, IUnknown *object, UINT32 id)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_GetTag (IUIAnimationStoryboard *iface, IUnknown **object, UINT32 *id)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_GetStatus (IUIAnimationStoryboard *iface, UI_ANIMATION_STORYBOARD_STATUS *status)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_GetElapsedTime (IUIAnimationStoryboard *iface,  UI_ANIMATION_SECONDS *elapsed)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return E_NOTIMPL;
-+}
-+
-+static HRESULT WINAPI animation_storyboard_SetStoryboardEventHandler (IUIAnimationStoryboard *iface, IUIAnimationStoryboardEventHandler *handler)
-+{
-+    struct animation_storyboard *This = impl_from_IUIAnimationStoryboard( iface );
-+    FIXME( "stub (%p)->(  )\n", This );
-+    return S_OK;
-+}
-+
-+const struct IUIAnimationStoryboardVtbl animation_storyboard_vtbl =
-+{
-+    animation_storyboard_QueryInterface,
-+    animation_storyboard_AddRef,
-+    animation_storyboard_Release,
-+    animation_storyboard_AddTransition,
-+    animation_storyboard_AddKeyframeAtOffset,
-+    animation_storyboard_AddKeyframeAfterTransition,
-+    animation_storyboard_AddTransitionAtKeyframe,
-+    animation_storyboard_AddTransitionBetweenKeyframes,
-+    animation_storyboard_RepeatBetweenKeyframes,
-+    animation_storyboard_HoldVariable,
-+    animation_storyboard_SetLongestAcceptableDelay,
-+    animation_storyboard_Schedule ,
-+    animation_storyboard_Conclude ,
-+    animation_storyboard_Finish ,
-+    animation_storyboard_Abandon,
-+    animation_storyboard_SetTag,
-+    animation_storyboard_GetTag ,
-+    animation_storyboard_GetStatus ,
-+    animation_storyboard_GetElapsedTime,
-+    animation_storyboard_SetStoryboardEventHandler
-+};
-+
-+HRESULT animation_storyboard_create( IUnknown *outer, REFIID iid, void **obj )
-+{
-+    struct animation_storyboard *This = heap_alloc( sizeof(*This) );
-+    HRESULT hr;
-+
-+    if (!This) return E_OUTOFMEMORY;
-+    This->IUIAnimationStoryboard_iface.lpVtbl = &animation_storyboard_vtbl;
-+    This->ref = 1;
-+
-+    hr = IUIAnimationStoryboard_QueryInterface( &This->IUIAnimationStoryboard_iface, iid, obj );
-+
-+    IUIAnimationStoryboard_Release( &This->IUIAnimationStoryboard_iface );
-+    return hr;
-+}
-+
-+/***********************************************************************
 + *          IUIAnimationManager
 + */
 +struct manager
@@ -650,19 +239,8 @@ index 00000000..28687b63
 +static HRESULT WINAPI manager_CreateAnimationVariable( IUIAnimationManager *iface, DOUBLE initial_value, IUIAnimationVariable **variable )
 +{
 +    struct manager *This = impl_from_IUIAnimationManager( iface );
-+    struct animation_var *var = heap_alloc( sizeof(*var) );
-+    HRESULT hr;
-+
 +    FIXME( "stub (%p)->(  )\n", This );
-+
-+    if (!var) return E_OUTOFMEMORY;
-+    var->IUIAnimationVariable_iface.lpVtbl = &animation_var_vtbl;
-+    var->ref = 1;
-+
-+    hr = animation_var_QueryInterface( &var->IUIAnimationVariable_iface, &IID_IUIAnimationVariable, (void **)variable );
-+
-+    IUIAnimationVariable_Release( &var->IUIAnimationVariable_iface );
-+    return hr;
++    return E_NOTIMPL;
 +}
 +
 +static HRESULT WINAPI manager_ScheduleTransition( IUIAnimationManager *iface, IUIAnimationVariable *variable, IUIAnimationTransition *transition, UI_ANIMATION_SECONDS current_time )
@@ -675,19 +253,8 @@ index 00000000..28687b63
 +static HRESULT WINAPI manager_CreateStoryboard( IUIAnimationManager *iface, IUIAnimationStoryboard **storyboard )
 +{
 +    struct manager *This = impl_from_IUIAnimationManager( iface );
-+    struct animation_storyboard *board = heap_alloc( sizeof(*board) );
-+    HRESULT hr;
-+
 +    FIXME( "stub (%p)->(  )\n", This );
-+
-+    if (!board) return E_OUTOFMEMORY;
-+    board->IUIAnimationStoryboard_iface.lpVtbl = &animation_storyboard_vtbl;
-+    board->ref = 1;
-+
-+    hr = animation_storyboard_QueryInterface( &board->IUIAnimationStoryboard_iface, &IID_IUIAnimationStoryboard, (void **)storyboard );
-+
-+    IUIAnimationStoryboard_Release( &board->IUIAnimationStoryboard_iface );
-+    return hr;
++    return E_NOTIMPL;
 +}
 +
 +static HRESULT WINAPI manager_FinishAllStoryboards( IUIAnimationManager *iface, UI_ANIMATION_SECONDS max_time )
@@ -1466,7 +1033,7 @@ index 00000000..28687b63
 +}
 diff --git a/dlls/uianimation/uianimation.spec b/dlls/uianimation/uianimation.spec
 new file mode 100644
-index 00000000..b16365d0
+index 0000000..b16365d
 --- /dev/null
 +++ b/dlls/uianimation/uianimation.spec
 @@ -0,0 +1,4 @@
@@ -1476,7 +1043,7 @@ index 00000000..b16365d0
 +@ stdcall -private DllUnregisterServer()
 diff --git a/dlls/uianimation/uianimation_typelib.idl b/dlls/uianimation/uianimation_typelib.idl
 new file mode 100644
-index 00000000..9066c09a
+index 0000000..9066c09
 --- /dev/null
 +++ b/dlls/uianimation/uianimation_typelib.idl
 @@ -0,0 +1,23 @@
@@ -1504,5 +1071,5 @@ index 00000000..9066c09a
 +
 +#include "uianimation.idl"
 -- 
-2.19.1
+1.9.1
 

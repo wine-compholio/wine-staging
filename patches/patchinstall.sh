@@ -6242,11 +6242,15 @@ fi
 # | 	dlls/uianimation/uianimation_typelib.idl, include/uianimation.idl
 # |
 if test "$enable_uianimation_stubs" -eq 1; then
-	patch_apply uianimation-stubs/0001-uianimation.idl-add-more-interfaces.patch
-	patch_apply uianimation-stubs/0002-uianimation-add-stub-dll.patch
+	patch_apply uianimation-stubs/0001-uianimation.idl-Add-more-interfaces.patch
+	patch_apply uianimation-stubs/0002-uianimation-Add-stub-dll.patch
+	patch_apply uianimation-stubs/0003-uianimation-Implement-IUIAnimationManager-CreateStor.patch
+	patch_apply uianimation-stubs/0004-uianimation-Implement-IUIAnimationManager-CreateAnim.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "uianimation.idl: Add more interfaces.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateStoryboard.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateAnimationVariable.", 1 },';
 	) >> "$patchlist"
 fi
 

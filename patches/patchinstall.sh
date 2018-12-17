@@ -172,6 +172,7 @@ patch_enable_all ()
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
+	enable_mfplat_MFGetSystemTime="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -671,6 +672,9 @@ patch_enable ()
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
+			;;
+		mfplat-MFGetSystemTime)
+			enable_mfplat_MFGetSystemTime="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4042,6 +4046,21 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mfplat-MFGetSystemTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46300] mfplat: Implement MFGetSystemTime
+# |
+# | Modified files:
+# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfidl.idl
+# |
+if test "$enable_mfplat_MFGetSystemTime" -eq 1; then
+	patch_apply mfplat-MFGetSystemTime/0001-mfplat-Implement-MFGetSystemTime.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFGetSystemTime.", 1 },';
 	) >> "$patchlist"
 fi
 

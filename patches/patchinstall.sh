@@ -374,6 +374,7 @@ patch_enable_all ()
 	enable_winex11_Window_Style="$1"
 	enable_winex11_XEMBED="$1"
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
+	enable_winex11_ime_check_thread_data="$1"
 	enable_winex11_key_translation="$1"
 	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
@@ -1280,6 +1281,9 @@ patch_enable ()
 			;;
 		winex11-_NET_ACTIVE_WINDOW)
 			enable_winex11__NET_ACTIVE_WINDOW="$2"
+			;;
+		winex11-ime-check-thread-data)
+			enable_winex11_ime_check_thread_data="$2"
 			;;
 		winex11-key_translation)
 			enable_winex11_key_translation="$2"
@@ -7487,6 +7491,22 @@ if test "$enable_winex11_XEMBED" -eq 1; then
 	patch_apply winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Enable/disable windows when they are (un)mapped by foreign applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11-ime-check-thread-data
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46263] Final Fantasy XI crashes after accepting EULA when using Ashita
+# |   *	[#28861] Final Fantasy XI hangs after character selection
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/window.c
+# |
+if test "$enable_winex11_ime_check_thread_data" -eq 1; then
+	patch_apply winex11-ime-check-thread-data/0001-winex11.drv-handle-missing-thread-data-in-X11DRV_get_ic.patch
+	(
+		printf '%s\n' '+    { "Enrico Horn", "winex11.drv: Handle missing thread data in X11DRV_get_ic.", 1 },';
 	) >> "$patchlist"
 fi
 

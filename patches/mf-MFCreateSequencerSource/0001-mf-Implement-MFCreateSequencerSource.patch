@@ -1,0 +1,240 @@
+From a6148704ad3c09339872975b1f129c37c3d35aa3 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Thu, 20 Dec 2018 13:54:47 +1100
+Subject: [PATCH] mf: Implement MFCreateSequencerSource
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=46105
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/mf/main.c            | 140 ++++++++++++++++++++++++++++++++++++++++++++++
+ dlls/mf/mf.spec           |   2 +-
+ dlls/mf/tests/Makefile.in |   2 +-
+ dlls/mf/tests/mf.c        |  18 ++++++
+ include/mfidl.idl         |   1 +
+ 5 files changed, 161 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/mf/main.c b/dlls/mf/main.c
+index 73cd6aa..1ef13b5 100644
+--- a/dlls/mf/main.c
++++ b/dlls/mf/main.c
+@@ -74,3 +74,143 @@ HRESULT WINAPI MFGetService(IUnknown *object, REFGUID service, REFIID riid, void
+     IMFGetService_Release(gs);
+     return hr;
+ }
++
++typedef struct seqsource
++{
++    IMFSequencerSource IMFSequencerSource_iface;
++    LONG ref;
++} seqsource;
++
++static inline seqsource *impl_from_IMFSequencerSource(IMFSequencerSource *iface)
++{
++    return CONTAINING_RECORD(iface, seqsource, IMFSequencerSource_iface);
++}
++
++static HRESULT WINAPI seqsource_QueryInterface(IMFSequencerSource *iface, REFIID riid, void **out)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), out);
++
++    if ( IsEqualIID(riid, &IID_IMFSequencerSource) ||
++            IsEqualIID(riid, &IID_IUnknown))
++    {
++        *out = &This->IMFSequencerSource_iface;
++    }
++    else
++    {
++        FIXME("(%s, %p)\n", debugstr_guid(riid), out);
++        *out = NULL;
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown*)*out);
++    return S_OK;
++}
++
++static ULONG WINAPI seqsource_AddRef(IMFSequencerSource *iface)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI seqsource_Release(IMFSequencerSource *iface)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    if (!ref)
++    {
++        HeapFree(GetProcessHeap(), 0, This);
++    }
++
++    return ref;
++}
++
++static HRESULT WINAPI seqsource_AppendTopology(IMFSequencerSource *iface, IMFTopology *topology, DWORD flags, MFSequencerElementId *element)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++
++    FIXME("%p, %p, %x, %p\n", This, topology, flags, element);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI seqsource_DeleteTopology(IMFSequencerSource *iface, MFSequencerElementId element)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++
++    FIXME("%p, %d\n", This, element);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI seqsource_GetPresentationContext(IMFSequencerSource *iface, IMFPresentationDescriptor *pd, MFSequencerElementId *id,
++        IMFTopology **topology)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++
++    FIXME("%p, %p, %p, %p\n", This, pd, id, topology);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI seqsource_UpdateTopology(IMFSequencerSource *iface, MFSequencerElementId id, IMFTopology *topology)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++
++    FIXME("%p, %d, %p\n", This, id, topology);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI seqsource_UpdateTopologyFlags(IMFSequencerSource *iface, MFSequencerElementId id, DWORD flags)
++{
++    seqsource *This = impl_from_IMFSequencerSource(iface);
++
++    FIXME("%p, %d, %x\n", This, id, flags);
++
++    return E_NOTIMPL;
++}
++
++static const IMFSequencerSourceVtbl seqsrc_vtbl =
++{
++    seqsource_QueryInterface,
++    seqsource_AddRef,
++    seqsource_Release,
++    seqsource_AppendTopology,
++    seqsource_DeleteTopology,
++    seqsource_GetPresentationContext,
++    seqsource_UpdateTopology,
++    seqsource_UpdateTopologyFlags
++};
++
++/***********************************************************************
++ *      MFCreateSequencerSource (mf.@)
++ */
++HRESULT WINAPI MFCreateSequencerSource(IUnknown *reserved, IMFSequencerSource **sequencer)
++{
++    seqsource *object;
++
++    TRACE("(%p, %p)\n", reserved, sequencer);
++
++    if (!sequencer)
++        return E_POINTER;
++
++    object = HeapAlloc(GetProcessHeap(), 0, sizeof(*object));
++    if (!object)
++        return E_OUTOFMEMORY;
++
++    object->IMFSequencerSource_iface.lpVtbl = &seqsrc_vtbl;
++    object->ref = 1;
++
++    *sequencer = &object->IMFSequencerSource_iface;
++
++    return S_OK;
++}
+diff --git a/dlls/mf/mf.spec b/dlls/mf/mf.spec
+index deb9057..b46c905 100644
+--- a/dlls/mf/mf.spec
++++ b/dlls/mf/mf.spec
+@@ -54,7 +54,7 @@
+ @ stub MFCreateSampleGrabberSinkActivate
+ @ stub MFCreateSecureHttpSchemePlugin
+ @ stub MFCreateSequencerSegmentOffset
+-@ stub MFCreateSequencerSource
++@ stdcall MFCreateSequencerSource(ptr ptr)
+ @ stub MFCreateSequencerSourceRemoteStream
+ @ stub MFCreateSimpleTypeHandler
+ @ stdcall MFCreateSourceResolver(ptr) mfplat.MFCreateSourceResolver
+diff --git a/dlls/mf/tests/Makefile.in b/dlls/mf/tests/Makefile.in
+index f989baa..f233cff 100644
+--- a/dlls/mf/tests/Makefile.in
++++ b/dlls/mf/tests/Makefile.in
+@@ -1,5 +1,5 @@
+ TESTDLL   = mf.dll
+-IMPORTS   = mf
++IMPORTS   = mf mfplat
+ 
+ C_SRCS = \
+ 	mf.c
+diff --git a/dlls/mf/tests/mf.c b/dlls/mf/tests/mf.c
+index 76e092a..ca10233 100644
+--- a/dlls/mf/tests/mf.c
++++ b/dlls/mf/tests/mf.c
+@@ -28,6 +28,7 @@
+ 
+ #include "initguid.h"
+ #include "mfidl.h"
++#include "mfapi.h"
+ 
+ #include "wine/test.h"
+ 
+@@ -170,8 +171,25 @@ static void test_MFGetService(void)
+     ok(unk == (void *)0xdeadbeef, "Unexpected out object.\n");
+ }
+ 
++static void test_MFCreateSequencerSource(void)
++{
++    HRESULT hr;
++    IMFSequencerSource *seq;
++
++    hr = MFStartup(MF_VERSION, MFSTARTUP_FULL);
++    ok(hr == S_OK, "got 0x%08x\n", hr);
++
++    hr = MFCreateSequencerSource(NULL, &seq);
++    ok(hr == S_OK, "got %#x\n", hr);
++
++    IMFSequencerSource_Release(seq);
++
++    MFShutdown();
++}
++
+ START_TEST(mf)
+ {
+     test_topology();
+     test_MFGetService();
++    test_MFCreateSequencerSource();
+ }
+diff --git a/include/mfidl.idl b/include/mfidl.idl
+index 2373e41..39dc394 100644
+--- a/include/mfidl.idl
++++ b/include/mfidl.idl
+@@ -307,6 +307,7 @@ interface IMFSequencerSource : IUnknown
+ 
+ cpp_quote("HRESULT WINAPI MFCreateMediaSession(IMFAttributes *config, IMFMediaSession **session);")
+ cpp_quote("HRESULT WINAPI MFCreateMFByteStreamOnStream(IStream *stream, IMFByteStream **bytestream);" )
++cpp_quote("HRESULT WINAPI MFCreateSequencerSource(IUnknown *reserved, IMFSequencerSource **sequencer);" )
+ cpp_quote("HRESULT WINAPI MFCreateSourceResolver(IMFSourceResolver **resolver);")
+ cpp_quote("HRESULT WINAPI MFCreateStreamDescriptor(DWORD identifier, DWORD cMediaTypes,")
+ cpp_quote("     IMFMediaType **types, IMFStreamDescriptor **descriptor);")
+-- 
+1.9.1
+

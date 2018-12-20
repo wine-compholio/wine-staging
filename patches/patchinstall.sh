@@ -173,6 +173,7 @@ patch_enable_all ()
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
+	enable_mf_MFCreateSequencerSource="$1"
 	enable_mfplat_MFGetSystemTime="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -678,6 +679,9 @@ patch_enable ()
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
+			;;
+		mf-MFCreateSequencerSource)
+			enable_mf_MFCreateSequencerSource="$2"
 			;;
 		mfplat-MFGetSystemTime)
 			enable_mfplat_MFGetSystemTime="$2"
@@ -4073,6 +4077,21 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mf-MFCreateSequencerSource
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46105] mf: Implement MFCreateSequencerSource
+# |
+# | Modified files:
+# |   *	dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/tests/Makefile.in, dlls/mf/tests/mf.c, include/mfidl.idl
+# |
+if test "$enable_mf_MFCreateSequencerSource" -eq 1; then
+	patch_apply mf-MFCreateSequencerSource/0001-mf-Implement-MFCreateSequencerSource.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mf: Implement MFCreateSequencerSource.", 1 },';
 	) >> "$patchlist"
 fi
 

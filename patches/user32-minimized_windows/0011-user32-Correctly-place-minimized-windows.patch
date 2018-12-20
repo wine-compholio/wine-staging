@@ -1,0 +1,380 @@
+From e8ef3930a640e5802f83f14b4512878b9a321448 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Wed, 20 Dec 2017 23:11:19 -0600
+Subject: [PATCH 11/15] user32: Correctly place minimized windows.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/user32/tests/win.c                   |  11 --
+ dlls/user32/winpos.c                      | 128 +++++++++-------------
+ dlls/wineandroid.drv/window.c             |  17 ---
+ dlls/wineandroid.drv/wineandroid.drv.spec |   1 -
+ dlls/winemac.drv/window.c                 |  10 +-
+ dlls/winex11.drv/window.c                 |  21 +---
+ 6 files changed, 51 insertions(+), 137 deletions(-)
+
+diff --git a/dlls/user32/tests/win.c b/dlls/user32/tests/win.c
+index 4ba2d045f0..0f3c2a9798 100644
+--- a/dlls/user32/tests/win.c
++++ b/dlls/user32/tests/win.c
+@@ -6506,7 +6506,6 @@ static void test_ShowWindow(void)
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER);
+     ok(ret, "not expected ret: %lu\n", ret);
+     GetWindowRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+@@ -6669,7 +6668,6 @@ static void test_ShowWindow(void)
+     style = GetWindowLongA(hwnd, GWL_STYLE);
+     ok(style & WS_MINIMIZE, "window should be minimized\n");
+     GetWindowRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+@@ -6731,14 +6729,12 @@ static void test_ShowWindow_owned(HWND hwndMain)
+     GetWindowRect(hwnd, &rect);
+     SetRect(&expect, 0, mon_info.rcWork.bottom - GetSystemMetrics(SM_CYMINIMIZED),
+             GetSystemMetrics(SM_CXMINIMIZED), mon_info.rcWork.bottom);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+     /* shouldn't be able to resize minimized windows */
+     ret = SetWindowPos(hwnd, 0, 0, 0, 200, 200, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
+     ok(ret, "wrong ret %d\n", ret);
+     GetWindowRect(hwnd, &rect);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -6753,7 +6749,6 @@ static void test_ShowWindow_owned(HWND hwndMain)
+     ok(style & WS_MINIMIZE, "window should be minimized\n");
+     ok(!(style & WS_MAXIMIZE), "window should not be maximized\n");
+     GetWindowRect(hwnd2, &rect);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -6859,14 +6854,12 @@ static void test_ShowWindow_child(HWND hwndMain)
+     SetRect(&expect, 0, expect.bottom - GetSystemMetrics(SM_CYMINIMIZED),
+             GetSystemMetrics(SM_CXMINIMIZED), expect.bottom);
+     OffsetRect(&expect, pt.x, pt.y);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+     /* shouldn't be able to resize minimized windows */
+     ret = SetWindowPos(hwnd, 0, 0, 0, 200, 200, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
+     ok(ret, "wrong ret %d\n", ret);
+     GetWindowRect(hwnd, &rect);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -6881,7 +6874,6 @@ static void test_ShowWindow_child(HWND hwndMain)
+     ok(style & WS_MINIMIZE, "window should be minimized\n");
+     ok(!(style & WS_MAXIMIZE), "window should not be maximized\n");
+     GetWindowRect(hwnd2, &rect);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -6984,14 +6976,12 @@ static void test_ShowWindow_mdichild(HWND hwndMain)
+     SetRect(&expect, 0, expect.bottom - GetSystemMetrics(SM_CYMINIMIZED),
+             GetSystemMetrics(SM_CXMINIMIZED), expect.bottom);
+     OffsetRect(&expect, pt.x, pt.y);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+     /* shouldn't be able to resize minimized windows */
+     ret = SetWindowPos(hwnd, 0, 0, 0, 200, 200, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
+     ok(ret, "wrong ret %d\n", ret);
+     GetWindowRect(hwnd, &rect);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -7006,7 +6996,6 @@ static void test_ShowWindow_mdichild(HWND hwndMain)
+     ok(style & WS_MINIMIZE, "window should be minimized\n");
+     ok(!(style & WS_MAXIMIZE), "window should not be maximized\n");
+     GetWindowRect(hwnd2, &rect);
+-    todo_wine
+     ok(EqualRect(&expect, &rect), "expected %s, got %s\n",
+        wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+diff --git a/dlls/user32/winpos.c b/dlls/user32/winpos.c
+index 6d137d75d7..4f936f8d30 100644
+--- a/dlls/user32/winpos.c
++++ b/dlls/user32/winpos.c
+@@ -922,95 +922,64 @@ static void get_next_minimized_child_pos( const RECT *parent, const MINIMIZEDMET
+     }
+ }
+ 
+-/***********************************************************************
+- *           WINPOS_FindIconPos
+- *
+- * Find a suitable place for an iconic window.
+- */
+-static POINT WINPOS_FindIconPos( HWND hwnd, POINT pt )
++/* detect whether another child window has already been minimized here */
++static BOOL find_minimized_child( HWND hwnd, HWND parent, POINT pt )
+ {
+-    RECT rect, rectParent;
+-    HWND parent, child;
+-    HRGN hrgn, tmp;
+-    int x, y, xspacing, yspacing;
+-    MINIMIZEDMETRICS metrics;
+-
+-    metrics.cbSize = sizeof(metrics);
+-    SystemParametersInfoW( SPI_GETMINIMIZEDMETRICS, sizeof(metrics), &metrics, 0 );
+-
+-    parent = GetAncestor( hwnd, GA_PARENT );
+-    if (parent == GetDesktopWindow())
+-    {
+-        MONITORINFO mon_info;
+-        HMONITOR monitor = MonitorFromWindow( hwnd, MONITOR_DEFAULTTOPRIMARY );
+-
+-        mon_info.cbSize = sizeof( mon_info );
+-        GetMonitorInfoW( monitor, &mon_info );
+-        rectParent = mon_info.rcWork;
+-    }
+-    else GetClientRect( parent, &rectParent );
+-
+-    if ((pt.x >= rectParent.left) && (pt.x + GetSystemMetrics(SM_CXICON) < rectParent.right) &&
+-        (pt.y >= rectParent.top) && (pt.y + GetSystemMetrics(SM_CYICON) < rectParent.bottom))
+-        return pt;  /* The icon already has a suitable position */
+-
+-    xspacing = GetSystemMetrics(SM_CXICONSPACING);
+-    yspacing = GetSystemMetrics(SM_CYICONSPACING);
+-
+-    /* Check if another icon already occupies this spot */
+-    /* FIXME: this is completely inefficient */
++    HWND child;
++    RECT rect;
+ 
+-    hrgn = CreateRectRgn( 0, 0, 0, 0 );
+-    tmp = CreateRectRgn( 0, 0, 0, 0 );
+     for (child = GetWindow( parent, GW_CHILD ); child; child = GetWindow( child, GW_HWNDNEXT ))
+     {
+         if (child == hwnd) continue;
+         if ((GetWindowLongW( child, GWL_STYLE ) & (WS_VISIBLE|WS_MINIMIZE)) != (WS_VISIBLE|WS_MINIMIZE))
+             continue;
+-        if (WIN_GetRectangles( child, COORDS_PARENT, &rect, NULL ))
++        if (WIN_GetRectangles( child, COORDS_PARENT, &rect, NULL )
++            && pt.x >= rect.left && pt.x < rect.right && pt.y >= rect.top && pt.y < rect.bottom)
+         {
+-            SetRectRgn( tmp, rect.left, rect.top, rect.right, rect.bottom );
+-            CombineRgn( hrgn, hrgn, tmp, RGN_OR );
++            return TRUE;
+         }
+     }
+-    DeleteObject( tmp );
+ 
+-    for (y = 0; y < (rectParent.bottom - rectParent.top) / yspacing; y++)
++    return FALSE;
++}
++
++static POINT get_minimized_pos( HWND hwnd )
++{
++    MINIMIZEDMETRICS metrics;
++    int width, height;
++    HWND parent;
++    RECT rect;
++    POINT pt;
++
++    if ((parent = GetAncestor( hwnd, GA_PARENT )) && parent != GetDesktopWindow())
+     {
+-        if (metrics.iArrange & ARW_STARTTOP)
+-        {
+-            rect.top = rectParent.top + y * yspacing;
+-            rect.bottom = rect.top + yspacing;
+-        }
+-        else
+-        {
+-            rect.bottom = rectParent.bottom - y * yspacing;
+-            rect.top = rect.bottom - yspacing;
+-        }
+-        for (x = 0; x < (rectParent.right - rectParent.left) / xspacing; x++)
+-        {
+-            if (metrics.iArrange & ARW_STARTRIGHT)
+-            {
+-                rect.right = rectParent.right - x * xspacing;
+-                rect.left = rect.right - xspacing;
+-            }
+-            else
+-            {
+-                rect.left = rectParent.left + x * xspacing;
+-                rect.right = rect.left + xspacing;
+-            }
+-            if (!RectInRegion( hrgn, &rect ))
+-            {
+-                /* No window was found, so it's OK for us */
+-                pt.x = rect.left + (xspacing - GetSystemMetrics(SM_CXICON)) / 2;
+-                pt.y = rect.top + (yspacing - GetSystemMetrics(SM_CYICON)) / 2;
+-                DeleteObject( hrgn );
+-                return pt;
+-            }
+-        }
++        GetClientRect( parent, &rect );
+     }
+-    DeleteObject( hrgn );
+-    pt.x = pt.y = 0;
++    else if (GetWindow( hwnd, GW_OWNER ))
++    {
++        MONITORINFO mon_info;
++        HMONITOR monitor = MonitorFromWindow( hwnd, MONITOR_DEFAULTTOPRIMARY );
++
++        mon_info.cbSize = sizeof(mon_info);
++        GetMonitorInfoW( monitor, &mon_info );
++        rect = mon_info.rcWork;
++    }
++    else
++    {
++        pt.x = pt.y = -32000;
++        return pt;
++    }
++
++    width = GetSystemMetrics( SM_CXMINIMIZED );
++    height = GetSystemMetrics( SM_CYMINIMIZED );
++
++    metrics.cbSize = sizeof(metrics);
++    SystemParametersInfoW( SPI_GETMINIMIZEDMETRICS, sizeof(metrics), &metrics, 0 );
++
++    pt = get_first_minimized_child_pos( &rect, &metrics, width, height );
++    while (find_minimized_child( hwnd, parent, pt ))
++        get_next_minimized_child_pos( &rect, &metrics, width, height, &pt );
++
+     return pt;
+ }
+ 
+@@ -1041,7 +1010,7 @@ UINT WINPOS_MinMaximize( HWND hwnd, UINT cmd, LPRECT rect )
+         case SW_SHOWMINIMIZED:
+         case SW_FORCEMINIMIZE:
+         case SW_MINIMIZE:
+-            wpl.ptMinPosition = WINPOS_FindIconPos( hwnd, wpl.ptMinPosition );
++            wpl.ptMinPosition = get_minimized_pos( hwnd );
+ 
+             SetRect( rect, wpl.ptMinPosition.x, wpl.ptMinPosition.y,
+                      wpl.ptMinPosition.x + GetSystemMetrics(SM_CXMINIMIZED),
+@@ -1071,7 +1040,7 @@ UINT WINPOS_MinMaximize( HWND hwnd, UINT cmd, LPRECT rect )
+ 
+         old_style = WIN_SetStyle( hwnd, WS_MINIMIZE, WS_MAXIMIZE );
+ 
+-        wpl.ptMinPosition = WINPOS_FindIconPos( hwnd, wpl.ptMinPosition );
++        wpl.ptMinPosition = get_minimized_pos( hwnd );
+ 
+         if (!(old_style & WS_MINIMIZE)) swpFlags |= SWP_STATECHANGED;
+         SetRect( rect, wpl.ptMinPosition.x, wpl.ptMinPosition.y,
+@@ -1220,7 +1189,8 @@ static BOOL show_window( HWND hwnd, INT cmd )
+         if (!IsWindow( hwnd )) goto done;
+     }
+ 
+-    swp = USER_Driver->pShowWindow( hwnd, cmd, &newPos, swp );
++    if (!IsIconic( hwnd ))
++        swp = USER_Driver->pShowWindow( hwnd, cmd, &newPos, swp );
+ 
+     parent = GetAncestor( hwnd, GA_PARENT );
+     if (parent && !IsWindowVisible( parent ) && !(swp & SWP_STATECHANGED))
+diff --git a/dlls/wineandroid.drv/window.c b/dlls/wineandroid.drv/window.c
+index 861b216852..04bdad62b6 100644
+--- a/dlls/wineandroid.drv/window.c
++++ b/dlls/wineandroid.drv/window.c
+@@ -1380,23 +1380,6 @@ void CDECL ANDROID_WindowPosChanged( HWND hwnd, HWND insert_after, UINT swp_flag
+ }
+ 
+ 
+-/***********************************************************************
+- *           ANDROID_ShowWindow
+- */
+-UINT CDECL ANDROID_ShowWindow( HWND hwnd, INT cmd, RECT *rect, UINT swp )
+-{
+-    if (IsRectEmpty( rect )) return swp;
+-    if (!IsIconic( hwnd )) return swp;
+-    /* always hide icons off-screen */
+-    if (rect->left != -32000 || rect->top != -32000)
+-    {
+-        OffsetRect( rect, -32000 - rect->left, -32000 - rect->top );
+-        swp &= ~(SWP_NOMOVE | SWP_NOCLIENTMOVE);
+-    }
+-    return swp;
+-}
+-
+-
+ /*****************************************************************
+  *	     ANDROID_SetParent
+  */
+diff --git a/dlls/wineandroid.drv/wineandroid.drv.spec b/dlls/wineandroid.drv/wineandroid.drv.spec
+index 00de23de27..50d7668373 100644
+--- a/dlls/wineandroid.drv/wineandroid.drv.spec
++++ b/dlls/wineandroid.drv/wineandroid.drv.spec
+@@ -22,7 +22,6 @@
+ @ cdecl SetParent(long long long) ANDROID_SetParent
+ @ cdecl SetWindowRgn(long long long) ANDROID_SetWindowRgn
+ @ cdecl SetWindowStyle(ptr long ptr) ANDROID_SetWindowStyle
+-@ cdecl ShowWindow(long long ptr long) ANDROID_ShowWindow
+ @ cdecl UpdateLayeredWindow(long ptr ptr) ANDROID_UpdateLayeredWindow
+ @ cdecl WindowMessage(long long long long) ANDROID_WindowMessage
+ @ cdecl WindowPosChanging(long long long ptr ptr ptr ptr) ANDROID_WindowPosChanging
+diff --git a/dlls/winemac.drv/window.c b/dlls/winemac.drv/window.c
+index 6dbc432a1e..6a13d955f3 100644
+--- a/dlls/winemac.drv/window.c
++++ b/dlls/winemac.drv/window.c
+@@ -1794,15 +1794,7 @@ UINT CDECL macdrv_ShowWindow(HWND hwnd, INT cmd, RECT *rect, UINT swp)
+ 
+     if (!data || !data->cocoa_window) goto done;
+     if (IsRectEmpty(rect)) goto done;
+-    if (GetWindowLongW(hwnd, GWL_STYLE) & WS_MINIMIZE)
+-    {
+-        if (rect->left != -32000 || rect->top != -32000)
+-        {
+-            OffsetRect(rect, -32000 - rect->left, -32000 - rect->top);
+-            swp &= ~(SWP_NOMOVE | SWP_NOCLIENTMOVE);
+-        }
+-        goto done;
+-    }
++    if (GetWindowLongW(hwnd, GWL_STYLE) & WS_MINIMIZE) goto done;
+     if (!data->on_screen) goto done;
+ 
+     /* only fetch the new rectangle if the ShowWindow was a result of an external event */
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index 1a61b6cf2c..7e08abdfa2 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -2443,17 +2443,6 @@ void CDECL X11DRV_WindowPosChanged( HWND hwnd, HWND insert_after, UINT swp_flags
+     release_win_data( data );
+ }
+ 
+-/* check if the window icon should be hidden (i.e. moved off-screen) */
+-static BOOL hide_icon( struct x11drv_win_data *data )
+-{
+-    static const WCHAR trayW[] = {'S','h','e','l','l','_','T','r','a','y','W','n','d',0};
+-
+-    if (data->managed) return TRUE;
+-    /* hide icons in desktop mode when the taskbar is active */
+-    if (root_window == DefaultRootWindow( gdi_display )) return FALSE;
+-    return IsWindowVisible( FindWindowW( trayW, NULL ));
+-}
+-
+ /***********************************************************************
+  *           ShowWindow   (X11DRV.@)
+  */
+@@ -2469,15 +2458,7 @@ UINT CDECL X11DRV_ShowWindow( HWND hwnd, INT cmd, RECT *rect, UINT swp )
+ 
+     if (!data || !data->whole_window) goto done;
+     if (IsRectEmpty( rect )) goto done;
+-    if (style & WS_MINIMIZE)
+-    {
+-        if (((rect->left != -32000 || rect->top != -32000)) && hide_icon( data ))
+-        {
+-            OffsetRect( rect, -32000 - rect->left, -32000 - rect->top );
+-            swp &= ~(SWP_NOMOVE | SWP_NOCLIENTMOVE);
+-        }
+-        goto done;
+-    }
++    if (style & WS_MINIMIZE) goto done;
+     if (!data->managed || !data->mapped || data->iconic) goto done;
+ 
+     /* only fetch the new rectangle if the ShowWindow was a result of a window manager event */
+-- 
+2.19.2
+

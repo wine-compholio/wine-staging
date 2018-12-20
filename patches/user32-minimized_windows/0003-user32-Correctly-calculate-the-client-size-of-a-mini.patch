@@ -1,0 +1,115 @@
+From f3effe1fc888e89a32c8cad4c7af7e41d09f979a Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Wed, 20 Dec 2017 19:49:03 -0600
+Subject: [PATCH 03/15] user32: Correctly calculate the client size of a
+ minimized window.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/user32/nonclient.c |  5 +++++
+ dlls/user32/tests/win.c | 17 ++++++++++-------
+ 2 files changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/user32/nonclient.c b/dlls/user32/nonclient.c
+index 4444a2c91e..26bb0a01b5 100644
+--- a/dlls/user32/nonclient.c
++++ b/dlls/user32/nonclient.c
+@@ -414,6 +414,11 @@ LRESULT NC_HandleNCCalcSize( HWND hwnd, WPARAM wparam, RECT *winRect )
+         if (winRect->left > winRect->right)
+             winRect->right = winRect->left;
+     }
++    else
++    {
++        winRect->right = winRect->left;
++        winRect->bottom = winRect->top;
++    }
+     return result;
+ }
+ 
+diff --git a/dlls/user32/tests/win.c b/dlls/user32/tests/win.c
+index 5f34b11e4b..d17288abcc 100644
+--- a/dlls/user32/tests/win.c
++++ b/dlls/user32/tests/win.c
+@@ -6488,7 +6488,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+     /* shouldn't be able to resize minimized windows */
+@@ -6502,7 +6501,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+     /* SetWindowPos shouldn't affect the client rect */
+@@ -6514,7 +6512,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+ 
+@@ -6606,7 +6603,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+ 
+@@ -6622,7 +6618,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+ 
+@@ -6665,7 +6660,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+     DestroyWindow(hwnd);
+@@ -6684,7 +6678,6 @@ static void test_ShowWindow(void)
+     ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+-    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+     DestroyWindow(hwnd);
+@@ -9925,6 +9918,7 @@ static void test_hide_window(void)
+ static void test_minimize_window(HWND hwndMain)
+ {
+     HWND hwnd, hwnd2, hwnd3;
++    RECT rc, rc_expect;
+ 
+     hwnd = CreateWindowExA(0, "MainWindowClass", "Main window", WS_POPUP | WS_VISIBLE,
+                            100, 100, 200, 200, 0, 0, GetModuleHandleA(NULL), NULL);
+@@ -10033,6 +10027,15 @@ static void test_minimize_window(HWND hwndMain)
+     DestroyWindow(hwnd3);
+     DestroyWindow(hwnd2);
+     DestroyWindow(hwnd);
++
++    /* test NC area */
++    ShowWindow(hwndMain, SW_MINIMIZE);
++    GetWindowRect(hwndMain, &rc);
++    SetRect(&rc_expect, rc.left, rc.top, rc.left, rc.top);
++    DefWindowProcA(hwndMain, WM_NCCALCSIZE, 0, (LPARAM)&rc);
++    ok(EqualRect(&rc, &rc_expect), "expected %s, got %s\n",
++       wine_dbgstr_rect(&rc_expect), wine_dbgstr_rect(&rc));
++    ShowWindow(hwndMain, SW_RESTORE);
+ }
+ 
+ static void test_desktop( void )
+-- 
+2.19.2
+

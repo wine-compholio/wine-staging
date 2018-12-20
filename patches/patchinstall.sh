@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5a8e430b96ab429a85f82f26ba9d2de4729954c2"
+	echo "3d5036e31769b0400d6cea08460e7fdb1cbf3556"
 }
 
 # Show version information
@@ -317,6 +317,7 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
+	enable_user32_minimized_windows="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -1109,6 +1110,9 @@ patch_enable ()
 			;;
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
+			;;
+		user32-minimized_windows)
+			enable_user32_minimized_windows="$2"
 			;;
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
@@ -6513,6 +6517,51 @@ if test "$enable_user32_ShowWindow" -eq 1; then
 	patch_apply user32-ShowWindow/0001-user32-ShowWindow-should-not-send-message-when-windo.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "user32: ShowWindow should not send message when window is already visible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-minimized_windows
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#7287] Redundant "tabs" appear with tabbed MDI (test with LTSpice)
+# |
+# | Modified files:
+# |   *	dlls/user32/controls.h, dlls/user32/icontitle.c, dlls/user32/nonclient.c, dlls/user32/tests/win.c, dlls/user32/win.c,
+# | 	dlls/user32/win.h, dlls/user32/winpos.c, dlls/wineandroid.drv/window.c, dlls/wineandroid.drv/wineandroid.drv.spec,
+# | 	dlls/winemac.drv/window.c, dlls/winex11.drv/window.c
+# |
+if test "$enable_user32_minimized_windows" -eq 1; then
+	patch_apply user32-minimized_windows/0001-user32-tests-Add-tests-for-GetWindowPlacement-and-Se.patch
+	patch_apply user32-minimized_windows/0002-user32-SetWindowPos-shouldn-t-change-the-client-rect.patch
+	patch_apply user32-minimized_windows/0003-user32-Correctly-calculate-the-client-size-of-a-mini.patch
+	patch_apply user32-minimized_windows/0004-user32-Use-the-C-XY-MINIMIZED-rather-than-C-XY-ICON-.patch
+	patch_apply user32-minimized_windows/0005-user32-AdjustWindowRect-shouldn-t-ignore-WS_MINIMIZE.patch
+	patch_apply user32-minimized_windows/0006-user32-tests-Add-tests-for-maximizing-and-minimizing.patch
+	patch_apply user32-minimized_windows/0007-user32-tests-Add-tests-for-maximizing-and-minimizing.patch
+	patch_apply user32-minimized_windows/0008-user32-tests-Add-tests-for-maximizing-and-minimizing.patch
+	patch_apply user32-minimized_windows/0009-user32-tests-Add-tests-for-ArrangeIconicWindows.patch
+	patch_apply user32-minimized_windows/0010-user32-Reimplement-ArrangeIconicWindows-using-minimi.patch
+	patch_apply user32-minimized_windows/0011-user32-Correctly-place-minimized-windows.patch
+	patch_apply user32-minimized_windows/0012-user32-Paint-title-bars-for-minimized-windows.patch
+	patch_apply user32-minimized_windows/0013-user32-Allow-clicking-the-restore-and-maximize-boxes.patch
+	patch_apply user32-minimized_windows/0014-user32-Get-rid-of-icon-titles.patch
+	patch_apply user32-minimized_windows/0015-user32-Move-iconic-windows-as-their-border-instead-o.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for GetWindowPlacement() and SetWindowPlacement().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: SetWindowPos() shouldn'\''t change the client rect of a minimized window.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Correctly calculate the client size of a minimized window.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Use the C[XY]MINIMIZED rather than C[XY]ICON size for minimized windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: AdjustWindowRect() shouldn'\''t ignore WS_MINIMIZE.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for maximizing and minimizing owned windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for maximizing and minimizing child windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for maximizing and minimizing MDI child windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for ArrangeIconicWindows().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Reimplement ArrangeIconicWindows() using minimized metrics.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Correctly place minimized windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Paint title bars for minimized windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Allow clicking the restore and maximize boxes for on minimized windows.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Get rid of icon titles.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Move iconic windows as their border instead of their icon.", 1 },';
 	) >> "$patchlist"
 fi
 

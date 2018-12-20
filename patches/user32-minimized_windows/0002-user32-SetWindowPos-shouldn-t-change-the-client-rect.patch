@@ -1,0 +1,51 @@
+From dfa57f43321be68d80204bcc960e62b1f341b5ad Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Wed, 20 Dec 2017 23:51:26 -0600
+Subject: [PATCH 02/15] user32: SetWindowPos() shouldn't change the client rect
+ of a minimized window.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/user32/tests/win.c | 12 ++++++++++++
+ dlls/user32/winpos.c    |  2 +-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/user32/tests/win.c b/dlls/user32/tests/win.c
+index 85b2b3a514..5f34b11e4b 100644
+--- a/dlls/user32/tests/win.c
++++ b/dlls/user32/tests/win.c
+@@ -6503,6 +6503,18 @@ static void test_ShowWindow(void)
+        wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
+     GetClientRect(hwnd, &rc);
+     todo_wine
++    ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
++       wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
++    /* SetWindowPos shouldn't affect the client rect */
++    ret = SetWindowPos(hwnd, 0, 0, 0, 0, 0,
++                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER);
++    ok(ret, "not expected ret: %lu\n", ret);
++    GetWindowRect(hwnd, &rc);
++    todo_wine
++    ok(EqualRect(&rcMinimized, &rc), "expected %s, got %s\n",
++       wine_dbgstr_rect(&rcMinimized), wine_dbgstr_rect(&rc));
++    GetClientRect(hwnd, &rc);
++    todo_wine
+     ok(EqualRect(&rcEmpty, &rc), "expected %s, got %s\n",
+        wine_dbgstr_rect(&rcEmpty), wine_dbgstr_rect(&rc));
+ 
+diff --git a/dlls/user32/winpos.c b/dlls/user32/winpos.c
+index 4b39d0aa39..38444b243f 100644
+--- a/dlls/user32/winpos.c
++++ b/dlls/user32/winpos.c
+@@ -1699,7 +1699,7 @@ static BOOL SWP_DoWinPosChanging( WINDOWPOS *pWinpos, RECT *old_window_rect, REC
+ 
+     WIN_GetRectangles( pWinpos->hwnd, COORDS_PARENT, old_window_rect, old_client_rect );
+     *new_window_rect = *old_window_rect;
+-    *new_client_rect = (wndPtr->dwStyle & WS_MINIMIZE) ? *old_window_rect : *old_client_rect;
++    *new_client_rect = *old_client_rect;
+ 
+     if (!(pWinpos->flags & SWP_NOSIZE))
+     {
+-- 
+2.19.2
+

@@ -1,0 +1,227 @@
+From 2b5b700cf45de221633d1c1c24d61114f219ca2c Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Wed, 19 Dec 2018 12:57:36 -0600
+Subject: [PATCH 10/15] user32: Reimplement ArrangeIconicWindows() using
+ minimized metrics.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/user32/tests/win.c |   8 ----
+ dlls/user32/winpos.c    | 103 ++++++++++++++++++++++++++++++----------
+ 2 files changed, 77 insertions(+), 34 deletions(-)
+
+diff --git a/dlls/user32/tests/win.c b/dlls/user32/tests/win.c
+index a1224557ab..4ba2d045f0 100644
+--- a/dlls/user32/tests/win.c
++++ b/dlls/user32/tests/win.c
+@@ -11328,7 +11328,6 @@ static void test_arrange_iconic_windows(void)
+ 
+     SetLastError(0xdeadbeef);
+     ret = ArrangeIconicWindows(parent);
+-todo_wine
+     ok(!ret, "wrong ret %u\n", ret);
+     ok(GetLastError() == 0xdeadbeef, "wrong error %u\n", GetLastError());
+ 
+@@ -11342,7 +11341,6 @@ todo_wine
+ 
+     SetLastError(0xdeadbeef);
+     ret = ArrangeIconicWindows(parent);
+-todo_wine
+     ok(!ret, "wrong ret %u\n", ret);
+     ok(GetLastError() == 0xdeadbeef, "wrong error %u\n", GetLastError());
+ 
+@@ -11365,14 +11363,12 @@ todo_wine
+     }
+ 
+     ret = ArrangeIconicWindows(parent);
+-todo_wine
+     ok(ret == 1, "wrong ret %u\n", ret);
+ 
+     GetWindowRect(hwnds[0], &rect);
+     SetRect(&expect, 0, 0, GetSystemMetrics(SM_CXMINIMIZED), GetSystemMetrics(SM_CYMINIMIZED));
+     OffsetRect(&expect, mm.iHorzGap, mm.iVertGap);
+     OffsetRect(&expect, pt.x, pt.y);
+-todo_wine
+     ok(EqualRect(&rect, &expect), "expected rect %s, got %s\n",
+         wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -11394,7 +11390,6 @@ todo_wine
+     }
+ 
+     ret = ArrangeIconicWindows(parent);
+-todo_wine
+     ok(ret == 10, "wrong ret %u\n", ret);
+ 
+     col = mm.iHorzGap;
+@@ -11411,7 +11406,6 @@ todo_wine
+         SetRect(&expect, col, row, col + GetSystemMetrics(SM_CXMINIMIZED),
+             row + GetSystemMetrics(SM_CYMINIMIZED));
+         OffsetRect(&expect, pt.x, pt.y);
+-todo_wine
+         ok(EqualRect(&rect, &expect), "hwnd %u: expected rect %s, got %s\n", i,
+             wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+@@ -11431,7 +11425,6 @@ todo_wine
+     }
+ 
+     ret = ArrangeIconicWindows(parent);
+-todo_wine
+     ok(ret == 10, "wrong ret %u\n", ret);
+ 
+     col = parent_rect.right - mm.iHorzGap;
+@@ -11448,7 +11441,6 @@ todo_wine
+         SetRect(&expect, col - GetSystemMetrics(SM_CXMINIMIZED),
+             row - GetSystemMetrics(SM_CYMINIMIZED), col, row);
+         OffsetRect(&expect, pt.x, pt.y);
+-todo_wine
+         ok(EqualRect(&rect, &expect), "hwnd %u: expected rect %s, got %s\n", i,
+             wine_dbgstr_rect(&expect), wine_dbgstr_rect(&rect));
+ 
+diff --git a/dlls/user32/winpos.c b/dlls/user32/winpos.c
+index bca50ca12a..6d137d75d7 100644
+--- a/dlls/user32/winpos.c
++++ b/dlls/user32/winpos.c
+@@ -852,6 +852,75 @@ MINMAXINFO WINPOS_GetMinMaxInfo( HWND hwnd )
+     return MinMax;
+ }
+ 
++static POINT get_first_minimized_child_pos( const RECT *parent, const MINIMIZEDMETRICS *mm,
++                                            int width, int height )
++{
++    POINT ret;
++
++    if (mm->iArrange & ARW_STARTRIGHT)
++        ret.x = parent->right - mm->iHorzGap - width;
++    else
++        ret.x = parent->left + mm->iHorzGap;
++    if (mm->iArrange & ARW_STARTTOP)
++        ret.y = parent->top + mm->iVertGap;
++    else
++        ret.y = parent->bottom - mm->iVertGap - height;
++
++    return ret;
++}
++
++static void get_next_minimized_child_pos( const RECT *parent, const MINIMIZEDMETRICS *mm,
++                                          int width, int height, POINT *pos )
++{
++    BOOL next;
++
++    if (mm->iArrange & ARW_UP) /* == ARW_DOWN */
++    {
++        if (mm->iArrange & ARW_STARTTOP)
++        {
++            pos->y += height + mm->iVertGap;
++            if ((next = pos->y + height > parent->bottom))
++                pos->y = parent->top + mm->iVertGap;
++        }
++        else
++        {
++            pos->y -= height + mm->iVertGap;
++            if ((next = pos->y < parent->top))
++                pos->y = parent->bottom - mm->iVertGap - height;
++        }
++
++        if (next)
++        {
++            if (mm->iArrange & ARW_STARTRIGHT)
++                pos->x -= width + mm->iHorzGap;
++            else
++                pos->x += width + mm->iHorzGap;
++        }
++    }
++    else
++    {
++        if (mm->iArrange & ARW_STARTRIGHT)
++        {
++            pos->x -= width + mm->iHorzGap;
++            if ((next = pos->x < parent->left))
++                pos->x = parent->right - mm->iHorzGap - width;
++        }
++        else
++        {
++            pos->x += width + mm->iHorzGap;
++            if ((next = pos->x + width > parent->right))
++                pos->x = parent->left + mm->iHorzGap;
++        }
++
++        if (next)
++        {
++            if (mm->iArrange & ARW_STARTTOP)
++                pos->y += height + mm->iVertGap;
++            else
++                pos->y -= height + mm->iVertGap;
++        }
++    }
++}
+ 
+ /***********************************************************************
+  *           WINPOS_FindIconPos
+@@ -2567,14 +2636,16 @@ BOOL WINAPI EndDeferWindowPos( HDWP hdwp )
+  */
+ UINT WINAPI ArrangeIconicWindows( HWND parent )
+ {
++    int width, height, count = 0;
+     RECT rectParent;
+     HWND hwndChild;
+-    INT x, y, xspacing, yspacing;
+     POINT pt;
+     MINIMIZEDMETRICS metrics;
+ 
+     metrics.cbSize = sizeof(metrics);
+     SystemParametersInfoW( SPI_GETMINIMIZEDMETRICS, sizeof(metrics), &metrics, 0 );
++    width = GetSystemMetrics( SM_CXMINIMIZED );
++    height = GetSystemMetrics( SM_CYMINIMIZED );
+ 
+     if (parent == GetDesktopWindow())
+     {
+@@ -2587,41 +2658,21 @@ UINT WINAPI ArrangeIconicWindows( HWND parent )
+     }
+     else GetClientRect( parent, &rectParent );
+ 
+-    x = y = 0;
+-    xspacing = GetSystemMetrics(SM_CXICONSPACING);
+-    yspacing = GetSystemMetrics(SM_CYICONSPACING);
++    pt = get_first_minimized_child_pos( &rectParent, &metrics, width, height );
+ 
+     hwndChild = GetWindow( parent, GW_CHILD );
+     while (hwndChild)
+     {
+         if( IsIconic( hwndChild ) )
+         {
+-            WINPOS_ShowIconTitle( hwndChild, FALSE );
+-
+-            if (metrics.iArrange & ARW_STARTRIGHT)
+-                pt.x = rectParent.right - (x + 1) * xspacing;
+-            else
+-                pt.x = rectParent.left + x * xspacing;
+-            if (metrics.iArrange & ARW_STARTTOP)
+-                pt.y = rectParent.top + y * yspacing;
+-            else
+-                pt.y = rectParent.bottom - (y + 1) * yspacing;
+-
+-            SetWindowPos( hwndChild, 0, pt.x + (xspacing - GetSystemMetrics(SM_CXICON)) / 2,
+-                          pt.y + (yspacing - GetSystemMetrics(SM_CYICON)) / 2, 0, 0,
++            SetWindowPos( hwndChild, 0, pt.x, pt.y, 0, 0,
+                           SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE );
+-	    if( IsWindow(hwndChild) )
+-                WINPOS_ShowIconTitle(hwndChild , TRUE );
+-
+-            if (++x >= (rectParent.right - rectParent.left) / xspacing)
+-            {
+-                x = 0;
+-                y++;
+-            }
++            get_next_minimized_child_pos( &rectParent, &metrics, width, height, &pt );
++            count++;
+         }
+         hwndChild = GetWindow( hwndChild, GW_HWNDNEXT );
+     }
+-    return yspacing;
++    return count;
+ }
+ 
+ 
+-- 
+2.19.2
+

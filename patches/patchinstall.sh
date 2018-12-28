@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2d16e6e59c910ba0a5e7c1c104b290731a8f1ffa"
+	echo "2058505cebc7bb069e1e2d0d738353336e943b7b"
 }
 
 # Show version information
@@ -162,7 +162,6 @@ patch_enable_all ()
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
-	enable_kernel32_MoveFile="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_NormalizeString="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
@@ -646,9 +645,6 @@ patch_enable ()
 			;;
 		kernel32-K32GetPerformanceInfo)
 			enable_kernel32_K32GetPerformanceInfo="$2"
-			;;
-		kernel32-MoveFile)
-			enable_kernel32_MoveFile="$2"
 			;;
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
@@ -3885,23 +3881,6 @@ if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
 	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-MoveFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14901] MoveFile with source == dest should succeed.
-# |
-# | Modified files:
-# |   *	dlls/appwiz.cpl/addons.c, dlls/urlmon/tests/url.c
-# |
-if test "$enable_kernel32_MoveFile" -eq 1; then
-	patch_apply kernel32-MoveFile/0006-urlmon-tests-Add-test-for-opening-cache-file-with-DE.patch
-	patch_apply kernel32-MoveFile/0007-appwiz.cpl-Copy-addons-to-cache-instead-of-moving.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "urlmon/tests: Add test for opening cache file with DELETE access.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "appwiz.cpl: Copy addons to cache instead of moving.", 1 },';
 	) >> "$patchlist"
 fi
 

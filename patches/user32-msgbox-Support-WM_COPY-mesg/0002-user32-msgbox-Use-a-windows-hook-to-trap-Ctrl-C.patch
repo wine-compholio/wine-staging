@@ -1,0 +1,65 @@
+From 27c59d8785c0c81039c4c307496c1e64d896a333 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Thu, 10 Jan 2019 16:17:33 +1100
+Subject: [PATCH] user32/msgbox: Use a windows hook to trap Ctrl+C
+
+---
+ dlls/user32/msgbox.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/user32/msgbox.c b/dlls/user32/msgbox.c
+index 8a1b89f..52b0852 100644
+--- a/dlls/user32/msgbox.c
++++ b/dlls/user32/msgbox.c
+@@ -388,6 +388,22 @@ static void MSGBOX_CopyToClipbaord( HWND hwnd )
+     }
+ }
+ 
++HHOOK msghook_handle;
++
++LRESULT CALLBACK msg_hook_proc(int nCode, WPARAM wParam, LPARAM lParam)
++{
++    MSG *msg = (MSG *)lParam;
++    if (nCode == MSGF_DIALOGBOX && msg->message == WM_KEYUP)
++    {
++        if ( (msg->wParam == 'C' || msg->wParam == 'c') && (GetKeyState(VK_CONTROL) & 0x8000))
++        {
++            MSGBOX_CopyToClipbaord(GetParent(msg->hwnd));
++        }
++    }
++
++    return CallNextHookEx(msghook_handle, nCode, wParam, lParam);
++}
++
+ /**************************************************************************
+  *           MSGBOX_DlgProc
+  *
+@@ -403,6 +419,7 @@ static INT_PTR CALLBACK MSGBOX_DlgProc( HWND hwnd, UINT message,
+        SetWindowContextHelpId(hwnd, mbp->dwContextHelpId);
+        MSGBOX_OnInit(hwnd, mbp);
+        SetPropA(hwnd, "WINE_MSGBOX_HELPCALLBACK", mbp->lpfnMsgBoxCallback);
++       msghook_handle = SetWindowsHookExA(WH_MSGFILTER, msg_hook_proc, GetModuleHandleA(NULL), 0);
+        break;
+    }
+    case WM_COPY:
+@@ -410,6 +427,9 @@ static INT_PTR CALLBACK MSGBOX_DlgProc( HWND hwnd, UINT message,
+         MSGBOX_CopyToClipbaord(hwnd);
+         break;
+    }
++   case WM_DESTROY:
++       UnhookWindowsHookEx(msghook_handle);
++       break;
+ 
+    case WM_COMMAND:
+     switch (LOWORD(wParam))
+@@ -454,7 +474,6 @@ static INT_PTR CALLBACK MSGBOX_DlgProc( HWND hwnd, UINT message,
+   return 0;
+ }
+ 
+-
+ /**************************************************************************
+  *		MessageBoxA (USER32.@)
+  */
+-- 
+1.9.1
+

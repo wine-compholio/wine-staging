@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "807e5fc04af7a7ea563af1e7da6ebe6662536e6b"
+	echo "2d6de2d129b39d2a0c4ffafa84dabed21c0e830e"
 }
 
 # Show version information
@@ -6573,8 +6573,10 @@ fi
 # |
 if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
 	patch_apply user32-msgbox-Support-WM_COPY-mesg/0001-user32-msgbox-Support-WM_COPY-Message.patch
+	patch_apply user32-msgbox-Support-WM_COPY-mesg/0002-user32-msgbox-Use-a-windows-hook-to-trap-Ctrl-C.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32/msgbox: Support WM_COPY Message.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32/msgbox: Use a windows hook to trap Ctrl+C.", 1 },';
 	) >> "$patchlist"
 fi
 

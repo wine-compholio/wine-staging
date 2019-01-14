@@ -1,0 +1,65 @@
+From e4bd4d8277a24e36bf1e58b99a8b32093eb1e771 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Mon, 14 Jan 2019 15:04:56 +1100
+Subject: [PATCH] oleaut32: Support VT_DECIMAL in VarRound
+
+Based of a patch by Carlos Chiriboga Calderon
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=26653
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/oleaut32/tests/vartest.c |  4 ++--
+ dlls/oleaut32/variant.c       | 14 ++++++++++++++
+ 2 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/oleaut32/tests/vartest.c b/dlls/oleaut32/tests/vartest.c
+index c00968e..92e044b 100644
+--- a/dlls/oleaut32/tests/vartest.c
++++ b/dlls/oleaut32/tests/vartest.c
+@@ -3632,7 +3632,8 @@ static const struct decimal_round_t decimal_round_data[] = {
+     {{ 2, 0, 0, 0, 199 }, { 2, 0, 0, 0, 199 }, 2},
+     {{ 2, DECIMAL_NEG, 0, 0, 199 }, { 2, DECIMAL_NEG, 0, 0, 199 }, 2},
+     {{ 2, DECIMAL_NEG, 0, 0, 55 },  { 2, DECIMAL_NEG, 0, 0, 6 }, 1},
+-    {{ 2, 0, 0, 0, 55 },  { 2, 0, 0, 0, 6 }, 1}
++    {{ 2, 0, 0, 0, 55 },  { 2, 0, 0, 0, 6 }, 1},
++    {{ 2, 0, 0, 0, 1999 }, { 1, 0, 0, 0, 200 }, 1},
+ };
+ 
+ static void test_VarRound(void)
+@@ -3735,7 +3736,6 @@ static void test_VarRound(void)
+         S1(U1(*pdec)).Lo32 = ptr->source.Lo32;
+         VariantInit(&vDst);
+         hres = pVarRound(&v, ptr->dec, &vDst);
+-    todo_wine
+         ok(hres == S_OK, "%d: got 0x%08x\n", i, hres);
+         if (hres == S_OK)
+         {
+diff --git a/dlls/oleaut32/variant.c b/dlls/oleaut32/variant.c
+index 8781f3e..fcbef53 100644
+--- a/dlls/oleaut32/variant.c
++++ b/dlls/oleaut32/variant.c
+@@ -5134,7 +5134,21 @@ HRESULT WINAPI VarRound(LPVARIANT pVarIn, int deci, LPVARIANT pVarOut)
+ 	}
+ 	V_VT(pVarOut) = V_VT(pVarIn);
+ 	break;
++    case VT_DECIMAL:
++    {
++        double dbl;
+ 
++        VarR8FromDec(&V_DECIMAL(pVarIn), &dbl);
++
++        if (dbl>0.0f)
++            dbl = floor(dbl*pow(10,deci)+0.5);
++        else
++            dbl = ceil(dbl*pow(10,deci)-0.5);
++
++        V_VT(pVarOut)=VT_DECIMAL;
++        VarDecFromR8(dbl, &V_DECIMAL(pVarOut));
++        break;
++    }
+     /* cases we don't know yet */
+     default:
+ 	FIXME("unimplemented part, V_VT(pVarIn) == 0x%X, deci == %d\n",
+-- 
+1.9.1
+

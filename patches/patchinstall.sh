@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2d6de2d129b39d2a0c4ffafa84dabed21c0e830e"
+	echo "5b72f909bb80c690e21bb33cadd3913903c38019"
 }
 
 # Show version information
@@ -251,6 +251,7 @@ patch_enable_all ()
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
+	enable_oleaut32_VarRound="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -912,6 +913,9 @@ patch_enable ()
 			;;
 		oleaut32-OleLoadPictureFile)
 			enable_oleaut32_OleLoadPictureFile="$2"
+			;;
+		oleaut32-VarRound)
+			enable_oleaut32_VarRound="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -5344,6 +5348,21 @@ if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Do not reimplement OleLoadPicture in OleLoadPicturePath.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Factor out stream creation from OleLoadPicturePath.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset oleaut32-VarRound
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26653] oleaut32: Support VT_DECIMAL in VarRound
+# |
+# | Modified files:
+# |   *	dlls/oleaut32/tests/vartest.c, dlls/oleaut32/variant.c
+# |
+if test "$enable_oleaut32_VarRound" -eq 1; then
+	patch_apply oleaut32-VarRound/0001-oleaut32-Support-VT_DECIMAL-in-VarRound.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "oleaut32: Support VT_DECIMAL in VarRound.", 1 },';
 	) >> "$patchlist"
 fi
 

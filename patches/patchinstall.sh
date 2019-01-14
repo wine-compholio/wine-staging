@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5b72f909bb80c690e21bb33cadd3913903c38019"
+	echo "8e0139af2a1cd1ac12aadfa18c8bb04552433ce4"
 }
 
 # Show version information
@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_OpenVirtualDisk="$1"
+	enable_vssapi_CreateVssBackupComponents="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -1135,6 +1136,9 @@ patch_enable ()
 			;;
 		virtdisk-OpenVirtualDisk)
 			enable_virtdisk_OpenVirtualDisk="$2"
+			;;
+		vssapi-CreateVssBackupComponents)
+			enable_vssapi_CreateVssBackupComponents="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -6685,6 +6689,33 @@ if test "$enable_virtdisk_OpenVirtualDisk" -eq 1; then
 	patch_apply virtdisk-OpenVirtualDisk/0001-virtdisk-Add-stub-for-OpenVirtualDisk.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "virtdisk: Add stub for OpenVirtualDisk.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset vssapi-CreateVssBackupComponents
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37639] vssapi: Add ?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@ stub
+# |   *	[#46088] vssapi: Add CreateVssBackupComponentsInternal stub
+# |
+# | Modified files:
+# |   *	dlls/vssapi/main.c, dlls/vssapi/vssapi.spec, include/Makefile.in, include/vsbackup.idl, include/vss.idl,
+# | 	include/vswriter.h, include/vswriter.idl
+# |
+if test "$enable_vssapi_CreateVssBackupComponents" -eq 1; then
+	patch_apply vssapi-CreateVssBackupComponents/0001-include-Add-more-VSS_-typedefs.patch
+	patch_apply vssapi-CreateVssBackupComponents/0002-include-Add-VSS-writer-enum.patch
+	patch_apply vssapi-CreateVssBackupComponents/0003-include-Convert-header-vswriter-to-an-idl.patch
+	patch_apply vssapi-CreateVssBackupComponents/0004-include-Add-vsbackup.idl.patch
+	patch_apply vssapi-CreateVssBackupComponents/0005-vssapi-Add-CreateVssBackupComponentsInternal-stub.patch
+	patch_apply vssapi-CreateVssBackupComponents/0006-vssapi-Add-CreateVssBackupComponents-YGJPAPAVIVssBac.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more VSS_* typedefs.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add VSS writer enum.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Convert header vswriter to an idl.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add vsbackup.idl.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "vssapi: Add CreateVssBackupComponentsInternal stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "vssapi: Add ?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@@@Z stub.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a15d4de557ac2ba3b2418cb39fc6080a7523e604"
+	echo "0b3e7115de6749262296518d659247168a202f5f"
 }
 
 # Show version information
@@ -6724,14 +6724,13 @@ fi
 # | Modified files:
 # |   *	dlls/gdiplus/tests/image.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/converter.c,
 # | 	dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
-# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/tiffformat.c, dlls/windowscodecs/wincodecs_private.h,
+# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/wincodecs_private.h,
 # | 	dlls/windowscodecs/windowscodecs_wincodec.idl
 # |
 if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
-	patch_apply windowscodecs-GIF_Encoder/0014-windowscodecs-Fix-the-buffer-size-check-in-the-TIFF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0015-windowscodecs-Add-support-for-converting-to-8bppInde.patch
 	patch_apply windowscodecs-GIF_Encoder/0016-windowscodecs-WICConvertBitmapSource-should-ask-IWIC.patch
 	patch_apply windowscodecs-GIF_Encoder/0020-windowscodecs-Add-registration-of-the-GIF-encoder.patch
@@ -6747,7 +6746,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs/tests: Add IWICBitmapEncoderInfo test.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the buffer size check in the TIFF decoder'\''s IWICBitmapFrameDecode::CopyPixels implementation.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bppIndexed format to IWICFormatConverter.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';

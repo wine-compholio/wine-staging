@@ -4228,12 +4228,12 @@ fi
 # |   *	[#46465] msvcp140: Forward _Equivalent to tr2_sys__Equivalent_wchar
 # |
 # | Modified files:
-# |   *	dlls/msvcp140/msvcp140.spec
+# |   *	dlls/msvcp140/msvcp140.spec, dlls/msvcp140/tests/msvcp140.c
 # |
 if test "$enable_msvcp140__Equivalent" -eq 1; then
-	patch_apply msvcp140-_Equivalent/0001-msvcp140-Forward-_Equivalent-to-tr2_sys__Equivalent_.patch
+	patch_apply msvcp140-_Equivalent/0001-msvcp140-Export-_Equivalent-and-port-tests.patch
 	(
-		printf '%s\n' '+    { "Gijs Vermeulen", "msvcp140: Forward _Equivalent to tr2_sys__Equivalent_wchar.", 1 },';
+		printf '%s\n' '+    { "Gijs Vermeulen", "msvcp140: Export _Equivalent and port tests.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0b3e7115de6749262296518d659247168a202f5f"
+	echo "5e677beef563b96505338024b84c122e26239d3f"
 }
 
 # Show version information
@@ -181,6 +181,7 @@ patch_enable_all ()
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
+	enable_msvcp140__Equivalent="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -704,6 +705,9 @@ patch_enable ()
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
+			;;
+		msvcp140-_Equivalent)
+			enable_msvcp140__Equivalent="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -4215,6 +4219,21 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msvcp140-_Equivalent
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46465] msvcp140: Forward _Equivalent to tr2_sys__Equivalent_wchar
+# |
+# | Modified files:
+# |   *	dlls/msvcp140/msvcp140.spec
+# |
+if test "$enable_msvcp140__Equivalent" -eq 1; then
+	patch_apply msvcp140-_Equivalent/0001-msvcp140-Forward-_Equivalent-to-tr2_sys__Equivalent_.patch
+	(
+		printf '%s\n' '+    { "Gijs Vermeulen", "msvcp140: Forward _Equivalent to tr2_sys__Equivalent_wchar.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6b42eae19f3bd9a4f4412fcb21c2f46a4c95bbfd"
+	echo "f5d7d9cccc941024f1532a9ac23427d07810f337"
 }
 
 # Show version information
@@ -127,7 +127,6 @@ patch_enable_all ()
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_Fix_Typos="$1"
-	enable_ddraw_FlipToGDISurface="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
@@ -181,7 +180,6 @@ patch_enable_all ()
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
-	enable_msvcp140__Equivalent="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -544,9 +542,6 @@ patch_enable ()
 		ddraw-Fix_Typos)
 			enable_ddraw_Fix_Typos="$2"
 			;;
-		ddraw-FlipToGDISurface)
-			enable_ddraw_FlipToGDISurface="$2"
-			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
 			;;
@@ -705,9 +700,6 @@ patch_enable ()
 			;;
 		msidb-Implementation)
 			enable_msidb_Implementation="$2"
-			;;
-		msvcp140-_Equivalent)
-			enable_msvcp140__Equivalent="$2"
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
@@ -3235,21 +3227,6 @@ if test "$enable_ddraw_Fix_Typos" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ddraw-FlipToGDISurface
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#30062] Implement ddraw7_FlipToGDISurface.
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/ddraw_private.h, dlls/ddraw/surface.c
-# |
-if test "$enable_ddraw_FlipToGDISurface" -eq 1; then
-	patch_apply ddraw-FlipToGDISurface/0001-ddraw-Implement-ddraw7_FlipToGDISurface.patch
-	(
-		printf '%s\n' '+    { "Henri Verbeet", "ddraw: Implement ddraw7_FlipToGDISurface.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-IDirect3DTexture2_Load
 # |
 # | Modified files:
@@ -4219,21 +4196,6 @@ if test "$enable_msidb_Implementation" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msvcp140-_Equivalent
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46465] msvcp140: Forward _Equivalent to tr2_sys__Equivalent_wchar
-# |
-# | Modified files:
-# |   *	dlls/msvcp140/msvcp140.spec, dlls/msvcp140/tests/msvcp140.c
-# |
-if test "$enable_msvcp140__Equivalent" -eq 1; then
-	patch_apply msvcp140-_Equivalent/0001-msvcp140-Export-_Equivalent-and-port-tests.patch
-	(
-		printf '%s\n' '+    { "Gijs Vermeulen", "msvcp140: Export _Equivalent and port tests.", 1 },';
 	) >> "$patchlist"
 fi
 

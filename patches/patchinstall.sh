@@ -360,6 +360,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
+	enable_wined3d_multisample_quality="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1242,6 +1243,9 @@ patch_enable ()
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
+			;;
+		wined3d-multisample-quality)
+			enable_wined3d_multisample_quality="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -7316,6 +7320,21 @@ if test "$enable_wined3d_mesa_texture_download" -eq 1; then
 	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-multisample-quality
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39080] wined3d: Ignore multisample quality for MULTISAMPLE_NONE
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/context.c
+# |
+if test "$enable_wined3d_multisample_quality" -eq 1; then
+	patch_apply wined3d-multisample-quality/0001-wined3d-Ignore-multisample-quality-for-MULTISAMPLE_N.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Ignore multisample quality for MULTISAMPLE_NONE in context_find_fbo_entry().", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -154,6 +154,7 @@ patch_enable_all ()
 	enable_imm32_message_on_focus="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
+	enable_iphlpapi_GetBestRoute2="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CopyFileEx="$1"
@@ -621,6 +622,9 @@ patch_enable ()
 			;;
 		inseng-Implementation)
 			enable_inseng_Implementation="$2"
+			;;
+		iphlpapi-GetBestRoute2)
+			enable_iphlpapi_GetBestRoute2="$2"
 			;;
 		iphlpapi-System_Ping)
 			enable_iphlpapi_System_Ping="$2"
@@ -3726,6 +3730,21 @@ if test "$enable_inseng_Implementation" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset iphlpapi-GetBestRoute2
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44850] iphlpapi: Add GetBestRoute2 stub.
+# |
+# | Modified files:
+# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/iphlpapi_main.c
+# |
+if test "$enable_iphlpapi_GetBestRoute2" -eq 1; then
+	patch_apply iphlpapi-GetBestRoute2/0001-iphlpapi-Add-GetBestRoute2-stub.patch
+	(
+		printf '%s\n' '+    { "Austin English", "iphlpapi: Add GetBestRoute2 stub.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset iphlpapi-System_Ping
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4333,8 +4352,8 @@ fi
 # |   *	[#29168] Update user shared data at realtime
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c,
-# | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c, dlls/ntdll/thread.c,
+# | 	dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
 # |
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch

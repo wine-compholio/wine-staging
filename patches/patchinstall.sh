@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f5d7d9cccc941024f1532a9ac23427d07810f337"
+	echo "fee112f90accd80805e9b499b9f8917661f76cba"
 }
 
 # Show version information
@@ -398,7 +398,6 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
-	enable_wtsapi32_WTSQueryUserToken="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 	enable_xaudio2_7_CreateFX_FXEcho="$1"
@@ -1355,9 +1354,6 @@ patch_enable ()
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
 			;;
-		wtsapi32-WTSQueryUserToken)
-			enable_wtsapi32_WTSQueryUserToken="$2"
-			;;
 		wuauserv-Dummy_Service)
 			enable_wuauserv_Dummy_Service="$2"
 			;;
@@ -1812,13 +1808,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	enable_wined3d_UAV_Counters=1
 fi
 
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_User_Shared_Data=1
-fi
-
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	if test "$enable_wineboot_DriveSerial" -gt 1; then
 		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
@@ -2028,6 +2017,20 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
+fi
+
+if test "$enable_ntdll_NtContinue" -eq 1; then
+	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
+		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
+	fi
+	enable_winebuild_Fake_Dlls=1
+fi
+
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	enable_ntdll_User_Shared_Data=1
 fi
 
 if test "$enable_ntdll_LdrInitializeThunk" -eq 1; then
@@ -4330,7 +4333,7 @@ fi
 # |   *	[#29168] Update user shared data at realtime
 # |
 # | Modified files:
-# |   *	dlls/kernel32/cpu.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c,
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c,
 # | 	dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
 # |
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
@@ -4728,7 +4731,56 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset winebuild-Fake_Dlls
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
+# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
+# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
+# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
+# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
+# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c,
+# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
+# | 	include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c,
+# | 	tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c,
+# | 	tools/winebuild/utils.c
+# |
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
+	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
+	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
+	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
+	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
+	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
+	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtContinue
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31910] Add stub for NtContinue
@@ -6995,52 +7047,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
-# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
-# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
-# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
-# |
-# | Modified files:
-# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
-# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
-# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c,
-# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
-# | 	include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c,
-# | 	tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c,
-# | 	tools/winebuild/utils.c
-# |
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
-	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
-	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
-	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
-	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
-	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
-	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winecfg-Libraries
 # |
 # | Modified files:
@@ -7905,21 +7911,6 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wtsapi32-WTSQueryUserToken
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39663] Improve WTSQueryUserToken stub to make GOG Galaxy happy
-# |
-# | Modified files:
-# |   *	dlls/wtsapi32/wtsapi32.c
-# |
-if test "$enable_wtsapi32_WTSQueryUserToken" -eq 1; then
-	patch_apply wtsapi32-WTSQueryUserToken/0001-wtsapi32-Improve-WTSQueryUserToken-stub.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Improve WTSQueryUserToken stub.", 2 },';
 	) >> "$patchlist"
 fi
 

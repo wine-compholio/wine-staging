@@ -361,6 +361,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_multisample_quality="$1"
+	enable_wined3d_stream_frequency="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1246,6 +1247,9 @@ patch_enable ()
 			;;
 		wined3d-multisample-quality)
 			enable_wined3d_multisample_quality="$2"
+			;;
+		wined3d-stream-frequency)
+			enable_wined3d_stream_frequency="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -7335,6 +7339,21 @@ if test "$enable_wined3d_multisample_quality" -eq 1; then
 	patch_apply wined3d-multisample-quality/0001-wined3d-Ignore-multisample-quality-for-MULTISAMPLE_N.patch
 	(
 		printf '%s\n' '+    { "Paul Gofman", "wined3d: Ignore multisample quality for MULTISAMPLE_NONE in context_find_fbo_entry().", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-stream-frequency
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39080] wined3d: Return stream frequency of 1 if it was not set.
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/device.c
+# |
+if test "$enable_wined3d_stream_frequency" -eq 1; then
+	patch_apply wined3d-stream-frequency/0001-wined3d-Return-stream-frequency-of-1-if-it-was-not-s.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Return stream frequency of 1 if it was not set.", 1 },';
 	) >> "$patchlist"
 fi
 

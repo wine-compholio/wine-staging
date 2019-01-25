@@ -172,6 +172,7 @@ patch_enable_all ()
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
+	enable_mciavi32_fullscreen_support="$1"
 	enable_mf_MFCreateSequencerSource="$1"
 	enable_mfplat_MFGetSystemTime="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
@@ -676,6 +677,9 @@ patch_enable ()
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
+			;;
+		mciavi32-fullscreen_support)
+			enable_mciavi32_fullscreen_support="$2"
 			;;
 		mf-MFCreateSequencerSource)
 			enable_mf_MFCreateSequencerSource="$2"
@@ -4067,6 +4071,21 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset mciavi32-fullscreen_support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15934] mciavi32: Add Support for MCI_MCIAVI_PLAY_FULLSCREEN
+# |
+# | Modified files:
+# |   *	dlls/mciavi32/mciavi.c
+# |
+if test "$enable_mciavi32_fullscreen_support" -eq 1; then
+	patch_apply mciavi32-fullscreen_support/0001-mciavi32-Add-Support-for-MCI_MCIAVI_PLAY_FULLSCREEN.patch
+	(
+		printf '%s\n' '+    { "Bruno Jesus", "mciavi32: Add Support for MCI_MCIAVI_PLAY_FULLSCREEN.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -11,12 +11,10 @@ def usage():
     print 'usage: ./staging/newupdate.py'
     print 'Applies every patch to a Wine tree. On failure, prints the name of'
     print 'the patch that failed to apply and cleans up the index. On success,'
-    print 'leaves every patch applied, and then runs autoreconf -f and'
-    print 'tools/make_requests to prepare for a build.'
-    print 'Note: this program must be used on a clean git tree (empty index).'
-    print 'This program does not update patchinstall.sh; you will need to run'
+    print 'leaves every patch applied, runs autoreconf -f and'
+    print 'tools/make_requests to prepare for a build, and runs'
     print './staging/patchupdate.py --skip-bugs --skip-checks'
-    print 'to do that.'
+    print 'to update patchinstall.sh.'
 
 # return a patch to be shoved in patchlist below
 def parse_def_file(name, path):
@@ -38,7 +36,7 @@ def apply_set(patchlist, name):
             return False
     print 'Applying',name
     for patch in sorted(os.listdir(patchdir+'/'+name)):
-        if patch.endswith('.patch') and subprocess.call(['git','-C',winedir,'apply','--index',patchdir+'/'+name+'/'+patch]):
+        if patch.endswith('.patch') and patch.startswith('0') and subprocess.call(['git','-C',winedir,'apply','--index',patchdir+'/'+name+'/'+patch]):
             print 'Failed to apply patch %s/%s' %(name, patch)
             return False
     applied.append(name)

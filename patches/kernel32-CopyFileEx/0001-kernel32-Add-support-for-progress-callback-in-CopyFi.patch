@@ -1,7 +1,7 @@
-From 407cee7ad5b44512ec170665b78bd5243e0345d5 Mon Sep 17 00:00:00 2001
+From 96f59c91f45ca9572e3e9141ee9ad81bbb6ba45d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 26 Feb 2015 06:41:26 +0100
-Subject: kernel32: Add support for progress callback in CopyFileEx.
+Subject: [PATCH] kernel32: Add support for progress callback in CopyFileEx.
 
 ---
  dlls/kernel32/path.c       | 66 +++++++++++++++++++++++++++++++++++++++++++---
@@ -9,10 +9,10 @@ Subject: kernel32: Add support for progress callback in CopyFileEx.
  2 files changed, 62 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 09b8b7f..18b28f6 100644
+index 41f0d34..f04b0f4 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
-@@ -1130,6 +1130,9 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1177,6 +1177,9 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
      DWORD count;
      BOOL ret = FALSE;
      char *buffer;
@@ -22,7 +22,7 @@ index 09b8b7f..18b28f6 100644
  
      if (!source || !dest)
      {
-@@ -1144,7 +1147,13 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1191,7 +1194,13 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
  
      TRACE("%s -> %s, %x\n", debugstr_w(source), debugstr_w(dest), flags);
  
@@ -37,7 +37,7 @@ index 09b8b7f..18b28f6 100644
                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                       NULL, OPEN_EXISTING, 0, 0)) == INVALID_HANDLE_VALUE)
      {
-@@ -1180,9 +1189,13 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1227,9 +1236,13 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
          }
      }
  
@@ -54,7 +54,7 @@ index 09b8b7f..18b28f6 100644
      {
          WARN("Unable to open dest %s\n", debugstr_w(dest));
          HeapFree( GetProcessHeap(), 0, buffer );
-@@ -1190,6 +1203,30 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1237,6 +1250,30 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
          return FALSE;
      }
  
@@ -85,7 +85,7 @@ index 09b8b7f..18b28f6 100644
      while (ReadFile( h1, buffer, buffer_size, &count, NULL ) && count)
      {
          char *p = buffer;
-@@ -1199,6 +1236,27 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -1246,6 +1283,27 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
              if (!WriteFile( h2, p, count, &res, NULL ) || !res) goto done;
              p += res;
              count -= res;
@@ -114,10 +114,10 @@ index 09b8b7f..18b28f6 100644
      }
      ret =  TRUE;
 diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
-index 53d225c..01d342d 100644
+index b47b2b9..68396c0 100644
 --- a/dlls/kernel32/tests/file.c
 +++ b/dlls/kernel32/tests/file.c
-@@ -1137,23 +1137,17 @@ static void test_CopyFileEx(void)
+@@ -1163,23 +1163,17 @@ static void test_CopyFileEx(void)
      ok(hfile != INVALID_HANDLE_VALUE, "failed to open destination file, error %d\n", GetLastError());
      SetLastError(0xdeadbeef);
      retok = CopyFileExA(source, dest, copy_progress_cb, hfile, NULL, 0);
@@ -140,7 +140,7 @@ index 53d225c..01d342d 100644
 -    todo_wine
      ok(GetFileAttributesA(dest) == INVALID_FILE_ATTRIBUTES, "file was not deleted\n");
  
-     ret = DeleteFileA(source);
+     retok = CopyFileExA(source, NULL, copy_progress_cb, hfile, NULL, 0);
 -- 
-2.4.2
+1.9.1
 

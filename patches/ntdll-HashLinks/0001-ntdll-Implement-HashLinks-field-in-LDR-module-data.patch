@@ -1,27 +1,27 @@
-From 62a2aa4ae486d307eb3616bf715924983c6d3458 Mon Sep 17 00:00:00 2001
+From 4cf5c404e02fb82de6ce8568a5b6ac6ccfcbe23e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 3 Apr 2017 05:30:27 +0200
 Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
 
 ---
- dlls/kernel32/tests/loader.c | 75 ++++++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/loader.c          | 65 ++++++++++++++++++++++++++++++++++++++
+ dlls/kernel32/tests/loader.c | 76 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/loader.c          | 65 +++++++++++++++++++++++++++++++++++++
  include/winternl.h           |  6 ++--
- 3 files changed, 144 insertions(+), 2 deletions(-)
+ 3 files changed, 145 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index e7a1a43..7528098 100644
+index 165c05e..d26b787 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -29,6 +29,7 @@
- #include "windef.h"
+@@ -30,6 +30,7 @@
  #include "winbase.h"
  #include "winternl.h"
+ #include "winnls.h"
 +#include "winuser.h"
  #include "wine/test.h"
  #include "delayloadhandler.h"
  
-@@ -3600,6 +3601,79 @@ static void test_InMemoryOrderModuleList(void)
+@@ -3806,6 +3807,79 @@ static void test_InMemoryOrderModuleList(void)
      ok(entry2 == mark2, "expected entry2 == mark2, got %p and %p\n", entry2, mark2);
  }
  
@@ -101,14 +101,17 @@ index e7a1a43..7528098 100644
  START_TEST(loader)
  {
      int argc;
-@@ -3664,4 +3738,5 @@ START_TEST(loader)
+@@ -3872,6 +3946,8 @@ START_TEST(loader)
      test_import_resolution();
      test_ExitProcess();
      test_InMemoryOrderModuleList();
 +    test_HashLinks();
++
+     /* loader test must be last, it can corrupt the internal loader state on Windows */
+     test_Loader();
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index da83b27..9493770 100644
+index a47dfe0..a8599bd 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -93,6 +93,9 @@ static const char * const reason_names[] =
@@ -195,7 +198,7 @@ index da83b27..9493770 100644
              /* FIXME: free the modref */
              builtin_load_info->status = STATUS_DLL_NOT_FOUND;
              return;
-@@ -2028,6 +2083,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
+@@ -2081,6 +2136,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, LPCWSTR name, HANDLE file,
              /* the module has only be inserted in the load & memory order lists */
              RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
              RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
@@ -203,7 +206,7 @@ index da83b27..9493770 100644
  
              /* FIXME: there are several more dangling references
               * left. Including dlls loaded by this dll before the
-@@ -3030,6 +3086,7 @@ static void free_modref( WINE_MODREF *wm )
+@@ -3097,6 +3153,7 @@ static void free_modref( WINE_MODREF *wm )
  {
      RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
      RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
@@ -211,7 +214,7 @@ index da83b27..9493770 100644
      if (wm->ldr.InInitializationOrderModuleList.Flink)
          RemoveEntryList(&wm->ldr.InInitializationOrderModuleList);
  
-@@ -3357,6 +3414,9 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+@@ -3424,6 +3481,9 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
      RemoveEntryList( &wm->ldr.InMemoryOrderModuleList );
      InsertHeadList( &peb->LdrData->InMemoryOrderModuleList, &wm->ldr.InMemoryOrderModuleList );
  
@@ -221,7 +224,7 @@ index da83b27..9493770 100644
      if ((status = virtual_alloc_thread_stack( NtCurrentTeb(), 0, 0, NULL )) != STATUS_SUCCESS)
      {
          ERR( "Main exe initialization for %s failed, status %x\n",
-@@ -3505,6 +3565,7 @@ void __wine_process_init(void)
+@@ -3570,6 +3630,7 @@ void __wine_process_init(void)
      NTSTATUS status;
      ANSI_STRING func_name;
      void (* DECLSPEC_NORETURN CDECL init_func)(void);
@@ -229,7 +232,7 @@ index da83b27..9493770 100644
  
      thread_init();
  
-@@ -3514,6 +3575,10 @@ void __wine_process_init(void)
+@@ -3579,6 +3640,10 @@ void __wine_process_init(void)
  
      load_global_options();
  
@@ -241,10 +244,10 @@ index da83b27..9493770 100644
      wine_dll_set_callback( load_builtin_callback );
  
 diff --git a/include/winternl.h b/include/winternl.h
-index c07cdec..4f04a28 100644
+index 9dfc440..ee89bc3 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2192,8 +2192,7 @@ typedef struct _LDR_MODULE
+@@ -2198,8 +2198,7 @@ typedef struct _LDR_MODULE
      ULONG               Flags;
      SHORT               LoadCount;
      SHORT               TlsIndex;
@@ -254,7 +257,7 @@ index c07cdec..4f04a28 100644
      ULONG               TimeDateStamp;
      HANDLE              ActivationContext;
      PVOID               PatchInformation;
-@@ -2203,6 +2202,9 @@ typedef struct _LDR_MODULE
+@@ -2209,6 +2208,9 @@ typedef struct _LDR_MODULE
      PVOID               ContextInformation;
      ULONG_PTR           OriginalBase;
      LARGE_INTEGER       LoadTime;
@@ -265,5 +268,5 @@ index c07cdec..4f04a28 100644
  
  typedef struct _LDR_DLL_LOADED_NOTIFICATION_DATA
 -- 
-2.7.4
+1.9.1
 

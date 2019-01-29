@@ -304,6 +304,7 @@ patch_enable_all ()
 	enable_taskmgr_Memory_Usage="$1"
 	enable_ucrtbase__o_="$1"
 	enable_uianimation_stubs="$1"
+	enable_urlmon_ftp_escape="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
@@ -1075,6 +1076,9 @@ patch_enable ()
 			;;
 		uianimation-stubs)
 			enable_uianimation_stubs="$2"
+			;;
+		urlmon-ftp_escape)
+			enable_urlmon_ftp_escape="$2"
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
@@ -6383,6 +6387,23 @@ if test "$enable_uianimation_stubs" -eq 1; then
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateStoryboard.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateAnimationVariable.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset urlmon-ftp_escape
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#26445] urlmon: Use unescaped Urls for FTP actions
+# |
+# | Modified files:
+# |   *	dlls/urlmon/ftp.c, dlls/urlmon/tests/Makefile.in, dlls/urlmon/tests/url.c
+# |
+if test "$enable_urlmon_ftp_escape" -eq 1; then
+	patch_apply urlmon-ftp_escape/0001-urlmon-Use-unescaped-Urls-for-FTP-actions.patch
+	patch_apply urlmon-ftp_escape/0002-urlmon-tests-Add-FTP-encoded-url-test.patch
+	(
+		printf '%s\n' '+    { "André Hentschel", "urlmon: Use unescaped Urls for FTP actions.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "urlmon/tests: Add FTP encoded url test.", 1 },';
 	) >> "$patchlist"
 fi
 

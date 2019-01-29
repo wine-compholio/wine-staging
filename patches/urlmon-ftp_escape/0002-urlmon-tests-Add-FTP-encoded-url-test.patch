@@ -1,0 +1,81 @@
+From 70241b0a4b7eadff9b2baeced34186b59e3dc53a Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 29 Jan 2019 09:04:27 +1100
+Subject: [PATCH] urlmon/tests: Add FTP encoded url test
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/urlmon/tests/Makefile.in |  2 +-
+ dlls/urlmon/tests/url.c       | 17 ++++++++++++++++-
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/urlmon/tests/Makefile.in b/dlls/urlmon/tests/Makefile.in
+index 2eef129..48afdc9 100644
+--- a/dlls/urlmon/tests/Makefile.in
++++ b/dlls/urlmon/tests/Makefile.in
+@@ -1,5 +1,5 @@
+ TESTDLL   = urlmon.dll
+-IMPORTS   = urlmon wininet ole32 oleaut32 user32 advapi32
++IMPORTS   = urlmon wininet ole32 oleaut32 user32 advapi32 shlwapi
+ 
+ C_SRCS = \
+ 	generated.c \
+diff --git a/dlls/urlmon/tests/url.c b/dlls/urlmon/tests/url.c
+index ada78c9..09e7d86 100644
+--- a/dlls/urlmon/tests/url.c
++++ b/dlls/urlmon/tests/url.c
+@@ -32,6 +32,7 @@
+ #include "urlmon.h"
+ #include "wininet.h"
+ #include "mshtml.h"
++#include "shlwapi.h"
+ 
+ #include "wine/test.h"
+ 
+@@ -191,6 +192,7 @@ static BOOL async_switch = FALSE;
+ static BOOL strict_bsc_qi;
+ static DWORD bindtest_flags;
+ static const char *test_file;
++static const char *ftp_url;
+ 
+ static WCHAR file_url[INTERNET_MAX_URL_LENGTH], current_url[INTERNET_MAX_URL_LENGTH];
+ 
+@@ -2905,7 +2907,10 @@ static void init_bind_test(int protocol, DWORD flags, DWORD t)
+         url_a = (flags & BINDTEST_INVALID_CN) ? "https://4.15.184.77/favicon.ico" : "https://test.winehq.org/tests/hello.html";
+         break;
+     case FTP_TEST:
+-        url_a = "ftp://ftp.winehq.org/welcome.msg";
++        if(!ftp_url)
++            url_a = "ftp://ftp.winehq.org/welcome.msg";
++        else
++            url_a = ftp_url;
+         break;
+     default:
+         url_a = "winetest:test";
+@@ -2969,6 +2974,13 @@ static void test_BindToStorage(int protocol, DWORD flags, DWORD t)
+     if(FAILED(hres))
+         return;
+ 
++    if(protocol == FTP_TEST)
++    {
++        /* FTP url dont have any escape characters, so convert the url to what is expected */
++        DWORD size = 0;
++        UrlUnescapeW(current_url, NULL, &size, URL_UNESCAPE_INPLACE);
++    }
++
+     hres = IMoniker_QueryInterface(mon, &IID_IBinding, (void**)&bind);
+     ok(hres == E_NOINTERFACE, "IMoniker should not have IBinding interface\n");
+     if(SUCCEEDED(hres))
+@@ -4144,6 +4156,9 @@ START_TEST(url)
+         trace("ftp test...\n");
+         test_BindToStorage(FTP_TEST, 0, TYMED_ISTREAM);
+ 
++        ftp_url = "ftp://ftp.winehq.org/welcome%2emsg";
++        test_BindToStorage(FTP_TEST, 0, TYMED_ISTREAM);
++
+         trace("test failures...\n");
+         test_BindToStorage_fail();
+ 
+-- 
+1.9.1
+

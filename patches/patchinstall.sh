@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_hid_HidD_FlushQueue="$1"
+	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
 	enable_imagehlp_ImageLoad="$1"
@@ -611,6 +612,9 @@ patch_enable ()
 			;;
 		hid-HidD_FlushQueue)
 			enable_hid_HidD_FlushQueue="$2"
+			;;
+		httpapi-HttpCreateServerSession)
+			enable_httpapi_HttpCreateServerSession="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -3668,6 +3672,21 @@ if test "$enable_hid_HidD_FlushQueue" -eq 1; then
 	patch_apply hid-HidD_FlushQueue/0001-hid-Implement-HidD_FlushQueue.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hid: Implement HidD_FlushQueue.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset httpapi-HttpCreateServerSession
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46549] httpapi: Fake success from HttpCreateServerSession
+# |
+# | Modified files:
+# |   *	dlls/httpapi/httpapi_main.c
+# |
+if test "$enable_httpapi_HttpCreateServerSession" -eq 1; then
+	patch_apply httpapi-HttpCreateServerSession/0001-httpapi-Fake-success-from-HttpCreateServerSession.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "httpapi: Fake success from HttpCreateServerSession.", 1 },';
 	) >> "$patchlist"
 fi
 

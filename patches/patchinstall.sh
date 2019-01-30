@@ -103,6 +103,7 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_MS_Root_Certs="$1"
+	enable_crypt32_old_libgnutls="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d8_ValidateShader="$1"
@@ -472,6 +473,9 @@ patch_enable ()
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
+			;;
+		crypt32-old_libgnutls)
+			enable_crypt32_old_libgnutls="$2"
 			;;
 		d2d1-ID2D1Factory1)
 			enable_d2d1_ID2D1Factory1="$2"
@@ -2640,6 +2644,18 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset crypt32-old_libgnutls
+# |
+# | Modified files:
+# |   *	dlls/crypt32/pfx.c
+# |
+if test "$enable_crypt32_old_libgnutls" -eq 1; then
+	patch_apply crypt32-old_libgnutls/0001-crypt32-Fix-compile-error-on-older-gnutls.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "crypt32: Fix compile error on older gnutls.", 1 },';
 	) >> "$patchlist"
 fi
 

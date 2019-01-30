@@ -160,6 +160,7 @@ patch_enable_all ()
 	enable_iphlpapi_System_Ping="$1"
 	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CopyFileEx="$1"
+	enable_kernel32_CreateSymbolicLink="$1"
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
@@ -645,6 +646,9 @@ patch_enable ()
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
+			;;
+		kernel32-CreateSymbolicLink)
+			enable_kernel32_CreateSymbolicLink="$2"
 			;;
 		kernel32-Debugger)
 			enable_kernel32_Debugger="$2"
@@ -3891,6 +3895,21 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-CreateSymbolicLink
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44948] kernel32: Implement CreateSymbolicLink
+# |
+# | Modified files:
+# |   *	dlls/kernel32/path.c, dlls/msvcp120/tests/msvcp120.c
+# |
+if test "$enable_kernel32_CreateSymbolicLink" -eq 1; then
+	patch_apply kernel32-CreateSymbolicLink/0001-kernel32-Implement-CreateSymbolicLink.patch
+	(
+		printf '%s\n' '+    { "Gijs Vermeulen", "kernel32: Implement CreateSymbolicLink.", 1 },';
 	) >> "$patchlist"
 fi
 

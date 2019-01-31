@@ -1,20 +1,20 @@
-From fe51309d6a518b11b1d9db5e42abfb6d31cae9eb Mon Sep 17 00:00:00 2001
+From 3754ff36e69f3d6266ded912de0babfea68cbfed Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 23:42:56 +0200
 Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
 
 ---
- dlls/ntoskrnl.exe/ntoskrnl.c     | 19 +++++++-
- dlls/ntoskrnl.exe/tests/driver.c | 37 ++++++++++++++--
- include/ddk/wdm.h                | 76 ++++++++++++++++++++++++++++++--
- include/winnt.h                  |  2 +
+ dlls/ntoskrnl.exe/ntoskrnl.c     | 19 +++++++++-
+ dlls/ntoskrnl.exe/tests/driver.c | 37 +++++++++++++++++--
+ include/ddk/wdm.h                | 76 ++++++++++++++++++++++++++++++++++++++--
+ include/winnt.h                  |  2 ++
  4 files changed, 127 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index 952fa5ec..2e08a50e 100644
+index d3c2ea6..7d1fcdb 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
-@@ -2181,7 +2181,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
+@@ -2153,7 +2153,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
                                              ULONG Tag,
                                              USHORT Depth)
  {
@@ -41,7 +41,7 @@ index 952fa5ec..2e08a50e 100644
  
  /***********************************************************************
 diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
-index e361d345..2260816c 100644
+index 215e090..70020e0 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.c
 @@ -22,6 +22,9 @@
@@ -54,7 +54,7 @@ index e361d345..2260816c 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -528,6 +531,33 @@ static void test_version(void)
+@@ -526,6 +529,33 @@ static void test_version(void)
      ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
  }
  
@@ -88,7 +88,7 @@ index e361d345..2260816c 100644
  static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
  {
      ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
-@@ -558,6 +588,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
+@@ -556,6 +586,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
      test_load_driver();
      test_sync();
      test_version();
@@ -96,7 +96,7 @@ index e361d345..2260816c 100644
  
      /* print process report */
      if (test_input->winetest_debug)
-@@ -609,7 +640,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
+@@ -607,7 +638,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
  
  static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
  {
@@ -105,7 +105,7 @@ index e361d345..2260816c 100644
      IoCompleteRequest(irp, IO_NO_INCREMENT);
      return STATUS_SUCCESS;
  }
-@@ -634,14 +665,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+@@ -632,14 +663,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
              break;
      }
  
@@ -123,7 +123,7 @@ index e361d345..2260816c 100644
      return STATUS_SUCCESS;
  }
 diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
-index a53c7a26..ca83129f 100644
+index 03af14d..a4114e6 100644
 --- a/include/ddk/wdm.h
 +++ b/include/ddk/wdm.h
 @@ -153,20 +153,18 @@ typedef struct _KWAIT_BLOCK {
@@ -146,9 +146,9 @@ index a53c7a26..ca83129f 100644
  typedef struct _ZONE_HEADER *PZONE_HEADER;
 +typedef struct _LOOKASIDE_LIST_EX *PLOOKASIDE_LIST_EX;
  
- typedef struct _FAST_MUTEX
- {
-@@ -191,6 +189,11 @@ typedef struct _VPB {
+ #define FM_LOCK_BIT 0x1
+ 
+@@ -193,6 +191,11 @@ typedef struct _VPB {
    WCHAR  VolumeLabel[MAXIMUM_VOLUME_LABEL_LENGTH / sizeof(WCHAR)];
  } VPB, *PVPB;
  
@@ -160,7 +160,7 @@ index a53c7a26..ca83129f 100644
  typedef enum _POOL_TYPE {
    NonPagedPool,
    PagedPool,
-@@ -1230,6 +1233,71 @@ typedef struct _KLOCK_QUEUE_HANDLE {
+@@ -1232,6 +1235,71 @@ typedef struct _KLOCK_QUEUE_HANDLE {
      KIRQL OldIrql;
  } KLOCK_QUEUE_HANDLE, *PKLOCK_QUEUE_HANDLE;
  
@@ -232,7 +232,7 @@ index a53c7a26..ca83129f 100644
  typedef NTSTATUS (NTAPI EX_CALLBACK_FUNCTION)(void *CallbackContext, void *Argument1, void *Argument2);
  typedef EX_CALLBACK_FUNCTION *PEX_CALLBACK_FUNCTION;
  
-@@ -1382,8 +1450,10 @@ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
+@@ -1384,8 +1452,10 @@ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
  PVOID     WINAPI ExAllocatePoolWithQuota(POOL_TYPE,SIZE_T);
  PVOID     WINAPI ExAllocatePoolWithTag(POOL_TYPE,SIZE_T,ULONG);
  PVOID     WINAPI ExAllocatePoolWithQuotaTag(POOL_TYPE,SIZE_T,ULONG);
@@ -244,7 +244,7 @@ index a53c7a26..ca83129f 100644
  PSLIST_ENTRY WINAPI ExInterlockedPushEntrySList(PSLIST_HEADER,PSLIST_ENTRY,PKSPIN_LOCK);
  LIST_ENTRY * WINAPI ExInterlockedRemoveHeadList(LIST_ENTRY*,KSPIN_LOCK*);
 diff --git a/include/winnt.h b/include/winnt.h
-index c08ee9a4..a156efc4 100644
+index 75dfcd8..1b840bd 100644
 --- a/include/winnt.h
 +++ b/include/winnt.h
 @@ -757,6 +757,8 @@ typedef struct _MEMORY_BASIC_INFORMATION
@@ -257,5 +257,5 @@ index c08ee9a4..a156efc4 100644
  #ifdef __GNUC__
  # define CONTAINING_RECORD(address, type, field) ({     \
 -- 
-2.20.1
+1.9.1
 

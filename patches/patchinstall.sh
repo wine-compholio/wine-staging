@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7003ba44892d39ec0f409c793b97a0c5f4ae72d0"
+	echo "84459ba94b9de2fc32499154aa4591f10d746947"
 }
 
 # Show version information
@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_MS_Root_Certs="$1"
-	enable_crypt32_old_libgnutls="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d8_ValidateShader="$1"
@@ -334,7 +333,6 @@ patch_enable_all ()
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
-	enable_windowscodecs_IWICPalette_InitializeFromBitmap="$1"
 	enable_windowscodecs_JPEG_Decoder="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
@@ -475,9 +473,6 @@ patch_enable ()
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
-			;;
-		crypt32-old_libgnutls)
-			enable_crypt32_old_libgnutls="$2"
 			;;
 		d2d1-ID2D1Factory1)
 			enable_d2d1_ID2D1Factory1="$2"
@@ -1169,9 +1164,6 @@ patch_enable ()
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
 			;;
-		windowscodecs-IWICPalette_InitializeFromBitmap)
-			enable_windowscodecs_IWICPalette_InitializeFromBitmap="$2"
-			;;
 		windowscodecs-JPEG_Decoder)
 			enable_windowscodecs_JPEG_Decoder="$2"
 			;;
@@ -1858,11 +1850,7 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	if test "$enable_windowscodecs_GIF_Encoder" -gt 1; then
 		abort "Patchset windowscodecs-GIF_Encoder disabled, but windowscodecs-TIFF_Support depends on that."
 	fi
-	if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -gt 1; then
-		abort "Patchset windowscodecs-IWICPalette_InitializeFromBitmap disabled, but windowscodecs-TIFF_Support depends on that."
-	fi
 	enable_windowscodecs_GIF_Encoder=1
-	enable_windowscodecs_IWICPalette_InitializeFromBitmap=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -2652,18 +2640,6 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset crypt32-old_libgnutls
-# |
-# | Modified files:
-# |   *	dlls/crypt32/pfx.c
-# |
-if test "$enable_crypt32_old_libgnutls" -eq 1; then
-	patch_apply crypt32-old_libgnutls/0001-crypt32-Fix-compile-error-on-older-gnutls.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "crypt32: Fix compile error on older gnutls.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6897,30 +6873,10 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-IWICPalette_InitializeFromBitmap
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39890] Implement IWICPalette::InitializeFromBitmap
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/gdiplus.spec, dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/palette.c,
-# | 	dlls/windowscodecs/tests/palette.c, include/gdiplusflat.h
-# |
-if test "$enable_windowscodecs_IWICPalette_InitializeFromBitmap" -eq 1; then
-	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0002-windowscodecs-Implement-IWICPalette-InitializeFromBi.patch
-	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0003-gdiplus-Implement-GdipInitializePalette.-v2.patch
-	patch_apply windowscodecs-IWICPalette_InitializeFromBitmap/0004-gdiplus-tests-Add-some-tests-for-GdipInitializePalet.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Implement IWICPalette::InitializeFromBitmap.", 5 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Implement GdipInitializePalette.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for GdipInitializePalette.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-TIFF_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	windowscodecs-GIF_Encoder, windowscodecs-IWICPalette_InitializeFromBitmap
+# |   *	windowscodecs-GIF_Encoder
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
@@ -6966,7 +6922,7 @@ fi
 # Patchset windowscodecs-32bppPRGBA
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	windowscodecs-GIF_Encoder, windowscodecs-IWICPalette_InitializeFromBitmap, windowscodecs-TIFF_Support
+# |   *	windowscodecs-GIF_Encoder, windowscodecs-TIFF_Support
 # |
 # | Modified files:
 # |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,

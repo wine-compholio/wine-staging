@@ -2476,7 +2476,7 @@ fi
 # | 	ms-win-appmodel-usercontext-l1-1-0.spec, dlls/ext-ms-win-appmodel-usercontext-l1-1-0/main.c, dlls/ext-ms-win-xaml-
 # | 	pal-l1-1-0/Makefile.in, dlls/ext-ms-win-xaml-pal-l1-1-0/ext-ms-win-xaml-pal-l1-1-0.spec, dlls/ext-ms-win-xaml-
 # | 	pal-l1-1-0/main.c, dlls/iertutil/Makefile.in, dlls/iertutil/iertutil.spec, dlls/iertutil/main.c,
-# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c, dlls/uiautomationcore/uiautomationcore.spec
+# | 	dlls/uiautomationcore/Makefile.in, dlls/uiautomationcore/uia_main.c
 # |
 if test "$enable_api_ms_win_Stub_DLLs" -eq 1; then
 	patch_apply api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
@@ -2556,17 +2556,13 @@ fi
 # |   *	[#45312] Fix issue for Assassin's Creed : Syndicate
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/ncrypt/ncrypt.spec,
-# | 	include/bcrypt.h
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/gnutls.c,
+# | 	dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec, include/bcrypt.h
 # |
 if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
-	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Add-support-for-algorithm-ECDH-P256.patch
-	patch_apply bcrypt-BCryptGenerateKeyPair/0002-bcrypt-Add-BCryptGenerateKeyPair-stub.patch
-	patch_apply bcrypt-BCryptGenerateKeyPair/0003-bcrypt-Add-BCryptFinalizeKeyPair-stub.patch
+	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Implement-BCryptGenerate-FinalizeKeyPair-for-.patch
 	(
-		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add support for algorithm ECDH P256.", 1 },';
-		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptGenerateKeyPair stub.", 1 },';
-		printf '%s\n' '+    { "Maxime Lombard", "bcrypt: Add BCryptFinalizeKeyPair stub.", 1 },';
+		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH P256.", 1 },';
 	) >> "$patchlist"
 fi
 

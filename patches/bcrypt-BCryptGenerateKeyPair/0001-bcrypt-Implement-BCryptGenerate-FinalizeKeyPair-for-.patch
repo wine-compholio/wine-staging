@@ -1,0 +1,635 @@
+From fa9138a3a147c99a5325e7b05a44145bc864d649 Mon Sep 17 00:00:00 2001
+From: Hans Leidekker <hans@codeweavers.com>
+Date: Tue, 5 Feb 2019 09:00:02 +1100
+Subject: [PATCH] bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH
+ P256.
+
+---
+ dlls/bcrypt/bcrypt.spec       |   4 +-
+ dlls/bcrypt/bcrypt_internal.h |   7 +-
+ dlls/bcrypt/bcrypt_main.c     |  56 ++++++++++++++-
+ dlls/bcrypt/gnutls.c          | 162 +++++++++++++++++++++++++++++++++++++++---
+ dlls/bcrypt/tests/bcrypt.c    |  94 ++++++++++++++++++------
+ dlls/ncrypt/ncrypt.spec       |   4 +-
+ include/bcrypt.h              |  12 +++-
+ 7 files changed, 297 insertions(+), 42 deletions(-)
+
+diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
+index f4d9a57..052a099 100644
+--- a/dlls/bcrypt/bcrypt.spec
++++ b/dlls/bcrypt/bcrypt.spec
+@@ -22,11 +22,11 @@
+ @ stub BCryptEnumProviders
+ @ stub BCryptEnumRegisteredProviders
+ @ stdcall BCryptExportKey(ptr ptr wstr ptr long ptr long)
+-@ stub BCryptFinalizeKeyPair
++@ stdcall BCryptFinalizeKeyPair(ptr long)
+ @ stdcall BCryptFinishHash(ptr ptr long long)
+ @ stub BCryptFreeBuffer
+ @ stdcall BCryptGenRandom(ptr ptr long long)
+-@ stub BCryptGenerateKeyPair
++@ stdcall BCryptGenerateKeyPair(ptr ptr long long)
+ @ stdcall BCryptGenerateSymmetricKey(ptr ptr ptr long ptr long long)
+ @ stdcall BCryptGetFipsAlgorithmMode(ptr)
+ @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long)
+diff --git a/dlls/bcrypt/bcrypt_internal.h b/dlls/bcrypt/bcrypt_internal.h
+index 593e784..b6e3d0b 100644
+--- a/dlls/bcrypt/bcrypt_internal.h
++++ b/dlls/bcrypt/bcrypt_internal.h
+@@ -125,6 +125,7 @@ enum alg_id
+     ALG_ID_SHA256,
+     ALG_ID_SHA384,
+     ALG_ID_SHA512,
++    ALG_ID_ECDH_P256,
+     ALG_ID_ECDSA_P256,
+     ALG_ID_ECDSA_P384,
+ };
+@@ -156,8 +157,9 @@ struct key_symmetric
+ 
+ struct key_asymmetric
+ {
+-    UCHAR *pubkey;
+-    ULONG  pubkey_len;
++    gnutls_privkey_t  handle;
++    UCHAR            *pubkey;
++    ULONG             pubkey_len;
+ };
+ 
+ struct key
+@@ -224,6 +226,7 @@ NTSTATUS key_symmetric_encrypt( struct key *, const UCHAR *, ULONG, UCHAR *, ULO
+ NTSTATUS key_symmetric_decrypt( struct key *, const UCHAR *, ULONG, UCHAR *, ULONG ) DECLSPEC_HIDDEN;
+ NTSTATUS key_symmetric_get_tag( struct key *, UCHAR *, ULONG ) DECLSPEC_HIDDEN;
+ NTSTATUS key_asymmetric_init( struct key *, struct algorithm *, const UCHAR *, ULONG ) DECLSPEC_HIDDEN;
++NTSTATUS key_asymmetric_generate( struct key * ) DECLSPEC_HIDDEN;
+ NTSTATUS key_asymmetric_verify( struct key *, void *, UCHAR *, ULONG, UCHAR *, ULONG, DWORD ) DECLSPEC_HIDDEN;
+ NTSTATUS key_destroy( struct key * ) DECLSPEC_HIDDEN;
+ BOOL key_is_symmetric( struct key * ) DECLSPEC_HIDDEN;
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 9427ea7..80bd14b 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -114,6 +114,7 @@ alg_props[] =
+     /* ALG_ID_SHA256 */ {  286,   32,  512, BCRYPT_SHA256_ALGORITHM, FALSE },
+     /* ALG_ID_SHA384 */ {  382,   48, 1024, BCRYPT_SHA384_ALGORITHM, FALSE },
+     /* ALG_ID_SHA512 */ {  382,   64, 1024, BCRYPT_SHA512_ALGORITHM, FALSE },
++    /* ALG_ID_ECDH_P256 */  { 0,   0,     0, BCRYPT_ECDH_P256_ALGORITHM, FALSE },
+     /* ALG_ID_ECDSA_P256 */ { 0,   0,     0, BCRYPT_ECDSA_P256_ALGORITHM, FALSE  },
+     /* ALG_ID_ECDSA_P384 */ { 0,   0,     0, BCRYPT_ECDSA_P384_ALGORITHM, FALSE  },
+ };
+@@ -184,6 +185,7 @@ NTSTATUS WINAPI BCryptOpenAlgorithmProvider( BCRYPT_ALG_HANDLE *handle, LPCWSTR
+     else if (!strcmpW( id, BCRYPT_SHA256_ALGORITHM )) alg_id = ALG_ID_SHA256;
+     else if (!strcmpW( id, BCRYPT_SHA384_ALGORITHM )) alg_id = ALG_ID_SHA384;
+     else if (!strcmpW( id, BCRYPT_SHA512_ALGORITHM )) alg_id = ALG_ID_SHA512;
++    else if (!strcmpW( id, BCRYPT_ECDH_P256_ALGORITHM )) alg_id = ALG_ID_ECDH_P256;
+     else if (!strcmpW( id, BCRYPT_ECDSA_P256_ALGORITHM )) alg_id = ALG_ID_ECDSA_P256;
+     else if (!strcmpW( id, BCRYPT_ECDSA_P384_ALGORITHM )) alg_id = ALG_ID_ECDSA_P384;
+     else
+@@ -811,6 +813,14 @@ static NTSTATUS key_export( struct key *key, const WCHAR *type, UCHAR *output, U
+         memcpy( output + sizeof(len), key->u.s.secret, key->u.s.secret_len );
+         return STATUS_SUCCESS;
+     }
++    else if (!strcmpW( type, BCRYPT_ECCPUBLIC_BLOB ))
++    {
++        *size = key->u.a.pubkey_len;
++        if (output_len < key->u.a.pubkey_len) return STATUS_SUCCESS;
++
++        memcpy( output, key->u.a.pubkey, key->u.a.pubkey_len );
++        return STATUS_SUCCESS;
++    }
+ 
+     FIXME( "unsupported key type %s\n", debugstr_w(type) );
+     return STATUS_NOT_IMPLEMENTED;
+@@ -1010,6 +1020,11 @@ static NTSTATUS key_import_pair( struct algorithm *alg, const WCHAR *type, BCRYP
+ 
+         switch (alg->id)
+         {
++        case ALG_ID_ECDH_P256:
++            key_size = 32;
++            magic = BCRYPT_ECDH_PUBLIC_P256_MAGIC;
++            break;
++
+         case ALG_ID_ECDSA_P256:
+             key_size = 32;
+             magic = BCRYPT_ECDSA_PUBLIC_P256_MAGIC;
+@@ -1028,7 +1043,7 @@ static NTSTATUS key_import_pair( struct algorithm *alg, const WCHAR *type, BCRYP
+         if (ecc_blob->dwMagic != magic) return STATUS_NOT_SUPPORTED;
+         if (ecc_blob->cbKey != key_size) return STATUS_INVALID_PARAMETER;
+ 
+-        if (!(key = heap_alloc( sizeof(*key) ))) return STATUS_NO_MEMORY;
++        if (!(key = heap_alloc_zero( sizeof(*key) ))) return STATUS_NO_MEMORY;
+         key->hdr.magic = MAGIC_KEY;
+         if ((status = key_asymmetric_init( key, alg, (BYTE *)ecc_blob, sizeof(*ecc_blob) + ecc_blob->cbKey * 2 )))
+         {
+@@ -1047,7 +1062,7 @@ static NTSTATUS key_import_pair( struct algorithm *alg, const WCHAR *type, BCRYP
+         if (input_len < sizeof(*rsa_blob)) return STATUS_INVALID_PARAMETER;
+         if (alg->id != ALG_ID_RSA || rsa_blob->Magic != BCRYPT_RSAPUBLIC_MAGIC) return STATUS_NOT_SUPPORTED;
+ 
+-        if (!(key = heap_alloc( sizeof(*key) ))) return STATUS_NO_MEMORY;
++        if (!(key = heap_alloc_zero( sizeof(*key) ))) return STATUS_NO_MEMORY;
+         key->hdr.magic = MAGIC_KEY;
+ 
+         size = sizeof(*rsa_blob) + rsa_blob->cbPublicExp + rsa_blob->cbModulus;
+@@ -1163,6 +1178,41 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
+     return STATUS_SUCCESS;
+ }
+ 
++NTSTATUS WINAPI BCryptGenerateKeyPair( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HANDLE *handle, ULONG key_len,
++                                       ULONG flags )
++{
++    struct algorithm *alg = algorithm;
++    struct key *key;
++    NTSTATUS status;
++
++    TRACE( "%p, %p, %u, %08x\n", algorithm, handle, key_len, flags );
++
++    if (!alg || alg->hdr.magic != MAGIC_ALG) return STATUS_INVALID_HANDLE;
++    if (!handle) return STATUS_INVALID_PARAMETER;
++
++    if (!(key = heap_alloc_zero( sizeof(*key) ))) return STATUS_NO_MEMORY;
++    key->hdr.magic = MAGIC_KEY;
++
++    if ((status = key_asymmetric_init( key, alg, NULL, 0 )))
++    {
++        heap_free( key );
++        return status;
++    }
++
++    *handle = key;
++    return STATUS_SUCCESS;
++}
++
++NTSTATUS WINAPI BCryptFinalizeKeyPair( BCRYPT_KEY_HANDLE handle, ULONG flags )
++{
++    struct key *key = handle;
++
++    TRACE( "%p, %08x\n", key, flags );
++    if (!key || key->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
++
++    return key_asymmetric_generate( key );
++}
++
+ NTSTATUS WINAPI BCryptImportKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HANDLE decrypt_key, LPCWSTR type,
+                                  BCRYPT_KEY_HANDLE *key, PUCHAR object, ULONG object_len, PUCHAR input,
+                                  ULONG input_len, ULONG flags )
+@@ -1192,7 +1242,7 @@ NTSTATUS WINAPI BCryptExportKey( BCRYPT_KEY_HANDLE export_key, BCRYPT_KEY_HANDLE
+     TRACE("%p, %p, %s, %p, %u, %p, %u\n", key, encrypt_key, debugstr_w(type), output, output_len, size, flags);
+ 
+     if (!key || key->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
+-    if (!output || !type || !size) return STATUS_INVALID_PARAMETER;
++    if (!type || !size) return STATUS_INVALID_PARAMETER;
+ 
+     if (encrypt_key)
+     {
+diff --git a/dlls/bcrypt/gnutls.c b/dlls/bcrypt/gnutls.c
+index 69276be..fe6fe9c 100644
+--- a/dlls/bcrypt/gnutls.c
++++ b/dlls/bcrypt/gnutls.c
+@@ -51,6 +51,9 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ #define GNUTLS_CIPHER_AES_128_GCM 93
+ #define GNUTLS_CIPHER_AES_256_GCM 94
+ #define GNUTLS_PK_ECC 4
++#define GNUTLS_PK_ECDSA 4
++
++#define GNUTLS_CURVE_TO_BITS(curve) (unsigned int)(((unsigned int)1<<31)|((unsigned int)(curve)))
+ 
+ typedef enum
+ {
+@@ -65,11 +68,14 @@ typedef enum
+ /* Not present in gnutls version < 3.0 */
+ static int (*pgnutls_cipher_tag)(gnutls_cipher_hd_t, void *, size_t);
+ static int (*pgnutls_cipher_add_auth)(gnutls_cipher_hd_t, const void *, size_t);
++static int (*pgnutls_privkey_export_ecc_raw)(gnutls_privkey_t, gnutls_ecc_curve_t *,
++                                             gnutls_datum_t *, gnutls_datum_t *, gnutls_datum_t *);
+ static int (*pgnutls_pubkey_import_ecc_raw)(gnutls_pubkey_t, gnutls_ecc_curve_t,
+                                             const gnutls_datum_t *, const gnutls_datum_t *);
+ static gnutls_sign_algorithm_t (*pgnutls_pk_to_sign)(gnutls_pk_algorithm_t, gnutls_digest_algorithm_t);
+ static int (*pgnutls_pubkey_verify_hash2)(gnutls_pubkey_t, gnutls_sign_algorithm_t, unsigned int,
+                                           const gnutls_datum_t *, const gnutls_datum_t *);
++static int (*pgnutls_privkey_generate)(gnutls_privkey_t, gnutls_pk_algorithm_t, unsigned int, unsigned int);
+ 
+ /* Not present in gnutls version < 2.11.0 */
+ static int (*pgnutls_pubkey_import_rsa_raw)(gnutls_pubkey_t key, const gnutls_datum_t *m, const gnutls_datum_t *e);
+@@ -85,8 +91,10 @@ MAKE_FUNCPTR(gnutls_global_init);
+ MAKE_FUNCPTR(gnutls_global_set_log_function);
+ MAKE_FUNCPTR(gnutls_global_set_log_level);
+ MAKE_FUNCPTR(gnutls_perror);
+-MAKE_FUNCPTR(gnutls_pubkey_init);
++MAKE_FUNCPTR(gnutls_privkey_deinit);
++MAKE_FUNCPTR(gnutls_privkey_init);
+ MAKE_FUNCPTR(gnutls_pubkey_deinit);
++MAKE_FUNCPTR(gnutls_pubkey_init);
+ #undef MAKE_FUNCPTR
+ 
+ static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void *tag, size_t tag_size)
+@@ -102,7 +110,13 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
+ static int compat_gnutls_pubkey_import_ecc_raw(gnutls_pubkey_t key, gnutls_ecc_curve_t curve,
+                                                const gnutls_datum_t *x, const gnutls_datum_t *y)
+ {
+-    return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
++    return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
++}
++
++static int compat_gnutls_privkey_export_ecc_raw(gnutls_privkey_t key, gnutls_ecc_curve_t *curve,
++                                                gnutls_datum_t *x, gnutls_datum_t *y, gnutls_datum_t *k)
++{
++    return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
+ }
+ 
+ static gnutls_sign_algorithm_t compat_gnutls_pk_to_sign(gnutls_pk_algorithm_t pk, gnutls_digest_algorithm_t hash)
+@@ -114,12 +128,18 @@ static int compat_gnutls_pubkey_verify_hash2(gnutls_pubkey_t key, gnutls_sign_al
+                                              unsigned int flags, const gnutls_datum_t *hash,
+                                              const gnutls_datum_t *signature)
+ {
+-    return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
++    return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
+ }
+ 
+ static int compat_gnutls_pubkey_import_rsa_raw(gnutls_pubkey_t key, const gnutls_datum_t *m, const gnutls_datum_t *e)
+ {
+-    return GNUTLS_E_UNKNOWN_CIPHER_TYPE;
++    return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
++}
++
++static int compat_gnutls_privkey_generate(gnutls_privkey_t key, gnutls_pk_algorithm_t algo, unsigned int bits,
++                                    unsigned int flags)
++{
++    return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
+ }
+ 
+ static void gnutls_log( int level, const char *msg )
+@@ -153,8 +173,10 @@ BOOL gnutls_initialize(void)
+     LOAD_FUNCPTR(gnutls_global_set_log_function)
+     LOAD_FUNCPTR(gnutls_global_set_log_level)
+     LOAD_FUNCPTR(gnutls_perror)
+-    LOAD_FUNCPTR(gnutls_pubkey_init);
++    LOAD_FUNCPTR(gnutls_privkey_deinit);
++    LOAD_FUNCPTR(gnutls_privkey_init);
+     LOAD_FUNCPTR(gnutls_pubkey_deinit);
++    LOAD_FUNCPTR(gnutls_pubkey_init);
+ #undef LOAD_FUNCPTR
+ 
+     if (!(pgnutls_cipher_tag = wine_dlsym( libgnutls_handle, "gnutls_cipher_tag", NULL, 0 )))
+@@ -178,6 +200,11 @@ BOOL gnutls_initialize(void)
+         WARN("gnutls_pubkey_import_ecc_raw not found\n");
+         pgnutls_pubkey_import_ecc_raw = compat_gnutls_pubkey_import_ecc_raw;
+     }
++    if (!(pgnutls_privkey_export_ecc_raw = wine_dlsym( libgnutls_handle, "gnutls_privkey_export_ecc_raw", NULL, 0 )))
++    {
++        WARN("gnutls_privkey_export_ecc_raw not found\n");
++        pgnutls_privkey_export_ecc_raw = compat_gnutls_privkey_export_ecc_raw;
++    }
+     if (!(pgnutls_pk_to_sign = wine_dlsym( libgnutls_handle, "gnutls_pk_to_sign", NULL, 0 )))
+     {
+         WARN("gnutls_pk_to_sign not found\n");
+@@ -194,6 +221,12 @@ BOOL gnutls_initialize(void)
+         pgnutls_pubkey_import_rsa_raw = compat_gnutls_pubkey_import_rsa_raw;
+     }
+ 
++    if (!(pgnutls_pubkey_import_rsa_raw = wine_dlsym( libgnutls_handle, "gnutls_privkey_generate", NULL, 0 )))
++    {
++        WARN("gnutls_privkey_generate not found\n");
++        pgnutls_privkey_generate = compat_gnutls_privkey_generate;
++    }
++
+     if (TRACE_ON( bcrypt ))
+     {
+         pgnutls_global_set_log_level( 4 );
+@@ -488,12 +521,114 @@ NTSTATUS key_symmetric_get_tag( struct key *key, UCHAR *tag, ULONG len )
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS export_gnutls_pubkey_ecc( gnutls_privkey_t gnutls_key, UCHAR **pubkey, ULONG *pubkey_len )
++{
++    BCRYPT_ECCKEY_BLOB *ecc_blob;
++    gnutls_ecc_curve_t curve;
++    gnutls_datum_t x, y;
++    DWORD magic, size;
++    UCHAR *src, *dst;
++    int ret;
++
++    if ((ret = pgnutls_privkey_export_ecc_raw( gnutls_key, &curve, &x, &y, NULL )))
++    {
++        pgnutls_perror( ret );
++        return STATUS_INTERNAL_ERROR;
++    }
++
++    switch (curve)
++    {
++    case GNUTLS_ECC_CURVE_SECP256R1:
++        magic = BCRYPT_ECDH_PUBLIC_P256_MAGIC;
++        size = 32;
++        break;
++
++    default:
++        FIXME( "curve %u not supported\n", curve );
++        free( x.data ); free( y.data );
++        return STATUS_NOT_IMPLEMENTED;
++    }
++
++    if (!(ecc_blob = heap_alloc( sizeof(*ecc_blob) + x.size + y.size )))
++    {
++        pgnutls_perror( ret );
++        free( x.data ); free( y.data );
++        return STATUS_NO_MEMORY;
++    }
++
++    ecc_blob->dwMagic = magic;
++    ecc_blob->cbKey   = size;
++
++    dst = (UCHAR *)(ecc_blob + 1);
++    if (x.size == size + 1) src = x.data + 1;
++    else src = x.data;
++    memcpy( dst, src, size );
++
++    dst += size;
++    if (y.size == size + 1) src = y.data + 1;
++    else src = y.data;
++    memcpy( dst, src, size );
++
++    *pubkey = (UCHAR *)ecc_blob;
++    *pubkey_len = sizeof(*ecc_blob) + ecc_blob->cbKey * 2;
++
++    free( x.data ); free( y.data );
++    return STATUS_SUCCESS;
++}
++
++NTSTATUS key_asymmetric_generate( struct key *key )
++{
++    gnutls_pk_algorithm_t pk_alg;
++    gnutls_ecc_curve_t curve;
++    gnutls_privkey_t handle;
++    NTSTATUS status;
++    int ret;
++
++    if (!libgnutls_handle) return STATUS_INTERNAL_ERROR;
++
++    switch (key->alg_id)
++    {
++    case ALG_ID_ECDH_P256:
++        pk_alg = GNUTLS_PK_ECDSA; /* compatible with ECDSA and ECDH */
++        curve = GNUTLS_ECC_CURVE_SECP256R1;
++        break;
++
++    default:
++        FIXME( "algorithm %u not supported\n", key->alg_id );
++        return STATUS_NOT_SUPPORTED;
++    }
++
++    if ((ret = pgnutls_privkey_init( &handle )))
++    {
++        pgnutls_perror( ret );
++        return STATUS_INTERNAL_ERROR;
++    }
++
++    if ((ret = pgnutls_privkey_generate( handle, pk_alg, GNUTLS_CURVE_TO_BITS(curve), 0 )))
++    {
++        pgnutls_perror( ret );
++        pgnutls_privkey_deinit( handle );
++        return STATUS_INTERNAL_ERROR;
++    }
++
++    if ((status = export_gnutls_pubkey_ecc( handle, &key->u.a.pubkey, &key->u.a.pubkey_len )))
++    {
++        pgnutls_privkey_deinit( handle );
++        return STATUS_INTERNAL_ERROR;
++    }
++
++    key->u.a.handle = handle;
++
++    return STATUS_SUCCESS;
++}
++
+ NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHAR *pubkey, ULONG pubkey_len )
+ {
+     if (!libgnutls_handle) return STATUS_INTERNAL_ERROR;
+ 
+     switch (alg->id)
+     {
++    case ALG_ID_ECDH_P256:
+     case ALG_ID_ECDSA_P256:
+     case ALG_ID_ECDSA_P384:
+     case ALG_ID_RSA:
+@@ -504,10 +639,13 @@ NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHA
+         return STATUS_NOT_SUPPORTED;
+     }
+ 
+-    if (!(key->u.a.pubkey = heap_alloc( pubkey_len ))) return STATUS_NO_MEMORY;
+-    memcpy( key->u.a.pubkey, pubkey, pubkey_len );
+-    key->u.a.pubkey_len = pubkey_len;
+-    key->alg_id         = alg->id;
++    if (pubkey_len)
++    {
++        if (!(key->u.a.pubkey = heap_alloc( pubkey_len ))) return STATUS_NO_MEMORY;
++        memcpy( key->u.a.pubkey, pubkey, pubkey_len );
++        key->u.a.pubkey_len = pubkey_len;
++    }
++    key->alg_id = alg->id;
+ 
+     return STATUS_SUCCESS;
+ }
+@@ -728,7 +866,11 @@ NTSTATUS key_destroy( struct key *key )
+         if (key->u.s.handle) pgnutls_cipher_deinit( key->u.s.handle );
+         heap_free( key->u.s.secret );
+     }
+-    else heap_free( key->u.a.pubkey );
++    else
++    {
++        if (key->u.a.handle) pgnutls_privkey_deinit( key->u.a.handle );
++        heap_free( key->u.a.pubkey );
++    }
+     heap_free( key );
+     return STATUS_SUCCESS;
+ }
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index c635fcb..f88e48f 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -26,34 +26,36 @@
+ 
+ #include "wine/test.h"
+ 
+-static NTSTATUS (WINAPI *pBCryptOpenAlgorithmProvider)(BCRYPT_ALG_HANDLE *, LPCWSTR, LPCWSTR, ULONG);
+ static NTSTATUS (WINAPI *pBCryptCloseAlgorithmProvider)(BCRYPT_ALG_HANDLE, ULONG);
+-static NTSTATUS (WINAPI *pBCryptGetFipsAlgorithmMode)(BOOLEAN *);
+ static NTSTATUS (WINAPI *pBCryptCreateHash)(BCRYPT_ALG_HANDLE, BCRYPT_HASH_HANDLE *, PUCHAR, ULONG, PUCHAR,
+-                                            ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptHash)(BCRYPT_ALG_HANDLE, UCHAR *, ULONG, UCHAR *, ULONG, UCHAR *, ULONG);
+-static NTSTATUS (WINAPI *pBCryptHashData)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptDuplicateHash)(BCRYPT_HASH_HANDLE, BCRYPT_HASH_HANDLE *, UCHAR *, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptFinishHash)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptDestroyHash)(BCRYPT_HASH_HANDLE);
++                                             ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptDecrypt)(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG,
++                                         ULONG *, ULONG);
+ static NTSTATUS (WINAPI *pBCryptDeriveKeyPBKDF2)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, PUCHAR, ULONG,
+                                                  ULONGLONG, PUCHAR, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptGenRandom)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptGetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG *, ULONG);
+-static NTSTATUS (WINAPI *pBCryptSetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptGenerateSymmetricKey)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE *, PUCHAR, ULONG,
+-                                                      PUCHAR, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptEncrypt)(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG,
+-                                      ULONG *, ULONG);
+-static NTSTATUS (WINAPI *pBCryptDecrypt)(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG,
+-                                      ULONG *, ULONG);
+-static NTSTATUS (WINAPI *pBCryptDuplicateKey)(BCRYPT_KEY_HANDLE, BCRYPT_KEY_HANDLE *, UCHAR *, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptDestroyHash)(BCRYPT_HASH_HANDLE);
+ static NTSTATUS (WINAPI *pBCryptDestroyKey)(BCRYPT_KEY_HANDLE);
+-static NTSTATUS (WINAPI *pBCryptImportKey)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE, LPCWSTR, BCRYPT_KEY_HANDLE *,
+-                                           PUCHAR, ULONG, PUCHAR, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptDuplicateHash)(BCRYPT_HASH_HANDLE, BCRYPT_HASH_HANDLE *, UCHAR *, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptDuplicateKey)(BCRYPT_KEY_HANDLE, BCRYPT_KEY_HANDLE *, UCHAR *, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptEncrypt)(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG,
++                                         ULONG *, ULONG);
+ static NTSTATUS (WINAPI *pBCryptExportKey)(BCRYPT_KEY_HANDLE, BCRYPT_KEY_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG *, ULONG);
+-static NTSTATUS (WINAPI *pBCryptImportKeyPair)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE, LPCWSTR, BCRYPT_KEY_HANDLE *, UCHAR *, ULONG, ULONG);
+-static NTSTATUS (WINAPI *pBCryptVerifySignature)(BCRYPT_KEY_HANDLE, VOID *, UCHAR *, ULONG, UCHAR *, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptFinalizeKeyPair)(BCRYPT_KEY_HANDLE, ULONG);
++static NTSTATUS (WINAPI *pBCryptFinishHash)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptGenerateKeyPair)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE *, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptGenerateSymmetricKey)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE *, PUCHAR, ULONG,
++                                                       PUCHAR, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptGetFipsAlgorithmMode)(BOOLEAN *);
++static NTSTATUS (WINAPI *pBCryptGetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG *, ULONG);
++static NTSTATUS (WINAPI *pBCryptGenRandom)(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptHash)(BCRYPT_ALG_HANDLE, UCHAR *, ULONG, UCHAR *, ULONG, UCHAR *, ULONG);
++static NTSTATUS (WINAPI *pBCryptHashData)(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptImportKey)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE, LPCWSTR, BCRYPT_KEY_HANDLE *,
++                                            PUCHAR, ULONG, PUCHAR, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptImportKeyPair)(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE, LPCWSTR, BCRYPT_KEY_HANDLE *,
++                                               UCHAR *, ULONG, ULONG);
++static NTSTATUS (WINAPI *pBCryptOpenAlgorithmProvider)(BCRYPT_ALG_HANDLE *, LPCWSTR, LPCWSTR, ULONG);
++static NTSTATUS (WINAPI *pBCryptSetProperty)(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG);static NTSTATUS (WINAPI *pBCryptVerifySignature)(BCRYPT_KEY_HANDLE, VOID *, UCHAR *, ULONG, UCHAR *, ULONG, ULONG);
+ 
+ static void test_BCryptGenRandom(void)
+ {
+@@ -1731,6 +1733,53 @@ static void test_RSA(void)
+     ok(!ret, "pBCryptCloseAlgorithmProvider failed: %08x\n", ret);
+ }
+ 
++static void test_ECDH(void)
++{
++    BYTE *buf;
++    BCRYPT_ECCKEY_BLOB *ecckey;
++    BCRYPT_ALG_HANDLE alg;
++    BCRYPT_KEY_HANDLE key;
++    NTSTATUS status;
++    ULONG size;
++
++    status = pBCryptOpenAlgorithmProvider(&alg, BCRYPT_ECDH_P256_ALGORITHM, NULL, 0);
++    if (status)
++    {
++        skip("Failed to open BCRYPT_ECDH_P256_ALGORITHM provider %08x\n", status);
++        return;
++    }
++
++    key = NULL;
++    status = pBCryptGenerateKeyPair(alg, &key, 256, 0);
++    ok(status == STATUS_SUCCESS, "got %08x\n", status);
++    ok(key != NULL, "key not set\n");
++
++    status = pBCryptFinalizeKeyPair(key, 0);
++    ok(status == STATUS_SUCCESS, "got %08x\n", status);
++
++    size = 0;
++    SetLastError(0xdeadbeef);
++    status = pBCryptExportKey(key, NULL, BCRYPT_ECCPUBLIC_BLOB, NULL, 0, &size, 0);
++    ok(status == STATUS_SUCCESS, "got %08x\n", status);
++    ok(size, "size not set\n");
++
++    buf = HeapAlloc(GetProcessHeap(), 0, size);
++    status = pBCryptExportKey(key, NULL, BCRYPT_ECCPUBLIC_BLOB, buf, size, &size, 0);
++    ok(status == STATUS_SUCCESS, "got %08x\n", status);
++    ecckey = (BCRYPT_ECCKEY_BLOB *)buf;
++    ok(ecckey->dwMagic == BCRYPT_ECDH_PUBLIC_P256_MAGIC, "got %08x\n", ecckey->dwMagic);
++    ok(ecckey->cbKey == 32, "got %u\n", ecckey->cbKey);
++    ok(size == sizeof(*ecckey) + ecckey->cbKey * 2, "got %u\n", size);
++    pBCryptDestroyKey(key);
++
++    status = BCryptImportKeyPair(alg, NULL, BCRYPT_ECCPUBLIC_BLOB, &key, buf, size, 0);
++    ok(status == STATUS_SUCCESS, "got %08x\n", status);
++    HeapFree(GetProcessHeap(), 0, buf);
++
++    pBCryptDestroyKey(key);
++    pBCryptCloseAlgorithmProvider(alg, 0);
++}
++
+ START_TEST(bcrypt)
+ {
+     HMODULE module;
+@@ -1776,6 +1825,7 @@ START_TEST(bcrypt)
+     test_key_import_export();
+     test_ECDSA();
+     test_RSA();
++    test_ECDH();
+ 
+     if (pBCryptHash) /* >= Win 10 */
+         test_BcryptHash();
+diff --git a/dlls/ncrypt/ncrypt.spec b/dlls/ncrypt/ncrypt.spec
+index adc0999..85fa5c0 100644
+--- a/dlls/ncrypt/ncrypt.spec
++++ b/dlls/ncrypt/ncrypt.spec
+@@ -23,11 +23,11 @@
+ @ stub BCryptEnumProviders
+ @ stub BCryptEnumRegisteredProviders
+ @ stdcall BCryptExportKey(ptr ptr wstr ptr long ptr long) bcrypt.BCryptExportKey
+-@ stub BCryptFinalizeKeyPair
++@ stdcall BCryptFinalizeKeyPair(ptr long) bcrypt.BCryptFinalizeKeyPair
+ @ stdcall BCryptFinishHash(ptr ptr long long) bcrypt.BCryptFinishHash
+ @ stub BCryptFreeBuffer
+ @ stdcall BCryptGenRandom(ptr ptr long long) bcrypt.BCryptGenRandom
+-@ stub BCryptGenerateKeyPair
++@ stdcall BCryptGenerateKeyPair(ptr ptr long long) bcrypt.BCryptGenerateKeyPair
+ @ stdcall BCryptGenerateSymmetricKey(ptr ptr ptr long ptr long long) bcrypt.BCryptGenerateSymmetricKey
+ @ stdcall BCryptGetFipsAlgorithmMode(ptr) bcrypt.BCryptGetFipsAlgorithmMode
+ @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long) bcrypt.BCryptGetProperty
+diff --git a/include/bcrypt.h b/include/bcrypt.h
+index d3e4b99..ba78c1d 100644
+--- a/include/bcrypt.h
++++ b/include/bcrypt.h
+@@ -81,6 +81,7 @@ typedef LONG NTSTATUS;
+ #define BCRYPT_SHA256_ALGORITHM     (const WCHAR []){'S','H','A','2','5','6',0}
+ #define BCRYPT_SHA384_ALGORITHM     (const WCHAR []){'S','H','A','3','8','4',0}
+ #define BCRYPT_SHA512_ALGORITHM     (const WCHAR []){'S','H','A','5','1','2',0}
++#define BCRYPT_ECDH_P256_ALGORITHM  (const WCHAR []){'E','C','D','H','_','P','2','5','6',0}
+ #define BCRYPT_ECDSA_P256_ALGORITHM (const WCHAR []){'E','C','D','S','A','_','P','2','5','6',0}
+ #define BCRYPT_ECDSA_P384_ALGORITHM (const WCHAR []){'E','C','D','S','A','_','P','3','8','4',0}
+ #define BCRYPT_ECDSA_P521_ALGORITHM (const WCHAR []){'E','C','D','S','A','_','P','5','2','1',0}
+@@ -99,6 +100,13 @@ typedef LONG NTSTATUS;
+ #define BCRYPT_ECDSA_PUBLIC_P521_MAGIC  0x35534345
+ #define BCRYPT_ECDSA_PRIVATE_P521_MAGIC 0x36534345
+ 
++#define BCRYPT_ECDH_PUBLIC_P256_MAGIC  0x314b4345
++#define BCRYPT_ECDH_PRIVATE_P256_MAGIC 0x324b4345
++#define BCRYPT_ECDH_PUBLIC_P384_MAGIC  0x334b4345
++#define BCRYPT_ECDH_PRIVATE_P384_MAGIC 0x344b4345
++#define BCRYPT_ECDH_PUBLIC_P521_MAGIC  0x354b4345
++#define BCRYPT_ECDH_PRIVATE_P521_MAGIC 0x364b4345
++
+ typedef struct _BCRYPT_ALGORITHM_IDENTIFIER
+ {
+     LPWSTR pszName;
+@@ -220,9 +228,12 @@ NTSTATUS WINAPI BCryptDecrypt(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR,
+ NTSTATUS WINAPI BCryptDeriveKeyPBKDF2(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, PUCHAR, ULONG, ULONGLONG, PUCHAR, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptDestroyHash(BCRYPT_HASH_HANDLE);
+ NTSTATUS WINAPI BCryptDestroyKey(BCRYPT_KEY_HANDLE);
++NTSTATUS WINAPI BCryptDuplicateHash(BCRYPT_HASH_HANDLE, BCRYPT_HASH_HANDLE *, UCHAR *, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptEncrypt(BCRYPT_KEY_HANDLE, PUCHAR, ULONG, VOID *, PUCHAR, ULONG, PUCHAR, ULONG, ULONG *, ULONG);
+ NTSTATUS WINAPI BCryptEnumAlgorithms(ULONG, ULONG *, BCRYPT_ALGORITHM_IDENTIFIER **, ULONG);
++NTSTATUS WINAPI BCryptFinalizeKeyPair(BCRYPT_KEY_HANDLE, ULONG);
+ NTSTATUS WINAPI BCryptFinishHash(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
++NTSTATUS WINAPI BCryptGenerateKeyPair(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE *, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptGenerateSymmetricKey(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE *, PUCHAR, ULONG, PUCHAR, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptGenRandom(BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptGetFipsAlgorithmMode(BOOLEAN *);
+@@ -232,7 +243,6 @@ NTSTATUS WINAPI BCryptHashData(BCRYPT_HASH_HANDLE, PUCHAR, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptImportKeyPair(BCRYPT_ALG_HANDLE, BCRYPT_KEY_HANDLE, LPCWSTR, BCRYPT_KEY_HANDLE *, UCHAR *, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE *, LPCWSTR, LPCWSTR, ULONG);
+ NTSTATUS WINAPI BCryptSetProperty(BCRYPT_HANDLE, LPCWSTR, PUCHAR, ULONG, ULONG);
+-NTSTATUS WINAPI BCryptDuplicateHash(BCRYPT_HASH_HANDLE, BCRYPT_HASH_HANDLE *, UCHAR *, ULONG, ULONG);
+ NTSTATUS WINAPI BCryptVerifySignature(BCRYPT_KEY_HANDLE, void *, UCHAR *, ULONG, UCHAR *, ULONG, ULONG);
+ 
+ #endif  /* __WINE_BCRYPT_H */
+-- 
+1.9.1
+

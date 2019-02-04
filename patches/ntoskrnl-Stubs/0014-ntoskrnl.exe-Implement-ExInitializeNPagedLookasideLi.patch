@@ -1,4 +1,4 @@
-From 3754ff36e69f3d6266ded912de0babfea68cbfed Mon Sep 17 00:00:00 2001
+From 38dab0fbe11effe3fd0f3d94f90865cd096da892 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 6 Jun 2017 23:42:56 +0200
 Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
@@ -11,7 +11,7 @@ Subject: [PATCH] ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.
  4 files changed, 127 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
-index d3c2ea6..7d1fcdb 100644
+index 1542c96..a450bf6 100644
 --- a/dlls/ntoskrnl.exe/ntoskrnl.c
 +++ b/dlls/ntoskrnl.exe/ntoskrnl.c
 @@ -2153,7 +2153,24 @@ void WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST Lookaside,
@@ -41,7 +41,7 @@ index d3c2ea6..7d1fcdb 100644
  
  /***********************************************************************
 diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
-index 215e090..70020e0 100644
+index 143b86b..13fce71 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.c
 @@ -22,6 +22,9 @@
@@ -54,7 +54,7 @@ index 215e090..70020e0 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -526,6 +529,33 @@ static void test_version(void)
+@@ -603,6 +606,33 @@ static void test_version(void)
      ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
  }
  
@@ -88,15 +88,15 @@ index 215e090..70020e0 100644
  static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
  {
      ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
-@@ -556,6 +586,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
+@@ -633,6 +663,7 @@ static NTSTATUS main_test(IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
      test_load_driver();
      test_sync();
      test_version();
 +    test_lookaside_list();
+     test_stack_callout();
  
      /* print process report */
-     if (test_input->winetest_debug)
-@@ -607,7 +638,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
+@@ -685,7 +716,7 @@ static NTSTATUS test_load_driver_ioctl(IRP *irp, IO_STACK_LOCATION *stack, ULONG
  
  static NTSTATUS WINAPI driver_Create(DEVICE_OBJECT *device, IRP *irp)
  {
@@ -105,7 +105,7 @@ index 215e090..70020e0 100644
      IoCompleteRequest(irp, IO_NO_INCREMENT);
      return STATUS_SUCCESS;
  }
-@@ -632,14 +663,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
+@@ -710,14 +741,14 @@ static NTSTATUS WINAPI driver_IoControl(DEVICE_OBJECT *device, IRP *irp)
              break;
      }
  

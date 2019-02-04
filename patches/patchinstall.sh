@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "84459ba94b9de2fc32499154aa4591f10d746947"
+	echo "152cda38df79cf04aae589f1d721de3cac1cd49e"
 }
 
 # Show version information
@@ -6844,7 +6844,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
-	patch_apply windowscodecs-GIF_Encoder/0015-windowscodecs-Add-support-for-converting-to-8bppInde.patch
 	patch_apply windowscodecs-GIF_Encoder/0016-windowscodecs-WICConvertBitmapSource-should-ask-IWIC.patch
 	patch_apply windowscodecs-GIF_Encoder/0020-windowscodecs-Add-registration-of-the-GIF-encoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0021-windowscodecs-Fix-IWICBitmapDecoder-CopyPalette-for-.patch
@@ -6859,7 +6858,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs/tests: Add IWICBitmapEncoderInfo test.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for converting to 8bppIndexed format to IWICFormatConverter.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';

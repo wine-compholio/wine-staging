@@ -98,6 +98,7 @@ patch_enable_all ()
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
 	enable_bcrypt_BCryptGenerateKeyPair="$1"
+	enable_bcrypt_BCryptSecretAgreement="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -458,6 +459,9 @@ patch_enable ()
 			;;
 		bcrypt-BCryptGenerateKeyPair)
 			enable_bcrypt_BCryptGenerateKeyPair="$2"
+			;;
+		bcrypt-BCryptSecretAgreement)
+			enable_bcrypt_BCryptSecretAgreement="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -2190,6 +2194,13 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
+if test "$enable_bcrypt_BCryptSecretAgreement" -eq 1; then
+	if test "$enable_bcrypt_BCryptGenerateKeyPair" -gt 1; then
+		abort "Patchset bcrypt-BCryptGenerateKeyPair disabled, but bcrypt-BCryptSecretAgreement depends on that."
+	fi
+	enable_bcrypt_BCryptGenerateKeyPair=1
+fi
+
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but advapi32-Token_Integrity_Level depends on that."
@@ -2563,6 +2574,26 @@ if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
 	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Implement-BCryptGenerate-FinalizeKeyPair-for-.patch
 	(
 		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH P256.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset bcrypt-BCryptSecretAgreement
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	bcrypt-BCryptGenerateKeyPair
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46564] Add BCryptDestroySecret/BCryptSecretAgreement stubs.
+# |
+# | Modified files:
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, include/bcrypt.h
+# |
+if test "$enable_bcrypt_BCryptSecretAgreement" -eq 1; then
+	patch_apply bcrypt-BCryptSecretAgreement/0001-bcrypt-Add-BCryptDestroySecret-BCryptSecretAgreement.patch
+	patch_apply bcrypt-BCryptSecretAgreement/0002-bcrypt-Add-BCryptDeriveKey-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "bcrypt: Add BCryptDestroySecret/BCryptSecretAgreement stubs.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "bcrypt: Add BCryptDeriveKey stub.", 1 },';
 	) >> "$patchlist"
 fi
 

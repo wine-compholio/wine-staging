@@ -1,4 +1,4 @@
-From 029720a4dd22e2245637a0967478fc409471dba7 Mon Sep 17 00:00:00 2001
+From 90e0b29f692afb60162cb93925ce5c250c8d6ee3 Mon Sep 17 00:00:00 2001
 From: Hans Leidekker <hans@codeweavers.com>
 Date: Tue, 5 Feb 2019 09:00:02 +1100
 Subject: [PATCH] bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH
@@ -7,16 +7,16 @@ Subject: [PATCH] bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH
 ---
  dlls/bcrypt/bcrypt.spec       |   4 +-
  dlls/bcrypt/bcrypt_internal.h |   7 +-
- dlls/bcrypt/bcrypt_main.c     |  56 ++++++++++++++-
- dlls/bcrypt/gnutls.c          | 162 +++++++++++++++++++++++++++++++++++++++---
+ dlls/bcrypt/bcrypt_main.c     |  56 +++++++++++++-
+ dlls/bcrypt/gnutls.c          | 165 +++++++++++++++++++++++++++++++++++++++---
  dlls/bcrypt/macos.c           |   6 ++
  dlls/bcrypt/tests/bcrypt.c    |  94 ++++++++++++++++++------
  dlls/ncrypt/ncrypt.spec       |   4 +-
- include/bcrypt.h              |  12 +++-
- 8 files changed, 303 insertions(+), 42 deletions(-)
+ include/bcrypt.h              |  12 ++-
+ 8 files changed, 306 insertions(+), 42 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index f4d9a57..052a099 100644
+index f4d9a57bb0..052a0996d4 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -22,11 +22,11 @@
@@ -34,7 +34,7 @@ index f4d9a57..052a099 100644
  @ stdcall BCryptGetFipsAlgorithmMode(ptr)
  @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long)
 diff --git a/dlls/bcrypt/bcrypt_internal.h b/dlls/bcrypt/bcrypt_internal.h
-index 593e784..b6e3d0b 100644
+index 593e78416e..b6e3d0b95f 100644
 --- a/dlls/bcrypt/bcrypt_internal.h
 +++ b/dlls/bcrypt/bcrypt_internal.h
 @@ -125,6 +125,7 @@ enum alg_id
@@ -66,7 +66,7 @@ index 593e784..b6e3d0b 100644
  NTSTATUS key_destroy( struct key * ) DECLSPEC_HIDDEN;
  BOOL key_is_symmetric( struct key * ) DECLSPEC_HIDDEN;
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 9427ea7..80bd14b 100644
+index 9427ea7150..80bd14b0b1 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -114,6 +114,7 @@ alg_props[] =
@@ -182,20 +182,26 @@ index 9427ea7..80bd14b 100644
      if (encrypt_key)
      {
 diff --git a/dlls/bcrypt/gnutls.c b/dlls/bcrypt/gnutls.c
-index 69276be..fe6fe9c 100644
+index 69276be925..1b2905e354 100644
 --- a/dlls/bcrypt/gnutls.c
 +++ b/dlls/bcrypt/gnutls.c
-@@ -51,6 +51,9 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
- #define GNUTLS_CIPHER_AES_128_GCM 93
+@@ -52,6 +52,8 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
  #define GNUTLS_CIPHER_AES_256_GCM 94
  #define GNUTLS_PK_ECC 4
-+#define GNUTLS_PK_ECDSA 4
-+
-+#define GNUTLS_CURVE_TO_BITS(curve) (unsigned int)(((unsigned int)1<<31)|((unsigned int)(curve)))
  
++#define GNUTLS_CURVE_TO_BITS(curve) (unsigned int)(((unsigned int)1<<31)|((unsigned int)(curve)))
++
  typedef enum
  {
-@@ -65,11 +68,14 @@ typedef enum
+     GNUTLS_ECC_CURVE_INVALID,
+@@ -62,14 +64,21 @@ typedef enum
+ } gnutls_ecc_curve_t;
+ #endif
+ 
++#ifndef GNUTLS_PK_ECDSA
++#define GNUTLS_PK_ECDSA 4
++#endif
++
  /* Not present in gnutls version < 3.0 */
  static int (*pgnutls_cipher_tag)(gnutls_cipher_hd_t, void *, size_t);
  static int (*pgnutls_cipher_add_auth)(gnutls_cipher_hd_t, const void *, size_t);
@@ -210,7 +216,7 @@ index 69276be..fe6fe9c 100644
  
  /* Not present in gnutls version < 2.11.0 */
  static int (*pgnutls_pubkey_import_rsa_raw)(gnutls_pubkey_t key, const gnutls_datum_t *m, const gnutls_datum_t *e);
-@@ -85,8 +91,10 @@ MAKE_FUNCPTR(gnutls_global_init);
+@@ -85,8 +94,10 @@ MAKE_FUNCPTR(gnutls_global_init);
  MAKE_FUNCPTR(gnutls_global_set_log_function);
  MAKE_FUNCPTR(gnutls_global_set_log_level);
  MAKE_FUNCPTR(gnutls_perror);
@@ -222,7 +228,7 @@ index 69276be..fe6fe9c 100644
  #undef MAKE_FUNCPTR
  
  static int compat_gnutls_cipher_tag(gnutls_cipher_hd_t handle, void *tag, size_t tag_size)
-@@ -102,7 +110,13 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
+@@ -102,7 +113,13 @@ static int compat_gnutls_cipher_add_auth(gnutls_cipher_hd_t handle, const void *
  static int compat_gnutls_pubkey_import_ecc_raw(gnutls_pubkey_t key, gnutls_ecc_curve_t curve,
                                                 const gnutls_datum_t *x, const gnutls_datum_t *y)
  {
@@ -237,7 +243,7 @@ index 69276be..fe6fe9c 100644
  }
  
  static gnutls_sign_algorithm_t compat_gnutls_pk_to_sign(gnutls_pk_algorithm_t pk, gnutls_digest_algorithm_t hash)
-@@ -114,12 +128,18 @@ static int compat_gnutls_pubkey_verify_hash2(gnutls_pubkey_t key, gnutls_sign_al
+@@ -114,12 +131,18 @@ static int compat_gnutls_pubkey_verify_hash2(gnutls_pubkey_t key, gnutls_sign_al
                                               unsigned int flags, const gnutls_datum_t *hash,
                                               const gnutls_datum_t *signature)
  {
@@ -258,7 +264,7 @@ index 69276be..fe6fe9c 100644
  }
  
  static void gnutls_log( int level, const char *msg )
-@@ -153,8 +173,10 @@ BOOL gnutls_initialize(void)
+@@ -153,8 +176,10 @@ BOOL gnutls_initialize(void)
      LOAD_FUNCPTR(gnutls_global_set_log_function)
      LOAD_FUNCPTR(gnutls_global_set_log_level)
      LOAD_FUNCPTR(gnutls_perror)
@@ -270,7 +276,7 @@ index 69276be..fe6fe9c 100644
  #undef LOAD_FUNCPTR
  
      if (!(pgnutls_cipher_tag = wine_dlsym( libgnutls_handle, "gnutls_cipher_tag", NULL, 0 )))
-@@ -178,6 +200,11 @@ BOOL gnutls_initialize(void)
+@@ -178,6 +203,11 @@ BOOL gnutls_initialize(void)
          WARN("gnutls_pubkey_import_ecc_raw not found\n");
          pgnutls_pubkey_import_ecc_raw = compat_gnutls_pubkey_import_ecc_raw;
      }
@@ -282,7 +288,7 @@ index 69276be..fe6fe9c 100644
      if (!(pgnutls_pk_to_sign = wine_dlsym( libgnutls_handle, "gnutls_pk_to_sign", NULL, 0 )))
      {
          WARN("gnutls_pk_to_sign not found\n");
-@@ -194,6 +221,12 @@ BOOL gnutls_initialize(void)
+@@ -194,6 +224,12 @@ BOOL gnutls_initialize(void)
          pgnutls_pubkey_import_rsa_raw = compat_gnutls_pubkey_import_rsa_raw;
      }
  
@@ -295,7 +301,7 @@ index 69276be..fe6fe9c 100644
      if (TRACE_ON( bcrypt ))
      {
          pgnutls_global_set_log_level( 4 );
-@@ -488,12 +521,114 @@ NTSTATUS key_symmetric_get_tag( struct key *key, UCHAR *tag, ULONG len )
+@@ -488,12 +524,114 @@ NTSTATUS key_symmetric_get_tag( struct key *key, UCHAR *tag, ULONG len )
      return STATUS_SUCCESS;
  }
  
@@ -410,7 +416,7 @@ index 69276be..fe6fe9c 100644
      case ALG_ID_ECDSA_P256:
      case ALG_ID_ECDSA_P384:
      case ALG_ID_RSA:
-@@ -504,10 +639,13 @@ NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHA
+@@ -504,10 +642,13 @@ NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHA
          return STATUS_NOT_SUPPORTED;
      }
  
@@ -428,7 +434,7 @@ index 69276be..fe6fe9c 100644
  
      return STATUS_SUCCESS;
  }
-@@ -728,7 +866,11 @@ NTSTATUS key_destroy( struct key *key )
+@@ -728,7 +869,11 @@ NTSTATUS key_destroy( struct key *key )
          if (key->u.s.handle) pgnutls_cipher_deinit( key->u.s.handle );
          heap_free( key->u.s.secret );
      }
@@ -442,7 +448,7 @@ index 69276be..fe6fe9c 100644
      return STATUS_SUCCESS;
  }
 diff --git a/dlls/bcrypt/macos.c b/dlls/bcrypt/macos.c
-index a6eaee8..0e0ed83 100644
+index a6eaee8b1d..0e0ed8379d 100644
 --- a/dlls/bcrypt/macos.c
 +++ b/dlls/bcrypt/macos.c
 @@ -205,6 +205,12 @@ NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *hash, ULO
@@ -459,7 +465,7 @@ index a6eaee8..0e0ed83 100644
  {
      if (key->u.s.ref_encrypt) CCCryptorRelease( key->u.s.ref_encrypt );
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index c635fcb..f88e48f 100644
+index c635fcb63b..f88e48f7c7 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
 @@ -26,34 +26,36 @@
@@ -584,7 +590,7 @@ index c635fcb..f88e48f 100644
      if (pBCryptHash) /* >= Win 10 */
          test_BcryptHash();
 diff --git a/dlls/ncrypt/ncrypt.spec b/dlls/ncrypt/ncrypt.spec
-index adc0999..85fa5c0 100644
+index adc0999aff..85fa5c0ea5 100644
 --- a/dlls/ncrypt/ncrypt.spec
 +++ b/dlls/ncrypt/ncrypt.spec
 @@ -23,11 +23,11 @@
@@ -602,7 +608,7 @@ index adc0999..85fa5c0 100644
  @ stdcall BCryptGetFipsAlgorithmMode(ptr) bcrypt.BCryptGetFipsAlgorithmMode
  @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long) bcrypt.BCryptGetProperty
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index d3e4b99..ba78c1d 100644
+index d3e4b9959d..ba78c1d9d0 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -81,6 +81,7 @@ typedef LONG NTSTATUS;
@@ -649,5 +655,5 @@ index d3e4b99..ba78c1d 100644
  
  #endif  /* __WINE_BCRYPT_H */
 -- 
-1.9.1
+2.11.0
 

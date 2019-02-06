@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "152cda38df79cf04aae589f1d721de3cac1cd49e"
+	echo "6b76648a8b773838ecde00719ca54a433edf5ce6"
 }
 
 # Show version information
@@ -2568,7 +2568,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/gnutls.c,
-# | 	dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec, include/bcrypt.h
+# | 	dlls/bcrypt/macos.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec, include/bcrypt.h
 # |
 if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
 	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Implement-BCryptGenerate-FinalizeKeyPair-for-.patch
@@ -6862,38 +6862,27 @@ fi
 # Patchset windowscodecs-GIF_Encoder
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/tests/image.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/converter.c,
-# | 	dlls/windowscodecs/gifformat.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
-# | 	dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/wincodecs_private.h,
+# |   *	dlls/gdiplus/tests/image.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/gifformat.c,
+# | 	dlls/windowscodecs/regsvr.c, dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/wincodecs_private.h,
 # | 	dlls/windowscodecs/windowscodecs_wincodec.idl
 # |
 if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
 	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
 	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
-	patch_apply windowscodecs-GIF_Encoder/0016-windowscodecs-WICConvertBitmapSource-should-ask-IWIC.patch
 	patch_apply windowscodecs-GIF_Encoder/0020-windowscodecs-Add-registration-of-the-GIF-encoder.patch
 	patch_apply windowscodecs-GIF_Encoder/0021-windowscodecs-Fix-IWICBitmapDecoder-CopyPalette-for-.patch
 	patch_apply windowscodecs-GIF_Encoder/0022-windowscodecs-Better-follow-the-GIF-spec-and-don-t-s.patch
-	patch_apply windowscodecs-GIF_Encoder/0023-windowscodecs-Fix-behaviour-of-format-converter-for-.patch
-	patch_apply windowscodecs-GIF_Encoder/0024-windowscodecs-tests-Add-a-bunch-of-new-tests-for-ind.patch
-	patch_apply windowscodecs-GIF_Encoder/0025-windowscodecs-tests-Add-some-tests-for-converting-24.patch
 	patch_apply windowscodecs-GIF_Encoder/0026-windowscodecs-tests-Add-the-tests-for-GIF-encoder-an.patch
-	patch_apply windowscodecs-GIF_Encoder/0027-windowscodecs-tests-Add-a-missing-check-for-IWICBitm.patch
 	patch_apply windowscodecs-GIF_Encoder/0028-windowscodecs-Correctly-indicate-that-the-global-inf.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs/tests: Add IWICBitmapEncoderInfo test.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: WICConvertBitmapSource should ask IWICFormatConverter::Initialize to use an optimized palette.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Better follow the GIF spec and don'\''t specify the local color table size if there is no local palette.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix behaviour of format converter for indexed formats when NULL or empty palette has been provided.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a bunch of new tests for indexed format conversions.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add some tests for converting 24bppBGR to 8bppIndexed format.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a missing check for IWICBitmapFrameDecode::GetPixelFormat return value.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
 	) >> "$patchlist"
 fi

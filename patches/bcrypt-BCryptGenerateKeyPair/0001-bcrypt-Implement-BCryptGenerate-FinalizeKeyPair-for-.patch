@@ -1,4 +1,4 @@
-From 90e0b29f692afb60162cb93925ce5c250c8d6ee3 Mon Sep 17 00:00:00 2001
+From e389506e3f5794441083739616be85071637907e Mon Sep 17 00:00:00 2001
 From: Hans Leidekker <hans@codeweavers.com>
 Date: Tue, 5 Feb 2019 09:00:02 +1100
 Subject: [PATCH] bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH
@@ -7,16 +7,16 @@ Subject: [PATCH] bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH
 ---
  dlls/bcrypt/bcrypt.spec       |   4 +-
  dlls/bcrypt/bcrypt_internal.h |   7 +-
- dlls/bcrypt/bcrypt_main.c     |  56 +++++++++++++-
+ dlls/bcrypt/bcrypt_main.c     |  68 ++++++++++++++++-
  dlls/bcrypt/gnutls.c          | 165 +++++++++++++++++++++++++++++++++++++++---
  dlls/bcrypt/macos.c           |   6 ++
  dlls/bcrypt/tests/bcrypt.c    |  94 ++++++++++++++++++------
  dlls/ncrypt/ncrypt.spec       |   4 +-
  include/bcrypt.h              |  12 ++-
- 8 files changed, 306 insertions(+), 42 deletions(-)
+ 8 files changed, 318 insertions(+), 42 deletions(-)
 
 diff --git a/dlls/bcrypt/bcrypt.spec b/dlls/bcrypt/bcrypt.spec
-index f4d9a57bb0..052a0996d4 100644
+index f4d9a57..052a099 100644
 --- a/dlls/bcrypt/bcrypt.spec
 +++ b/dlls/bcrypt/bcrypt.spec
 @@ -22,11 +22,11 @@
@@ -34,7 +34,7 @@ index f4d9a57bb0..052a0996d4 100644
  @ stdcall BCryptGetFipsAlgorithmMode(ptr)
  @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long)
 diff --git a/dlls/bcrypt/bcrypt_internal.h b/dlls/bcrypt/bcrypt_internal.h
-index 593e78416e..b6e3d0b95f 100644
+index 593e784..b6e3d0b 100644
 --- a/dlls/bcrypt/bcrypt_internal.h
 +++ b/dlls/bcrypt/bcrypt_internal.h
 @@ -125,6 +125,7 @@ enum alg_id
@@ -66,7 +66,7 @@ index 593e78416e..b6e3d0b95f 100644
  NTSTATUS key_destroy( struct key * ) DECLSPEC_HIDDEN;
  BOOL key_is_symmetric( struct key * ) DECLSPEC_HIDDEN;
 diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
-index 9427ea7150..80bd14b0b1 100644
+index 9427ea7..38d006b 100644
 --- a/dlls/bcrypt/bcrypt_main.c
 +++ b/dlls/bcrypt/bcrypt_main.c
 @@ -114,6 +114,7 @@ alg_props[] =
@@ -130,7 +130,26 @@ index 9427ea7150..80bd14b0b1 100644
          key->hdr.magic = MAGIC_KEY;
  
          size = sizeof(*rsa_blob) + rsa_blob->cbPublicExp + rsa_blob->cbModulus;
-@@ -1163,6 +1178,41 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
+@@ -1135,6 +1150,18 @@ static NTSTATUS key_import_pair( struct algorithm *alg, const WCHAR *type, BCRYP
+     ERR( "support for keys not available at build time\n" );
+     return STATUS_NOT_IMPLEMENTED;
+ }
++
++NTSTATUS key_asymmetric_generate( struct key *key )
++{
++    FIXME( "support for keys not available at build time\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
++
++NTSTATUS key_asymmetric_init( struct key *key, struct algorithm *alg, const UCHAR *pubkey, ULONG pubkey_len )
++{
++    FIXME( "support for keys not available at build time\n" );
++    return STATUS_NOT_IMPLEMENTED;
++}
+ #endif
+ 
+ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HANDLE *handle,
+@@ -1163,6 +1190,41 @@ NTSTATUS WINAPI BCryptGenerateSymmetricKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_
      return STATUS_SUCCESS;
  }
  
@@ -172,7 +191,7 @@ index 9427ea7150..80bd14b0b1 100644
  NTSTATUS WINAPI BCryptImportKey( BCRYPT_ALG_HANDLE algorithm, BCRYPT_KEY_HANDLE decrypt_key, LPCWSTR type,
                                   BCRYPT_KEY_HANDLE *key, PUCHAR object, ULONG object_len, PUCHAR input,
                                   ULONG input_len, ULONG flags )
-@@ -1192,7 +1242,7 @@ NTSTATUS WINAPI BCryptExportKey( BCRYPT_KEY_HANDLE export_key, BCRYPT_KEY_HANDLE
+@@ -1192,7 +1254,7 @@ NTSTATUS WINAPI BCryptExportKey( BCRYPT_KEY_HANDLE export_key, BCRYPT_KEY_HANDLE
      TRACE("%p, %p, %s, %p, %u, %p, %u\n", key, encrypt_key, debugstr_w(type), output, output_len, size, flags);
  
      if (!key || key->hdr.magic != MAGIC_KEY) return STATUS_INVALID_HANDLE;
@@ -182,7 +201,7 @@ index 9427ea7150..80bd14b0b1 100644
      if (encrypt_key)
      {
 diff --git a/dlls/bcrypt/gnutls.c b/dlls/bcrypt/gnutls.c
-index 69276be925..1b2905e354 100644
+index 69276be..1b2905e 100644
 --- a/dlls/bcrypt/gnutls.c
 +++ b/dlls/bcrypt/gnutls.c
 @@ -52,6 +52,8 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
@@ -448,7 +467,7 @@ index 69276be925..1b2905e354 100644
      return STATUS_SUCCESS;
  }
 diff --git a/dlls/bcrypt/macos.c b/dlls/bcrypt/macos.c
-index a6eaee8b1d..0e0ed8379d 100644
+index a6eaee8..0e0ed83 100644
 --- a/dlls/bcrypt/macos.c
 +++ b/dlls/bcrypt/macos.c
 @@ -205,6 +205,12 @@ NTSTATUS key_asymmetric_verify( struct key *key, void *padding, UCHAR *hash, ULO
@@ -465,7 +484,7 @@ index a6eaee8b1d..0e0ed8379d 100644
  {
      if (key->u.s.ref_encrypt) CCCryptorRelease( key->u.s.ref_encrypt );
 diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
-index c635fcb63b..f88e48f7c7 100644
+index c635fcb..f88e48f 100644
 --- a/dlls/bcrypt/tests/bcrypt.c
 +++ b/dlls/bcrypt/tests/bcrypt.c
 @@ -26,34 +26,36 @@
@@ -590,7 +609,7 @@ index c635fcb63b..f88e48f7c7 100644
      if (pBCryptHash) /* >= Win 10 */
          test_BcryptHash();
 diff --git a/dlls/ncrypt/ncrypt.spec b/dlls/ncrypt/ncrypt.spec
-index adc0999aff..85fa5c0ea5 100644
+index adc0999..85fa5c0 100644
 --- a/dlls/ncrypt/ncrypt.spec
 +++ b/dlls/ncrypt/ncrypt.spec
 @@ -23,11 +23,11 @@
@@ -608,7 +627,7 @@ index adc0999aff..85fa5c0ea5 100644
  @ stdcall BCryptGetFipsAlgorithmMode(ptr) bcrypt.BCryptGetFipsAlgorithmMode
  @ stdcall BCryptGetProperty(ptr wstr ptr long ptr long) bcrypt.BCryptGetProperty
 diff --git a/include/bcrypt.h b/include/bcrypt.h
-index d3e4b9959d..ba78c1d9d0 100644
+index d3e4b99..ba78c1d 100644
 --- a/include/bcrypt.h
 +++ b/include/bcrypt.h
 @@ -81,6 +81,7 @@ typedef LONG NTSTATUS;
@@ -655,5 +674,5 @@ index d3e4b9959d..ba78c1d9d0 100644
  
  #endif  /* __WINE_BCRYPT_H */
 -- 
-2.11.0
+1.9.1
 

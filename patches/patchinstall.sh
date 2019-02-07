@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c3ac646a8ded3ef3ebc743a7fdda01b0691a427a"
+	echo "957a1f0216995c14c3a3fe737358578a506af707"
 }
 
 # Show version information
@@ -359,7 +359,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
-	enable_wined3d_multisample_quality="$1"
 	enable_wined3d_stream_frequency="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -1240,9 +1239,6 @@ patch_enable ()
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
-			;;
-		wined3d-multisample-quality)
-			enable_wined3d_multisample_quality="$2"
 			;;
 		wined3d-stream-frequency)
 			enable_wined3d_stream_frequency="$2"
@@ -5248,16 +5244,14 @@ fi
 # Patchset ntoskrnl-Stubs
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
-	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7275,21 +7269,6 @@ if test "$enable_wined3d_mesa_texture_download" -eq 1; then
 	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-multisample-quality
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39080] wined3d: Ignore multisample quality for MULTISAMPLE_NONE
-# |
-# | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/context.c
-# |
-if test "$enable_wined3d_multisample_quality" -eq 1; then
-	patch_apply wined3d-multisample-quality/0001-wined3d-Ignore-multisample-quality-for-MULTISAMPLE_N.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "wined3d: Ignore multisample quality for MULTISAMPLE_NONE in context_find_fbo_entry().", 1 },';
 	) >> "$patchlist"
 fi
 

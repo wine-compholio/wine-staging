@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6b76648a8b773838ecde00719ca54a433edf5ce6"
+	echo "c3ac646a8ded3ef3ebc743a7fdda01b0691a427a"
 }
 
 # Show version information
@@ -210,7 +210,6 @@ patch_enable_all ()
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_LdrGetDllHandle="$1"
 	enable_ntdll_LdrInitializeThunk="$1"
-	enable_ntdll_Loader_Machine_Type="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
@@ -240,7 +239,6 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_Zero_mod_name="$1"
-	enable_ntdll_futex_condition_var="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_Fix_Relocation="$1"
@@ -796,9 +794,6 @@ patch_enable ()
 		ntdll-LdrInitializeThunk)
 			enable_ntdll_LdrInitializeThunk="$2"
 			;;
-		ntdll-Loader_Machine_Type)
-			enable_ntdll_Loader_Machine_Type="$2"
-			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
 			;;
@@ -885,9 +880,6 @@ patch_enable ()
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
-			;;
-		ntdll-futex-condition-var)
-			enable_ntdll_futex_condition_var="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -1976,13 +1968,6 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 	enable_nvapi_Stub_DLL=1
 fi
 
-if test "$enable_ntoskrnl_Stubs" -eq 1; then
-	if test "$enable_Compiler_Warnings" -gt 1; then
-		abort "Patchset Compiler_Warnings disabled, but ntoskrnl-Stubs depends on that."
-	fi
-	enable_Compiler_Warnings=1
-fi
-
 if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	if test "$enable_ntdll_Exception" -gt 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
@@ -2078,14 +2063,10 @@ if test "$enable_ntdll_DllRedirects" -eq 1; then
 	if test "$enable_ntdll_DllOverrides_WOW64" -gt 1; then
 		abort "Patchset ntdll-DllOverrides_WOW64 disabled, but ntdll-DllRedirects depends on that."
 	fi
-	if test "$enable_ntdll_Loader_Machine_Type" -gt 1; then
-		abort "Patchset ntdll-Loader_Machine_Type disabled, but ntdll-DllRedirects depends on that."
-	fi
 	if test "$enable_wow64cpu_Wow64Transition" -gt 1; then
 		abort "Patchset wow64cpu-Wow64Transition disabled, but ntdll-DllRedirects depends on that."
 	fi
 	enable_ntdll_DllOverrides_WOW64=1
-	enable_ntdll_Loader_Machine_Type=1
 	enable_wow64cpu_Wow64Transition=1
 fi
 
@@ -4563,21 +4544,6 @@ if test "$enable_ntdll_DllOverrides_WOW64" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Loader_Machine_Type
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38021] Check architecture before trying to load libraries
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_Loader_Machine_Type" -eq 1; then
-	patch_apply ntdll-Loader_Machine_Type/0001-ntdll-Check-architecture-before-loading-module.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Check architecture before loading module.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wow64cpu-Wow64Transition
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4599,7 +4565,7 @@ fi
 # Patchset ntdll-DllRedirects
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, wow64cpu-Wow64Transition
+# |   *	ntdll-DllOverrides_WOW64, wow64cpu-Wow64Transition
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
@@ -5032,7 +4998,7 @@ fi
 # Patchset ntdll-Purist_Mode
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, wow64cpu-Wow64Transition, ntdll-DllRedirects
+# |   *	ntdll-DllOverrides_WOW64, wow64cpu-Wow64Transition, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	dlls/ntdll/loadorder.c
@@ -5267,21 +5233,6 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-futex-condition-var
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45524] Add a futex-based implementation of condition variables
-# |
-# | Modified files:
-# |   *	dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_futex_condition_var" -eq 1; then
-	patch_apply ntdll-futex-condition-var/0001-ntdll-Add-a-futex-based-condition-variable-implement.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add a futex-based condition variable implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-set_full_cpu_context
 # |
 # | Modified files:
@@ -5296,23 +5247,17 @@ fi
 
 # Patchset ntoskrnl-Stubs
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Compiler_Warnings
-# |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h,
-# | 	include/winnt.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/tests/driver.c
 # |
 if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	patch_apply ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
 	patch_apply ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
 	patch_apply ntoskrnl-Stubs/0013-ntoskrnl.exe-Implement-NtBuildNumber.patch
-	patch_apply ntoskrnl-Stubs/0014-ntoskrnl.exe-Implement-ExInitializeNPagedLookasideLi.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement NtBuildNumber.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntoskrnl.exe: Implement ExInitializeNPagedLookasideList.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6761,7 +6706,7 @@ fi
 # Patchset uxtheme-GTK_Theming
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DllOverrides_WOW64, ntdll-Loader_Machine_Type, wow64cpu-Wow64Transition, ntdll-DllRedirects
+# |   *	ntdll-DllOverrides_WOW64, wow64cpu-Wow64Transition, ntdll-DllRedirects
 # |
 # | Modified files:
 # |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/button.c, dlls/uxtheme-gtk/combobox.c, dlls
@@ -7391,7 +7336,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, Compiler_Warnings, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

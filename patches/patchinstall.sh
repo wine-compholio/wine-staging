@@ -261,6 +261,7 @@ patch_enable_all ()
 	enable_qwave_QOSCreateHandle="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_secur32_compile_fix="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
@@ -945,6 +946,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		secur32-compile-fix)
+			enable_secur32_compile_fix="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -5566,6 +5570,18 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset secur32-compile-fix
+# |
+# | Modified files:
+# |   *	dlls/secur32/schannel_gnutls.c
+# |
+if test "$enable_secur32_compile_fix" -eq 1; then
+	patch_apply secur32-compile-fix/0001-secur32-Fix-compile-error-on-older-gnutls.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "secur32: Fix compile error on older gnutls.", 2 },';
 	) >> "$patchlist"
 fi
 

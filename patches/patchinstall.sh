@@ -6709,11 +6709,11 @@ fi
 # |   *	ntdll-DllOverrides_WOW64, wow64cpu-Wow64Transition, ntdll-DllRedirects
 # |
 # | Modified files:
-# |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/button.c, dlls/uxtheme-gtk/combobox.c, dlls
-# | 	/uxtheme-gtk/edit.c, dlls/uxtheme-gtk/header.c, dlls/uxtheme-gtk/listbox.c, dlls/uxtheme-gtk/listview.c, dlls/uxtheme-
-# | 	gtk/menu.c, dlls/uxtheme-gtk/rebar.c, dlls/uxtheme-gtk/status.c, dlls/uxtheme-gtk/tab.c, dlls/uxtheme-gtk/toolbar.c,
-# | 	dlls/uxtheme-gtk/trackbar.c, dlls/uxtheme-gtk/uxtheme-gtk.spec, dlls/uxtheme-gtk/uxtheme.c, dlls/uxtheme-
-# | 	gtk/uxthemegtk.h, dlls/uxtheme-gtk/version.rc, dlls/uxtheme-gtk/window.c
+# |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/buffer.c, dlls/uxtheme-gtk/button.c, dlls
+# | 	/uxtheme-gtk/combobox.c, dlls/uxtheme-gtk/edit.c, dlls/uxtheme-gtk/header.c, dlls/uxtheme-gtk/listbox.c, dlls/uxtheme-
+# | 	gtk/listview.c, dlls/uxtheme-gtk/menu.c, dlls/uxtheme-gtk/rebar.c, dlls/uxtheme-gtk/status.c, dlls/uxtheme-gtk/tab.c,
+# | 	dlls/uxtheme-gtk/toolbar.c, dlls/uxtheme-gtk/trackbar.c, dlls/uxtheme-gtk/uxtheme-gtk.spec, dlls/uxtheme-gtk/uxtheme.c,
+# | 	dlls/uxtheme-gtk/uxthemegtk.h, dlls/uxtheme-gtk/version.rc, dlls/uxtheme-gtk/window.c
 # |
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0001-uxthemegtk-Add-configure-check-and-stub-dll.patch
@@ -6725,6 +6725,7 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0007-uxthemegtk-Add-export-for-OpenThemeDataEx.patch
 	patch_apply uxtheme-GTK_Theming/0008-uxthemegtk-Fix-some-incorrect-error-codes.patch
 	patch_apply uxtheme-GTK_Theming/0009-uxthemegtk-Validate-theme-handles-before-accessing-p.patch
+	patch_apply uxtheme-GTK_Theming/0010-Add-buffering-functions.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Add configure check and stub dll.", 1 },';
 		printf '%s\n' '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
@@ -6735,6 +6736,7 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Add buffering functions.", 1 },';
 	) >> "$patchlist"
 fi
 

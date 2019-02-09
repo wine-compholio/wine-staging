@@ -220,7 +220,6 @@ patch_enable_all ()
 	enable_ntdll_NtSuspendProcess="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
-	enable_ntdll_Purist_Mode="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
@@ -822,9 +821,6 @@ patch_enable ()
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
-			;;
-		ntdll-Purist_Mode)
-			enable_ntdll_Purist_Mode="$2"
 			;;
 		ntdll-RtlCaptureStackBackTrace)
 			enable_ntdll_RtlCaptureStackBackTrace="$2"
@@ -1990,13 +1986,6 @@ if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 		abort "Patchset ntdll-LdrInitializeThunk disabled, but ntdll-RtlCreateUserThread depends on that."
 	fi
 	enable_ntdll_LdrInitializeThunk=1
-fi
-
-if test "$enable_ntdll_Purist_Mode" -eq 1; then
-	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but ntdll-Purist_Mode depends on that."
-	fi
-	enable_ntdll_DllRedirects=1
 fi
 
 if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
@@ -4972,21 +4961,6 @@ if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Purist_Mode
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wow64cpu-Wow64Transition, ntdll-DllRedirects
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loadorder.c
-# |
-if test "$enable_ntdll_Purist_Mode" -eq 1; then
-	patch_apply ntdll-Purist_Mode/0001-ntdll-Add-dll-override-default-rule-for-purist-mode.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "ntdll: Add dll override default rule for purist mode.", 1 },';
 	) >> "$patchlist"
 fi
 

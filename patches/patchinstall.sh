@@ -1837,13 +1837,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	enable_windowscodecs_GIF_Encoder=1
 fi
 
-if test "$enable_uxtheme_GTK_Theming" -eq 1; then
-	if test "$enable_ntdll_DllRedirects" -gt 1; then
-		abort "Patchset ntdll-DllRedirects disabled, but uxtheme-GTK_Theming depends on that."
-	fi
-	enable_ntdll_DllRedirects=1
-fi
-
 if test "$enable_user32_GetPointerType" -eq 1; then
 	if test "$enable_user32_Mouse_Message_Hwnd" -gt 1; then
 		abort "Patchset user32-Mouse_Message_Hwnd disabled, but user32-GetPointerType depends on that."
@@ -6651,38 +6644,23 @@ fi
 
 # Patchset uxtheme-GTK_Theming
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wow64cpu-Wow64Transition, ntdll-DllRedirects
-# |
 # | Modified files:
-# |   *	aclocal.m4, configure.ac, dlls/uxtheme-gtk/Makefile.in, dlls/uxtheme-gtk/buffer.c, dlls/uxtheme-gtk/button.c, dlls
-# | 	/uxtheme-gtk/combobox.c, dlls/uxtheme-gtk/edit.c, dlls/uxtheme-gtk/header.c, dlls/uxtheme-gtk/listbox.c, dlls/uxtheme-
-# | 	gtk/listview.c, dlls/uxtheme-gtk/menu.c, dlls/uxtheme-gtk/rebar.c, dlls/uxtheme-gtk/status.c, dlls/uxtheme-gtk/tab.c,
-# | 	dlls/uxtheme-gtk/toolbar.c, dlls/uxtheme-gtk/trackbar.c, dlls/uxtheme-gtk/uxtheme-gtk.spec, dlls/uxtheme-gtk/uxtheme.c,
-# | 	dlls/uxtheme-gtk/uxthemegtk.h, dlls/uxtheme-gtk/version.rc, dlls/uxtheme-gtk/window.c
+# |   *	aclocal.m4, configure.ac, dlls/uxtheme/Makefile.in, dlls/uxtheme/draw.c, dlls/uxtheme/gtk-button.c, dlls/uxtheme/gtk-
+# | 	combobox.c, dlls/uxtheme/gtk-edit.c, dlls/uxtheme/gtk-header.c, dlls/uxtheme/gtk-listbox.c, dlls/uxtheme/gtk-listview.c,
+# | 	dlls/uxtheme/gtk-menu.c, dlls/uxtheme/gtk-rebar.c, dlls/uxtheme/gtk-status.c, dlls/uxtheme/gtk-tab.c, dlls/uxtheme/gtk-
+# | 	toolbar.c, dlls/uxtheme/gtk-trackbar.c, dlls/uxtheme/gtk-window.c, dlls/uxtheme/gtk.c, dlls/uxtheme/metric.c,
+# | 	dlls/uxtheme/property.c, dlls/uxtheme/system.c, dlls/uxtheme/uxthemedll.h, dlls/uxtheme/uxthemegtk.h
 # |
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
-	patch_apply uxtheme-GTK_Theming/0001-uxthemegtk-Add-configure-check-and-stub-dll.patch
-	patch_apply uxtheme-GTK_Theming/0002-uxthemegtk-Initial-implementation.patch
-	patch_apply uxtheme-GTK_Theming/0003-uxthemegtk-Implement-enumeration-of-themes-color-and.patch
-	patch_apply uxtheme-GTK_Theming/0004-uxthemegtk-Correctly-render-buttons-with-GTK-3.14.0.patch
-	patch_apply uxtheme-GTK_Theming/0005-uxthemegtk-Print-class-name-before-calling-vtable-fu.patch
-	patch_apply uxtheme-GTK_Theming/0006-uxthemegtk-Reset-FPU-flags-before-calling-GTK3-funct.patch
-	patch_apply uxtheme-GTK_Theming/0007-uxthemegtk-Add-export-for-OpenThemeDataEx.patch
-	patch_apply uxtheme-GTK_Theming/0008-uxthemegtk-Fix-some-incorrect-error-codes.patch
-	patch_apply uxtheme-GTK_Theming/0009-uxthemegtk-Validate-theme-handles-before-accessing-p.patch
-	patch_apply uxtheme-GTK_Theming/0010-Add-buffering-functions.patch
+	patch_apply uxtheme-GTK_Theming/0001-uxtheme-Initial-implementation-of-GTK-backend.patch
+	patch_apply uxtheme-GTK_Theming/0003-uxtheme-Correctly-render-buttons-with-GTK-3.14.0.patch
+	patch_apply uxtheme-GTK_Theming/0004-uxtheme-Reset-FPU-flags-before-calling-GTK3-function.patch
+	patch_apply uxtheme-GTK_Theming/0005-uxtheme-Fix-some-incorrect-error-codes.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Add configure check and stub dll.", 1 },';
-		printf '%s\n' '+    { "Ivan Akulinchev", "uxthemegtk: Initial implementation.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Implement enumeration of themes, color and sizes.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Correctly render buttons with GTK >= 3.14.0.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Print class name before calling vtable functions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "uxthemegtk: Reset FPU flags before calling GTK3 functions.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Add export for OpenThemeDataEx.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Fix some incorrect error codes.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "uxthemegtk: Validate theme handles before accessing private data.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Add buffering functions.", 1 },';
+		printf '%s\n' '+    { "Ivan Akulinchev", "uxtheme: Initial implementation of GTK backend.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Correctly render buttons with GTK >= 3.14.0.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "uxtheme: Reset FPU flags before calling GTK3 functions.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Fix some incorrect error codes.", 1 },';
 	) >> "$patchlist"
 fi
 

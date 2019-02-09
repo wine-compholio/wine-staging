@@ -195,7 +195,6 @@ patch_enable_all ()
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
-	enable_ntdll_DllRedirects="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
@@ -745,9 +744,6 @@ patch_enable ()
 			;;
 		ntdll-DeviceType_Systemroot)
 			enable_ntdll_DeviceType_Systemroot="$2"
-			;;
-		ntdll-DllRedirects)
-			enable_ntdll_DllRedirects="$2"
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
@@ -2031,13 +2027,6 @@ if test "$enable_ntdll_HashLinks" -eq 1; then
 		abort "Patchset ntdll-LDR_MODULE disabled, but ntdll-HashLinks depends on that."
 	fi
 	enable_ntdll_LDR_MODULE=1
-fi
-
-if test "$enable_ntdll_DllRedirects" -eq 1; then
-	if test "$enable_wow64cpu_Wow64Transition" -gt 1; then
-		abort "Patchset wow64cpu-Wow64Transition disabled, but ntdll-DllRedirects depends on that."
-	fi
-	enable_wow64cpu_Wow64Transition=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -4497,47 +4486,6 @@ if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wow64cpu-Wow64Transition
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)
-# |
-# | Modified files:
-# |   *	configure, configure.ac, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/wow64cpu/Makefile.in,
-# | 	dlls/wow64cpu/wow64cpu.spec, dlls/wow64cpu/wow64cpu_main.c
-# |
-if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
-	patch_apply wow64cpu-Wow64Transition/0001-wow64cpu-Add-stub-dll.patch
-	patch_apply wow64cpu-Wow64Transition/0002-ntdll-Add-a-stub-implementation-of-Wow64Transition.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "wow64cpu: Add stub dll.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add a stub implementation of Wow64Transition.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-DllRedirects
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wow64cpu-Wow64Transition
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/loadorder.c, dlls/ntdll/ntdll_misc.h
-# |
-if test "$enable_ntdll_DllRedirects" -eq 1; then
-	patch_apply ntdll-DllRedirects/0001-ntdll-Move-logic-to-determine-loadorder-HKCU-app-key.patch
-	patch_apply ntdll-DllRedirects/0002-ntdll-Move-logic-to-read-loadorder-registry-values-i.patch
-	patch_apply ntdll-DllRedirects/0003-ntdll-Move-code-to-determine-module-basename-into-se.patch
-	patch_apply ntdll-DllRedirects/0004-ntdll-Implement-get_redirect-function.patch
-	patch_apply ntdll-DllRedirects/0005-ntdll-Implement-loader-redirection-scheme.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Move logic to determine loadorder HKCU/app key into separate functions.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Move logic to read loadorder registry values into separate function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Move code to determine module basename into separate function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement get_redirect function.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement loader redirection scheme.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7755,6 +7703,24 @@ if test "$enable_wmvcore_WMCreateSyncReaderPriv" -eq 1; then
 	patch_apply wmvcore-WMCreateSyncReaderPriv/0001-wmvcore-Implement-WMCreateSyncReaderPriv.patch
 	(
 		printf '%s\n' '+    { "Andrey Gusev", "wmvcore: Implement WMCreateSyncReaderPriv.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wow64cpu-Wow64Transition
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/wow64cpu/Makefile.in,
+# | 	dlls/wow64cpu/wow64cpu.spec, dlls/wow64cpu/wow64cpu_main.c
+# |
+if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
+	patch_apply wow64cpu-Wow64Transition/0001-wow64cpu-Add-stub-dll.patch
+	patch_apply wow64cpu-Wow64Transition/0002-ntdll-Add-a-stub-implementation-of-Wow64Transition.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "wow64cpu: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add a stub implementation of Wow64Transition.", 1 },';
 	) >> "$patchlist"
 fi
 

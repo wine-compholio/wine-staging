@@ -1,15 +1,15 @@
-From 0683c1a5e5093e865f2d3b76db7a5e269155c964 Mon Sep 17 00:00:00 2001
+From 4dfc4b1420d91a8f288aaad946e85c170e7dd214 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 13 Dec 2014 03:18:35 +0100
 Subject: [PATCH] ntdll: Implement get_redirect function.
 
 ---
- dlls/ntdll/loadorder.c  | 118 +++++++++++++++++++++++++++++++++++++++++++++---
+ dlls/ntdll/loadorder.c  | 118 +++++++++++++++++++++++++++++++++++++---
  dlls/ntdll/ntdll_misc.h |   1 +
  2 files changed, 112 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/loadorder.c b/dlls/ntdll/loadorder.c
-index eb27d60..9f536ff 100644
+index eb7e6723..c88666ad 100644
 --- a/dlls/ntdll/loadorder.c
 +++ b/dlls/ntdll/loadorder.c
 @@ -344,11 +344,11 @@ static HANDLE open_app_reg_key( const WCHAR *sub_key, const WCHAR *app_name )
@@ -40,10 +40,11 @@ index eb27d60..9f536ff 100644
  {
      static const WCHAR DllOverridesW[] = {'\\','D','l','l','O','v','e','r','r','i','d','e','s',0};
      static HANDLE app_key = (HANDLE)-1;
-@@ -379,6 +379,41 @@ static HANDLE get_app_key( const WCHAR *app_name )
+@@ -378,6 +378,41 @@ static HANDLE get_app_key( const WCHAR *app_name )
+ }
  
  
- /***************************************************************************
++/***************************************************************************
 + *	get_redirect_standard_key
 + *
 + * Return a handle to the standard DllRedirects registry section.
@@ -78,12 +79,11 @@ index eb27d60..9f536ff 100644
 +}
 +
 +
-+/***************************************************************************
+ /***************************************************************************
   *	get_registry_string
   *
-  * Load a registry string for a given module.
-@@ -450,6 +485,32 @@ static enum loadorder get_load_order_value( HANDLE std_key, HANDLE app_key, cons
-     return ret;
+@@ -416,6 +451,32 @@ static enum loadorder get_registry_load_order( HANDLE hkey, const WCHAR *module
+     return str ? parse_load_order( str ) : LO_INVALID;
  }
  
 + /***************************************************************************
@@ -114,8 +114,8 @@ index eb27d60..9f536ff 100644
 +}
  
  /***************************************************************************
-  *	get_module_basename   (internal)
-@@ -494,10 +555,10 @@ enum loadorder get_load_order( const WCHAR *app_name, const WCHAR *path )
+  *	get_load_order_value
+@@ -494,11 +555,11 @@ enum loadorder get_load_order( const WCHAR *app_name, const UNICODE_STRING *nt_n
      WCHAR *module, *basename;
  
      if (!init_done) init_load_order();
@@ -123,13 +123,14 @@ index eb27d60..9f536ff 100644
 -    if (app_name) app_key = get_app_key( app_name );
 +    std_key = get_override_standard_key();
 +    if (app_name) app_key = get_override_app_key( app_name );
+     if (!strncmpW( path, nt_prefixW, 4 )) path += 4;
  
 -    TRACE("looking for %s\n", debugstr_w(path));
 +    TRACE("looking up loadorder for %s\n", debugstr_w(path));
  
      if (!(module = get_module_basename(path, &basename)))
          return ret;
-@@ -531,3 +592,46 @@ enum loadorder get_load_order( const WCHAR *app_name, const WCHAR *path )
+@@ -532,3 +593,46 @@ enum loadorder get_load_order( const WCHAR *app_name, const UNICODE_STRING *nt_n
      RtlFreeHeap( GetProcessHeap(), 0, module );
      return ret;
  }
@@ -177,17 +178,17 @@ index eb27d60..9f536ff 100644
 +    return ret;
 +}
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 561e23f..3c2424c 100644
+index 5b32abc5..eff7d579 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -258,6 +258,7 @@ enum loadorder
+@@ -217,6 +217,7 @@ enum loadorder
  };
  
- extern enum loadorder get_load_order( const WCHAR *app_name, const WCHAR *path ) DECLSPEC_HIDDEN;
+ extern enum loadorder get_load_order( const WCHAR *app_name, const UNICODE_STRING *nt_name ) DECLSPEC_HIDDEN;
 +extern WCHAR* get_redirect( const WCHAR *app_name, const WCHAR *path, BYTE *buffer, ULONG size ) DECLSPEC_HIDDEN;
  
  struct debug_info
  {
 -- 
-1.9.1
+2.20.1
 

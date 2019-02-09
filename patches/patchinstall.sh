@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "957a1f0216995c14c3a3fe737358578a506af707"
+	echo "f7b3120991df02ecaa975c18c6421fedb48ae731"
 }
 
 # Show version information
@@ -259,7 +259,6 @@ patch_enable_all ()
 	enable_qwave_QOSCreateHandle="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_secur32_compile_fix="$1"
 	enable_server_ClipCursor="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
@@ -938,9 +937,6 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
-			;;
-		secur32-compile-fix)
-			enable_secur32_compile_fix="$2"
 			;;
 		server-ClipCursor)
 			enable_server_ClipCursor="$2"
@@ -2855,10 +2851,8 @@ fi
 # |   *	dlls/d3d8/d3d8_main.c, dlls/d3d8/tests/device.c
 # |
 if test "$enable_d3d8_ValidateShader" -eq 1; then
-	patch_apply d3d8-ValidateShader/0001-d3d8-Improve-ValidateVertexShader-stub.patch
 	patch_apply d3d8-ValidateShader/0002-d3d8-Improve-ValidatePixelShader-stub.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidateVertexShader stub.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5524,18 +5518,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset secur32-compile-fix
-# |
-# | Modified files:
-# |   *	dlls/secur32/schannel_gnutls.c
-# |
-if test "$enable_secur32_compile_fix" -eq 1; then
-	patch_apply secur32-compile-fix/0001-secur32-Fix-compile-error-on-older-gnutls.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "secur32: Fix compile error on older gnutls.", 2 },';
 	) >> "$patchlist"
 fi
 

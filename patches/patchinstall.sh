@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f7b3120991df02ecaa975c18c6421fedb48ae731"
+	echo "d0727decdedb5aba250038458e0a28dec5687e50"
 }
 
 # Show version information
@@ -166,7 +166,6 @@ patch_enable_all ()
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
-	enable_kernel32_NormalizeString="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_Profile="$1"
@@ -206,7 +205,6 @@ patch_enable_all ()
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
-	enable_ntdll_LdrGetDllHandle="$1"
 	enable_ntdll_LdrInitializeThunk="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -324,7 +322,6 @@ patch_enable_all ()
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_OpenVirtualDisk="$1"
-	enable_vssapi_CreateVssBackupComponents="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -356,7 +353,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
-	enable_wined3d_stream_frequency="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -658,9 +654,6 @@ patch_enable ()
 		kernel32-NeedCurrentDirectoryForExePath)
 			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
 			;;
-		kernel32-NormalizeString)
-			enable_kernel32_NormalizeString="$2"
-			;;
 		kernel32-PE_Loader_Fixes)
 			enable_kernel32_PE_Loader_Fixes="$2"
 			;;
@@ -777,9 +770,6 @@ patch_enable ()
 			;;
 		ntdll-LDR_MODULE)
 			enable_ntdll_LDR_MODULE="$2"
-			;;
-		ntdll-LdrGetDllHandle)
-			enable_ntdll_LdrGetDllHandle="$2"
 			;;
 		ntdll-LdrInitializeThunk)
 			enable_ntdll_LdrInitializeThunk="$2"
@@ -1132,9 +1122,6 @@ patch_enable ()
 		virtdisk-OpenVirtualDisk)
 			enable_virtdisk_OpenVirtualDisk="$2"
 			;;
-		vssapi-CreateVssBackupComponents)
-			enable_vssapi_CreateVssBackupComponents="$2"
-			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
 			;;
@@ -1227,9 +1214,6 @@ patch_enable ()
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
-			;;
-		wined3d-stream-frequency)
-			enable_wined3d_stream_frequency="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -2055,13 +2039,6 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
 	fi
 	enable_ntdll_ThreadTime=1
-fi
-
-if test "$enable_libs_Unicode_Collation" -eq 1; then
-	if test "$enable_kernel32_NormalizeString" -gt 1; then
-		abort "Patchset kernel32-NormalizeString disabled, but libs-Unicode_Collation depends on that."
-	fi
-	enable_kernel32_NormalizeString=1
 fi
 
 if test "$enable_kernel32_Processor_Group" -eq 1; then
@@ -3926,28 +3903,6 @@ if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-NormalizeString
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42734] Implement NormalizeString
-# |
-# | Modified files:
-# |   *	dlls/kernel32/locale.c, dlls/kernel32/tests/locale.c, libs/port/compose.c, libs/port/decompose.c, libs/port/mbtowc.c,
-# | 	tools/make_unicode
-# |
-if test "$enable_kernel32_NormalizeString" -eq 1; then
-	patch_apply kernel32-NormalizeString/0001-tools-make_unicode-Implement-full-Unicode-character-.patch
-	patch_apply kernel32-NormalizeString/0002-tools-make_unicode-Implement-canonical-composition-f.patch
-	patch_apply kernel32-NormalizeString/0003-kernel32-Implement-NormalizeString-API-function.patch
-	patch_apply kernel32-NormalizeString/0004-libs-Generated-make_unicode-files.patch
-	(
-		printf '%s\n' '+    { "Sergio Gómez Del Real", "tools/make_unicode: Implement full Unicode character decomposition.", 1 },';
-		printf '%s\n' '+    { "Sergio Gómez Del Real", "tools/make_unicode: Implement canonical composition for use in normalization.", 1 },';
-		printf '%s\n' '+    { "Sergio Gómez Del Real", "kernel32: Implement NormalizeString API function.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "libs: Generated make_unicode files.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-PE_Loader_Fixes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4064,9 +4019,6 @@ if test "$enable_libs_Debug_Channel" -eq 1; then
 fi
 
 # Patchset libs-Unicode_Collation
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-NormalizeString
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#10767] Fix comparison of punctuation characters in lstrcmp
@@ -4646,18 +4598,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll/tests: Add test for deleting junction point target.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-LdrGetDllHandle
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_LdrGetDllHandle" -eq 1; then
-	patch_apply ntdll-LdrGetDllHandle/0001-ntdll-Improve-speed-of-LdrGetDllHandle-when-searchin.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Improve speed of LdrGetDllHandle when searching for the basename of modules that are not loaded.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6651,33 +6591,6 @@ if test "$enable_virtdisk_OpenVirtualDisk" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset vssapi-CreateVssBackupComponents
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37639] vssapi: Add ?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@ stub
-# |   *	[#46088] vssapi: Add CreateVssBackupComponentsInternal stub
-# |
-# | Modified files:
-# |   *	dlls/vssapi/main.c, dlls/vssapi/vssapi.spec, include/Makefile.in, include/vsbackup.idl, include/vss.idl,
-# | 	include/vswriter.h, include/vswriter.idl
-# |
-if test "$enable_vssapi_CreateVssBackupComponents" -eq 1; then
-	patch_apply vssapi-CreateVssBackupComponents/0001-include-Add-more-VSS_-typedefs.patch
-	patch_apply vssapi-CreateVssBackupComponents/0002-include-Add-VSS-writer-enum.patch
-	patch_apply vssapi-CreateVssBackupComponents/0003-include-Convert-header-vswriter-to-an-idl.patch
-	patch_apply vssapi-CreateVssBackupComponents/0004-include-Add-vsbackup.idl.patch
-	patch_apply vssapi-CreateVssBackupComponents/0005-vssapi-Add-CreateVssBackupComponentsInternal-stub.patch
-	patch_apply vssapi-CreateVssBackupComponents/0006-vssapi-Add-CreateVssBackupComponents-YGJPAPAVIVssBac.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add more VSS_* typedefs.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add VSS writer enum.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Convert header vswriter to an idl.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add vsbackup.idl.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "vssapi: Add CreateVssBackupComponentsInternal stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "vssapi: Add ?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@@@Z stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-GIF_Encoder
 # |
 # | Modified files:
@@ -7147,21 +7060,6 @@ if test "$enable_wined3d_mesa_texture_download" -eq 1; then
 	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-stream-frequency
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39080] wined3d: Return stream frequency of 1 if it was not set.
-# |
-# | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/device.c
-# |
-if test "$enable_wined3d_stream_frequency" -eq 1; then
-	patch_apply wined3d-stream-frequency/0001-wined3d-Return-stream-frequency-of-1-if-it-was-not-s.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "wined3d: Return stream frequency of 1 if it was not set.", 1 },';
 	) >> "$patchlist"
 fi
 

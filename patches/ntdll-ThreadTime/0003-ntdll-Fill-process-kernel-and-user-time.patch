@@ -1,19 +1,19 @@
-From 3868624c41bc318ee89c5c5183d3ca9ef483f6ba Mon Sep 17 00:00:00 2001
+From 507f3b20311ceae6a42bde2937d82031594d0b32 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 9 Mar 2017 16:27:23 +0100
-Subject: ntdll: Fill process kernel and user time.
+Subject: [PATCH] ntdll: Fill process kernel and user time.
 
 ---
- dlls/ntdll/nt.c         |  6 +++-
+ dlls/ntdll/nt.c         |  6 ++-
  dlls/ntdll/ntdll_misc.h |  3 ++
- dlls/ntdll/thread.c     | 84 ++++++++++++++++++++++++++++---------------------
+ dlls/ntdll/thread.c     | 84 +++++++++++++++++++++++------------------
  3 files changed, 56 insertions(+), 37 deletions(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index fbd0fdf51a9..cac95325541 100644
+index fcc5c635a68..2b5cf5d0ae3 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
-@@ -1927,6 +1927,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2452,6 +2452,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
          {
              SYSTEM_PROCESS_INFORMATION* spi = SystemInformation;
              SYSTEM_PROCESS_INFORMATION* last = NULL;
@@ -21,7 +21,7 @@ index fbd0fdf51a9..cac95325541 100644
              HANDLE hSnap = 0;
              WCHAR procname[1024];
              WCHAR* exename;
-@@ -1964,7 +1965,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2489,7 +2490,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
  
                          if (Length >= len + procstructlen)
                          {
@@ -30,7 +30,7 @@ index fbd0fdf51a9..cac95325541 100644
                               * vmCounters, ioCounters
                               */
   
-@@ -1982,6 +1983,9 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2507,6 +2508,9 @@ NTSTATUS WINAPI NtQuerySystemInformation(
  
                              /* spi->ti will be set later on */
  
@@ -41,10 +41,10 @@ index fbd0fdf51a9..cac95325541 100644
                          len += procstructlen;
                      }
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index c97b1e1f73f..260e7030dae 100644
+index 6b71ded85b1..4a411292cdc 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -245,4 +245,7 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
+@@ -258,4 +258,7 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
  
  NTSTATUS WINAPI RtlHashUnicodeString(PCUNICODE_STRING,BOOLEAN,ULONG,ULONG*);
  
@@ -53,12 +53,12 @@ index c97b1e1f73f..260e7030dae 100644
 +                              LARGE_INTEGER *kernel, LARGE_INTEGER *user) DECLSPEC_HIDDEN;
  #endif
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 00d03f103ce..1c6cab3aa28 100644
+index fe99a804c15..fea1244620c 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -80,6 +80,53 @@ static RTL_CRITICAL_SECTION_DEBUG critsect_debug =
- };
- static RTL_CRITICAL_SECTION peb_lock = { &critsect_debug, -1, 0, 0, 0, 0 };
+@@ -151,6 +151,53 @@ static ULONG_PTR get_image_addr(void)
+ }
+ #endif
  
 +
 +BOOL read_process_time(int unix_pid, int unix_tid, unsigned long clk_tck,
@@ -108,9 +108,9 @@ index 00d03f103ce..1c6cab3aa28 100644
 +
 +
  /***********************************************************************
-  *           get_unicode_string
+  *           thread_init
   *
-@@ -989,42 +1036,7 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
+@@ -929,42 +976,7 @@ NTSTATUS WINAPI NtQueryInformationThread( HANDLE handle, THREADINFOCLASS class,
  #ifdef __linux__
                  /* only /proc provides exact values for a specific thread */
                  if (unix_pid != -1 && unix_tid != -1)
@@ -155,5 +155,5 @@ index 00d03f103ce..1c6cab3aa28 100644
  
                  /* get values for current process instead */
 -- 
-2.14.1
+2.20.1
 

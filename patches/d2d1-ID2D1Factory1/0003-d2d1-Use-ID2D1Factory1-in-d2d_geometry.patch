@@ -1,7 +1,7 @@
-From 2af2d1c51ec73862a156850d702dcb4608d73558 Mon Sep 17 00:00:00 2001
+From 30d0aa2712dbdfe8f532118f9829c7999c0326a7 Mon Sep 17 00:00:00 2001
 From: Lucian Poston <lucian.poston@gmail.com>
 Date: Thu, 3 May 2018 00:38:06 -0700
-Subject: d2d1: Use ID2D1Factory1 in d2d_geometry
+Subject: [PATCH] d2d1: Use ID2D1Factory1 in d2d_geometry
 
 https://bugs.winehq.org/show_bug.cgi?id=44052
 
@@ -13,10 +13,10 @@ Signed-off-by: Lucian Poston <lucian.poston@gmail.com>
  3 files changed, 28 insertions(+), 16 deletions(-)
 
 diff --git a/dlls/d2d1/d2d1_private.h b/dlls/d2d1/d2d1_private.h
-index 21e2b88..0bb0112 100644
+index 70b841df8cb..85c56524de4 100644
 --- a/dlls/d2d1/d2d1_private.h
 +++ b/dlls/d2d1/d2d1_private.h
-@@ -406,7 +406,7 @@ struct d2d_geometry
+@@ -424,7 +424,7 @@ struct d2d_geometry
      ID2D1Geometry ID2D1Geometry_iface;
      LONG refcount;
  
@@ -25,7 +25,7 @@ index 21e2b88..0bb0112 100644
  
      D2D_MATRIX_3X2_F transform;
  
-@@ -470,10 +470,10 @@ struct d2d_geometry
+@@ -494,10 +494,10 @@ struct d2d_geometry
      } u;
  };
  
@@ -37,13 +37,13 @@ index 21e2b88..0bb0112 100644
 +        ID2D1Factory1 *factory, const D2D1_RECT_F *rect) DECLSPEC_HIDDEN;
 +void d2d_transformed_geometry_init(struct d2d_geometry *geometry, ID2D1Factory1 *factory,
          ID2D1Geometry *src_geometry, const D2D_MATRIX_3X2_F *transform) DECLSPEC_HIDDEN;
- struct d2d_geometry *unsafe_impl_from_ID2D1Geometry(ID2D1Geometry *iface) DECLSPEC_HIDDEN;
- 
+ HRESULT d2d_geometry_group_init(struct d2d_geometry *geometry, ID2D1Factory *factory,
+         D2D1_FILL_MODE fill_mode, ID2D1Geometry **src_geometries, unsigned int geometry_count) DECLSPEC_HIDDEN;
 diff --git a/dlls/d2d1/factory.c b/dlls/d2d1/factory.c
-index 7810e95..2a1a536 100644
+index c2a0405abdd..33c2d173596 100644
 --- a/dlls/d2d1/factory.c
 +++ b/dlls/d2d1/factory.c
-@@ -140,7 +140,7 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateRectangleGeometry(ID2D1Factor
+@@ -141,7 +141,7 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateRectangleGeometry(ID2D1Factor
      if (!(object = heap_alloc_zero(sizeof(*object))))
          return E_OUTOFMEMORY;
  
@@ -52,7 +52,7 @@ index 7810e95..2a1a536 100644
      {
          WARN("Failed to initialize rectangle geometry, hr %#x.\n", hr);
          heap_free(object);
-@@ -190,7 +190,7 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateTransformedGeometry(ID2D1Fact
+@@ -207,7 +207,7 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreateTransformedGeometry(ID2D1Fact
      if (!(object = heap_alloc_zero(sizeof(*object))))
          return E_OUTOFMEMORY;
  
@@ -61,7 +61,7 @@ index 7810e95..2a1a536 100644
  
      TRACE("Created transformed geometry %p.\n", object);
      *transformed_geometry = (ID2D1TransformedGeometry *)&object->ID2D1Geometry_iface;
-@@ -207,7 +207,7 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreatePathGeometry(ID2D1Factory1 *i
+@@ -224,7 +224,7 @@ static HRESULT STDMETHODCALLTYPE d2d_factory_CreatePathGeometry(ID2D1Factory2 *i
      if (!(object = heap_alloc_zero(sizeof(*object))))
          return E_OUTOFMEMORY;
  
@@ -71,7 +71,7 @@ index 7810e95..2a1a536 100644
      TRACE("Created path geometry %p.\n", object);
      *geometry = (ID2D1PathGeometry *)&object->ID2D1Geometry_iface;
 diff --git a/dlls/d2d1/geometry.c b/dlls/d2d1/geometry.c
-index d716fb1..5bf63f6 100644
+index 250ff0c5535..7b67e247f7a 100644
 --- a/dlls/d2d1/geometry.c
 +++ b/dlls/d2d1/geometry.c
 @@ -2343,15 +2343,15 @@ static void d2d_geometry_cleanup(struct d2d_geometry *geometry)
@@ -134,7 +134,7 @@ index d716fb1..5bf63f6 100644
  }
  
  static HRESULT STDMETHODCALLTYPE d2d_rectangle_geometry_GetBounds(ID2D1RectangleGeometry *iface,
-@@ -3780,7 +3788,7 @@ static const struct ID2D1RectangleGeometryVtbl d2d_rectangle_geometry_vtbl =
+@@ -3779,7 +3787,7 @@ static const struct ID2D1RectangleGeometryVtbl d2d_rectangle_geometry_vtbl =
      d2d_rectangle_geometry_GetRect,
  };
  
@@ -143,7 +143,7 @@ index d716fb1..5bf63f6 100644
  {
      struct d2d_face *f;
      D2D1_POINT_2F *v;
-@@ -3901,10 +3909,14 @@ static void STDMETHODCALLTYPE d2d_transformed_geometry_GetFactory(ID2D1Transform
+@@ -3900,10 +3908,14 @@ static void STDMETHODCALLTYPE d2d_transformed_geometry_GetFactory(ID2D1Transform
          ID2D1Factory **factory)
  {
      struct d2d_geometry *geometry = impl_from_ID2D1TransformedGeometry(iface);
@@ -159,7 +159,7 @@ index d716fb1..5bf63f6 100644
  }
  
  static HRESULT STDMETHODCALLTYPE d2d_transformed_geometry_GetBounds(ID2D1TransformedGeometry *iface,
-@@ -4098,7 +4110,7 @@ static const struct ID2D1TransformedGeometryVtbl d2d_transformed_geometry_vtbl =
+@@ -4096,7 +4108,7 @@ static const struct ID2D1TransformedGeometryVtbl d2d_transformed_geometry_vtbl =
      d2d_transformed_geometry_GetTransform,
  };
  
@@ -169,5 +169,5 @@ index d716fb1..5bf63f6 100644
  {
      struct d2d_geometry *src_impl;
 -- 
-2.7.4
+2.20.1
 

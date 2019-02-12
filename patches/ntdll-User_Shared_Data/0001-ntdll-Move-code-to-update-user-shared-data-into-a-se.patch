@@ -1,4 +1,4 @@
-From 49c61feeae4cc2c5a0a4c6a6e0aa8bd5b6ef3f46 Mon Sep 17 00:00:00 2001
+From 33502f50d05cbb558a0589af8c08125ed7a988dc Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 26 Nov 2014 10:46:09 +0100
 Subject: [PATCH] ntdll: Move code to update user shared data into a separate
@@ -6,14 +6,14 @@ Subject: [PATCH] ntdll: Move code to update user shared data into a separate
 
 ---
  dlls/ntdll/ntdll.spec |  3 +++
- dlls/ntdll/thread.c   | 32 ++++++++++++++++++++++----------
- 2 files changed, 25 insertions(+), 10 deletions(-)
+ dlls/ntdll/thread.c   | 24 ++++++++++++++++++------
+ 2 files changed, 21 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 5e7c463..a339562 100644
+index 008abb744a0..87a6c70081b 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1509,3 +1509,6 @@
+@@ -1526,3 +1526,6 @@
  # Filesystem
  @ cdecl wine_nt_to_unix_file_name(ptr ptr long long)
  @ cdecl wine_unix_to_nt_file_name(ptr ptr)
@@ -21,13 +21,30 @@ index 5e7c463..a339562 100644
 +# User shared data
 +@ cdecl __wine_user_shared_data()
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index f1fff59..45bfb14 100644
+index 6718f38c7e1..974519cca48 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -350,6 +350,26 @@ static ULONG_PTR get_image_addr(void)
- }
- #endif
+@@ -248,7 +248,6 @@ void thread_init(void)
+     void *addr;
+     BOOL suspend;
+     SIZE_T size, info_size;
+-    LARGE_INTEGER now;
+     NTSTATUS status;
+     struct ntdll_thread_data *thread_data;
+     static struct debug_info debug_info;  /* debug info for initial thread */
+@@ -361,7 +360,23 @@ void thread_init(void)
+             wine_server_fd_to_handle( 2, GENERIC_WRITE|SYNCHRONIZE, OBJ_INHERIT, &params.hStdError );
+     }
  
+-    /* initialize time values in user_shared_data */
++	/* initialize user_shared_data */
++    __wine_user_shared_data();
++    fill_cpu_info();
++
++    NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
++}
++
++
 +
 +/**************************************************************************
 + *  __wine_user_shared_data   (NTDLL.@)
@@ -37,46 +54,21 @@ index f1fff59..45bfb14 100644
 +BYTE* CDECL __wine_user_shared_data(void)
 +{
 +    LARGE_INTEGER now;
-+    NtQuerySystemTime( &now );
-+    user_shared_data->SystemTime.LowPart = now.u.LowPart;
-+    user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
-+    user_shared_data->u.TickCountQuad = (now.QuadPart - server_start_time) / 10000;
-+    user_shared_data->u.TickCount.High2Time = user_shared_data->u.TickCount.High1Time;
-+    user_shared_data->TickCountLowDeprecated = user_shared_data->u.TickCount.LowPart;
-+    user_shared_data->TickCountMultiplier = 1 << 24;
-+    return (BYTE *)user_shared_data;
-+}
-+
-+
- /***********************************************************************
-  *           thread_init
-  *
-@@ -363,7 +383,6 @@ void thread_init(void)
-     void *addr;
-     BOOL suspend;
-     SIZE_T size, info_size;
--    LARGE_INTEGER now;
-     NTSTATUS status;
-     struct ntdll_thread_data *thread_data;
-     static struct debug_info debug_info;  /* debug info for initial thread */
-@@ -475,15 +494,8 @@ void thread_init(void)
-             wine_server_fd_to_handle( 2, GENERIC_WRITE|SYNCHRONIZE, OBJ_INHERIT, &params.hStdError );
-     }
- 
--    /* initialize time values in user_shared_data */
--    NtQuerySystemTime( &now );
--    user_shared_data->SystemTime.LowPart = now.u.LowPart;
--    user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
--    user_shared_data->u.TickCountQuad = (now.QuadPart - server_start_time) / 10000;
--    user_shared_data->u.TickCount.High2Time = user_shared_data->u.TickCount.High1Time;
--    user_shared_data->TickCountLowDeprecated = user_shared_data->u.TickCount.LowPart;
--    user_shared_data->TickCountMultiplier = 1 << 24;
+     NtQuerySystemTime( &now );
+     user_shared_data->SystemTime.LowPart = now.u.LowPart;
+     user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
+@@ -369,10 +384,7 @@ void thread_init(void)
+     user_shared_data->u.TickCount.High2Time = user_shared_data->u.TickCount.High1Time;
+     user_shared_data->TickCountLowDeprecated = user_shared_data->u.TickCount.LowPart;
+     user_shared_data->TickCountMultiplier = 1 << 24;
 -
-+    /* initialize user_shared_data */
-+    __wine_user_shared_data();
-     fill_cpu_info();
+-    fill_cpu_info();
+-
+-    NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
++    return (BYTE *)user_shared_data;
+ }
  
-     NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
+ 
 -- 
-2.7.4
+2.20.1
 

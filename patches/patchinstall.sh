@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9781b5433cd4b708c0f537aa0b5608ff4157f04c"
+	echo "7907ccfdcb39b30dc49c96c411332534525b6ea9"
 }
 
 # Show version information
@@ -96,8 +96,6 @@ patch_enable_all ()
 	enable_atl_AtlAxDialogBox="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
-	enable_bcrypt_BCryptDeriveKeyPBKDF2="$1"
-	enable_bcrypt_BCryptGenerateKeyPair="$1"
 	enable_bcrypt_BCryptSecretAgreement="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
@@ -176,7 +174,6 @@ patch_enable_all ()
 	enable_libs_Unicode_Collation="$1"
 	enable_mciavi32_fullscreen_support="$1"
 	enable_mf_MFCreateSequencerSource="$1"
-	enable_mfplat_MFGetSystemTime="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -444,12 +441,6 @@ patch_enable ()
 		avifile.dll16-AVIStreamGetFrame)
 			enable_avifile_dll16_AVIStreamGetFrame="$2"
 			;;
-		bcrypt-BCryptDeriveKeyPBKDF2)
-			enable_bcrypt_BCryptDeriveKeyPBKDF2="$2"
-			;;
-		bcrypt-BCryptGenerateKeyPair)
-			enable_bcrypt_BCryptGenerateKeyPair="$2"
-			;;
 		bcrypt-BCryptSecretAgreement)
 			enable_bcrypt_BCryptSecretAgreement="$2"
 			;;
@@ -683,9 +674,6 @@ patch_enable ()
 			;;
 		mf-MFCreateSequencerSource)
 			enable_mf_MFCreateSequencerSource="$2"
-			;;
-		mfplat-MFGetSystemTime)
-			enable_mfplat_MFGetSystemTime="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -2111,13 +2099,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
-if test "$enable_bcrypt_BCryptSecretAgreement" -eq 1; then
-	if test "$enable_bcrypt_BCryptGenerateKeyPair" -gt 1; then
-		abort "Patchset bcrypt-BCryptGenerateKeyPair disabled, but bcrypt-BCryptSecretAgreement depends on that."
-	fi
-	enable_bcrypt_BCryptGenerateKeyPair=1
-fi
-
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_Staging" -gt 1; then
 		abort "Patchset Staging disabled, but advapi32-Token_Integrity_Level depends on that."
@@ -2462,42 +2443,7 @@ if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset bcrypt-BCryptDeriveKeyPBKDF2
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42704] Implement BCryptDeriveKeyPBKDF2
-# |
-# | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec,
-# | 	include/bcrypt.h
-# |
-if test "$enable_bcrypt_BCryptDeriveKeyPBKDF2" -eq 1; then
-	patch_apply bcrypt-BCryptDeriveKeyPBKDF2/0001-bcrypt-Implement-BCryptDeriveKeyPBKDF2-and-add-test-.patch
-	(
-		printf '%s\n' '+    { "Jack Grigg", "bcrypt: Implement BCryptDeriveKeyPBKDF2 and add test vectors.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset bcrypt-BCryptGenerateKeyPair
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45312] Fix issue for Assassin's Creed : Syndicate
-# |
-# | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/gnutls.c,
-# | 	dlls/bcrypt/macos.c, dlls/bcrypt/tests/bcrypt.c, dlls/ncrypt/ncrypt.spec, include/bcrypt.h
-# |
-if test "$enable_bcrypt_BCryptGenerateKeyPair" -eq 1; then
-	patch_apply bcrypt-BCryptGenerateKeyPair/0001-bcrypt-Implement-BCryptGenerate-FinalizeKeyPair-for-.patch
-	(
-		printf '%s\n' '+    { "Hans Leidekker", "bcrypt: Implement BCryptGenerate/FinalizeKeyPair for ECDH P256.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset bcrypt-BCryptSecretAgreement
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	bcrypt-BCryptGenerateKeyPair
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46564] Add BCryptDestroySecret/BCryptSecretAgreement stubs.
@@ -4061,21 +4007,6 @@ if test "$enable_mf_MFCreateSequencerSource" -eq 1; then
 	patch_apply mf-MFCreateSequencerSource/0001-mf-Implement-MFCreateSequencerSource.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mf: Implement MFCreateSequencerSource.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-MFGetSystemTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46300] mfplat: Implement MFGetSystemTime
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec, include/mfidl.idl
-# |
-if test "$enable_mfplat_MFGetSystemTime" -eq 1; then
-	patch_apply mfplat-MFGetSystemTime/0001-mfplat-Implement-MFGetSystemTime.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mfplat: Implement MFGetSystemTime.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7159,16 +7090,12 @@ fi
 # |   *	[#4836] Various improvements for wineps.drv for Adobe PageMaker compatibility
 # |
 # | Modified files:
-# |   *	dlls/gdi32/tests/dc.c, dlls/wineps.drv/download.c, dlls/wineps.drv/escape.c, dlls/wineps.drv/psdrv.h
+# |   *	dlls/wineps.drv/download.c, dlls/wineps.drv/escape.c, dlls/wineps.drv/psdrv.h
 # |
 if test "$enable_wineps_drv_PostScript_Fixes" -eq 1; then
-	patch_apply wineps.drv-PostScript_Fixes/0003-wineps.drv-Add-stubs-for-escapes-required-by-Adobe-P.patch
 	patch_apply wineps.drv-PostScript_Fixes/0004-wineps.drv-Add-support-for-GETFACENAME-and-DOWNLOADF.patch
-	patch_apply wineps.drv-PostScript_Fixes/0005-wineps.drv-PostScript-header-should-be-written-by-St.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: Add stubs for escapes required by Adobe PageMaker.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: Add support for GETFACENAME and DOWNLOADFACE escapes.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "wineps.drv: PostScript header should be written by StartDoc instead of StartPage.", 1 },';
 	) >> "$patchlist"
 fi
 

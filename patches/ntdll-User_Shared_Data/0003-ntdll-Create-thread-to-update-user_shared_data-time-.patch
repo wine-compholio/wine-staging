@@ -1,18 +1,18 @@
-From 986dd43219c45f75fe172cd2a17197fc373641f2 Mon Sep 17 00:00:00 2001
+From 3e5ae0f2aec2dfb5d6fd1da07021a6772e8a2135 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
  when necessary.
 
 ---
- dlls/ntdll/loader.c     | 31 ++++++++++++++++++
- dlls/ntdll/ntdll_misc.h |  3 ++
- dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++-----
- dlls/ntdll/virtual.c    | 17 ++++++++++
+ dlls/ntdll/loader.c     | 31 ++++++++++++++++++++++
+ dlls/ntdll/ntdll_misc.h |  3 +++
+ dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++-----
+ dlls/ntdll/virtual.c    | 17 ++++++++++++
  4 files changed, 114 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 1e609a08610..70976855e12 100644
+index 71d2659..64aea23 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3493,6 +3493,36 @@ static void load_global_options(void)
@@ -52,19 +52,19 @@ index 1e609a08610..70976855e12 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -3522,6 +3552,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
-     if (!peb->ProcessParameters->WindowTitle.Buffer)
-         peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
+@@ -3520,6 +3550,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     peb->LoaderLock = &loader_section;
+     update_user_process_params( &wm->ldr.FullDllName );
      version_init( wm->ldr.FullDllName.Buffer );
 +    user_shared_data_init();
      hidden_exports_init( wm->ldr.FullDllName.Buffer );
      virtual_set_large_address_space();
  
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index ec2e74a891b..1e2f2fdeb6e 100644
+index dd4c8bc..2bf1453 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -194,6 +194,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+@@ -195,6 +195,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_fill_image_information( const pe_image_info_t *pe_info,
                                              SECTION_IMAGE_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -75,7 +75,7 @@ index ec2e74a891b..1e2f2fdeb6e 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 974519cca48..63778f6b840 100644
+index 0a11cfe..1c09344 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -44,6 +44,7 @@
@@ -97,7 +97,7 @@ index 974519cca48..63778f6b840 100644
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
-@@ -265,7 +268,7 @@ void thread_init(void)
+@@ -263,7 +266,7 @@ void thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -106,7 +106,7 @@ index 974519cca48..63778f6b840 100644
      memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
  
      /* allocate and initialize the PEB */
-@@ -376,18 +379,71 @@ void thread_init(void)
+@@ -355,18 +358,71 @@ void thread_init(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
@@ -184,7 +184,7 @@ index 974519cca48..63778f6b840 100644
   *           free_thread_data
   */
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index da40aabb6c7..de63460e741 100644
+index da40aab..de63460 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -2013,6 +2013,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
@@ -220,5 +220,5 @@ index da40aabb6c7..de63460e741 100644
  }
  
 -- 
-2.20.1
+1.9.1
 

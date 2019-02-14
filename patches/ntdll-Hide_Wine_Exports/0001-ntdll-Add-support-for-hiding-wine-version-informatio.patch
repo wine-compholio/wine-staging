@@ -1,4 +1,4 @@
-From c2794d82d31322d361e3545e54789fee28119d40 Mon Sep 17 00:00:00 2001
+From 6dce8cc12b18115a486509cc730e6993b9ce56a0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 30 May 2015 02:23:15 +0200
 Subject: [PATCH] ntdll: Add support for hiding wine version information from
@@ -10,7 +10,7 @@ Subject: [PATCH] ntdll: Add support for hiding wine version information from
  2 files changed, 100 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 58c02c9..04bae4b 100644
+index cda55e1..71d2659 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -68,9 +68,12 @@ typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
@@ -26,7 +26,7 @@ index 58c02c9..04bae4b 100644
  
  struct ldr_notification
  {
-@@ -1598,6 +1601,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+@@ -1602,6 +1605,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
  }
  
  
@@ -123,7 +123,7 @@ index 58c02c9..04bae4b 100644
  /******************************************************************
   *		LdrGetProcedureAddress  (NTDLL.@)
   */
-@@ -1618,7 +1711,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+@@ -1622,7 +1715,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
          LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
          void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
                            : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
@@ -132,19 +132,19 @@ index 58c02c9..04bae4b 100644
          {
              *address = proc;
              ret = STATUS_SUCCESS;
-@@ -3374,6 +3467,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
-     if (!peb->ProcessParameters->WindowTitle.Buffer)
-         peb->ProcessParameters->WindowTitle = wm->ldr.FullDllName;
+@@ -3427,6 +3520,7 @@ void WINAPI LdrInitializeThunk( void *kernel_start, ULONG_PTR unknown2,
+     peb->LoaderLock = &loader_section;
+     update_user_process_params( &wm->ldr.FullDllName );
      version_init( wm->ldr.FullDllName.Buffer );
 +    hidden_exports_init( wm->ldr.FullDllName.Buffer );
      virtual_set_large_address_space();
  
      LdrQueryImageFileExecutionOptions( &peb->ProcessParameters->ImagePathName, globalflagW,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index d0fc81b..c09f25c 100644
+index e1b2482..dd4c8bc 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -254,6 +254,11 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
+@@ -259,6 +259,11 @@ extern HANDLE keyed_event DECLSPEC_HIDDEN;
  
  NTSTATUS WINAPI RtlHashUnicodeString(PCUNICODE_STRING,BOOLEAN,ULONG,ULONG*);
  

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7907ccfdcb39b30dc49c96c411332534525b6ea9"
+	echo "3fc1180623b9a0c9fc9e16abf358b179f2eff49b"
 }
 
 # Show version information
@@ -202,7 +202,6 @@ patch_enable_all ()
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
-	enable_ntdll_LdrInitializeThunk="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
@@ -758,9 +757,6 @@ patch_enable ()
 			;;
 		ntdll-LDR_MODULE)
 			enable_ntdll_LDR_MODULE="$2"
-			;;
-		ntdll-LdrInitializeThunk)
-			enable_ntdll_LdrInitializeThunk="$2"
 			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
@@ -1938,13 +1934,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 fi
 
-if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
-	if test "$enable_ntdll_LdrInitializeThunk" -gt 1; then
-		abort "Patchset ntdll-LdrInitializeThunk disabled, but ntdll-RtlCreateUserThread depends on that."
-	fi
-	enable_ntdll_LdrInitializeThunk=1
-fi
-
 if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
 	if test "$enable_kernel32_K32GetPerformanceInfo" -gt 1; then
 		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
@@ -1978,13 +1967,6 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
 	fi
 	enable_ntdll_User_Shared_Data=1
-fi
-
-if test "$enable_ntdll_LdrInitializeThunk" -eq 1; then
-	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
-		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-LdrInitializeThunk depends on that."
-	fi
-	enable_advapi32_Token_Integrity_Level=1
 fi
 
 if test "$enable_ntdll_Junction_Points" -eq 1; then
@@ -4532,27 +4514,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-LdrInitializeThunk
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45570] League of Legends 8.12+ fails to start a game (anticheat engine, incorrect implementation of
-# | 	LdrInitializeThunk)
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/signal_arm.c,
-# | 	dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c,
-# | 	dlls/ntdll/thread.c, include/winternl.h
-# |
-if test "$enable_ntdll_LdrInitializeThunk" -eq 1; then
-	patch_apply ntdll-LdrInitializeThunk/0001-ntdll-Refactor-LdrInitializeThunk.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor LdrInitializeThunk.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Manifest_Range
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4786,9 +4747,6 @@ if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 fi
 
 # Patchset ntdll-RtlCreateUserThread
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level, ntdll-LdrInitializeThunk
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)

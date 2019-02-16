@@ -1,0 +1,104 @@
+From b278711b2c76680e6e26a114f74d7f7c26ff6328 Mon Sep 17 00:00:00 2001
+From: Daniel Wendt <daniel.wendt@linux.com>
+Date: Tue, 10 Dec 2013 14:55:32 +0100
+Subject: [PATCH] gdi32: fix for rotated ellipse
+
+Bug: http://bugs.winehq.org/show_bug.cgi?id=35331
+---
+ dlls/gdi32/dibdrv/graphics.c | 60 +++++++++++++++++++++++++++++++-------------
+ 1 file changed, 42 insertions(+), 18 deletions(-)
+
+diff --git a/dlls/gdi32/dibdrv/graphics.c b/dlls/gdi32/dibdrv/graphics.c
+index d269cc1..447aab5 100644
+--- a/dlls/gdi32/dibdrv/graphics.c
++++ b/dlls/gdi32/dibdrv/graphics.c
+@@ -1555,6 +1555,23 @@ BOOL dibdrv_RoundRect( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+     BOOL ret = TRUE;
+     HRGN outline = 0, interior = 0;
+ 
++    BOOL exclude_rotation_translation = FALSE;
++    XFORM old;
++    XFORM rotation_and_translation;
++
++    if (GetGraphicsMode( pdev->dev.hdc ) == GM_ADVANCED)
++    {
++        XFORM xf;
++        GetWorldTransform( pdev->dev.hdc, &old );
++        xf = old;
++        if (xform_has_rotate_and_uniform_scale_and_shear( &xf ) &&
++            xform_decompose_rotation_and_translation( &xf, &rotation_and_translation ))
++        {
++            SetWorldTransform( pdev->dev.hdc, &xf );
++            exclude_rotation_translation = TRUE;
++        }
++    }
++
+     if (!get_pen_device_rect( dc, pdev, &rect, left, top, right, bottom )) return TRUE;
+ 
+     pt[0].x = pt[0].y = 0;
+@@ -1575,23 +1592,6 @@ BOOL dibdrv_RoundRect( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+         return FALSE;
+     }
+ 
+-    if (pdev->brush.style != BS_NULL &&
+-        !(interior = CreateRoundRectRgn( rect.left, rect.top, rect.right + 1, rect.bottom + 1,
+-                                         ellipse_width, ellipse_height )))
+-    {
+-        HeapFree( GetProcessHeap(), 0, points );
+-        if (outline) DeleteObject( outline );
+-        return FALSE;
+-    }
+-
+-    /* if not using a region, paint the interior first so the outline can overlap it */
+-    if (interior && !outline)
+-    {
+-        ret = brush_region( pdev, interior );
+-        DeleteObject( interior );
+-        interior = 0;
+-    }
+-
+     count = ellipse_first_quadrant( ellipse_width, ellipse_height, points );
+ 
+     if (dc->ArcDirection == AD_CLOCKWISE)
+@@ -1635,13 +1635,37 @@ BOOL dibdrv_RoundRect( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+     }
+     count = end + 1;
+ 
++    if (exclude_rotation_translation == TRUE)
++    {
++        SetWorldTransform( pdev->dev.hdc, &rotation_and_translation );
++        /* apply rotation and translation to calculated points */
++        LPtoDP( dev->hdc, points, count );
++        /* restore origin matrix */
++        SetWorldTransform( pdev->dev.hdc, &old );
++    }
++
++    if (pdev->brush.style != BS_NULL &&
++        !(interior = CreatePolygonRgn(points, count, ALTERNATE)))
++    {
++        HeapFree( GetProcessHeap(), 0, points );
++        if (outline) DeleteObject( outline );
++            return FALSE;
++    }
++
++    /* if not using a region, paint the interior first so the outline can overlap it */
++    if (interior && !outline)
++    {
++        ret = brush_region( pdev, interior );
++        DeleteObject( interior );
++        interior = 0;
++    }
++
+     reset_dash_origin( pdev );
+     pdev->pen_lines( pdev, count, points, TRUE, outline );
+     add_pen_lines_bounds( pdev, count, points, outline );
+ 
+     if (interior)
+     {
+-        CombineRgn( interior, interior, outline, RGN_DIFF );
+         ret = brush_region( pdev, interior );
+         DeleteObject( interior );
+     }
+-- 
+1.9.1
+

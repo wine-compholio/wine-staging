@@ -3206,7 +3206,7 @@ fi
 if test "$enable_ddraw_version_check" -eq 1; then
 	patch_apply ddraw-version-check/0001-ddraw-Return-correct-devices-based-off-requested-Dir.patch
 	(
-		printf '%s\n' '+    { "David Adam", "ddraw: Return correct devices based off requested DirectX version.", 1 },';
+		printf '%s\n' '+    { "Andrew D'\''Addesio", "ddraw: Return correct devices based off requested DirectX version.", 1 },';
 	) >> "$patchlist"
 fi
 

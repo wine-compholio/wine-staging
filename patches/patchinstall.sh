@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3fc1180623b9a0c9fc9e16abf358b179f2eff49b"
+	echo "06531b1d9898ba3ac3b7c69d6192682202606f8f"
 }
 
 # Show version information
@@ -130,6 +130,7 @@ patch_enable_all ()
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Write_Vtable="$1"
+	enable_ddraw_version_check="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
 	enable_dsound_EAX="$1"
@@ -145,6 +146,7 @@ patch_enable_all ()
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
+	enable_gdi32_rotation="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_hid_HidD_FlushQueue="$1"
 	enable_httpapi_HttpCreateServerSession="$1"
@@ -542,6 +544,9 @@ patch_enable ()
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
 			;;
+		ddraw-version-check)
+			enable_ddraw_version_check="$2"
+			;;
 		dinput-Deadlock)
 			enable_dinput_Deadlock="$2"
 			;;
@@ -586,6 +591,9 @@ patch_enable ()
 			;;
 		gdi32-MultiMonitor)
 			enable_gdi32_MultiMonitor="$2"
+			;;
+		gdi32-rotation)
+			enable_gdi32_rotation="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -2053,6 +2061,13 @@ if test "$enable_dsound_EAX" -eq 1; then
 	enable_dsound_Fast_Mixer=1
 fi
 
+if test "$enable_ddraw_version_check" -eq 1; then
+	if test "$enable_ddraw_Device_Caps" -gt 1; then
+		abort "Patchset ddraw-Device_Caps disabled, but ddraw-version-check depends on that."
+	fi
+	enable_ddraw_Device_Caps=1
+fi
+
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
@@ -3177,6 +3192,24 @@ if test "$enable_ddraw_Write_Vtable" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ddraw-version-check
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ddraw-Device_Caps
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#19153] https://bugs.winehq.org/show_bug.cgi?id=19153
+# |
+# | Modified files:
+# |   *	dlls/ddraw/ddraw.c
+# |
+if test "$enable_ddraw_version_check" -eq 1; then
+	patch_apply ddraw-version-check/0001-ddraw-Return-correct-devices-based-off-requested-Dir.patch
+	(
+		printf '%s\n' '+    { "David Adam", "ddraw: Return correct devices based off requested DirectX version.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dinput-Deadlock
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3489,6 +3522,24 @@ if test "$enable_gdi32_MultiMonitor" -eq 1; then
 		printf '%s\n' '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		printf '%s\n' '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\.\\DISPLAY<n>) to each monitor.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Return a more reasonable display DeviceID.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-rotation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34579] gdi32: fix for rotated Arc, ArcTo, Chord and Pie drawing problem
+# |   *	[#35331] gdi32: fix for rotated ellipse
+# |
+# | Modified files:
+# |   *	dlls/gdi32/dibdrv/graphics.c, dlls/gdi32/gdi_private.h
+# |
+if test "$enable_gdi32_rotation" -eq 1; then
+	patch_apply gdi32-rotation/0001-gdi32-fix-for-rotated-Arc-ArcTo-Chord-and-Pie-drawin.patch
+	patch_apply gdi32-rotation/0002-gdi32-fix-for-rotated-ellipse.patch
+	(
+		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated Arc, ArcTo, Chord and Pie drawing problem.", 1 },';
+		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated ellipse.", 1 },';
 	) >> "$patchlist"
 fi
 

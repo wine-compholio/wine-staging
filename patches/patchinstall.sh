@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "06531b1d9898ba3ac3b7c69d6192682202606f8f"
+	echo "5e86cc0a8f37295072b03b1c13aa205ff3e6f3e4"
 }
 
 # Show version information
@@ -254,7 +254,6 @@ patch_enable_all ()
 	enable_qwave_QOSCreateHandle="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_server_ClipCursor="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -321,7 +320,6 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_virtdisk_OpenVirtualDisk="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
-	enable_windowscodecs_32bppPRGBA="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_JPEG_Decoder="$1"
@@ -917,9 +915,6 @@ patch_enable ()
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
 			;;
-		server-ClipCursor)
-			enable_server_ClipCursor="$2"
-			;;
 		server-Desktop_Refcount)
 			enable_server_Desktop_Refcount="$2"
 			;;
@@ -1117,9 +1112,6 @@ patch_enable ()
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
-			;;
-		windowscodecs-32bppPRGBA)
-			enable_windowscodecs_32bppPRGBA="$2"
 			;;
 		windowscodecs-GIF_Encoder)
 			enable_windowscodecs_GIF_Encoder="$2"
@@ -1803,13 +1795,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	enable_wineboot_drivers_etc_Stubs=1
 fi
 
-if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
-	if test "$enable_windowscodecs_TIFF_Support" -gt 1; then
-		abort "Patchset windowscodecs-TIFF_Support disabled, but windowscodecs-32bppPRGBA depends on that."
-	fi
-	enable_windowscodecs_TIFF_Support=1
-fi
-
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	if test "$enable_windowscodecs_GIF_Encoder" -gt 1; then
 		abort "Patchset windowscodecs-GIF_Encoder disabled, but windowscodecs-TIFF_Support depends on that."
@@ -1871,9 +1856,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
 	fi
-	if test "$enable_server_ClipCursor" -gt 1; then
-		abort "Patchset server-ClipCursor disabled, but server-Shared_Memory depends on that."
-	fi
 	if test "$enable_server_Key_State" -gt 1; then
 		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
 	fi
@@ -1884,7 +1866,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
 	fi
 	enable_ntdll_Threading=1
-	enable_server_ClipCursor=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
@@ -3590,7 +3571,7 @@ fi
 # |   *	[#46549] httpapi: Fake success from HttpCreateServerSession
 # |
 # | Modified files:
-# |   *	dlls/httpapi/httpapi_main.c
+# |   *	dlls/httpapi/httpapi_main.c, dlls/httpapi/tests/httpapi.c
 # |
 if test "$enable_httpapi_HttpCreateServerSession" -eq 1; then
 	patch_apply httpapi-HttpCreateServerSession/0001-httpapi-Fake-success-from-HttpCreateServerSession.patch
@@ -5350,21 +5331,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-ClipCursor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38791] Fix handling of cursor position clipping
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/input.c, server/queue.c
-# |
-if test "$enable_server_ClipCursor" -eq 1; then
-	patch_apply server-ClipCursor/0001-server-Fix-handling-of-cursor-position-clipping.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve handling of cursor position clipping for empty rectangle.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Desktop_Refcount
 # |
 # | Modified files:
@@ -5497,7 +5463,7 @@ fi
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage, server-Signal_Thread
+# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
@@ -5529,8 +5495,7 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Misc_ACL, ntdll-Threading, server-ClipCursor, server-Key_State, server-PeekMessage, server-Signal_Thread, server-
-# | 	Shared_Memory
+# |   *	server-Misc_ACL, ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -6412,15 +6377,10 @@ fi
 # | 	dlls/winemac.drv/window.c, dlls/winex11.drv/window.c
 # |
 if test "$enable_user32_minimized_windows" -eq 1; then
-	patch_apply user32-minimized_windows/0001-user32-tests-Add-tests-for-GetWindowPlacement-and-Se.patch
 	patch_apply user32-minimized_windows/0002-user32-SetWindowPos-shouldn-t-change-the-client-rect.patch
 	patch_apply user32-minimized_windows/0003-user32-Correctly-calculate-the-client-size-of-a-mini.patch
 	patch_apply user32-minimized_windows/0004-user32-Use-the-C-XY-MINIMIZED-rather-than-C-XY-ICON-.patch
 	patch_apply user32-minimized_windows/0005-user32-AdjustWindowRect-shouldn-t-ignore-WS_MINIMIZE.patch
-	patch_apply user32-minimized_windows/0006-user32-tests-Add-tests-for-maximizing-and-minimizing.patch
-	patch_apply user32-minimized_windows/0007-user32-tests-Add-tests-for-maximizing-and-minimizing.patch
-	patch_apply user32-minimized_windows/0008-user32-tests-Add-tests-for-maximizing-and-minimizing.patch
-	patch_apply user32-minimized_windows/0009-user32-tests-Add-tests-for-ArrangeIconicWindows.patch
 	patch_apply user32-minimized_windows/0010-user32-Reimplement-ArrangeIconicWindows-using-minimi.patch
 	patch_apply user32-minimized_windows/0011-user32-Correctly-place-minimized-windows.patch
 	patch_apply user32-minimized_windows/0012-user32-Paint-title-bars-for-minimized-windows.patch
@@ -6428,15 +6388,10 @@ if test "$enable_user32_minimized_windows" -eq 1; then
 	patch_apply user32-minimized_windows/0014-user32-Get-rid-of-icon-titles.patch
 	patch_apply user32-minimized_windows/0015-user32-Move-iconic-windows-as-their-border-instead-o.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for GetWindowPlacement() and SetWindowPlacement().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: SetWindowPos() shouldn'\''t change the client rect of a minimized window.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Correctly calculate the client size of a minimized window.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Use the C[XY]MINIMIZED rather than C[XY]ICON size for minimized windows.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: AdjustWindowRect() shouldn'\''t ignore WS_MINIMIZE.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for maximizing and minimizing owned windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for maximizing and minimizing child windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for maximizing and minimizing MDI child windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32/tests: Add tests for ArrangeIconicWindows().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Reimplement ArrangeIconicWindows() using minimized metrics.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Correctly place minimized windows.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Paint title bars for minimized windows.", 1 },';
@@ -6567,6 +6522,37 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset windowscodecs-IMILBitmapSource
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
+# |
+if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
+	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
+	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windowscodecs-JPEG_Decoder
+# |
+# | Modified files:
+# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
+# |
+if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
+	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
+	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for CMYK to BGR conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset windowscodecs-TIFF_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6610,55 +6596,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-32bppPRGBA
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	windowscodecs-GIF_Encoder, windowscodecs-TIFF_Support
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/info.c, dlls/windowscodecs/regsvr.c,
-# | 	dlls/windowscodecs/tests/converter.c
-# |
-if test "$enable_windowscodecs_32bppPRGBA" -eq 1; then
-	patch_apply windowscodecs-32bppPRGBA/0001-windowscodecs-Add-support-for-32bppRGB-32bppRGBA-and.patch
-	patch_apply windowscodecs-32bppPRGBA/0002-windowscodecs-Fix-32bppRGB-to-32bppRGBA-conversion.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppRGB, 32bppRGBA and 32bppPRGBA to format converter.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix 32bppRGB to 32bppRGBA conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-IMILBitmapSource
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
-# |
-if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
-	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
-	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-JPEG_Decoder
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
-# |
-if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
-	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
-	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for CMYK to BGR conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

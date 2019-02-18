@@ -382,6 +382,7 @@ patch_enable_all ()
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
 	enable_wmvcore_WMCheckURlExtension="$1"
+	enable_wmvcore_WMCreateSyncReader="$1"
 	enable_wmvcore_WMCreateSyncReaderPriv="$1"
 	enable_wow64cpu_Wow64Transition="$1"
 	enable_wpcap_Dynamic_Linking="$1"
@@ -1300,6 +1301,9 @@ patch_enable ()
 		wmvcore-WMCheckURlExtension)
 			enable_wmvcore_WMCheckURlExtension="$2"
 			;;
+		wmvcore-WMCreateSyncReader)
+			enable_wmvcore_WMCreateSyncReader="$2"
+			;;
 		wmvcore-WMCreateSyncReaderPriv)
 			enable_wmvcore_WMCreateSyncReaderPriv="$2"
 			;;
@@ -1718,7 +1722,11 @@ if test "$enable_wmvcore_WMCreateSyncReaderPriv" -eq 1; then
 	if test "$enable_wmvcore_WMCheckURlExtension" -gt 1; then
 		abort "Patchset wmvcore-WMCheckURlExtension disabled, but wmvcore-WMCreateSyncReaderPriv depends on that."
 	fi
+	if test "$enable_wmvcore_WMCreateSyncReader" -gt 1; then
+		abort "Patchset wmvcore-WMCreateSyncReader disabled, but wmvcore-WMCreateSyncReaderPriv depends on that."
+	fi
 	enable_wmvcore_WMCheckURlExtension=1
+	enable_wmvcore_WMCreateSyncReader=1
 fi
 
 if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
@@ -7522,10 +7530,25 @@ if test "$enable_wmvcore_WMCheckURlExtension" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wmvcore-WMCreateSyncReader
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35841] wmvcore: Implement WMCreateSyncReader
+# |
+# | Modified files:
+# |   *	dlls/wmvcore/wmvcore_main.c
+# |
+if test "$enable_wmvcore_WMCreateSyncReader" -eq 1; then
+	patch_apply wmvcore-WMCreateSyncReader/0001-wmvcore-Implement-WMCreateSyncReader.patch
+	(
+		printf '%s\n' '+    { "Andrey Gusev", "wmvcore: Implement WMCreateSyncReader.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wmvcore-WMCreateSyncReaderPriv
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wmvcore-WMCheckURlExtension
+# |   *	wmvcore-WMCheckURlExtension, wmvcore-WMCreateSyncReader
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37327] wmvcore: Implement WMCreateSyncReaderPriv

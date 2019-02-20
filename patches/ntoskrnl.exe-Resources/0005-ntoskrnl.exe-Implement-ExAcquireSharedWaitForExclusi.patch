@@ -1,0 +1,108 @@
+From 3503f4db49ee2c4602fc1af38c97f456a1dea76a Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Tue, 29 Jan 2019 21:40:19 -0600
+Subject: [PATCH 05/13] ntoskrnl.exe: Implement
+ ExAcquireSharedWaitForExclusive().
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
+ dlls/ntoskrnl.exe/sync.c            | 59 +++++++++++++++++++++++++++++
+ include/ddk/wdm.h                   |  1 +
+ 3 files changed, 61 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+index 4609c86d..c32f4590 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
++++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+@@ -123,7 +123,7 @@
+ @ stdcall ExAcquireResourceExclusiveLite(ptr long)
+ @ stdcall ExAcquireResourceSharedLite(ptr long)
+ @ stdcall ExAcquireSharedStarveExclusive(ptr long)
+-@ stub ExAcquireSharedWaitForExclusive
++@ stdcall ExAcquireSharedWaitForExclusive(ptr long)
+ @ stub ExAllocateFromPagedLookasideList
+ @ stdcall ExAllocatePool(long long)
+ @ stdcall ExAllocatePoolWithQuota(long long)
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index 3033c8a2..2fd7f903 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -886,3 +886,62 @@ BOOLEAN WINAPI ExAcquireSharedStarveExclusive( ERESOURCE *resource, BOOLEAN wait
+ 
+     return TRUE;
+ }
++
++/***********************************************************************
++ *           ExAcquireSharedWaitForExclusive  (NTOSKRNL.EXE.@)
++ */
++BOOLEAN WINAPI ExAcquireSharedWaitForExclusive( ERESOURCE *resource, BOOLEAN wait )
++{
++    OWNER_ENTRY *entry;
++    KIRQL irql;
++
++    TRACE("resource %p, wait %u.\n", resource, wait);
++
++    KeAcquireSpinLock( &resource->SpinLock, &irql );
++
++    entry = resource_get_shared_entry( resource, (ERESOURCE_THREAD)KeGetCurrentThread() );
++
++    if (resource->Flag & ResourceOwnedExclusive)
++    {
++        if (resource->OwnerEntry.OwnerThread == (ERESOURCE_THREAD)KeGetCurrentThread())
++        {
++            resource->ActiveEntries++;
++            KeReleaseSpinLock( &resource->SpinLock, irql );
++            return TRUE;
++        }
++    }
++    else if (!resource->NumberOfExclusiveWaiters)
++    {
++        entry->OwnerCount++;
++        resource->ActiveEntries++;
++        KeReleaseSpinLock( &resource->SpinLock, irql );
++        return TRUE;
++    }
++
++    if (!wait)
++    {
++        KeReleaseSpinLock( &resource->SpinLock, irql );
++        return FALSE;
++    }
++
++    if (!resource->SharedWaiters)
++    {
++        resource->SharedWaiters = heap_alloc( sizeof(*resource->SharedWaiters) );
++        KeInitializeSemaphore( resource->SharedWaiters, 0, INT_MAX );
++    }
++    resource->NumberOfSharedWaiters++;
++
++    KeReleaseSpinLock( &resource->SpinLock, irql );
++
++    KeWaitForSingleObject( resource->SharedWaiters, Executive, KernelMode, FALSE, NULL );
++
++    KeAcquireSpinLock( &resource->SpinLock, &irql );
++
++    entry->OwnerCount++;
++    resource->ActiveEntries++;
++    resource->NumberOfSharedWaiters--;
++
++    KeReleaseSpinLock( &resource->SpinLock, irql );
++
++    return TRUE;
++}
+diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
+index a65974da..010c1ee4 100644
+--- a/include/ddk/wdm.h
++++ b/include/ddk/wdm.h
+@@ -1515,6 +1515,7 @@ void      WINAPI ExAcquireFastMutexUnsafe(PFAST_MUTEX);
+ BOOLEAN   WINAPI ExAcquireResourceExclusiveLite(ERESOURCE*,BOOLEAN);
+ BOOLEAN   WINAPI ExAcquireResourceSharedLite(ERESOURCE*,BOOLEAN);
+ BOOLEAN   WINAPI ExAcquireSharedStarveExclusive(ERESOURCE*,BOOLEAN);
++BOOLEAN   WINAPI ExAcquireSharedWaitForExclusive(ERESOURCE*,BOOLEAN);
+ PVOID     WINAPI ExAllocatePool(POOL_TYPE,SIZE_T);
+ PVOID     WINAPI ExAllocatePoolWithQuota(POOL_TYPE,SIZE_T);
+ PVOID     WINAPI ExAllocatePoolWithTag(POOL_TYPE,SIZE_T,ULONG);
+-- 
+2.20.1
+

@@ -1,0 +1,116 @@
+From 25b736d558aba82da91d004b8976471df6ef0a64 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Tue, 29 Jan 2019 21:41:46 -0600
+Subject: [PATCH 06/13] ntoskrnl.exe: Implement
+ ExReleaseResourceForThreadLite().
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.c |  8 -----
+ dlls/ntoskrnl.exe/sync.c     | 61 ++++++++++++++++++++++++++++++++++++
+ include/ddk/wdm.h            |  1 +
+ 3 files changed, 62 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
+index d6c35d1c..5ab4db12 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/ntoskrnl.c
+@@ -3047,14 +3047,6 @@ NTSTATUS WINAPI ExDeleteResourceLite(PERESOURCE resource)
+     return STATUS_NOT_IMPLEMENTED;
+ }
+ 
+-/***********************************************************************
+- *           ExReleaseResourceForThreadLite   (NTOSKRNL.EXE.@)
+- */
+-void WINAPI ExReleaseResourceForThreadLite( PERESOURCE resource, ERESOURCE_THREAD tid )
+-{
+-    FIXME( "stub: %p %lu\n", resource, tid );
+-}
+-
+ /***********************************************************************
+  *           KeEnterCriticalRegion  (NTOSKRNL.EXE.@)
+  */
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index 2fd7f903..450e4417 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -945,3 +945,64 @@ BOOLEAN WINAPI ExAcquireSharedWaitForExclusive( ERESOURCE *resource, BOOLEAN wai
+ 
+     return TRUE;
+ }
++
++/***********************************************************************
++ *           ExReleaseResourceForThreadLite   (NTOSKRNL.EXE.@)
++ */
++void WINAPI ExReleaseResourceForThreadLite( ERESOURCE *resource, ERESOURCE_THREAD thread )
++{
++    OWNER_ENTRY *entry;
++    KIRQL irql;
++
++    TRACE("resource %p, thread %#lx.\n", resource, thread);
++
++    KeAcquireSpinLock( &resource->SpinLock, &irql );
++
++    if (resource->Flag & ResourceOwnedExclusive)
++    {
++        if (resource->OwnerEntry.OwnerThread == thread)
++        {
++            if (!--resource->ActiveEntries)
++            {
++                resource->OwnerEntry.OwnerThread = 0;
++                resource->Flag &= ~ResourceOwnedExclusive;
++            }
++        }
++        else
++        {
++            ERR("Attempt to release %p for thread %#lx, but resource is exclusively owned by %#lx.\n",
++                    resource, thread, resource->OwnerEntry.OwnerThread);
++            return;
++        }
++    }
++    else
++    {
++        entry = resource_get_shared_entry( resource, thread );
++        if (entry->OwnerCount)
++        {
++            entry->OwnerCount--;
++            resource->ActiveEntries--;
++        }
++        else
++        {
++            ERR("Attempt to release %p for thread %#lx, but resource is not owned by that thread.\n",
++                    resource, thread);
++            return;
++        }
++    }
++
++    if (!resource->ActiveEntries)
++    {
++        if (resource->NumberOfExclusiveWaiters)
++        {
++            KeSetEvent( resource->ExclusiveWaiters, IO_NO_INCREMENT, FALSE );
++        }
++        else if (resource->NumberOfSharedWaiters)
++        {
++            KeReleaseSemaphore( resource->SharedWaiters, IO_NO_INCREMENT,
++                    resource->NumberOfSharedWaiters, FALSE );
++        }
++    }
++
++    KeReleaseSpinLock( &resource->SpinLock, irql );
++}
+diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
+index 010c1ee4..e95458bf 100644
+--- a/include/ddk/wdm.h
++++ b/include/ddk/wdm.h
+@@ -1529,6 +1529,7 @@ PSLIST_ENTRY WINAPI ExInterlockedPopEntrySList(PSLIST_HEADER,PKSPIN_LOCK);
+ PSLIST_ENTRY WINAPI ExInterlockedPushEntrySList(PSLIST_HEADER,PSLIST_ENTRY,PKSPIN_LOCK);
+ LIST_ENTRY * WINAPI ExInterlockedRemoveHeadList(LIST_ENTRY*,KSPIN_LOCK*);
+ void      WINAPI ExReleaseFastMutexUnsafe(PFAST_MUTEX);
++void      WINAPI ExReleaseResourceForThreadLite(ERESOURCE*,ERESOURCE_THREAD);
+ 
+ void      WINAPI IoAcquireCancelSpinLock(KIRQL*);
+ NTSTATUS  WINAPI IoAllocateDriverObjectExtension(PDRIVER_OBJECT,PVOID,ULONG,PVOID*);
+-- 
+2.20.1
+

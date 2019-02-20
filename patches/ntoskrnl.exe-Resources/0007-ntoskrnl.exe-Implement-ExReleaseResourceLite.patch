@@ -1,0 +1,68 @@
+From d211d0b1843d4bea1502be6b3bd236ab893b19c2 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Tue, 29 Jan 2019 21:44:23 -0600
+Subject: [PATCH 07/13] ntoskrnl.exe: Implement ExReleaseResourceLite().
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.c        |  8 --------
+ dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
+ dlls/ntoskrnl.exe/sync.c            | 13 +++++++++++++
+ 3 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.c b/dlls/ntoskrnl.exe/ntoskrnl.c
+index 5ab4db12..556b2ae8 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/ntoskrnl.c
+@@ -3912,14 +3912,6 @@ NTSTATUS WINAPI DbgQueryDebugFilterState(ULONG component, ULONG level)
+     return STATUS_NOT_IMPLEMENTED;
+ }
+ 
+-/*********************************************************************
+- *           ExReleaseResourceLite    (NTOSKRNL.@)
+- */
+-void WINAPI ExReleaseResourceLite(PERESOURCE resource)
+-{
+-    FIXME("stub: %p\n", resource);
+-}
+-
+ /*********************************************************************
+  *           PsGetProcessWow64Process    (NTOSKRNL.@)
+  */
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+index c32f4590..79db7ee8 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
++++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+@@ -9,7 +9,7 @@
+ @ stdcall -arch=i386 -norelay ExInterlockedPushEntrySList (ptr ptr ptr) NTOSKRNL_ExInterlockedPushEntrySList
+ @ stub ExReInitializeRundownProtection
+ @ stdcall -norelay ExReleaseFastMutexUnsafe(ptr)
+-@ stdcall ExReleaseResourceLite(ptr)
++@ stdcall -norelay ExReleaseResourceLite(ptr)
+ @ stub ExReleaseRundownProtection
+ @ stub ExReleaseRundownProtectionEx
+ @ stub ExRundownCompleted
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index 450e4417..0553db7f 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -1006,3 +1006,16 @@ void WINAPI ExReleaseResourceForThreadLite( ERESOURCE *resource, ERESOURCE_THREA
+ 
+     KeReleaseSpinLock( &resource->SpinLock, irql );
+ }
++
++/***********************************************************************
++ *           ExReleaseResourceLite  (NTOSKRNL.EXE.@)
++ */
++#ifdef DEFINE_FASTCALL1_ENTRYPOINT
++DEFINE_FASTCALL1_ENTRYPOINT( ExReleaseResourceLite )
++void WINAPI DECLSPEC_HIDDEN __regs_ExReleaseResourceLite( ERESOURCE *resource )
++#else
++void WINAPI ExReleaseResourceLite( ERESOURCE *resource )
++#endif
++{
++    ExReleaseResourceForThreadLite( resource, (ERESOURCE_THREAD)KeGetCurrentThread() );
++}
+-- 
+2.20.1
+

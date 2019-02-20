@@ -1,0 +1,67 @@
+From c497239999dfae6e989f27118c5289e2d0bf5c0d Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Tue, 29 Jan 2019 21:49:26 -0600
+Subject: [PATCH 10/13] ntoskrnl.exe: Implement ExGetSharedWaiterCount().
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntoskrnl.exe/ntoskrnl.exe.spec |  2 +-
+ dlls/ntoskrnl.exe/sync.c            | 19 +++++++++++++++++++
+ include/ddk/wdm.h                   |  1 +
+ 3 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+index 3d6ed649..45553e06 100644
+--- a/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
++++ b/dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+@@ -148,7 +148,7 @@
+ @ stub ExGetCurrentProcessorCpuUsage
+ @ stdcall ExGetExclusiveWaiterCount(ptr)
+ @ stub ExGetPreviousMode
+-@ stub ExGetSharedWaiterCount
++@ stdcall ExGetSharedWaiterCount(ptr)
+ @ stdcall ExInitializeNPagedLookasideList(ptr ptr ptr long long long long)
+ @ stdcall ExInitializePagedLookasideList(ptr ptr ptr long long long long)
+ @ stdcall ExInitializeResourceLite(ptr)
+diff --git a/dlls/ntoskrnl.exe/sync.c b/dlls/ntoskrnl.exe/sync.c
+index d024ee9f..ad68e7ea 100644
+--- a/dlls/ntoskrnl.exe/sync.c
++++ b/dlls/ntoskrnl.exe/sync.c
+@@ -1050,3 +1050,22 @@ ULONG WINAPI ExGetExclusiveWaiterCount( ERESOURCE *resource )
+ 
+     return count;
+ }
++
++/***********************************************************************
++ *           ExGetSharedWaiterCount   (NTOSKRNL.EXE.@)
++ */
++ULONG WINAPI ExGetSharedWaiterCount( ERESOURCE *resource )
++{
++    ULONG count;
++    KIRQL irql;
++
++    TRACE("resource %p.\n", resource);
++
++    KeAcquireSpinLock( &resource->SpinLock, &irql );
++
++    count = resource->NumberOfSharedWaiters;
++
++    KeReleaseSpinLock( &resource->SpinLock, irql );
++
++    return count;
++}
+diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
+index f7ced72a..7a4be723 100644
+--- a/include/ddk/wdm.h
++++ b/include/ddk/wdm.h
+@@ -1525,6 +1525,7 @@ NTSTATUS  WINAPI ExDeleteResourceLite(ERESOURCE*);
+ void      WINAPI ExFreePool(PVOID);
+ void      WINAPI ExFreePoolWithTag(PVOID,ULONG);
+ ULONG     WINAPI ExGetExclusiveWaiterCount(ERESOURCE*);
++ULONG     WINAPI ExGetSharedWaiterCount(ERESOURCE*);
+ void      WINAPI ExInitializeNPagedLookasideList(PNPAGED_LOOKASIDE_LIST,PALLOCATE_FUNCTION,PFREE_FUNCTION,ULONG,SIZE_T,ULONG,USHORT);
+ NTSTATUS  WINAPI ExInitializeResourceLite(ERESOURCE*);
+ PSLIST_ENTRY WINAPI ExInterlockedPopEntrySList(PSLIST_HEADER,PKSPIN_LOCK);
+-- 
+2.20.1
+

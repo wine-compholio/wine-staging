@@ -236,6 +236,7 @@ patch_enable_all ()
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_Fix_Relocation="$1"
+	enable_ntoskrnl_exe_Resources="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -860,6 +861,9 @@ patch_enable ()
 			;;
 		ntoskrnl.exe-Fix_Relocation)
 			enable_ntoskrnl_exe_Fix_Relocation="$2"
+			;;
+		ntoskrnl.exe-Resources)
+			enable_ntoskrnl_exe_Resources="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -1742,8 +1746,12 @@ if test "$enable_winedevice_Default_Drivers" -eq 1; then
 	if test "$enable_ntoskrnl_Stubs" -gt 1; then
 		abort "Patchset ntoskrnl-Stubs disabled, but winedevice-Default_Drivers depends on that."
 	fi
+	if test "$enable_ntoskrnl_exe_Resources" -gt 1; then
+		abort "Patchset ntoskrnl.exe-Resources disabled, but winedevice-Default_Drivers depends on that."
+	fi
 	enable_dxva2_Video_Decoder=1
 	enable_ntoskrnl_Stubs=1
+	enable_ntoskrnl_exe_Resources=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
@@ -5056,6 +5064,47 @@ if test "$enable_ntoskrnl_exe_Fix_Relocation" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntoskrnl.exe-Resources
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45819] Symantec Eraser Control Driver 'eeCtrl64.sys' (Norton 360) fails in driver entry point due to
+# | 	'ntoskrnl.exe.ExInitializeResourceLite' stub (needs STATUS_SUCCESS)
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/sync.c,
+# | 	dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
+# |
+if test "$enable_ntoskrnl_exe_Resources" -eq 1; then
+	patch_apply ntoskrnl.exe-Resources/0001-ntoskrnl.exe-Implement-ExInitializeResourceLite.patch
+	patch_apply ntoskrnl.exe-Resources/0002-ntoskrnl.exe-Implement-ExAcquireResourceExclusiveLit.patch
+	patch_apply ntoskrnl.exe-Resources/0003-ntoskrnl.exe-Implement-ExAcquireResourceSharedLite.patch
+	patch_apply ntoskrnl.exe-Resources/0004-ntoskrnl.exe-Implement-ExAcquireSharedStarveExclusiv.patch
+	patch_apply ntoskrnl.exe-Resources/0005-ntoskrnl.exe-Implement-ExAcquireSharedWaitForExclusi.patch
+	patch_apply ntoskrnl.exe-Resources/0006-ntoskrnl.exe-Implement-ExReleaseResourceForThreadLit.patch
+	patch_apply ntoskrnl.exe-Resources/0007-ntoskrnl.exe-Implement-ExReleaseResourceLite.patch
+	patch_apply ntoskrnl.exe-Resources/0008-ntoskrnl.exe-Implement-ExDeleteResourceLite.patch
+	patch_apply ntoskrnl.exe-Resources/0009-ntoskrnl.exe-Implement-ExGetExclusiveWaiterCount.patch
+	patch_apply ntoskrnl.exe-Resources/0010-ntoskrnl.exe-Implement-ExGetSharedWaiterCount.patch
+	patch_apply ntoskrnl.exe-Resources/0011-ntoskrnl.exe-Implement-ExIsResourceAcquiredExclusive.patch
+	patch_apply ntoskrnl.exe-Resources/0012-ntoskrnl.exe-Implement-ExIsResourceAcquiredSharedLit.patch
+	patch_apply ntoskrnl.exe-Resources/0013-ntoskrnl.exe-tests-Add-tests-for-ERESOURCE-functions.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExInitializeResourceLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireResourceExclusiveLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireResourceSharedLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireSharedStarveExclusive().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireSharedWaitForExclusive().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExReleaseResourceForThreadLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExReleaseResourceLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExDeleteResourceLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExGetExclusiveWaiterCount().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExGetSharedWaiterCount().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExIsResourceAcquiredExclusiveLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExIsResourceAcquiredSharedLite().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe/tests: Add tests for ERESOURCE functions.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset nvcuvid-CUDA_Video_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6967,7 +7016,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, ntoskrnl-Stubs
+# |   *	dxva2-Video_Decoder, ntoskrnl-Stubs, ntoskrnl.exe-Resources
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

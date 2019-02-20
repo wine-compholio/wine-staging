@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5e86cc0a8f37295072b03b1c13aa205ff3e6f3e4"
+	echo "0c738d900a8daccf2c5460972033766d34d59aed"
 }
 
 # Show version information
@@ -246,7 +246,6 @@ patch_enable_all ()
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
-	enable_oleaut32_VarRound="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -890,9 +889,6 @@ patch_enable ()
 			;;
 		oleaut32-OleLoadPictureFile)
 			enable_oleaut32_OleLoadPictureFile="$2"
-			;;
-		oleaut32-VarRound)
-			enable_oleaut32_VarRound="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -5197,21 +5193,6 @@ if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset oleaut32-VarRound
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26653] oleaut32: Support VT_DECIMAL in VarRound
-# |
-# | Modified files:
-# |   *	dlls/oleaut32/tests/vartest.c, dlls/oleaut32/variant.c
-# |
-if test "$enable_oleaut32_VarRound" -eq 1; then
-	patch_apply oleaut32-VarRound/0001-oleaut32-Support-VT_DECIMAL-in-VarRound.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "oleaut32: Support VT_DECIMAL in VarRound.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset opengl32-wglChoosePixelFormat
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6372,31 +6353,11 @@ fi
 # |   *	[#7287] Redundant "tabs" appear with tabbed MDI (test with LTSpice)
 # |
 # | Modified files:
-# |   *	dlls/user32/controls.h, dlls/user32/icontitle.c, dlls/user32/nonclient.c, dlls/user32/tests/win.c, dlls/user32/win.c,
-# | 	dlls/user32/win.h, dlls/user32/winpos.c, dlls/wineandroid.drv/window.c, dlls/wineandroid.drv/wineandroid.drv.spec,
-# | 	dlls/winemac.drv/window.c, dlls/winex11.drv/window.c
+# |   *	dlls/user32/winpos.c
 # |
 if test "$enable_user32_minimized_windows" -eq 1; then
-	patch_apply user32-minimized_windows/0002-user32-SetWindowPos-shouldn-t-change-the-client-rect.patch
-	patch_apply user32-minimized_windows/0003-user32-Correctly-calculate-the-client-size-of-a-mini.patch
-	patch_apply user32-minimized_windows/0004-user32-Use-the-C-XY-MINIMIZED-rather-than-C-XY-ICON-.patch
-	patch_apply user32-minimized_windows/0005-user32-AdjustWindowRect-shouldn-t-ignore-WS_MINIMIZE.patch
-	patch_apply user32-minimized_windows/0010-user32-Reimplement-ArrangeIconicWindows-using-minimi.patch
-	patch_apply user32-minimized_windows/0011-user32-Correctly-place-minimized-windows.patch
-	patch_apply user32-minimized_windows/0012-user32-Paint-title-bars-for-minimized-windows.patch
-	patch_apply user32-minimized_windows/0013-user32-Allow-clicking-the-restore-and-maximize-boxes.patch
-	patch_apply user32-minimized_windows/0014-user32-Get-rid-of-icon-titles.patch
 	patch_apply user32-minimized_windows/0015-user32-Move-iconic-windows-as-their-border-instead-o.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "user32: SetWindowPos() shouldn'\''t change the client rect of a minimized window.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Correctly calculate the client size of a minimized window.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Use the C[XY]MINIMIZED rather than C[XY]ICON size for minimized windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: AdjustWindowRect() shouldn'\''t ignore WS_MINIMIZE.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Reimplement ArrangeIconicWindows() using minimized metrics.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Correctly place minimized windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Paint title bars for minimized windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Allow clicking the restore and maximize boxes for on minimized windows.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Get rid of icon titles.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Move iconic windows as their border instead of their icon.", 1 },';
 	) >> "$patchlist"
 fi

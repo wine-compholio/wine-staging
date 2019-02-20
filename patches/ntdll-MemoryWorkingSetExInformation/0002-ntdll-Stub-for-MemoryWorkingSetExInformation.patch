@@ -1,0 +1,92 @@
+From fc6b868cee4657f9cb5b57a12cbb36a15faddd68 Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Sat, 18 Aug 2018 15:48:10 -0500
+Subject: [PATCH] ntdll: Stub for MemoryWorkingSetExInformation.
+
+---
+ dlls/ntdll/virtual.c | 22 ++++++++++++++++++++++
+ include/winternl.h   | 21 ++++++++++++++++++++-
+ 2 files changed, 42 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 82b56b16..58563aaf 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -3024,6 +3024,25 @@ found:
+ }
+ 
+ 
++static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
++                                    MEMORY_WORKING_SET_EX_INFORMATION *info,
++                                    SIZE_T len, SIZE_T *res_len )
++{
++    MEMORY_WORKING_SET_EX_INFORMATION *p;
++
++    for (p = info; (UINT_PTR)(p + 1) <= (UINT_PTR)info + len; p++)
++    {
++        FIXME("(VirtualAddress=%p) Unimplemented.\n", p->VirtualAddress);
++        /* FIXME Mark all addresses as invalid. */
++        info->VirtualAttributes.Valid = 0;
++    }
++
++    if (res_len)
++        *res_len = (UINT_PTR)p - (UINT_PTR)info;
++    return STATUS_SUCCESS;
++}
++
++
+ #define UNIMPLEMENTED_INFO_CLASS(c) \
+     case c: \
+         FIXME("(process=%p,addr=%p) Unimplemented information class: " #c "\n", process, addr); \
+@@ -3048,6 +3067,9 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+         case MemorySectionName:
+             return get_section_name( process, addr, buffer, len, res_len );
+ 
++        case MemoryWorkingSetExInformation:
++            return get_working_set_ex( process, addr, buffer, len, res_len );
++
+         UNIMPLEMENTED_INFO_CLASS(MemoryWorkingSetList);
+         UNIMPLEMENTED_INFO_CLASS(MemoryBasicVlmInformation);
+ 
+diff --git a/include/winternl.h b/include/winternl.h
+index 46dac7e4..44c2f94a 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -1042,7 +1042,8 @@ typedef enum _MEMORY_INFORMATION_CLASS {
+     MemoryBasicInformation,
+     MemoryWorkingSetList,
+     MemorySectionName,
+-    MemoryBasicVlmInformation
++    MemoryBasicVlmInformation,
++    MemoryWorkingSetExInformation,
+ } MEMORY_INFORMATION_CLASS;
+ 
+ typedef struct _MEMORY_SECTION_NAME
+@@ -1050,6 +1051,24 @@ typedef struct _MEMORY_SECTION_NAME
+     UNICODE_STRING SectionFileName;
+ } MEMORY_SECTION_NAME, *PMEMORY_SECTION_NAME;
+ 
++typedef union _MEMORY_WORKING_SET_EX_BLOCK {
++    ULONG_PTR Flags;
++    struct {
++        ULONG_PTR Valid : 1;
++        ULONG_PTR ShareCount : 3;
++        ULONG_PTR Win32Protection : 11;
++        ULONG_PTR Shared : 1;
++        ULONG_PTR Node : 6;
++        ULONG_PTR Locked : 1;
++        ULONG_PTR LargePage : 1;
++    } DUMMYSTRUCTNAME;
++} MEMORY_WORKING_SET_EX_BLOCK, *PMEMORY_WORKING_SET_EX_BLOCK;
++
++typedef struct _MEMORY_WORKING_SET_EX_INFORMATION {
++    PVOID                       VirtualAddress;
++    MEMORY_WORKING_SET_EX_BLOCK VirtualAttributes;
++} MEMORY_WORKING_SET_EX_INFORMATION, *PMEMORY_WORKING_SET_EX_INFORMATION;
++
+ typedef enum _MUTANT_INFORMATION_CLASS
+ {
+     MutantBasicInformation
+-- 
+2.20.1
+

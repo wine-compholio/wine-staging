@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c0cc126d579e078f2804112c14f0c18b38f68937"
+	echo "812d03129dea53337367789bac8ab523b9fce21d"
 }
 
 # Show version information
@@ -6546,10 +6546,8 @@ fi
 # |
 if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
 	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
-	patch_apply windowscodecs-JPEG_Decoder/0005-windowscodecs-Add-support-for-CMYK-to-BGR-conversion.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for CMYK to BGR conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

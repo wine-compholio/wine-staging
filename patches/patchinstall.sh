@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0c738d900a8daccf2c5460972033766d34d59aed"
+	echo "c0cc126d579e078f2804112c14f0c18b38f68937"
 }
 
 # Show version information
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_mciavi32_fullscreen_support="$1"
-	enable_mf_MFCreateSequencerSource="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -313,7 +312,6 @@ patch_enable_all ()
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
-	enable_user32_minimized_windows="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -678,9 +676,6 @@ patch_enable ()
 			;;
 		mciavi32-fullscreen_support)
 			enable_mciavi32_fullscreen_support="$2"
-			;;
-		mf-MFCreateSequencerSource)
-			enable_mf_MFCreateSequencerSource="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -1092,9 +1087,6 @@ patch_enable ()
 			;;
 		user32-ShowWindow)
 			enable_user32_ShowWindow="$2"
-			;;
-		user32-minimized_windows)
-			enable_user32_minimized_windows="$2"
 			;;
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
@@ -4032,21 +4024,6 @@ if test "$enable_mciavi32_fullscreen_support" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mf-MFCreateSequencerSource
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46105] mf: Implement MFCreateSequencerSource
-# |
-# | Modified files:
-# |   *	dlls/mf/main.c, dlls/mf/mf.spec, dlls/mf/tests/Makefile.in, dlls/mf/tests/mf.c, include/mfidl.idl
-# |
-if test "$enable_mf_MFCreateSequencerSource" -eq 1; then
-	patch_apply mf-MFCreateSequencerSource/0001-mf-Implement-MFCreateSequencerSource.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mf: Implement MFCreateSequencerSource.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mmsystem.dll16-MIDIHDR_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6424,21 +6401,6 @@ if test "$enable_user32_ShowWindow" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-minimized_windows
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#7287] Redundant "tabs" appear with tabbed MDI (test with LTSpice)
-# |
-# | Modified files:
-# |   *	dlls/user32/winpos.c
-# |
-if test "$enable_user32_minimized_windows" -eq 1; then
-	patch_apply user32-minimized_windows/0015-user32-Move-iconic-windows-as-their-border-instead-o.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Move iconic windows as their border instead of their icon.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-msgbox-Support-WM_COPY-mesg
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6601,11 +6563,6 @@ fi
 # | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c, include/wincodec.idl
 # |
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
-	patch_apply windowscodecs-TIFF_Support/0001-windowscodecs-tests-Add-a-test-for-8bpp-indexed-TIFF.patch
-	patch_apply windowscodecs-TIFF_Support/0002-windowscodecs-tests-Make-the-test-for-8bpp-indexed-T.patch
-	patch_apply windowscodecs-TIFF_Support/0003-windowscodecs-Fix-the-SupportsTransparency-flag-valu.patch
-	patch_apply windowscodecs-TIFF_Support/0004-windowscodecs-Fail-earlier-in-TIFF-decoder-s-Initial.patch
-	patch_apply windowscodecs-TIFF_Support/0005-windowscodecs-Avoid-redundant-checks-when-reading-a-.patch
 	patch_apply windowscodecs-TIFF_Support/0006-windowscodecs-Add-support-for-16bppGray-and-32bppGra.patch
 	patch_apply windowscodecs-TIFF_Support/0007-windowscodecs-Add-support-for-3bps-RGB-format-to-TIF.patch
 	patch_apply windowscodecs-TIFF_Support/0008-windowscodecs-Add-support-for-12bpp-RGB-format-to-TI.patch
@@ -6618,11 +6575,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
 	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add a test for 8bpp indexed TIFF format.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Make the test for 8bpp indexed TIFF format run under XP.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix the SupportsTransparency flag value for various pixel formats.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fail earlier in TIFF decoder'\''s Initialize method for unsupported pixel formats.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Avoid redundant checks when reading a TIFF tile.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';

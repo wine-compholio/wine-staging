@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "812d03129dea53337367789bac8ab523b9fce21d"
+	echo "b3c5b7da9442af840431cd7f795da20989aad42a"
 }
 
 # Show version information
@@ -321,7 +321,6 @@ patch_enable_all ()
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
-	enable_windowscodecs_JPEG_Decoder="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -1115,9 +1114,6 @@ patch_enable ()
 		windowscodecs-IMILBitmapSource)
 			enable_windowscodecs_IMILBitmapSource="$2"
 			;;
-		windowscodecs-JPEG_Decoder)
-			enable_windowscodecs_JPEG_Decoder="$2"
-			;;
 		windowscodecs-TIFF_Support)
 			enable_windowscodecs_TIFF_Support="$2"
 			;;
@@ -1856,6 +1852,9 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
 	fi
+	if test "$enable_ntdll_Wait_User_APC" -gt 1; then
+		abort "Patchset ntdll-Wait_User_APC disabled, but server-Shared_Memory depends on that."
+	fi
 	if test "$enable_server_Key_State" -gt 1; then
 		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
 	fi
@@ -1866,6 +1865,7 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
 	fi
 	enable_ntdll_Threading=1
+	enable_ntdll_Wait_User_APC=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
@@ -5498,7 +5498,7 @@ fi
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread
+# |   *	ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
@@ -5530,7 +5530,8 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Misc_ACL, ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory
+# |   *	server-Misc_ACL, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread,
+# | 	server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -5548,9 +5549,6 @@ if test "$enable_server_Object_Types" -eq 1; then
 	patch_apply server-Object_Types/0002-ntdll-Implement-ObjectTypesInformation-in-NtQueryObj.patch
 	patch_apply server-Object_Types/0003-server-Register-types-during-startup.patch
 	patch_apply server-Object_Types/0004-server-Rename-ObjectType-to-Type.patch
-	patch_apply server-Object_Types/0005-server-Add-type-Token.patch
-	patch_apply server-Object_Types/0006-server-Add-type-Process.patch
-	patch_apply server-Object_Types/0007-server-Add-type-Thread.patch
 	patch_apply server-Object_Types/0008-ntdll-Set-TypeIndex-for-ObjectTypeInformation-in-NtQ.patch
 	patch_apply server-Object_Types/0009-ntdll-Set-object-type-for-System-Extended-HandleInfo.patch
 	patch_apply server-Object_Types/0010-ntdll-Mimic-object-type-behavior-for-different-windo.patch
@@ -5559,9 +5557,6 @@ if test "$enable_server_Object_Types" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement ObjectTypesInformation in NtQueryObject.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "server: Register types during startup.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "server: Rename ObjectType to Type.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Add type Token.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Add type Process.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Add type Thread.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Set TypeIndex for ObjectTypeInformation in NtQueryObject.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Set object type for System(Extended)HandleInformation in NtQuerySystemInformation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Mimic object type behavior for different windows versions.", 1 },';
@@ -6536,18 +6531,6 @@ if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-JPEG_Decoder
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/converter.c, dlls/windowscodecs/jpegformat.c
-# |
-if test "$enable_windowscodecs_JPEG_Decoder" -eq 1; then
-	patch_apply windowscodecs-JPEG_Decoder/0004-windowscodecs-Move-JPEG-frame-image-data-initializat.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Move JPEG frame image data initialization from Frame::CopyPixels to Decoder::Initialize.", 2 },';
 	) >> "$patchlist"
 fi
 

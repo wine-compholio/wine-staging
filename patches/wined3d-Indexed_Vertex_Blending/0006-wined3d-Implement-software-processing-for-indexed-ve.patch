@@ -1,21 +1,21 @@
-From 5221861c923787581dc67b8dd4d0901e0536d304 Mon Sep 17 00:00:00 2001
+From 5e7d9e0d6a83ef9d175e2953a39f299a4b91975a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 31 Aug 2017 01:26:38 +0200
 Subject: wined3d: Implement software processing for indexed vertex blending.
 
 ---
- dlls/wined3d/context.c         | 107 +++++++++++++++++++++++++++++++++++++++--
- dlls/wined3d/device.c          |  16 ------
- dlls/wined3d/glsl_shader.c     |  32 ++++++++----
+ dlls/wined3d/context.c         | 107 ++++++++++++++++++++++++++++++++-
+ dlls/wined3d/device.c          |  16 -----
+ dlls/wined3d/glsl_shader.c     |  32 +++++++---
  dlls/wined3d/utils.c           |   7 ++-
- dlls/wined3d/wined3d_private.h |  16 +++++-
+ dlls/wined3d/wined3d_private.h |  16 ++++-
  5 files changed, 148 insertions(+), 30 deletions(-)
 
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 15981ea..c54982a 100644
+index cf250162..272792fb 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -4476,6 +4476,101 @@ static void draw_primitive_arrays(struct wined3d_context *context, const struct
+@@ -4508,6 +4508,101 @@ static void draw_primitive_arrays(struct wined3d_context *context, const struct
      }
  }
  
@@ -117,7 +117,7 @@ index 15981ea..c54982a 100644
  static unsigned int get_stride_idx(const void *idx_data, unsigned int idx_size,
          unsigned int base_vertex_idx, unsigned int start_idx, unsigned int vertex_idx)
  {
-@@ -4504,6 +4599,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+@@ -4536,6 +4631,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
      BOOL specular_fog = FALSE;
      BOOL ps = use_ps(state);
      const void *ptr;
@@ -125,7 +125,7 @@ index 15981ea..c54982a 100644
  
      static unsigned int once;
  
-@@ -4540,7 +4636,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+@@ -4572,7 +4668,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
                  if (!(use_map & 1u << element_idx))
                      continue;
  
@@ -134,7 +134,7 @@ index 15981ea..c54982a 100644
                  ops->generic[si->elements[element_idx].format->emit_idx](element_idx, ptr);
              }
          }
-@@ -4652,7 +4748,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+@@ -4684,7 +4780,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
  
          if (normal)
          {
@@ -143,7 +143,7 @@ index 15981ea..c54982a 100644
              ops->normal[si->elements[WINED3D_FFP_NORMAL].format->emit_idx](ptr);
          }
  
-@@ -4697,7 +4793,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
+@@ -4729,7 +4825,7 @@ static void draw_primitive_immediate_mode(struct wined3d_context *context, const
  
          if (position)
          {
@@ -152,7 +152,7 @@ index 15981ea..c54982a 100644
              ops->position[si->elements[WINED3D_FFP_POSITION].format->emit_idx](ptr);
          }
      }
-@@ -4919,6 +5015,11 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
+@@ -4958,6 +5054,11 @@ void draw_primitive(struct wined3d_device *device, const struct wined3d_state *s
                  WARN_(d3d_perf)("Using software emulation because manual fog coordinates are provided.\n");
              emulation = TRUE;
          }
@@ -165,10 +165,10 @@ index 15981ea..c54982a 100644
          if (emulation)
          {
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 7e14b88..717a7d3 100644
+index 0d936bcb..dcae682a 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3914,31 +3914,15 @@ HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device
+@@ -4027,31 +4027,15 @@ HRESULT CDECL wined3d_device_validate_device(const struct wined3d_device *device
  
  void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *device, BOOL software)
  {
@@ -201,10 +201,10 @@ index 7e14b88..717a7d3 100644
  }
  
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index d53ad70..3cfa901 100644
+index 244b5eb3..8dec8114 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -8583,14 +8583,21 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+@@ -8955,14 +8955,21 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
      }
      else
      {
@@ -232,7 +232,7 @@ index d53ad70..3cfa901 100644
          }
  
          shader_addline(buffer, "gl_Position = ffp_projection_matrix * ec_pos;\n");
-@@ -8608,10 +8615,17 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
+@@ -8980,10 +8987,17 @@ static GLuint shader_glsl_generate_ffp_vertex_shader(struct shader_glsl_priv *pr
      shader_addline(buffer, "vec3 normal = vec3(0.0);\n");
      if (settings->normal)
      {
@@ -254,10 +254,10 @@ index d53ad70..3cfa901 100644
  
          if (settings->normalize)
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index 8a07b3e..870f261 100644
+index cb9efef0..a699cf5b 100644
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
-@@ -6245,7 +6245,12 @@ void wined3d_ffp_get_vs_settings(const struct wined3d_context *context,
+@@ -6533,7 +6533,12 @@ void wined3d_ffp_get_vs_settings(const struct wined3d_context *context,
      }
  
      if (use_indexed_vertex_blending(state, si))
@@ -272,19 +272,19 @@ index 8a07b3e..870f261 100644
      settings->clipping = state->render_states[WINED3D_RS_CLIPPING]
              && state->render_states[WINED3D_RS_CLIPPLANEENABLE];
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 92a5ef1..3d08572 100644
+index d84ed0d4..492b9190 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -2743,7 +2743,7 @@ struct wined3d_ffp_vs_settings
+@@ -2829,7 +2829,7 @@ struct wined3d_ffp_vs_settings
      DWORD flatshading     : 1;
      DWORD swizzle_map     : 16; /* MAX_ATTRIBS, 16 */
      DWORD vb_indices      : 1;
 -    DWORD padding         : 1;
 +    DWORD sw_blending     : 1;
  
-     DWORD texgen[MAX_TEXTURES];
+     DWORD texgen[WINED3D_MAX_TEXTURES];
  };
-@@ -4345,6 +4345,20 @@ static inline BOOL use_indexed_vertex_blending(const struct wined3d_state *state
+@@ -4588,6 +4588,20 @@ static inline BOOL use_indexed_vertex_blending(const struct wined3d_state *state
      return TRUE;
  }
  
@@ -306,5 +306,5 @@ index 92a5ef1..3d08572 100644
  {
      /* Check state->vertex_declaration to allow this to be used before the
 -- 
-2.7.4
+2.20.1
 

@@ -1,19 +1,19 @@
-From ae940533d113a6419605d09c874561af4cd292d4 Mon Sep 17 00:00:00 2001
+From 6b6b0104bb50897030fef3e9f49321f1ac33edae Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:08:36 -0600
 Subject: server: Inherit security attributes from parent directories on
  creation. (try 7)
 
 ---
- dlls/advapi32/tests/security.c |   8 +--
- server/file.c                  | 137 +++++++++++++++++++++++++++++++++++++++++
+ dlls/advapi32/tests/security.c |   8 +-
+ server/file.c                  | 137 +++++++++++++++++++++++++++++++++
  2 files changed, 141 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index a85bb38..7be1db6 100644
+index 53bea200..fbde5213 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3280,7 +3280,7 @@ static void test_CreateDirectoryA(void)
+@@ -3654,7 +3654,7 @@ static void test_CreateDirectoryA(void)
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
      ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
      test_inherited_dacl(pDacl, admin_sid, user_sid, INHERITED_ACE,
@@ -22,7 +22,7 @@ index a85bb38..7be1db6 100644
      LocalFree(pSD);
      CloseHandle(hTemp);
  
-@@ -3349,7 +3349,7 @@ static void test_CreateDirectoryA(void)
+@@ -3722,7 +3722,7 @@ static void test_CreateDirectoryA(void)
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
      ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
      test_inherited_dacl(pDacl, admin_sid, user_sid, INHERITED_ACE,
@@ -31,7 +31,7 @@ index a85bb38..7be1db6 100644
      LocalFree(pSD);
      CloseHandle(hTemp);
  
-@@ -3414,7 +3414,7 @@ static void test_CreateDirectoryA(void)
+@@ -3787,7 +3787,7 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
      test_inherited_dacl(pDacl, admin_sid, user_sid,
                          OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE | INHERITED_ACE,
@@ -40,7 +40,7 @@ index a85bb38..7be1db6 100644
      LocalFree(pSD);
      bret = RemoveDirectoryA(tmpfile);
      ok(bret == TRUE, "RemoveDirectoryA failed with error %u\n", GetLastError());
-@@ -3495,7 +3495,7 @@ static void test_CreateDirectoryA(void)
+@@ -3868,7 +3868,7 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "Failed to get permissions on file\n");
      test_inherited_dacl(pDacl, admin_sid, user_sid,
                          OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE | INHERITED_ACE,
@@ -50,7 +50,7 @@ index a85bb38..7be1db6 100644
      CloseHandle(hTemp);
  
 diff --git a/server/file.c b/server/file.c
-index 49f193d..6fbb71c 100644
+index 107fea65..7d80a003 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -71,6 +71,7 @@ struct file
@@ -60,8 +60,8 @@ index 49f193d..6fbb71c 100644
 +static struct security_descriptor *get_xattr_sd( int fd );
  
  static void file_dump( struct object *obj, int verbose );
- static struct object_type *file_get_type( struct object *obj );
-@@ -225,11 +226,142 @@ static void set_xattr_sd( int fd, const struct security_descriptor *sd )
+ static struct fd *file_get_fd( struct object *obj );
+@@ -223,11 +224,142 @@ static void set_xattr_sd( int fd, const struct security_descriptor *sd )
      xattr_fset( fd, WINE_XATTR_SD, buffer, len );
  }
  
@@ -204,7 +204,7 @@ index 49f193d..6fbb71c 100644
      struct object *obj = NULL;
      struct fd *fd;
      int flags;
-@@ -258,6 +390,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -256,6 +388,10 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      default:                set_error( STATUS_INVALID_PARAMETER ); goto done;
      }
  
@@ -215,7 +215,7 @@ index 49f193d..6fbb71c 100644
      if (sd)
      {
          const SID *owner = sd_get_owner( sd );
-@@ -297,6 +433,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -295,6 +431,7 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      release_object( fd );
  
  done:
@@ -224,5 +224,5 @@ index 49f193d..6fbb71c 100644
      return obj;
  }
 -- 
-2.4.2
+2.20.1
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b3c5b7da9442af840431cd7f795da20989aad42a"
+	echo "f784cabd3489b20c13afd80fddbbcf5aa1b656b3"
 }
 
 # Show version information
@@ -391,9 +391,6 @@ patch_enable_all ()
 	enable_wtsapi32_EnumerateProcesses="$1"
 	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
-	enable_xaudio2_7_CreateFX_FXEcho="$1"
-	enable_xaudio2_7_WMA_support="$1"
-	enable_xaudio2_CommitChanges="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1323,15 +1320,6 @@ patch_enable ()
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
-			;;
-		xaudio2_7-CreateFX-FXEcho)
-			enable_xaudio2_7_CreateFX_FXEcho="$2"
-			;;
-		xaudio2_7-WMA_support)
-			enable_xaudio2_7_WMA_support="$2"
-			;;
-		xaudio2_CommitChanges)
-			enable_xaudio2_CommitChanges="$2"
 			;;
 		*)
 			return 1
@@ -7644,57 +7632,6 @@ if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xaudio2_7-CreateFX-FXEcho
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39402] Support FXEcho interface in CreateFX
-# |
-# | Modified files:
-# |   *	dlls/xaudio2_7/xapofx.c
-# |
-if test "$enable_xaudio2_7_CreateFX_FXEcho" -eq 1; then
-	patch_apply xaudio2_7-CreateFX-FXEcho/0001-xaudio2_7-Support-FXEcho-interface-in-CreateFX.patch
-	(
-		printf '%s\n' '+    { "Thomas Crider", "xaudio2_7: Support FXEcho interface in CreateFX.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xaudio2_7-WMA_support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39402] Use ffmpeg 4.x to convert WMA format
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/x3daudio1_0/Makefile.in, dlls/x3daudio1_1/Makefile.in, dlls/x3daudio1_2/Makefile.in,
-# | 	dlls/x3daudio1_3/Makefile.in, dlls/x3daudio1_4/Makefile.in, dlls/x3daudio1_5/Makefile.in, dlls/x3daudio1_6/Makefile.in,
-# | 	dlls/x3daudio1_7/Makefile.in, dlls/xapofx1_1/Makefile.in, dlls/xapofx1_2/Makefile.in, dlls/xapofx1_3/Makefile.in,
-# | 	dlls/xapofx1_4/Makefile.in, dlls/xapofx1_5/Makefile.in, dlls/xaudio2_0/Makefile.in, dlls/xaudio2_1/Makefile.in,
-# | 	dlls/xaudio2_2/Makefile.in, dlls/xaudio2_3/Makefile.in, dlls/xaudio2_4/Makefile.in, dlls/xaudio2_5/Makefile.in,
-# | 	dlls/xaudio2_6/Makefile.in, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h,
-# | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/mmreg.h
-# |
-if test "$enable_xaudio2_7_WMA_support" -eq 1; then
-	patch_apply xaudio2_7-WMA_support/0001-xaudio2-Use-ffmpeg-to-convert-WMA-formats.patch
-	(
-		printf '%s\n' '+    { "Andrew Eikum", "xaudio2: Use ffmpeg to convert WMA formats.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset xaudio2_CommitChanges
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44883] Return S_OK from IXAudio2Impl_CommitChanges()
-# |
-# | Modified files:
-# |   *	dlls/xaudio2_7/xaudio_dll.c
-# |
-if test "$enable_xaudio2_CommitChanges" -eq 1; then
-	patch_apply xaudio2_CommitChanges/0001-xaudio2-Return-S_OK-in-IXAudio2-in-CommitChanges.patch
-	(
-		printf '%s\n' '+    { "Thomas Crider", "xaudio2: Return S_OK in IXAudio2 in CommitChanges.", 1 },';
 	) >> "$patchlist"
 fi
 

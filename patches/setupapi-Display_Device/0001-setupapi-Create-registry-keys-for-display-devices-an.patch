@@ -1,16 +1,16 @@
-From 2ad71921a69eda4efea18ceca917c00cccf69abc Mon Sep 17 00:00:00 2001
+From 7e98f3407f4dfda7ef82ae236af3073029c60191 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 Feb 2016 03:17:09 +0100
 Subject: [PATCH] setupapi: Create registry keys for display devices and
  display drivers.
 
 ---
- dlls/setupapi/devinst.c | 108 +++++++++++++++++++++++++++++++++++++++++++-----
+ dlls/setupapi/devinst.c | 122 ++++++++++++++++++++++++++++++++++++++++++++----
  loader/wine.inf.in      |   2 +
- 2 files changed, 100 insertions(+), 10 deletions(-)
+ 2 files changed, 116 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
-index 82a45b4..9baefd3 100644
+index 537b335..1693684 100644
 --- a/dlls/setupapi/devinst.c
 +++ b/dlls/setupapi/devinst.c
 @@ -95,6 +95,15 @@ static const WCHAR Control[] = {'C','o','n','t','r','o','l',0};
@@ -29,7 +29,7 @@ index 82a45b4..9baefd3 100644
  /* is used to identify if a DeviceInfoSet pointer is
  valid or not */
  #define SETUP_DEVICE_INFO_SET_MAGIC 0xd00ff056
-@@ -191,6 +200,90 @@ static struct device_iface *get_device_iface(HDEVINFO devinfo, const SP_DEVICE_I
+@@ -190,6 +199,90 @@ static struct device_iface *get_device_iface(HDEVINFO devinfo, const SP_DEVICE_I
      return (struct device_iface *)data->Reserved;
  }
  
@@ -120,7 +120,7 @@ index 82a45b4..9baefd3 100644
  static inline void copy_device_data(SP_DEVINFO_DATA *data, const struct device *device)
  {
      data->ClassGuid = device->class;
-@@ -482,8 +575,7 @@ static HKEY SETUPDI_CreateDevKey(struct device *device)
+@@ -503,8 +596,7 @@ static HKEY SETUPDI_CreateDevKey(struct device *device)
      HKEY enumKey, key = INVALID_HANDLE_VALUE;
      LONG l;
  
@@ -130,7 +130,7 @@ index 82a45b4..9baefd3 100644
      if (!l)
      {
          RegCreateKeyExW(enumKey, device->instanceId, 0, NULL, 0,
-@@ -2012,8 +2104,7 @@ static void SETUPDI_EnumerateMatchingInterfaces(HDEVINFO DeviceInfoSet,
+@@ -2099,8 +2191,7 @@ static void SETUPDI_EnumerateMatchingInterfaces(HDEVINFO DeviceInfoSet,
  
      TRACE("%s\n", debugstr_w(enumstr));
  
@@ -140,7 +140,7 @@ index 82a45b4..9baefd3 100644
      for (i = 0; !l; i++)
      {
          len = ARRAY_SIZE(subKeyName);
-@@ -2233,8 +2324,7 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
+@@ -2320,8 +2411,7 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
      TRACE("%p, %s, %s, %08x\n", DeviceInfoSet, debugstr_guid(class),
              debugstr_w(enumstr), flags);
  
@@ -150,28 +150,35 @@ index 82a45b4..9baefd3 100644
      if (enumKey != INVALID_HANDLE_VALUE)
      {
          if (enumstr)
-@@ -3345,8 +3435,7 @@ static HKEY SETUPDI_OpenDevKey(struct device *device, REGSAM samDesired)
-     HKEY enumKey, key = INVALID_HANDLE_VALUE;
-     LONG l;
- 
--    l = RegCreateKeyExW(HKEY_LOCAL_MACHINE, Enum, 0, NULL, 0, KEY_ALL_ACCESS,
--            NULL, &enumKey, NULL);
+@@ -3555,8 +3645,24 @@ HKEY WINAPI SetupDiOpenDevRegKey(HDEVINFO devinfo, SP_DEVINFO_DATA *device_data,
+             FIXME("Unhandled type %#x.\n", KeyType);
+             l = ERROR_CALL_NOT_IMPLEMENTED;
+     }
+-    SetLastError(l == ERROR_FILE_NOT_FOUND ? ERROR_KEY_DOES_NOT_EXIST : l);
+-    return l ? INVALID_HANDLE_VALUE : key;
++    return key;
++}
++
++static BOOL SETUPDI_DeleteDevKey(struct device *device)
++{
++    HKEY enumKey;
++    BOOL ret = FALSE;
++    LONG l;
++
 +    l = open_enum_key(&enumKey);
-     if (!l)
-     {
-         RegOpenKeyExW(enumKey, device->instanceId, 0, samDesired, &key);
-@@ -3438,8 +3527,7 @@ static BOOL SETUPDI_DeleteDevKey(struct device *device)
-     BOOL ret = FALSE;
-     LONG l;
++    if (!l)
++    {
++        ret = RegDeleteTreeW(enumKey, device->instanceId);
++        RegCloseKey(enumKey);
++    }
++    else
++        SetLastError(l);
++    return ret;
+ }
  
--    l = RegCreateKeyExW(HKEY_LOCAL_MACHINE, Enum, 0, NULL, 0, KEY_ALL_ACCESS,
--            NULL, &enumKey, NULL);
-+    l = open_enum_key(&enumKey);
-     if (!l)
-     {
-         ret = RegDeleteTreeW(enumKey, device->instanceId);
+ /***********************************************************************
 diff --git a/loader/wine.inf.in b/loader/wine.inf.in
-index 5a3f8c4..51e1745 100644
+index 1fe8b11..93c3afb 100644
 --- a/loader/wine.inf.in
 +++ b/loader/wine.inf.in
 @@ -465,6 +465,8 @@ HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"Locale",0x1

@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_ddraw_version_check="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
+	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -547,6 +548,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dinput-reconnect-joystick)
+			enable_dinput_reconnect_joystick="$2"
 			;;
 		dinput-remap-joystick)
 			enable_dinput_remap_joystick="$2"
@@ -3232,6 +3236,21 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-reconnect-joystick
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34297] dinput: Allow reconnecting to disconnected joysticks
+# |
+# | Modified files:
+# |   *	dlls/dinput/joystick_linuxinput.c
+# |
+if test "$enable_dinput_reconnect_joystick" -eq 1; then
+	patch_apply dinput-reconnect-joystick/0001-dinput-Allow-reconnecting-to-disconnected-joysticks.patch
+	(
+		printf '%s\n' '+    { "Andrew Church", "dinput: Allow reconnecting to disconnected joysticks.", 1 },';
 	) >> "$patchlist"
 fi
 

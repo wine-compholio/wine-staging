@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_ddraw_version_check="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
+	enable_dinput_remap_joystick="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
@@ -546,6 +547,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dinput-remap-joystick)
+			enable_dinput_remap_joystick="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3228,6 +3232,22 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-remap-joystick
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35815] dinput: Allow remapping of joystick buttons.
+# |
+# | Modified files:
+# |   *	dlls/dinput/joystick.c, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c, dlls/dinput/joystick_osx.c,
+# | 	dlls/dinput/joystick_private.h
+# |
+if test "$enable_dinput_remap_joystick" -eq 1; then
+	patch_apply dinput-remap-joystick/0001-dinput-Allow-remapping-of-joystick-buttons.patch
+	(
+		printf '%s\n' '+    { "Andrew Church", "dinput: Allow remapping of joystick buttons.", 1 },';
 	) >> "$patchlist"
 fi
 

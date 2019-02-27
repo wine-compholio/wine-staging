@@ -1,7 +1,7 @@
-From 85acc986954ed6476fe459fc60fafee7211eb556 Mon Sep 17 00:00:00 2001
+From 62ab92c3a4b0ba57df6a84ac0119a0c134760608 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Tue, 29 Jan 2019 21:54:39 -0600
-Subject: [PATCH 13/13] ntoskrnl.exe/tests: Add tests for ERESOURCE functions.
+Subject: [PATCH] ntoskrnl.exe/tests: Add tests for ERESOURCE functions.
 
 Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
 ---
@@ -10,10 +10,10 @@ Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
  2 files changed, 312 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntoskrnl.exe/tests/driver.c b/dlls/ntoskrnl.exe/tests/driver.c
-index 3984240e..6d64cc8e 100644
+index 2fbe493fa35..b2ac5fc8a0e 100644
 --- a/dlls/ntoskrnl.exe/tests/driver.c
 +++ b/dlls/ntoskrnl.exe/tests/driver.c
-@@ -289,7 +289,14 @@ static NTSTATUS wait_multiple(ULONG count, void *objs[], WAIT_TYPE wait_type, UL
+@@ -308,7 +308,14 @@ static NTSTATUS wait_multiple(ULONG count, void *objs[], WAIT_TYPE wait_type, UL
      return KeWaitForMultipleObjects(count, objs, wait_type, Executive, KernelMode, FALSE, &integer, NULL);
  }
  
@@ -29,7 +29,7 @@ index 3984240e..6d64cc8e 100644
  {
      OBJECT_ATTRIBUTES attr = {0};
      HANDLE thread;
-@@ -300,12 +307,25 @@ static void run_thread(PKSTART_ROUTINE proc, void *arg)
+@@ -319,12 +326,25 @@ static void run_thread(PKSTART_ROUTINE proc, void *arg)
      ret = PsCreateSystemThread(&thread, THREAD_ALL_ACCESS, &attr, NULL, NULL, proc, arg);
      ok(!ret, "got %#x\n", ret);
  
@@ -55,8 +55,8 @@ index 3984240e..6d64cc8e 100644
  static KMUTEX test_mutex;
  
  static void WINAPI mutex_thread(void *arg)
-@@ -636,6 +656,294 @@ static void test_version(void)
-     ok(*pNtBuildNumber == build, "Expected build number %u, got %u\n", build, *pNtBuildNumber);
+@@ -763,6 +783,294 @@ static void test_ob_reference(const WCHAR *test_path)
+     ok(!status, "ZwClose failed: %#x\n", status);
  }
  
 +static void check_resource_(int line, ERESOURCE *resource, ULONG exclusive_waiters,
@@ -350,16 +350,16 @@ index 3984240e..6d64cc8e 100644
  static NTSTATUS main_test(DEVICE_OBJECT *device, IRP *irp, IO_STACK_LOCATION *stack, ULONG_PTR *info)
  {
      ULONG length = stack->Parameters.DeviceIoControl.OutputBufferLength;
-@@ -669,6 +977,7 @@ static NTSTATUS main_test(DEVICE_OBJECT *device, IRP *irp, IO_STACK_LOCATION *st
-     test_version();
+@@ -805,6 +1113,7 @@ static NTSTATUS main_test(DEVICE_OBJECT *device, IRP *irp, IO_STACK_LOCATION *st
      test_stack_callout();
      test_lookaside_list();
+     test_ob_reference(test_input->path);
 +    test_resource();
  
      /* print process report */
-     if (test_input->winetest_debug)
+     if (winetest_debug)
 diff --git a/include/ddk/wdm.h b/include/ddk/wdm.h
-index e5a2906f..0677be69 100644
+index e5a2906fb49..0677be693c1 100644
 --- a/include/ddk/wdm.h
 +++ b/include/ddk/wdm.h
 @@ -1578,6 +1578,7 @@ void      WINAPI KeAcquireSpinLockAtDpcLevel(KSPIN_LOCK*);

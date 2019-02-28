@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_ddraw_version_check="$1"
 	enable_dinput_Deadlock="$1"
 	enable_dinput_Initialize="$1"
+	enable_dinput_axis_recalc="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
 	enable_dsound_EAX="$1"
@@ -548,6 +549,9 @@ patch_enable ()
 			;;
 		dinput-Initialize)
 			enable_dinput_Initialize="$2"
+			;;
+		dinput-axis-recalc)
+			enable_dinput_axis_recalc="$2"
 			;;
 		dinput-reconnect-joystick)
 			enable_dinput_reconnect_joystick="$2"
@@ -3236,6 +3240,21 @@ if test "$enable_dinput_Initialize" -eq 1; then
 	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-axis-recalc
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41317] dinput: Recalculated Axis after deadzone change.
+# |
+# | Modified files:
+# |   *	dlls/dinput/joystick.c
+# |
+if test "$enable_dinput_axis_recalc" -eq 1; then
+	patch_apply dinput-axis-recalc/0001-dinput-Recalculated-Axis-after-deadzone-change.patch
+	(
+		printf '%s\n' '+    { "Bruno Jesus", "dinput: Recalculated Axis after deadzone change.", 1 },';
 	) >> "$patchlist"
 fi
 

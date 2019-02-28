@@ -1,0 +1,96 @@
+From 2eca40657576f5e3e3ad7e4b6b0c7431e6d1509c Mon Sep 17 00:00:00 2001
+From: Austin English <austinenglish@gmail.com>
+Date: Tue, 27 Oct 2015 15:08:02 -0500
+Subject: [PATCH] msasn1: implement ASN1_CreateModule
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This is based on code from the FreeRDP project, used with permission
+of the author, Marc-André Moreau <marcandre.moreau@gmail.com>
+
+Wine-bug: https://bugs.winehq.org/show_bug.cgi?id=38020
+Signed-off-by: Austin English <austinenglish@gmail.com>
+---
+ dlls/msasn1/main.c      | 39 +++++++++++++++++++++++++++++++++++++++
+ dlls/msasn1/msasn1.spec |  2 +-
+ 2 files changed, 40 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/msasn1/main.c b/dlls/msasn1/main.c
+index 81f246a..ec9d88d 100644
+--- a/dlls/msasn1/main.c
++++ b/dlls/msasn1/main.c
+@@ -1,5 +1,9 @@
+ /*
+  * Copyright 2014 Austin English
++ * Copyright 2015 Marc-André Moreau
++ *
++ * ASN1_CreateModule based on code from the FreeRDP project, with permission from
++ * Marc-André Moreau <marcandre.moreau@gmail.com>
+  *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+@@ -22,8 +26,12 @@
+ 
+ #include "windef.h"
+ #include "winbase.h"
++#include "wine/debug.h"
++
+ #include "msasn1.h"
+ 
++WINE_DEFAULT_DEBUG_CHANNEL(msasn);
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
+ {
+ 
+@@ -38,3 +46,34 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
+ 
+     return TRUE;
+ }
++
++ASN1module_t WINAPI ASN1_CreateModule(ASN1uint32_t version, ASN1encodingrule_e rule, ASN1uint32_t flags, ASN1uint32_t pdu, const ASN1GenericFun_t encoder[], const ASN1GenericFun_t decoder[], const ASN1FreeFun_t freememory[], const ASN1uint32_t size[], ASN1magic_t modulename)
++{
++    ASN1module_t module = NULL;
++
++    TRACE("%u, %u, %x, %u, %p, %p, %p, %p, %u\n", version, rule, flags, pdu, encoder, decoder, freememory, size, modulename);
++
++    if (!((encoder) && (decoder) && (freememory) && (size)))
++        return NULL;
++
++    module = (ASN1module_t) malloc(sizeof(struct tagASN1module_t));
++    ZeroMemory(module, sizeof(struct tagASN1module_t));
++
++    if (module)
++    {
++        module->nModuleName = modulename;
++        module->dwFlags = flags;
++        module->eRule = rule;
++        module->cPDUs = pdu;
++        module->apfnFreeMemory = freememory;
++        module->acbStructSize = size;
++
++        if (rule & ASN1_BER_RULE)
++        {
++            module->BER.apfnEncoder = (const ASN1BerEncFun_t*) encoder;
++            module->BER.apfnDecoder = (const ASN1BerDecFun_t*) decoder;
++        }
++    }
++
++    return module;
++}
+diff --git a/dlls/msasn1/msasn1.spec b/dlls/msasn1/msasn1.spec
+index 1658399..ca6a461 100644
+--- a/dlls/msasn1/msasn1.spec
++++ b/dlls/msasn1/msasn1.spec
+@@ -223,7 +223,7 @@
+ @ stub ASN1_CreateDecoder
+ @ stub ASN1_CreateDecoderEx
+ @ stub ASN1_CreateEncoder
+-@ stub ASN1_CreateModule
++@ stdcall ASN1_CreateModule(long long long long ptr ptr ptr ptr long)
+ @ stub ASN1_Decode
+ @ stub ASN1_Encode
+ @ stub ASN1_FreeDecoded
+-- 
+1.9.1
+

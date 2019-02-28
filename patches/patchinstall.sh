@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "474a6771ba03e2c475cd088ff40c97e8285a455f"
+	echo "d88f12950761e9ff8d125a579de6e743979f4945"
 }
 
 # Show version information
@@ -341,6 +341,7 @@ patch_enable_all ()
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_Restore_DirectX10_Support="$1"
+	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
@@ -1170,6 +1171,9 @@ patch_enable ()
 		wined3d-Restore-DirectX10-Support)
 			enable_wined3d_Restore_DirectX10_Support="$2"
 			;;
+		wined3d-SWVP-shaders)
+			enable_wined3d_SWVP_shaders="$2"
+			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
 			;;
@@ -1723,8 +1727,19 @@ if test "$enable_winedevice_Default_Drivers" -eq 1; then
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
+	if test "$enable_wined3d_SWVP_shaders" -gt 1; then
+		abort "Patchset wined3d-SWVP-shaders disabled, but wined3d-Indexed_Vertex_Blending depends on that."
+	fi
 	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
 		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-Indexed_Vertex_Blending depends on that."
+	fi
+	enable_wined3d_SWVP_shaders=1
+	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
+fi
+
+if test "$enable_wined3d_SWVP_shaders" -eq 1; then
+	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
+		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-SWVP-shaders depends on that."
 	fi
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
@@ -6819,38 +6834,59 @@ if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-Indexed_Vertex_Blending
+# Patchset wined3d-SWVP-shaders
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#39057] Support for indexed vertex blending
+# |   *	[#8051] Sims 2 demo exits prematurely
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
-# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/d3d9/d3d9_private.h, dlls/d3d9/device.c, dlls/d3d9/directx.c, dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c,
+# | 	dlls/wined3d/adapter_gl.c, dlls/wined3d/device.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
+# | 	dlls/wined3d/shader_sm1.c, dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_SWVP_shaders" -eq 1; then
+	patch_apply wined3d-SWVP-shaders/0001-wined3d-Use-UBO-for-vertex-shader-float-constants-if.patch
+	patch_apply wined3d-SWVP-shaders/0002-d3d9-Support-SWVP-vertex-shader-float-constants-limi.patch
+	patch_apply wined3d-SWVP-shaders/0003-wined3d-Report-actual-vertex-shader-float-constants-.patch
+	patch_apply wined3d-SWVP-shaders/0004-wined3d-Support-SWVP-vertex-shader-constants-limit-i.patch
+	patch_apply wined3d-SWVP-shaders/0005-wined3d-Support-SWVP-mode-vertex-shaders.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Use UBO for vertex shader float constants if supported.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "d3d9: Support SWVP vertex shader float constants limits.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Report actual vertex shader float constants limit for SWVP device.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Support SWVP vertex shader constants limit in state tracking.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Support SWVP mode vertex shaders.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Indexed_Vertex_Blending
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-WINED3D_RS_COLORWRITEENABLE, wined3d-SWVP-shaders
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#39057] Support for Indexed Vertex Blending
+# |
+# | Modified files:
+# |   *	dlls/d3d9/tests/visual.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/directx.c,
+# | 	dlls/wined3d/glsl_shader.c, dlls/wined3d/state.c, dlls/wined3d/utils.c, dlls/wined3d/vertexdeclaration.c,
+# | 	dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	patch_apply wined3d-Indexed_Vertex_Blending/0001-d3d9-tests-Add-test-for-indexed-vertex-blending.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0002-wined3d-Implement-hardware-indexed-vertex-blending-w.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0003-d3d9-tests-Test-normal-calculation-when-indexed-vert.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0004-wined3d-Fix-calculation-of-normal-when-vertex-blendi.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0005-wined3d-Move-matrix-inversion-functions-into-utils.c.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0006-wined3d-Implement-software-processing-for-indexed-ve.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0007-d3d9-tests-Check-MaxVertexBlendMatrixIndex-capabilit.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0008-wined3d-Report-correct-number-of-blend-matrices-when.patch
-	patch_apply wined3d-Indexed_Vertex_Blending/0009-wined3d-Track-updates-of-vertex-blend-matrices-separ.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0002-d3d9-tests-Test-normal-calculation-when-indexed-vert.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0003-d3d9-tests-Check-MaxVertexBlendMatrixIndex-capabilit.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0004-wined3d-Allow-higher-world-matrix-states.patch
+	patch_apply wined3d-Indexed_Vertex_Blending/0005-wined3d-Support-indexed-vertex-blending.patch
 	(
 		printf '%s\n' '+    { "Paul Gofman", "d3d9/tests: Add test for indexed vertex blending.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "wined3d: Implement hardware indexed vertex blending with 9 matrices.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Test normal calculation when indexed vertex blending is enabled.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Fix calculation of normal when vertex blending is enabled.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Move matrix inversion functions into utils.c.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement software processing for indexed vertex blending.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Check MaxVertexBlendMatrixIndex capability.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Report correct number of blend matrices when software vertex processing is used.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Track updates of vertex blend matrices separately.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Allow higher world matrix states.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Support indexed vertex blending.", 1 },';
 	) >> "$patchlist"
 fi
 

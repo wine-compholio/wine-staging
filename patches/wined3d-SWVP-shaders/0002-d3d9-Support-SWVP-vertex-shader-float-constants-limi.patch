@@ -1,0 +1,145 @@
+From b6f4150aa69d697f08abcf82ee59ffadb2fa6ad2 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <gofmanp@gmail.com>
+Date: Mon, 25 Feb 2019 14:24:50 +0300
+Subject: [PATCH 2/5] d3d9: Support SWVP vertex shader float constants limits.
+
+Signed-off-by: Paul Gofman <gofmanp@gmail.com>
+---
+ dlls/d3d9/d3d9_private.h |  3 ++-
+ dlls/d3d9/device.c       | 32 +++++++++++++++++++++++++-------
+ dlls/d3d9/directx.c      |  2 +-
+ 3 files changed, 28 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/d3d9/d3d9_private.h b/dlls/d3d9/d3d9_private.h
+index 3fe0376e5c..300bee73c7 100644
+--- a/dlls/d3d9/d3d9_private.h
++++ b/dlls/d3d9/d3d9_private.h
+@@ -41,6 +41,7 @@
+ #include "wine/wined3d.h"
+ 
+ #define D3D9_MAX_VERTEX_SHADER_CONSTANTF 256
++#define D3D9_MAX_VERTEX_SHADER_CONSTANTF_SWVP 8192
+ #define D3D9_MAX_TEXTURE_UNITS 20
+ #define D3D9_MAX_STREAMS 16
+ 
+@@ -57,7 +58,7 @@ enum wined3d_format_id wined3dformat_from_d3dformat(D3DFORMAT format) DECLSPEC_H
+ unsigned int wined3dmapflags_from_d3dmapflags(unsigned int flags, unsigned int usage) DECLSPEC_HIDDEN;
+ void present_parameters_from_wined3d_swapchain_desc(D3DPRESENT_PARAMETERS *present_parameters,
+         const struct wined3d_swapchain_desc *swapchain_desc, DWORD presentation_interval) DECLSPEC_HIDDEN;
+-void d3dcaps_from_wined3dcaps(D3DCAPS9 *caps, const struct wined3d_caps *wined3d_caps) DECLSPEC_HIDDEN;
++void d3dcaps_from_wined3dcaps(D3DCAPS9 *caps, const struct wined3d_caps *wined3d_caps, DWORD flags) DECLSPEC_HIDDEN;
+ 
+ struct d3d9
+ {
+diff --git a/dlls/d3d9/device.c b/dlls/d3d9/device.c
+index 6cc3f180b0..03d2faf61a 100644
+--- a/dlls/d3d9/device.c
++++ b/dlls/d3d9/device.c
+@@ -362,7 +362,7 @@ static BOOL wined3d_swapchain_desc_from_present_parameters(struct wined3d_swapch
+     return TRUE;
+ }
+ 
+-void d3dcaps_from_wined3dcaps(D3DCAPS9 *caps, const struct wined3d_caps *wined3d_caps)
++void d3dcaps_from_wined3dcaps(D3DCAPS9 *caps, const struct wined3d_caps *wined3d_caps, DWORD creation_flags)
+ {
+     static const DWORD ps_minor_version[] = {0, 4, 0, 0};
+     static const DWORD vs_minor_version[] = {0, 1, 0, 0};
+@@ -500,7 +500,10 @@ void d3dcaps_from_wined3dcaps(D3DCAPS9 *caps, const struct wined3d_caps *wined3d
+         D3DPTEXTURECAPS_MIPMAP         | D3DPTEXTURECAPS_MIPVOLUMEMAP  | D3DPTEXTURECAPS_MIPCUBEMAP      |
+         D3DPTEXTURECAPS_CUBEMAP_POW2   | D3DPTEXTURECAPS_VOLUMEMAP_POW2| D3DPTEXTURECAPS_NOPROJECTEDBUMPENV;
+ 
+-    caps->MaxVertexShaderConst = min(D3D9_MAX_VERTEX_SHADER_CONSTANTF, caps->MaxVertexShaderConst);
++    if (creation_flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
++        caps->MaxVertexShaderConst = min(D3D9_MAX_VERTEX_SHADER_CONSTANTF_SWVP, caps->MaxVertexShaderConst);
++    else
++        caps->MaxVertexShaderConst = min(D3D9_MAX_VERTEX_SHADER_CONSTANTF, caps->MaxVertexShaderConst);
+     caps->NumSimultaneousRTs = min(D3D_MAX_SIMULTANEOUS_RENDERTARGETS, caps->NumSimultaneousRTs);
+ 
+     if (caps->PixelShaderVersion > 3)
+@@ -679,6 +682,7 @@ static HRESULT WINAPI d3d9_device_GetDirect3D(IDirect3DDevice9Ex *iface, IDirect
+ static HRESULT WINAPI d3d9_device_GetDeviceCaps(IDirect3DDevice9Ex *iface, D3DCAPS9 *caps)
+ {
+     struct d3d9_device *device = impl_from_IDirect3DDevice9Ex(iface);
++    struct wined3d_device_creation_parameters creation_parameters;
+     struct wined3d_caps wined3d_caps;
+     HRESULT hr;
+ 
+@@ -687,13 +691,15 @@ static HRESULT WINAPI d3d9_device_GetDeviceCaps(IDirect3DDevice9Ex *iface, D3DCA
+     if (!caps)
+         return D3DERR_INVALIDCALL;
+ 
++    wined3d_device_get_creation_parameters(device->wined3d_device, &creation_parameters);
++
+     memset(caps, 0, sizeof(*caps));
+ 
+     wined3d_mutex_lock();
+     hr = wined3d_device_get_device_caps(device->wined3d_device, &wined3d_caps);
+     wined3d_mutex_unlock();
+ 
+-    d3dcaps_from_wined3dcaps(caps, &wined3d_caps);
++    d3dcaps_from_wined3dcaps(caps, &wined3d_caps, creation_parameters.flags);
+ 
+     return hr;
+ }
+@@ -3418,14 +3424,20 @@ static HRESULT WINAPI d3d9_device_SetVertexShaderConstantF(IDirect3DDevice9Ex *i
+         UINT reg_idx, const float *data, UINT count)
+ {
+     struct d3d9_device *device = impl_from_IDirect3DDevice9Ex(iface);
++    struct wined3d_device_creation_parameters creation_parameters;
++    unsigned int max_constants;
+     HRESULT hr;
+ 
+     TRACE("iface %p, reg_idx %u, data %p, count %u.\n", iface, reg_idx, data, count);
+ 
+-    if (reg_idx + count > D3D9_MAX_VERTEX_SHADER_CONSTANTF)
++    wined3d_device_get_creation_parameters(device->wined3d_device, &creation_parameters);
++    max_constants = creation_parameters.flags
++            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
++            ? D3D9_MAX_VERTEX_SHADER_CONSTANTF_SWVP : D3D9_MAX_VERTEX_SHADER_CONSTANTF;
++    if (reg_idx + count > max_constants)
+     {
+         WARN("Trying to access %u constants, but d3d9 only supports %u\n",
+-             reg_idx + count, D3D9_MAX_VERTEX_SHADER_CONSTANTF);
++             reg_idx + count, max_constants);
+         return D3DERR_INVALIDCALL;
+     }
+ 
+@@ -3441,14 +3453,20 @@ static HRESULT WINAPI d3d9_device_GetVertexShaderConstantF(IDirect3DDevice9Ex *i
+         UINT reg_idx, float *data, UINT count)
+ {
+     struct d3d9_device *device = impl_from_IDirect3DDevice9Ex(iface);
++    struct wined3d_device_creation_parameters creation_parameters;
++    unsigned int max_constants;
+     HRESULT hr;
+ 
+     TRACE("iface %p, reg_idx %u, data %p, count %u.\n", iface, reg_idx, data, count);
+ 
+-    if (reg_idx + count > D3D9_MAX_VERTEX_SHADER_CONSTANTF)
++    wined3d_device_get_creation_parameters(device->wined3d_device, &creation_parameters);
++    max_constants = creation_parameters.flags
++            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
++            ? D3D9_MAX_VERTEX_SHADER_CONSTANTF_SWVP : D3D9_MAX_VERTEX_SHADER_CONSTANTF;
++    if (reg_idx + count > max_constants)
+     {
+         WARN("Trying to access %u constants, but d3d9 only supports %u\n",
+-             reg_idx + count, D3D9_MAX_VERTEX_SHADER_CONSTANTF);
++             reg_idx + count, max_constants);
+         return D3DERR_INVALIDCALL;
+     }
+ 
+diff --git a/dlls/d3d9/directx.c b/dlls/d3d9/directx.c
+index eab114d19c..7c4defa169 100644
+--- a/dlls/d3d9/directx.c
++++ b/dlls/d3d9/directx.c
+@@ -371,7 +371,7 @@ static HRESULT WINAPI d3d9_GetDeviceCaps(IDirect3D9Ex *iface, UINT adapter, D3DD
+     hr = wined3d_get_device_caps(d3d9->wined3d, adapter, device_type, &wined3d_caps);
+     wined3d_mutex_unlock();
+ 
+-    d3dcaps_from_wined3dcaps(caps, &wined3d_caps);
++    d3dcaps_from_wined3dcaps(caps, &wined3d_caps, 0);
+ 
+     return hr;
+ }
+-- 
+2.20.1
+

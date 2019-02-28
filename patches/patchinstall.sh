@@ -181,7 +181,6 @@ patch_enable_all ()
 	enable_mciavi32_fullscreen_support="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
-	enable_msasn1_ASN1_CreateModule="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msi_MsiGetDatabaseState="$1"
@@ -695,9 +694,6 @@ patch_enable ()
 			;;
 		mountmgr-DosDevices)
 			enable_mountmgr_DosDevices="$2"
-			;;
-		msasn1-ASN1_CreateModule)
-			enable_msasn1_ASN1_CreateModule="$2"
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
@@ -4129,21 +4125,6 @@ if test "$enable_mountmgr_DosDevices" -eq 1; then
 	patch_apply mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "mountmgr.sys: Write usable device paths into HKLM\\SYSTEM\\MountedDevices.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msasn1-ASN1_CreateModule
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38020] msasn1: implement ASN1_CreateModule
-# |
-# | Modified files:
-# |   *	dlls/msasn1/main.c, dlls/msasn1/msasn1.spec
-# |
-if test "$enable_msasn1_ASN1_CreateModule" -eq 1; then
-	patch_apply msasn1-ASN1_CreateModule/0001-msasn1-implement-ASN1_CreateModule.patch
-	(
-		printf '%s\n' '+    { "Austin English", "msasn1: Implement ASN1_CreateModule.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9422b844b59282db04af533451f50661de56b9ca"
+	echo "6d35c10a7b7155dd552a3ad1a266d205e38f8765"
 }
 
 # Show version information
@@ -105,7 +105,6 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
-	enable_d3d8_ValidateShader="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
@@ -382,8 +381,6 @@ patch_enable_all ()
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
 	enable_wintrust_WinVerifyTrust="$1"
-	enable_wmvcore_WMCreateSyncReader="$1"
-	enable_wmvcore_WMCreateSyncReaderPriv="$1"
 	enable_wow64cpu_Wow64Transition="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -470,9 +467,6 @@ patch_enable ()
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
-			;;
-		d3d8-ValidateShader)
-			enable_d3d8_ValidateShader="$2"
 			;;
 		d3d9-DesktopWindow)
 			enable_d3d9_DesktopWindow="$2"
@@ -1302,12 +1296,6 @@ patch_enable ()
 		wintrust-WinVerifyTrust)
 			enable_wintrust_WinVerifyTrust="$2"
 			;;
-		wmvcore-WMCreateSyncReader)
-			enable_wmvcore_WMCreateSyncReader="$2"
-			;;
-		wmvcore-WMCreateSyncReaderPriv)
-			enable_wmvcore_WMCreateSyncReaderPriv="$2"
-			;;
 		wow64cpu-Wow64Transition)
 			enable_wow64cpu_Wow64Transition="$2"
 			;;
@@ -1741,13 +1729,6 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
 	fi
 	enable_server_Desktop_Refcount=1
-fi
-
-if test "$enable_wmvcore_WMCreateSyncReaderPriv" -eq 1; then
-	if test "$enable_wmvcore_WMCreateSyncReader" -gt 1; then
-		abort "Patchset wmvcore-WMCreateSyncReader disabled, but wmvcore-WMCreateSyncReaderPriv depends on that."
-	fi
-	enable_wmvcore_WMCreateSyncReader=1
 fi
 
 if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
@@ -2800,21 +2781,6 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d11: Implement restoring of state after executing a command list.", 1 },';
 		printf '%s\n' '+    { "Steve Melenchuk", "d3d11: Allow NULL pointer for initial count in d3d11_deferred_context_CSSetUnorderedAccessViews.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Correctly align map info buffer.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d8-ValidateShader
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40036] Improve stubs for Validate{Vertex,Pixel}Shader
-# |
-# | Modified files:
-# |   *	dlls/d3d8/d3d8_main.c, dlls/d3d8/tests/device.c
-# |
-if test "$enable_d3d8_ValidateShader" -eq 1; then
-	patch_apply d3d8-ValidateShader/0002-d3d8-Improve-ValidatePixelShader-stub.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Improve ValidatePixelShader stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7550,39 +7516,6 @@ if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
 	patch_apply wintrust-WTHelperGetProvCertFromChain/0001-wintrust-Add-parameter-check-in-WTHelperGetProvCertF.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintrust: Add parameter check in WTHelperGetProvCertFromChain.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wmvcore-WMCreateSyncReader
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35841] wmvcore: Implement WMCreateSyncReader
-# |
-# | Modified files:
-# |   *	dlls/wmvcore/wmvcore_main.c
-# |
-if test "$enable_wmvcore_WMCreateSyncReader" -eq 1; then
-	patch_apply wmvcore-WMCreateSyncReader/0001-wmvcore-Implement-WMCreateSyncReader.patch
-	(
-		printf '%s\n' '+    { "Andrey Gusev", "wmvcore: Implement WMCreateSyncReader.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wmvcore-WMCreateSyncReaderPriv
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wmvcore-WMCreateSyncReader
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37327] wmvcore: Implement WMCreateSyncReaderPriv
-# |
-# | Modified files:
-# |   *	dlls/wmvcore/wmvcore.spec, dlls/wmvcore/wmvcore_main.c
-# |
-if test "$enable_wmvcore_WMCreateSyncReaderPriv" -eq 1; then
-	patch_apply wmvcore-WMCreateSyncReaderPriv/0001-wmvcore-Implement-WMCreateSyncReaderPriv.patch
-	(
-		printf '%s\n' '+    { "Andrey Gusev", "wmvcore: Implement WMCreateSyncReaderPriv.", 1 },';
 	) >> "$patchlist"
 fi
 

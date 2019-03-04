@@ -1,7 +1,7 @@
-From 135039777d3d6a79580661221cf4f394d390d5fb Mon Sep 17 00:00:00 2001
+From 86345de0628fe7d467f25797c532a3a11e5b61eb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 02:05:49 +0200
-Subject: winebuild: Use multipass label system to generate fake dlls.
+Subject: [PATCH] winebuild: Use multipass label system to generate fake dlls.
 
 ---
  tools/winebuild/build.h  |   6 ++
@@ -11,10 +11,10 @@ Subject: winebuild: Use multipass label system to generate fake dlls.
  4 files changed, 180 insertions(+), 64 deletions(-)
 
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
-index e338c9c8024..3434cfe9c90 100644
+index b8ab56e..218b721 100644
 --- a/tools/winebuild/build.h
 +++ b/tools/winebuild/build.h
-@@ -328,6 +328,7 @@ extern size_t input_buffer_pos;
+@@ -332,6 +332,7 @@ extern size_t input_buffer_pos;
  extern size_t input_buffer_size;
  extern unsigned char *output_buffer;
  extern size_t output_buffer_pos;
@@ -22,7 +22,7 @@ index e338c9c8024..3434cfe9c90 100644
  extern size_t output_buffer_size;
  
  extern void init_input_buffer( const char *file );
-@@ -343,6 +344,11 @@ extern void put_dword( unsigned int val );
+@@ -347,6 +348,11 @@ extern void put_dword( unsigned int val );
  extern void put_qword( unsigned int val );
  extern void put_pword( unsigned int val );
  extern void align_output( unsigned int align );
@@ -35,7 +35,7 @@ index e338c9c8024..3434cfe9c90 100644
  /* global variables */
  
 diff --git a/tools/winebuild/res32.c b/tools/winebuild/res32.c
-index 1686f567185..8db3213fbbd 100644
+index b20dfb4..2f35918 100644
 --- a/tools/winebuild/res32.c
 +++ b/tools/winebuild/res32.c
 @@ -534,7 +534,6 @@ void output_bin_resources( DLLSPEC *spec, unsigned int start_rva )
@@ -47,10 +47,10 @@ index 1686f567185..8db3213fbbd 100644
      /* output the resource directories */
  
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index dde1bd0704d..c01ff6d7746 100644
+index dc63c39..59cced1 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -702,11 +702,11 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -811,11 +811,11 @@ void BuildSpec32File( DLLSPEC *spec )
  
  
  /*******************************************************************
@@ -65,7 +65,7 @@ index dde1bd0704d..c01ff6d7746 100644
  {
      static const unsigned char dll_code_section[] = { 0x31, 0xc0,          /* xor %eax,%eax */
                                                        0xc2, 0x0c, 0x00 };  /* ret $12 */
-@@ -718,22 +718,8 @@ void output_fake_module( DLLSPEC *spec )
+@@ -827,22 +827,8 @@ void output_fake_module( DLLSPEC *spec )
      const unsigned int page_size = get_page_size();
      const unsigned int section_align = page_size;
      const unsigned int file_align = 0x200;
@@ -88,7 +88,7 @@ index dde1bd0704d..c01ff6d7746 100644
  
      put_word( 0x5a4d );       /* e_magic */
      put_word( 0x40 );         /* e_cblp */
-@@ -761,7 +747,7 @@ void output_fake_module( DLLSPEC *spec )
+@@ -870,7 +856,7 @@ void output_fake_module( DLLSPEC *spec )
      put_dword( lfanew );
  
      put_data( fakedll_signature, sizeof(fakedll_signature) );
@@ -97,7 +97,7 @@ index dde1bd0704d..c01ff6d7746 100644
  
      put_dword( 0x4550 );                             /* Signature */
      switch(target_cpu)
-@@ -785,11 +771,11 @@ void output_fake_module( DLLSPEC *spec )
+@@ -894,11 +880,11 @@ void output_fake_module( DLLSPEC *spec )
                IMAGE_NT_OPTIONAL_HDR32_MAGIC );       /* Magic */
      put_byte(  7 );                                  /* MajorLinkerVersion */
      put_byte(  10 );                                 /* MinorLinkerVersion */
@@ -112,7 +112,7 @@ index dde1bd0704d..c01ff6d7746 100644
      if (get_ptr_size() == 4) put_dword( 0 );         /* BaseOfData */
      put_pword( 0x10000000 );                         /* ImageBase */
      put_dword( section_align );                      /* SectionAlignment */
-@@ -801,8 +787,8 @@ void output_fake_module( DLLSPEC *spec )
+@@ -910,8 +896,8 @@ void output_fake_module( DLLSPEC *spec )
      put_word( spec->subsystem_major );               /* MajorSubsystemVersion */
      put_word( spec->subsystem_minor );               /* MinorSubsystemVersion */
      put_dword( 0 );                                  /* Win32VersionValue */
@@ -123,7 +123,7 @@ index dde1bd0704d..c01ff6d7746 100644
      put_dword( 0 );                                  /* CheckSum */
      put_word( spec->subsystem );                     /* Subsystem */
      put_word( spec->dll_characteristics );           /* DllCharacteristics */
-@@ -815,10 +801,10 @@ void output_fake_module( DLLSPEC *spec )
+@@ -924,10 +910,10 @@ void output_fake_module( DLLSPEC *spec )
  
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT] */
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] */
@@ -137,7 +137,7 @@ index dde1bd0704d..c01ff6d7746 100644
      }
      else
      {
-@@ -828,8 +814,8 @@ void output_fake_module( DLLSPEC *spec )
+@@ -937,8 +923,8 @@ void output_fake_module( DLLSPEC *spec )
  
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION] */
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY] */
@@ -148,7 +148,7 @@ index dde1bd0704d..c01ff6d7746 100644
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG] */
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_COPYRIGHT] */
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_GLOBALPTR] */
-@@ -842,62 +828,95 @@ void output_fake_module( DLLSPEC *spec )
+@@ -951,62 +937,95 @@ void output_fake_module( DLLSPEC *spec )
      put_dword( 0 ); put_dword( 0 );   /* DataDirectory[15] */
  
      /* .text section */
@@ -280,7 +280,7 @@ index dde1bd0704d..c01ff6d7746 100644
  }
  
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index 925054b8bb7..eada46604ec 100644
+index f331903..7188d10 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
 @@ -37,6 +37,7 @@
@@ -291,7 +291,7 @@ index 925054b8bb7..eada46604ec 100644
  #include "build.h"
  
  #if defined(_WIN32) && !defined(__CYGWIN__)
-@@ -518,8 +519,86 @@ size_t input_buffer_pos;
+@@ -522,8 +523,86 @@ size_t input_buffer_pos;
  size_t input_buffer_size;
  unsigned char *output_buffer;
  size_t output_buffer_pos;
@@ -378,7 +378,7 @@ index 925054b8bb7..eada46604ec 100644
  static void check_output_buffer_space( size_t size )
  {
      if (output_buffer_pos + size >= output_buffer_size)
-@@ -556,7 +635,9 @@ void init_output_buffer(void)
+@@ -560,7 +639,9 @@ void init_output_buffer(void)
  {
      output_buffer_size = 1024;
      output_buffer_pos = 0;
@@ -388,15 +388,15 @@ index 925054b8bb7..eada46604ec 100644
  }
  
  void flush_output_buffer(void)
-@@ -564,6 +645,7 @@ void flush_output_buffer(void)
-     if (fwrite( output_buffer, 1, output_buffer_pos, output_file ) != output_buffer_pos)
+@@ -570,6 +651,7 @@ void flush_output_buffer(void)
          fatal_error( "Error writing to %s\n", output_file_name );
+     close_output_file();
      free( output_buffer );
 +    free_labels();
  }
  
  unsigned char get_byte(void)
-@@ -603,12 +685,14 @@ void put_data( const void *data, size_t size )
+@@ -609,12 +691,14 @@ void put_data( const void *data, size_t size )
      check_output_buffer_space( size );
      memcpy( output_buffer + output_buffer_pos, data, size );
      output_buffer_pos += size;
@@ -411,7 +411,7 @@ index 925054b8bb7..eada46604ec 100644
  }
  
  void put_word( unsigned short val )
-@@ -655,6 +739,14 @@ void align_output( unsigned int align )
+@@ -661,6 +745,14 @@ void align_output( unsigned int align )
      output_buffer_pos += size;
  }
  
@@ -427,5 +427,5 @@ index 925054b8bb7..eada46604ec 100644
  void output_standard_file_header(void)
  {
 -- 
-2.12.2
+1.9.1
 

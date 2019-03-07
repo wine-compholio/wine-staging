@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "56f34c7489cb463981e987a59aee9f8780fef7cd"
+	echo "ab7756619c1b16c761618a68d1b6a06ad437cbe8"
 }
 
 # Show version information
@@ -186,7 +186,6 @@ patch_enable_all ()
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msidb_Implementation="$1"
 	enable_msvcrt_Math_Precision="$1"
-	enable_msvfw32_ICGetDisplayFormat="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"
@@ -272,13 +271,11 @@ patch_enable_all ()
 	enable_server_Stored_ACLs="$1"
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
-	enable_setupapi_CM_Request_Device_Eject="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
 	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
-	enable_setupapi_SetupDiGetDeviceInterfaceDetail="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
@@ -711,9 +708,6 @@ patch_enable ()
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
 			;;
-		msvfw32-ICGetDisplayFormat)
-			enable_msvfw32_ICGetDisplayFormat="$2"
-			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
 			;;
@@ -969,9 +963,6 @@ patch_enable ()
 		server-device_manager_destroy)
 			enable_server_device_manager_destroy="$2"
 			;;
-		setupapi-CM_Request_Device_Eject)
-			enable_setupapi_CM_Request_Device_Eject="$2"
-			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
 			;;
@@ -986,9 +977,6 @@ patch_enable ()
 			;;
 		setupapi-SP_COPY_IN_USE_NEEDS_REBOOT)
 			enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$2"
-			;;
-		setupapi-SetupDiGetDeviceInterfaceDetail)
-			enable_setupapi_SetupDiGetDeviceInterfaceDetail="$2"
 			;;
 		setupapi-SetupPromptForDisk)
 			enable_setupapi_SetupPromptForDisk="$2"
@@ -4235,27 +4223,6 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msvfw32-ICGetDisplayFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23175] Fix implementation of ICGetDisplayFormat
-# |   *	[#25180] Fix rendering of Clonk Endeavour's intro video
-# |   *	[#14695] Implement support for converting 16 bit depth to 24 bit in msvidc32
-# |
-# | Modified files:
-# |   *	dlls/iccvid/iccvid.c, dlls/msvfw32/tests/msvfw.c, dlls/msvidc32/msvideo1.c
-# |
-if test "$enable_msvfw32_ICGetDisplayFormat" -eq 1; then
-	patch_apply msvfw32-ICGetDisplayFormat/0005-iccvid-Fix-calculation-of-stride-and-size.patch
-	patch_apply msvfw32-ICGetDisplayFormat/0006-msvidc32-Add-support-for-converting-16-bit-depth-to-.patch
-	patch_apply msvfw32-ICGetDisplayFormat/0007-msvidc32-Fix-calculation-of-stride-and-size.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "iccvid: Fix calculation of stride and size.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "msvidc32: Add support for converting 16 bit depth to 24 bit.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "msvidc32: Fix calculation of stride and size.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-APC_Performance
 # |
 # | Modified files:
@@ -5691,21 +5658,6 @@ if test "$enable_server_device_manager_destroy" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset setupapi-CM_Request_Device_Eject
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45879] Added CM_Request_Device_EjectA/W stub
-# |
-# | Modified files:
-# |   *	dlls/setupapi/setupapi.spec, dlls/setupapi/stubs.c, include/cfgmgr32.h
-# |
-if test "$enable_setupapi_CM_Request_Device_Eject" -eq 1; then
-	patch_apply setupapi-CM_Request_Device_Eject/0001-setupapi-Added-CM_Request_Device_EjectA-W-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "setupapi: Added CM_Request_Device_EjectA/W stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset setupapi-DiskSpaceList
 # |
 # | Modified files:
@@ -5796,23 +5748,6 @@ if test "$enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT" -eq 1; then
 	patch_apply setupapi-SP_COPY_IN_USE_NEEDS_REBOOT/0001-setupapi-Implement-SP_COPY_IN_USE_NEEDS_REBOOT.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SP_COPY_IN_USE_NEEDS_REBOOT.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-SetupDiGetDeviceInterfaceDetail
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45963] - Add SetupDiInstallDeviceInterfaces/SetupDiRegisterCoDeviceInstallers stubs
-# |
-# | Modified files:
-# |   *	dlls/setupapi/devinst.c, dlls/setupapi/setupapi.spec
-# |
-if test "$enable_setupapi_SetupDiGetDeviceInterfaceDetail" -eq 1; then
-	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0001-setupapi-Add-SetupDiInstallDeviceInterfaces.patch
-	patch_apply setupapi-SetupDiGetDeviceInterfaceDetail/0002-setupapi-Add-SetupDiRegisterCoDeviceInstallers-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "setupapi: Add SetupDiInstallDeviceInterfaces.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "setupapi: Add SetupDiRegisterCoDeviceInstallers stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6923,9 +6858,10 @@ fi
 # |   *	[#8051] Sims 2 demo exits prematurely
 # |
 # | Modified files:
-# |   *	dlls/d3d9/d3d9_private.h, dlls/d3d9/device.c, dlls/d3d9/directx.c, dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c,
-# | 	dlls/wined3d/adapter_gl.c, dlls/wined3d/device.c, dlls/wined3d/glsl_shader.c, dlls/wined3d/shader.c,
-# | 	dlls/wined3d/shader_sm1.c, dlls/wined3d/stateblock.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/d3d8/directx.c, dlls/d3d9/d3d9_private.h, dlls/d3d9/device.c, dlls/d3d9/directx.c, dlls/d3d9/tests/device.c,
+# | 	dlls/d3d9/tests/visual.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/device.c, dlls/wined3d/glsl_shader.c,
+# | 	dlls/wined3d/shader.c, dlls/wined3d/shader_sm1.c, dlls/wined3d/state.c, dlls/wined3d/stateblock.c,
+# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 if test "$enable_wined3d_SWVP_shaders" -eq 1; then
 	patch_apply wined3d-SWVP-shaders/0001-wined3d-Use-UBO-for-vertex-shader-float-constants-if.patch

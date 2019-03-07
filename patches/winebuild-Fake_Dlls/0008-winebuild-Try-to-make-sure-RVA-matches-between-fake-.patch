@@ -1,4 +1,4 @@
-From 7366d8005ea9236758e481dd41ed9a62c8abf7ce Mon Sep 17 00:00:00 2001
+From b9dbb8650b4b339de5e71cf5dab5c3ec321def58 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 25 May 2017 21:46:27 +0200
 Subject: [PATCH] winebuild: Try to make sure RVA matches between fake and
@@ -7,14 +7,14 @@ Subject: [PATCH] winebuild: Try to make sure RVA matches between fake and
 ---
  dlls/kernel32/tests/loader.c |  1 -
  libs/wine/loader.c           | 13 +++++++++++--
- tools/winebuild/spec32.c     | 23 ++++++++++++++++++++---
- 3 files changed, 31 insertions(+), 6 deletions(-)
+ tools/winebuild/spec32.c     | 17 +++++++++++++++--
+ 3 files changed, 26 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 3e012ff..ffc28fd 100644
+index 96cd67ff4..3a441bf7b 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1449,7 +1449,6 @@ static void test_FakeDLL(void)
+@@ -1579,7 +1579,6 @@ static void test_FakeDLL(void)
          /* check position in memory */
          dll_rva = (DWORD_PTR)dll_func - (DWORD_PTR)module;
          map_rva = funcs[ordinals[i]];
@@ -23,7 +23,7 @@ index 3e012ff..ffc28fd 100644
             func_name, dll_rva, map_rva);
  
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
-index 1dcb397..677e0fe 100644
+index 8f40ea049..163125c9e 100644
 --- a/libs/wine/loader.c
 +++ b/libs/wine/loader.c
 @@ -405,8 +405,12 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
@@ -54,10 +54,10 @@ index 1dcb397..677e0fe 100644
  
      memcpy( sec->Name, ".text", sizeof(".text") );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 3955982..430c7a5 100644
+index 75b2474fa..d0b1367ef 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -348,14 +348,24 @@ static void output_relay_debug( DLLSPEC *spec )
+@@ -378,14 +378,25 @@ static void output_relay_debug( DLLSPEC *spec )
   */
  static void output_syscall_thunks( DLLSPEC *spec )
  {
@@ -77,6 +77,7 @@ index 3955982..430c7a5 100644
 +
 +    output( "\t.align %d\n", get_alignment(65536) );
 +    output( "__wine_spec_pe_header_syscalls:\n" );
++    output( "__wine_spec_pe_header_syscalls_end:\n" );
 +    output( "\t.byte 0\n" );
 +    output( "\t.balign %d, 0\n", page_size );
  
@@ -84,22 +85,15 @@ index 3955982..430c7a5 100644
      for (i = 0; i < spec->nb_syscalls; i++)
      {
          ORDDEF *odp = spec->syscalls[i];
-@@ -734,7 +744,14 @@ void output_module( DLLSPEC *spec )
-     output( "\t.long 0,0\n" );  /* DataDirectory[12] */
-     output( "\t.long 0,0\n" );  /* DataDirectory[13] */
-     output( "\t.long 0,0\n" );  /* DataDirectory[14] */
--    output( "\t.long 0,0\n" );  /* DataDirectory[15] */
-+
-+    if (spec->nb_syscalls)   /* DataDirectory[15] */
-+    {
-+        output( "\t%s __wine_spec_pe_header_syscalls\n", get_asm_ptr_keyword() );
-+        if (get_ptr_size() == 4) output( "\t.long 0\n" );
-+    }
-+    else
-+        output( "\t.long 0,0\n" );
+@@ -765,6 +776,8 @@ void output_module( DLLSPEC *spec )
+         data_dirs[1] = ".L__wine_spec_imports";   /* DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] */
+     if (spec->nb_resources)
+         data_dirs[2] = ".L__wine_spec_resources"; /* DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE] */
++    if (spec->nb_syscalls)
++        data_dirs[15] = "__wine_spec_pe_header_syscalls";
  
-     output( "\n\t%s\n", get_asm_string_section() );
-     output( "%s\n", asm_globl("__wine_spec_file_name") );
+     output_data_directories( data_dirs );
+ 
 -- 
-1.9.1
+2.20.1
 

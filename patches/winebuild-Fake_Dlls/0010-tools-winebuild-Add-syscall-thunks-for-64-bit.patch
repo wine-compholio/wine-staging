@@ -1,4 +1,4 @@
-From d7aefc52dbb93e36fb89acec49a349cb039fb7e8 Mon Sep 17 00:00:00 2001
+From a75cddcd2f710f40852647fcb2b4d6da9127c92b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -6,17 +6,17 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 ---
  dlls/kernel32/tests/loader.c |   7 +-
  dlls/ntdll/signal_x86_64.c   |   3 +
- dlls/ntdll/thread.c          |   6 ++
+ dlls/ntdll/thread.c          |   6 +
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
- tools/winebuild/spec32.c     | 209 +++++++++++++++++++++++++++++++++++++++++--
- 6 files changed, 223 insertions(+), 8 deletions(-)
+ tools/winebuild/spec32.c     | 210 ++++++++++++++++++++++++++++++++++-
+ 6 files changed, 224 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 028a187..c97ee75 100644
+index 94a5109b4..15ec89f14 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1564,7 +1564,7 @@ static void test_filenames(void)
+@@ -1527,7 +1527,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -25,7 +25,7 @@ index 028a187..c97ee75 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1606,8 +1606,13 @@ static void test_FakeDLL(void)
+@@ -1569,8 +1569,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -40,7 +40,7 @@ index 028a187..c97ee75 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 54871b8..0ce0c22 100644
+index 54871b830..0ce0c22d7 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -328,6 +328,8 @@ static inline struct amd64_thread_data *amd64_thread_data(void)
@@ -61,7 +61,7 @@ index 54871b8..0ce0c22 100644
      return status;
  }
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 1c09344..afe5731 100644
+index 394b3be60..11963689c 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -60,6 +60,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
@@ -73,7 +73,7 @@ index 1c09344..afe5731 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -301,6 +303,10 @@ void thread_init(void)
+@@ -299,6 +301,10 @@ void thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
@@ -85,7 +85,7 @@ index 1c09344..afe5731 100644
       * Starting with Vista, the first user to log on has session id 1.
       * Session id 0 is for processes that don't interact with the user (like services).
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
-index 162c94d..87eb5a8 100644
+index e33e5b669..1fbcfd7f6 100644
 --- a/libs/wine/loader.c
 +++ b/libs/wine/loader.c
 @@ -468,7 +468,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
@@ -101,7 +101,7 @@ index 162c94d..87eb5a8 100644
      sec++;
  
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index b758ca0..3e69540 100644
+index b758ca0db..3e695406d 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -549,7 +549,7 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
@@ -114,10 +114,10 @@ index b758ca0..3e69540 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 3b18b6f..77bc8b4 100644
+index d0b1367ef..de510b3da 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -357,11 +357,11 @@ static void output_relay_debug( DLLSPEC *spec )
+@@ -372,11 +372,11 @@ static void output_relay_debug( DLLSPEC *spec )
  }
  
  /*******************************************************************
@@ -131,10 +131,11 @@ index 3b18b6f..77bc8b4 100644
  {
      const unsigned int page_size = get_page_size();
      int i;
-@@ -460,6 +460,90 @@ static void output_syscall_thunks( DLLSPEC *spec )
+@@ -475,6 +475,91 @@ static void output_syscall_thunks( DLLSPEC *spec )
+     output_function_size( "__wine_syscall_dispatcher" );
  }
  
- /*******************************************************************
++/*******************************************************************
 + *         output_syscall_thunks_x64
 + *
 + * Output entry points for system call functions
@@ -155,6 +156,7 @@ index 3b18b6f..77bc8b4 100644
 +
 +    output( "\t.align %d\n", get_alignment(65536) );
 +    output( "__wine_spec_pe_header_syscalls:\n" );
++    output( "__wine_spec_pe_header_syscalls_end:\n" );
 +    output( "\t.byte 0\n" );
 +    output( "\t.balign %d, 0\n", page_size );
 +
@@ -218,11 +220,10 @@ index 3b18b6f..77bc8b4 100644
 +    output_function_size( "__wine_syscall_dispatcher" );
 +}
 +
-+/*******************************************************************
+ /*******************************************************************
   *         output_exports
   *
-  * Output the export table for a Win32 module.
-@@ -816,7 +900,10 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -803,7 +888,10 @@ void output_spec32_file( DLLSPEC *spec )
      open_output_file();
      output_standard_file_header();
      output_module( spec );
@@ -234,7 +235,7 @@ index 3b18b6f..77bc8b4 100644
      output_stubs( spec );
      output_exports( spec );
      output_imports( spec );
-@@ -829,7 +916,7 @@ void BuildSpec32File( DLLSPEC *spec )
+@@ -816,7 +904,7 @@ void output_spec32_file( DLLSPEC *spec )
  
  static int needs_stub_exports( DLLSPEC *spec )
  {
@@ -243,7 +244,7 @@ index 3b18b6f..77bc8b4 100644
          return 0;
      if (!(spec->characteristics & IMAGE_FILE_DLL))
          return 0;
-@@ -839,7 +926,7 @@ static int needs_stub_exports( DLLSPEC *spec )
+@@ -826,7 +914,7 @@ static int needs_stub_exports( DLLSPEC *spec )
  }
  
  
@@ -252,7 +253,7 @@ index 3b18b6f..77bc8b4 100644
  {
      int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
      size_t rva, thunk;
-@@ -1001,6 +1088,113 @@ static void create_stub_exports_text( DLLSPEC *spec )
+@@ -988,6 +1076,113 @@ static void create_stub_exports_text( DLLSPEC *spec )
  }
  
  
@@ -366,7 +367,7 @@ index 3b18b6f..77bc8b4 100644
  static void create_stub_exports_data( DLLSPEC *spec )
  {
      int i;
-@@ -1200,7 +1394,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -1187,7 +1382,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
      if (needs_stub_exports( spec ))
      {
          put_label( "text_start" );
@@ -379,5 +380,5 @@ index 3b18b6f..77bc8b4 100644
      }
      else
 -- 
-1.9.1
+2.20.1
 

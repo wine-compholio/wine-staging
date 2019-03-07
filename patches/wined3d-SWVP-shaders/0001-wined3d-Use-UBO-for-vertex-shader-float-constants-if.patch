@@ -1,4 +1,4 @@
-From 168e4d29d3880dcb9db75c0a90a459037ee707d5 Mon Sep 17 00:00:00 2001
+From 22aa526b9442ac184b928d16fd354d97b92a7a39 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 13:17:01 +0300
 Subject: [PATCH 1/5] wined3d: Use UBO for vertex shader float constants if
@@ -6,15 +6,44 @@ Subject: [PATCH 1/5] wined3d: Use UBO for vertex shader float constants if
 
 Signed-off-by: Paul Gofman <gofmanp@gmail.com>
 ---
+ dlls/d3d8/directx.c            |   2 +-
+ dlls/d3d9/directx.c            |   2 +-
  dlls/wined3d/adapter_gl.c      |   3 +
- dlls/wined3d/glsl_shader.c     | 113 +++++++++++++++++++++++++++++----
+ dlls/wined3d/glsl_shader.c     | 126 ++++++++++++++++++++++++++++++---
  dlls/wined3d/shader.c          |   2 +
- dlls/wined3d/utils.c           |   5 ++
+ dlls/wined3d/state.c           |   5 ++
  dlls/wined3d/wined3d_private.h |   2 +
- 5 files changed, 114 insertions(+), 11 deletions(-)
+ include/wine/wined3d.h         |   1 +
+ 8 files changed, 130 insertions(+), 13 deletions(-)
 
+diff --git a/dlls/d3d8/directx.c b/dlls/d3d8/directx.c
+index 09188cc2ae..657227357c 100644
+--- a/dlls/d3d8/directx.c
++++ b/dlls/d3d8/directx.c
+@@ -419,7 +419,7 @@ BOOL d3d8_init(struct d3d8 *d3d8)
+     DWORD flags = WINED3D_LEGACY_DEPTH_BIAS | WINED3D_VIDMEM_ACCOUNTING
+             | WINED3D_HANDLE_RESTORE | WINED3D_PIXEL_CENTER_INTEGER
+             | WINED3D_LEGACY_UNBOUND_RESOURCE_COLOR | WINED3D_NO_PRIMITIVE_RESTART
+-            | WINED3D_LEGACY_CUBEMAP_FILTERING;
++            | WINED3D_LEGACY_CUBEMAP_FILTERING | WINED3D_LEGACY_SHADER_CONSTANTS;
+ 
+     d3d8->IDirect3D8_iface.lpVtbl = &d3d8_vtbl;
+     d3d8->refcount = 1;
+diff --git a/dlls/d3d9/directx.c b/dlls/d3d9/directx.c
+index c507991aaa..7cdf5ddbb9 100644
+--- a/dlls/d3d9/directx.c
++++ b/dlls/d3d9/directx.c
+@@ -585,7 +585,7 @@ BOOL d3d9_init(struct d3d9 *d3d9, BOOL extended)
+     DWORD flags = WINED3D_PRESENT_CONVERSION | WINED3D_HANDLE_RESTORE | WINED3D_PIXEL_CENTER_INTEGER
+             | WINED3D_SRGB_READ_WRITE_CONTROL | WINED3D_LEGACY_UNBOUND_RESOURCE_COLOR
+             | WINED3D_NO_PRIMITIVE_RESTART | WINED3D_LEGACY_CUBEMAP_FILTERING
+-            | WINED3D_NORMALIZED_DEPTH_BIAS;
++            | WINED3D_NORMALIZED_DEPTH_BIAS | WINED3D_LEGACY_SHADER_CONSTANTS;
+ 
+     if (!extended)
+         flags |= WINED3D_VIDMEM_ACCOUNTING;
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index 964e51944f..86df4003db 100644
+index a61e87344b..abd7114ff2 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
 @@ -3087,6 +3087,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
@@ -28,7 +57,7 @@ index 964e51944f..86df4003db 100644
      }
      if (gl_info->supported[ARB_TESSELLATION_SHADER])
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 476ae2fae0..ecc1d7fbf8 100644
+index 84899be004..710abbe2a0 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -138,6 +138,10 @@ struct shader_glsl_priv
@@ -50,7 +79,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
  };
  
  struct glsl_hs_program
-@@ -1145,12 +1150,48 @@ static inline void walk_constant_heap_clamped(const struct wined3d_gl_info *gl_i
+@@ -1145,12 +1150,54 @@ static inline void walk_constant_heap_clamped(const struct wined3d_gl_info *gl_i
      checkGLcall("walk_constant_heap_clamped()");
  }
  
@@ -77,6 +106,12 @@ index 476ae2fae0..ecc1d7fbf8 100644
 +        const struct wined3d_vec4 *data;
 +        unsigned max_const_used;
 +
++        if (priv->ubo_vs_c == -1)
++        {
++            ERR("UBO is not initialized.\n");
++            return;
++        }
++
 +        bind_and_orphan_consts_ubo(gl_info, priv);
 +        max_const_used = shader->reg_maps.usesrelconstF
 +                ? WINED3D_MAX_VS_CONSTS_F : shader->reg_maps.constant_float_count;
@@ -100,7 +135,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
  
      /* 1.X pshaders have the constants clamped to [-1;1] implicitly. */
      if (shader->reg_maps.shader_version.major == 1
-@@ -1801,7 +1842,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1801,7 +1848,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
  
      if (update_mask & WINED3D_SHADER_CONST_VS_F)
          shader_glsl_load_constants_f(vshader, gl_info, state->vs_consts_f,
@@ -109,7 +144,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
  
      if (update_mask & WINED3D_SHADER_CONST_VS_I)
          shader_glsl_load_constants_i(vshader, gl_info, state->vs_consts_i,
-@@ -1954,7 +1995,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1954,7 +2001,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
  
      if (update_mask & WINED3D_SHADER_CONST_PS_F)
          shader_glsl_load_constants_f(pshader, gl_info, state->ps_consts_f,
@@ -118,17 +153,30 @@ index 476ae2fae0..ecc1d7fbf8 100644
  
      if (update_mask & WINED3D_SHADER_CONST_PS_I)
          shader_glsl_load_constants_i(pshader, gl_info, state->ps_consts_i,
-@@ -2093,6 +2134,9 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
+@@ -2093,6 +2140,12 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
      struct constant_heap *heap = &priv->vconst_heap;
      UINT i;
  
++    if (!(device->adapter->d3d_info.wined3d_creation_flags & WINED3D_LEGACY_SHADER_CONSTANTS))
++        WARN("Called without legacy shader constant mode.\n");
++
 +    if (priv->consts_ubo)
 +        return;
 +
      for (i = start; i < count + start; ++i)
      {
          update_heap_entry(heap, i, priv->next_constant_version);
-@@ -2408,6 +2452,7 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
+@@ -2105,6 +2158,9 @@ static void shader_glsl_update_float_pixel_constants(struct wined3d_device *devi
+     struct constant_heap *heap = &priv->pconst_heap;
+     UINT i;
+ 
++    if (!(device->adapter->d3d_info.wined3d_creation_flags & WINED3D_LEGACY_SHADER_CONSTANTS))
++        WARN("Called without legacy shader constant mode.\n");
++
+     for (i = start; i < count + start; ++i)
+     {
+         update_heap_entry(heap, i, priv->next_constant_version);
+@@ -2408,6 +2464,7 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
      const struct wined3d_shader_version *version = &reg_maps->shader_version;
      const struct vs_compile_args *vs_args = ctx_priv->cur_vs_args;
      const struct ps_compile_args *ps_args = ctx_priv->cur_ps_args;
@@ -136,7 +184,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
      const struct wined3d_gl_info *gl_info = context->gl_info;
      const struct wined3d_shader_indexable_temp *idx_temp_reg;
      unsigned int uniform_block_base, uniform_block_count;
-@@ -2428,7 +2473,15 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
+@@ -2428,7 +2485,15 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
      }
  
      /* Declare the constants (aka uniforms) */
@@ -153,7 +201,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
      {
          unsigned max_constantsF;
  
-@@ -2493,11 +2546,12 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
+@@ -2493,11 +2558,12 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
              }
              else
              {
@@ -168,7 +216,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
      }
  
      /* Always declare the full set of constants, the compiler can remove the
-@@ -10104,17 +10158,44 @@ static struct glsl_ffp_fragment_shader *shader_glsl_find_ffp_fragment_shader(str
+@@ -10120,17 +10186,44 @@ static struct glsl_ffp_fragment_shader *shader_glsl_find_ffp_fragment_shader(str
  
  
  static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *gl_info,
@@ -181,9 +229,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
  
 -    for (i = 0; i < vs_c_count; ++i)
 +    if (priv->consts_ubo && vs_c_count)
-     {
--        string_buffer_sprintf(name, "vs_c[%u]", i);
--        vs->uniform_f_locations[i] = GL_EXTCALL(glGetUniformLocation(program_id, name->buffer));
++    {
 +        unsigned int base, count;
 +
 +        vs->vs_c_block_index = GL_EXTCALL(glGetUniformBlockIndex(program_id, "vs_c_ubo"));
@@ -194,19 +240,21 @@ index 476ae2fae0..ecc1d7fbf8 100644
 +        wined3d_gl_limits_get_uniform_block_range(&gl_info->limits, WINED3D_SHADER_TYPE_VERTEX,
 +                &base, &count);
 +        assert(count >= 1);
-+        GL_EXTCALL(glUniformBlockBinding(program_id, vs->vs_c_block_index, base + count + 1));
++        GL_EXTCALL(glUniformBlockBinding(program_id, vs->vs_c_block_index, base));
 +        checkGLcall("glUniformBlockBinding");
 +        if (priv->ubo_vs_c == -1)
 +        {
 +            GL_EXTCALL(glGenBuffers(1, &priv->ubo_vs_c));
 +            GL_EXTCALL(glBindBuffer(GL_UNIFORM_BUFFER, priv->ubo_vs_c));
 +            checkGLcall("glBindBuffer (UBO)");
-+            GL_EXTCALL(glBindBufferBase(GL_UNIFORM_BUFFER, base + count + 1, priv->ubo_vs_c));
++            GL_EXTCALL(glBindBufferBase(GL_UNIFORM_BUFFER, base, priv->ubo_vs_c));
 +            checkGLcall("glBindBufferBase");
 +        }
 +    }
 +    else if (!priv->consts_ubo)
-+    {
+     {
+-        string_buffer_sprintf(name, "vs_c[%u]", i);
+-        vs->uniform_f_locations[i] = GL_EXTCALL(glGetUniformLocation(program_id, name->buffer));
 +        for (i = 0; i < vs_c_count; ++i)
 +        {
 +            string_buffer_sprintf(name, "vs_c[%u]", i);
@@ -218,15 +266,16 @@ index 476ae2fae0..ecc1d7fbf8 100644
  
      for (i = 0; i < WINED3D_MAX_CONSTS_I; ++i)
      {
-@@ -11194,6 +11275,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -11210,6 +11303,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
      if (!(priv = heap_alloc_zero(sizeof(*priv))))
          return E_OUTOFMEMORY;
  
-+    priv->consts_ubo = gl_info->supported[ARB_UNIFORM_BUFFER_OBJECT];
++    priv->consts_ubo = (device->adapter->d3d_info.wined3d_creation_flags & WINED3D_LEGACY_SHADER_CONSTANTS)
++            && gl_info->supported[ARB_UNIFORM_BUFFER_OBJECT];
      string_buffer_list_init(&priv->string_buffers);
  
      if (!(vertex_priv = vertex_pipe->vp_alloc(&glsl_shader_backend, priv)))
-@@ -11248,6 +11330,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -11264,6 +11359,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
      device->fragment_priv = fragment_priv;
      device->shader_priv = priv;
  
@@ -235,7 +284,7 @@ index 476ae2fae0..ecc1d7fbf8 100644
      return WINED3D_OK;
  
  fail:
-@@ -11275,6 +11359,13 @@ static void shader_glsl_free(struct wined3d_device *device)
+@@ -11291,6 +11388,13 @@ static void shader_glsl_free(struct wined3d_device *device)
      priv->fragment_pipe->free_private(device);
      priv->vertex_pipe->vp_free(device);
  
@@ -262,27 +311,27 @@ index 2db4a3cbc2..e34b6548cd 100644
                      wined3d_insert_bits(reg_maps->constf, reg->idx[0].offset, 1, 0x1);
                  }
              }
-diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index d77cb1ce11..104e276585 100644
---- a/dlls/wined3d/utils.c
-+++ b/dlls/wined3d/utils.c
-@@ -6462,6 +6462,11 @@ void wined3d_gl_limits_get_uniform_block_range(const struct wined3d_gl_limits *g
-         if (i == shader_type)
-             return;
-         *base += *count;
-+        if (i == WINED3D_SHADER_TYPE_VERTEX)
-+        {
-+            /* Reserve binding location for vs_c UBO. */
-+            ++*base;
-+        }
-     }
+diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
+index 3af60e1351..d84b42d2ea 100644
+--- a/dlls/wined3d/state.c
++++ b/dlls/wined3d/state.c
+@@ -4392,6 +4392,11 @@ static void state_cb(struct wined3d_context *context, const struct wined3d_state
+     unsigned int i, base, count;
  
-     ERR("Unrecognized shader type %#x.\n", shader_type);
+     TRACE("context %p, state %p, state_id %#x.\n", context, state, state_id);
++    if (context->d3d_info->wined3d_creation_flags & WINED3D_LEGACY_SHADER_CONSTANTS)
++    {
++        WARN("Called in legacy shader constant mode.\n");
++        return;
++    }
+ 
+     if (STATE_IS_GRAPHICS_CONSTANT_BUFFER(state_id))
+         shader_type = state_id - STATE_GRAPHICS_CONSTANT_BUFFER(0);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index ea41abdaf8..5edff2ecee 100644
+index a5a3f34737..81507db891 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1051,6 +1051,7 @@ struct wined3d_shader_reg_maps
+@@ -1053,6 +1053,7 @@ struct wined3d_shader_reg_maps
      struct wined3d_shader_tgsm *tgsm;
      SIZE_T tgsm_capacity;
      unsigned int tgsm_count;
@@ -290,7 +339,7 @@ index ea41abdaf8..5edff2ecee 100644
  };
  
  /* Keeps track of details for TEX_M#x# instructions which need to maintain
-@@ -2590,6 +2591,7 @@ struct wined3d_gl_limits
+@@ -2592,6 +2593,7 @@ struct wined3d_gl_limits
      UINT glsl_varyings;
      UINT glsl_vs_float_constants;
      UINT glsl_ps_float_constants;
@@ -298,6 +347,18 @@ index ea41abdaf8..5edff2ecee 100644
  
      UINT arb_vs_float_constants;
      UINT arb_vs_native_constants;
+diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
+index 86fde6a1f2..c597897f43 100644
+--- a/include/wine/wined3d.h
++++ b/include/wine/wined3d.h
+@@ -1348,6 +1348,7 @@ enum wined3d_shader_type
+ #define WINED3D_NO_PRIMITIVE_RESTART                            0x00000800
+ #define WINED3D_LEGACY_CUBEMAP_FILTERING                        0x00001000
+ #define WINED3D_NORMALIZED_DEPTH_BIAS                           0x00002000
++#define WINED3D_LEGACY_SHADER_CONSTANTS                         0x00004000
+ 
+ #define WINED3D_RESZ_CODE                                       0x7fa05000
+ 
 -- 
 2.20.1
 

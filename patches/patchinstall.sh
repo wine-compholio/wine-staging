@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ab7756619c1b16c761618a68d1b6a06ad437cbe8"
+	echo "5baadda536172d6713fa6fef1196dc2baa773904"
 }
 
 # Show version information
@@ -4176,13 +4176,9 @@ fi
 # Patchset msidb-Implementation
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/msi/database.c, dlls/msi/msipriv.h, dlls/msi/streams.c, dlls/msi/suminfo.c,
-# | 	programs/msidb/Makefile.in, programs/msidb/main.c
+# |   *	dlls/msi/database.c, dlls/msi/msipriv.h, dlls/msi/streams.c, dlls/msi/suminfo.c, programs/msidb/main.c
 # |
 if test "$enable_msidb_Implementation" -eq 1; then
-	patch_apply msidb-Implementation/0001-msidb-Add-stub-tool-for-manipulating-MSI-databases.patch
-	patch_apply msidb-Implementation/0003-msidb-Add-support-for-importing-database-tables.patch
-	patch_apply msidb-Implementation/0004-msidb-Add-support-for-adding-stream-cabinet-files-to.patch
 	patch_apply msidb-Implementation/0005-msi-Add-support-for-deleting-streams-from-an-MSI-dat.patch
 	patch_apply msidb-Implementation/0006-msidb-Add-support-for-removing-stream-cabinet-files-.patch
 	patch_apply msidb-Implementation/0007-msidb-Add-support-for-extracting-stream-cabinet-file.patch
@@ -4193,9 +4189,6 @@ if test "$enable_msidb_Implementation" -eq 1; then
 	patch_apply msidb-Implementation/0012-msi-Add-support-for-exporting-binary-streams-Binary-.patch
 	patch_apply msidb-Implementation/0013-msidb-Add-support-for-wildcard-full-database-export.patch
 	(
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add stub tool for manipulating MSI databases.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for importing database tables.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for adding stream/cabinet files to MSI databases.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for deleting streams from an MSI database.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for removing stream/cabinet files from MSI databases.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for extracting stream/cabinet files from MSI databases.", 1 },';

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f34f13825fd060fda40f0a5b02dc1b420e3a8e1e"
+	echo "73355cab96de112f5125907424b37289afc6ebe7"
 }
 
 # Show version information
@@ -249,6 +249,7 @@ patch_enable_all ()
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
+	enable_opencl_version_1_2="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
@@ -897,6 +898,9 @@ patch_enable ()
 			;;
 		oleaut32-OleLoadPictureFile)
 			enable_oleaut32_OleLoadPictureFile="$2"
+			;;
+		opencl-version_1_2)
+			enable_opencl_version_1_2="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -5283,6 +5287,29 @@ if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Do not reimplement OleLoadPicture in OleLoadPicturePath.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Factor out stream creation from OleLoadPicturePath.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset opencl-version_1_2
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46470] opencl: Add support for OpenCL 1.2.
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/opencl/opencl.c, dlls/opencl/opencl.spec, include/config.h.in
+# |
+if test "$enable_opencl_version_1_2" -eq 1; then
+	patch_apply opencl-version_1_2/0001-opencl-Add-OpenCL-1.0-function-pointer-loader.patch
+	patch_apply opencl-version_1_2/0002-opencl-Use-function-pointer-instead-of-call-the-func.patch
+	patch_apply opencl-version_1_2/0003-opencl-Add-OpenCL-1.1-implementation.patch
+	patch_apply opencl-version_1_2/0004-opencl-Add-OpenCL-1.2-implementation.patch
+	patch_apply opencl-version_1_2/0005-opencl-Expose-all-extensions-list-to-wine.patch
+	(
+		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Add OpenCL 1.0 function pointer loader.", 1 },';
+		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Use function pointer instead of call the function directly.", 1 },';
+		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Add OpenCL 1.1 implementation.", 1 },';
+		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Add OpenCL 1.2 implementation.", 1 },';
+		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Expose all extensions list to wine.", 1 },';
 	) >> "$patchlist"
 fi
 

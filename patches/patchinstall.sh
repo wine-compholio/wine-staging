@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fa262317480e52eb3420c4e0ba9bae9e17db4457"
+	echo "05994cd6179626438ef26c13ee45323a6a1f66eb"
 }
 
 # Show version information
@@ -184,7 +184,6 @@ patch_enable_all ()
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
-	enable_msidb_Implementation="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -249,7 +248,6 @@ patch_enable_all ()
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
-	enable_opencl_version_1_2="$1"
 	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
@@ -704,9 +702,6 @@ patch_enable ()
 		msi-msi_vcl_get_cost)
 			enable_msi_msi_vcl_get_cost="$2"
 			;;
-		msidb-Implementation)
-			enable_msidb_Implementation="$2"
-			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
 			;;
@@ -898,9 +893,6 @@ patch_enable ()
 			;;
 		oleaut32-OleLoadPictureFile)
 			enable_oleaut32_OleLoadPictureFile="$2"
-			;;
-		opencl-version_1_2)
-			enable_opencl_version_1_2="$2"
 			;;
 		opengl32-wglChoosePixelFormat)
 			enable_opengl32_wglChoosePixelFormat="$2"
@@ -4181,34 +4173,6 @@ if test "$enable_msi_msi_vcl_get_cost" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset msidb-Implementation
-# |
-# | Modified files:
-# |   *	dlls/msi/database.c, dlls/msi/msipriv.h, dlls/msi/streams.c, dlls/msi/suminfo.c, programs/msidb/main.c
-# |
-if test "$enable_msidb_Implementation" -eq 1; then
-	patch_apply msidb-Implementation/0005-msi-Add-support-for-deleting-streams-from-an-MSI-dat.patch
-	patch_apply msidb-Implementation/0006-msidb-Add-support-for-removing-stream-cabinet-files-.patch
-	patch_apply msidb-Implementation/0007-msidb-Add-support-for-extracting-stream-cabinet-file.patch
-	patch_apply msidb-Implementation/0008-msidb-Add-support-for-exporting-database-tables.patch
-	patch_apply msidb-Implementation/0009-msidb-Add-support-for-exporting-with-short-DOS-filen.patch
-	patch_apply msidb-Implementation/0010-msi-Add-support-for-exporting-the-_SummaryInformatio.patch
-	patch_apply msidb-Implementation/0011-msi-Break-out-field-exporting-into-a-separate-routin.patch
-	patch_apply msidb-Implementation/0012-msi-Add-support-for-exporting-binary-streams-Binary-.patch
-	patch_apply msidb-Implementation/0013-msidb-Add-support-for-wildcard-full-database-export.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for deleting streams from an MSI database.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for removing stream/cabinet files from MSI databases.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for extracting stream/cabinet files from MSI databases.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for exporting database tables.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for exporting with short (DOS) filenames.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting the _SummaryInformation table.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msi: Break out field exporting into a separate routine.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msi: Add support for exporting binary streams (Binary/Icon tables).", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "msidb: Add support for wildcard (full database) export.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset msvcrt-Math_Precision
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5287,29 +5251,6 @@ if test "$enable_oleaut32_OleLoadPictureFile" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Do not reimplement OleLoadPicture in OleLoadPicturePath.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Factor out stream creation from OleLoadPicturePath.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "oleaut32: Implement OleLoadPictureFile.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset opencl-version_1_2
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46470] opencl: Add support for OpenCL 1.2.
-# |
-# | Modified files:
-# |   *	configure, configure.ac, dlls/opencl/opencl.c, dlls/opencl/opencl.spec, include/config.h.in
-# |
-if test "$enable_opencl_version_1_2" -eq 1; then
-	patch_apply opencl-version_1_2/0001-opencl-Add-OpenCL-1.0-function-pointer-loader.patch
-	patch_apply opencl-version_1_2/0002-opencl-Use-function-pointer-instead-of-call-the-func.patch
-	patch_apply opencl-version_1_2/0003-opencl-Add-OpenCL-1.1-implementation.patch
-	patch_apply opencl-version_1_2/0004-opencl-Add-OpenCL-1.2-implementation.patch
-	patch_apply opencl-version_1_2/0005-opencl-Expose-all-extensions-list-to-wine.patch
-	(
-		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Add OpenCL 1.0 function pointer loader.", 1 },';
-		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Use function pointer instead of call the function directly.", 1 },';
-		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Add OpenCL 1.1 implementation.", 1 },';
-		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Add OpenCL 1.2 implementation.", 1 },';
-		printf '%s\n' '+    { "Nakarin Khankham", "opencl: Expose all extensions list to wine.", 1 },';
 	) >> "$patchlist"
 fi
 

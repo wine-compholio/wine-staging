@@ -1,4 +1,4 @@
-From 81cc694e55e5febfc063f6b323fea0546c75984a Mon Sep 17 00:00:00 2001
+From 58c4900ecbdb4dbf745c9af78c040d2cfdcff288 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
@@ -7,17 +7,17 @@ Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
 ---
  configure.ac          | 12 ++++++++++++
  dlls/ntdll/file.c     | 22 +++++++++++++++++++++-
- include/wine/port.h   |  8 ++++++++
+ include/wine/port.h   | 20 ++++++++++++++++++++
  libs/port/Makefile.in |  3 ++-
  libs/port/xattr.c     | 39 +++++++++++++++++++++++++++++++++++++++
- 5 files changed, 82 insertions(+), 2 deletions(-)
+ 5 files changed, 94 insertions(+), 2 deletions(-)
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index dfa130e..affa3f9 100644
+index 5c4e6fd..9e0dcf0 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -83,6 +83,7 @@ AC_ARG_WITH(udev,      AS_HELP_STRING([--without-udev],[do not use udev (plug an
+@@ -84,6 +84,7 @@ AC_ARG_WITH(udev,      AS_HELP_STRING([--without-udev],[do not use udev (plug an
  AC_ARG_WITH(v4l,       AS_HELP_STRING([--without-v4l],[do not use v4l1 (v4l support)]))
  AC_ARG_WITH(vkd3d,     AS_HELP_STRING([--without-vkd3d],[do not use vkd3d (Direct3D 12 support)]))
  AC_ARG_WITH(vulkan,    AS_HELP_STRING([--without-vulkan],[do not use Vulkan]))
@@ -25,7 +25,7 @@ index dfa130e..affa3f9 100644
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
  AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -716,6 +717,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -703,6 +704,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -44,7 +44,7 @@ index dfa130e..affa3f9 100644
  
  AC_SUBST(DLLFLAGS,"-D_REENTRANT")
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 8e4f52c..af6f6a4 100644
+index d0aaadf..27d2ce0 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -122,6 +122,22 @@ mode_t FILE_umask = 0;
@@ -89,13 +89,25 @@ index 8e4f52c..af6f6a4 100644
  }
  
 diff --git a/include/wine/port.h b/include/wine/port.h
-index a3b6c6f..f3b6eb5 100644
+index 2f6e9eb..902d674 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -391,6 +391,14 @@ extern int mkstemps(char *template, int suffix_len);
- extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
- #endif
+@@ -335,6 +335,26 @@ int usleep (unsigned int useconds);
  
+ extern int mkstemps(char *template, int suffix_len);
+ 
++/* Process creation flags */
++#ifndef _P_WAIT
++# define _P_WAIT    0
++# define _P_NOWAIT  1
++# define _P_OVERLAY 2
++# define _P_NOWAITO 3
++# define _P_DETACH  4
++#endif
++#ifndef HAVE__SPAWNVP
++extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
++#endif
++
 +/* Extended attribute functions */
 +
 +#ifndef XATTR_USER_PREFIX
@@ -108,10 +120,10 @@ index a3b6c6f..f3b6eb5 100644
  
  #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index c87b99de..111807a 100644
+index 86b9022..b09dc54 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
-@@ -106,4 +106,5 @@ C_SRCS = \
+@@ -102,4 +102,5 @@ C_SRCS = \
  	symlink.c \
  	usleep.c \
  	utf8.c \

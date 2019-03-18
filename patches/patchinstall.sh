@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "05994cd6179626438ef26c13ee45323a6a1f66eb"
+	echo "3e61c7127ed7eb764a8b308fd8897cbc26a93a4a"
 }
 
 # Show version information
@@ -358,7 +358,6 @@ patch_enable_all ()
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
-	enable_winex11_ClipCursor="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_UpdateLayeredWindow="$1"
@@ -1224,9 +1223,6 @@ patch_enable ()
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
-			;;
-		winex11-ClipCursor)
-			enable_winex11_ClipCursor="$2"
 			;;
 		winex11-DefaultDisplayFrequency)
 			enable_winex11_DefaultDisplayFrequency="$2"
@@ -5264,7 +5260,7 @@ fi
 # |   *	[#46470] opencl: Add support for OpenCL 1.2.
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/opencl/opencl.c, dlls/opencl/opencl.spec, include/config.h.in
+# |   *	configure, configure.ac, dlls/opencl/opencl.c, dlls/opencl/opencl.spec, include/config.h.in
 # |
 if test "$enable_opencl_version_1_2" -eq 1; then
 	patch_apply opencl-version_1_2/0001-opencl-Add-OpenCL-1.0-function-pointer-loader.patch
@@ -7119,21 +7115,6 @@ if test "$enable_winex11_CandidateWindowPos" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winex11-ClipCursor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38087] Fix multithreading issues with fullscreen clipping
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/mouse.c
-# |
-if test "$enable_winex11_ClipCursor" -eq 1; then
-	patch_apply winex11-ClipCursor/0001-winex11-Forward-all-clipping-requests-to-the-right-t.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "winex11: Forward all clipping requests to the right thread (including fullscreen clipping).", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winex11-DefaultDisplayFrequency
 # |
 # | Modified files:
@@ -7652,11 +7633,15 @@ fi
 # | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/xapo.idl, include/xaudio2.idl
 # |
 if test "$enable_xaudio2_revert" -eq 1; then
-	patch_apply xaudio2-revert/0001-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
-	patch_apply xaudio2-revert/0002-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
-	patch_apply xaudio2-revert/0003-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
-	patch_apply xaudio2-revert/0004-Revert-xaudio2-Rewrite-to-use-FAudio.patch
+	patch_apply xaudio2-revert/0001-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
+	patch_apply xaudio2-revert/0002-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
+	patch_apply xaudio2-revert/0003-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
+	patch_apply xaudio2-revert/0004-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
+	patch_apply xaudio2-revert/0005-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
+	patch_apply xaudio2-revert/0006-Revert-xaudio2-Rewrite-to-use-FAudio.patch
 	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7/tests: Remove redundant not-NULL checks (coccinellery).\".", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7: Add a trailing '\''\\n'\'' to an ERR() message.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: IXAPO::Process out parameter should not be const.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: IXAudio23 needs its own interface, for XAUDIO23_VOICE_SENDS parameters.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix uninitialized variable access (Valgrind).\".", 1 },';

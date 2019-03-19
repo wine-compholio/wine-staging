@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3e61c7127ed7eb764a8b308fd8897cbc26a93a4a"
+	echo "42683dd159385ed2f83fa6d9a8b73ed8b64e04e2"
 }
 
 # Show version information
@@ -89,7 +89,6 @@ patch_enable_all ()
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_RegLoadAppKey="$1"
 	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
@@ -416,9 +415,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-RegLoadAppKey)
-			enable_advapi32_RegLoadAppKey="$2"
 			;;
 		advapi32-SetSecurityInfo)
 			enable_advapi32_SetSecurityInfo="$2"
@@ -2304,23 +2300,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		printf '%s\n' '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-RegLoadAppKey
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41591] advapi32: Add RegLoadAppKeyA/RegLoadAppKeyW stubs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/advapi32.spec, dlls/advapi32/registry.c, dlls/api-ms-win-core-registry-l1-1-0/api-ms-win-core-
-# | 	registry-l1-1-0.spec, dlls/api-ms-win-downlevel-advapi32-l1-1-0/api-ms-win-downlevel-advapi32-l1-1-0.spec,
-# | 	dlls/kernelbase/kernelbase.spec, include/winreg.h
-# |
-if test "$enable_advapi32_RegLoadAppKey" -eq 1; then
-	patch_apply advapi32-RegLoadAppKey/0001-advapi32-Add-RegLoadAppKeyA-RegLoadAppKeyW-stubs.patch
-	(
-		printf '%s\n' '+    { "Austin English", "advapi32: Add RegLoadAppKeyA/RegLoadAppKeyW stubs.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6138,15 +6117,13 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation.spec,
-# | 	dlls/uianimation/uianimation_typelib.idl, include/uianimation.idl
+# | 	dlls/uianimation/uianimation_typelib.idl
 # |
 if test "$enable_uianimation_stubs" -eq 1; then
-	patch_apply uianimation-stubs/0001-uianimation.idl-Add-more-interfaces.patch
 	patch_apply uianimation-stubs/0002-uianimation-Add-stub-dll.patch
 	patch_apply uianimation-stubs/0003-uianimation-Implement-IUIAnimationManager-CreateStor.patch
 	patch_apply uianimation-stubs/0004-uianimation-Implement-IUIAnimationManager-CreateAnim.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "uianimation.idl: Add more interfaces.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateStoryboard.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateAnimationVariable.", 1 },';

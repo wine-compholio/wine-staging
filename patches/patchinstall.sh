@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "42683dd159385ed2f83fa6d9a8b73ed8b64e04e2"
+	echo "6325d85406fbf7f46770bc739da4b7e2c9b199d7"
 }
 
 # Show version information

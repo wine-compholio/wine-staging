@@ -1,10 +1,10 @@
-From 34d4aa2c4b456d660b0fb6be52faebd1eadc1296 Mon Sep 17 00:00:00 2001
+From 6ea5706c091caa459ccb11f59ddda4f0bb8089d9 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Thu, 31 May 2018 10:58:48 -0500
 Subject: [PATCH] xaudio2: Use ffmpeg to convert WMA formats
 
 ---
- configure.ac                    |  33 +++
+ configure.ac                    |  33 ++++
  dlls/x3daudio1_0/Makefile.in    |   2 +
  dlls/x3daudio1_1/Makefile.in    |   2 +
  dlls/x3daudio1_2/Makefile.in    |   2 +
@@ -26,16 +26,16 @@ Subject: [PATCH] xaudio2: Use ffmpeg to convert WMA formats
  dlls/xaudio2_5/Makefile.in      |   3 +-
  dlls/xaudio2_6/Makefile.in      |   3 +-
  dlls/xaudio2_7/Makefile.in      |   3 +-
- dlls/xaudio2_7/xaudio_dll.c     | 370 +++++++++++++++++++++++++++++++-
+ dlls/xaudio2_7/xaudio_dll.c     | 370 ++++++++++++++++++++++++++++++++++++++--
  dlls/xaudio2_7/xaudio_private.h |   9 +
  dlls/xaudio2_8/Makefile.in      |   3 +-
  dlls/xaudio2_9/Makefile.in      |   3 +-
  include/config.h.in             |   9 +
- include/mmreg.h                 |   5 +
- 28 files changed, 462 insertions(+), 20 deletions(-)
+ include/mmreg.h                 |   1 +
+ 28 files changed, 458 insertions(+), 20 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 0d580e6943e..539abd225af 100644
+index 44e91bc..b2c6147 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -43,6 +43,7 @@ AC_ARG_WITH(cups,      AS_HELP_STRING([--without-cups],[do not use CUPS]))
@@ -46,7 +46,7 @@ index 0d580e6943e..539abd225af 100644
  AC_ARG_WITH(float-abi, AS_HELP_STRING([--with-float-abi=abi],[specify the ABI (soft|softfp|hard) for ARM platforms]))
  AC_ARG_WITH(fontconfig,AS_HELP_STRING([--without-fontconfig],[do not use fontconfig]))
  AC_ARG_WITH(freetype,  AS_HELP_STRING([--without-freetype],[do not use the FreeType library]))
-@@ -1835,6 +1836,38 @@ WINE_NOTICE_WITH(mpg123,[test "x$ac_cv_lib_mpg123_mpg123_feed" != xyes -a x"$ac_
+@@ -1834,6 +1835,38 @@ WINE_NOTICE_WITH(mpg123,[test "x$ac_cv_lib_mpg123_mpg123_feed" != xyes -a x"$ac_
                   [enable_l3codeca_acm])
  test "x$ac_cv_lib_mpg123_mpg123_feed" = xyes || enable_mp3dmod=${enable_mp3dmod:-no}
  
@@ -86,7 +86,7 @@ index 0d580e6943e..539abd225af 100644
  if test "$ac_cv_header_AL_al_h" = "yes"
  then
 diff --git a/dlls/x3daudio1_0/Makefile.in b/dlls/x3daudio1_0/Makefile.in
-index 9b4ce2189cf..6c2b0058b72 100644
+index 9b4ce21..6c2b005 100644
 --- a/dlls/x3daudio1_0/Makefile.in
 +++ b/dlls/x3daudio1_0/Makefile.in
 @@ -1,5 +1,7 @@
@@ -98,7 +98,7 @@ index 9b4ce2189cf..6c2b0058b72 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_1/Makefile.in b/dlls/x3daudio1_1/Makefile.in
-index d866dc3ddb9..e268e3c5edc 100644
+index d866dc3..e268e3c 100644
 --- a/dlls/x3daudio1_1/Makefile.in
 +++ b/dlls/x3daudio1_1/Makefile.in
 @@ -1,5 +1,7 @@
@@ -110,7 +110,7 @@ index d866dc3ddb9..e268e3c5edc 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_2/Makefile.in b/dlls/x3daudio1_2/Makefile.in
-index d5de11b2585..75841230511 100644
+index d5de11b..7584123 100644
 --- a/dlls/x3daudio1_2/Makefile.in
 +++ b/dlls/x3daudio1_2/Makefile.in
 @@ -1,5 +1,7 @@
@@ -122,7 +122,7 @@ index d5de11b2585..75841230511 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_3/Makefile.in b/dlls/x3daudio1_3/Makefile.in
-index cfd2c6c6c69..084336d4645 100644
+index cfd2c6c..084336d 100644
 --- a/dlls/x3daudio1_3/Makefile.in
 +++ b/dlls/x3daudio1_3/Makefile.in
 @@ -1,5 +1,7 @@
@@ -134,7 +134,7 @@ index cfd2c6c6c69..084336d4645 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_4/Makefile.in b/dlls/x3daudio1_4/Makefile.in
-index bd0eac7fc6c..691a71ad210 100644
+index bd0eac7..691a71a 100644
 --- a/dlls/x3daudio1_4/Makefile.in
 +++ b/dlls/x3daudio1_4/Makefile.in
 @@ -1,5 +1,7 @@
@@ -146,7 +146,7 @@ index bd0eac7fc6c..691a71ad210 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_5/Makefile.in b/dlls/x3daudio1_5/Makefile.in
-index dac67aef76d..cee7b4b28e5 100644
+index dac67ae..cee7b4b 100644
 --- a/dlls/x3daudio1_5/Makefile.in
 +++ b/dlls/x3daudio1_5/Makefile.in
 @@ -1,5 +1,7 @@
@@ -158,7 +158,7 @@ index dac67aef76d..cee7b4b28e5 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_6/Makefile.in b/dlls/x3daudio1_6/Makefile.in
-index 177fb8d34d8..23876bd8a47 100644
+index 177fb8d..23876bd 100644
 --- a/dlls/x3daudio1_6/Makefile.in
 +++ b/dlls/x3daudio1_6/Makefile.in
 @@ -1,5 +1,7 @@
@@ -170,7 +170,7 @@ index 177fb8d34d8..23876bd8a47 100644
  
  C_SRCS = \
 diff --git a/dlls/x3daudio1_7/Makefile.in b/dlls/x3daudio1_7/Makefile.in
-index 019588dce0a..448a5486792 100644
+index 019588d..448a548 100644
 --- a/dlls/x3daudio1_7/Makefile.in
 +++ b/dlls/x3daudio1_7/Makefile.in
 @@ -1,5 +1,7 @@
@@ -182,7 +182,7 @@ index 019588dce0a..448a5486792 100644
  
  C_SRCS = \
 diff --git a/dlls/xapofx1_1/Makefile.in b/dlls/xapofx1_1/Makefile.in
-index f69ff86bd9f..e43cfcf0a71 100644
+index f69ff86..e43cfcf 100644
 --- a/dlls/xapofx1_1/Makefile.in
 +++ b/dlls/xapofx1_1/Makefile.in
 @@ -1,6 +1,8 @@
@@ -195,7 +195,7 @@ index f69ff86bd9f..e43cfcf0a71 100644
  
  C_SRCS = \
 diff --git a/dlls/xapofx1_2/Makefile.in b/dlls/xapofx1_2/Makefile.in
-index d56a2be4bbe..bf4df8b091a 100644
+index d56a2be..bf4df8b 100644
 --- a/dlls/xapofx1_2/Makefile.in
 +++ b/dlls/xapofx1_2/Makefile.in
 @@ -1,6 +1,8 @@
@@ -208,7 +208,7 @@ index d56a2be4bbe..bf4df8b091a 100644
  
  C_SRCS = \
 diff --git a/dlls/xapofx1_3/Makefile.in b/dlls/xapofx1_3/Makefile.in
-index 1139520b73e..4a3056d8d6c 100644
+index 1139520..4a3056d 100644
 --- a/dlls/xapofx1_3/Makefile.in
 +++ b/dlls/xapofx1_3/Makefile.in
 @@ -1,6 +1,8 @@
@@ -221,7 +221,7 @@ index 1139520b73e..4a3056d8d6c 100644
  
  C_SRCS = \
 diff --git a/dlls/xapofx1_4/Makefile.in b/dlls/xapofx1_4/Makefile.in
-index b49e4643af6..36672e7760f 100644
+index b49e464..36672e7 100644
 --- a/dlls/xapofx1_4/Makefile.in
 +++ b/dlls/xapofx1_4/Makefile.in
 @@ -1,6 +1,8 @@
@@ -234,7 +234,7 @@ index b49e4643af6..36672e7760f 100644
  
  C_SRCS = \
 diff --git a/dlls/xapofx1_5/Makefile.in b/dlls/xapofx1_5/Makefile.in
-index 5055a16fd54..f9244f593ac 100644
+index 5055a16..f9244f5 100644
 --- a/dlls/xapofx1_5/Makefile.in
 +++ b/dlls/xapofx1_5/Makefile.in
 @@ -1,6 +1,8 @@
@@ -247,7 +247,7 @@ index 5055a16fd54..f9244f593ac 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_0/Makefile.in b/dlls/xaudio2_0/Makefile.in
-index cf15c7bf022..d8d282bcdeb 100644
+index cf15c7b..d8d282b 100644
 --- a/dlls/xaudio2_0/Makefile.in
 +++ b/dlls/xaudio2_0/Makefile.in
 @@ -1,7 +1,8 @@
@@ -261,7 +261,7 @@ index cf15c7bf022..d8d282bcdeb 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_1/Makefile.in b/dlls/xaudio2_1/Makefile.in
-index 32a5a62a2ae..a0d7bfc7cbf 100644
+index 32a5a62..a0d7bfc 100644
 --- a/dlls/xaudio2_1/Makefile.in
 +++ b/dlls/xaudio2_1/Makefile.in
 @@ -1,7 +1,8 @@
@@ -275,7 +275,7 @@ index 32a5a62a2ae..a0d7bfc7cbf 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_2/Makefile.in b/dlls/xaudio2_2/Makefile.in
-index f20de2d5f4e..4ba7e6c34a6 100644
+index f20de2d..4ba7e6c 100644
 --- a/dlls/xaudio2_2/Makefile.in
 +++ b/dlls/xaudio2_2/Makefile.in
 @@ -1,7 +1,8 @@
@@ -289,7 +289,7 @@ index f20de2d5f4e..4ba7e6c34a6 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_3/Makefile.in b/dlls/xaudio2_3/Makefile.in
-index ca749f247b1..62c644f6e6f 100644
+index ca749f2..62c644f 100644
 --- a/dlls/xaudio2_3/Makefile.in
 +++ b/dlls/xaudio2_3/Makefile.in
 @@ -1,7 +1,8 @@
@@ -303,7 +303,7 @@ index ca749f247b1..62c644f6e6f 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_4/Makefile.in b/dlls/xaudio2_4/Makefile.in
-index 0b74f68fdc6..b77753fb069 100644
+index 0b74f68..b77753f 100644
 --- a/dlls/xaudio2_4/Makefile.in
 +++ b/dlls/xaudio2_4/Makefile.in
 @@ -1,7 +1,8 @@
@@ -317,7 +317,7 @@ index 0b74f68fdc6..b77753fb069 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_5/Makefile.in b/dlls/xaudio2_5/Makefile.in
-index 09356c94ac7..bd687348911 100644
+index 09356c9..bd68734 100644
 --- a/dlls/xaudio2_5/Makefile.in
 +++ b/dlls/xaudio2_5/Makefile.in
 @@ -1,7 +1,8 @@
@@ -331,7 +331,7 @@ index 09356c94ac7..bd687348911 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_6/Makefile.in b/dlls/xaudio2_6/Makefile.in
-index e0ef588158d..17295098f0f 100644
+index e0ef588..1729509 100644
 --- a/dlls/xaudio2_6/Makefile.in
 +++ b/dlls/xaudio2_6/Makefile.in
 @@ -1,7 +1,8 @@
@@ -345,7 +345,7 @@ index e0ef588158d..17295098f0f 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_7/Makefile.in b/dlls/xaudio2_7/Makefile.in
-index 2f2e2320072..41d307dca7c 100644
+index 2f2e232..41d307d 100644
 --- a/dlls/xaudio2_7/Makefile.in
 +++ b/dlls/xaudio2_7/Makefile.in
 @@ -1,7 +1,8 @@
@@ -359,7 +359,7 @@ index 2f2e2320072..41d307dca7c 100644
  C_SRCS = \
  	compat.c \
 diff --git a/dlls/xaudio2_7/xaudio_dll.c b/dlls/xaudio2_7/xaudio_dll.c
-index e52d9624d3b..319c2392c66 100644
+index 0bbe943..2e65f47 100644
 --- a/dlls/xaudio2_7/xaudio_dll.c
 +++ b/dlls/xaudio2_7/xaudio_dll.c
 @@ -82,6 +82,11 @@ __ASM_GLOBAL_FUNC( call_on_voice_processing_pass_start,
@@ -525,7 +525,7 @@ index e52d9624d3b..319c2392c66 100644
          /* ADPCM gives us a number of samples per block, so round down to
           * nearest block and convert to bytes */
          buf->xa2buffer.PlayBegin = buf->xa2buffer.PlayBegin / ((ADPCMWAVEFORMAT*)This->fmt)->wSamplesPerBlock * This->fmt->nBlockAlign;
-@@ -1513,19 +1632,119 @@ static HRESULT WINAPI IXAudio2Impl_CreateSourceVoice(IXAudio2 *iface,
+@@ -1515,19 +1634,119 @@ static HRESULT WINAPI IXAudio2Impl_CreateSourceVoice(IXAudio2 *iface,
  
      src->al_fmt = get_al_format(pSourceFormat);
      if(!src->al_fmt){
@@ -651,7 +651,7 @@ index e52d9624d3b..319c2392c66 100644
          src->in_use = FALSE;
          LeaveCriticalSection(&src->lock);
          return hr;
-@@ -2255,6 +2474,9 @@ HRESULT WINAPI XAudio2Create(IXAudio2 **ppxa2, UINT32 flags, XAUDIO2_PROCESSOR p
+@@ -2257,6 +2476,9 @@ HRESULT WINAPI XAudio2Create(IXAudio2 **ppxa2, UINT32 flags, XAUDIO2_PROCESSOR p
   * buffer's data has all been queued */
  static BOOL xa2buffer_queue_period(XA2SourceImpl *src, XA2Buffer *buf, ALuint al_buf)
  {
@@ -661,7 +661,7 @@ index e52d9624d3b..319c2392c66 100644
      UINT32 submit_bytes;
      const BYTE *submit_buf = NULL;
  
-@@ -2263,9 +2485,133 @@ static BOOL xa2buffer_queue_period(XA2SourceImpl *src, XA2Buffer *buf, ALuint al
+@@ -2265,9 +2487,133 @@ static BOOL xa2buffer_queue_period(XA2SourceImpl *src, XA2Buffer *buf, ALuint al
          return FALSE;
      }
  
@@ -798,7 +798,7 @@ index e52d9624d3b..319c2392c66 100644
  
      alBufferData(al_buf, src->al_fmt, submit_buf, submit_bytes,
              src->fmt->nSamplesPerSec);
-@@ -2288,6 +2634,10 @@ static UINT32 get_underrun_warning(XA2SourceImpl *src)
+@@ -2290,6 +2636,10 @@ static UINT32 get_underrun_warning(XA2SourceImpl *src)
      UINT32 period_bytes = src->xa2->period_frames * src->submit_blocksize;
      UINT32 total = 0, i;
  
@@ -810,7 +810,7 @@ index e52d9624d3b..319c2392c66 100644
          XA2Buffer *buf = &src->buffers[(src->first_buf + i) % XAUDIO2_MAX_QUEUED_BUFFERS];
          total += buf->cur_end_bytes - buf->offs_bytes;
 diff --git a/dlls/xaudio2_7/xaudio_private.h b/dlls/xaudio2_7/xaudio_private.h
-index 5d3814fb9ef..9cf7f003c41 100644
+index 5d3814fb..9cf7f00 100644
 --- a/dlls/xaudio2_7/xaudio_private.h
 +++ b/dlls/xaudio2_7/xaudio_private.h
 @@ -29,6 +29,10 @@
@@ -837,7 +837,7 @@ index 5d3814fb9ef..9cf7f003c41 100644
  } XA2SourceImpl;
  
 diff --git a/dlls/xaudio2_8/Makefile.in b/dlls/xaudio2_8/Makefile.in
-index d4efc41d5c3..8ad071f4805 100644
+index d4efc41..8ad071f 100644
 --- a/dlls/xaudio2_8/Makefile.in
 +++ b/dlls/xaudio2_8/Makefile.in
 @@ -1,7 +1,8 @@
@@ -851,7 +851,7 @@ index d4efc41d5c3..8ad071f4805 100644
  
  C_SRCS = \
 diff --git a/dlls/xaudio2_9/Makefile.in b/dlls/xaudio2_9/Makefile.in
-index ceb2216f5a2..0243ed6740d 100644
+index ceb2216..0243ed6 100644
 --- a/dlls/xaudio2_9/Makefile.in
 +++ b/dlls/xaudio2_9/Makefile.in
 @@ -1,7 +1,8 @@
@@ -865,10 +865,10 @@ index ceb2216f5a2..0243ed6740d 100644
  
  C_SRCS = \
 diff --git a/include/config.h.in b/include/config.h.in
-index c3247cb21fe..7067a10e8bf 100644
+index 545e0d6..e1ffa19 100644
 --- a/include/config.h.in
 +++ b/include/config.h.in
-@@ -408,6 +408,15 @@
+@@ -396,6 +396,15 @@
  /* Define to 1 if you have the `lgammaf' function. */
  #undef HAVE_LGAMMAF
  
@@ -885,21 +885,17 @@ index c3247cb21fe..7067a10e8bf 100644
  #undef HAVE_LIBGETTEXTPO
  
 diff --git a/include/mmreg.h b/include/mmreg.h
-index 8bb581dd792..1214dfa93f5 100644
+index e7d70bb..3e22079 100644
 --- a/include/mmreg.h
 +++ b/include/mmreg.h
-@@ -110,6 +110,11 @@ typedef struct _WAVEFORMATEX {
- #define  WAVE_FORMAT_MPEG			0x0050	/*  Microsoft Corporation  */
+@@ -117,6 +117,7 @@ typedef struct _WAVEFORMATEX {
  #define  WAVE_FORMAT_MPEGLAYER3			0x0055
  #define  WAVE_FORMAT_MSRT24			0x0082  /*  Microsoft Corporation */
+ #define  WAVE_FORMAT_DOLBY_AC3_SPDIF		0x0092
 +#define  WAVE_FORMAT_MSAUDIO1			0x0160
-+#define  WAVE_FORMAT_WMAUDIO2			0x0161
-+#define  WAVE_FORMAT_WMAUDIO3			0x0162
-+#define  WAVE_FORMAT_WMAUDIO_LOSSLESS		0x0163
-+
- #define  WAVE_FORMAT_CREATIVE_ADPCM		0x0200	/*  Creative Labs, Inc  */
- #define  WAVE_FORMAT_CREATIVE_FASTSPEECH8	0x0202	/*  Creative Labs, Inc  */
- #define  WAVE_FORMAT_CREATIVE_FASTSPEECH10	0x0203	/*  Creative Labs, Inc  */
+ #define  WAVE_FORMAT_WMAUDIO2			0x0161
+ #define  WAVE_FORMAT_WMAUDIO3			0x0162
+ #define  WAVE_FORMAT_WMAUDIO_LOSSLESS		0x0163
 -- 
-2.18.0
+1.9.1
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c988910caeebfd1415ad4d036964a67078493e46"
+	echo "c7f323107b3b956d206d8d0ee28851d60f19841c"
 }
 
 # Show version information
@@ -154,7 +154,6 @@ patch_enable_all ()
 	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imagehlp_Cleanup="$1"
-	enable_imagehlp_ImageLoad="$1"
 	enable_imm32_message_on_focus="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
@@ -610,9 +609,6 @@ patch_enable ()
 			;;
 		imagehlp-Cleanup)
 			enable_imagehlp_Cleanup="$2"
-			;;
-		imagehlp-ImageLoad)
-			enable_imagehlp_ImageLoad="$2"
 			;;
 		imm32-message_on_focus)
 			enable_imm32_message_on_focus="$2"
@@ -2047,13 +2043,6 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
 	fi
 	enable_server_File_Permissions=1
-fi
-
-if test "$enable_imagehlp_ImageLoad" -eq 1; then
-	if test "$enable_imagehlp_Cleanup" -gt 1; then
-		abort "Patchset imagehlp-Cleanup disabled, but imagehlp-ImageLoad depends on that."
-	fi
-	enable_imagehlp_Cleanup=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -3650,31 +3639,14 @@ fi
 # |   *	[#23455] Properly implement imagehlp.ImageLoad and ImageUnload
 # |
 # | Modified files:
-# |   *	dlls/imagehlp/access.c, dlls/imagehlp/modify.c, dlls/imagehlp/tests/integrity.c
+# |   *	dlls/imagehlp/modify.c, dlls/imagehlp/tests/integrity.c
 # |
 if test "$enable_imagehlp_Cleanup" -eq 1; then
 	patch_apply imagehlp-Cleanup/0001-imagehlp-Catch-invalid-memory-access-in-CheckSumMapp.patch
 	patch_apply imagehlp-Cleanup/0002-imagehlp-Fix-checksum-calculation-for-odd-sizes.patch
-	patch_apply imagehlp-Cleanup/0003-imagehlp-Implement-ImageLoad-and-cleanup-ImageUnload.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "imagehlp: Catch invalid memory access in CheckSumMappedFile and add tests.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "imagehlp: Fix checksum calculation for odd sizes.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "imagehlp: Implement ImageLoad and cleanup ImageUnload.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset imagehlp-ImageLoad
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	imagehlp-Cleanup
-# |
-# | Modified files:
-# |   *	dlls/imagehlp/tests/image.c
-# |
-if test "$enable_imagehlp_ImageLoad" -eq 1; then
-	patch_apply imagehlp-ImageLoad/0001-imagehlp-tests-Add-tests-for-ImageLoad-ImageUnload-G.patch
-	(
-		printf '%s\n' '+    { "Mark Jansen", "imagehlp/tests: Add tests for ImageLoad, ImageUnload, GetImageUnusedHeaderBytes.", 1 },';
 	) >> "$patchlist"
 fi
 

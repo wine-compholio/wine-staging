@@ -1,7 +1,7 @@
-From 8c0527ec9d3d1635b74d892aa21d45b86a1e5a18 Mon Sep 17 00:00:00 2001
+From 0acb83f21a53fe47d9fa9c3ed5d2732ccce18ade Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 13:17:01 +0300
-Subject: [PATCH 1/5] wined3d: Use UBO for vertex shader float constants if
+Subject: [PATCH] wined3d: Use UBO for vertex shader float constants if
  supported.
 
 Signed-off-by: Paul Gofman <gofmanp@gmail.com>
@@ -17,7 +17,7 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  8 files changed, 147 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/d3d8/directx.c b/dlls/d3d8/directx.c
-index f78ff3e5af..847cfd17bf 100644
+index f78ff3e5af7..847cfd17bf6 100644
 --- a/dlls/d3d8/directx.c
 +++ b/dlls/d3d8/directx.c
 @@ -420,7 +420,7 @@ BOOL d3d8_init(struct d3d8 *d3d8)
@@ -30,7 +30,7 @@ index f78ff3e5af..847cfd17bf 100644
      d3d8->IDirect3D8_iface.lpVtbl = &d3d8_vtbl;
      d3d8->refcount = 1;
 diff --git a/dlls/d3d9/directx.c b/dlls/d3d9/directx.c
-index c507991aaa..7cdf5ddbb9 100644
+index c507991aaa4..7cdf5ddbb9a 100644
 --- a/dlls/d3d9/directx.c
 +++ b/dlls/d3d9/directx.c
 @@ -585,7 +585,7 @@ BOOL d3d9_init(struct d3d9 *d3d9, BOOL extended)
@@ -43,10 +43,10 @@ index c507991aaa..7cdf5ddbb9 100644
      if (!extended)
          flags |= WINED3D_VIDMEM_ACCOUNTING;
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index 5a5a1612a5..fe85fab216 100644
+index 1b8282be964..05f03170a7d 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -3091,6 +3091,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
+@@ -3084,6 +3084,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
              gl_info->limits.uniform_blocks[WINED3D_SHADER_TYPE_VERTEX] = min(gl_max, WINED3D_MAX_CBS);
              TRACE("Max vertex uniform blocks: %u (%d).\n",
                      gl_info->limits.uniform_blocks[WINED3D_SHADER_TYPE_VERTEX], gl_max);
@@ -57,7 +57,7 @@ index 5a5a1612a5..fe85fab216 100644
      }
      if (gl_info->supported[ARB_TESSELLATION_SHADER])
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 84899be004..5dc5c98982 100644
+index f88e2e92f09..b9042196493 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -138,6 +138,10 @@ struct shader_glsl_priv
@@ -318,9 +318,9 @@ index 84899be004..5dc5c98982 100644
      return WINED3D_OK;
  
  fail:
-@@ -11291,6 +11404,13 @@ static void shader_glsl_free(struct wined3d_device *device)
-     priv->fragment_pipe->free_private(device);
-     priv->vertex_pipe->vp_free(device);
+@@ -11291,6 +11404,13 @@ static void shader_glsl_free(struct wined3d_device *device, struct wined3d_conte
+     priv->fragment_pipe->free_private(device, context);
+     priv->vertex_pipe->vp_free(device, context);
  
 +    if (priv->ubo_vs_c != -1)
 +    {
@@ -333,7 +333,7 @@ index 84899be004..5dc5c98982 100644
      device->shader_priv = NULL;
  }
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 2db4a3cbc2..e34b6548cd 100644
+index 72f4f63695c..7eda21191d5 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
 @@ -764,6 +764,8 @@ static BOOL shader_record_register_usage(struct wined3d_shader *shader, struct w
@@ -346,7 +346,7 @@ index 2db4a3cbc2..e34b6548cd 100644
                  }
              }
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index 3af60e1351..d84b42d2ea 100644
+index 2e728d78619..94227209035 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
 @@ -4392,6 +4392,11 @@ static void state_cb(struct wined3d_context *context, const struct wined3d_state
@@ -362,7 +362,7 @@ index 3af60e1351..d84b42d2ea 100644
      if (STATE_IS_GRAPHICS_CONSTANT_BUFFER(state_id))
          shader_type = state_id - STATE_GRAPHICS_CONSTANT_BUFFER(0);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 152a78cbf9..faf4be0ab1 100644
+index bd71bdb7b07..99d6e242aba 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -1055,6 +1055,7 @@ struct wined3d_shader_reg_maps
@@ -382,7 +382,7 @@ index 152a78cbf9..faf4be0ab1 100644
      UINT arb_vs_float_constants;
      UINT arb_vs_native_constants;
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 6d977a6179..1a541bed46 100644
+index 765a92dac2e..64c9473e774 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
 @@ -1348,6 +1348,7 @@ enum wined3d_shader_type

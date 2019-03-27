@@ -1,7 +1,7 @@
-From ec2efdf0470dac6a513b0e4a01cc48745b8fa04f Mon Sep 17 00:00:00 2001
+From 46332c4aabadfe412ff38a801d3dbf828a555f6e Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 20:28:35 +0300
-Subject: [PATCH 5/5] wined3d: Support indexed vertex blending.
+Subject: [PATCH] wined3d: Support indexed vertex blending.
 
 Signed-off-by: Paul Gofman <gofmanp@gmail.com>
 ---
@@ -13,7 +13,7 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  5 files changed, 169 insertions(+), 30 deletions(-)
 
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index bd9f349746..beed647b6c 100644
+index bd9f349746d..beed647b6c6 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
 @@ -21607,7 +21607,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
@@ -44,7 +44,7 @@ index bd9f349746..beed647b6c 100644
  
          hr = IDirect3DDevice9_SetSoftwareVertexProcessing(device, FALSE);
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index df4dfa0659..8791a714cc 100644
+index 389045bdc82..1660e4d50c6 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -150,6 +150,9 @@ struct shader_glsl_priv
@@ -317,10 +317,10 @@ index df4dfa0659..8791a714cc 100644
      device->vertex_priv = vertex_priv;
      device->fragment_priv = fragment_priv;
      device->shader_priv = priv;
-@@ -11436,6 +11543,14 @@ static void shader_glsl_free(struct wined3d_device *device)
+@@ -11436,6 +11543,14 @@ static void shader_glsl_free(struct wined3d_device *device, struct wined3d_conte
      string_buffer_free(&priv->shader_buffer);
-     priv->fragment_pipe->free_private(device);
-     priv->vertex_pipe->vp_free(device);
+     priv->fragment_pipe->free_private(device, context);
+     priv->vertex_pipe->vp_free(device, context);
 +    if (priv->ubo_modelview != -1)
 +    {
 +        const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
@@ -345,7 +345,7 @@ index df4dfa0659..8791a714cc 100644
      caps->vertex_processing_caps = WINED3DVTXPCAPS_TEXGEN
              | WINED3DVTXPCAPS_MATERIALSOURCE7
              | WINED3DVTXPCAPS_VERTEXFOG
-@@ -12051,7 +12170,8 @@ static void glsl_vertex_pipe_pixel_shader(struct wined3d_context *context,
+@@ -12052,7 +12171,8 @@ static void glsl_vertex_pipe_pixel_shader(struct wined3d_context *context,
  static void glsl_vertex_pipe_world(struct wined3d_context *context,
          const struct wined3d_state *state, DWORD state_id)
  {
@@ -356,10 +356,10 @@ index df4dfa0659..8791a714cc 100644
  
  static void glsl_vertex_pipe_vertexblend(struct wined3d_context *context,
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index fd8e944e3b..fbc44b78b9 100644
+index bf03f470491..2557c79e17b 100644
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
-@@ -6331,6 +6331,7 @@ void wined3d_ffp_get_vs_settings(const struct wined3d_context *context,
+@@ -6334,6 +6334,7 @@ void wined3d_ffp_get_vs_settings(const struct wined3d_context *context,
          settings->flatshading = FALSE;
  
      settings->swizzle_map = si->swizzle_map;
@@ -368,7 +368,7 @@ index fd8e944e3b..fbc44b78b9 100644
  
  int wined3d_ffp_vertex_program_key_compare(const void *key, const struct wine_rb_entry *entry)
 diff --git a/dlls/wined3d/vertexdeclaration.c b/dlls/wined3d/vertexdeclaration.c
-index cd8bb5e423..d37f3ce860 100644
+index cd8bb5e4233..d37f3ce8606 100644
 --- a/dlls/wined3d/vertexdeclaration.c
 +++ b/dlls/wined3d/vertexdeclaration.c
 @@ -119,6 +119,15 @@ static BOOL declaration_element_valid_ffp(const struct wined3d_vertex_element *e
@@ -388,7 +388,7 @@ index cd8bb5e423..d37f3ce860 100644
              switch(element->format)
              {
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 5cbadfc2ed..7265c2d606 100644
+index d5f89fb6b02..cdf9d157782 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -279,6 +279,7 @@ static inline enum complex_fixup get_complex_fixup(struct color_fixup_desc fixup
@@ -399,7 +399,7 @@ index 5cbadfc2ed..7265c2d606 100644
  #define MAX_RENDER_TARGETS          8
  
  struct min_lookup
-@@ -2852,7 +2853,8 @@ struct wined3d_ffp_vs_settings
+@@ -2858,7 +2859,8 @@ struct wined3d_ffp_vs_settings
      DWORD ortho_fog       : 1;
      DWORD flatshading     : 1;
      DWORD swizzle_map     : 16; /* MAX_ATTRIBS, 16 */
@@ -409,7 +409,7 @@ index 5cbadfc2ed..7265c2d606 100644
  
      DWORD texgen[WINED3D_MAX_TEXTURES];
  };
-@@ -4748,6 +4750,13 @@ static inline void wined3d_not_from_cs(struct wined3d_cs *cs)
+@@ -4754,6 +4756,13 @@ static inline void wined3d_not_from_cs(struct wined3d_cs *cs)
      assert(cs->thread_id != GetCurrentThreadId());
  }
  

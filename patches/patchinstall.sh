@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c7f323107b3b956d206d8d0ee28851d60f19841c"
+	echo "829170f3d6b875f7a6f065072cc3334a20ff805e"
 }
 
 # Show version information
@@ -180,7 +180,6 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
-	enable_msi_MsiGetDatabaseState="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -255,7 +254,6 @@ patch_enable_all ()
 	enable_qwave_QOSCreateHandle="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -295,7 +293,6 @@ patch_enable_all ()
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_taskmgr_Memory_Usage="$1"
 	enable_uianimation_stubs="$1"
-	enable_urlmon_ftp_escape="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
@@ -688,9 +685,6 @@ patch_enable ()
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
 			;;
-		msi-MsiGetDatabaseState)
-			enable_msi_MsiGetDatabaseState="$2"
-			;;
 		msi-msi_vcl_get_cost)
 			enable_msi_msi_vcl_get_cost="$2"
 			;;
@@ -913,9 +907,6 @@ patch_enable ()
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
 			;;
-		server-Desktop_Refcount)
-			enable_server_Desktop_Refcount="$2"
-			;;
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
 			;;
@@ -1032,9 +1023,6 @@ patch_enable ()
 			;;
 		uianimation-stubs)
 			enable_uianimation_stubs="$2"
-			;;
-		urlmon-ftp_escape)
-			enable_urlmon_ftp_escape="$2"
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
@@ -1695,20 +1683,6 @@ if test "$enable_xaudio2_7_CreateFX_FXEcho" -eq 1; then
 		abort "Patchset xaudio2-revert disabled, but xaudio2_7-CreateFX-FXEcho depends on that."
 	fi
 	enable_xaudio2_revert=1
-fi
-
-if test "$enable_ws2_32_WSACleanup" -eq 1; then
-	if test "$enable_server_Desktop_Refcount" -gt 1; then
-		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-WSACleanup depends on that."
-	fi
-	enable_server_Desktop_Refcount=1
-fi
-
-if test "$enable_ws2_32_TransmitFile" -eq 1; then
-	if test "$enable_server_Desktop_Refcount" -gt 1; then
-		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
-	fi
-	enable_server_Desktop_Refcount=1
 fi
 
 if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
@@ -4014,7 +3988,7 @@ fi
 # |   *	[#32490] Graphical issues in Inquisitor
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/locale.c, libs/wine/collation.c
+# |   *	dlls/kernel32/tests/locale.c, libs/port/collation.c
 # |
 if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
@@ -4097,18 +4071,6 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	patch_apply mshtml-HTMLLocation_put_hash/0001-mshtml-Add-IHTMLLocation-hash-property-s-getter-impl.patch
 	(
 		printf '%s\n' '+    { "Zhenbo Li", "mshtml: Add IHTMLLocation::hash property'\''s getter implementation.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset msi-MsiGetDatabaseState
-# |
-# | Modified files:
-# |   *	dlls/msi/database.c
-# |
-if test "$enable_msi_MsiGetDatabaseState" -eq 1; then
-	patch_apply msi-MsiGetDatabaseState/0001-msi-Always-return-MSIDBSTATE_ERROR-when-MsiGetDataba.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "msi: Always return MSIDBSTATE_ERROR when MsiGetDatabaseState is called from a custom action.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5362,30 +5324,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Desktop_Refcount
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/winstation.c, dlls/user32/winstation.c, include/winuser.h, programs/explorer/desktop.c,
-# | 	server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c,
-# | 	server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c, server/handle.c,
-# | 	server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c,
-# | 	server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c,
-# | 	server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c,
-# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
-# |
-if test "$enable_server_Desktop_Refcount" -eq 1; then
-	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
-	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
-	patch_apply server-Desktop_Refcount/0003-user32-Implement-CWF_CREATE_ONLY-flag-for-CreateWind.patch
-	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Implement CWF_CREATE_ONLY flag for CreateWindowStation.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-FileEndOfFileInformation
 # |
 # | Modified files:
@@ -6099,23 +6037,6 @@ if test "$enable_uianimation_stubs" -eq 1; then
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateStoryboard.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateAnimationVariable.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset urlmon-ftp_escape
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26445] urlmon: Use unescaped Urls for FTP actions
-# |
-# | Modified files:
-# |   *	dlls/urlmon/ftp.c, dlls/urlmon/tests/Makefile.in, dlls/urlmon/tests/url.c
-# |
-if test "$enable_urlmon_ftp_escape" -eq 1; then
-	patch_apply urlmon-ftp_escape/0001-urlmon-Use-unescaped-Urls-for-FTP-actions.patch
-	patch_apply urlmon-ftp_escape/0002-urlmon-tests-Add-FTP-encoded-url-test.patch
-	(
-		printf '%s\n' '+    { "André Hentschel", "urlmon: Use unescaped Urls for FTP actions.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "urlmon/tests: Add FTP encoded url test.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7448,9 +7369,6 @@ fi
 
 # Patchset ws2_32-TransmitFile
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount
-# |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c
 # |
@@ -7464,9 +7382,6 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 fi
 
 # Patchset ws2_32-WSACleanup
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#18670] Properly close sockets when WSACleanup is called

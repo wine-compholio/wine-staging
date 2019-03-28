@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "829170f3d6b875f7a6f065072cc3334a20ff805e"
+	echo "0e8401076679f337655e72fa1726f05fcd89e069"
 }
 
 # Show version information
@@ -153,7 +153,6 @@ patch_enable_all ()
 	enable_hid_HidD_FlushQueue="$1"
 	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
-	enable_imagehlp_Cleanup="$1"
 	enable_imm32_message_on_focus="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
@@ -603,9 +602,6 @@ patch_enable ()
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
-			;;
-		imagehlp-Cleanup)
-			enable_imagehlp_Cleanup="$2"
 			;;
 		imm32-message_on_focus)
 			enable_imm32_message_on_focus="$2"
@@ -2965,14 +2961,12 @@ fi
 # |   *	[#33904] Return dummy ID3DXSkinInfo interface when skinning info not present
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_private.h, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/skin.c, dlls/d3dx9_36/tests/mesh.c
+# |   *	dlls/d3dx9_36/d3dx9_private.h, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/skin.c
 # |
 if test "$enable_d3dx9_36_Dummy_Skininfo" -eq 1; then
 	patch_apply d3dx9_36-Dummy_Skininfo/0001-d3dx9_36-Return-dummy-skininfo-interface-in-D3DXLoad.patch
-	patch_apply d3dx9_36-Dummy_Skininfo/0002-d3dx9_36-tests-Add-initial-tests-for-dummy-skininfo-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3dx9_36: Return dummy skininfo interface in D3DXLoadSkinMeshFromXof when skin information is unavailable.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "d3dx9_36/tests: Add initial tests for dummy skininfo interface.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3604,23 +3598,6 @@ if test "$enable_imagehlp_BindImageEx" -eq 1; then
 	patch_apply imagehlp-BindImageEx/0001-imagehlp-Implement-parts-of-BindImageEx-to-make-free.patch
 	(
 		printf '%s\n' '+    { "Bernhard Reiter", "imagehlp: Implement parts of BindImageEx to make freezing Python scripts work.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset imagehlp-Cleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23455] Properly implement imagehlp.ImageLoad and ImageUnload
-# |
-# | Modified files:
-# |   *	dlls/imagehlp/modify.c, dlls/imagehlp/tests/integrity.c
-# |
-if test "$enable_imagehlp_Cleanup" -eq 1; then
-	patch_apply imagehlp-Cleanup/0001-imagehlp-Catch-invalid-memory-access-in-CheckSumMapp.patch
-	patch_apply imagehlp-Cleanup/0002-imagehlp-Fix-checksum-calculation-for-odd-sizes.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "imagehlp: Catch invalid memory access in CheckSumMappedFile and add tests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "imagehlp: Fix checksum calculation for odd sizes.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7283,13 +7260,9 @@ fi
 # |   *	dlls/wintrust/softpub.c, dlls/wintrust/tests/softpub.c
 # |
 if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
-	patch_apply wintrust-WinVerifyTrust/0001-wintrust-tests-Add-tests-for-WinVerifyTrust.-v2.patch
-	patch_apply wintrust-WinVerifyTrust/0002-wintrust-tests-Add-some-additional-tests.patch
 	patch_apply wintrust-WinVerifyTrust/0003-wintrust-Verify-image-hash-in-WinVerifyTrust.patch
 	patch_apply wintrust-WinVerifyTrust/0004-wintrust-use-enhanced-crypto-provider-in-VerifyImage.patch
 	(
-		printf '%s\n' '+    { "Mark Jansen", "wintrust/tests: Add tests for WinVerifyTrust.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wintrust/tests: Add some additional tests.", 1 },';
 		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 2 },';
 		printf '%s\n' '+    { "Marko Friedemann", "wintrust: Use enhanced crypto provider in VerifyImageHash.", 1 },';
 	) >> "$patchlist"

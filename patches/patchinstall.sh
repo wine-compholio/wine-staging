@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0e8401076679f337655e72fa1726f05fcd89e069"
+	echo "cad72d3cd7a40e2c1f70d19b988e19da62710bf8"
 }
 
 # Show version information
@@ -168,7 +168,6 @@ patch_enable_all ()
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
-	enable_kernel32_Profile="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -647,9 +646,6 @@ patch_enable ()
 			;;
 		kernel32-Processor_Group)
 			enable_kernel32_Processor_Group="$2"
-			;;
-		kernel32-Profile)
-			enable_kernel32_Profile="$2"
 			;;
 		kernel32-SCSI_Sysfs)
 			enable_kernel32_SCSI_Sysfs="$2"
@@ -3880,22 +3876,6 @@ if test "$enable_kernel32_Processor_Group" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement some processor group functions.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for SetThreadIdealProcessorEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-Profile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#8036] Fix handling of empty section and key name for profile files.
-# |   *	[#18099] Super Mario 3: Mario Forever fails to load keyboard mapping from profile files.
-# |
-# | Modified files:
-# |   *	dlls/kernel32/profile.c, dlls/kernel32/tests/profile.c
-# |
-if test "$enable_kernel32_Profile" -eq 1; then
-	patch_apply kernel32-Profile/0001-kernel32-Allow-empty-profile-section-and-key-name-st.patch
-	(
-		printf '%s\n' '+    { "Claudio Fontana", "kernel32: Allow empty profile section and key name strings.", 1 },';
 	) >> "$patchlist"
 fi
 

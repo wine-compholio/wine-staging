@@ -1,4 +1,4 @@
-From 74e911fda30ef2ab782ef18168b2acd36e23a8a2 Mon Sep 17 00:00:00 2001
+From 5b78cbd64ca2edfaa6b6535e8c849b77ef5c5152 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 20:15:07 +0300
 Subject: [PATCH 4/5] wined3d: Allow higher world matrix states.
@@ -16,22 +16,22 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  8 files changed, 268 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index 47fff09b8a..63c3a37511 100644
+index d8ad17050c..b4cebc9704 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -3754,6 +3754,7 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
+@@ -3735,6 +3735,7 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
      d3d_info->ffp_generic_attributes = vertex_caps.ffp_generic_attributes;
      d3d_info->limits.ffp_vertex_blend_matrices = vertex_caps.max_vertex_blend_matrices;
      d3d_info->limits.active_light_count = vertex_caps.max_active_lights;
 +    d3d_info->limits.ffp_max_vertex_blend_matrix_index = vertex_caps.max_vertex_blend_matrix_index;
      d3d_info->emulated_flatshading = vertex_caps.emulated_flatshading;
  
-     adapter->fragment_pipe->get_caps(gl_info, &fragment_caps);
+     adapter->fragment_pipe->get_caps(adapter, &fragment_caps);
 diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
-index 022d790fff..af979a4c1e 100644
+index 9960d06cea..8ac7da00f2 100644
 --- a/dlls/wined3d/cs.c
 +++ b/dlls/wined3d/cs.c
-@@ -1670,7 +1670,8 @@ static void wined3d_cs_exec_set_transform(struct wined3d_cs *cs, const void *dat
+@@ -1669,7 +1669,8 @@ static void wined3d_cs_exec_set_transform(struct wined3d_cs *cs, const void *dat
      const struct wined3d_cs_set_transform *op = data;
  
      cs->state.transforms[op->state] = op->matrix;
@@ -42,11 +42,11 @@ index 022d790fff..af979a4c1e 100644
  }
  
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 4b98987f63..7f146787bf 100644
+index ad249eed84..c83d644746 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3645,6 +3645,11 @@ HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device
-     adapter->vertex_pipe->vp_get_caps(&adapter->gl_info, &vertex_caps);
+@@ -3621,6 +3621,11 @@ HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device
+     adapter->vertex_pipe->vp_get_caps(adapter, &vertex_caps);
      if (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
          caps->MaxVertexShaderConst = adapter->d3d_info.limits.vs_uniform_count_swvp;
 +    caps->MaxVertexBlendMatrixIndex = vertex_caps.max_vertex_blend_matrix_index;
@@ -58,10 +58,10 @@ index 4b98987f63..7f146787bf 100644
  }
  
 diff --git a/dlls/wined3d/directx.c b/dlls/wined3d/directx.c
-index debc4e5dc6..84b252582f 100644
+index 83fa47a779..9fd5f396e0 100644
 --- a/dlls/wined3d/directx.c
 +++ b/dlls/wined3d/directx.c
-@@ -2113,6 +2113,8 @@ HRESULT CDECL wined3d_get_device_caps(const struct wined3d *wined3d, unsigned in
+@@ -1982,6 +1982,8 @@ HRESULT CDECL wined3d_get_device_caps(const struct wined3d *wined3d, unsigned in
      caps->MaxActiveLights                  = vertex_caps.max_active_lights;
      caps->MaxVertexBlendMatrices           = vertex_caps.max_vertex_blend_matrices;
      caps->MaxVertexBlendMatrixIndex        = vertex_caps.max_vertex_blend_matrix_index;
@@ -71,10 +71,10 @@ index debc4e5dc6..84b252582f 100644
      caps->FVFCaps                          = vertex_caps.fvf_caps;
      caps->RasterCaps                      |= vertex_caps.raster_caps;
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 0df81ed669..df4dfa0659 100644
+index c07ff2680c..e48560c0b5 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -12240,6 +12240,258 @@ static const struct wined3d_state_entry_template glsl_vertex_pipe_vp_states[] =
+@@ -12231,6 +12231,258 @@ static const struct wined3d_state_entry_template glsl_vertex_pipe_vp_states[] =
      {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(1)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(1)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
      {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(2)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(2)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
      {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(3)),                {STATE_TRANSFORM(WINED3D_TS_WORLD_MATRIX(3)),                glsl_vertex_pipe_vertexblend }, WINED3D_GL_EXT_NONE    },
@@ -334,10 +334,10 @@ index 0df81ed669..df4dfa0659 100644
      {STATE_TEXTURESTAGE(1, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), {STATE_TEXTURESTAGE(1, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), glsl_vertex_pipe_texmatrix}, WINED3D_GL_EXT_NONE       },
      {STATE_TEXTURESTAGE(2, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), {STATE_TEXTURESTAGE(2, WINED3D_TSS_TEXTURE_TRANSFORM_FLAGS), glsl_vertex_pipe_texmatrix}, WINED3D_GL_EXT_NONE       },
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index d84b42d2ea..8110d530e7 100644
+index f68f225cfb..4777cc6742 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
-@@ -5416,7 +5416,8 @@ static void prune_invalid_states(struct wined3d_state_entry *state_table, const
+@@ -5410,7 +5410,8 @@ static void prune_invalid_states(struct wined3d_state_entry *state_table, const
          state_table[i].apply = state_undefined;
      }
  
@@ -348,10 +348,10 @@ index d84b42d2ea..8110d530e7 100644
      for (i = start; i <= last; ++i)
      {
 diff --git a/dlls/wined3d/utils.c b/dlls/wined3d/utils.c
-index 1a07366822..fd8e944e3b 100644
+index 302b8e7d36..f7ba936588 100644
 --- a/dlls/wined3d/utils.c
 +++ b/dlls/wined3d/utils.c
-@@ -4934,11 +4934,9 @@ const char *debug_d3dtstype(enum wined3d_transform_state tstype)
+@@ -4937,11 +4937,9 @@ const char *debug_d3dtstype(enum wined3d_transform_state tstype)
      TSTYPE_TO_STR(WINED3D_TS_WORLD_MATRIX(3));
  #undef TSTYPE_TO_STR
      default:
@@ -367,7 +367,7 @@ index 1a07366822..fd8e944e3b 100644
          return "unrecognized";
      }
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 766449d711..5cbadfc2ed 100644
+index edc96f8af9..6237558678 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -171,6 +171,7 @@ struct wined3d_d3d_limits

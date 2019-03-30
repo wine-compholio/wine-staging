@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cad72d3cd7a40e2c1f70d19b988e19da62710bf8"
+	echo "c6ff0e01224e86c7baa31d019fcb0a7bf03e2f96"
 }
 
 # Show version information
@@ -1710,18 +1710,7 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	if test "$enable_wined3d_SWVP_shaders" -gt 1; then
 		abort "Patchset wined3d-SWVP-shaders disabled, but wined3d-Indexed_Vertex_Blending depends on that."
 	fi
-	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
-		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-Indexed_Vertex_Blending depends on that."
-	fi
 	enable_wined3d_SWVP_shaders=1
-	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
-fi
-
-if test "$enable_wined3d_SWVP_shaders" -eq 1; then
-	if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -gt 1; then
-		abort "Patchset wined3d-WINED3D_RS_COLORWRITEENABLE disabled, but wined3d-SWVP-shaders depends on that."
-	fi
-	enable_wined3d_WINED3D_RS_COLORWRITEENABLE=1
 fi
 
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
@@ -6665,24 +6654,7 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
-	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement all 8 d3d11 color write masks.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-SWVP-shaders
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-WINED3D_RS_COLORWRITEENABLE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#8051] Sims 2 demo exits prematurely
@@ -6711,7 +6683,7 @@ fi
 # Patchset wined3d-Indexed_Vertex_Blending
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-WINED3D_RS_COLORWRITEENABLE, wined3d-SWVP-shaders
+# |   *	wined3d-SWVP-shaders
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#39057] Support for Indexed Vertex Blending
@@ -6748,6 +6720,20 @@ if test "$enable_wined3d_Restore_DirectX10_Support" -eq 1; then
 	patch_apply wined3d-Restore-DirectX10-Support/0001-wined3d-Remove-check-for-Polygon-offset-clamping.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wined3d: Remove check for Polygon offset clamping.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/state.c,
+# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
+	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement all 8 d3d11 color write masks.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c6ff0e01224e86c7baa31d019fcb0a7bf03e2f96"
+	echo "56404595d5c42168d4fd4c1ec3a1b802a6aab5c1"
 }
 
 # Show version information
@@ -5982,7 +5982,7 @@ fi
 # |   *	[#41369] Add UIAnimation and stubs interfaces
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation.spec,
+# |   *	dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation.spec,
 # | 	dlls/uianimation/uianimation_typelib.idl
 # |
 if test "$enable_uianimation_stubs" -eq 1; then

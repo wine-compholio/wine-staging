@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "56404595d5c42168d4fd4c1ec3a1b802a6aab5c1"
+	echo "33c35baa6761b00c8cef236c06cb1655f3f228d9"
 }
 
 # Show version information
@@ -285,7 +285,6 @@ patch_enable_all ()
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHAddDataBlock="$1"
-	enable_shlwapi_SHMapHandle="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
@@ -347,7 +346,6 @@ patch_enable_all ()
 	enable_winedevice_Default_Drivers="$1"
 	enable_winemapi_user_xdg_mail="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
-	enable_winemp3_acm_MPEG3_StreamOpen="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winex11_CandidateWindowPos="$1"
@@ -998,9 +996,6 @@ patch_enable ()
 		shlwapi-SHAddDataBlock)
 			enable_shlwapi_SHAddDataBlock="$2"
 			;;
-		shlwapi-SHMapHandle)
-			enable_shlwapi_SHMapHandle="$2"
-			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
 			;;
@@ -1183,9 +1178,6 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
-			;;
-		winemp3.acm-MPEG3_StreamOpen)
-			enable_winemp3_acm_MPEG3_StreamOpen="$2"
 			;;
 		wineps.drv-PostScript_Fixes)
 			enable_wineps_drv_PostScript_Fixes="$2"
@@ -5838,18 +5830,6 @@ if test "$enable_shlwapi_SHAddDataBlock" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset shlwapi-SHMapHandle
-# |
-# | Modified files:
-# |   *	dlls/shlwapi/ordinal.c, dlls/shlwapi/tests/ordinal.c
-# |
-if test "$enable_shlwapi_SHMapHandle" -eq 1; then
-	patch_apply shlwapi-SHMapHandle/0002-shlwapi-SHMapHandle-should-not-set-error-when-NULL-i.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi: SHMapHandle should not set error when NULL is passed as hShared.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset shlwapi-UrlCombine
 # |
 # | Modified files:
@@ -5960,17 +5940,14 @@ fi
 # Patchset taskmgr-Memory_Usage
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, programs/taskmgr/font.bmp, programs/taskmgr/graph.c, programs/taskmgr/resource.h,
-# | 	programs/taskmgr/taskmgr.c, programs/taskmgr/taskmgr.rc
+# |   *	dlls/ntdll/nt.c, programs/taskmgr/graph.c
 # |
 if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 	patch_apply taskmgr-Memory_Usage/0002-ntdll-Report-system-information-SystemPerformanceInf.patch
-	patch_apply taskmgr-Memory_Usage/0003-taskmgr-Use-system-font-instead-of-special-bitmap-fo.patch
 	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
 	patch_apply taskmgr-Memory_Usage/0005-ntdll-Implement-basic-IO-stats-for-SystemPerformance.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use system font instead of special bitmap font.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement basic IO stats for SystemPerformanceInformation in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
@@ -6852,18 +6829,6 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	patch_apply winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winemenubuilder: Create desktop shortcuts with absolute wine path.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winemp3.acm-MPEG3_StreamOpen
-# |
-# | Modified files:
-# |   *	dlls/l3codeca.acm/mpegl3.c, dlls/msacm32/tests/msacm.c
-# |
-if test "$enable_winemp3_acm_MPEG3_StreamOpen" -eq 1; then
-	patch_apply winemp3.acm-MPEG3_StreamOpen/0001-winemp3.acm-Check-input-format-in-MPEG3_StreamOpen.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "l3codeca.acm: Check input format in MPEG3_StreamOpen.", 1 },';
 	) >> "$patchlist"
 fi
 

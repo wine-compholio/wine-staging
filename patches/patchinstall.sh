@@ -3106,7 +3106,8 @@ fi
 # Patchset ddraw-Write_Vtable
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#39534] Make ddraw1 and ddraw_surface1 vtable as writable
+# |   *	[#39534] Make ddraw1 and ddraw_surface1 vtable as writable.
+# |   *	[#46949] Make ddraw[2-7] and palette vtable as writable.
 # |
 # | Modified files:
 # |   *	dlls/ddraw/ddraw.c, dlls/ddraw/palette.c, dlls/ddraw/surface.c
@@ -7174,7 +7175,7 @@ fi
 # |   *	[#18517] Improve eraser from working.
 # |
 # | Modified files:
-# |   *	dlls/winex11.drv/wintab.c, dlls/wintab32/context.c
+# |   *	dlls/winex11.drv/wintab.c, dlls/wintab32/context.c, dlls/wintab32/tests/Makefile.in, dlls/wintab32/tests/context.c
 # |
 if test "$enable_wintab32_improvements" -eq 1; then
 	patch_apply wintab32-improvements/0001-winex11-Implement-PK_CHANGE-for-wintab.patch
@@ -7182,14 +7183,16 @@ if test "$enable_wintab32_improvements" -eq 1; then
 	patch_apply wintab32-improvements/0003-winex11-Handle-negative-orAltitude-values.patch
 	patch_apply wintab32-improvements/0004-winex11.drv-Support-multiplex-categories-WTI_DSCTXS-.patch
 	patch_apply wintab32-improvements/0005-winex11-Support-WTI_STATUS-in-WTInfo.patch
-	patch_apply wintab32-improvements/0006-winex11-Use-active-owner-when-sending-messages.patch
+	patch_apply wintab32-improvements/0006-wintab32-Scale-NormalPressure-before-sending-to-to-c.patch
+	patch_apply wintab32-improvements/0007-wintab32-tests-Initial-interactive-test.patch
 	(
 		printf '%s\n' '+    { "Eriks Dobelis", "winex11: Implement PK_CHANGE for wintab.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32: Set lcSysExtX/Y for the first index of WTI_DDCTXS.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Handle negative orAltitude values.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11.drv: Support multiplex categories WTI_DSCTXS and WTI_DDCTXS.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Support WTI_STATUS in WTInfo.", 1 },';
-		printf '%s\n' '+    { "Robert Walker", "winex11: Use active owner when sending messages.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32: Scale NormalPressure before sending to the client.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32/tests: Initial interactive test.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,32 @@
+From dd5371720cce8910281a79d860d1fcb45acc1767 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Wed, 3 Apr 2019 16:43:30 +1100
+Subject: [PATCH] wintab32: Scale NormalPressure before sending to the client.
+
+We need to workout how to get valid Min/Max Pressure values that are the
+same value as windows.
+
+---
+ dlls/winex11.drv/wintab.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/wintab.c b/dlls/winex11.drv/wintab.c
+index 3517bd53cef..380562e9597 100644
+--- a/dlls/winex11.drv/wintab.c
++++ b/dlls/winex11.drv/wintab.c
+@@ -925,7 +925,11 @@ static BOOL motion_event( HWND hwnd, XEvent *event )
+         FIXME("Negative orAltitude detected\n");
+         return FALSE;
+     }
+-    gMsgPacket.pkNormalPressure = motion->axis_data[2];
++    /* Scale the value sent from XInput 0-65536
++     * Windows                          0-1043
++     */
++    gMsgPacket.pkNormalPressure = ((motion->axis_data[2] - gSysDevice.NPRESSURE.axMin) /
++                        ((float)gSysDevice.NPRESSURE.axMax - gSysDevice.NPRESSURE.axMin)) * 1043;
+     gMsgPacket.pkButtons = get_button_state(curnum);
+     gMsgPacket.pkChanged = get_changed_state(&gMsgPacket);
+     SendMessageW(hwndTabletDefault,WT_PACKET,gMsgPacket.pkSerialNumber,(LPARAM)hwnd);
+-- 
+2.20.1
+

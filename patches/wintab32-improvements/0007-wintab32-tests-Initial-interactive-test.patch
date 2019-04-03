@@ -1,0 +1,297 @@
+From 47421c170433df8172083dc2d0187bd9426ba3ee Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 2 Apr 2019 12:25:57 +1100
+Subject: [PATCH] wintab32/tests: Initial interactive test
+
+This is a work in progress test when using a stylus.
+- Should display all information from the packet.
+- Cleanup of variable naming.
+
+---
+ dlls/wintab32/tests/Makefile.in |   2 +-
+ dlls/wintab32/tests/context.c   | 195 ++++++++++++++++++++++++++++++--
+ 2 files changed, 184 insertions(+), 13 deletions(-)
+
+diff --git a/dlls/wintab32/tests/Makefile.in b/dlls/wintab32/tests/Makefile.in
+index 635e03fd5d6..ad63c27b5d1 100644
+--- a/dlls/wintab32/tests/Makefile.in
++++ b/dlls/wintab32/tests/Makefile.in
+@@ -1,5 +1,5 @@
+ TESTDLL   = wintab32.dll
+-IMPORTS   = user32
++IMPORTS   = user32 gdi32
+ 
+ C_SRCS = \
+ 	context.c
+diff --git a/dlls/wintab32/tests/context.c b/dlls/wintab32/tests/context.c
+index 5f059127657..b77e6c546a9 100644
+--- a/dlls/wintab32/tests/context.c
++++ b/dlls/wintab32/tests/context.c
+@@ -21,6 +21,11 @@
+ #include <assert.h>
+ #include <windows.h>
+ #include <wintab.h>
++#include <stdio.h>
++
++#define PACKETDATA	(PK_X | PK_Y | PK_BUTTONS | PK_NORMAL_PRESSURE)
++#define PACKETMODE	PK_BUTTONS
++#include "pktdef.h"
+ 
+ #include "wine/test.h"
+ 
+@@ -29,11 +34,19 @@ static const CHAR wintabTestWindowClassName[] = "WintabTestWnd";
+ static const CHAR contextName[] = "TestContext";
+ static const UINT X = 0;
+ static const UINT Y = 0;
+-static const UINT WIDTH = 200;
+-static const UINT HEIGHT = 200;
++static const UINT WIDTH = 640;
++static const UINT HEIGHT = 480;
++
++static LOGCONTEXTA glogContext;
++static HCTX hCtx = NULL;
+ 
+-static HCTX (WINAPI *pWTOpenA)(HWND, LPLOGCONTEXTA, BOOL);
+ static BOOL (WINAPI *pWTClose)(HCTX);
++static BOOL (WINAPI *pWTEnable)(HCTX, BOOL);
++static UINT (WINAPI *pWTInfoA)(UINT, UINT, void*);
++static HCTX (WINAPI *pWTOpenA)(HWND, LPLOGCONTEXTA, BOOL);
++static BOOL (WINAPI *pWTOverlap)(HCTX, BOOL);
++static BOOL (WINAPI *pWTPacket)(HCTX, UINT, void*);
++
+ 
+ static HMODULE load_functions(void)
+ {
+@@ -49,8 +62,12 @@ static HMODULE load_functions(void)
+         return NULL;
+     }
+ 
+-    if (GET_PROC(WTOpenA) &&
+-        GET_PROC(WTClose) )
++    if (GET_PROC(WTClose) &&
++        GET_PROC(WTEnable) &&
++        GET_PROC(WTInfoA) &&
++        GET_PROC(WTOpenA) &&
++        GET_PROC(WTOverlap) &&
++        GET_PROC(WTPacket) )
+     {
+         return hWintab;
+     }
+@@ -70,7 +87,7 @@ static LRESULT CALLBACK wintabTestWndProc(HWND hwnd, UINT msg, WPARAM wParam,
+     return DefWindowProcA(hwnd, msg, wParam, lParam);
+ }
+ 
+-static void wintab_create_window(HWND* pHwnd)
++static void wintab_create_window(HWND* pHwnd, WNDPROC wndproc)
+ {
+     WNDCLASSA testWindowClass;
+ 
+@@ -80,18 +97,18 @@ static void wintab_create_window(HWND* pHwnd)
+ 
+     ZeroMemory(&testWindowClass, sizeof(testWindowClass));
+ 
+-    testWindowClass.lpfnWndProc   = wintabTestWndProc;
++    testWindowClass.lpfnWndProc   = wndproc;
+     testWindowClass.hInstance     = NULL;
+     testWindowClass.hIcon         = NULL;
+     testWindowClass.hCursor       = NULL;
+-    testWindowClass.hbrBackground = NULL;
++    testWindowClass.hbrBackground = (HBRUSH)(COLOR_APPWORKSPACE + 1);;
+     testWindowClass.lpszMenuName  = NULL;
+     testWindowClass.lpszClassName = wintabTestWindowClassName;
+ 
+     assert(RegisterClassA(&testWindowClass));
+ 
+     *pHwnd = CreateWindowA(wintabTestWindowClassName, NULL,
+-                            WS_OVERLAPPED, X, Y, WIDTH, HEIGHT, NULL, NULL,
++                            WS_OVERLAPPEDWINDOW, X, Y, WIDTH, HEIGHT, NULL, NULL,
+                             NULL, NULL);
+ 
+     assert(*pHwnd != NULL);
+@@ -106,13 +123,12 @@ static void wintab_destroy_window(HWND hwnd)
+ /* test how a logcontext is validated by wtopen */
+ static void test_WTOpenContextValidation(void)
+ {
+-    HWND defaultWindow = NULL;
+-    HCTX hCtx = NULL;
++    HWND defaultWindow = NULL;    
+     LOGCONTEXTA testLogCtx;
+     LOGCONTEXTA refLogCtx;
+     int memdiff;
+ 
+-    wintab_create_window(&defaultWindow);
++    wintab_create_window(&defaultWindow, wintabTestWndProc);
+ 
+     ZeroMemory(&testLogCtx, sizeof(testLogCtx));
+     strcpy(testLogCtx.lcName, contextName);
+@@ -135,6 +151,158 @@ static void test_WTOpenContextValidation(void)
+     wintab_destroy_window(defaultWindow);
+ }
+ 
++static HCTX initial_tablet(HWND hwnd)
++{
++    HCTX hctx = NULL;
++    UINT wWTInfoRetVal = 0;
++    AXIS TabletX = {0};
++    AXIS TabletY = {0};
++    AXIS value = {0};
++
++    glogContext.lcOptions |= CXO_SYSTEM;
++
++    /* Open default system context so that we can get tablet data in screen coordinates (not tablet coordinates). */
++    wWTInfoRetVal = pWTInfoA(WTI_DEFSYSCTX, 0, &glogContext);
++    ok(wWTInfoRetVal == sizeof( LOGCONTEXTA ), "incorrect size\n" );
++    ok(glogContext.lcOptions & CXO_SYSTEM, "Wrong options 0x%08x\n", glogContext.lcOptions);
++
++    /*wsprintf(glogContext.lcName, "PrsTest Digitizing %x", hInst);*/
++
++    glogContext.lcOptions |= CXO_MESSAGES;     /* We want WT_PACKET messages. */
++    glogContext.lcPktData = PACKETDATA;
++    glogContext.lcPktMode = PACKETMODE;
++    glogContext.lcMoveMask = PACKETDATA;
++    glogContext.lcBtnUpMask = glogContext.lcBtnDnMask;
++
++    wWTInfoRetVal = pWTInfoA( WTI_DEVICES, DVC_X, &TabletX );
++    ok(wWTInfoRetVal == sizeof( AXIS ), "Wrong DVC_X size %d\n", wWTInfoRetVal);
++
++    wWTInfoRetVal = pWTInfoA( WTI_DEVICES, DVC_Y, &TabletY );
++    ok(wWTInfoRetVal == sizeof( AXIS ), "Wrong DVC_Y size %d\n", wWTInfoRetVal);
++
++    wWTInfoRetVal = pWTInfoA( WTI_DEVICES, DVC_NPRESSURE, &value );
++    ok(wWTInfoRetVal == sizeof( AXIS ), "Wrong DVC_NPRESSURE, size %d\n", wWTInfoRetVal);
++    ok(0, "DVC_NPRESSURE = %d, %d, %d\n", value.axMin, value.axMax, value.axUnits);
++
++    glogContext.lcInOrgX = 0;
++    glogContext.lcInOrgY = 0;
++    glogContext.lcInExtX = TabletX.axMax;
++    glogContext.lcInExtY = TabletY.axMax;
++
++    /* Guarantee the output coordinate space to be in screen coordinates.   */
++    glogContext.lcOutOrgX = GetSystemMetrics( SM_XVIRTUALSCREEN );
++    glogContext.lcOutOrgY = GetSystemMetrics( SM_YVIRTUALSCREEN );
++    glogContext.lcOutExtX = GetSystemMetrics( SM_CXVIRTUALSCREEN );
++
++    /* In Wintab, the tablet origin is lower left.  Move origin to upper left
++        so that it coincides with screen origin. */
++    glogContext.lcOutExtY = -GetSystemMetrics( SM_CYVIRTUALSCREEN );
++
++    hctx = pWTOpenA( hwnd, &glogContext, FALSE );
++
++    return hctx;
++}
++
++static LRESULT CALLBACK wintabInteractiveWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
++{
++    static POINT ptOld, ptNew;
++    static UINT prsOld, prsNew;
++    PACKET pkt;
++    static RECT rcClient;
++    PAINTSTRUCT psPaint;
++    HDC hdc;
++
++    switch (msg)
++    {
++        case WM_CREATE:
++            hCtx = initial_tablet(hwnd);
++            break;
++        case WM_DESTROY:
++            if (hCtx)
++                pWTClose(hCtx);
++            PostQuitMessage(0);
++            break;
++        case WM_PAINT:
++            if ( (hdc = BeginPaint(hwnd, &psPaint)) )
++            {
++                RECT clientRect;
++                char buffer[1024];
++
++                GetClientRect(hwnd, &clientRect);
++                if(!hCtx)
++                {
++                    DrawTextA(hdc, "No Tablet", -1, &clientRect, 0);
++                }
++                else
++                {
++                    POINT scrPoint = {ptNew.x, ptNew.y};
++
++                    ScreenToClient(hwnd, &scrPoint);
++
++                    sprintf( buffer, "%d,%d, pressure %d", ptNew.x, ptNew.y, prsNew );
++                    DrawTextA(hdc, buffer, -1, &clientRect, 0);
++
++                    PatBlt(hdc, rcClient.left, scrPoint.y, rcClient.right, 1, DSTINVERT);
++                    PatBlt(hdc, scrPoint.x, rcClient.top, 1, rcClient.bottom, DSTINVERT);
++                    Ellipse(hdc, scrPoint.x - prsNew, scrPoint.y - prsNew, scrPoint.x + prsNew, scrPoint.y + prsNew);
++                    EndPaint(hwnd, &psPaint);
++                }
++            }
++            break;
++        case WT_PACKET:
++        {
++            if (pWTPacket((HCTX)lParam, wParam, &pkt))
++            {
++                ptOld = ptNew;
++                prsOld = prsNew;
++
++                ptNew.x = pkt.pkX;
++                ptNew.y = pkt.pkY;
++
++                prsNew = pkt.pkNormalPressure;
++
++                if (ptNew.x != ptOld.x || ptNew.y != ptOld.y || prsNew != prsOld)
++                    InvalidateRect(hwnd, NULL, TRUE);
++            }
++            break;
++        }
++        case WM_ACTIVATE:
++            if (LOWORD(wParam))
++            {
++                InvalidateRect(hwnd, NULL, TRUE);
++            }
++
++            /* if switching in the middle, disable the region */
++            if (hCtx)
++            {
++                pWTEnable(hCtx, LOWORD(wParam));
++                if (hCtx && LOWORD(wParam))
++                {
++                    pWTOverlap(hCtx, TRUE);
++                }
++            }
++            break;
++    }
++    return DefWindowProcA(hwnd, msg, wParam, lParam);
++}
++
++static void test_interactive(void)
++{
++    HWND defaultWindow = NULL;
++    MSG msg;
++
++    wintab_create_window(&defaultWindow, wintabInteractiveWndProc);
++    ShowWindow(defaultWindow, SW_SHOW);
++
++    while (GetMessageA(&msg, NULL, 0, 0))
++    {
++        TranslateMessage(&msg);
++        DispatchMessageA(&msg);
++    }
++
++    wintab_destroy_window(defaultWindow);
++}
++
+ START_TEST(context)
+ {
+     HMODULE hWintab = load_functions();
+@@ -147,5 +315,8 @@ START_TEST(context)
+ 
+     test_WTOpenContextValidation();
+ 
++    if(winetest_interactive)
++        test_interactive();
++
+     FreeLibrary(hWintab);
+ }
+-- 
+2.20.1
+

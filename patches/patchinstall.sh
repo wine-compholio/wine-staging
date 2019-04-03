@@ -3109,12 +3109,14 @@ fi
 # |   *	[#39534] Make ddraw1 and ddraw_surface1 vtable as writable
 # |
 # | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/surface.c
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/palette.c, dlls/ddraw/surface.c
 # |
 if test "$enable_ddraw_Write_Vtable" -eq 1; then
 	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
+	patch_apply ddraw-Write_Vtable/0002-ddraw-Allow-writing-to-vtable-for-surface-and-palett.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ddraw: Allow writing to vtable for surface and palette.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5959,8 +5961,7 @@ fi
 # |   *	[#41369] Add UIAnimation and stubs interfaces
 # |
 # | Modified files:
-# |   *	dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation.spec,
-# | 	dlls/uianimation/uianimation_typelib.idl
+# |   *	dlls/uianimation/Makefile.in, dlls/uianimation/main.c, dlls/uianimation/uianimation_typelib.idl
 # |
 if test "$enable_uianimation_stubs" -eq 1; then
 	patch_apply uianimation-stubs/0002-uianimation-Add-stub-dll.patch

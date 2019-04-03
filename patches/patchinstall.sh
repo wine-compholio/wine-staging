@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "33c35baa6761b00c8cef236c06cb1655f3f228d9"
+	echo "8268c47462544baf5bc7e5071c0a9f2d00c5c2cb"
 }
 
 # Show version information
@@ -131,7 +131,6 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
 	enable_dinput_Deadlock="$1"
-	enable_dinput_Initialize="$1"
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
@@ -534,9 +533,6 @@ patch_enable ()
 			;;
 		dinput-Deadlock)
 			enable_dinput_Deadlock="$2"
-			;;
-		dinput-Initialize)
-			enable_dinput_Initialize="$2"
 			;;
 		dinput-axis-recalc)
 			enable_dinput_axis_recalc="$2"
@@ -2177,11 +2173,9 @@ fi
 if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
 	patch_apply advapi32-CreateRestrictedToken/0001-ntdll-Implement-NtFilterToken.patch
 	patch_apply advapi32-CreateRestrictedToken/0002-advapi32-Implement-CreateRestrictedToken.patch
-	patch_apply advapi32-CreateRestrictedToken/0003-server-Correctly-validate-SID-length-in-sd_is_valid.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtFilterToken.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Implement CreateRestrictedToken.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Correctly validate SID length in sd_is_valid.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3155,21 +3149,6 @@ if test "$enable_dinput_Deadlock" -eq 1; then
 	patch_apply dinput-Deadlock/0001-dinput-Avoid-possible-deadlock-when-CS-are-acquired-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Avoid possible deadlock when CS are acquired in different order.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dinput-Initialize
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21403] Do not wait for hook thread startup in IDirectInput8::Initialize
-# |
-# | Modified files:
-# |   *	dlls/dinput/dinput_main.c
-# |
-if test "$enable_dinput_Initialize" -eq 1; then
-	patch_apply dinput-Initialize/0001-dinput-Do-not-wait-for-hook-thread-startup-in-IDirec.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Do not wait for hook thread startup in IDirectInput8::Initialize.", 1 },';
 	) >> "$patchlist"
 fi
 

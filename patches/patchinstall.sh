@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
+	enable_ddraw_Texture_Wrong_Caps="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
 	enable_dinput_Deadlock="$1"
@@ -517,6 +518,9 @@ patch_enable ()
 			;;
 		ddraw-Silence_FIXMEs)
 			enable_ddraw_Silence_FIXMEs="$2"
+			;;
+		ddraw-Texture_Wrong_Caps)
+			enable_ddraw_Texture_Wrong_Caps="$2"
 			;;
 		ddraw-Write_Vtable)
 			enable_ddraw_Write_Vtable="$2"
@@ -2040,6 +2044,13 @@ if test "$enable_ddraw_version_check" -eq 1; then
 	enable_ddraw_Device_Caps=1
 fi
 
+if test "$enable_ddraw_Texture_Wrong_Caps" -eq 1; then
+	if test "$enable_ddraw_Rendering_Targets" -gt 1; then
+		abort "Patchset ddraw-Rendering_Targets disabled, but ddraw-Texture_Wrong_Caps depends on that."
+	fi
+	enable_ddraw_Rendering_Targets=1
+fi
+
 if test "$enable_d3dx9_36_DXTn" -eq 1; then
 	if test "$enable_wined3d_DXTn" -gt 1; then
 		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
@@ -3098,6 +3109,24 @@ if test "$enable_ddraw_Silence_FIXMEs" -eq 1; then
 	patch_apply ddraw-Silence_FIXMEs/0001-ddraw-Silence-noisy-FIXME-about-unimplemented-D3DPRO.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "ddraw: Silence noisy FIXME about unimplemented D3DPROCESSVERTICES_UPDATEEXTENTS.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ddraw-Texture_Wrong_Caps
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ddraw-Rendering_Targets
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46948] Allow setting texture without DDSCAPS_TEXTURE for software device
+# |
+# | Modified files:
+# |   *	dlls/ddraw/device.c, dlls/ddraw/tests/ddraw4.c
+# |
+if test "$enable_ddraw_Texture_Wrong_Caps" -eq 1; then
+	patch_apply ddraw-Texture_Wrong_Caps/0001-ddraw-Allow-setting-texture-without-DDSCAPS_TEXTURE-.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ddraw: Allow setting texture without DDSCAPS_TEXTURE for software device.", 1 },';
 	) >> "$patchlist"
 fi
 

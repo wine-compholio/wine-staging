@@ -1,0 +1,265 @@
+From 1b4c479e85db593612a550cac2f3f9b562a3ac6c Mon Sep 17 00:00:00 2001
+From: Paul Gofman <gofmanp@gmail.com>
+Date: Thu, 4 Apr 2019 02:25:00 +0300
+Subject: [PATCH] ddraw: Allow setting texture without DDSCAPS_TEXTURE for
+ software device.
+
+Signed-off-by: Paul Gofman <gofmanp@gmail.com>
+---
+ dlls/ddraw/device.c       |  22 +++++--
+ dlls/ddraw/tests/ddraw4.c | 128 +++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 141 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ddraw/device.c b/dlls/ddraw/device.c
+index 9c2de58cac..c0bb93794d 100644
+--- a/dlls/ddraw/device.c
++++ b/dlls/ddraw/device.c
+@@ -2946,10 +2946,8 @@ static HRESULT WINAPI d3d_device3_SetLightState(IDirect3DDevice3 *iface,
+                 wined3d_mutex_unlock();
+                 return DDERR_INVALIDPARAMS;
+             }
+-
+             material_activate(m);
+         }
+-
+         device->material = value;
+     }
+     else if (state == D3DLIGHTSTATE_COLORMODEL)
+@@ -4820,7 +4818,8 @@ static HRESULT d3d_device7_SetTexture(IDirect3DDevice7 *iface,
+     struct ddraw_surface *surf = unsafe_impl_from_IDirectDrawSurface7(texture);
+     struct wined3d_texture *wined3d_texture = NULL;
+ 
+-    TRACE("iface %p, stage %u, texture %p.\n", iface, stage, texture);
++    TRACE("iface %p, stage %u, texture %p, surf %p, surf->surface_desc.ddsCaps.dwCaps %#x.\n",
++            iface, stage, texture, surf, surf ? surf->surface_desc.ddsCaps.dwCaps : 0);
+ 
+     if (surf && (surf->surface_desc.ddsCaps.dwCaps & DDSCAPS_TEXTURE))
+         wined3d_texture = surf->wined3d_texture;
+@@ -4856,8 +4855,8 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
+ {
+     struct d3d_device *device = impl_from_IDirect3DDevice3(iface);
+     struct ddraw_surface *tex = unsafe_impl_from_IDirect3DTexture2(texture);
++    struct wined3d_texture *wined3d_texture;
+     DWORD texmapblend;
+-    HRESULT hr;
+ 
+     TRACE("iface %p, stage %u, texture %p.\n", iface, stage, texture);
+ 
+@@ -4866,7 +4865,18 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
+     if (device->legacyTextureBlending)
+         IDirect3DDevice3_GetRenderState(iface, D3DRENDERSTATE_TEXTUREMAPBLEND, &texmapblend);
+ 
+-    hr = IDirect3DDevice7_SetTexture(&device->IDirect3DDevice7_iface, stage, &tex->IDirectDrawSurface7_iface);
++    if (tex && ((tex->surface_desc.ddsCaps.dwCaps & DDSCAPS_TEXTURE) || !device->hw))
++    {
++        if (!(tex->surface_desc.ddsCaps.dwCaps & DDSCAPS_TEXTURE))
++            WARN("Setting texture without DDSCAPS_TEXTURE.\n");
++        wined3d_texture = tex->wined3d_texture;
++    }
++    else
++    {
++        wined3d_texture = NULL;
++    }
++
++    wined3d_device_set_texture(device->wined3d_device, stage, wined3d_texture);
+ 
+     if (device->legacyTextureBlending && texmapblend == D3DTBLEND_MODULATE)
+     {
+@@ -4898,7 +4908,7 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
+ 
+     wined3d_mutex_unlock();
+ 
+-    return hr;
++    return D3D_OK;
+ }
+ 
+ static const struct tss_lookup
+diff --git a/dlls/ddraw/tests/ddraw4.c b/dlls/ddraw/tests/ddraw4.c
+index abf745aecb..26a021b429 100644
+--- a/dlls/ddraw/tests/ddraw4.c
++++ b/dlls/ddraw/tests/ddraw4.c
+@@ -329,7 +329,7 @@ static IDirectDraw4 *create_ddraw(void)
+     return ddraw4;
+ }
+ 
+-static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
++static IDirect3DDevice3 *create_device_ex(HWND window, DWORD coop_level, BOOL software)
+ {
+     IDirectDrawSurface4 *surface, *ds;
+     IDirect3DDevice3 *device = NULL;
+@@ -349,6 +349,8 @@ static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
+     surface_desc.dwSize = sizeof(surface_desc);
+     surface_desc.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
+     surface_desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_3DDEVICE;
++    if (software)
++        surface_desc.ddsCaps.dwCaps |= DDSCAPS_SYSTEMMEMORY;
+     surface_desc.dwWidth = 640;
+     surface_desc.dwHeight = 480;
+ 
+@@ -377,7 +379,8 @@ static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
+     }
+ 
+     memset(&z_fmt, 0, sizeof(z_fmt));
+-    hr = IDirect3D3_EnumZBufferFormats(d3d3, &IID_IDirect3DHALDevice, enum_z_fmt, &z_fmt);
++    hr = IDirect3D3_EnumZBufferFormats(d3d3, software ? &IID_IDirect3DRGBDevice
++            : &IID_IDirect3DHALDevice, enum_z_fmt, &z_fmt);
+     if (FAILED(hr) || !z_fmt.dwSize)
+     {
+         IDirect3D3_Release(d3d3);
+@@ -389,6 +392,8 @@ static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
+     surface_desc.dwSize = sizeof(surface_desc);
+     surface_desc.dwFlags = DDSD_CAPS | DDSD_PIXELFORMAT | DDSD_WIDTH | DDSD_HEIGHT;
+     surface_desc.ddsCaps.dwCaps = DDSCAPS_ZBUFFER;
++    if (software)
++        surface_desc.ddsCaps.dwCaps |= DDSCAPS_SYSTEMMEMORY;
+     U4(surface_desc).ddpfPixelFormat = z_fmt;
+     surface_desc.dwWidth = 640;
+     surface_desc.dwHeight = 480;
+@@ -411,7 +416,8 @@ static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
+         return NULL;
+     }
+ 
+-    hr = IDirect3D3_CreateDevice(d3d3, &IID_IDirect3DHALDevice, surface, &device, NULL);
++    hr = IDirect3D3_CreateDevice(d3d3, software ? &IID_IDirect3DRGBDevice
++            : &IID_IDirect3DHALDevice, surface, &device, NULL);
+     IDirect3D3_Release(d3d3);
+     IDirectDrawSurface4_Release(surface);
+     if (FAILED(hr))
+@@ -420,6 +426,11 @@ static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
+     return device;
+ }
+ 
++static IDirect3DDevice3 *create_device(HWND window, DWORD coop_level)
++{
++    return create_device_ex(window, coop_level, FALSE);
++}
++
+ static IDirect3DViewport3 *create_viewport(IDirect3DDevice3 *device, UINT x, UINT y, UINT w, UINT h)
+ {
+     IDirect3DViewport3 *viewport;
+@@ -16023,6 +16034,116 @@ static void test_caps(void)
+     IDirectDraw4_Release(ddraw);
+ }
+ 
++static void test_texture_wrong_caps_(BOOL software)
++{
++    static struct
++    {
++        struct vec3 position;
++        struct vec2 texcoord;
++    }
++    quad[] =
++    {
++        {{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
++        {{-1.0f,  1.0f, 0.0f}, {0.0f, 0.0f}},
++        {{ 1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
++        {{ 1.0f,  1.0f, 0.0f}, {1.0f, 0.0f}},
++    };
++    static DDPIXELFORMAT fmt =
++    {
++        sizeof(DDPIXELFORMAT), DDPF_RGB | DDPF_ALPHAPIXELS, 0,
++                {32}, {0x00ff0000}, {0x0000ff00}, {0x000000ff}, {0xff000000}
++    };
++    D3DRECT clear_rect = {{0}, {0}, {640}, {480}};
++    IDirectDrawSurface4 *surface, *rt;
++    D3DCOLOR color, expected_color;
++    IDirect3DViewport3 *viewport;
++    IDirect3DTexture2 *texture;
++    IDirect3DDevice3 *device;
++    IDirectDraw4 *ddraw;
++    DDSURFACEDESC2 ddsd;
++    IDirect3D3 *d3d;
++    ULONG refcount;
++    HWND window;
++    HRESULT hr;
++
++    window = create_window();
++    if (!(device = create_device_ex(window, DDSCL_NORMAL, software)))
++    {
++        skip("Failed to create a 3D device, skipping test.\n");
++        DestroyWindow(window);
++        return;
++    }
++    hr = IDirect3DDevice3_GetDirect3D(device, &d3d);
++    ok(hr == DD_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3D3_QueryInterface(d3d, &IID_IDirectDraw4, (void **)&ddraw);
++    ok(hr == DD_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_GetRenderTarget(device, &rt);
++    ok(hr == DD_OK, "Got unexpected hr %#x.\n", hr);
++
++    viewport = create_viewport(device, 0, 0, 640, 480);
++    hr = IDirect3DDevice3_SetCurrentViewport(device, viewport);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++
++    memset(&ddsd, 0, sizeof(ddsd));
++    ddsd.dwSize = sizeof(ddsd);
++    ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
++    ddsd.dwHeight = 16;
++    ddsd.dwWidth = 16;
++    ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
++    U4(ddsd).ddpfPixelFormat = fmt;
++    hr = IDirectDraw4_CreateSurface(ddraw, &ddsd, &surface, NULL);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirectDrawSurface4_QueryInterface(surface, &IID_IDirect3DTexture2, (void **)&texture);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++
++    fill_surface(surface, 0xff00ff00);
++
++    hr = IDirect3DDevice3_SetRenderState(device, D3DRENDERSTATE_ZENABLE, D3DZB_FALSE);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++
++    hr = IDirect3DDevice3_SetTextureStageState(device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_SetTextureStageState(device, 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_SetTextureStageState(device, 0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_SetTextureStageState(device, 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
++
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_SetTexture(device, 0, texture);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DViewport3_Clear2(viewport, 1, &clear_rect, D3DCLEAR_TARGET, 0x000000ff, 0.0f, 0);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_BeginScene(device);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_DrawPrimitive(device, D3DPT_TRIANGLESTRIP,
++            D3DFVF_XYZ | D3DFVF_TEX1, quad, 4, 0);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++    hr = IDirect3DDevice3_EndScene(device);
++    ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
++
++    expected_color = software ? 0x0000ff00 : 0x00ffffff;
++    color = get_surface_color(rt, 320, 240);
++    ok(color == expected_color, "Got color 0x%08x, expected 0x%08x.\n", color, expected_color);
++
++    IDirect3DTexture2_Release(texture);
++    IDirectDrawSurface4_Release(surface);
++    IDirectDraw4_Release(ddraw);
++    IDirect3D3_Release(d3d);
++    refcount = IDirect3DDevice3_Release(device);
++    ok(!refcount, "Device has %u references left.\n", refcount);
++    DestroyWindow(window);
++}
++
++static void test_texture_wrong_caps()
++{
++    trace("Hardware device.\n");
++    test_texture_wrong_caps_(FALSE);
++
++    trace("Software device.\n");
++    test_texture_wrong_caps_(TRUE);
++}
++
+ START_TEST(ddraw4)
+ {
+     DDDEVICEIDENTIFIER identifier;
+@@ -16156,4 +16277,5 @@ START_TEST(ddraw4)
+     test_gdi_surface();
+     test_alphatest();
+     test_clipper_refcount();
++    test_texture_wrong_caps();
+ }
+-- 
+2.20.1
+

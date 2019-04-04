@@ -142,6 +142,7 @@ patch_enable_all ()
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
+	enable_eventfd_synchronization="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
@@ -566,6 +567,9 @@ patch_enable ()
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
+			;;
+		eventfd_synchronization)
+			enable_eventfd_synchronization="$2"
 			;;
 		explorer-Video_Registry_Key)
 			enable_explorer_Video_Registry_Key="$2"
@@ -1786,13 +1790,6 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
-	fi
-	enable_ntdll_ThreadTime=1
-fi
-
 if test "$enable_server_Object_Types" -eq 1; then
 	if test "$enable_server_Misc_ACL" -gt 1; then
 		abort "Patchset server-Misc_ACL disabled, but server-Object_Types depends on that."
@@ -1802,29 +1799,6 @@ if test "$enable_server_Object_Types" -eq 1; then
 	fi
 	enable_server_Misc_ACL=1
 	enable_server_Shared_Memory=1
-fi
-
-if test "$enable_server_Shared_Memory" -eq 1; then
-	if test "$enable_ntdll_Threading" -gt 1; then
-		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
-	fi
-	if test "$enable_ntdll_Wait_User_APC" -gt 1; then
-		abort "Patchset ntdll-Wait_User_APC disabled, but server-Shared_Memory depends on that."
-	fi
-	if test "$enable_server_Key_State" -gt 1; then
-		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
-	fi
-	if test "$enable_server_PeekMessage" -gt 1; then
-		abort "Patchset server-PeekMessage disabled, but server-Shared_Memory depends on that."
-	fi
-	if test "$enable_server_Signal_Thread" -gt 1; then
-		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
-	fi
-	enable_ntdll_Threading=1
-	enable_ntdll_Wait_User_APC=1
-	enable_server_Key_State=1
-	enable_server_PeekMessage=1
-	enable_server_Signal_Thread=1
 fi
 
 if test "$enable_server_Inherited_ACLs" -eq 1; then
@@ -1866,13 +1840,6 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 	enable_nvapi_Stub_DLL=1
 fi
 
-if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
-	if test "$enable_ntdll_Exception" -gt 1; then
-		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
-	fi
-	enable_ntdll_Exception=1
-fi
-
 if test "$enable_ntdll_Signal_Handler" -eq 1; then
 	if test "$enable_ntdll_WRITECOPY" -gt 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but ntdll-Signal_Handler depends on that."
@@ -1885,13 +1852,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntdll-WRITECOPY depends on that."
 	fi
 	enable_ntdll_User_Shared_Data=1
-fi
-
-if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
-	if test "$enable_kernel32_K32GetPerformanceInfo" -gt 1; then
-		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
-	fi
-	enable_kernel32_K32GetPerformanceInfo=1
 fi
 
 if test "$enable_ntdll_NtContinue" -eq 1; then
@@ -1950,20 +1910,6 @@ if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 fi
 
-if test "$enable_ntdll_User_Shared_Data" -eq 1; then
-	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
-		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
-	fi
-	enable_ntdll_Hide_Wine_Exports=1
-fi
-
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
-	enable_ntdll_ThreadTime=1
-fi
-
 if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	if test "$enable_ntdll_ThreadTime" -gt 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
@@ -1990,6 +1936,95 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
 	fi
 	enable_server_File_Permissions=1
+fi
+
+if test "$enable_eventfd_synchronization" -eq 1; then
+	if test "$enable_ntdll_NtSuspendProcess" -gt 1; then
+		abort "Patchset ntdll-NtSuspendProcess disabled, but eventfd_synchronization depends on that."
+	fi
+	if test "$enable_ntdll_RtlCreateUserThread" -gt 1; then
+		abort "Patchset ntdll-RtlCreateUserThread disabled, but eventfd_synchronization depends on that."
+	fi
+	if test "$enable_ntdll_SystemRoot_Symlink" -gt 1; then
+		abort "Patchset ntdll-SystemRoot_Symlink disabled, but eventfd_synchronization depends on that."
+	fi
+	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but eventfd_synchronization depends on that."
+	fi
+	if test "$enable_server_Realtime_Priority" -gt 1; then
+		abort "Patchset server-Realtime_Priority disabled, but eventfd_synchronization depends on that."
+	fi
+	if test "$enable_server_Shared_Memory" -gt 1; then
+		abort "Patchset server-Shared_Memory disabled, but eventfd_synchronization depends on that."
+	fi
+	if test "$enable_ws2_32_WSACleanup" -gt 1; then
+		abort "Patchset ws2_32-WSACleanup disabled, but eventfd_synchronization depends on that."
+	fi
+	enable_ntdll_NtSuspendProcess=1
+	enable_ntdll_RtlCreateUserThread=1
+	enable_ntdll_SystemRoot_Symlink=1
+	enable_ntdll_User_Shared_Data=1
+	enable_server_Realtime_Priority=1
+	enable_server_Shared_Memory=1
+	enable_ws2_32_WSACleanup=1
+fi
+
+if test "$enable_server_Shared_Memory" -eq 1; then
+	if test "$enable_ntdll_Threading" -gt 1; then
+		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
+	fi
+	if test "$enable_ntdll_Wait_User_APC" -gt 1; then
+		abort "Patchset ntdll-Wait_User_APC disabled, but server-Shared_Memory depends on that."
+	fi
+	if test "$enable_server_Key_State" -gt 1; then
+		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
+	fi
+	if test "$enable_server_PeekMessage" -gt 1; then
+		abort "Patchset server-PeekMessage disabled, but server-Shared_Memory depends on that."
+	fi
+	if test "$enable_server_Signal_Thread" -gt 1; then
+		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
+	fi
+	enable_ntdll_Threading=1
+	enable_ntdll_Wait_User_APC=1
+	enable_server_Key_State=1
+	enable_server_PeekMessage=1
+	enable_server_Signal_Thread=1
+fi
+
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
+	fi
+	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_ntdll_User_Shared_Data" -eq 1; then
+	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
+		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
+	fi
+	enable_ntdll_Hide_Wine_Exports=1
+fi
+
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
+	enable_ntdll_ThreadTime=1
+fi
+
+if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
+	if test "$enable_ntdll_Exception" -gt 1; then
+		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
+	fi
+	enable_ntdll_Exception=1
+fi
+
+if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
+	if test "$enable_kernel32_K32GetPerformanceInfo" -gt 1; then
+		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
+	fi
+	enable_kernel32_K32GetPerformanceInfo=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -3391,6 +3426,482 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-K32GetPerformanceInfo
+# |
+# | Modified files:
+# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
+# |
+if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
+	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtSuspendProcess
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-K32GetPerformanceInfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44656] Implement NtSuspendProcess and NtResumeProcess
+# |
+# | Modified files:
+# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/process.c, server/protocol.def, server/thread.c
+# |
+if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
+	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlCreateUserThread
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
+	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Exception
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
+# |
+# | Modified files:
+# |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
+# |
+if test "$enable_ntdll_Exception" -eq 1; then
+	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemRoot_Symlink
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Exception
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c
+# |
+if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
+	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ThreadTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#20230] Return correct values for GetThreadTimes function
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/thread.c, server/protocol.def,
+# | 	server/snapshot.c, server/thread.c, server/thread.h
+# |
+if test "$enable_ntdll_ThreadTime" -eq 1; then
+	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
+	patch_apply ntdll-ThreadTime/0002-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
+	patch_apply ntdll-ThreadTime/0003-ntdll-Fill-process-kernel-and-user-time.patch
+	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
+	patch_apply ntdll-ThreadTime/0005-ntdll-Fill-out-thread-times-in-process-enumeration.patch
+	patch_apply ntdll-ThreadTime/0006-ntdll-Fill-process-virtual-memory-counters-in-NtQuer.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process kernel and user time.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill out thread times in process enumeration.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process virtual memory counters in NtQuerySystemInformation.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Hide_Wine_Exports
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38656] Add support for hiding wine version information from applications
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
+# |
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-User_Shared_Data
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#29168] Update user shared data at realtime
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c, dlls/ntdll/thread.c,
+# | 	dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
+# |
+if test "$enable_ntdll_User_Shared_Data" -eq 1; then
+	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
+	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
+	patch_apply ntdll-User_Shared_Data/0003-ntdll-Create-thread-to-update-user_shared_data-time-.patch
+	patch_apply ntdll-User_Shared_Data/0004-ntdll-tests-Test-updating-TickCount-in-user_shared_d.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Create thread to update user_shared_data time values when necessary.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll/tests: Test updating TickCount in user_shared_data.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Realtime_Priority
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime
+# |
+# | Modified files:
+# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
+# |
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
+	(
+		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Threading
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_Threading" -eq 1; then
+	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Wait_User_APC
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#14697] Do not allow interruption of system APC in server_select
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/sync.c
+# |
+if test "$enable_ntdll_Wait_User_APC" -eq 1; then
+	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Key_State
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31899] Implement locking and synchronization of key states
+# |   *	[#35907] Fix caps lock state issues with multiple processes
+# |
+# | Modified files:
+# |   *	server/queue.c
+# |
+if test "$enable_server_Key_State" -eq 1; then
+	patch_apply server-Key_State/0001-server-Introduce-a-helper-function-to-update-the-thr.patch
+	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-PeekMessage
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28884] GetMessage should remove already seen messages with higher priority
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/msg.c, server/queue.c
+# |
+if test "$enable_server_PeekMessage" -eq 1; then
+	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Signal_Thread
+# |
+# | Modified files:
+# |   *	server/thread.c, server/thread.h
+# |
+if test "$enable_server_Signal_Thread" -eq 1; then
+	patch_apply server-Signal_Thread/0001-server-Do-not-signal-thread-until-it-is-really-gone.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not signal violently terminated threads until they are really gone.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Shared_Memory
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
+# | 	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h, include/wine/server.h, include/winternl.h,
+# | 	server/fd.c, server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c, server/thread.c,
+# | 	server/thread.h
+# |
+if test "$enable_server_Shared_Memory" -eq 1; then
+	patch_apply server-Shared_Memory/0001-ntdll-Implement-virtual_map_shared_memory.patch
+	patch_apply server-Shared_Memory/0002-server-Implement-support-for-global-and-local-shared.patch
+	patch_apply server-Shared_Memory/0003-user32-Get-rid-of-wineserver-call-for-GetInputState.patch
+	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
+	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
+	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
+	patch_apply server-Shared_Memory/0007-server-Store-a-list-of-associated-queues-for-each-th.patch
+	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18670] Properly close sockets when WSACleanup is called
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h,
+# | 	server/protocol.def, server/sock.c
+# |
+if test "$enable_ws2_32_WSACleanup" -eq 1; then
+	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
+	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
+	(
+		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset eventfd_synchronization
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	kernel32-K32GetPerformanceInfo, ntdll-NtSuspendProcess, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
+# | 	SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, server-Realtime_Priority, ntdll-
+# | 	Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory,
+# | 	ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
+# |
+# | Modified files:
+# |   *	README.esync, configure.ac, dlls/kernel32/tests/sync.c, dlls/ntdll/Makefile.in, dlls/ntdll/critsection.c,
+# | 	dlls/ntdll/esync.c, dlls/ntdll/esync.h, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c,
+# | 	dlls/ntdll/server.c, dlls/ntdll/sync.c, dlls/ntdll/thread.c, dlls/rpcrt4/rpc_server.c, dlls/user32/hook.c,
+# | 	dlls/wineandroid.drv/window.c, dlls/winemac.drv/macdrv_main.c, dlls/winex11.drv/x11drv_main.c, server/Makefile.in,
+# | 	server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c,
+# | 	server/debugger.c, server/device.c, server/directory.c, server/esync.c, server/esync.h, server/event.c, server/fd.c,
+# | 	server/file.c, server/file.h, server/handle.c, server/hook.c, server/mailslot.c, server/main.c, server/mapping.c,
+# | 	server/mutex.c, server/named_pipe.c, server/object.h, server/process.c, server/process.h, server/protocol.def,
+# | 	server/queue.c, server/registry.c, server/request.c, server/semaphore.c, server/serial.c, server/signal.c,
+# | 	server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/thread.h, server/timer.c, server/token.c,
+# | 	server/winstation.c
+# |
+if test "$enable_eventfd_synchronization" -eq 1; then
+	patch_apply eventfd_synchronization/0001-configure-Check-for-sys-eventfd.h-ppoll-and-shm_open.patch
+	patch_apply eventfd_synchronization/0002-server-Create-server-objects-for-eventfd-based-synch.patch
+	patch_apply eventfd_synchronization/0003-ntdll-Create-eventfd-based-objects-for-semaphores.patch
+	patch_apply eventfd_synchronization/0004-ntdll-Store-esync-objects-locally.patch
+	patch_apply eventfd_synchronization/0005-ntdll-Implement-NtReleaseSemaphore.patch
+	patch_apply eventfd_synchronization/0006-ntdll-Close-esync-objects.patch
+	patch_apply eventfd_synchronization/0007-ntdll-Implement-waiting-on-esync-objects.patch
+	patch_apply eventfd_synchronization/0008-ntdll-Create-esync-objects-for-events.patch
+	patch_apply eventfd_synchronization/0009-ntdll-Implement-NtSetEvent.patch
+	patch_apply eventfd_synchronization/0010-ntdll-Implement-NtResetEvent.patch
+	patch_apply eventfd_synchronization/0011-ntdll-Implement-NtPulseEvent.patch
+	patch_apply eventfd_synchronization/0012-ntdll-Implement-waiting-on-events.patch
+	patch_apply eventfd_synchronization/0013-server-Add-an-object-operation-to-grab-the-esync-fil.patch
+	patch_apply eventfd_synchronization/0014-server-Add-a-request-to-get-the-eventfd-file-descrip.patch
+	patch_apply eventfd_synchronization/0015-server-Create-eventfd-file-descriptors-for-process-o.patch
+	patch_apply eventfd_synchronization/0016-ntdll-server-Implement-waiting-on-server-bound-objec.patch
+	patch_apply eventfd_synchronization/0017-server-Create-eventfd-file-descriptors-for-event-obj.patch
+	patch_apply eventfd_synchronization/0018-server-Allow-re-setting-esync-events-on-the-server-s.patch
+	patch_apply eventfd_synchronization/0019-ntdll-Try-again-if-poll-returns-EINTR.patch
+	patch_apply eventfd_synchronization/0020-server-Create-eventfd-file-descriptors-for-thread-ob.patch
+	patch_apply eventfd_synchronization/0021-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
+	patch_apply eventfd_synchronization/0022-server-Create-eventfd-file-descriptors-for-message-q.patch
+	patch_apply eventfd_synchronization/0023-ntdll-wineandroid.drv-winemac.drv-winex11.drv-Store-.patch
+	patch_apply eventfd_synchronization/0024-server-ntdll-Also-wait-on-the-queue-fd-when-waiting-.patch
+	patch_apply eventfd_synchronization/0025-server-Create-eventfd-descriptors-for-device-manager.patch
+	patch_apply eventfd_synchronization/0026-ntdll-Create-esync-objects-for-mutexes.patch
+	patch_apply eventfd_synchronization/0027-ntdll-Implement-NtReleaseMutant.patch
+	patch_apply eventfd_synchronization/0028-ntdll-Implement-waiting-on-mutexes.patch
+	patch_apply eventfd_synchronization/0029-ntdll-Implement-wait-all.patch
+	patch_apply eventfd_synchronization/0030-esync-Add-a-README.patch
+	patch_apply eventfd_synchronization/0031-ntdll-Implement-NtSignalAndWaitForSingleObject.patch
+	patch_apply eventfd_synchronization/0032-server-ntdll-Also-store-the-esync-type-in-the-server.patch
+	patch_apply eventfd_synchronization/0033-ntdll-server-Implement-NtOpenSemaphore.patch
+	patch_apply eventfd_synchronization/0034-ntdll-Implement-NtOpenEvent.patch
+	patch_apply eventfd_synchronization/0035-ntdll-Implement-NtOpenMutant.patch
+	patch_apply eventfd_synchronization/0036-ntdll-Record-the-current-count-of-a-semaphore-locall.patch
+	patch_apply eventfd_synchronization/0037-server-Implement-esync_map_access.patch
+	patch_apply eventfd_synchronization/0038-server-Alter-conditions-in-is_queue_hung.patch
+	patch_apply eventfd_synchronization/0039-ntdll-server-Allow-DuplicateHandle-to-succeed-by-imp.patch
+	patch_apply eventfd_synchronization/0040-server-Create-eventfd-descriptors-for-timers.patch
+	patch_apply eventfd_synchronization/0041-server-Allocate-shared-memory-segments-for-semaphore.patch
+	patch_apply eventfd_synchronization/0042-ntdll-Use-shared-memory-segments-to-store-semaphore-.patch
+	patch_apply eventfd_synchronization/0043-ntdll-Lock-creating-and-opening-objects-with-volatil.patch
+	patch_apply eventfd_synchronization/0044-server-ntdll-Pass-the-shared-memory-index-back-from-.patch
+	patch_apply eventfd_synchronization/0045-server-ntdll-Implement-alertable-waits.patch
+	patch_apply eventfd_synchronization/0046-esync-Update-README.patch
+	patch_apply eventfd_synchronization/0047-kernel32-tests-Mark-some-existing-tests-as-failing-u.patch
+	patch_apply eventfd_synchronization/0048-kernel32-tests-Add-some-semaphore-tests.patch
+	patch_apply eventfd_synchronization/0049-kernel32-tests-Add-some-event-tests.patch
+	patch_apply eventfd_synchronization/0050-kernel32-tests-Add-some-mutex-tests.patch
+	patch_apply eventfd_synchronization/0051-kernel32-tests-Add-some-tests-for-wait-timeouts.patch
+	patch_apply eventfd_synchronization/0052-ntdll-Go-through-the-server-if-necessary-when-perfor.patch
+	patch_apply eventfd_synchronization/0053-server-Create-eventfd-descriptors-for-console_input_.patch
+	patch_apply eventfd_synchronization/0054-server-Alter-conditions-in-is_queue_hung-again.patch
+	patch_apply eventfd_synchronization/0055-ntdll-Let-the-server-know-when-we-are-doing-a-messag.patch
+	patch_apply eventfd_synchronization/0056-ntdll-Avoid-server_select-when-waiting-for-critical-.patch
+	patch_apply eventfd_synchronization/0057-user32-Remove-hooks-that-time-out.patch
+	patch_apply eventfd_synchronization/0058-server-Don-t-check-for-a-hung-queue-when-sending-low.patch
+	patch_apply eventfd_synchronization/0059-kernel32-tests-Zigzag-test.patch
+	patch_apply eventfd_synchronization/0060-server-Try-to-remove-a-pre-xisting-shm-file.patch
+	patch_apply eventfd_synchronization/0061-ntdll-Implement-NtQuerySemaphore.patch
+	patch_apply eventfd_synchronization/0062-ntdll-Implement-NtQueryEvent.patch
+	patch_apply eventfd_synchronization/0063-ntdll-Implement-NtQueryMutant.patch
+	patch_apply eventfd_synchronization/0064-server-Create-eventfd-descriptors-for-pseudo-fd-obje.patch
+	patch_apply eventfd_synchronization/0065-ntdll-Cache-the-esync-struct-itself-instead-of-a-poi.patch
+	patch_apply eventfd_synchronization/0066-esync-Update-README.patch
+	patch_apply eventfd_synchronization/0067-esync-Add-note-about-file-limits-not-being-raised-wh.patch
+	patch_apply eventfd_synchronization/0068-ntdll-Ignore-pseudo-handles.patch
+	patch_apply eventfd_synchronization/0069-ntdll-Try-to-avoid-poll-for-uncontended-objects.patch
+	patch_apply eventfd_synchronization/0070-ntdll-Store-an-event-s-signaled-state-internally.patch
+	patch_apply eventfd_synchronization/0071-ntdll-Fix-growing-the-shm_addrs-array.patch
+	patch_apply eventfd_synchronization/0072-server-Update-the-shared-memory-state-when-re-settin.patch
+	patch_apply eventfd_synchronization/0073-ntdll-Fix-a-missing-break-statement.patch
+	patch_apply eventfd_synchronization/0074-ntdll-server-Abort-if-esync-is-enabled-for-the-serve.patch
+	patch_apply eventfd_synchronization/0075-esync-Update-README.patch
+	patch_apply eventfd_synchronization/0076-ntdll-Correctly-allocate-the-esync-handle-cache.patch
+	patch_apply eventfd_synchronization/0077-ntdll-server-Specify-EFD_SEMAPHORE-on-the-server-sid.patch
+	patch_apply eventfd_synchronization/0078-ntdll-server-Initialize-the-shared-memory-portion-on.patch
+	patch_apply eventfd_synchronization/0079-ntdll-server-Revert-to-old-implementation-of-hung-qu.patch
+	patch_apply eventfd_synchronization/0080-ntdll-Fix-a-couple-of-misplaced-global-variables.patch
+	patch_apply eventfd_synchronization/0081-ntdll-Yield-during-PulseEvent.patch
+	patch_apply eventfd_synchronization/0082-ntdll-server-Check-the-value-of-WINEESYNC-instead-of.patch
+	patch_apply eventfd_synchronization/0083-esync-Update-README.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "configure: Check for sys/eventfd.h, ppoll(), and shm_open().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create server objects for eventfd-based synchronization objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Create eventfd-based objects for semaphores.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Store esync objects locally.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtReleaseSemaphore().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Close esync objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement waiting on esync objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Create esync objects for events.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtSetEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtResetEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtPulseEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement waiting on events.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Add an object operation to grab the esync file descriptor.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Add a request to get the eventfd file descriptor associated with a waitable handle.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd file descriptors for process objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Implement waiting on server-bound objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd file descriptors for event objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Allow (re)setting esync events on the server side.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Try again if poll() returns EINTR.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd file descriptors for thread objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "rpcrt4: Avoid closing the server thread handle while it is being waited on.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd file descriptors for message queues.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, wineandroid.drv, winemac.drv, winex11.drv: Store the thread'\''s queue fd in ntdll.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server, ntdll: Also wait on the queue fd when waiting for driver events.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd descriptors for device manager objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Create esync objects for mutexes.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtReleaseMutant().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement waiting on mutexes.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement wait-all.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "esync: Add a README.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtSignalAndWaitForSingleObject().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server, ntdll: Also store the esync type in the server.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Implement NtOpenSemaphore().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtOpenEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtOpenMutant().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Record the current count of a semaphore locally.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Implement esync_map_access().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Alter conditions in is_queue_hung().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Allow DuplicateHandle() to succeed by implementing esync_get_esync_fd().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd descriptors for timers.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Allocate shared memory segments for semaphores and mutexes.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Use shared memory segments to store semaphore and mutex state.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Lock creating and opening objects with volatile state.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server, ntdll: Pass the shared memory index back from get_esync_fd.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server, ntdll: Implement alertable waits.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "esync: Update README.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Mark some existing tests as failing under esync.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Add some semaphore tests.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Add some event tests.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Add some mutex tests.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Add some tests for wait timeouts.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Go through the server if necessary when performing event/semaphore/mutex ops.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd descriptors for console_input_events objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Alter conditions in is_queue_hung(), again.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Let the server know when we are doing a message wait.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Avoid server_select() when waiting for critical sections.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Remove hooks that time out.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Don'\''t check for a hung queue when sending low-level hooks.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Zigzag test.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "=?UTF-8?q?server:=20Try=20to=20remove=20a=20pre?= =?UTF-8?q?=C3=ABxisting=20shm=20file.?=.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtQuerySemaphore().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtQueryEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtQueryMutant().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create eventfd descriptors for pseudo-fd objects and use them for named pipes.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Cache the esync struct itself instead of a pointer to it.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "esync: Update README.", 1 },';
+		printf '%s\n' '+    { "Mathieu Comandon", "esync: Add note about file limits not being raised when using systemd.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Ignore pseudo-handles.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Try to avoid poll() for uncontended objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Store an event'\''s signaled state internally.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Fix growing the shm_addrs array.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Update the shared memory state when (re)setting an event.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Fix a missing break statement.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Abort if esync is enabled for the server but not the client, and vice versa.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "esync: Update README.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Correctly allocate the esync handle cache.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Specify EFD_SEMAPHORE on the server side.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Initialize the shared memory portion on the server side.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Revert to old implementation of hung queue detection.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Fix a couple of misplaced global variables.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Yield during PulseEvent().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Check the value of WINEESYNC instead of just the presence.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "esync: Update README.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset explorer-Video_Registry_Key
 # |
 # | Modified files:
@@ -3785,18 +4296,6 @@ if test "$enable_kernel32_Job_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-K32GetPerformanceInfo
-# |
-# | Modified files:
-# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
-# |
-if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
-	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-NeedCurrentDirectoryForExePath
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4074,32 +4573,6 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ThreadTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#20230] Return correct values for GetThreadTimes function
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/thread.c, server/protocol.def,
-# | 	server/snapshot.c, server/thread.c, server/thread.h
-# |
-if test "$enable_ntdll_ThreadTime" -eq 1; then
-	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
-	patch_apply ntdll-ThreadTime/0002-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
-	patch_apply ntdll-ThreadTime/0003-ntdll-Fill-process-kernel-and-user-time.patch
-	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
-	patch_apply ntdll-ThreadTime/0005-ntdll-Fill-out-thread-times-in-process-enumeration.patch
-	patch_apply ntdll-ThreadTime/0006-ntdll-Fill-process-virtual-memory-counters-in-NtQuer.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process kernel and user time.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill out thread times in process enumeration.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process virtual memory counters in NtQuerySystemInformation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ApiSetMap
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -4115,49 +4588,6 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	patch_apply ntdll-ApiSetMap/0001-ntdll-Add-dummy-apiset-to-PEB.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add dummy apiset to PEB.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Hide_Wine_Exports
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38656] Add support for hiding wine version information from applications
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
-# |
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-User_Shared_Data
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29168] Update user shared data at realtime
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/time.c, dlls/ntdll/thread.c,
-# | 	dlls/ntdll/virtual.c, dlls/ntoskrnl.exe/instr.c
-# |
-if test "$enable_ntdll_User_Shared_Data" -eq 1; then
-	patch_apply ntdll-User_Shared_Data/0001-ntdll-Move-code-to-update-user-shared-data-into-a-se.patch
-	patch_apply ntdll-User_Shared_Data/0002-ntoskrnl-Update-USER_SHARED_DATA-before-accessing-me.patch
-	patch_apply ntdll-User_Shared_Data/0003-ntdll-Create-thread-to-update-user_shared_data-time-.patch
-	patch_apply ntdll-User_Shared_Data/0004-ntdll-tests-Test-updating-TickCount-in-user_shared_d.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Move code to update user shared data into a separate function.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Create thread to update user_shared_data time values when necessary.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll/tests: Test updating TickCount in user_shared_data.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4252,21 +4682,6 @@ if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Exception
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
-# |
-# | Modified files:
-# |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
-# |
-if test "$enable_ntdll_Exception" -eq 1; then
-	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4619,24 +5034,6 @@ if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtSuspendProcess
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-K32GetPerformanceInfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44656] Implement NtSuspendProcess and NtResumeProcess
-# |
-# | Modified files:
-# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/process.c, server/protocol.def, server/thread.c
-# |
-if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
-	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ProcessQuotaLimits
 # |
 # | Modified files:
@@ -4661,21 +5058,6 @@ if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
 	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlCreateUserThread
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
-# |
-if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
-	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4812,48 +5194,6 @@ if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
 	patch_apply ntdll-SystemModuleInformation/0001-ntdll-Don-t-call-LdrQueryProcessModuleInformation-in.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t call LdrQueryProcessModuleInformation in NtQuerySystemInformation(SystemModuleInformation).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-SystemRoot_Symlink
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Exception
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c
-# |
-if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
-	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Threading
-# |
-# | Modified files:
-# |   *	dlls/ntdll/thread.c
-# |
-if test "$enable_ntdll_Threading" -eq 1; then
-	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Wait_User_APC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14697] Do not allow interruption of system APC in server_select
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_Wait_User_APC" -eq 1; then
-	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -5333,83 +5673,6 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Key_State
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31899] Implement locking and synchronization of key states
-# |   *	[#35907] Fix caps lock state issues with multiple processes
-# |
-# | Modified files:
-# |   *	server/queue.c
-# |
-if test "$enable_server_Key_State" -eq 1; then
-	patch_apply server-Key_State/0001-server-Introduce-a-helper-function-to-update-the-thr.patch
-	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-PeekMessage
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28884] GetMessage should remove already seen messages with higher priority
-# |
-# | Modified files:
-# |   *	dlls/user32/tests/msg.c, server/queue.c
-# |
-if test "$enable_server_PeekMessage" -eq 1; then
-	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Signal_Thread
-# |
-# | Modified files:
-# |   *	server/thread.c, server/thread.h
-# |
-if test "$enable_server_Signal_Thread" -eq 1; then
-	patch_apply server-Signal_Thread/0001-server-Do-not-signal-thread-until-it-is-really-gone.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Do not signal violently terminated threads until they are really gone.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Shared_Memory
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
-# | 	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h, include/wine/server.h, include/winternl.h,
-# | 	server/fd.c, server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c, server/thread.c,
-# | 	server/thread.h
-# |
-if test "$enable_server_Shared_Memory" -eq 1; then
-	patch_apply server-Shared_Memory/0001-ntdll-Implement-virtual_map_shared_memory.patch
-	patch_apply server-Shared_Memory/0002-server-Implement-support-for-global-and-local-shared.patch
-	patch_apply server-Shared_Memory/0003-user32-Get-rid-of-wineserver-call-for-GetInputState.patch
-	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
-	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
-	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
-	patch_apply server-Shared_Memory/0007-server-Store-a-list-of-associated-queues-for-each-th.patch
-	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -5443,21 +5706,6 @@ if test "$enable_server_Object_Types" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Set TypeIndex for ObjectTypeInformation in NtQueryObject.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Set object type for System(Extended)HandleInformation in NtQuerySystemInformation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Mimic object type behavior for different windows versions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Realtime_Priority
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
-# |
-# | Modified files:
-# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
-# |
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
-	(
-		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7294,24 +7542,6 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "ws2_32: Add support for TF_DISCONNECT to TransmitFile.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ws2_32: Add support for TF_REUSE_SOCKET to TransmitFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18670] Properly close sockets when WSACleanup is called
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h,
-# | 	server/protocol.def, server/sock.c
-# |
-if test "$enable_ws2_32_WSACleanup" -eq 1; then
-	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
-	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
-	(
-		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
 	) >> "$patchlist"
 fi
 

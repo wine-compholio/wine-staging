@@ -1,0 +1,201 @@
+From 2ca666409e42b5ecf78b32a583d3ba95cbcce356 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Sun, 10 Jun 2018 23:12:16 -0500
+Subject: [PATCH 41/83] server: Allocate shared memory segments for semaphores
+ and mutexes.
+
+As has been described in the README, these two objects have state that can't
+be expressed (or read from) the eventfd descriptor. Namely, for semaphores
+we need to know the current lock count, and for mutexes we need to know the
+ owner tid and the recursion count. To make these work across processes, we
+store them in a global shared memory section.
+
+This patch has no effect by itself; it's for separation.
+
+We use the WINEPREFIX dir to discriminate shm sections for simultaneously
+running servers; this is based off of code in libwine (specifically
+init_server_dir()).
+---
+ server/esync.c      | 65 +++++++++++++++++++++++++++++++++++++++++++++
+ server/esync.h      |  1 +
+ server/main.c       |  4 +++
+ server/protocol.def |  2 ++
+ 4 files changed, 72 insertions(+)
+
+diff --git a/server/esync.c b/server/esync.c
+index 5dd38c42a..e9a1ec15e 100644
+--- a/server/esync.c
++++ b/server/esync.c
+@@ -21,17 +21,26 @@
+ #include "config.h"
+ #include "wine/port.h"
+ 
++#include <fcntl.h>
+ #include <stdint.h>
+ #include <stdio.h>
+ #include <stdarg.h>
+ #ifdef HAVE_SYS_EVENTFD_H
+ # include <sys/eventfd.h>
+ #endif
++#ifdef HAVE_SYS_MMAN_H
++# include <sys/mman.h>
++#endif
++#ifdef HAVE_SYS_STAT_H
++# include <sys/stat.h>
++#endif
++#include <unistd.h>
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+ #include "windef.h"
+ #include "winternl.h"
++#include "wine/library.h"
+ 
+ #include "handle.h"
+ #include "request.h"
+@@ -52,11 +61,46 @@ int do_esync(void)
+ #endif
+ }
+ 
++static char shm_name[29];
++static int shm_fd;
++static off_t shm_size;
++
++static void shm_cleanup(void)
++{
++    close( shm_fd );
++    if (shm_unlink( shm_name ) == -1)
++        perror( "shm_unlink" );
++}
++
++void esync_init(void)
++{
++    struct stat st;
++
++    if (stat( wine_get_config_dir(), &st ) == -1)
++        fatal_error( "cannot stat %s\n", wine_get_config_dir() );
++
++    if (st.st_ino != (unsigned long)st.st_ino)
++        sprintf( shm_name, "/wine-%lx%08lx-esync", (unsigned long)((unsigned long long)st.st_ino >> 32), (unsigned long)st.st_ino );
++    else
++        sprintf( shm_name, "/wine-%lx-esync", (unsigned long)st.st_ino );
++
++    shm_fd = shm_open( shm_name, O_RDWR | O_CREAT | O_EXCL, 0644 );
++    if (shm_fd == -1)
++        perror( "shm_open" );
++
++    shm_size = sysconf( _SC_PAGESIZE );
++    if (ftruncate( shm_fd, shm_size ) == -1)
++        perror( "ftruncate" );
++
++    atexit( shm_cleanup );
++}
++
+ struct esync
+ {
+     struct object   obj;    /* object header */
+     int             fd;     /* eventfd file descriptor */
+     enum esync_type type;
++    unsigned int    shm_idx;    /* index into the shared memory section */
+ };
+ 
+ static void esync_dump( struct object *obj, int verbose );
+@@ -146,6 +190,25 @@ static struct esync *create_esync( struct object *root, const struct unicode_str
+                 return NULL;
+             }
+             esync->type = type;
++            if (type == ESYNC_SEMAPHORE || type == ESYNC_MUTEX)
++            {
++                /* Use the fd as index, since that'll be unique across all
++                 * processes, but should hopefully end up also allowing reuse. */
++                esync->shm_idx = esync->fd + 1; /* we keep index 0 reserved */
++                while (esync->shm_idx * 8 >= shm_size)
++                {
++                    /* Better expand the shm section. */
++                    shm_size += sysconf( _SC_PAGESIZE );
++                    if (ftruncate( shm_fd, shm_size ) == -1)
++                    {
++                        fprintf( stderr, "esync: couldn't expand %s to size %ld: ",
++                            shm_name, shm_size );
++                        perror( "ftruncate" );
++                    }
++                }
++            }
++            else
++                esync->shm_idx = 0;
+         }
+         else
+         {
+@@ -247,6 +310,7 @@ DECL_HANDLER(create_esync)
+                                                           req->access, objattr->attributes );
+ 
+         reply->type = esync->type;
++        reply->shm_idx = esync->shm_idx;
+         send_client_fd( current->process, esync->fd, reply->handle );
+         release_object( esync );
+     }
+@@ -278,6 +342,7 @@ DECL_HANDLER(open_esync)
+         }
+ 
+         reply->type = esync->type;
++        reply->shm_idx = esync->shm_idx;
+ 
+         send_client_fd( current->process, esync->fd, reply->handle );
+         release_object( esync );
+diff --git a/server/esync.h b/server/esync.h
+index 2687c72e4..aeb58c546 100644
+--- a/server/esync.h
++++ b/server/esync.h
+@@ -19,6 +19,7 @@
+  */
+ 
+ extern int do_esync(void);
++void esync_init(void);
+ int esync_create_fd( int initval, int flags );
+ void esync_wake_up( struct object *obj );
+ void esync_clear( int fd );
+diff --git a/server/main.c b/server/main.c
+index 13af3b9fe..2a91f5ec8 100644
+--- a/server/main.c
++++ b/server/main.c
+@@ -36,6 +36,7 @@
+ #include "file.h"
+ #include "thread.h"
+ #include "request.h"
++#include "esync.h"
+ #include "wine/library.h"
+ 
+ /* command-line options */
+@@ -142,6 +143,9 @@ int main( int argc, char *argv[] )
+     sock_init();
+     open_master_socket();
+ 
++    if (do_esync())
++        esync_init();
++
+     if (debug_level) fprintf( stderr, "wineserver: starting (pid=%ld)\n", (long) getpid() );
+     init_scheduler();
+     init_signals();
+diff --git a/server/protocol.def b/server/protocol.def
+index d14fdb607..c2b554490 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -4052,6 +4052,7 @@ struct handle_info
+ @REPLY
+     obj_handle_t handle;        /* handle to the object */
+     int          type;          /* type of esync object (see below) */
++    unsigned int shm_idx;       /* this object's index into the shm section */
+ @END
+ 
+ /* Open an esync object */
+@@ -4064,6 +4065,7 @@ struct handle_info
+ @REPLY
+     obj_handle_t handle;        /* handle to the event */
+     int          type;          /* type of esync object (above) */
++    unsigned int shm_idx;       /* this object's index into the shm section */
+ @END
+ 
+ /* Retrieve the esync fd for an object. */
+-- 
+2.20.1
+

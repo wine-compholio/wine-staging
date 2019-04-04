@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8268c47462544baf5bc7e5071c0a9f2d00c5c2cb"
+	echo "17056908acae1d5c7cf5d255ec232210abfe86da"
 }
 
 # Show version information
@@ -106,7 +106,6 @@ patch_enable_all ()
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
-	enable_d3dx9_36_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
@@ -116,7 +115,6 @@ patch_enable_all ()
 	enable_d3dx9_36_DDS="$1"
 	enable_d3dx9_36_DXTn="$1"
 	enable_d3dx9_36_DrawText="$1"
-	enable_d3dx9_36_Dummy_Skininfo="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
@@ -460,9 +458,6 @@ patch_enable ()
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
 			;;
-		d3dx9_36-32bpp_Alpha_Channel)
-			enable_d3dx9_36_32bpp_Alpha_Channel="$2"
-			;;
 		d3dx9_36-BumpLuminance)
 			enable_d3dx9_36_BumpLuminance="$2"
 			;;
@@ -489,9 +484,6 @@ patch_enable ()
 			;;
 		d3dx9_36-DrawText)
 			enable_d3dx9_36_DrawText="$2"
-			;;
-		d3dx9_36-Dummy_Skininfo)
-			enable_d3dx9_36_Dummy_Skininfo="$2"
 			;;
 		d3dx9_36-Filter_Warnings)
 			enable_d3dx9_36_Filter_Warnings="$2"
@@ -2179,7 +2171,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
-# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.def, libs/wine/wine.map, loader/main.c
+# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.map, loader/main.c
 # |
 if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch
@@ -2749,18 +2741,6 @@ if test "$enable_d3d9_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-32bpp_Alpha_Channel
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
-# |
-if test "$enable_d3dx9_36_32bpp_Alpha_Channel" -eq 1; then
-	patch_apply d3dx9_36-32bpp_Alpha_Channel/0001-d3dx9-Return-D3DFMT_A8R8G8B8-in-D3DXGetImageInfoFrom.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9: Return D3DFMT_A8R8G8B8 in D3DXGetImageInfoFromFileInMemory for 32 bpp BMP with alpha.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-BumpLuminance
 # |
 # | Modified files:
@@ -2962,21 +2942,6 @@ if test "$enable_d3dx9_36_DrawText" -eq 1; then
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Support NULL terminated strings in ID3DXFont_DrawText.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: ID3DXFont_DrawText calc_rect can be null.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-Dummy_Skininfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33904] Return dummy ID3DXSkinInfo interface when skinning info not present
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/d3dx9_private.h, dlls/d3dx9_36/mesh.c, dlls/d3dx9_36/skin.c
-# |
-if test "$enable_d3dx9_36_Dummy_Skininfo" -eq 1; then
-	patch_apply d3dx9_36-Dummy_Skininfo/0001-d3dx9_36-Return-dummy-skininfo-interface-in-D3DXLoad.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3dx9_36: Return dummy skininfo interface in D3DXLoadSkinMeshFromXof when skin information is unavailable.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6189,15 +6154,13 @@ fi
 # Patchset taskmgr-Memory_Usage
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, programs/taskmgr/graph.c
+# |   *	dlls/ntdll/nt.c
 # |
 if test "$enable_taskmgr_Memory_Usage" -eq 1; then
 	patch_apply taskmgr-Memory_Usage/0002-ntdll-Report-system-information-SystemPerformanceInf.patch
-	patch_apply taskmgr-Memory_Usage/0004-taskmgr-Use-different-units-depending-on-memory-usag.patch
 	patch_apply taskmgr-Memory_Usage/0005-ntdll-Implement-basic-IO-stats-for-SystemPerformance.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "taskmgr: Use different units depending on memory usage.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement basic IO stats for SystemPerformanceInformation in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi

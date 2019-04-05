@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "17056908acae1d5c7cf5d255ec232210abfe86da"
+	echo "8ee1e3453e2e714241bcaac0cd75f4af3f828c8d"
 }
 
 # Show version information
@@ -7684,7 +7684,7 @@ fi
 # | 	dlls/xapofx1_4/Makefile.in, dlls/xapofx1_5/Makefile.in, dlls/xaudio2_0/Makefile.in, dlls/xaudio2_1/Makefile.in,
 # | 	dlls/xaudio2_2/Makefile.in, dlls/xaudio2_3/Makefile.in, dlls/xaudio2_4/Makefile.in, dlls/xaudio2_5/Makefile.in,
 # | 	dlls/xaudio2_6/Makefile.in, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h,
-# | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/mmreg.h
+# | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in
 # |
 if test "$enable_xaudio2_7_WMA_support" -eq 1; then
 	patch_apply xaudio2_7-WMA_support/0001-xaudio2-Use-ffmpeg-to-convert-WMA-formats.patch

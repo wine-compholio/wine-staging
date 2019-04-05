@@ -1,4 +1,4 @@
-From 599d50340aaf37f2eb39a789a4034e677d52e92c Mon Sep 17 00:00:00 2001
+From 51e513935e94ddd1113ad016be7eb4100829ddc6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 29 Jul 2015 17:09:50 +0200
 Subject: [PATCH] ddraw: Create rendering targets in video memory if possible.
@@ -12,10 +12,10 @@ Based on a patch by Henri Verbeet.
  4 files changed, 53 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/ddraw/ddraw.c b/dlls/ddraw/ddraw.c
-index 6b2abe3..dfd52a0 100644
+index 8467fbf4c..b9e13a49b 100644
 --- a/dlls/ddraw/ddraw.c
 +++ b/dlls/ddraw/ddraw.c
-@@ -4209,7 +4209,7 @@ static HRESULT WINAPI d3d7_CreateDevice(IDirect3D7 *iface, REFCLSID riid,
+@@ -4235,7 +4235,7 @@ static HRESULT WINAPI d3d7_CreateDevice(IDirect3D7 *iface, REFCLSID riid,
      TRACE("iface %p, riid %s, surface %p, device %p.\n", iface, debugstr_guid(riid), surface, device);
  
      wined3d_mutex_lock();
@@ -24,7 +24,7 @@ index 6b2abe3..dfd52a0 100644
      {
          *device = &object->IDirect3DDevice7_iface;
      }
-@@ -4238,7 +4238,7 @@ static HRESULT WINAPI d3d3_CreateDevice(IDirect3D3 *iface, REFCLSID riid,
+@@ -4264,7 +4264,7 @@ static HRESULT WINAPI d3d3_CreateDevice(IDirect3D3 *iface, REFCLSID riid,
          return CLASS_E_NOAGGREGATION;
  
      wined3d_mutex_lock();
@@ -33,7 +33,7 @@ index 6b2abe3..dfd52a0 100644
      {
          *device = &device_impl->IDirect3DDevice3_iface;
      }
-@@ -4264,7 +4264,7 @@ static HRESULT WINAPI d3d2_CreateDevice(IDirect3D2 *iface, REFCLSID riid,
+@@ -4290,7 +4290,7 @@ static HRESULT WINAPI d3d2_CreateDevice(IDirect3D2 *iface, REFCLSID riid,
              iface, debugstr_guid(riid), surface, device);
  
      wined3d_mutex_lock();
@@ -43,10 +43,10 @@ index 6b2abe3..dfd52a0 100644
          *device = &device_impl->IDirect3DDevice2_iface;
      }
 diff --git a/dlls/ddraw/ddraw_private.h b/dlls/ddraw/ddraw_private.h
-index b035a7e..699f719 100644
+index 19f21a892..e2fe323b6 100644
 --- a/dlls/ddraw/ddraw_private.h
 +++ b/dlls/ddraw/ddraw_private.h
-@@ -303,6 +303,7 @@ struct d3d_device
+@@ -304,6 +304,7 @@ struct d3d_device
      IUnknown IUnknown_inner;
      LONG ref;
      UINT version;
@@ -54,8 +54,8 @@ index b035a7e..699f719 100644
  
      IUnknown *outer_unknown;
      struct wined3d_device *wined3d_device;
-@@ -347,7 +348,7 @@ struct d3d_device
-     struct wined3d_vec4 user_clip_planes[D3DMAXUSERCLIPPLANES];
+@@ -350,7 +351,7 @@ struct d3d_device
+     BOOL recording;
  };
  
 -HRESULT d3d_device_create(struct ddraw *ddraw, struct ddraw_surface *target, IUnknown *rt_iface,
@@ -64,10 +64,10 @@ index b035a7e..699f719 100644
  enum wined3d_depth_buffer_type d3d_device_update_depth_stencil(struct d3d_device *device) DECLSPEC_HIDDEN;
  
 diff --git a/dlls/ddraw/device.c b/dlls/ddraw/device.c
-index 0d48c7d..2bef17d 100644
+index 003ce1d2e..c5e303ee0 100644
 --- a/dlls/ddraw/device.c
 +++ b/dlls/ddraw/device.c
-@@ -1854,7 +1854,7 @@ static HRESULT d3d_device7_SetRenderTarget(IDirect3DDevice7 *iface,
+@@ -1850,7 +1850,7 @@ static HRESULT d3d_device7_SetRenderTarget(IDirect3DDevice7 *iface,
          return DDERR_INVALIDCAPS;
      }
  
@@ -76,7 +76,7 @@ index 0d48c7d..2bef17d 100644
      {
          WARN("Surface %p is not in video memory.\n", target_impl);
          wined3d_mutex_unlock();
-@@ -1930,7 +1930,7 @@ static HRESULT WINAPI d3d_device3_SetRenderTarget(IDirect3DDevice3 *iface,
+@@ -1926,7 +1926,7 @@ static HRESULT WINAPI d3d_device3_SetRenderTarget(IDirect3DDevice3 *iface,
          return DDERR_INVALIDPIXELFORMAT;
      }
  
@@ -85,7 +85,7 @@ index 0d48c7d..2bef17d 100644
      {
          WARN("Surface %p is not in video memory.\n", target_impl);
          IDirectDrawSurface4_AddRef(target);
-@@ -1979,7 +1979,7 @@ static HRESULT WINAPI d3d_device2_SetRenderTarget(IDirect3DDevice2 *iface,
+@@ -1975,7 +1975,7 @@ static HRESULT WINAPI d3d_device2_SetRenderTarget(IDirect3DDevice2 *iface,
          return DDERR_INVALIDPIXELFORMAT;
      }
  
@@ -94,7 +94,7 @@ index 0d48c7d..2bef17d 100644
      {
          WARN("Surface %p is not in video memory.\n", target_impl);
          IDirectDrawSurface_AddRef(target);
-@@ -6891,7 +6891,7 @@ enum wined3d_depth_buffer_type d3d_device_update_depth_stencil(struct d3d_device
+@@ -6963,7 +6963,7 @@ enum wined3d_depth_buffer_type d3d_device_update_depth_stencil(struct d3d_device
      return WINED3D_ZB_TRUE;
  }
  
@@ -103,7 +103,7 @@ index 0d48c7d..2bef17d 100644
          struct ddraw_surface *target, IUnknown *rt_iface, UINT version, IUnknown *outer_unknown)
  {
      static const D3DMATRIX ident =
-@@ -6914,6 +6914,7 @@ static HRESULT d3d_device_init(struct d3d_device *device, struct ddraw *ddraw,
+@@ -6986,6 +6986,7 @@ static HRESULT d3d_device_init(struct d3d_device *device, struct ddraw *ddraw,
      device->IUnknown_inner.lpVtbl = &d3d_device_inner_vtbl;
      device->ref = 1;
      device->version = version;
@@ -111,7 +111,7 @@ index 0d48c7d..2bef17d 100644
  
      if (outer_unknown)
          device->outer_unknown = outer_unknown;
-@@ -6964,14 +6965,18 @@ static HRESULT d3d_device_init(struct d3d_device *device, struct ddraw *ddraw,
+@@ -7036,14 +7037,18 @@ static HRESULT d3d_device_init(struct d3d_device *device, struct ddraw *ddraw,
      return D3D_OK;
  }
  
@@ -133,7 +133,7 @@ index 0d48c7d..2bef17d 100644
  
      if (!(target->surface_desc.ddsCaps.dwCaps & DDSCAPS_3DDEVICE)
              || (target->surface_desc.ddsCaps.dwCaps & DDSCAPS_ZBUFFER))
-@@ -6994,7 +6999,7 @@ HRESULT d3d_device_create(struct ddraw *ddraw, struct ddraw_surface *target, IUn
+@@ -7066,7 +7071,7 @@ HRESULT d3d_device_create(struct ddraw *ddraw, struct ddraw_surface *target, IUn
          return DDERR_OUTOFMEMORY;
      }
  
@@ -142,7 +142,7 @@ index 0d48c7d..2bef17d 100644
      {
          WARN("Surface %p is not in video memory.\n", target);
          return D3DERR_SURFACENOTINVIDMEM;
-@@ -7012,7 +7017,7 @@ HRESULT d3d_device_create(struct ddraw *ddraw, struct ddraw_surface *target, IUn
+@@ -7084,7 +7089,7 @@ HRESULT d3d_device_create(struct ddraw *ddraw, struct ddraw_surface *target, IUn
          return DDERR_OUTOFMEMORY;
      }
  
@@ -152,7 +152,7 @@ index 0d48c7d..2bef17d 100644
          WARN("Failed to initialize device, hr %#x.\n", hr);
          heap_free(object);
 diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
-index 8190442..c73981b 100644
+index 4e2faef86..03b97f0d6 100644
 --- a/dlls/ddraw/surface.c
 +++ b/dlls/ddraw/surface.c
 @@ -226,7 +226,7 @@ static HRESULT WINAPI ddraw_surface7_QueryInterface(IDirectDrawSurface7 *iface,
@@ -164,7 +164,7 @@ index 8190442..c73981b 100644
                          1, &This->device1, (IUnknown *)&This->IDirectDrawSurface_iface)))
                  {
                      This->device1 = NULL;
-@@ -6162,7 +6162,39 @@ HRESULT ddraw_surface_create(struct ddraw *ddraw, const DDSURFACEDESC2 *surface_
+@@ -6166,7 +6166,39 @@ HRESULT ddraw_surface_create(struct ddraw *ddraw, const DDSURFACEDESC2 *surface_
  
      if (desc->ddsCaps.dwCaps & DDSCAPS_SYSTEMMEMORY)
      {
@@ -206,5 +206,5 @@ index 8190442..c73981b 100644
      }
      else
 -- 
-1.9.1
+2.20.1
 

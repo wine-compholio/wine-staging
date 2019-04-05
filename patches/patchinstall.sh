@@ -7421,7 +7421,7 @@ if test "$enable_wintab32_improvements" -eq 1; then
 	patch_apply wintab32-improvements/0003-winex11-Handle-negative-orAltitude-values.patch
 	patch_apply wintab32-improvements/0004-winex11.drv-Support-multiplex-categories-WTI_DSCTXS-.patch
 	patch_apply wintab32-improvements/0005-winex11-Support-WTI_STATUS-in-WTInfo.patch
-	patch_apply wintab32-improvements/0006-wintab32-Scale-NormalPressure-before-sending-to-to-c.patch
+	patch_apply wintab32-improvements/0006-wintab32-Scale-NormalPressure-before-sending-to-the-.patch
 	patch_apply wintab32-improvements/0007-wintab32-tests-Initial-interactive-test.patch
 	(
 		printf '%s\n' '+    { "Eriks Dobelis", "winex11: Implement PK_CHANGE for wintab.", 1 },';

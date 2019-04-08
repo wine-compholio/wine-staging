@@ -1,8 +1,8 @@
-From e3a723494fcecb85cebeeb8557aa21cf3f30f0b1 Mon Sep 17 00:00:00 2001
+From 29517778d9000de8de3217bcd6f1a2bb933123c6 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Sat, 9 Jun 2018 14:44:54 -0500
-Subject: [PATCH 24/83] server, ntdll: Also wait on the queue fd when waiting
- for driver events.
+Subject: [PATCH] server, ntdll: Also wait on the queue fd when waiting for
+ driver events.
 
 Normally the server handles this, by polling on the fd during its main loop.
 The problem there is that the server only polls when the thread is waiting
@@ -23,7 +23,7 @@ fix the 'drives' tab.
  8 files changed, 60 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index 210556fc2..4d708c6df 100644
+index 5d8dbac2d..dcb7801d9 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -80,17 +80,9 @@ void __wine_esync_set_queue_fd( int fd )
@@ -100,13 +100,13 @@ index 210556fc2..4d708c6df 100644
          FIXME("Can't wait on esync and server objects at the same time!\n");
 @@ -510,6 +515,9 @@ NTSTATUS esync_wait_objects( DWORD count, const HANDLE *handles, BOOLEAN wait_an
          for (i = 0; i < count; i++)
-             DPRINTF(" %p", handles[i]);
+             TRACE(" %p", handles[i]);
  
 +        if (msgwait)
-+            DPRINTF(" or driver events (fd %d)", ntdll_get_thread_data()->esync_queue_fd);
++            TRACE(" or driver events (fd %d)", ntdll_get_thread_data()->esync_queue_fd);
 +
          if (!timeout)
-             DPRINTF(", timeout = INFINITE.\n");
+             TRACE(", timeout = INFINITE.\n");
          else
 @@ -527,10 +535,16 @@ NTSTATUS esync_wait_objects( DWORD count, const HANDLE *handles, BOOLEAN wait_an
              fds[i].fd = objs[i] ? objs[i]->fd : -1;
@@ -176,7 +176,7 @@ index 4f7ff6bda..1f8c0d516 100644
      }
      else
 diff --git a/server/event.c b/server/event.c
-index 62d8bf7d3..9e0bf8cbf 100644
+index d2f9e378c..79287e7ed 100644
 --- a/server/event.c
 +++ b/server/event.c
 @@ -50,7 +50,7 @@ static void event_dump( struct object *obj, int verbose );
@@ -188,7 +188,7 @@ index 62d8bf7d3..9e0bf8cbf 100644
  static unsigned int event_map_access( struct object *obj, unsigned int access );
  static int event_signal( struct object *obj, unsigned int access);
  static struct list *event_get_kernel_obj_list( struct object *obj );
-@@ -202,9 +202,10 @@ static int event_signaled( struct object *obj, struct wait_queue_entry *entry )
+@@ -203,9 +203,10 @@ static int event_signaled( struct object *obj, struct wait_queue_entry *entry )
      return event->signaled;
  }
  
@@ -201,7 +201,7 @@ index 62d8bf7d3..9e0bf8cbf 100644
  }
  
 diff --git a/server/object.h b/server/object.h
-index 592b76617..23dcdafa4 100644
+index ee0f1f776..ca5a191f9 100644
 --- a/server/object.h
 +++ b/server/object.h
 @@ -69,7 +69,7 @@ struct object_ops
@@ -214,7 +214,7 @@ index 592b76617..23dcdafa4 100644
      void (*satisfied)(struct object *,struct wait_queue_entry *);
      /* signal an object */
 diff --git a/server/process.c b/server/process.c
-index 0bb220dba..d2fa0f3a8 100644
+index 1ce2fb05c..6e6dfc41c 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -67,7 +67,7 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
@@ -226,7 +226,7 @@ index 0bb220dba..d2fa0f3a8 100644
  static void terminate_process( struct process *process, struct thread *skip, int exit_code );
  
  static const struct object_ops process_ops =
-@@ -652,9 +652,10 @@ static int process_signaled( struct object *obj, struct wait_queue_entry *entry
+@@ -654,9 +654,10 @@ static int process_signaled( struct object *obj, struct wait_queue_entry *entry
      return !process->running_threads;
  }
  
@@ -239,10 +239,10 @@ index 0bb220dba..d2fa0f3a8 100644
  }
  
 diff --git a/server/protocol.def b/server/protocol.def
-index 5f2d77bc7..cebe0e88e 100644
+index 17959c233..8d2df1f97 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4056,4 +4056,14 @@ struct handle_info
+@@ -4012,4 +4012,14 @@ struct handle_info
  @REQ(get_esync_fd)
      obj_handle_t handle;        /* handle to the object */
  @REPLY
@@ -283,7 +283,7 @@ index 0ea95291c..91de4a3a8 100644
  }
  
 diff --git a/server/thread.c b/server/thread.c
-index e82d71f67..539cd0491 100644
+index 35bddeeaa..7c8ff1d5d 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -133,7 +133,7 @@ static const struct object_ops thread_apc_ops =
@@ -294,8 +294,8 @@ index e82d71f67..539cd0491 100644
 +static int thread_get_esync_fd( struct object *obj, enum esync_type *type );
  static unsigned int thread_map_access( struct object *obj, unsigned int access );
  static void thread_poll_event( struct fd *fd, int event );
- static void destroy_thread( struct object *obj );
-@@ -396,9 +396,10 @@ static int thread_signaled( struct object *obj, struct wait_queue_entry *entry )
+ static struct list *thread_get_kernel_obj_list( struct object *obj );
+@@ -405,9 +405,10 @@ static int thread_signaled( struct object *obj, struct wait_queue_entry *entry )
      return mythread->state == TERMINATED && !mythread->exit_poll;
  }
  
@@ -308,5 +308,5 @@ index e82d71f67..539cd0491 100644
  }
  
 -- 
-2.20.1
+2.21.0
 

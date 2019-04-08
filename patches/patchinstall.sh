@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8ee1e3453e2e714241bcaac0cd75f4af3f828c8d"
+	echo "18883a76762afab3e18e1279a9666240e19d4d03"
 }
 
 # Show version information
@@ -130,7 +130,6 @@ patch_enable_all ()
 	enable_ddraw_Texture_Wrong_Caps="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
-	enable_dinput_Deadlock="$1"
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
@@ -150,7 +149,6 @@ patch_enable_all ()
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_rotation="$1"
 	enable_gdiplus_Performance_Improvements="$1"
-	enable_hid_HidD_FlushQueue="$1"
 	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
@@ -533,9 +531,6 @@ patch_enable ()
 		ddraw-version-check)
 			enable_ddraw_version_check="$2"
 			;;
-		dinput-Deadlock)
-			enable_dinput_Deadlock="$2"
-			;;
 		dinput-axis-recalc)
 			enable_dinput_axis_recalc="$2"
 			;;
@@ -592,9 +587,6 @@ patch_enable ()
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
-			;;
-		hid-HidD_FlushQueue)
-			enable_hid_HidD_FlushQueue="$2"
 			;;
 		httpapi-HttpCreateServerSession)
 			enable_httpapi_HttpCreateServerSession="$2"
@@ -1943,6 +1935,9 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 fi
 
 if test "$enable_eventfd_synchronization" -eq 1; then
+	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
+		abort "Patchset advapi32-Token_Integrity_Level disabled, but eventfd_synchronization depends on that."
+	fi
 	if test "$enable_ntdll_NtSuspendProcess" -gt 1; then
 		abort "Patchset ntdll-NtSuspendProcess disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1955,6 +1950,9 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but eventfd_synchronization depends on that."
 	fi
+	if test "$enable_server_Misc_ACL" -gt 1; then
+		abort "Patchset server-Misc_ACL disabled, but eventfd_synchronization depends on that."
+	fi
 	if test "$enable_server_Realtime_Priority" -gt 1; then
 		abort "Patchset server-Realtime_Priority disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1964,10 +1962,12 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but eventfd_synchronization depends on that."
 	fi
+	enable_advapi32_Token_Integrity_Level=1
 	enable_ntdll_NtSuspendProcess=1
 	enable_ntdll_RtlCreateUserThread=1
 	enable_ntdll_SystemRoot_Symlink=1
 	enable_ntdll_User_Shared_Data=1
+	enable_server_Misc_ACL=1
 	enable_server_Realtime_Priority=1
 	enable_server_Shared_Memory=1
 	enable_ws2_32_WSACleanup=1
@@ -3186,21 +3186,6 @@ if test "$enable_ddraw_version_check" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-Deadlock
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43356] Avoid possible deadlock in dinput when CS are acquired in different order
-# |
-# | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/dinput_main.c, dlls/dinput/dinput_private.h
-# |
-if test "$enable_dinput_Deadlock" -eq 1; then
-	patch_apply dinput-Deadlock/0001-dinput-Avoid-possible-deadlock-when-CS-are-acquired-.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "dinput: Avoid possible deadlock when CS are acquired in different order.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-axis-recalc
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3724,7 +3709,8 @@ fi
 # Patchset eventfd_synchronization
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-K32GetPerformanceInfo, ntdll-NtSuspendProcess, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
+# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level,
+# | 	kernel32-K32GetPerformanceInfo, ntdll-NtSuspendProcess, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
 # | 	SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, server-Realtime_Priority, ntdll-
 # | 	Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory,
 # | 	ws2_32-WSACleanup
@@ -4041,21 +4027,6 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change multiplications by additions in the x/y scaler loops.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Remove ceilf/floorf calls from bilinear scaler.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Prefer using pre-multiplied ARGB data in the scaler.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset hid-HidD_FlushQueue
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45878] Implement HidD_FlushQueue
-# |
-# | Modified files:
-# |   *	dlls/hid/hid.spec, dlls/hid/hidd.c
-# |
-if test "$enable_hid_HidD_FlushQueue" -eq 1; then
-	patch_apply hid-HidD_FlushQueue/0001-hid-Implement-HidD_FlushQueue.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "hid: Implement HidD_FlushQueue.", 1 },';
 	) >> "$patchlist"
 fi
 

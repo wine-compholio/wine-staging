@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "18883a76762afab3e18e1279a9666240e19d4d03"
+	echo "5ed7a61de7e72ecf4cf6ef76d4044f32640b93cb"
 }
 
 # Show version information
@@ -5258,32 +5258,15 @@ fi
 # | 	'ntoskrnl.exe.ExInitializeResourceLite' stub (needs STATUS_SUCCESS)
 # |
 # | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/sync.c,
-# | 	dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/sync.c, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
 # |
 if test "$enable_ntoskrnl_exe_Resources" -eq 1; then
-	patch_apply ntoskrnl.exe-Resources/0001-ntoskrnl.exe-Implement-ExInitializeResourceLite.patch
-	patch_apply ntoskrnl.exe-Resources/0002-ntoskrnl.exe-Implement-ExAcquireResourceExclusiveLit.patch
-	patch_apply ntoskrnl.exe-Resources/0003-ntoskrnl.exe-Implement-ExAcquireResourceSharedLite.patch
-	patch_apply ntoskrnl.exe-Resources/0004-ntoskrnl.exe-Implement-ExAcquireSharedStarveExclusiv.patch
-	patch_apply ntoskrnl.exe-Resources/0005-ntoskrnl.exe-Implement-ExAcquireSharedWaitForExclusi.patch
-	patch_apply ntoskrnl.exe-Resources/0006-ntoskrnl.exe-Implement-ExReleaseResourceForThreadLit.patch
-	patch_apply ntoskrnl.exe-Resources/0007-ntoskrnl.exe-Implement-ExReleaseResourceLite.patch
-	patch_apply ntoskrnl.exe-Resources/0008-ntoskrnl.exe-Implement-ExDeleteResourceLite.patch
 	patch_apply ntoskrnl.exe-Resources/0009-ntoskrnl.exe-Implement-ExGetExclusiveWaiterCount.patch
 	patch_apply ntoskrnl.exe-Resources/0010-ntoskrnl.exe-Implement-ExGetSharedWaiterCount.patch
 	patch_apply ntoskrnl.exe-Resources/0011-ntoskrnl.exe-Implement-ExIsResourceAcquiredExclusive.patch
 	patch_apply ntoskrnl.exe-Resources/0012-ntoskrnl.exe-Implement-ExIsResourceAcquiredSharedLit.patch
 	patch_apply ntoskrnl.exe-Resources/0013-ntoskrnl.exe-tests-Add-tests-for-ERESOURCE-functions.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExInitializeResourceLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireResourceExclusiveLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireResourceSharedLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireSharedStarveExclusive().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExAcquireSharedWaitForExclusive().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExReleaseResourceForThreadLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExReleaseResourceLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExDeleteResourceLite().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExGetExclusiveWaiterCount().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExGetSharedWaiterCount().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExIsResourceAcquiredExclusiveLite().", 1 },';
@@ -7447,13 +7430,11 @@ fi
 # |   *	[#42518] Implement image hash verification in WinVerifyTrust
 # |
 # | Modified files:
-# |   *	dlls/wintrust/softpub.c, dlls/wintrust/tests/softpub.c
+# |   *	dlls/wintrust/softpub.c
 # |
 if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
-	patch_apply wintrust-WinVerifyTrust/0003-wintrust-Verify-image-hash-in-WinVerifyTrust.patch
 	patch_apply wintrust-WinVerifyTrust/0004-wintrust-use-enhanced-crypto-provider-in-VerifyImage.patch
 	(
-		printf '%s\n' '+    { "Mark Jansen", "wintrust: Verify image hash in WinVerifyTrust.", 2 },';
 		printf '%s\n' '+    { "Marko Friedemann", "wintrust: Use enhanced crypto provider in VerifyImageHash.", 1 },';
 	) >> "$patchlist"
 fi

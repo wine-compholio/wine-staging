@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5ed7a61de7e72ecf4cf6ef76d4044f32640b93cb"
+	echo "0652a2ccc967c6d1ca04c67f58112ff491ab9a62"
 }
 
 # Show version information
@@ -231,7 +231,6 @@ patch_enable_all ()
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_Fix_Relocation="$1"
-	enable_ntoskrnl_exe_Resources="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -833,9 +832,6 @@ patch_enable ()
 			;;
 		ntoskrnl.exe-Fix_Relocation)
 			enable_ntoskrnl_exe_Fix_Relocation="$2"
-			;;
-		ntoskrnl.exe-Resources)
-			enable_ntoskrnl_exe_Resources="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -1690,12 +1686,8 @@ if test "$enable_winedevice_Default_Drivers" -eq 1; then
 	if test "$enable_ntoskrnl_Stubs" -gt 1; then
 		abort "Patchset ntoskrnl-Stubs disabled, but winedevice-Default_Drivers depends on that."
 	fi
-	if test "$enable_ntoskrnl_exe_Resources" -gt 1; then
-		abort "Patchset ntoskrnl.exe-Resources disabled, but winedevice-Default_Drivers depends on that."
-	fi
 	enable_dxva2_Video_Decoder=1
 	enable_ntoskrnl_Stubs=1
-	enable_ntoskrnl_exe_Resources=1
 fi
 
 if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
@@ -5251,30 +5243,6 @@ if test "$enable_ntoskrnl_exe_Fix_Relocation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl.exe-Resources
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45819] Symantec Eraser Control Driver 'eeCtrl64.sys' (Norton 360) fails in driver entry point due to
-# | 	'ntoskrnl.exe.ExInitializeResourceLite' stub (needs STATUS_SUCCESS)
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.exe.spec, dlls/ntoskrnl.exe/sync.c, dlls/ntoskrnl.exe/tests/driver.c, include/ddk/wdm.h
-# |
-if test "$enable_ntoskrnl_exe_Resources" -eq 1; then
-	patch_apply ntoskrnl.exe-Resources/0009-ntoskrnl.exe-Implement-ExGetExclusiveWaiterCount.patch
-	patch_apply ntoskrnl.exe-Resources/0010-ntoskrnl.exe-Implement-ExGetSharedWaiterCount.patch
-	patch_apply ntoskrnl.exe-Resources/0011-ntoskrnl.exe-Implement-ExIsResourceAcquiredExclusive.patch
-	patch_apply ntoskrnl.exe-Resources/0012-ntoskrnl.exe-Implement-ExIsResourceAcquiredSharedLit.patch
-	patch_apply ntoskrnl.exe-Resources/0013-ntoskrnl.exe-tests-Add-tests-for-ERESOURCE-functions.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExGetExclusiveWaiterCount().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExGetSharedWaiterCount().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExIsResourceAcquiredExclusiveLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: Implement ExIsResourceAcquiredSharedLite().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe/tests: Add tests for ERESOURCE functions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset nvcuvid-CUDA_Video_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -7014,7 +6982,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, ntoskrnl-Stubs, ntoskrnl.exe-Resources
+# |   *	dxva2-Video_Decoder, ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,
@@ -7406,7 +7374,6 @@ fi
 # |   *	dlls/winex11.drv/wintab.c, dlls/wintab32/context.c, dlls/wintab32/tests/Makefile.in, dlls/wintab32/tests/context.c
 # |
 if test "$enable_wintab32_improvements" -eq 1; then
-	patch_apply wintab32-improvements/0001-winex11-Implement-PK_CHANGE-for-wintab.patch
 	patch_apply wintab32-improvements/0002-wintab32-Set-lcSysExtX-Y-for-the-first-index-of-WTI_.patch
 	patch_apply wintab32-improvements/0003-winex11-Handle-negative-orAltitude-values.patch
 	patch_apply wintab32-improvements/0004-winex11.drv-Support-multiplex-categories-WTI_DSCTXS-.patch
@@ -7414,7 +7381,6 @@ if test "$enable_wintab32_improvements" -eq 1; then
 	patch_apply wintab32-improvements/0006-wintab32-Scale-NormalPressure-before-sending-to-the-.patch
 	patch_apply wintab32-improvements/0007-wintab32-tests-Initial-interactive-test.patch
 	(
-		printf '%s\n' '+    { "Eriks Dobelis", "winex11: Implement PK_CHANGE for wintab.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32: Set lcSysExtX/Y for the first index of WTI_DDCTXS.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Handle negative orAltitude values.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11.drv: Support multiplex categories WTI_DSCTXS and WTI_DDCTXS.", 1 },';

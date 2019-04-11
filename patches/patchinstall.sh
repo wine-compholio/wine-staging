@@ -133,6 +133,7 @@ patch_enable_all ()
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
+	enable_dinput_wheel_support="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
@@ -538,6 +539,9 @@ patch_enable ()
 			;;
 		dinput-remap-joystick)
 			enable_dinput_remap_joystick="$2"
+			;;
+		dinput-wheel-support)
+			enable_dinput_wheel_support="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3221,6 +3225,23 @@ if test "$enable_dinput_remap_joystick" -eq 1; then
 	patch_apply dinput-remap-joystick/0001-dinput-Allow-remapping-of-joystick-buttons.patch
 	(
 		printf '%s\n' '+    { "Andrew Church", "dinput: Allow remapping of joystick buttons.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-wheel-support
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46989] dinput: Wheel (Wheel, Gas, Brake) axes inputs aren't recognized
+# |
+# | Modified files:
+# |   *	dlls/dinput/joystick_linux.c, dlls/winejoystick.drv/joystick_linux.c
+# |
+if test "$enable_dinput_wheel_support" -eq 1; then
+	patch_apply dinput-wheel-support/0001-winejoystick-Add-support-for-wheel-axes.patch
+	patch_apply dinput-wheel-support/0002-dinput-Map-wheel-gas-and-brake-axes-as-well.patch
+	(
+		printf '%s\n' '+    { "Tim Schumacher", "winejoystick: Add support for wheel axes.", 1 },';
+		printf '%s\n' '+    { "Tim Schumacher", "dinput: Map wheel, gas, and brake axes as well.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0652a2ccc967c6d1ca04c67f58112ff491ab9a62"
+	echo "0cb79db12ac7c48477518dcff269ccc5d6b745e0"
 }
 
 # Show version information
@@ -167,7 +167,6 @@ patch_enable_all ()
 	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
-	enable_kernel32_ReplaceFileW="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
@@ -641,9 +640,6 @@ patch_enable ()
 			;;
 		kernel32-Processor_Group)
 			enable_kernel32_Processor_Group="$2"
-			;;
-		kernel32-ReplaceFileW)
-			enable_kernel32_ReplaceFileW="$2"
 			;;
 		kernel32-SCSI_Sysfs)
 			enable_kernel32_SCSI_Sysfs="$2"
@@ -4353,21 +4349,6 @@ if test "$enable_kernel32_Processor_Group" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-ReplaceFileW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33845] kernel32: Correct ReplaceFileW behaviour for warframe
-# |
-# | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
-# |
-if test "$enable_kernel32_ReplaceFileW" -eq 1; then
-	patch_apply kernel32-ReplaceFileW/0001-kernel32-Correct-ReplaceFileW-behaviour.patch
-	(
-		printf '%s\n' '+    { "Brock York", "kernel32: Correct ReplaceFileW behaviour.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-SCSI_Sysfs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7392,7 +7373,7 @@ fi
 # |   *	[#18517] Improve eraser from working.
 # |
 # | Modified files:
-# |   *	dlls/winex11.drv/wintab.c, dlls/wintab32/context.c, dlls/wintab32/tests/Makefile.in, dlls/wintab32/tests/context.c
+# |   *	dlls/winex11.drv/wintab.c, dlls/wintab32/context.c
 # |
 if test "$enable_wintab32_improvements" -eq 1; then
 	patch_apply wintab32-improvements/0002-wintab32-Set-lcSysExtX-Y-for-the-first-index-of-WTI_.patch
@@ -7400,14 +7381,12 @@ if test "$enable_wintab32_improvements" -eq 1; then
 	patch_apply wintab32-improvements/0004-winex11.drv-Support-multiplex-categories-WTI_DSCTXS-.patch
 	patch_apply wintab32-improvements/0005-winex11-Support-WTI_STATUS-in-WTInfo.patch
 	patch_apply wintab32-improvements/0006-wintab32-Scale-NormalPressure-before-sending-to-the-.patch
-	patch_apply wintab32-improvements/0007-wintab32-tests-Initial-interactive-test.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32: Set lcSysExtX/Y for the first index of WTI_DDCTXS.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Handle negative orAltitude values.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11.drv: Support multiplex categories WTI_DSCTXS and WTI_DDCTXS.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winex11: Support WTI_STATUS in WTInfo.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32: Scale NormalPressure before sending to the client.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintab32/tests: Initial interactive test.", 1 },';
 	) >> "$patchlist"
 fi
 

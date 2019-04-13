@@ -1,0 +1,60 @@
+From 4ae8c8dcc501081481fd07302f7cba16d19ecda6 Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Fri, 12 Apr 2019 20:04:03 -0500
+Subject: [PATCH 2/3] ntdll: Return ntdll.dll as the first entry for
+ SystemModuleInformation.
+
+---
+ dlls/ntdll/nt.c | 29 ++++++++++++++++++++++++++++-
+ 1 file changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
+index 7cc5d81b2..df3c40fcc 100644
+--- a/dlls/ntdll/nt.c
++++ b/dlls/ntdll/nt.c
+@@ -2352,6 +2352,33 @@ BOOLEAN WINAPI RtlIsProcessorFeaturePresent( UINT feature )
+     return feature < PROCESSOR_FEATURE_MAX && user_shared_data->ProcessorFeatures[feature];
+ }
+ 
++static void get_ntdll_system_module(SYSTEM_MODULE *sm)
++{
++    char *ptr;
++    ANSI_STRING str;
++    PLIST_ENTRY entry;
++    PLDR_MODULE mod;
++
++    /* The first entry must be ntdll. */
++    entry = NtCurrentTeb()->Peb->LdrData->InLoadOrderModuleList.Flink;
++    mod = CONTAINING_RECORD(entry, LDR_MODULE, InLoadOrderModuleList);
++
++    sm->Reserved1 = 0;
++    sm->Reserved2 = 0;
++    sm->ImageBaseAddress = mod->BaseAddress;
++    sm->ImageSize = mod->SizeOfImage;
++    sm->Flags = mod->Flags;
++    sm->Id = 0;
++    sm->Rank = 0;
++    sm->Unknown = 0;
++    str.Length = 0;
++    str.MaximumLength = MAXIMUM_FILENAME_LENGTH;
++    str.Buffer = (char*)sm->Name;
++    RtlUnicodeStringToAnsiString(&str, &mod->FullDllName, FALSE);
++    ptr = strrchr(str.Buffer, '\\');
++    sm->NameOffset = (ptr != NULL) ? (ptr - str.Buffer + 1) : 0;
++}
++
+ /******************************************************************************
+  * NtQuerySystemInformation [NTDLL.@]
+  * ZwQuerySystemInformation [NTDLL.@]
+@@ -2780,7 +2807,7 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+ 
+             FIXME("returning fake driver list\n");
+             smi->ModulesCount = 1;
+-            memset(&smi->Modules[0], 0, sizeof(smi->Modules[0]));
++            get_ntdll_system_module(&smi->Modules[0]);
+             ret = STATUS_SUCCESS;
+         }
+         break;
+-- 
+2.21.0
+

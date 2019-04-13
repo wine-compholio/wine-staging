@@ -5150,14 +5150,20 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45550] League of Legends 8.15+ anticheat fails due to incorrect implementation of
 # | 	NtQuerySystemInformation(SystemModuleInformation)
+# |   *	[#45666] League of Legends 8.15+ fails due to missing implementation of
+# | 	NtQuerySystemInformation(SystemModuleInformationEx) in Windows Vista+ mode
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c
+# |   *	dlls/ntdll/nt.c, include/winternl.h
 # |
 if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
 	patch_apply ntdll-SystemModuleInformation/0001-ntdll-Don-t-call-LdrQueryProcessModuleInformation-in.patch
+	patch_apply ntdll-SystemModuleInformation/0002-ntdll-Return-ntdll.dll-as-the-first-entry-for-System.patch
+	patch_apply ntdll-SystemModuleInformation/0003-ntdll-Add-stub-for-NtQuerySystemInformation-SystemMo.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t call LdrQueryProcessModuleInformation in NtQuerySystemInformation(SystemModuleInformation).", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Return ntdll.dll as the first entry for SystemModuleInformation.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Add stub for NtQuerySystemInformation(SystemModuleInformationEx).", 1 },';
 	) >> "$patchlist"
 fi
 

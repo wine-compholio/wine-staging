@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0cb79db12ac7c48477518dcff269ccc5d6b745e0"
+	echo "fabde842ede40fc53cf6f5743d5b477841f7b11c"
 }
 
 # Show version information
@@ -1695,37 +1695,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 		abort "Patchset wined3d-SWVP-shaders disabled, but wined3d-Indexed_Vertex_Blending depends on that."
 	fi
 	enable_wined3d_SWVP_shaders=1
-fi
-
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	if test "$enable_d3d11_Deferred_Context" -gt 1; then
-		abort "Patchset d3d11-Deferred_Context disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	if test "$enable_d3d9_Tests" -gt 1; then
-		abort "Patchset d3d9-Tests disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	if test "$enable_wined3d_Accounting" -gt 1; then
-		abort "Patchset wined3d-Accounting disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	if test "$enable_wined3d_DXTn" -gt 1; then
-		abort "Patchset wined3d-DXTn disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	if test "$enable_wined3d_Dual_Source_Blending" -gt 1; then
-		abort "Patchset wined3d-Dual_Source_Blending disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	if test "$enable_wined3d_Silence_FIXMEs" -gt 1; then
-		abort "Patchset wined3d-Silence_FIXMEs disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	if test "$enable_wined3d_UAV_Counters" -gt 1; then
-		abort "Patchset wined3d-UAV_Counters disabled, but wined3d-CSMT_Main depends on that."
-	fi
-	enable_d3d11_Deferred_Context=1
-	enable_d3d9_Tests=1
-	enable_wined3d_Accounting=1
-	enable_wined3d_DXTn=1
-	enable_wined3d_Dual_Source_Blending=1
-	enable_wined3d_Silence_FIXMEs=1
-	enable_wined3d_UAV_Counters=1
 fi
 
 if test "$enable_wineboot_ProxySettings" -eq 1; then
@@ -6782,6 +6751,20 @@ if test "$enable_wined3d_Accounting" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-CSMT_Main
+# |
+# | Modified files:
+# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_CSMT_Main" -eq 1; then
+	patch_apply wined3d-CSMT_Main/0042-wined3d-Reset-context-before-destruction.patch
+	patch_apply wined3d-CSMT_Main/0045-wined3d-Improve-wined3d_cs_emit_update_sub_resource.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | Modified files:
@@ -6794,50 +6777,6 @@ if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic dual source blend test.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement dual source blending.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Silence_FIXMEs
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c, dlls/wined3d/texture.c
-# |
-if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
-	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
-	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UAV_Counters
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c
-# |
-if test "$enable_wined3d_UAV_Counters" -eq 1; then
-	patch_apply wined3d-UAV_Counters/0001-wined3d-Remaining-UAV-counter-changes.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Remaining UAV counter changes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-CSMT_Main
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	nvcuda-CUDA_Support, nvapi-Stub_DLL, d3d11-Deferred_Context, d3d9-Tests, wined3d-Accounting, wined3d-
-# | 	WINED3DFMT_B8G8R8X8_UNORM, wined3d-DXTn, wined3d-Dual_Source_Blending, wined3d-Silence_FIXMEs, wined3d-UAV_Counters
-# |
-# | Modified files:
-# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/0042-wined3d-Reset-context-before-destruction.patch
-	patch_apply wined3d-CSMT_Main/0045-wined3d-Improve-wined3d_cs_emit_update_sub_resource.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6907,6 +6846,32 @@ if test "$enable_wined3d_Restore_DirectX10_Support" -eq 1; then
 	patch_apply wined3d-Restore-DirectX10-Support/0001-wined3d-Remove-check-for-Polygon-offset-clamping.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wined3d: Remove check for Polygon offset clamping.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-Silence_FIXMEs
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c, dlls/wined3d/texture.c
+# |
+if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
+	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
+	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
+	(
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-UAV_Counters
+# |
+# | Modified files:
+# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c
+# |
+if test "$enable_wined3d_UAV_Counters" -eq 1; then
+	patch_apply wined3d-UAV_Counters/0001-wined3d-Remaining-UAV-counter-changes.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Remaining UAV counter changes.", 1 },';
 	) >> "$patchlist"
 fi
 

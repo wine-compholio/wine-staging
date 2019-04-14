@@ -96,6 +96,7 @@ patch_enable_all ()
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptSecretAgreement="$1"
+	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctrl_rebar_capture="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
@@ -427,6 +428,9 @@ patch_enable ()
 			;;
 		bcrypt-BCryptSecretAgreement)
 			enable_bcrypt_BCryptSecretAgreement="$2"
+			;;
+		combase-GetRestrictedErrorInfo)
+			enable_combase_GetRestrictedErrorInfo="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -2387,6 +2391,25 @@ if test "$enable_bcrypt_BCryptSecretAgreement" -eq 1; then
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "bcrypt: Add BCryptDestroySecret/BCryptSecretAgreement stubs.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "bcrypt: Add BCryptDeriveKey stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset combase-GetRestrictedErrorInfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46972] combase: Add GetRestrictedErrorInfo/RoOriginateLanguageException stubs.
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-winrt-error-l1-1-0/api-ms-win-core-winrt-error-l1-1-0.spec, dlls/api-ms-win-core-winrt-error-l1-1-1
+# | 	/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in,
+# | 	include/restrictederrorinfo.idl
+# |
+if test "$enable_combase_GetRestrictedErrorInfo" -eq 1; then
+	patch_apply combase-GetRestrictedErrorInfo/0001-include-Add-restrictederrorinfo.idl.patch
+	patch_apply combase-GetRestrictedErrorInfo/0002-combase-Add-GetRestrictedErrorInfo-and-RoOriginateLa.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "include: Add restrictederrorinfo.idl.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "combase: Add GetRestrictedErrorInfo and RoOriginateLanguageException stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

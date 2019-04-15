@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fabde842ede40fc53cf6f5743d5b477841f7b11c"
+	echo "f9301c2b66450a1cdd986e9052fcaa76535ba8b7"
 }
 
 # Show version information
@@ -249,7 +249,6 @@ patch_enable_all ()
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_quartz_Silence_FIXMEs="$1"
-	enable_qwave_QOSCreateHandle="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_server_FileEndOfFileInformation="$1"
@@ -887,9 +886,6 @@ patch_enable ()
 			;;
 		quartz-Silence_FIXMEs)
 			enable_quartz_Silence_FIXMEs="$2"
-			;;
-		qwave-QOSCreateHandle)
-			enable_qwave_QOSCreateHandle="$2"
 			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
@@ -5505,21 +5501,6 @@ if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
 	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset qwave-QOSCreateHandle
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46174] qwave: Added QOSCreateHandle stub
-# |
-# | Modified files:
-# |   *	dlls/qwave/main.c, dlls/qwave/qwave.spec, include/qos2.h
-# |
-if test "$enable_qwave_QOSCreateHandle" -eq 1; then
-	patch_apply qwave-QOSCreateHandle/0001-qwave-Added-QOSCreateHandle-stub.patch
-	(
-		printf '%s\n' '+    { "Gijs Vermeulen", "qwave: Added QOSCreateHandle stub.", 1 },';
 	) >> "$patchlist"
 fi
 

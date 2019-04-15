@@ -1,11 +1,11 @@
-From 7c2ba2192c4575c08d7f939bd983d1e70a978a3b Mon Sep 17 00:00:00 2001
+From 8d0c92ca0d291d015870b454dde92ba7bd76ceb6 Mon Sep 17 00:00:00 2001
 From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
 Date: Tue, 19 Mar 2019 08:41:11 +1100
 Subject: [PATCH] Revert "xaudio2: Rewrite to use FAudio."
 
 This reverts commit 3e390b1aafff47df63376a8ca4293c515d74f4ba.
 ---
- configure                         |  149 +-
+ configure                         |   51 +-
  configure.ac                      |   24 +-
  dlls/x3daudio1_0/Makefile.in      |    2 -
  dlls/x3daudio1_1/Makefile.in      |    2 -
@@ -28,24 +28,24 @@ This reverts commit 3e390b1aafff47df63376a8ca4293c515d74f4ba.
  dlls/xaudio2_5/Makefile.in        |    6 +-
  dlls/xaudio2_6/Makefile.in        |    6 +-
  dlls/xaudio2_7/Makefile.in        |    5 +-
- dlls/xaudio2_7/compat.c           |  774 +++++----
+ dlls/xaudio2_7/compat.c           |  774 ++++++-----
  dlls/xaudio2_7/tests/xaudio2.c    |   59 +-
  dlls/xaudio2_7/x3daudio.c         |   36 +-
- dlls/xaudio2_7/xapo.c             |  405 -----
- dlls/xaudio2_7/xapofx.c           |  792 ++++++++-
+ dlls/xaudio2_7/xapo.c             |  405 ------
+ dlls/xaudio2_7/xapofx.c           |  792 ++++++++++-
  dlls/xaudio2_7/xaudio_allocator.c |   41 -
  dlls/xaudio2_7/xaudio_classes.idl |    7 +
- dlls/xaudio2_7/xaudio_dll.c       | 2604 +++++++++++++++++------------
- dlls/xaudio2_7/xaudio_private.h   |  174 +-
+ dlls/xaudio2_7/xaudio_dll.c       | 2604 ++++++++++++++++++++++---------------
+ dlls/xaudio2_7/xaudio_private.h   |  174 +--
  dlls/xaudio2_8/Makefile.in        |    5 +-
  dlls/xaudio2_9/Makefile.in        |    5 +-
  include/config.h.in               |    6 -
- 35 files changed, 2973 insertions(+), 2201 deletions(-)
+ 35 files changed, 2973 insertions(+), 2103 deletions(-)
  delete mode 100644 dlls/xaudio2_7/xapo.c
  delete mode 100644 dlls/xaudio2_7/xaudio_allocator.c
 
 diff --git a/configure b/configure
-index c21c70d0f..f69a2614a 100755
+index 35dccd9..1642e5a 100755
 --- a/configure
 +++ b/configure
 @@ -659,8 +659,6 @@ CUPS_LIBS
@@ -65,7 +65,7 @@ index c21c70d0f..f69a2614a 100755
  with_float_abi
  with_fontconfig
  with_freetype
-@@ -1837,8 +1834,6 @@ UDEV_CFLAGS
+@@ -1838,8 +1835,6 @@ UDEV_CFLAGS
  UDEV_LIBS
  SDL2_CFLAGS
  SDL2_LIBS
@@ -74,7 +74,7 @@ index c21c70d0f..f69a2614a 100755
  CAPI20_CFLAGS
  CAPI20_LIBS
  CUPS_CFLAGS
-@@ -2509,7 +2504,6 @@ Optional Packages:
+@@ -2510,7 +2505,6 @@ Optional Packages:
    --without-cups          do not use CUPS
    --without-curses        do not use (n)curses
    --without-dbus          do not use DBus (dynamic device support)
@@ -82,7 +82,7 @@ index c21c70d0f..f69a2614a 100755
    --with-float-abi=abi    specify the ABI (soft|softfp|hard) for ARM platforms
    --without-fontconfig    do not use fontconfig
    --without-freetype      do not use the FreeType library
-@@ -2618,9 +2612,6 @@ Some influential environment variables:
+@@ -2619,9 +2613,6 @@ Some influential environment variables:
    UDEV_LIBS   Linker flags for libudev, overriding pkg-config
    SDL2_CFLAGS C compiler flags for sdl2, overriding pkg-config
    SDL2_LIBS   Linker flags for sdl2, overriding pkg-config
@@ -92,7 +92,7 @@ index c21c70d0f..f69a2614a 100755
    CAPI20_CFLAGS
                C compiler flags for capi20, overriding pkg-config
    CAPI20_LIBS Linker flags for capi20, overriding pkg-config
-@@ -3853,12 +3844,6 @@ if test "${with_dbus+set}" = set; then :
+@@ -3854,12 +3845,6 @@ if test "${with_dbus+set}" = set; then :
  fi
  
  
@@ -105,112 +105,7 @@ index c21c70d0f..f69a2614a 100755
  # Check whether --with-float-abi was given.
  if test "${with_float_abi+set}" = set; then :
    withval=$with_float_abi;
-@@ -14651,104 +14636,6 @@ esac
- 
- fi
- 
--if test "x$with_faudio" != "xno"
--then
--    if ${FAUDIO_CFLAGS:+false} :; then :
--  if ${PKG_CONFIG+:} false; then :
--  FAUDIO_CFLAGS=`$PKG_CONFIG --cflags faudio 2>/dev/null`
--fi
--fi
--
--if ${FAUDIO_LIBS:+false} :; then :
--  if ${PKG_CONFIG+:} false; then :
--  FAUDIO_LIBS=`$PKG_CONFIG --libs faudio 2>/dev/null`
--fi
--fi
--
--FAUDIO_LIBS=${FAUDIO_LIBS:-"-lFAudio"}
--$as_echo "$as_me:${as_lineno-$LINENO}: faudio cflags: $FAUDIO_CFLAGS" >&5
--$as_echo "$as_me:${as_lineno-$LINENO}: faudio libs: $FAUDIO_LIBS" >&5
--ac_save_CPPFLAGS=$CPPFLAGS
--CPPFLAGS="$CPPFLAGS $FAUDIO_CFLAGS"
--for ac_header in FAudio.h
--do :
--  ac_fn_c_check_header_mongrel "$LINENO" "FAudio.h" "ac_cv_header_FAudio_h" "$ac_includes_default"
--if test "x$ac_cv_header_FAudio_h" = xyes; then :
--  cat >>confdefs.h <<_ACEOF
--#define HAVE_FAUDIO_H 1
--_ACEOF
-- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -lFAudio" >&5
--$as_echo_n "checking for -lFAudio... " >&6; }
--if ${ac_cv_lib_soname_FAudio+:} false; then :
--  $as_echo_n "(cached) " >&6
--else
--  ac_check_soname_save_LIBS=$LIBS
--LIBS="-lFAudio $FAUDIO_LIBS $LIBS"
--  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
--/* end confdefs.h.  */
--
--/* Override any GCC internal prototype to avoid an error.
--   Use char because int might match the return type of a GCC
--   builtin and then its argument prototype would still apply.  */
--#ifdef __cplusplus
--extern "C"
--#endif
--char FAudioCreate ();
--int
--main ()
--{
--return FAudioCreate ();
--  ;
--  return 0;
--}
--_ACEOF
--if ac_fn_c_try_link "$LINENO"; then :
--  case "$LIBEXT" in
--    dll) ac_cv_lib_soname_FAudio=`$ac_cv_path_LDD conftest.exe | grep "FAudio" | sed -e "s/dll.*/dll/"';2,$d'` ;;
--    dylib) ac_cv_lib_soname_FAudio=`$OTOOL -L conftest$ac_exeext | grep "libFAudio*\\.[0-9A-Za-z.]*dylib" | sed -e "s/^.*\/\(libFAudio*\.[0-9A-Za-z.]*dylib\).*$/\1/"';2,$d'` ;;
--    *) ac_cv_lib_soname_FAudio=`$READELF -d conftest$ac_exeext | grep "NEEDED.*libFAudio*\\.$LIBEXT" | sed -e "s/^.*\\[\\(libFAudio*\\.$LIBEXT[^	 ]*\\)\\].*$/\1/"';2,$d'`
--       if ${ac_cv_lib_soname_FAudio:+false} :; then :
--  ac_cv_lib_soname_FAudio=`$LDD conftest$ac_exeext | grep "libFAudio*\\.$LIBEXT" | sed -e "s/^.*\(libFAudio*\.$LIBEXT[^	 ]*\).*$/\1/"';2,$d'`
--fi ;;
--  esac
--fi
--rm -f core conftest.err conftest.$ac_objext \
--    conftest$ac_exeext conftest.$ac_ext
--  LIBS=$ac_check_soname_save_LIBS
--fi
--if ${ac_cv_lib_soname_FAudio:+false} :; then :
--  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
--$as_echo "not found" >&6; }
--
--else
--  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_soname_FAudio" >&5
--$as_echo "$ac_cv_lib_soname_FAudio" >&6; }
--
--cat >>confdefs.h <<_ACEOF
--#define SONAME_LIBFAUDIO "$ac_cv_lib_soname_FAudio"
--_ACEOF
--
--
--fi
--fi
--
--done
--
--CPPFLAGS=$ac_save_CPPFLAGS
--test -z "$FAUDIO_CFLAGS" || FAUDIO_CFLAGS=`echo " $FAUDIO_CFLAGS" | sed 's/ -I\([^/]\)/ -I\$(top_builddir)\/\1/g'`
--test -z "$FAUDIO_LIBS" || FAUDIO_LIBS=`echo " $FAUDIO_LIBS" | sed 's/ -L\([^/]\)/ -L\$(top_builddir)\/\1/g'`
--
--fi
--if test "x$ac_cv_lib_soname_FAudio" = "x"; then :
--  case "x$with_faudio" in
--  x)   as_fn_append wine_notices "|libFAudio ${notice_platform}development files not found, XAudio2 won't be supported." ;;
--  xno) ;;
--  *)   as_fn_error $? "libFAudio ${notice_platform}development files not found, XAudio2 won't be supported.
--This is an error since --with-faudio was requested." "$LINENO" 5 ;;
--esac
--
--fi
--
- if test "x$with_capi" != "xno"
- then
-     if ${CAPI20_CFLAGS:+false} :; then :
-@@ -15818,8 +15705,40 @@ esac
+@@ -15986,8 +15971,40 @@ esac
  enable_openal32=${enable_openal32:-no}
  fi
  
@@ -252,7 +147,7 @@ index c21c70d0f..f69a2614a 100755
      enable_x3daudio1_0=${enable_x3daudio1_0:-no}
      enable_x3daudio1_1=${enable_x3daudio1_1:-no}
      enable_x3daudio1_2=${enable_x3daudio1_2:-no}
-@@ -19591,8 +19510,6 @@ UDEV_CFLAGS = $UDEV_CFLAGS
+@@ -19769,8 +19786,6 @@ UDEV_CFLAGS = $UDEV_CFLAGS
  UDEV_LIBS = $UDEV_LIBS
  SDL2_CFLAGS = $SDL2_CFLAGS
  SDL2_LIBS = $SDL2_LIBS
@@ -262,7 +157,7 @@ index c21c70d0f..f69a2614a 100755
  CAPI20_LIBS = $CAPI20_LIBS
  CUPS_CFLAGS = $CUPS_CFLAGS
 diff --git a/configure.ac b/configure.ac
-index 02e7e9ec4..c5984b084 100644
+index 3f4bf6d..e4e583a 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -42,7 +42,6 @@ AC_ARG_WITH(cups,      AS_HELP_STRING([--without-cups],[do not use CUPS]))
@@ -273,7 +168,7 @@ index 02e7e9ec4..c5984b084 100644
  AC_ARG_WITH(float-abi, AS_HELP_STRING([--with-float-abi=abi],[specify the ABI (soft|softfp|hard) for ARM platforms]))
  AC_ARG_WITH(fontconfig,AS_HELP_STRING([--without-fontconfig],[do not use fontconfig]))
  AC_ARG_WITH(freetype,  AS_HELP_STRING([--without-freetype],[do not use the FreeType library]))
-@@ -1650,16 +1649,6 @@ fi
+@@ -1707,16 +1706,6 @@ fi
  WINE_NOTICE_WITH(sdl,[test "x$ac_cv_lib_soname_SDL2" = "x"],
                   [libSDL2 ${notice_platform}development files not found, SDL2 won't be supported.])
  
@@ -290,7 +185,7 @@ index 02e7e9ec4..c5984b084 100644
  dnl **** Check for capi4linux ****
  if test "x$with_capi" != "xno"
  then
-@@ -1824,8 +1813,19 @@ WINE_NOTICE_WITH(openal,[test "x$ac_cv_lib_openal" != xyes],
+@@ -1881,8 +1870,19 @@ WINE_NOTICE_WITH(openal,[test "x$ac_cv_lib_openal" != xyes],
                   [libopenal ${notice_platform}development files not found (or too old), OpenAL won't be supported.],
                   [enable_openal32])
  
@@ -312,7 +207,7 @@ index 02e7e9ec4..c5984b084 100644
      enable_x3daudio1_1=${enable_x3daudio1_1:-no}
      enable_x3daudio1_2=${enable_x3daudio1_2:-no}
 diff --git a/dlls/x3daudio1_0/Makefile.in b/dlls/x3daudio1_0/Makefile.in
-index d2305be6f..9b4ce2189 100644
+index d2305be..9b4ce21 100644
 --- a/dlls/x3daudio1_0/Makefile.in
 +++ b/dlls/x3daudio1_0/Makefile.in
 @@ -1,8 +1,6 @@
@@ -325,7 +220,7 @@ index d2305be6f..9b4ce2189 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_1/Makefile.in b/dlls/x3daudio1_1/Makefile.in
-index efe8d7453..d866dc3dd 100644
+index efe8d74..d866dc3 100644
 --- a/dlls/x3daudio1_1/Makefile.in
 +++ b/dlls/x3daudio1_1/Makefile.in
 @@ -1,8 +1,6 @@
@@ -338,7 +233,7 @@ index efe8d7453..d866dc3dd 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_2/Makefile.in b/dlls/x3daudio1_2/Makefile.in
-index 3b52e063f..d5de11b25 100644
+index 3b52e06..d5de11b 100644
 --- a/dlls/x3daudio1_2/Makefile.in
 +++ b/dlls/x3daudio1_2/Makefile.in
 @@ -1,8 +1,6 @@
@@ -351,7 +246,7 @@ index 3b52e063f..d5de11b25 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_3/Makefile.in b/dlls/x3daudio1_3/Makefile.in
-index 9afd1e643..cfd2c6c6c 100644
+index 9afd1e6..cfd2c6c 100644
 --- a/dlls/x3daudio1_3/Makefile.in
 +++ b/dlls/x3daudio1_3/Makefile.in
 @@ -1,8 +1,6 @@
@@ -364,7 +259,7 @@ index 9afd1e643..cfd2c6c6c 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_4/Makefile.in b/dlls/x3daudio1_4/Makefile.in
-index e481567cc..bd0eac7fc 100644
+index e481567..bd0eac7 100644
 --- a/dlls/x3daudio1_4/Makefile.in
 +++ b/dlls/x3daudio1_4/Makefile.in
 @@ -1,8 +1,6 @@
@@ -377,7 +272,7 @@ index e481567cc..bd0eac7fc 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_5/Makefile.in b/dlls/x3daudio1_5/Makefile.in
-index 0a97959e7..dac67aef7 100644
+index 0a97959..dac67ae 100644
 --- a/dlls/x3daudio1_5/Makefile.in
 +++ b/dlls/x3daudio1_5/Makefile.in
 @@ -1,8 +1,6 @@
@@ -390,7 +285,7 @@ index 0a97959e7..dac67aef7 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_6/Makefile.in b/dlls/x3daudio1_6/Makefile.in
-index c88374a38..177fb8d34 100644
+index c88374a..177fb8d 100644
 --- a/dlls/x3daudio1_6/Makefile.in
 +++ b/dlls/x3daudio1_6/Makefile.in
 @@ -1,8 +1,6 @@
@@ -403,7 +298,7 @@ index c88374a38..177fb8d34 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/x3daudio1_7/Makefile.in b/dlls/x3daudio1_7/Makefile.in
-index 267a93fd6..019588dce 100644
+index 267a93f..019588d 100644
 --- a/dlls/x3daudio1_7/Makefile.in
 +++ b/dlls/x3daudio1_7/Makefile.in
 @@ -1,8 +1,6 @@
@@ -416,7 +311,7 @@ index 267a93fd6..019588dce 100644
  C_SRCS = \
  	x3daudio.c
 diff --git a/dlls/xapofx1_1/Makefile.in b/dlls/xapofx1_1/Makefile.in
-index df40978ec..f69ff86bd 100644
+index df40978..f69ff86 100644
 --- a/dlls/xapofx1_1/Makefile.in
 +++ b/dlls/xapofx1_1/Makefile.in
 @@ -2,12 +2,8 @@ EXTRADEFS = -DXAPOFX1_VER=1 -DXAUDIO2_VER=2
@@ -434,7 +329,7 @@ index df40978ec..f69ff86bd 100644
  
  RC_SRCS = version.rc
 diff --git a/dlls/xapofx1_2/Makefile.in b/dlls/xapofx1_2/Makefile.in
-index 5e70ad262..d56a2be4b 100644
+index 5e70ad2..d56a2be 100644
 --- a/dlls/xapofx1_2/Makefile.in
 +++ b/dlls/xapofx1_2/Makefile.in
 @@ -2,10 +2,6 @@ EXTRADEFS = -DXAPOFX1_VER=2 -DXAUDIO2_VER=3
@@ -450,7 +345,7 @@ index 5e70ad262..d56a2be4b 100644
 -	xaudio_allocator.c
 +	xapofx.c
 diff --git a/dlls/xapofx1_3/Makefile.in b/dlls/xapofx1_3/Makefile.in
-index 5cf91a7c2..1139520b7 100644
+index 5cf91a7..1139520 100644
 --- a/dlls/xapofx1_3/Makefile.in
 +++ b/dlls/xapofx1_3/Makefile.in
 @@ -2,12 +2,8 @@ EXTRADEFS = -DXAPOFX1_VER=3 -DXAUDIO2_VER=4
@@ -468,7 +363,7 @@ index 5cf91a7c2..1139520b7 100644
  
  RC_SRCS = version.rc
 diff --git a/dlls/xapofx1_4/Makefile.in b/dlls/xapofx1_4/Makefile.in
-index ab1106fcf..b49e4643a 100644
+index ab1106f..b49e464 100644
 --- a/dlls/xapofx1_4/Makefile.in
 +++ b/dlls/xapofx1_4/Makefile.in
 @@ -2,10 +2,6 @@ EXTRADEFS = -DXAPOFX1_VER=4 -DXAUDIO2_VER=6
@@ -484,7 +379,7 @@ index ab1106fcf..b49e4643a 100644
 -	xaudio_allocator.c
 +	xapofx.c
 diff --git a/dlls/xapofx1_5/Makefile.in b/dlls/xapofx1_5/Makefile.in
-index bda50c048..5055a16fd 100644
+index bda50c0..5055a16 100644
 --- a/dlls/xapofx1_5/Makefile.in
 +++ b/dlls/xapofx1_5/Makefile.in
 @@ -2,10 +2,6 @@ EXTRADEFS = -DXAPOFX1_VER=5 -DXAUDIO2_VER=7
@@ -500,7 +395,7 @@ index bda50c048..5055a16fd 100644
 -	xaudio_allocator.c
 +	xapofx.c
 diff --git a/dlls/xaudio2_0/Makefile.in b/dlls/xaudio2_0/Makefile.in
-index 4f766b824..cf15c7bf0 100644
+index 4f766b8..cf15c7b 100644
 --- a/dlls/xaudio2_0/Makefile.in
 +++ b/dlls/xaudio2_0/Makefile.in
 @@ -1,14 +1,12 @@
@@ -521,7 +416,7 @@ index 4f766b824..cf15c7bf0 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_1/Makefile.in b/dlls/xaudio2_1/Makefile.in
-index 9e50adfa8..32a5a62a2 100644
+index 9e50adf..32a5a62 100644
 --- a/dlls/xaudio2_1/Makefile.in
 +++ b/dlls/xaudio2_1/Makefile.in
 @@ -1,14 +1,12 @@
@@ -542,7 +437,7 @@ index 9e50adfa8..32a5a62a2 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_2/Makefile.in b/dlls/xaudio2_2/Makefile.in
-index b7076fea4..f20de2d5f 100644
+index b7076fe..f20de2d 100644
 --- a/dlls/xaudio2_2/Makefile.in
 +++ b/dlls/xaudio2_2/Makefile.in
 @@ -1,14 +1,12 @@
@@ -563,7 +458,7 @@ index b7076fea4..f20de2d5f 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_3/Makefile.in b/dlls/xaudio2_3/Makefile.in
-index a1140f833..ca749f247 100644
+index a1140f8..ca749f2 100644
 --- a/dlls/xaudio2_3/Makefile.in
 +++ b/dlls/xaudio2_3/Makefile.in
 @@ -1,14 +1,12 @@
@@ -584,7 +479,7 @@ index a1140f833..ca749f247 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_4/Makefile.in b/dlls/xaudio2_4/Makefile.in
-index 6d1f5e4e7..0b74f68fd 100644
+index 6d1f5e4..0b74f68 100644
 --- a/dlls/xaudio2_4/Makefile.in
 +++ b/dlls/xaudio2_4/Makefile.in
 @@ -1,14 +1,12 @@
@@ -605,7 +500,7 @@ index 6d1f5e4e7..0b74f68fd 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_5/Makefile.in b/dlls/xaudio2_5/Makefile.in
-index d65b4bd1e..09356c94a 100644
+index d65b4bd..09356c9 100644
 --- a/dlls/xaudio2_5/Makefile.in
 +++ b/dlls/xaudio2_5/Makefile.in
 @@ -1,14 +1,12 @@
@@ -626,7 +521,7 @@ index d65b4bd1e..09356c94a 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_6/Makefile.in b/dlls/xaudio2_6/Makefile.in
-index 3bcc930e2..e0ef58815 100644
+index 3bcc930..e0ef588 100644
 --- a/dlls/xaudio2_6/Makefile.in
 +++ b/dlls/xaudio2_6/Makefile.in
 @@ -1,14 +1,12 @@
@@ -647,7 +542,7 @@ index 3bcc930e2..e0ef58815 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_7/Makefile.in b/dlls/xaudio2_7/Makefile.in
-index 294f841b0..2f2e23200 100644
+index 294f841..2f2e232 100644
 --- a/dlls/xaudio2_7/Makefile.in
 +++ b/dlls/xaudio2_7/Makefile.in
 @@ -1,15 +1,12 @@
@@ -668,7 +563,7 @@ index 294f841b0..2f2e23200 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_7/compat.c b/dlls/xaudio2_7/compat.c
-index 318f66858..4980e25f2 100644
+index 318f668..4980e25 100644
 --- a/dlls/xaudio2_7/compat.c
 +++ b/dlls/xaudio2_7/compat.c
 @@ -124,15 +124,15 @@ static XAUDIO2_SEND_DESCRIPTOR *convert_send_descriptors23(const XAUDIO23_VOICE_
@@ -2817,7 +2712,7 @@ index 318f66858..4980e25f2 100644
  
  static HRESULT WINAPI XA27_StartEngine(IXAudio27 *iface)
 diff --git a/dlls/xaudio2_7/tests/xaudio2.c b/dlls/xaudio2_7/tests/xaudio2.c
-index 4ead8d8de..0c1d9a780 100644
+index 4ead8d8..0c1d9a7 100644
 --- a/dlls/xaudio2_7/tests/xaudio2.c
 +++ b/dlls/xaudio2_7/tests/xaudio2.c
 @@ -524,7 +524,7 @@ static void test_buffer_callbacks(IXAudio2 *xa)
@@ -2932,7 +2827,7 @@ index 4ead8d8de..0c1d9a780 100644
              ok(hr == REGDB_E_CLASSNOTREG, "CoCreateInstance should have failed: %08x\n", hr);
              if(SUCCEEDED(hr))
 diff --git a/dlls/xaudio2_7/x3daudio.c b/dlls/xaudio2_7/x3daudio.c
-index ee3367e09..58f7062ad 100644
+index ee3367e..58f7062 100644
 --- a/dlls/xaudio2_7/x3daudio.c
 +++ b/dlls/xaudio2_7/x3daudio.c
 @@ -1,6 +1,5 @@
@@ -3017,7 +2912,7 @@ index ee3367e09..58f7062ad 100644
  #endif /* XAUDIO2_VER >= 8 || defined X3DAUDIO1_VER */
 diff --git a/dlls/xaudio2_7/xapo.c b/dlls/xaudio2_7/xapo.c
 deleted file mode 100644
-index ccad417ea..000000000
+index ccad417..0000000
 --- a/dlls/xaudio2_7/xapo.c
 +++ /dev/null
 @@ -1,405 +0,0 @@
@@ -3427,7 +3322,7 @@ index ccad417ea..000000000
 -    return hr;
 -}
 diff --git a/dlls/xaudio2_7/xapofx.c b/dlls/xaudio2_7/xapofx.c
-index 100ba02d3..e450851b2 100644
+index 100ba02..e450851 100644
 --- a/dlls/xaudio2_7/xapofx.c
 +++ b/dlls/xaudio2_7/xapofx.c
 @@ -1,6 +1,5 @@
@@ -4273,7 +4168,7 @@ index 100ba02d3..e450851b2 100644
          hr = make_xapo_factory(class, &IID_IClassFactory, (void**)&cf);
 diff --git a/dlls/xaudio2_7/xaudio_allocator.c b/dlls/xaudio2_7/xaudio_allocator.c
 deleted file mode 100644
-index 41be48a80..000000000
+index 41be48a..0000000
 --- a/dlls/xaudio2_7/xaudio_allocator.c
 +++ /dev/null
 @@ -1,41 +0,0 @@
@@ -4319,7 +4214,7 @@ index 41be48a80..000000000
 -    return CoTaskMemRealloc(ptr, size);
 -}
 diff --git a/dlls/xaudio2_7/xaudio_classes.idl b/dlls/xaudio2_7/xaudio_classes.idl
-index 17a59c35c..64e350f8d 100644
+index 17a59c3..64e350f 100644
 --- a/dlls/xaudio2_7/xaudio_classes.idl
 +++ b/dlls/xaudio2_7/xaudio_classes.idl
 @@ -41,6 +41,13 @@ coclass AudioVolumeMeter { interface IUnknown; }
@@ -4337,7 +4232,7 @@ index 17a59c35c..64e350f8d 100644
  
  #if XAUDIO2_VER == 6
 diff --git a/dlls/xaudio2_7/xaudio_dll.c b/dlls/xaudio2_7/xaudio_dll.c
-index 43f0c0a67..6dc0d8fd9 100644
+index 43f0c0a..6dc0d8f 100644
 --- a/dlls/xaudio2_7/xaudio_dll.c
 +++ b/dlls/xaudio2_7/xaudio_dll.c
 @@ -1,7 +1,6 @@
@@ -7623,7 +7518,7 @@ index 43f0c0a67..6dc0d8fd9 100644
  }
 -#endif /* XAUDIO2_VER >= 8 */
 diff --git a/dlls/xaudio2_7/xaudio_private.h b/dlls/xaudio2_7/xaudio_private.h
-index 84bab8257..5d3814fb9 100644
+index 84bab82..5d3814f 100644
 --- a/dlls/xaudio2_7/xaudio_private.h
 +++ b/dlls/xaudio2_7/xaudio_private.h
 @@ -1,6 +1,5 @@
@@ -7879,7 +7774,7 @@ index 84bab8257..5d3814fb9 100644
 -extern void* XAudio_Internal_Realloc(void* ptr, size_t size) DECLSPEC_HIDDEN;
 +extern HRESULT xaudio2_initialize(IXAudio2Impl *This, UINT32 flags, XAUDIO2_PROCESSOR proc) DECLSPEC_HIDDEN;
 diff --git a/dlls/xaudio2_8/Makefile.in b/dlls/xaudio2_8/Makefile.in
-index 566ddb6b3..d4efc41d5 100644
+index 566ddb6..d4efc41 100644
 --- a/dlls/xaudio2_8/Makefile.in
 +++ b/dlls/xaudio2_8/Makefile.in
 @@ -1,16 +1,13 @@
@@ -7901,7 +7796,7 @@ index 566ddb6b3..d4efc41d5 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/dlls/xaudio2_9/Makefile.in b/dlls/xaudio2_9/Makefile.in
-index 1a1982781..ceb2216f5 100644
+index 1a19827..ceb2216 100644
 --- a/dlls/xaudio2_9/Makefile.in
 +++ b/dlls/xaudio2_9/Makefile.in
 @@ -1,16 +1,13 @@
@@ -7923,7 +7818,7 @@ index 1a1982781..ceb2216f5 100644
  
  IDL_SRCS = xaudio_classes.idl
 diff --git a/include/config.h.in b/include/config.h.in
-index aeb571ab9..f8ec5ce51 100644
+index 6c229c1..2ab64bb 100644
 --- a/include/config.h.in
 +++ b/include/config.h.in
 @@ -150,9 +150,6 @@
@@ -7947,5 +7842,5 @@ index aeb571ab9..f8ec5ce51 100644
  #undef SONAME_LIBFONTCONFIG
  
 -- 
-2.21.0
+1.9.1
 

@@ -1,19 +1,20 @@
-From 1fe09b6fd1dd6fe7520932c2c226728301d5d099 Mon Sep 17 00:00:00 2001
+From 272ed659e67adc42778e428ac4b74d2844dc9ad5 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 21:00:21 -0700
-Subject: [PATCH] ntdll: Add support for deleting junction points.
+Subject: ntdll: Add support for deleting junction points.
 
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 51 +++++++++++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/tests/file.c | 22 +++++++++++++++++++++
- include/ddk/ntifs.h     | 12 ++++++++++++
- 3 files changed, 85 insertions(+)
+ dlls/ntdll/file.c       | 51 +++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 23 ++++++++++++++++++-
+ include/ntifs.h         | 12 ++++++++++
+ 3 files changed, 85 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 66cc16a..9b8d4c8 100644
+index ee561d9268..2effe7efb0 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1775,6 +1775,41 @@ cleanup:
+@@ -1846,6 +1846,41 @@ cleanup:
  }
  
  
@@ -55,7 +56,7 @@ index 66cc16a..9b8d4c8 100644
  /**************************************************************************
   *              NtFsControlFile                 [NTDLL.@]
   *              ZwFsControlFile                 [NTDLL.@]
-@@ -1861,6 +1896,22 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1931,6 +1966,22 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
          status = STATUS_SUCCESS;
          break;
  
@@ -79,12 +80,12 @@ index 66cc16a..9b8d4c8 100644
      {
          REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)out_buffer;
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 94d5a04..a92961d 100644
+index cdb608d305..bc6961bc61 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -4565,12 +4565,15 @@ static void test_junction_points(void)
-     static const WCHAR junctionW[] = {'\\','j','u','n','c','t','i','o','n',0};
-     WCHAR path[MAX_PATH], junction_path[MAX_PATH], target_path[MAX_PATH];
+@@ -4863,12 +4863,15 @@ static void test_reparse_points(void)
+     static const WCHAR reparseW[] = {'\\','r','e','p','a','r','s','e',0};
+     WCHAR path[MAX_PATH], reparse_path[MAX_PATH], target_path[MAX_PATH];
      static const WCHAR targetW[] = {'\\','t','a','r','g','e','t',0};
 +    FILE_BASIC_INFORMATION old_attrib, new_attrib;
      static const WCHAR fooW[] = {'f','o','o',0};
@@ -96,46 +97,54 @@ index 94d5a04..a92961d 100644
      INT buffer_len, string_len;
 +    IO_STATUS_BLOCK iosb;
      UNICODE_STRING nameW;
-     HANDLE hJunction;
+     HANDLE handle;
      WCHAR *dest;
-@@ -4618,6 +4621,8 @@ static void test_junction_points(void)
+@@ -4916,6 +4919,8 @@ static void test_reparse_points(void)
          win_skip("Failed to open junction point directory handle (0x%x).\n", GetLastError());
          goto cleanup;
      }
-+    dwret = NtQueryInformationFile(hJunction, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
++    dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
 +    ok(dwret == STATUS_SUCCESS, "Failed to get junction point folder's attributes (0x%x).\n", dwret);
      buffer_len = build_reparse_buffer(nameW.Buffer, &buffer);
-     bret = DeviceIoControl(hJunction, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
+     bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
-@@ -4632,6 +4637,23 @@ static void test_junction_points(void)
-     ok(bret, "Failed to read junction point!\n");
+@@ -4930,6 +4935,22 @@ static void test_reparse_points(void)
+     dest = &buffer->MountPointReparseBuffer.PathBuffer[buffer->MountPointReparseBuffer.SubstituteNameOffset/sizeof(WCHAR)];
      ok((memcmp(dest, nameW.Buffer, string_len) == 0), "Junction point destination does not match ('%s' != '%s')!\n",
                                                        wine_dbgstr_w(dest), wine_dbgstr_w(nameW.Buffer));
 +
 +    /* Delete the junction point */
 +    memset(&old_attrib, 0x00, sizeof(old_attrib));
 +    old_attrib.LastAccessTime.QuadPart = 0x200deadcafebeef;
-+    dwret = NtSetInformationFile(hJunction, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
++    dwret = NtSetInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
 +    ok(dwret == STATUS_SUCCESS, "Failed to set junction point folder's attributes (0x%x).\n", dwret);
 +    memset(&guid_buffer, 0x00, sizeof(guid_buffer));
 +    guid_buffer.ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
-+    bret = DeviceIoControl(hJunction, FSCTL_DELETE_REPARSE_POINT, (LPVOID)&guid_buffer,
++    bret = DeviceIoControl(handle, FSCTL_DELETE_REPARSE_POINT, (LPVOID)&guid_buffer,
 +                           REPARSE_GUID_DATA_BUFFER_HEADER_SIZE, NULL, 0, &dwret, 0);
 +    ok(bret, "Failed to delete junction point! (0x%x)\n", GetLastError());
 +    memset(&new_attrib, 0x00, sizeof(new_attrib));
-+    dwret = NtQueryInformationFile(hJunction, &iosb, &new_attrib, sizeof(new_attrib), FileBasicInformation);
++    dwret = NtQueryInformationFile(handle, &iosb, &new_attrib, sizeof(new_attrib), FileBasicInformation);
 +    ok(dwret == STATUS_SUCCESS, "Failed to get junction point folder's attributes (0x%x).\n", dwret);
-+    /* conversion bug: we see 0x1c9c380deadbee6 on Wine */
-+    todo_wine ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
-+                 "Junction point folder's access time does not match.\n");
-     CloseHandle(hJunction);
++    ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
++       "Junction point folder's access time does not match.\n");
+     CloseHandle(handle);
  
  cleanup:
-diff --git a/include/ddk/ntifs.h b/include/ddk/ntifs.h
-index ccbd2a7..679d8ba 100644
---- a/include/ddk/ntifs.h
-+++ b/include/ddk/ntifs.h
-@@ -158,4 +158,16 @@ typedef struct _REPARSE_DATA_BUFFER {
+@@ -4937,7 +4958,7 @@ cleanup:
+     pRtlFreeUnicodeString(&nameW);
+     HeapFree(GetProcessHeap(), 0, buffer);
+     bret = RemoveDirectoryW(reparse_path);
+-    todo_wine ok(bret, "Failed to remove temporary reparse point directory!\n");
++    ok(bret, "Failed to remove temporary reparse point directory!\n");
+     bret = RemoveDirectoryW(target_path);
+     ok(bret, "Failed to remove temporary target directory!\n");
+     RemoveDirectoryW(path);
+diff --git a/include/ntifs.h b/include/ntifs.h
+index 21d42e1732..4539b89d58 100644
+--- a/include/ntifs.h
++++ b/include/ntifs.h
+@@ -39,4 +39,16 @@ typedef struct _REPARSE_DATA_BUFFER {
      };
  } REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
  
@@ -151,7 +160,7 @@ index ccbd2a7..679d8ba 100644
 +
 +#define REPARSE_GUID_DATA_BUFFER_HEADER_SIZE FIELD_OFFSET(REPARSE_GUID_DATA_BUFFER, GenericReparseBuffer)
 +
- #endif
+ #endif /* __WINE_NTIFS_H */
 -- 
-2.7.4
+2.17.1
 

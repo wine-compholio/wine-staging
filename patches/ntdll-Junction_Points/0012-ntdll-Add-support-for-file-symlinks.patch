@@ -1,0 +1,94 @@
+From 43b9fbb15b535717e2b8cb082330efd179acf321 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Thu, 11 Apr 2019 17:57:53 -0600
+Subject: ntdll: Add support for file symlinks.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
+---
+ dlls/ntdll/file.c       | 11 ++++++++---
+ dlls/ntdll/tests/file.c | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 41 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 0eb522bf1d..7c1a711fc3 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1665,6 +1665,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+     int relative_offset = 0;
+     UNICODE_STRING nt_dest;
+     int dest_len, offset;
++    BOOL is_dir = TRUE;
+     NTSTATUS status;
+     struct stat st;
+     WCHAR *dest;
+@@ -1755,7 +1756,8 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+             status = FILE_GetNtStatus();
+             goto cleanup;
+         }
+-        if (S_ISDIR(st.st_mode))
++        is_dir = S_ISDIR(st.st_mode);
++        if (is_dir)
+             strcat( magic_dest, "." );
+         strcat( magic_dest, "/" );
+     }
+@@ -1781,8 +1783,11 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+     /* Atomically move the link into position */
+     if (!renameat2( -1, tmplink, -1, unix_src.Buffer, RENAME_EXCHANGE ))
+     {
+-        /* success: link and folder have switched locations */
+-        rmdir( tmplink ); /* remove the folder (at link location) */
++        /* success: link and folder/file have switched locations */
++        if (is_dir)
++            rmdir( tmplink ); /* remove the folder (at link location) */
++        else
++            unlink( tmplink ); /* remove the file (at link location) */
+     }
+     else if (errno == ENOSYS)
+     {
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index c13ee84bf0..f40dc1f51b 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -5050,6 +5050,39 @@ static void test_reparse_points(void)
+     /* Delete the junction point directory and create a blank slate for symlink tests */
+     bret = RemoveDirectoryW(reparse_path);
+     ok(bret, "Failed to delete junction point!\n");
++
++    /* Create the file symlink */
++    HeapFree(GetProcessHeap(), 0, buffer);
++    handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW,
++                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
++    if (handle == INVALID_HANDLE_VALUE)
++    {
++        win_skip("Failed to open symlink directory handle (0x%x).\n", GetLastError());
++        goto cleanup;
++    }
++    dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
++    ok(dwret == STATUS_SUCCESS, "Failed to get symlink file's attributes (0x%x).\n", dwret);
++    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_SYMLINK, 0, &buffer);
++    bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
++    ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
++    CloseHandle(handle);
++
++    /* Check deleting a file symlink as if it were a directory */
++    bret = RemoveDirectoryW(reparse_path);
++    todo_wine ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
++    err = GetLastError();
++    todo_wine ok(err == ERROR_DIRECTORY,
++                 "Expected last error 0x%x for RemoveDirectory on file symlink (actually 0x%x)!\n",
++                 ERROR_DIRECTORY, err);
++    dwret = GetFileAttributesW(reparse_path);
++    todo_wine ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
++    ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
++
++    /* Delete the symlink as a file */
++    bret = DeleteFileW(reparse_path);
++    todo_wine ok(bret, "Failed to delete symlink as a file!\n");
++
++    /* Create a blank slate for directory symlink tests */
+     bret = CreateDirectoryW(reparse_path, NULL);
+     ok(bret, "Failed to create junction point directory.\n");
+     dwret = GetFileAttributesW(reparse_path);
+-- 
+2.17.1
+

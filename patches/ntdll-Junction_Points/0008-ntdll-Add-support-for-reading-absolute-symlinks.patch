@@ -1,0 +1,92 @@
+From a482fa218dbe1284c8a08fba84c9f36dec4d3eba Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Wed, 13 Mar 2019 12:55:20 -0600
+Subject: ntdll: Add support for reading absolute symlinks.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
+---
+ dlls/ntdll/file.c       | 22 ++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 13 ++++++++++++-
+ 2 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 00e3d7aa31..ee8ac6bd10 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1787,6 +1787,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+     UNICODE_STRING nt_dest;
+     DWORD max_length;
+     NTSTATUS status;
++    ULONG flags = 0;
+     INT prefix_len;
+     ssize_t ret;
+     char *p;
+@@ -1833,6 +1834,17 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+         }
+         buffer->ReparseTag |= (val << i);
+     }
++    /* skip past the directory/file flag */
++    if (buffer->ReparseTag == IO_REPARSE_TAG_SYMLINK)
++    {
++        char c = *p++;
++
++        if ((c != '/' && c != '.') || (c == '.' && *p++ != '/'))
++        {
++            status = STATUS_NOT_IMPLEMENTED;
++            goto cleanup;
++        }
++    }
+     unix_dest.Length -= (p - unix_dest.Buffer);
+     memmove(unix_dest.Buffer, p, unix_dest.Length);
+ 
+@@ -1851,6 +1863,16 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+         buffer->MountPointReparseBuffer.PrintNameLength = nt_dest.Length - prefix_len*sizeof(WCHAR);
+         print_name = &buffer->MountPointReparseBuffer.PathBuffer[buffer->MountPointReparseBuffer.PrintNameOffset/sizeof(WCHAR)];
+         break;
++    case IO_REPARSE_TAG_SYMLINK:
++        max_length = out_size-FIELD_OFFSET(typeof(*buffer), SymbolicLinkReparseBuffer.PathBuffer[1]);
++        buffer->SymbolicLinkReparseBuffer.SubstituteNameOffset = 0;
++        buffer->SymbolicLinkReparseBuffer.SubstituteNameLength = nt_dest.Length;
++        subst_name = &buffer->SymbolicLinkReparseBuffer.PathBuffer[buffer->SymbolicLinkReparseBuffer.SubstituteNameOffset/sizeof(WCHAR)];
++        buffer->SymbolicLinkReparseBuffer.PrintNameOffset = nt_dest.Length + sizeof(WCHAR);
++        buffer->SymbolicLinkReparseBuffer.PrintNameLength = nt_dest.Length - prefix_len*sizeof(WCHAR);
++        print_name = &buffer->SymbolicLinkReparseBuffer.PathBuffer[buffer->SymbolicLinkReparseBuffer.PrintNameOffset/sizeof(WCHAR)];
++        buffer->SymbolicLinkReparseBuffer.Flags = flags;
++        break;
+     default:
+         /* unrecognized (regular) files should probably be treated as symlinks */
+         WARN("unrecognized symbolic link\n");
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index bdac50cbd6..ef69d12f6c 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -5067,7 +5067,6 @@ static void test_reparse_points(void)
+     ok(dwret == STATUS_SUCCESS, "Failed to get symlink folder's attributes (0x%x).\n", dwret);
+     buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_SYMLINK, &buffer);
+     bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
+-    CloseHandle(handle);
+     ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
+ 
+     /* Check the file attributes of the symlink */
+@@ -5075,6 +5074,18 @@ static void test_reparse_points(void)
+     ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
+     ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: %d)\n", dwret);
+ 
++    /* Read back the symlink */
++    HeapFree(GetProcessHeap(), 0, buffer);
++    buffer_len = sizeof(*buffer) + MAX_PATH*sizeof(WCHAR);
++    buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_len);
++    bret = DeviceIoControl(handle, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID)buffer, buffer_len, &dwret, 0);
++    string_len = buffer->SymbolicLinkReparseBuffer.SubstituteNameLength;
++    dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[buffer->SymbolicLinkReparseBuffer.SubstituteNameOffset/sizeof(WCHAR)];
++    ok(bret, "Failed to read symlink!\n");
++    ok((memcmp(dest, nameW.Buffer, string_len) == 0), "Symlink destination does not match ('%s' != '%s')!\n",
++                                                      wine_dbgstr_w(dest), wine_dbgstr_w(nameW.Buffer));
++    CloseHandle(handle);
++
+ cleanup:
+     /* Cleanup */
+     pRtlFreeUnicodeString(&nameW);
+-- 
+2.17.1
+

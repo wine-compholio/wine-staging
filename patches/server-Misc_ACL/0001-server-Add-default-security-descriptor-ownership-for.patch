@@ -1,4 +1,4 @@
-From 3bc077fcf2d73665b8838bf23e989ed248af823e Mon Sep 17 00:00:00 2001
+From 0672c3d257e7e70d48edafde6e8a286b8e7c2c85 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 25 Jun 2014 11:49:12 -0600
 Subject: [PATCH] server: Add default security descriptor ownership for
@@ -6,13 +6,13 @@ Subject: [PATCH] server: Add default security descriptor ownership for
 
 ---
  dlls/advapi32/tests/security.c | 35 ++++++++++++++++++++++++++++++++++
- server/process.c               | 26 ++++++++++++++++++++++++-
+ server/process.c               | 27 +++++++++++++++++++++++++-
  server/security.h              |  1 +
  server/token.c                 |  2 ++
- 4 files changed, 63 insertions(+), 1 deletion(-)
+ 4 files changed, 64 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index d9cae64d..3097a64f 100644
+index 62aa556846a..eb106daab1d 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -4682,11 +4682,15 @@ static void test_acls(void)
@@ -70,7 +70,7 @@ index d9cae64d..3097a64f 100644
  
  static void test_GetSidSubAuthority(void)
 diff --git a/server/process.c b/server/process.c
-index 77bd1e74..e3596942 100644
+index 2d6394a9183..0a77130b613 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -63,6 +63,7 @@ static void process_dump( struct object *obj, int verbose );
@@ -79,9 +79,9 @@ index 77bd1e74..e3596942 100644
  static unsigned int process_map_access( struct object *obj, unsigned int access );
 +static struct security_descriptor *process_get_sd( struct object *obj );
  static void process_poll_event( struct fd *fd, int event );
+ static struct list *process_get_kernel_obj_list( struct object *obj );
  static void process_destroy( struct object *obj );
- static void terminate_process( struct process *process, struct thread *skip, int exit_code );
-@@ -79,7 +80,7 @@ static const struct object_ops process_ops =
+@@ -80,7 +81,7 @@ static const struct object_ops process_ops =
      no_signal,                   /* signal */
      no_get_fd,                   /* get_fd */
      process_map_access,          /* map_access */
@@ -90,8 +90,15 @@ index 77bd1e74..e3596942 100644
      default_set_sd,              /* set_sd */
      no_lookup_name,              /* lookup_name */
      no_link_name,                /* link_name */
-@@ -658,6 +659,29 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
+@@ -663,12 +664,36 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
      return access & ~(GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE | GENERIC_ALL);
+ }
+ 
++
+ static struct list *process_get_kernel_obj_list( struct object *obj )
+ {
+     struct process *process = (struct process *)obj;
+     return &process->kernel_object;
  }
  
 +static struct security_descriptor *process_get_sd( struct object *obj )
@@ -121,7 +128,7 @@ index 77bd1e74..e3596942 100644
  {
      struct process *process = get_fd_user( fd );
 diff --git a/server/security.h b/server/security.h
-index 873bbc6a..606dbb2a 100644
+index bc4a8f64daa..6c337143c3d 100644
 --- a/server/security.h
 +++ b/server/security.h
 @@ -47,6 +47,7 @@ extern const PSID security_local_user_sid;
@@ -133,7 +140,7 @@ index 873bbc6a..606dbb2a 100644
  
  
 diff --git a/server/token.c b/server/token.c
-index e440d489..f236084b 100644
+index de76939831e..0e124e8fe0c 100644
 --- a/server/token.c
 +++ b/server/token.c
 @@ -83,6 +83,7 @@ static const SID_N(5) local_user_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORIT

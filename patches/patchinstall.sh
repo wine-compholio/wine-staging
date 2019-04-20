@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f9301c2b66450a1cdd986e9052fcaa76535ba8b7"
+	echo "9d7d68747b06a03893df99c4beea36b762508603"
 }
 
 # Show version information
@@ -207,7 +207,6 @@ patch_enable_all ()
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
-	enable_ntdll_NtSuspendProcess="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_RtlCaptureStackBackTrace="$1"
@@ -759,9 +758,6 @@ patch_enable ()
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
-			;;
-		ntdll-NtSuspendProcess)
-			enable_ntdll_NtSuspendProcess="$2"
 			;;
 		ntdll-Pipe_SpecialCharacters)
 			enable_ntdll_Pipe_SpecialCharacters="$2"
@@ -1895,9 +1891,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
 		abort "Patchset advapi32-Token_Integrity_Level disabled, but eventfd_synchronization depends on that."
 	fi
-	if test "$enable_ntdll_NtSuspendProcess" -gt 1; then
-		abort "Patchset ntdll-NtSuspendProcess disabled, but eventfd_synchronization depends on that."
-	fi
 	if test "$enable_ntdll_RtlCreateUserThread" -gt 1; then
 		abort "Patchset ntdll-RtlCreateUserThread disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1920,7 +1913,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but eventfd_synchronization depends on that."
 	fi
 	enable_advapi32_Token_Integrity_Level=1
-	enable_ntdll_NtSuspendProcess=1
 	enable_ntdll_RtlCreateUserThread=1
 	enable_ntdll_SystemRoot_Symlink=1
 	enable_ntdll_User_Shared_Data=1
@@ -1979,13 +1971,6 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
 	fi
 	enable_ntdll_Exception=1
-fi
-
-if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
-	if test "$enable_kernel32_K32GetPerformanceInfo" -gt 1; then
-		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but ntdll-NtSuspendProcess depends on that."
-	fi
-	enable_kernel32_K32GetPerformanceInfo=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -3418,36 +3403,6 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-K32GetPerformanceInfo
-# |
-# | Modified files:
-# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
-# |
-if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
-	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtSuspendProcess
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	kernel32-K32GetPerformanceInfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44656] Implement NtSuspendProcess and NtResumeProcess
-# |
-# | Modified files:
-# |   *	dlls/ntdll/process.c, dlls/ntdll/tests/Makefile.in, dlls/ntdll/tests/process.c, server/protocol.def, server/thread.c
-# |
-if test "$enable_ntdll_NtSuspendProcess" -eq 1; then
-	patch_apply ntdll-NtSuspendProcess/0001-ntdll-Implement-NtSuspendProcess-and-NtResumeProcess.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement NtSuspendProcess and NtResumeProcess.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3702,11 +3657,10 @@ fi
 # Patchset eventfd_synchronization
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level,
-# | 	kernel32-K32GetPerformanceInfo, ntdll-NtSuspendProcess, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
-# | 	SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, server-Realtime_Priority, ntdll-
-# | 	Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory,
-# | 	ws2_32-WSACleanup
+# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level, ntdll-RtlCreateUserThread,
+# | 	ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, server-
+# | 	Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread,
+# | 	server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4259,6 +4213,18 @@ if test "$enable_kernel32_Job_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-K32GetPerformanceInfo
+# |
+# | Modified files:
+# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
+# |
+if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
+	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset kernel32-NeedCurrentDirectoryForExePath
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4758,7 +4724,8 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c,
-# | 	dlls/ntdll/tests/file.c, include/Makefile.in, include/wine/port.h, libs/port/Makefile.in, server/fd.c
+# | 	dlls/ntdll/tests/file.c, include/Makefile.in, include/ntifs.h, include/wine/port.h, libs/port/Makefile.in,
+# | 	libs/port/renameat2.c, server/fd.c
 # |
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch

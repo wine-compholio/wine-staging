@@ -1,4 +1,4 @@
-From 29517778d9000de8de3217bcd6f1a2bb933123c6 Mon Sep 17 00:00:00 2001
+From 91c96ca57892577e20be532ae58b423fea1750b2 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Sat, 9 Jun 2018 14:44:54 -0500
 Subject: [PATCH] server, ntdll: Also wait on the queue fd when waiting for
@@ -23,7 +23,7 @@ fix the 'drives' tab.
  8 files changed, 60 insertions(+), 23 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index 5d8dbac2d..dcb7801d9 100644
+index 5d8dbac2df4..dcb7801d912 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -80,17 +80,9 @@ void __wine_esync_set_queue_fd( int fd )
@@ -140,7 +140,7 @@ index 5d8dbac2d..dcb7801d9 100644
                   * we were waiting for. So keep waiting. */
                  NtQuerySystemTime( &now );
 diff --git a/server/esync.c b/server/esync.c
-index 4f7ff6bda..1f8c0d516 100644
+index 4f7ff6bdaed..1f8c0d5167a 100644
 --- a/server/esync.c
 +++ b/server/esync.c
 @@ -150,11 +150,12 @@ int esync_create_fd( int initval, int flags )
@@ -176,7 +176,7 @@ index 4f7ff6bda..1f8c0d516 100644
      }
      else
 diff --git a/server/event.c b/server/event.c
-index d2f9e378c..79287e7ed 100644
+index d2f9e378cb1..79287e7edc0 100644
 --- a/server/event.c
 +++ b/server/event.c
 @@ -50,7 +50,7 @@ static void event_dump( struct object *obj, int verbose );
@@ -201,7 +201,7 @@ index d2f9e378c..79287e7ed 100644
  }
  
 diff --git a/server/object.h b/server/object.h
-index ee0f1f776..ca5a191f9 100644
+index ee0f1f776e3..ca5a191f975 100644
 --- a/server/object.h
 +++ b/server/object.h
 @@ -69,7 +69,7 @@ struct object_ops
@@ -214,19 +214,19 @@ index ee0f1f776..ca5a191f9 100644
      void (*satisfied)(struct object *,struct wait_queue_entry *);
      /* signal an object */
 diff --git a/server/process.c b/server/process.c
-index 1ce2fb05c..6e6dfc41c 100644
+index ed03210a5f5..7fdbfb98cae 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -67,7 +67,7 @@ static unsigned int process_map_access( struct object *obj, unsigned int access
- static struct security_descriptor *process_get_sd( struct object *obj );
+@@ -68,7 +68,7 @@ static struct security_descriptor *process_get_sd( struct object *obj );
  static void process_poll_event( struct fd *fd, int event );
+ static struct list *process_get_kernel_obj_list( struct object *obj );
  static void process_destroy( struct object *obj );
 -static int process_get_esync_fd( struct object *obj );
 +static int process_get_esync_fd( struct object *obj, enum esync_type *type );
  static void terminate_process( struct process *process, struct thread *skip, int exit_code );
  
  static const struct object_ops process_ops =
-@@ -654,9 +654,10 @@ static int process_signaled( struct object *obj, struct wait_queue_entry *entry
+@@ -656,9 +656,10 @@ static int process_signaled( struct object *obj, struct wait_queue_entry *entry
      return !process->running_threads;
  }
  
@@ -239,10 +239,10 @@ index 1ce2fb05c..6e6dfc41c 100644
  }
  
 diff --git a/server/protocol.def b/server/protocol.def
-index 17959c233..8d2df1f97 100644
+index 7a383590c55..7644a25b8ec 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4012,4 +4012,14 @@ struct handle_info
+@@ -4011,4 +4011,14 @@ struct handle_info
  @REQ(get_esync_fd)
      obj_handle_t handle;        /* handle to the object */
  @REPLY
@@ -258,7 +258,7 @@ index 17959c233..8d2df1f97 100644
 +    ESYNC_QUEUE,
 +};
 diff --git a/server/queue.c b/server/queue.c
-index 0ea95291c..91de4a3a8 100644
+index 0ea95291c34..91de4a3a85f 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -165,7 +165,7 @@ static void msg_queue_dump( struct object *obj, int verbose );
@@ -283,7 +283,7 @@ index 0ea95291c..91de4a3a8 100644
  }
  
 diff --git a/server/thread.c b/server/thread.c
-index 35bddeeaa..7c8ff1d5d 100644
+index 83781f0d712..ae2112486b2 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -133,7 +133,7 @@ static const struct object_ops thread_apc_ops =
@@ -308,5 +308,5 @@ index 35bddeeaa..7c8ff1d5d 100644
  }
  
 -- 
-2.21.0
+2.20.1
 

@@ -1,4 +1,4 @@
-From dd6544561d6432555f14a9004e107e6b87564949 Mon Sep 17 00:00:00 2001
+From 19cfff2a16953b65f9767fee571a4ce5d51b0536 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: [PATCH] ntdll: Implement process token elevation through manifests.
@@ -12,10 +12,10 @@ Subject: [PATCH] ntdll: Implement process token elevation through manifests.
  5 files changed, 68 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index d7dbe57..7588d5a 100644
+index c0708c6..479608f 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3321,6 +3321,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -3505,6 +3505,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
  
  
  /***********************************************************************
@@ -48,7 +48,7 @@ index d7dbe57..7588d5a 100644
   *           load_global_options
   */
  static void load_global_options(void)
-@@ -3373,6 +3399,7 @@ static void load_global_options(void)
+@@ -3557,6 +3583,7 @@ static void load_global_options(void)
  }
  
  
@@ -56,7 +56,7 @@ index d7dbe57..7588d5a 100644
  /***********************************************************************
   *           RtlImageDirectoryEntryToData   (NTDLL.@)
   */
-@@ -3408,7 +3435,6 @@ PVOID WINAPI RtlImageDirectoryEntryToData( HMODULE module, BOOL image, WORD dir,
+@@ -3592,7 +3619,6 @@ PVOID WINAPI RtlImageDirectoryEntryToData( HMODULE module, BOOL image, WORD dir,
      return RtlImageRvaToVa( nt, module, addr, NULL );
  }
  
@@ -64,16 +64,16 @@ index d7dbe57..7588d5a 100644
  /***********************************************************************
   *           RtlImageRvaToSection   (NTDLL.@)
   */
-@@ -3505,7 +3531,7 @@ void __wine_process_init(void)
- {
-     static const WCHAR kernel32W[] = {'k','e','r','n','e','l','3','2','.','d','l','l',0};
+@@ -3691,7 +3717,7 @@ void __wine_process_init(void)
+                                       's','y','s','t','e','m','3','2','\\',
+                                       'k','e','r','n','e','l','3','2','.','d','l','l',0};
      static const WCHAR globalflagW[] = {'G','l','o','b','a','l','F','l','a','g',0};
 -
 +    ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION runlevel;
      WINE_MODREF *wm;
      NTSTATUS status;
      ANSI_STRING func_name;
-@@ -3556,6 +3582,16 @@ void __wine_process_init(void)
+@@ -3742,6 +3768,16 @@ void __wine_process_init(void)
                                         &NtCurrentTeb()->Peb->NtGlobalFlag, sizeof(DWORD), NULL );
      heap_set_debug_flags( GetProcessHeap() );
  
@@ -91,10 +91,10 @@ index d7dbe57..7588d5a 100644
      RemoveEntryList( &wm->ldr.InLoadOrderModuleList );
      InsertHeadList( &NtCurrentTeb()->Peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderModuleList );
 diff --git a/server/process.c b/server/process.c
-index 0a25f44..3988b52 100644
+index d8fdfcc..2c9365a 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -1109,6 +1109,14 @@ struct process_snapshot *process_snap( int *count )
+@@ -1129,6 +1129,14 @@ struct process_snapshot *process_snap( int *count )
      return snapshot;
  }
  
@@ -110,10 +110,10 @@ index 0a25f44..3988b52 100644
  DECL_HANDLER(new_process)
  {
 diff --git a/server/process.h b/server/process.h
-index 4566a04..029b328 100644
+index d9d29f0..a494eab 100644
 --- a/server/process.h
 +++ b/server/process.h
-@@ -138,6 +138,7 @@ extern void break_process( struct process *process );
+@@ -139,6 +139,7 @@ extern void break_process( struct process *process );
  extern void detach_debugged_processes( struct thread *debugger );
  extern struct process_snapshot *process_snap( int *count );
  extern void enum_processes( int (*cb)(struct process*, void*), void *user);
@@ -122,10 +122,10 @@ index 4566a04..029b328 100644
  /* console functions */
  extern void inherit_console(struct thread *parent_thread, struct process *process, obj_handle_t hconin);
 diff --git a/server/protocol.def b/server/protocol.def
-index 071f740..cc44503 100644
+index 2b8d51a..650c279 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3674,6 +3674,13 @@ struct handle_info
+@@ -3721,6 +3721,13 @@ struct handle_info
  @END
  
  
@@ -140,10 +140,10 @@ index 071f740..cc44503 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/token.c b/server/token.c
-index e449e61..961fbe7 100644
+index fcab799..181219d 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -1797,3 +1797,17 @@ DECL_HANDLER(create_token)
+@@ -1806,3 +1806,17 @@ DECL_HANDLER(create_token)
          release_object( token );
      }
  }

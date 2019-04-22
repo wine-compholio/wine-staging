@@ -1,8 +1,8 @@
-From 3b870c439904eef2623f7d027213e66dc99822f0 Mon Sep 17 00:00:00 2001
+From 5a1db7cf17d8204d65fa6294c782a05bdf4cf14f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 30 Mar 2015 12:50:21 +0200
-Subject: server: Temporarily store the full security descriptor for file
- objects.
+Subject: [PATCH] server: Temporarily store the full security descriptor for
+ file objects.
 
 ---
  dlls/advapi32/tests/security.c | 16 +++-----
@@ -12,10 +12,10 @@ Subject: server: Temporarily store the full security descriptor for file
  4 files changed, 74 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 059f798..0bf7228 100644
+index 9ad5881..4c44f44 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3540,7 +3540,6 @@ static void test_CreateDirectoryA(void)
+@@ -3701,7 +3701,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
      bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
@@ -23,7 +23,7 @@ index 059f798..0bf7228 100644
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -3616,7 +3615,6 @@ static void test_CreateDirectoryA(void)
+@@ -3777,7 +3776,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
      bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
@@ -31,7 +31,7 @@ index 059f798..0bf7228 100644
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -3762,7 +3760,6 @@ static void test_CreateDirectoryA(void)
+@@ -3923,7 +3921,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
      bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
@@ -39,7 +39,7 @@ index 059f798..0bf7228 100644
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -4742,23 +4739,22 @@ static void test_GetSecurityInfo(void)
+@@ -4954,23 +4951,22 @@ static void test_GetSecurityInfo(void)
          bret = pGetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -70,12 +70,12 @@ index 059f798..0bf7228 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/change.c b/server/change.c
-index 66ac1d6..a6ed1c6 100644
+index f89c34c..f67b547 100644
 --- a/server/change.c
 +++ b/server/change.c
-@@ -1125,7 +1125,8 @@ static int dir_add_to_existing_notify( struct dir *dir )
+@@ -1076,7 +1076,8 @@ static int dir_add_to_existing_notify( struct dir *dir )
  
- #endif  /* USE_INOTIFY */
+ #endif  /* HAVE_SYS_INOTIFY_H */
  
 -struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
 +struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode,
@@ -83,7 +83,7 @@ index 66ac1d6..a6ed1c6 100644
  {
      struct dir *dir;
  
-@@ -1145,6 +1146,11 @@ struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
+@@ -1096,6 +1097,11 @@ struct object *create_dir_obj( struct fd *fd, unsigned int access, mode_t mode )
      dir->client_process = NULL;
      set_fd_user( fd, &dir_fd_ops, &dir->obj );
  
@@ -96,10 +96,10 @@ index 66ac1d6..a6ed1c6 100644
  
      return &dir->obj;
 diff --git a/server/file.c b/server/file.c
-index 81a7496..be98fa1 100644
+index 6c89387..aae2aa1 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -176,7 +176,8 @@ struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access, unsigne
+@@ -173,7 +173,8 @@ struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access, unsigne
      return file;
  }
  
@@ -109,7 +109,7 @@ index 81a7496..be98fa1 100644
  {
      struct file *file = alloc_object( &file_ops );
  
-@@ -187,6 +188,12 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
+@@ -184,6 +185,12 @@ static struct object *create_file_obj( struct fd *fd, unsigned int access, mode_
      file->fd      = fd;
      grab_object( fd );
      set_fd_user( fd, &file_fd_ops, &file->obj );
@@ -122,7 +122,7 @@ index 81a7496..be98fa1 100644
      return &file->obj;
  }
  
-@@ -253,11 +260,11 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
+@@ -250,11 +257,11 @@ static struct object *create_file( struct fd *root, const char *nameptr, data_si
      if (!fd) goto done;
  
      if (S_ISDIR(mode))
@@ -136,7 +136,7 @@ index 81a7496..be98fa1 100644
  
      release_object( fd );
  
-@@ -573,46 +580,66 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
+@@ -564,46 +571,66 @@ mode_t sd_to_mode( const struct security_descriptor *sd, const SID *owner )
  int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
                   const struct security_descriptor *sd, unsigned int set_info )
  {
@@ -228,7 +228,7 @@ index 81a7496..be98fa1 100644
  }
  
  static struct object *file_lookup_name( struct object *obj, struct unicode_str *name, unsigned int attr )
-@@ -748,7 +775,10 @@ DECL_HANDLER(create_file)
+@@ -740,7 +767,10 @@ DECL_HANDLER(create_file)
      if ((file = create_file( root_fd, name, name_len, req->access, req->sharing,
                               req->create, req->options, req->attrs, sd )))
      {
@@ -241,10 +241,10 @@ index 81a7496..be98fa1 100644
      }
      if (root_fd) release_object( root_fd );
 diff --git a/server/file.h b/server/file.h
-index e11d19f..32bf595 100644
+index d1a80c1..2bea255 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -154,7 +154,8 @@ extern struct device *create_unix_device( struct object *root, const struct unic
+@@ -183,7 +183,8 @@ extern int          shmglobal_fd;
  
  extern void do_change_notify( int unix_fd );
  extern void sigio_callback(void);
@@ -255,5 +255,5 @@ index e11d19f..32bf595 100644
  
  /* completion */
 -- 
-2.8.0
+1.9.1
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9d7d68747b06a03893df99c4beea36b762508603"
+	echo "9d75caf4e1deea0ec8d5ad3f829e7218bc1e3c16"
 }
 
 # Show version information
@@ -172,7 +172,6 @@ patch_enable_all ()
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
-	enable_mciavi32_fullscreen_support="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -217,7 +216,6 @@ patch_enable_all ()
 	enable_ntdll_Stack_Guard_Page="$1"
 	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
-	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
@@ -285,7 +283,6 @@ patch_enable_all ()
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
-	enable_taskmgr_Memory_Usage="$1"
 	enable_uianimation_stubs="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Paint_Event="$1"
@@ -365,7 +362,6 @@ patch_enable_all ()
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
-	enable_wintrust_WinVerifyTrust="$1"
 	enable_wow64cpu_Wow64Transition="$1"
 	enable_wpcap_Dynamic_Linking="$1"
 	enable_ws2_32_APC_Performance="$1"
@@ -654,9 +650,6 @@ patch_enable ()
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
 			;;
-		mciavi32-fullscreen_support)
-			enable_mciavi32_fullscreen_support="$2"
-			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
 			;;
@@ -788,9 +781,6 @@ patch_enable ()
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
-			;;
-		ntdll-SystemExtendedProcessInformation)
-			enable_ntdll_SystemExtendedProcessInformation="$2"
 			;;
 		ntdll-SystemInterruptInformation)
 			enable_ntdll_SystemInterruptInformation="$2"
@@ -992,9 +982,6 @@ patch_enable ()
 			;;
 		stdole32.tlb-SLTG_Typelib)
 			enable_stdole32_tlb_SLTG_Typelib="$2"
-			;;
-		taskmgr-Memory_Usage)
-			enable_taskmgr_Memory_Usage="$2"
 			;;
 		uianimation-stubs)
 			enable_uianimation_stubs="$2"
@@ -1232,9 +1219,6 @@ patch_enable ()
 			;;
 		wintrust-WTHelperGetProvCertFromChain)
 			enable_wintrust_WTHelperGetProvCertFromChain="$2"
-			;;
-		wintrust-WinVerifyTrust)
-			enable_wintrust_WinVerifyTrust="$2"
 			;;
 		wow64cpu-Wow64Transition)
 			enable_wow64cpu_Wow64Transition="$2"
@@ -1655,13 +1639,6 @@ if test "$enable_xaudio2_7_CreateFX_FXEcho" -eq 1; then
 		abort "Patchset xaudio2-revert disabled, but xaudio2_7-CreateFX-FXEcho depends on that."
 	fi
 	enable_xaudio2_revert=1
-fi
-
-if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
-	if test "$enable_wintrust_WinVerifyTrust" -gt 1; then
-		abort "Patchset wintrust-WinVerifyTrust disabled, but wintrust-WTHelperGetProvCertFromChain depends on that."
-	fi
-	enable_wintrust_WinVerifyTrust=1
 fi
 
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
@@ -4359,21 +4336,6 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset mciavi32-fullscreen_support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15934] mciavi32: Add Support for MCI_MCIAVI_PLAY_FULLSCREEN
-# |
-# | Modified files:
-# |   *	dlls/mciavi32/mciavi.c
-# |
-if test "$enable_mciavi32_fullscreen_support" -eq 1; then
-	patch_apply mciavi32-fullscreen_support/0001-mciavi32-Add-Support-for-MCI_MCIAVI_PLAY_FULLSCREEN.patch
-	(
-		printf '%s\n' '+    { "Bruno Jesus", "mciavi32: Add Support for MCI_MCIAVI_PLAY_FULLSCREEN.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mmsystem.dll16-MIDIHDR_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5097,22 +5059,6 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-SystemExtendedProcessInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46870] League of Legends 8.12+ fails to start a game in Vista+ mode (anticheat engine,
-# | 	SystemExtendedProcessInformation)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c
-# |
-if test "$enable_ntdll_SystemExtendedProcessInformation" -eq 1; then
-	patch_apply ntdll-SystemExtendedProcessInformation/0001-ntdll-Add-stub-for-NtQuerySystemInformation-SystemEx.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add stub for NtQuerySystemInformation(SystemExtendedProcessInformation).", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6083,20 +6029,6 @@ if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	patch_apply stdole32.tlb-SLTG_Typelib/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset taskmgr-Memory_Usage
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c
-# |
-if test "$enable_taskmgr_Memory_Usage" -eq 1; then
-	patch_apply taskmgr-Memory_Usage/0002-ntdll-Report-system-information-SystemPerformanceInf.patch
-	patch_apply taskmgr-Memory_Usage/0005-ntdll-Implement-basic-IO-stats-for-SystemPerformance.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Report system information SystemPerformanceInformation info class.", 2 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement basic IO stats for SystemPerformanceInformation in NtQuerySystemInformation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7332,25 +7264,7 @@ if test "$enable_wintab32_improvements" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wintrust-WinVerifyTrust
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42518] Implement image hash verification in WinVerifyTrust
-# |
-# | Modified files:
-# |   *	dlls/wintrust/softpub.c
-# |
-if test "$enable_wintrust_WinVerifyTrust" -eq 1; then
-	patch_apply wintrust-WinVerifyTrust/0004-wintrust-use-enhanced-crypto-provider-in-VerifyImage.patch
-	(
-		printf '%s\n' '+    { "Marko Friedemann", "wintrust: Use enhanced crypto provider in VerifyImageHash.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wintrust-WTHelperGetProvCertFromChain
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wintrust-WinVerifyTrust
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44061] Check Parameter in WTHelperGetProvCertFromChain

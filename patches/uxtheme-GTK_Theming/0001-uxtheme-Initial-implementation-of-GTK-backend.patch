@@ -1,4 +1,4 @@
-From 5e328eb8ce74a65f1cd7e7332c12c7548119e848 Mon Sep 17 00:00:00 2001
+From 02bb8239600800a77a9e27661a6c45baba7f4fa1 Mon Sep 17 00:00:00 2001
 From: Ivan Akulinchev <ivan.akulinchev@gmail.com>
 Date: Sat, 9 Feb 2019 15:18:54 -0600
 Subject: [PATCH] uxtheme: Initial implementation of GTK backend.
@@ -23,25 +23,25 @@ Additional changes by Sebastian Lackner <sebastian@fds-team.de>:
  configure.ac                |  20 +
  dlls/uxtheme/Makefile.in    |  15 +
  dlls/uxtheme/draw.c         |  30 ++
- dlls/uxtheme/gtk-button.c   | 516 +++++++++++++++++++
- dlls/uxtheme/gtk-combobox.c | 242 +++++++++
- dlls/uxtheme/gtk-edit.c     | 211 ++++++++
- dlls/uxtheme/gtk-header.c   | 128 +++++
- dlls/uxtheme/gtk-listbox.c  | 119 +++++
+ dlls/uxtheme/gtk-button.c   | 516 ++++++++++++++++++++++++
+ dlls/uxtheme/gtk-combobox.c | 242 +++++++++++
+ dlls/uxtheme/gtk-edit.c     | 211 ++++++++++
+ dlls/uxtheme/gtk-header.c   | 128 ++++++
+ dlls/uxtheme/gtk-listbox.c  | 119 ++++++
  dlls/uxtheme/gtk-listview.c |  38 ++
- dlls/uxtheme/gtk-menu.c     | 189 +++++++
- dlls/uxtheme/gtk-rebar.c    | 102 ++++
- dlls/uxtheme/gtk-status.c   | 157 ++++++
- dlls/uxtheme/gtk-tab.c      | 207 ++++++++
- dlls/uxtheme/gtk-toolbar.c  | 171 +++++++
- dlls/uxtheme/gtk-trackbar.c | 188 +++++++
- dlls/uxtheme/gtk-window.c   | 172 +++++++
- dlls/uxtheme/gtk.c          | 962 ++++++++++++++++++++++++++++++++++++
- dlls/uxtheme/metric.c       |  24 +
+ dlls/uxtheme/gtk-menu.c     | 189 +++++++++
+ dlls/uxtheme/gtk-rebar.c    | 102 +++++
+ dlls/uxtheme/gtk-status.c   | 157 ++++++++
+ dlls/uxtheme/gtk-tab.c      | 207 ++++++++++
+ dlls/uxtheme/gtk-toolbar.c  | 171 ++++++++
+ dlls/uxtheme/gtk-trackbar.c | 188 +++++++++
+ dlls/uxtheme/gtk-window.c   | 172 ++++++++
+ dlls/uxtheme/gtk.c          | 962 ++++++++++++++++++++++++++++++++++++++++++++
+ dlls/uxtheme/metric.c       |  24 ++
  dlls/uxtheme/property.c     |  40 ++
  dlls/uxtheme/system.c       |  34 +-
- dlls/uxtheme/uxthemedll.h   |  72 +++
- dlls/uxtheme/uxthemegtk.h   | 129 +++++
+ dlls/uxtheme/uxthemedll.h   |  72 ++++
+ dlls/uxtheme/uxthemegtk.h   | 129 ++++++
  23 files changed, 3785 insertions(+), 1 deletion(-)
  create mode 100644 dlls/uxtheme/gtk-button.c
  create mode 100644 dlls/uxtheme/gtk-combobox.c
@@ -60,10 +60,10 @@ Additional changes by Sebastian Lackner <sebastian@fds-team.de>:
  create mode 100644 dlls/uxtheme/uxthemegtk.h
 
 diff --git a/aclocal.m4 b/aclocal.m4
-index 25ac678f..04bb6ed7 100644
+index ed0c3a8..4151fe7 100644
 --- a/aclocal.m4
 +++ b/aclocal.m4
-@@ -125,6 +125,26 @@ test -z "$ac_libs" || ac_libs=`echo " $ac_libs" | sed 's/ -L\([[^/]]\)/ -L\$(top
+@@ -126,6 +126,26 @@ test -z "$ac_libs" || ac_libs=`echo " $ac_libs" | sed 's/ -L\([[^/]]\)/ -L\$(top
  AS_VAR_POPDEF([ac_libs])dnl
  AS_VAR_POPDEF([ac_cflags])])dnl
  
@@ -91,7 +91,7 @@ index 25ac678f..04bb6ed7 100644
  dnl
  dnl Usage: WINE_TRY_ASM_LINK(asm-code,includes,function,[action-if-found,[action-if-not-found]])
 diff --git a/configure.ac b/configure.ac
-index 1b425d22..2f2d2025 100644
+index c2f97e0..7034c42 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -56,6 +56,7 @@ AC_ARG_WITH(gsm,       AS_HELP_STRING([--without-gsm],[do not use libgsm (GSM 06
@@ -100,9 +100,9 @@ index 1b425d22..2f2d2025 100644
  AC_ARG_WITH(gstreamer, AS_HELP_STRING([--without-gstreamer],[do not use GStreamer (codecs support)]))
 +AC_ARG_WITH(gtk3,      AS_HELP_STRING([--without-gtk3],[do not use gtk3 (gtk3 theming support)]))
  AC_ARG_WITH(hal,       AS_HELP_STRING([--without-hal],[do not use HAL (dynamic device support)]))
+ AC_ARG_WITH(inotify,   AS_HELP_STRING([--without-inotify],[do not use inotify (filesystem change notifications)]))
  AC_ARG_WITH(jpeg,      AS_HELP_STRING([--without-jpeg],[do not use JPEG]))
- AC_ARG_WITH(krb5,      AS_HELP_STRING([--without-krb5],[do not use krb5 (Kerberos)]))
-@@ -1471,6 +1472,25 @@ fi
+@@ -1502,6 +1503,25 @@ fi
  WINE_NOTICE_WITH(cms,[test "$ac_cv_lib_lcms2_cmsOpenProfileFromFile" != "yes"],
                   [liblcms2 ${notice_platform}development files not found, Color Management won't be supported.])
  
@@ -129,7 +129,7 @@ index 1b425d22..2f2d2025 100644
  if test "x$with_freetype" != "xno"
  then
 diff --git a/dlls/uxtheme/Makefile.in b/dlls/uxtheme/Makefile.in
-index c3fff30b..e09f891e 100644
+index c3fff30..e09f891 100644
 --- a/dlls/uxtheme/Makefile.in
 +++ b/dlls/uxtheme/Makefile.in
 @@ -2,10 +2,25 @@ MODULE    = uxtheme.dll
@@ -159,7 +159,7 @@ index c3fff30b..e09f891e 100644
  	metric.c \
  	msstyles.c \
 diff --git a/dlls/uxtheme/draw.c b/dlls/uxtheme/draw.c
-index 69c53b9e..dbcbaab7 100644
+index 69c53b9..dbcbaab 100644
 --- a/dlls/uxtheme/draw.c
 +++ b/dlls/uxtheme/draw.c
 @@ -55,6 +55,10 @@ HRESULT WINAPI EnableThemeDialogTexture(HWND hwnd, DWORD dwFlags)
@@ -257,7 +257,7 @@ index 69c53b9e..dbcbaab7 100644
      if (bgtype != BT_IMAGEFILE) return FALSE;
 diff --git a/dlls/uxtheme/gtk-button.c b/dlls/uxtheme/gtk-button.c
 new file mode 100644
-index 00000000..f8b3da0d
+index 0000000..f8b3da0
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-button.c
 @@ -0,0 +1,516 @@
@@ -779,7 +779,7 @@ index 00000000..f8b3da0d
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-combobox.c b/dlls/uxtheme/gtk-combobox.c
 new file mode 100644
-index 00000000..60bcb0e6
+index 0000000..60bcb0e
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-combobox.c
 @@ -0,0 +1,242 @@
@@ -1027,7 +1027,7 @@ index 00000000..60bcb0e6
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-edit.c b/dlls/uxtheme/gtk-edit.c
 new file mode 100644
-index 00000000..dee00d7b
+index 0000000..dee00d7
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-edit.c
 @@ -0,0 +1,211 @@
@@ -1244,7 +1244,7 @@ index 00000000..dee00d7b
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-header.c b/dlls/uxtheme/gtk-header.c
 new file mode 100644
-index 00000000..8a5b235e
+index 0000000..8a5b235
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-header.c
 @@ -0,0 +1,128 @@
@@ -1378,7 +1378,7 @@ index 00000000..8a5b235e
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-listbox.c b/dlls/uxtheme/gtk-listbox.c
 new file mode 100644
-index 00000000..6e275925
+index 0000000..6e27592
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-listbox.c
 @@ -0,0 +1,119 @@
@@ -1503,7 +1503,7 @@ index 00000000..6e275925
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-listview.c b/dlls/uxtheme/gtk-listview.c
 new file mode 100644
-index 00000000..9b98983f
+index 0000000..9b98983
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-listview.c
 @@ -0,0 +1,38 @@
@@ -1547,7 +1547,7 @@ index 00000000..9b98983f
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-menu.c b/dlls/uxtheme/gtk-menu.c
 new file mode 100644
-index 00000000..5d00afdf
+index 0000000..5d00afd
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-menu.c
 @@ -0,0 +1,189 @@
@@ -1742,7 +1742,7 @@ index 00000000..5d00afdf
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-rebar.c b/dlls/uxtheme/gtk-rebar.c
 new file mode 100644
-index 00000000..5d5b5a48
+index 0000000..5d5b5a4
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-rebar.c
 @@ -0,0 +1,102 @@
@@ -1850,7 +1850,7 @@ index 00000000..5d5b5a48
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-status.c b/dlls/uxtheme/gtk-status.c
 new file mode 100644
-index 00000000..38f8646e
+index 0000000..38f8646
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-status.c
 @@ -0,0 +1,157 @@
@@ -2013,7 +2013,7 @@ index 00000000..38f8646e
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-tab.c b/dlls/uxtheme/gtk-tab.c
 new file mode 100644
-index 00000000..d6417f64
+index 0000000..d6417f6
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-tab.c
 @@ -0,0 +1,207 @@
@@ -2226,7 +2226,7 @@ index 00000000..d6417f64
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-toolbar.c b/dlls/uxtheme/gtk-toolbar.c
 new file mode 100644
-index 00000000..b23cf0b4
+index 0000000..b23cf0b
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-toolbar.c
 @@ -0,0 +1,171 @@
@@ -2403,7 +2403,7 @@ index 00000000..b23cf0b4
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-trackbar.c b/dlls/uxtheme/gtk-trackbar.c
 new file mode 100644
-index 00000000..a58540e3
+index 0000000..a58540e
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-trackbar.c
 @@ -0,0 +1,188 @@
@@ -2597,7 +2597,7 @@ index 00000000..a58540e3
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-window.c b/dlls/uxtheme/gtk-window.c
 new file mode 100644
-index 00000000..657cfb03
+index 0000000..657cfb0
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-window.c
 @@ -0,0 +1,172 @@
@@ -2775,7 +2775,7 @@ index 00000000..657cfb03
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk.c b/dlls/uxtheme/gtk.c
 new file mode 100644
-index 00000000..bbee8e87
+index 0000000..9459b1f
 --- /dev/null
 +++ b/dlls/uxtheme/gtk.c
 @@ -0,0 +1,962 @@
@@ -3742,7 +3742,7 @@ index 00000000..bbee8e87
 +
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/metric.c b/dlls/uxtheme/metric.c
-index 073422f1..244187d1 100644
+index 073422f..244187d 100644
 --- a/dlls/uxtheme/metric.c
 +++ b/dlls/uxtheme/metric.c
 @@ -31,6 +31,7 @@
@@ -3819,7 +3819,7 @@ index 073422f1..244187d1 100644
          WARN("Unknown StringID: %d\n", iStringID);
          return STG_E_INVALIDPARAMETER;
 diff --git a/dlls/uxtheme/property.c b/dlls/uxtheme/property.c
-index 0e077aee..ada48287 100644
+index 0e077ae..ada4828 100644
 --- a/dlls/uxtheme/property.c
 +++ b/dlls/uxtheme/property.c
 @@ -31,6 +31,7 @@
@@ -3961,7 +3961,7 @@ index 0e077aee..ada48287 100644
          *pOrigin = PO_NOTFOUND;
          return S_OK;
 diff --git a/dlls/uxtheme/system.c b/dlls/uxtheme/system.c
-index c898ad32..2f7d40fc 100644
+index c898ad3..2f7d40f 100644
 --- a/dlls/uxtheme/system.c
 +++ b/dlls/uxtheme/system.c
 @@ -558,6 +558,10 @@ BOOL WINAPI IsAppThemed(void)
@@ -4069,7 +4069,7 @@ index c898ad32..2f7d40fc 100644
          return TRUE;
      return FALSE;
 diff --git a/dlls/uxtheme/uxthemedll.h b/dlls/uxtheme/uxthemedll.h
-index fee152c9..cdc5958d 100644
+index fee152c..cdc5958 100644
 --- a/dlls/uxtheme/uxthemedll.h
 +++ b/dlls/uxtheme/uxthemedll.h
 @@ -21,6 +21,14 @@
@@ -4160,7 +4160,7 @@ index fee152c9..cdc5958d 100644
  /* "Cheap" binary alpha blending - but possibly faster */
 diff --git a/dlls/uxtheme/uxthemegtk.h b/dlls/uxtheme/uxthemegtk.h
 new file mode 100644
-index 00000000..87cd0456
+index 0000000..87cd045
 --- /dev/null
 +++ b/dlls/uxtheme/uxthemegtk.h
 @@ -0,0 +1,129 @@
@@ -4294,5 +4294,5 @@ index 00000000..87cd0456
 +
 +#endif /* UXTHEMEGTK_H */
 -- 
-2.20.1
+1.9.1
 

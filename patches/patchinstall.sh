@@ -52,15 +52,15 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9d75caf4e1deea0ec8d5ad3f829e7218bc1e3c16"
+	echo "75aa4ab16b03a11464ab0d3e4c4cfbff0180c269"
 }
 
 # Show version information
 version()
 {
 	echo "Wine Staging 4.6"
-	echo "Copyright (C) 2014-2018 the Wine Staging project authors."
-	echo "Copyright (C) 2018 Alistair Leslie-Hughes"
+	echo "Copyright (C) 2014-2019 the Wine Staging project authors."
+	echo "Copyright (C) 2018-2019 Alistair Leslie-Hughes"
 	echo ""
 	echo "Patchset to be applied on upstream Wine:"
 	echo "  commit $(upstream_commit)"

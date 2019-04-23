@@ -356,6 +356,7 @@ patch_enable_all ()
 	enable_winex11_key_translation="$1"
 	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_winex11_drv_mouse_coorrds="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
@@ -1202,6 +1203,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		winex11.drv-mouse-coorrds)
+			enable_winex11_drv_mouse_coorrds="$2"
 			;;
 		winhttp-System_Proxy_Autoconfig)
 			enable_winhttp_System_Proxy_Autoconfig="$2"
@@ -7181,6 +7185,21 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11.drv-mouse-coorrds
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46309] winex11.drv: Use root-relative coordinates for events, if possible.
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c
+# |
+if test "$enable_winex11_drv_mouse_coorrds" -eq 1; then
+	patch_apply winex11.drv-mouse-coorrds/0001-winex11.drv-mouse-Use-root-relative-coordinates-for-ev.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/mouse: Use root-relative coordinates for events, if possible.", 1 },';
 	) >> "$patchlist"
 fi
 

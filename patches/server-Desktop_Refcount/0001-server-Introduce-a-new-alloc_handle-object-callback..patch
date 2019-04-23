@@ -1,299 +1,312 @@
-From a38788ceb03df268149adad0c74b300220003eca Mon Sep 17 00:00:00 2001
+From e5632cdae888ce1ed2274dc44d08eee6d2e9603e Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 4 Dec 2015 10:36:47 +0100
 Subject: [PATCH] server: Introduce a new alloc_handle object callback. (v2)
 
 Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
 ---
- server/async.c      |  2 ++
- server/atom.c       |  1 +
- server/change.c     |  1 +
- server/clipboard.c  |  1 +
- server/completion.c |  1 +
- server/console.c    |  3 +++
- server/debugger.c   |  2 ++
- server/device.c     |  4 ++++
- server/directory.c  |  2 ++
- server/event.c      |  2 ++
- server/fd.c         |  4 ++++
- server/file.c       |  1 +
- server/handle.c     | 13 +++++++++++--
- server/hook.c       |  1 +
- server/mailslot.c   |  3 +++
- server/mapping.c    |  3 +++
- server/mutex.c      |  1 +
- server/named_pipe.c |  7 ++++++-
- server/object.c     |  4 ++++
- server/object.h     |  5 ++++-
- server/process.c    |  3 +++
- server/queue.c      |  2 ++
- server/registry.c   |  1 +
- server/request.c    |  1 +
- server/semaphore.c  |  1 +
- server/serial.c     |  1 +
- server/signal.c     |  1 +
- server/snapshot.c   |  1 +
- server/sock.c       |  2 ++
- server/symlink.c    |  1 +
- server/thread.c     |  2 ++
- server/timer.c      |  1 +
- server/token.c      |  1 +
- server/winstation.c |  2 ++
- 34 files changed, 77 insertions(+), 4 deletions(-)
+ include/wine/server_protocol.h |  2 +-
+ server/async.c                 |  2 ++
+ server/atom.c                  |  1 +
+ server/change.c                |  1 +
+ server/clipboard.c             |  1 +
+ server/completion.c            |  1 +
+ server/console.c               |  3 +++
+ server/debugger.c              |  2 ++
+ server/device.c                |  4 ++++
+ server/directory.c             |  2 ++
+ server/event.c                 |  2 ++
+ server/fd.c                    |  4 ++++
+ server/file.c                  |  1 +
+ server/handle.c                | 13 +++++++++++--
+ server/hook.c                  |  1 +
+ server/mailslot.c              |  3 +++
+ server/mapping.c               |  3 +++
+ server/mutex.c                 |  1 +
+ server/named_pipe.c            |  7 ++++++-
+ server/object.c                |  4 ++++
+ server/object.h                |  5 ++++-
+ server/process.c               |  3 +++
+ server/queue.c                 |  2 ++
+ server/registry.c              |  1 +
+ server/request.c               |  1 +
+ server/semaphore.c             |  1 +
+ server/serial.c                |  1 +
+ server/signal.c                |  1 +
+ server/snapshot.c              |  1 +
+ server/sock.c                  |  2 ++
+ server/symlink.c               |  1 +
+ server/thread.c                |  2 ++
+ server/timer.c                 |  1 +
+ server/token.c                 |  1 +
+ server/winstation.c            |  2 ++
+ 35 files changed, 78 insertions(+), 5 deletions(-)
 
+diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
+index 9e26aa4..973f6df 100644
+--- a/include/wine/server_protocol.h
++++ b/include/wine/server_protocol.h
+@@ -6677,6 +6677,6 @@ union generic_reply
+     struct resume_process_reply resume_process_reply;
+ };
+ 
+-#define SERVER_PROTOCOL_VERSION 579
++#define SERVER_PROTOCOL_VERSION 580
+ 
+ #endif /* __WINE_WINE_SERVER_PROTOCOL_H */
 diff --git a/server/async.c b/server/async.c
-index cadeda3..aab4085 100644
+index 75989e5..b5aff66 100644
 --- a/server/async.c
 +++ b/server/async.c
-@@ -79,6 +79,7 @@ static const struct object_ops async_ops =
-     no_link_name,              /* link_name */
+@@ -81,6 +81,7 @@ static const struct object_ops async_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      async_destroy              /* destroy */
  };
-@@ -467,6 +468,7 @@ static const struct object_ops iosb_ops =
-     no_link_name,             /* link_name */
+@@ -471,6 +472,7 @@ static const struct object_ops iosb_ops =
      NULL,                     /* unlink_name */
      no_open_file,             /* open_file */
+     no_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,          /* alloc_handle */
      no_close_handle,          /* close_handle */
      iosb_destroy              /* destroy */
  };
 diff --git a/server/atom.c b/server/atom.c
-index 3ff7540..7bebf13 100644
+index 11b7ac5..e27b6f4 100644
 --- a/server/atom.c
 +++ b/server/atom.c
-@@ -90,6 +90,7 @@ static const struct object_ops atom_table_ops =
-     no_link_name,                 /* link_name */
+@@ -92,6 +92,7 @@ static const struct object_ops atom_table_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      atom_table_destroy            /* destroy */
  };
 diff --git a/server/change.c b/server/change.c
-index d00a885..a4ed5df 100644
+index 2be6a83..dee48ce 100644
 --- a/server/change.c
 +++ b/server/change.c
-@@ -172,6 +172,7 @@ static const struct object_ops dir_ops =
-     no_link_name,             /* link_name */
+@@ -127,6 +127,7 @@ static const struct object_ops dir_ops =
      NULL,                     /* unlink_name */
      no_open_file,             /* open_file */
+     no_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,          /* alloc_handle */
      dir_close_handle,         /* close_handle */
      dir_destroy               /* destroy */
  };
 diff --git a/server/clipboard.c b/server/clipboard.c
-index 162725b..0898150 100644
+index 673aabb..5888754 100644
 --- a/server/clipboard.c
 +++ b/server/clipboard.c
-@@ -87,6 +87,7 @@ static const struct object_ops clipboard_ops =
-     no_link_name,                 /* link_name */
+@@ -89,6 +89,7 @@ static const struct object_ops clipboard_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      clipboard_destroy             /* destroy */
  };
 diff --git a/server/completion.c b/server/completion.c
-index 8b8983a..72dbc5b 100644
+index 1a074c8..c0d2ccf 100644
 --- a/server/completion.c
 +++ b/server/completion.c
-@@ -75,6 +75,7 @@ static const struct object_ops completion_ops =
-     directory_link_name,       /* link_name */
+@@ -77,6 +77,7 @@ static const struct object_ops completion_ops =
      default_unlink_name,       /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      completion_destroy         /* destroy */
  };
 diff --git a/server/console.c b/server/console.c
-index e1ae086..d9c60f9 100644
+index c322708..f437e74 100644
 --- a/server/console.c
 +++ b/server/console.c
-@@ -87,6 +87,7 @@ static const struct object_ops console_input_ops =
-     no_link_name,                     /* link_name */
+@@ -90,6 +90,7 @@ static const struct object_ops console_input_ops =
      NULL,                             /* unlink_name */
      no_open_file,                     /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      no_close_handle,                  /* close_handle */
      console_input_destroy             /* destroy */
  };
-@@ -121,6 +122,7 @@ static const struct object_ops console_input_events_ops =
-     no_link_name,                     /* link_name */
+@@ -128,6 +129,7 @@ static const struct object_ops console_input_events_ops =
      NULL,                             /* unlink_name */
      no_open_file,                     /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      no_close_handle,                  /* close_handle */
      console_input_events_destroy      /* destroy */
  };
-@@ -177,6 +179,7 @@ static const struct object_ops screen_buffer_ops =
-     no_link_name,                     /* link_name */
+@@ -186,6 +188,7 @@ static const struct object_ops screen_buffer_ops =
      NULL,                             /* unlink_name */
      no_open_file,                     /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      no_close_handle,                  /* close_handle */
      screen_buffer_destroy             /* destroy */
  };
 diff --git a/server/debugger.c b/server/debugger.c
-index 79b7e52..d658fc0 100644
+index 9a29ef4..1c68ee0 100644
 --- a/server/debugger.c
 +++ b/server/debugger.c
-@@ -84,6 +84,7 @@ static const struct object_ops debug_event_ops =
-     no_link_name,                  /* link_name */
+@@ -86,6 +86,7 @@ static const struct object_ops debug_event_ops =
      NULL,                          /* unlink_name */
      no_open_file,                  /* open_file */
+     no_kernel_obj_list,            /* get_kernel_obj_list */
 +    no_alloc_handle,               /* alloc_handle */
      no_close_handle,               /* close_handle */
      debug_event_destroy            /* destroy */
  };
-@@ -110,6 +111,7 @@ static const struct object_ops debug_ctx_ops =
-     no_link_name,                  /* link_name */
+@@ -114,6 +115,7 @@ static const struct object_ops debug_ctx_ops =
      NULL,                          /* unlink_name */
      no_open_file,                  /* open_file */
+     no_kernel_obj_list,            /* get_kernel_obj_list */
 +    no_alloc_handle,               /* alloc_handle */
      no_close_handle,               /* close_handle */
      debug_ctx_destroy              /* destroy */
  };
 diff --git a/server/device.c b/server/device.c
-index ac7d88f..55e6c7d 100644
+index 8340cb1..6573bd4 100644
 --- a/server/device.c
 +++ b/server/device.c
-@@ -75,6 +75,7 @@ static const struct object_ops irp_call_ops =
-     no_link_name,                     /* link_name */
+@@ -79,6 +79,7 @@ static const struct object_ops irp_call_ops =
      NULL,                             /* unlink_name */
      no_open_file,                     /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      no_close_handle,                  /* close_handle */
      irp_call_destroy                  /* destroy */
  };
-@@ -111,6 +112,7 @@ static const struct object_ops device_manager_ops =
-     no_link_name,                     /* link_name */
+@@ -120,6 +121,7 @@ static const struct object_ops device_manager_ops =
      NULL,                             /* unlink_name */
      no_open_file,                     /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      no_close_handle,                  /* close_handle */
      device_manager_destroy            /* destroy */
  };
-@@ -152,6 +154,7 @@ static const struct object_ops device_ops =
-     directory_link_name,              /* link_name */
+@@ -164,6 +166,7 @@ static const struct object_ops device_ops =
      default_unlink_name,              /* unlink_name */
      device_open_file,                 /* open_file */
+     device_get_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      no_close_handle,                  /* close_handle */
      device_destroy                    /* destroy */
  };
-@@ -197,6 +200,7 @@ static const struct object_ops device_file_ops =
-     no_link_name,                     /* link_name */
+@@ -211,6 +214,7 @@ static const struct object_ops device_file_ops =
      NULL,                             /* unlink_name */
      no_open_file,                     /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 +    no_alloc_handle,                  /* alloc_handle */
      device_file_close_handle,         /* close_handle */
      device_file_destroy               /* destroy */
  };
 diff --git a/server/directory.c b/server/directory.c
-index 6aa3a55..699eb70f 100644
+index 55cbad3..1ab0c73 100644
 --- a/server/directory.c
 +++ b/server/directory.c
-@@ -67,6 +67,7 @@ static const struct object_ops object_type_ops =
-     directory_link_name,          /* link_name */
+@@ -69,6 +69,7 @@ static const struct object_ops object_type_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      no_destroy                    /* destroy */
  };
-@@ -102,6 +103,7 @@ static const struct object_ops directory_ops =
-     directory_link_name,          /* link_name */
+@@ -106,6 +107,7 @@ static const struct object_ops directory_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      directory_destroy             /* destroy */
  };
 diff --git a/server/event.c b/server/event.c
-index cfc0f6a..608fafb 100644
+index 79287e7..ad8fddb 100644
 --- a/server/event.c
 +++ b/server/event.c
-@@ -68,6 +68,7 @@ static const struct object_ops event_ops =
-     directory_link_name,       /* link_name */
+@@ -76,6 +76,7 @@ static const struct object_ops event_ops =
      default_unlink_name,       /* unlink_name */
      no_open_file,              /* open_file */
+     event_get_kernel_obj_list, /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
-     no_destroy                 /* destroy */
+     event_destroy              /* destroy */
  };
-@@ -101,6 +102,7 @@ static const struct object_ops keyed_event_ops =
-     directory_link_name,         /* link_name */
+@@ -111,6 +112,7 @@ static const struct object_ops keyed_event_ops =
      default_unlink_name,         /* unlink_name */
      no_open_file,                /* open_file */
+     no_kernel_obj_list,          /* get_kernel_obj_list */
 +    no_alloc_handle,             /* alloc_handle */
      no_close_handle,             /* close_handle */
      no_destroy                   /* destroy */
  };
 diff --git a/server/fd.c b/server/fd.c
-index 119fae6..5dcd382 100644
+index 2a38780..e628cdb 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -218,6 +218,7 @@ static const struct object_ops fd_ops =
-     no_link_name,             /* link_name */
+@@ -222,6 +222,7 @@ static const struct object_ops fd_ops =
      NULL,                     /* unlink_name */
      no_open_file,             /* open_file */
+     no_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,          /* alloc_handle */
      no_close_handle,          /* close_handle */
      fd_destroy                /* destroy */
  };
-@@ -257,6 +258,7 @@ static const struct object_ops device_ops =
-     no_link_name,             /* link_name */
+@@ -263,6 +264,7 @@ static const struct object_ops device_ops =
      NULL,                     /* unlink_name */
      no_open_file,             /* open_file */
+     no_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,          /* alloc_handle */
      no_close_handle,          /* close_handle */
      device_destroy            /* destroy */
  };
-@@ -295,6 +297,7 @@ static const struct object_ops inode_ops =
-     no_link_name,             /* link_name */
+@@ -303,6 +305,7 @@ static const struct object_ops inode_ops =
      NULL,                     /* unlink_name */
      no_open_file,             /* open_file */
+     no_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,          /* alloc_handle */
      no_close_handle,          /* close_handle */
      inode_destroy             /* destroy */
  };
-@@ -335,6 +338,7 @@ static const struct object_ops file_lock_ops =
-     no_link_name,               /* link_name */
+@@ -345,6 +348,7 @@ static const struct object_ops file_lock_ops =
      NULL,                       /* unlink_name */
      no_open_file,               /* open_file */
+     no_kernel_obj_list,         /* get_kernel_obj_list */
 +    no_alloc_handle,            /* alloc_handle */
      no_close_handle,            /* close_handle */
      no_destroy                  /* destroy */
  };
 diff --git a/server/file.c b/server/file.c
-index 8d39f30..2d9134c 100644
+index 224ab7d..ca9a368 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -95,6 +95,7 @@ static const struct object_ops file_ops =
-     no_link_name,                 /* link_name */
+@@ -96,6 +96,7 @@ static const struct object_ops file_ops =
      NULL,                         /* unlink_name */
      file_open_file,               /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
      file_destroy                  /* destroy */
  };
 diff --git a/server/handle.c b/server/handle.c
-index 35ab860..782baef 100644
+index 6ca4489..879098a 100644
 --- a/server/handle.c
 +++ b/server/handle.c
-@@ -133,6 +133,7 @@ static const struct object_ops handle_table_ops =
-     no_link_name,                    /* link_name */
+@@ -135,6 +135,7 @@ static const struct object_ops handle_table_ops =
      NULL,                            /* unlink_name */
      no_open_file,                    /* open_file */
+     no_kernel_obj_list,              /* get_kernel_obj_list */
 +    no_alloc_handle,                 /* alloc_handle */
      no_close_handle,                 /* close_handle */
      handle_table_destroy             /* destroy */
  };
-@@ -232,7 +233,7 @@ static int grow_handle_table( struct handle_table *table )
+@@ -234,7 +235,7 @@ static int grow_handle_table( struct handle_table *table )
  }
  
  /* allocate the first free entry in the handle table */
@@ -302,7 +315,7 @@ index 35ab860..782baef 100644
  {
      struct handle_entry *entry = table->entries + table->free;
      int i;
-@@ -248,6 +249,10 @@ static obj_handle_t alloc_entry( struct handle_table *table, void *obj, unsigned
+@@ -250,6 +251,10 @@ static obj_handle_t alloc_entry( struct handle_table *table, void *obj, unsigned
      table->free = i + 1;
      entry->ptr    = grab_object_for_handle( obj );
      entry->access = access;
@@ -313,7 +326,7 @@ index 35ab860..782baef 100644
      return index_to_handle(i);
  }
  
-@@ -373,7 +378,11 @@ struct handle_table *copy_handle_table( struct process *process, struct process
+@@ -375,7 +380,11 @@ struct handle_table *copy_handle_table( struct process *process, struct process
          for (i = 0; i <= table->last; i++, ptr++)
          {
              if (!ptr->ptr) continue;
@@ -327,136 +340,136 @@ index 35ab860..782baef 100644
          }
      }
 diff --git a/server/hook.c b/server/hook.c
-index 3a0e4b4..dc653b8 100644
+index f5d7639..22b1482 100644
 --- a/server/hook.c
 +++ b/server/hook.c
-@@ -91,6 +91,7 @@ static const struct object_ops hook_table_ops =
-     no_link_name,                 /* link_name */
+@@ -93,6 +93,7 @@ static const struct object_ops hook_table_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      hook_table_destroy            /* destroy */
  };
 diff --git a/server/mailslot.c b/server/mailslot.c
-index 95308c4..bc9089b 100644
+index fc1caa9..57d0775 100644
 --- a/server/mailslot.c
 +++ b/server/mailslot.c
-@@ -89,6 +89,7 @@ static const struct object_ops mailslot_ops =
-     mailslot_link_name,        /* link_name */
+@@ -91,6 +91,7 @@ static const struct object_ops mailslot_ops =
      default_unlink_name,       /* unlink_name */
      mailslot_open_file,        /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      fd_close_handle,           /* close_handle */
      mailslot_destroy           /* destroy */
  };
-@@ -145,6 +146,7 @@ static const struct object_ops mail_writer_ops =
-     no_link_name,               /* link_name */
+@@ -149,6 +150,7 @@ static const struct object_ops mail_writer_ops =
      NULL,                       /* unlink_name */
      no_open_file,               /* open_file */
+     no_kernel_obj_list,         /* get_kernel_obj_list */
 +    no_alloc_handle,            /* alloc_handle */
      fd_close_handle,            /* close_handle */
      mail_writer_destroy         /* destroy */
  };
-@@ -202,6 +204,7 @@ static const struct object_ops mailslot_device_ops =
-     directory_link_name,            /* link_name */
+@@ -208,6 +210,7 @@ static const struct object_ops mailslot_device_ops =
      default_unlink_name,            /* unlink_name */
      mailslot_device_open_file,      /* open_file */
+     no_kernel_obj_list,             /* get_kernel_obj_list */
 +    no_alloc_handle,                /* alloc_handle */
      fd_close_handle,                /* close_handle */
      mailslot_device_destroy         /* destroy */
  };
 diff --git a/server/mapping.c b/server/mapping.c
-index bc59b21..ca803a4 100644
+index 1b3df08..819181a 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
-@@ -77,6 +77,7 @@ static const struct object_ops ranges_ops =
-     no_link_name,              /* link_name */
+@@ -103,6 +103,7 @@ static const struct object_ops ranges_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      ranges_destroy             /* destroy */
  };
-@@ -111,6 +112,7 @@ static const struct object_ops shared_map_ops =
-     no_link_name,              /* link_name */
+@@ -139,6 +140,7 @@ static const struct object_ops shared_map_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      shared_map_destroy         /* destroy */
  };
-@@ -166,6 +168,7 @@ static const struct object_ops mapping_ops =
-     directory_link_name,         /* link_name */
+@@ -196,6 +198,7 @@ static const struct object_ops mapping_ops =
      default_unlink_name,         /* unlink_name */
      no_open_file,                /* open_file */
+     no_kernel_obj_list,          /* get_kernel_obj_list */
 +    no_alloc_handle,             /* alloc_handle */
      fd_close_handle,             /* close_handle */
      mapping_destroy              /* destroy */
  };
 diff --git a/server/mutex.c b/server/mutex.c
-index d1887e4..a2a0a24 100644
+index f5f969b..a4ab6bd 100644
 --- a/server/mutex.c
 +++ b/server/mutex.c
-@@ -71,6 +71,7 @@ static const struct object_ops mutex_ops =
-     directory_link_name,       /* link_name */
+@@ -73,6 +73,7 @@ static const struct object_ops mutex_ops =
      default_unlink_name,       /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      mutex_destroy              /* destroy */
  };
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index 19a5426..8bb2283 100644
+index ceb9894..6892081 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
-@@ -134,6 +134,7 @@ static const struct object_ops named_pipe_ops =
-     named_pipe_link_name,         /* link_name */
+@@ -130,6 +130,7 @@ static const struct object_ops named_pipe_ops =
      default_unlink_name,          /* unlink_name */
      named_pipe_open_file,         /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      named_pipe_destroy            /* destroy */
  };
-@@ -176,6 +177,7 @@ static const struct object_ops pipe_server_ops =
-     no_link_name,                 /* link_name */
+@@ -173,6 +174,7 @@ static const struct object_ops pipe_server_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
      pipe_server_destroy           /* destroy */
  };
-@@ -217,6 +219,7 @@ static const struct object_ops pipe_client_ops =
-     no_link_name,                 /* link_name */
+@@ -216,6 +218,7 @@ static const struct object_ops pipe_client_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
      pipe_end_destroy              /* destroy */
  };
-@@ -262,7 +265,8 @@ static const struct object_ops named_pipe_device_ops =
-     directory_link_name,              /* link_name */
+@@ -263,7 +266,8 @@ static const struct object_ops named_pipe_device_ops =
      default_unlink_name,              /* unlink_name */
      named_pipe_device_open_file,      /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
 -    no_close_handle,                  /* close_handle */
 +    no_alloc_handle,                  /* alloc_handle */
 +    fd_close_handle,                  /* close_handle */
      named_pipe_device_destroy         /* destroy */
  };
  
-@@ -290,6 +294,7 @@ static const struct object_ops named_pipe_device_file_ops =
-     no_link_name,                            /* link_name */
+@@ -293,6 +297,7 @@ static const struct object_ops named_pipe_device_file_ops =
      NULL,                                    /* unlink_name */
      no_open_file,                            /* open_file */
+     no_kernel_obj_list,                      /* get_kernel_obj_list */
 +    no_alloc_handle,                         /* alloc_handle */
      fd_close_handle,                         /* close_handle */
      named_pipe_device_file_destroy           /* destroy */
  };
 diff --git a/server/object.c b/server/object.c
-index 4455718..14cd38e 100644
+index 048da50..fbac8f7 100644
 --- a/server/object.c
 +++ b/server/object.c
-@@ -692,6 +692,10 @@ struct object *no_open_file( struct object *obj, unsigned int access, unsigned i
+@@ -693,6 +693,10 @@ struct object *no_open_file( struct object *obj, unsigned int access, unsigned i
      return NULL;
  }
  
@@ -468,13 +481,13 @@ index 4455718..14cd38e 100644
  {
      return 1;  /* ok to close */
 diff --git a/server/object.h b/server/object.h
-index b5c50e1..72ad852 100644
+index ca5a191..d913e65 100644
 --- a/server/object.h
 +++ b/server/object.h
-@@ -89,8 +89,10 @@ struct object_ops
-     /* open a file object to access this object */
-     struct object *(*open_file)(struct object *, unsigned int access, unsigned int sharing,
+@@ -93,8 +93,10 @@ struct object_ops
                                  unsigned int options);
+     /* return list of kernel objects */
+     struct list *(*get_kernel_obj_list)(struct object *);
 +    /* allocate a handle to this object */
 +    void (*alloc_handle)(struct object *, struct process *, obj_handle_t);
      /* close a handle to this object */
@@ -483,226 +496,226 @@ index b5c50e1..72ad852 100644
      /* destroy on refcount == 0 */
      void (*destroy)(struct object *);
  };
-@@ -163,6 +165,7 @@ extern int no_link_name( struct object *obj, struct object_name *name, struct ob
- extern void default_unlink_name( struct object *obj, struct object_name *name );
+@@ -169,6 +171,7 @@ extern void default_unlink_name( struct object *obj, struct object_name *name );
  extern struct object *no_open_file( struct object *obj, unsigned int access, unsigned int sharing,
                                      unsigned int options );
+ extern struct list *no_kernel_obj_list( struct object *obj );
 +extern void no_alloc_handle( struct object *obj, struct process *process, obj_handle_t handle );
  extern int no_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
  extern void no_destroy( struct object *obj );
  #ifdef DEBUG_OBJECTS
 diff --git a/server/process.c b/server/process.c
-index 3bd545a..5274dc3 100644
+index f0b44a8..c059d19 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -84,6 +84,7 @@ static const struct object_ops process_ops =
-     no_link_name,                /* link_name */
+@@ -91,6 +91,7 @@ static const struct object_ops process_ops =
      NULL,                        /* unlink_name */
      no_open_file,                /* open_file */
+     process_get_kernel_obj_list, /* get_kernel_obj_list */
 +    no_alloc_handle,             /* alloc_handle */
      no_close_handle,             /* close_handle */
      process_destroy              /* destroy */
  };
-@@ -133,6 +134,7 @@ static const struct object_ops startup_info_ops =
-     no_link_name,                  /* link_name */
+@@ -142,6 +143,7 @@ static const struct object_ops startup_info_ops =
      NULL,                          /* unlink_name */
      no_open_file,                  /* open_file */
+     no_kernel_obj_list,            /* get_kernel_obj_list */
 +    no_alloc_handle,               /* alloc_handle */
      no_close_handle,               /* close_handle */
      startup_info_destroy           /* destroy */
  };
-@@ -176,6 +178,7 @@ static const struct object_ops job_ops =
-     directory_link_name,           /* link_name */
+@@ -187,6 +189,7 @@ static const struct object_ops job_ops =
      default_unlink_name,           /* unlink_name */
      no_open_file,                  /* open_file */
+     no_kernel_obj_list,            /* get_kernel_obj_list */
 +    no_alloc_handle,               /* alloc_handle */
      job_close_handle,              /* close_handle */
      job_destroy                    /* destroy */
  };
 diff --git a/server/queue.c b/server/queue.c
-index f274dfb..ca9d677 100644
+index 56fa4d9..b5d0677 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -181,6 +181,7 @@ static const struct object_ops msg_queue_ops =
-     no_link_name,              /* link_name */
+@@ -194,6 +194,7 @@ static const struct object_ops msg_queue_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      msg_queue_destroy          /* destroy */
  };
-@@ -216,6 +217,7 @@ static const struct object_ops thread_input_ops =
-     no_link_name,                 /* link_name */
+@@ -231,6 +232,7 @@ static const struct object_ops thread_input_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      thread_input_destroy          /* destroy */
  };
 diff --git a/server/registry.c b/server/registry.c
-index 9e6815d..21a6be5 100644
+index 1757fd3..e56134e 100644
 --- a/server/registry.c
 +++ b/server/registry.c
-@@ -170,6 +170,7 @@ static const struct object_ops key_ops =
-     no_link_name,            /* link_name */
+@@ -172,6 +172,7 @@ static const struct object_ops key_ops =
      NULL,                    /* unlink_name */
      no_open_file,            /* open_file */
+     no_kernel_obj_list,      /* get_kernel_obj_list */
 +    no_alloc_handle,         /* alloc_handle */
      key_close_handle,        /* close_handle */
      key_destroy              /* destroy */
  };
 diff --git a/server/request.c b/server/request.c
-index c10c4e6..4d0e673 100644
+index 73878cf..f089ccc 100644
 --- a/server/request.c
 +++ b/server/request.c
-@@ -107,6 +107,7 @@ static const struct object_ops master_socket_ops =
-     no_link_name,                  /* link_name */
+@@ -109,6 +109,7 @@ static const struct object_ops master_socket_ops =
      NULL,                          /* unlink_name */
      no_open_file,                  /* open_file */
+     no_kernel_obj_list,            /* get_kernel_obj_list */
 +    no_alloc_handle,               /* alloc_handle */
      no_close_handle,               /* close_handle */
      master_socket_destroy          /* destroy */
  };
 diff --git a/server/semaphore.c b/server/semaphore.c
-index 08ff153..15e7392 100644
+index 36e3e79..1913871 100644
 --- a/server/semaphore.c
 +++ b/server/semaphore.c
-@@ -68,6 +68,7 @@ static const struct object_ops semaphore_ops =
-     directory_link_name,           /* link_name */
+@@ -70,6 +70,7 @@ static const struct object_ops semaphore_ops =
      default_unlink_name,           /* unlink_name */
      no_open_file,                  /* open_file */
+     no_kernel_obj_list,            /* get_kernel_obj_list */
 +    no_alloc_handle,               /* alloc_handle */
      no_close_handle,               /* close_handle */
      no_destroy                     /* destroy */
  };
 diff --git a/server/serial.c b/server/serial.c
-index f0adf92..1722149 100644
+index 2848e1d..966b8bc 100644
 --- a/server/serial.c
 +++ b/server/serial.c
-@@ -102,6 +102,7 @@ static const struct object_ops serial_ops =
-     no_link_name,                 /* link_name */
+@@ -104,6 +104,7 @@ static const struct object_ops serial_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
      serial_destroy                /* destroy */
  };
 diff --git a/server/signal.c b/server/signal.c
-index 74416fa..4b2b8c4 100644
+index ca20039..a2e0efe 100644
 --- a/server/signal.c
 +++ b/server/signal.c
-@@ -77,6 +77,7 @@ static const struct object_ops handler_ops =
-     no_link_name,             /* link_name */
+@@ -79,6 +79,7 @@ static const struct object_ops handler_ops =
      NULL,                     /* unlink_name */
      no_open_file,             /* open_file */
+     no_kernel_obj_list,       /* get_kernel_obj_list */
 +    no_alloc_handle,          /* alloc_handle */
      no_close_handle,          /* close_handle */
      handler_destroy           /* destroy */
  };
 diff --git a/server/snapshot.c b/server/snapshot.c
-index e35588a..6e788ab 100644
+index 7d0d742..2ad9d5d 100644
 --- a/server/snapshot.c
 +++ b/server/snapshot.c
-@@ -71,6 +71,7 @@ static const struct object_ops snapshot_ops =
-     no_link_name,                 /* link_name */
+@@ -73,6 +73,7 @@ static const struct object_ops snapshot_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      snapshot_destroy              /* destroy */
  };
 diff --git a/server/sock.c b/server/sock.c
-index a8e6e28..cd9a8fa 100644
+index 4a10aac..f951f23 100644
 --- a/server/sock.c
 +++ b/server/sock.c
-@@ -155,6 +155,7 @@ static const struct object_ops sock_ops =
-     no_link_name,                 /* link_name */
+@@ -156,6 +156,7 @@ static const struct object_ops sock_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      fd_close_handle,              /* close_handle */
      sock_destroy                  /* destroy */
  };
-@@ -980,6 +981,7 @@ static const struct object_ops ifchange_ops =
-     no_link_name,            /* link_name */
+@@ -972,6 +973,7 @@ static const struct object_ops ifchange_ops =
      NULL,                    /* unlink_name */
      no_open_file,            /* open_file */
+     no_kernel_obj_list,      /* get_kernel_obj_list */
 +    no_alloc_handle,         /* alloc_handle */
      no_close_handle,         /* close_handle */
      ifchange_destroy         /* destroy */
  };
 diff --git a/server/symlink.c b/server/symlink.c
-index 9199bc5..ecc0e43 100644
+index 6b66b23..52387be 100644
 --- a/server/symlink.c
 +++ b/server/symlink.c
-@@ -70,6 +70,7 @@ static const struct object_ops symlink_ops =
-     directory_link_name,          /* link_name */
+@@ -72,6 +72,7 @@ static const struct object_ops symlink_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      no_close_handle,              /* close_handle */
      symlink_destroy               /* destroy */
  };
 diff --git a/server/thread.c b/server/thread.c
-index 7162fc3..7e9419b 100644
+index 8c45419..bcb8526 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -120,6 +120,7 @@ static const struct object_ops thread_apc_ops =
-     no_link_name,               /* link_name */
+@@ -123,6 +123,7 @@ static const struct object_ops thread_apc_ops =
      NULL,                       /* unlink_name */
      no_open_file,               /* open_file */
+     no_kernel_obj_list,         /* get_kernel_obj_list */
 +    no_alloc_handle,            /* alloc_handle */
      no_close_handle,            /* close_handle */
      thread_apc_destroy          /* destroy */
  };
-@@ -151,6 +152,7 @@ static const struct object_ops thread_ops =
-     no_link_name,               /* link_name */
+@@ -159,6 +160,7 @@ static const struct object_ops thread_ops =
      NULL,                       /* unlink_name */
      no_open_file,               /* open_file */
+     thread_get_kernel_obj_list, /* get_kernel_obj_list */
 +    no_alloc_handle,            /* alloc_handle */
      no_close_handle,            /* close_handle */
      destroy_thread              /* destroy */
  };
 diff --git a/server/timer.c b/server/timer.c
-index 3a786fb..95df28f 100644
+index f2403fc..75d289c 100644
 --- a/server/timer.c
 +++ b/server/timer.c
-@@ -75,6 +75,7 @@ static const struct object_ops timer_ops =
-     directory_link_name,       /* link_name */
+@@ -80,6 +80,7 @@ static const struct object_ops timer_ops =
      default_unlink_name,       /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      timer_destroy              /* destroy */
  };
 diff --git a/server/token.c b/server/token.c
-index d88f16c..57c2267 100644
+index 1a41ad0..71f8552 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -155,6 +155,7 @@ static const struct object_ops token_ops =
-     no_link_name,              /* link_name */
+@@ -164,6 +164,7 @@ static const struct object_ops token_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
+     no_kernel_obj_list,        /* get_kernel_obj_list */
 +    no_alloc_handle,           /* alloc_handle */
      no_close_handle,           /* close_handle */
      token_destroy              /* destroy */
  };
 diff --git a/server/winstation.c b/server/winstation.c
-index a0be058..5f96be8 100644
+index 845043b..d7e8a5c 100644
 --- a/server/winstation.c
 +++ b/server/winstation.c
-@@ -75,6 +75,7 @@ static const struct object_ops winstation_ops =
-     directory_link_name,          /* link_name */
+@@ -77,6 +77,7 @@ static const struct object_ops winstation_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      winstation_close_handle,      /* close_handle */
      winstation_destroy            /* destroy */
  };
-@@ -98,6 +99,7 @@ static const struct object_ops desktop_ops =
-     desktop_link_name,            /* link_name */
+@@ -102,6 +103,7 @@ static const struct object_ops desktop_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
+     no_kernel_obj_list,           /* get_kernel_obj_list */
 +    no_alloc_handle,              /* alloc_handle */
      desktop_close_handle,         /* close_handle */
      desktop_destroy               /* destroy */

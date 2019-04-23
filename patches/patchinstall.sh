@@ -247,6 +247,7 @@ patch_enable_all ()
 	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -877,6 +878,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		server-Desktop_Refcount)
+			enable_server_Desktop_Refcount="$2"
 			;;
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
@@ -1651,6 +1655,13 @@ if test "$enable_xaudio2_7_CreateFX_FXEcho" -eq 1; then
 		abort "Patchset xaudio2-revert disabled, but xaudio2_7-CreateFX-FXEcho depends on that."
 	fi
 	enable_xaudio2_revert=1
+fi
+
+if test "$enable_ws2_32_TransmitFile" -eq 1; then
+	if test "$enable_server_Desktop_Refcount" -gt 1; then
+		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
+	fi
+	enable_server_Desktop_Refcount=1
 fi
 
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
@@ -5475,6 +5486,31 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset server-Desktop_Refcount
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/winstation.c, include/wine/server_protocol.h, programs/explorer/desktop.c, server/async.c,
+# | 	server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c, server/debugger.c,
+# | 	server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c, server/handle.c, server/handle.h,
+# | 	server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c,
+# | 	server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c, server/semaphore.c,
+# | 	server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/timer.c,
+# | 	server/token.c, server/winstation.c
+# |
+if test "$enable_server_Desktop_Refcount" -eq 1; then
+	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
+	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
+	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-FileEndOfFileInformation
 # |
 # | Modified files:
@@ -7395,6 +7431,9 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 fi
 
 # Patchset ws2_32-TransmitFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

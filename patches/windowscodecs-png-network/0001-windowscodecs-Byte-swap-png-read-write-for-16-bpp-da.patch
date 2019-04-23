@@ -1,0 +1,55 @@
+From d52c018519697f040058ab1b58e9415baad477c5 Mon Sep 17 00:00:00 2001
+From: Bryon Roche <kain@kain.org>
+Date: Mon, 22 Apr 2019 19:30:13 +1000
+Subject: [PATCH] windowscodecs: Byte swap png read/write for 16-bpp data.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=46558
+---
+ dlls/windowscodecs/pngformat.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/dlls/windowscodecs/pngformat.c b/dlls/windowscodecs/pngformat.c
+index db0fa9ed50..a79e7e1cff 100644
+--- a/dlls/windowscodecs/pngformat.c
++++ b/dlls/windowscodecs/pngformat.c
+@@ -332,6 +332,7 @@ MAKE_FUNCPTR(png_set_strip_16);
+ MAKE_FUNCPTR(png_set_tRNS);
+ MAKE_FUNCPTR(png_set_tRNS_to_alpha);
+ MAKE_FUNCPTR(png_set_write_fn);
++MAKE_FUNCPTR(png_set_swap);
+ MAKE_FUNCPTR(png_read_end);
+ MAKE_FUNCPTR(png_read_image);
+ MAKE_FUNCPTR(png_read_info);
+@@ -398,6 +399,7 @@ static void *load_libpng(void)
+         LOAD_FUNCPTR(png_set_tRNS);
+         LOAD_FUNCPTR(png_set_tRNS_to_alpha);
+         LOAD_FUNCPTR(png_set_write_fn);
++        LOAD_FUNCPTR(png_set_swap);
+         LOAD_FUNCPTR(png_read_end);
+         LOAD_FUNCPTR(png_read_image);
+         LOAD_FUNCPTR(png_read_info);
+@@ -642,6 +644,10 @@ static HRESULT WINAPI PngDecoder_Initialize(IWICBitmapDecoder *iface, IStream *p
+     color_type = ppng_get_color_type(This->png_ptr, This->info_ptr);
+     bit_depth = ppng_get_bit_depth(This->png_ptr, This->info_ptr);
+ 
++    /* PNGs with bit-depth greater than 8 are network byte order. Windows does not expect this. */
++    if (bit_depth > 8) 
++        ppng_set_swap(This->png_ptr);
++
+     /* check for color-keyed alpha */
+     transparency = ppng_get_tRNS(This->png_ptr, This->info_ptr, &trans, &num_trans, &trans_values);
+ 
+@@ -1643,6 +1649,10 @@ static HRESULT WINAPI PngFrameEncode_WritePixels(IWICBitmapFrameEncode *iface,
+             }
+         }
+ 
++        /* Tell PNG we need to byte swap if writing a >8-bpp image */
++        if (This->format->bit_depth > 8)
++            ppng_set_swap(This->png_ptr);
++
+         ppng_set_IHDR(This->png_ptr, This->info_ptr, This->width, This->height,
+             This->format->bit_depth, This->format->color_type,
+             This->interlace ? PNG_INTERLACE_ADAM7 : PNG_INTERLACE_NONE,
+-- 
+2.20.1
+

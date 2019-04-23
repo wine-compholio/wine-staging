@@ -1,21 +1,21 @@
-From 48fd8c19b8a0403c297c5bd0eade9cd5ef446305 Mon Sep 17 00:00:00 2001
+From 2ccff55de1a8e43f12fde63870b0d93ec63dd4ab Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 12:00:51 -0600
-Subject: [PATCH] ntdll: Correctly report file symbolic links as files.
+Subject: ntdll: Correctly report file symbolic links as files.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 110 +++++++++++++++++++++++++++++++++---------------
- dlls/ntdll/tests/file.c |   8 ++--
+ dlls/ntdll/file.c       | 110 +++++++++++++++++++++++++++-------------
+ dlls/ntdll/tests/file.c |   8 +--
  2 files changed, 79 insertions(+), 39 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 4e5bf46..6cb351b 100644
+index a9fe846e08..8ffd79ccbf 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -140,6 +140,9 @@ static inline int get_file_xattr( char *hexattr, int attrlen )
-     return 0;
- }
+@@ -124,6 +124,9 @@ mode_t FILE_umask = 0;
+ 
+ static const WCHAR ntfsW[] = {'N','T','F','S'};
  
 +NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, USHORT *unix_dest_len,
 +                            DWORD *tag, ULONG *flags, BOOL *is_dir);
@@ -23,7 +23,7 @@ index 4e5bf46..6cb351b 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -214,10 +217,14 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -160,10 +163,14 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
      if (ret == -1) return ret;
      if (S_ISLNK( st->st_mode ))
      {
@@ -37,8 +37,8 @@ index 4e5bf46..6cb351b 100644
 +            st->st_mode = (st->st_mode & ~S_IFMT) | (is_dir ? S_IFDIR : S_IFREG);
      }
      *attr |= get_file_attributes( st );
-     /* retrieve any stored DOS attributes */
-@@ -1920,48 +1927,34 @@ cleanup:
+     return ret;
+@@ -1822,48 +1829,34 @@ cleanup:
  }
  
  
@@ -102,7 +102,7 @@ index 4e5bf46..6cb351b 100644
          p++;
      }
      if (*p++ != '/')
-@@ -1969,7 +1962,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -1871,7 +1864,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
          status = STATUS_NOT_IMPLEMENTED;
          goto cleanup;
      }
@@ -111,7 +111,7 @@ index 4e5bf46..6cb351b 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          char c = *p++;
-@@ -1984,21 +1977,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -1886,21 +1879,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
              status = STATUS_NOT_IMPLEMENTED;
              goto cleanup;
          }
@@ -186,10 +186,10 @@ index 4e5bf46..6cb351b 100644
      /* convert the relative path into an absolute path */
      if (flags == SYMLINK_FLAG_RELATIVE)
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 3f47c69..cecce37 100644
+index f40dc1f51b..f23bf8644c 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5288,13 +5288,13 @@ static void test_reparse_points(void)
+@@ -5069,13 +5069,13 @@ static void test_reparse_points(void)
  
      /* Check deleting a file symlink as if it were a directory */
      bret = RemoveDirectoryW(reparse_path);
@@ -205,7 +205,7 @@ index 3f47c69..cecce37 100644
      ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
  
      /* Delete the symlink as a file */
-@@ -5303,10 +5303,10 @@ static void test_reparse_points(void)
+@@ -5084,10 +5084,10 @@ static void test_reparse_points(void)
  
      /* Create a blank slate for directory symlink tests */
      bret = CreateDirectoryW(reparse_path, NULL);
@@ -219,5 +219,5 @@ index 3f47c69..cecce37 100644
      /* Create the directory symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
 -- 
-1.9.1
+2.17.1
 

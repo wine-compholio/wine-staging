@@ -1,21 +1,22 @@
-From d51c91b6f63c6ee874964726439285be8085ac7b Mon Sep 17 00:00:00 2001
+From 987c69eed0950c375af8eeb97dda539f9a636677 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 3 Apr 2015 03:58:47 +0200
-Subject: server: Allow to open files without any permission bits. (try 2)
+Subject: [PATCH] server: Allow to open files without any permission bits. (try
+ 2)
 
 Changes in v2:
 * As suggested by Piotr, fix the problem for both files and directories.
 * Pay attention to requested access attributes - this fixes a couple more todo_wine's.
 ---
  dlls/advapi32/tests/security.c | 32 ++++++++++++--------------------
- server/fd.c                    | 21 +++++++++++++++++++++
- 2 files changed, 33 insertions(+), 20 deletions(-)
+ server/fd.c                    | 20 ++++++++++++++++++++
+ 2 files changed, 32 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index cf104ab..c517f85 100644
+index 56251db..a5ab606 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3548,17 +3548,13 @@ static void test_CreateDirectoryA(void)
+@@ -3718,17 +3718,13 @@ static void test_CreateDirectoryA(void)
      error = pGetNamedSecurityInfoA(tmpfile, SE_FILE_OBJECT,
                                     OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
@@ -39,7 +40,7 @@ index cf104ab..c517f85 100644
      CloseHandle(hTemp);
  
      /* Test inheritance of ACLs in NtCreateFile without security descriptor */
-@@ -3628,17 +3624,13 @@ static void test_CreateDirectoryA(void)
+@@ -3798,17 +3794,13 @@ static void test_CreateDirectoryA(void)
      error = pGetNamedSecurityInfoA(tmpfile, SE_FILE_OBJECT,
                                     OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
@@ -64,10 +65,10 @@ index cf104ab..c517f85 100644
  
  done:
 diff --git a/server/fd.c b/server/fd.c
-index 77c7026..f331606 100644
+index ac046c9..770cc0d 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1755,6 +1755,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1817,6 +1817,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      struct fd *fd;
      int root_fd = -1;
      int rw_mode;
@@ -75,7 +76,7 @@ index 77c7026..f331606 100644
      int created = (flags & O_CREAT);
  
      if (((options & FILE_DELETE_ON_CLOSE) && !(access & DELETE)) ||
-@@ -1816,10 +1817,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1878,10 +1879,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
              if ((access & FILE_UNIX_WRITE_ACCESS) || (flags & O_CREAT))
                  fd->unix_fd = open( name, O_RDONLY | (flags & ~(O_TRUNC | O_CREAT | O_EXCL)), *mode );
          }
@@ -104,15 +105,14 @@ index 77c7026..f331606 100644
              goto error;
          }
      }
-@@ -1827,6 +1846,8 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1889,6 +1908,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      closed_fd->unix_fd = fd->unix_fd;
      closed_fd->unlink = 0;
      closed_fd->unix_name = fd->unix_name;
-+
 +    if (do_chmod) chmod( name, *mode );
-     fstat( fd->unix_fd, &st );
+     lstat( fd->unix_name, &st );
      *mode = st.st_mode;
  
 -- 
-2.9.0
+1.9.1
 

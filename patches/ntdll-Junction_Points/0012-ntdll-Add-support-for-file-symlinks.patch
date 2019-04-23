@@ -1,16 +1,16 @@
-From 43b9fbb15b535717e2b8cb082330efd179acf321 Mon Sep 17 00:00:00 2001
+From 0cf6512a8532b065dc92d6ac16678dff180a1107 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 11 Apr 2019 17:57:53 -0600
 Subject: ntdll: Add support for file symlinks.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 11 ++++++++---
+ dlls/ntdll/file.c       | 27 ++++++++++++++++++++++-----
  dlls/ntdll/tests/file.c | 33 +++++++++++++++++++++++++++++++++
- 2 files changed, 41 insertions(+), 3 deletions(-)
+ 2 files changed, 55 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 0eb522bf1d..7c1a711fc3 100644
+index 8795eb6e9d..a9fe846e08 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -1665,6 +1665,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
@@ -45,6 +45,52 @@ index 0eb522bf1d..7c1a711fc3 100644
      }
      else if (errno == ENOSYS)
      {
+@@ -1989,6 +1994,7 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+     BOOL tempdir_created = FALSE;
+     int dest_fd, needs_close;
+     ANSI_STRING unix_name;
++    BOOL is_dir = TRUE;
+     NTSTATUS status;
+     struct stat st;
+ 
+@@ -2000,12 +2006,13 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+ 
+     TRACE("Deleting symlink %s\n", unix_name.Buffer);
+ 
+-    /* Produce the directory in a temporary location in the same folder */
++    /* Produce the file/directory in a temporary location in the same folder */
+     if (fstat( dest_fd, &st ) == -1)
+     {
+         status = FILE_GetNtStatus();
+         goto cleanup;
+     }
++    is_dir = S_ISDIR(st.st_mode);
+     strcpy( tmpdir, unix_name.Buffer );
+     dirname( tmpdir) ;
+     strcat( tmpdir, "/.winelink.XXXXXX" );
+@@ -2017,11 +2024,21 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+     tempdir_created = TRUE;
+     strcpy( tmpfile, tmpdir );
+     strcat( tmpfile, "/tmpfile" );
+-    if (mkdir( tmpfile, st.st_mode ))
++    if (is_dir && mkdir( tmpfile, st.st_mode ))
+     {
+         status = FILE_GetNtStatus();
+         goto cleanup;
+     }
++    else if (!is_dir)
++    {
++        int fd = open( tmpfile, O_CREAT|O_WRONLY|O_TRUNC, st.st_mode );
++        if (fd < 0)
++            {
++            status = FILE_GetNtStatus();
++            goto cleanup;
++        }
++        close( fd );
++    }
+     /* attemp to retain the ownership (if possible) */
+     lchown( tmpfile, st.st_uid, st.st_gid );
+     /* Atomically move the directory into position */
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
 index c13ee84bf0..f40dc1f51b 100644
 --- a/dlls/ntdll/tests/file.c

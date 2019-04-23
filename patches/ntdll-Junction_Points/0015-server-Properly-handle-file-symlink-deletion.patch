@@ -1,19 +1,19 @@
-From 108acd429c44d9a06bab68ad66890ee6756264cc Mon Sep 17 00:00:00 2001
+From d6f127ccdc6bb2a2c74551bfae669a6eee55c312 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 13:41:07 -0600
-Subject: [PATCH] server: Properly handle file symlink deletion.
+Subject: server: Properly handle file symlink deletion.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/tests/file.c |  6 ++---
- server/fd.c             | 64 +++++++++++++++++++++++++++++++++++++++++++++----
+ dlls/ntdll/tests/file.c |  6 ++--
+ server/fd.c             | 64 +++++++++++++++++++++++++++++++++++++----
  2 files changed, 62 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 8800ab0..92ac697 100644
+index a1323ab4f6..8ab8a5da53 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5299,14 +5299,14 @@ static void test_reparse_points(void)
+@@ -5080,14 +5080,14 @@ static void test_reparse_points(void)
  
      /* Delete the symlink as a file */
      bret = DeleteFileW(reparse_path);
@@ -32,10 +32,10 @@ index 8800ab0..92ac697 100644
      /* Create the directory symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
 diff --git a/server/fd.c b/server/fd.c
-index 6c4cf61..58843d7 100644
+index 5d80e218b9..71347e4318 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1075,7 +1075,7 @@ static void inode_destroy( struct object *obj )
+@@ -1069,7 +1069,7 @@ static void inode_destroy( struct object *obj )
          {
              /* make sure it is still the same file */
              struct stat st;
@@ -44,7 +44,7 @@ index 6c4cf61..58843d7 100644
              {
                  if (S_ISDIR(st.st_mode)) rmdir( fd->unix_name );
                  else unlink( fd->unix_name );
-@@ -1769,6 +1769,53 @@ char *dup_fd_name( struct fd *root, const char *name )
+@@ -1747,6 +1747,53 @@ char *dup_fd_name( struct fd *root, const char *name )
      return ret;
  }
  
@@ -98,12 +98,12 @@ index 6c4cf61..58843d7 100644
  /* open() wrapper that returns a struct fd with no fd user set */
  struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode, unsigned int access,
                      unsigned int sharing, unsigned int options )
-@@ -1876,14 +1923,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1826,14 +1873,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+     closed_fd->unix_fd = fd->unix_fd;
+     closed_fd->unlink = 0;
      closed_fd->unix_name = fd->unix_name;
- 
-     if (do_chmod) chmod( name, *mode );
 -    fstat( fd->unix_fd, &st );
-+    fstatat( -1, fd->unix_name, &st, AT_SYMLINK_NOFOLLOW );
++    lstat( fd->unix_name, &st );
      *mode = st.st_mode;
  
      /* only bother with an inode for normal files and directories */
@@ -116,7 +116,7 @@ index 6c4cf61..58843d7 100644
  
          if (!inode)
          {
-@@ -1898,13 +1946,19 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1848,13 +1896,19 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
          list_add_head( &inode->open, &fd->inode_entry );
          closed_fd = NULL;
  
@@ -139,5 +139,5 @@ index 6c4cf61..58843d7 100644
              set_error( STATUS_FILE_IS_A_DIRECTORY );
              goto error;
 -- 
-1.9.1
+2.17.1
 

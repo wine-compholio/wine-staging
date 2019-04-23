@@ -1792,6 +1792,13 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 fi
 
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
+	fi
+	enable_ntdll_Junction_Points=1
+fi
+
 if test "$enable_ntdll_NtContinue" -eq 1; then
 	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
@@ -1825,13 +1832,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
-fi
-
-if test "$enable_ntdll_Junction_Points" -eq 1; then
-	if test "$enable_ntdll_NtQueryEaFile" -gt 1; then
-		abort "Patchset ntdll-NtQueryEaFile disabled, but ntdll-Junction_Points depends on that."
-	fi
-	enable_ntdll_NtQueryEaFile=1
 fi
 
 if test "$enable_ntdll_HashLinks" -eq 1; then
@@ -1880,6 +1880,9 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
 		abort "Patchset advapi32-Token_Integrity_Level disabled, but eventfd_synchronization depends on that."
 	fi
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but eventfd_synchronization depends on that."
+	fi
 	if test "$enable_ntdll_RtlCreateUserThread" -gt 1; then
 		abort "Patchset ntdll-RtlCreateUserThread disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1902,6 +1905,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but eventfd_synchronization depends on that."
 	fi
 	enable_advapi32_Token_Integrity_Level=1
+	enable_ntdll_Junction_Points=1
 	enable_ntdll_RtlCreateUserThread=1
 	enable_ntdll_SystemRoot_Symlink=1
 	enable_ntdll_User_Shared_Data=1
@@ -3392,6 +3396,53 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Junction_Points
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12401] Support for Junction Points
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c,
+# | 	dlls/ntdll/tests/file.c, include/Makefile.in, include/ntifs.h, include/wine/port.h, libs/port/Makefile.in,
+# | 	libs/port/renameat2.c, server/fd.c
+# |
+if test "$enable_ntdll_Junction_Points" -eq 1; then
+	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
+	patch_apply ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
+	patch_apply ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
+	patch_apply ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch
+	patch_apply ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
+	patch_apply ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
+	patch_apply ntdll-Junction_Points/0007-ntdll-Add-support-for-absolute-symlink-creation.patch
+	patch_apply ntdll-Junction_Points/0008-ntdll-Add-support-for-reading-absolute-symlinks.patch
+	patch_apply ntdll-Junction_Points/0009-ntdll-Add-support-for-deleting-symlinks.patch
+	patch_apply ntdll-Junction_Points/0010-ntdll-Add-support-for-relative-symlink-creation.patch
+	patch_apply ntdll-Junction_Points/0011-ntdll-Add-support-for-reading-relative-symlinks.patch
+	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
+	patch_apply ntdll-Junction_Points/0013-ntdll-Correctly-report-file-symbolic-links-as-files.patch
+	patch_apply ntdll-Junction_Points/0014-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
+	patch_apply ntdll-Junction_Points/0015-server-Properly-handle-file-symlink-deletion.patch
+	patch_apply ntdll-Junction_Points/0016-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for absolute symlink creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading absolute symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for relative symlink creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading relative symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse points.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3646,10 +3697,10 @@ fi
 # Patchset eventfd_synchronization
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level, ntdll-RtlCreateUserThread,
-# | 	ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, server-
-# | 	Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread,
-# | 	server-Shared_Memory, ws2_32-WSACleanup
+# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
+# | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
+# | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4676,68 +4727,6 @@ if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtQueryEaFile
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Junction_Points
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-NtQueryEaFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12401] Support for Junction Points
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c,
-# | 	dlls/ntdll/tests/file.c, include/Makefile.in, include/ntifs.h, include/wine/port.h, libs/port/Makefile.in,
-# | 	libs/port/renameat2.c, server/fd.c
-# |
-if test "$enable_ntdll_Junction_Points" -eq 1; then
-	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
-	patch_apply ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
-	patch_apply ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
-	patch_apply ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch
-	patch_apply ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
-	patch_apply ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
-	patch_apply ntdll-Junction_Points/0007-ntdll-Add-support-for-absolute-symlink-creation.patch
-	patch_apply ntdll-Junction_Points/0008-ntdll-Add-support-for-reading-absolute-symlinks.patch
-	patch_apply ntdll-Junction_Points/0009-ntdll-Add-support-for-deleting-symlinks.patch
-	patch_apply ntdll-Junction_Points/0010-ntdll-Add-support-for-relative-symlink-creation.patch
-	patch_apply ntdll-Junction_Points/0011-ntdll-Add-support-for-reading-relative-symlinks.patch
-	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
-	patch_apply ntdll-Junction_Points/0013-ntdll-Correctly-report-file-symbolic-links-as-files.patch
-	patch_apply ntdll-Junction_Points/0014-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
-	patch_apply ntdll-Junction_Points/0015-server-Properly-handle-file-symlink-deletion.patch
-	patch_apply ntdll-Junction_Points/0016-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for absolute symlink creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading absolute symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for relative symlink creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading relative symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse points.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Manifest_Range
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4913,6 +4902,21 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for NtContinue.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "Use NtContinue to continue execution after exceptions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryEaFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Junction_Points
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
 	) >> "$patchlist"
 fi
 

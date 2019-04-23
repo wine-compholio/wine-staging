@@ -1,20 +1,20 @@
-From 272ed659e67adc42778e428ac4b74d2844dc9ad5 Mon Sep 17 00:00:00 2001
+From 8e8839dfe0b2eeae7b0d124b65725257792e3813 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 21:00:21 -0700
 Subject: ntdll: Add support for deleting junction points.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 51 +++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/tests/file.c | 23 ++++++++++++++++++-
- include/ntifs.h         | 12 ++++++++++
- 3 files changed, 85 insertions(+), 1 deletion(-)
+ dlls/ntdll/file.c       | 96 +++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 23 +++++++++-
+ include/ntifs.h         | 12 ++++++
+ 3 files changed, 130 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index ee561d9268..2effe7efb0 100644
+index ee561d9268..1730d816d9 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1846,6 +1846,41 @@ cleanup:
+@@ -1846,6 +1846,86 @@ cleanup:
  }
  
  
@@ -24,9 +24,12 @@ index ee561d9268..2effe7efb0 100644
 + */
 +NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
 +{
++    char tmpdir[PATH_MAX], tmpfile[PATH_MAX];
++    BOOL tempdir_created = FALSE;
 +    int dest_fd, needs_close;
 +    ANSI_STRING unix_name;
 +    NTSTATUS status;
++    struct stat st;
 +
 +    if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
 +        return status;
@@ -35,12 +38,53 @@ index ee561d9268..2effe7efb0 100644
 +        goto cleanup;
 +
 +    TRACE("Deleting symlink %s\n", unix_name.Buffer);
-+    if (unlink( unix_name.Buffer ) < 0)
++
++    /* Produce the directory in a temporary location in the same folder */
++    if (fstat( dest_fd, &st ) == -1)
 +    {
 +        status = FILE_GetNtStatus();
 +        goto cleanup;
 +    }
-+    if (mkdir( unix_name.Buffer, 0775 ) < 0)
++    strcpy( tmpdir, unix_name.Buffer );
++    dirname( tmpdir) ;
++    strcat( tmpdir, "/.winelink.XXXXXX" );
++    if (mkdtemp( tmpdir ) == NULL)
++    {
++        status = FILE_GetNtStatus();
++        goto cleanup;
++    }
++    tempdir_created = TRUE;
++    strcpy( tmpfile, tmpdir );
++    strcat( tmpfile, "/tmpfile" );
++    if (mkdir( tmpfile, st.st_mode ))
++    {
++        status = FILE_GetNtStatus();
++        goto cleanup;
++    }
++    /* attemp to retain the ownership (if possible) */
++    lchown( tmpfile, st.st_uid, st.st_gid );
++    /* Atomically move the directory into position */
++    if (!renameat2( -1, tmpfile, -1, unix_name.Buffer, RENAME_EXCHANGE ))
++    {
++        /* success: link and folder have switched locations */
++        unlink( tmpfile ); /* remove the link (at folder location) */
++    }
++    else if (errno == ENOSYS)
++    {
++        FIXME( "Atomic exchange of directory with symbolic link unsupported on this system, "
++               "using unsafe exchange instead.\n" );
++        if (unlink( unix_name.Buffer ))
++        {
++            status = FILE_GetNtStatus();
++            goto cleanup;
++        }
++        if (rename( tmpfile, unix_name.Buffer ))
++        {
++            status = FILE_GetNtStatus();
++            goto cleanup; /* not moved, orignal file/folder at destination is orphaned */
++        }
++    }
++    else
 +    {
 +        status = FILE_GetNtStatus();
 +        goto cleanup;
@@ -48,6 +92,7 @@ index ee561d9268..2effe7efb0 100644
 +    status = STATUS_SUCCESS;
 +
 +cleanup:
++    if (tempdir_created) rmdir( tmpdir );
 +    if (needs_close) close( dest_fd );
 +    return status;
 +}
@@ -56,7 +101,7 @@ index ee561d9268..2effe7efb0 100644
  /**************************************************************************
   *              NtFsControlFile                 [NTDLL.@]
   *              ZwFsControlFile                 [NTDLL.@]
-@@ -1931,6 +1966,22 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1931,6 +2011,22 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
          status = STATUS_SUCCESS;
          break;
  

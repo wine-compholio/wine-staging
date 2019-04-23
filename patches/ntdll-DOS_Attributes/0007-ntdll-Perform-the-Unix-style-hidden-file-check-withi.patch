@@ -1,4 +1,4 @@
-From 92eada413d3bc9e95d1d00478daf9a06fd3e587e Mon Sep 17 00:00:00 2001
+From a0b58c6366226c2079da60a4b5d757da4bd728b6 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 11:26:48 -0600
 Subject: [PATCH] ntdll: Perform the Unix-style hidden file check within the
@@ -11,7 +11,7 @@ Subject: [PATCH] ntdll: Perform the Unix-style hidden file check within the
  3 files changed, 10 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 4655a634..511a345 100644
+index c853470..56737b8 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
 @@ -1267,17 +1267,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
@@ -50,11 +50,11 @@ index 4655a634..511a345 100644
      }
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 3a96d3b..b2b88d6 100644
+index 0dbf612..5926c99 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -218,6 +218,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
-         if (S_ISDIR( st->st_mode )) *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+@@ -227,6 +227,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+             st->st_mode = (st->st_mode & ~S_IFMT) | (is_dir ? S_IFDIR : S_IFREG);
      }
      *attr |= get_file_attributes( st );
 +    /* convert Unix-style hidden files to a DOS hidden file attribute */
@@ -64,7 +64,7 @@ index 3a96d3b..b2b88d6 100644
      len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
      if (len == -1) return ret;
      *attr |= get_file_xattr( hexattr, len );
-@@ -3023,8 +3027,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+@@ -3447,8 +3451,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
              info->AllocationSize = std.AllocationSize;
              info->EndOfFile      = std.EndOfFile;
              info->FileAttributes = basic.FileAttributes;
@@ -73,7 +73,7 @@ index 3a96d3b..b2b88d6 100644
          }
          RtlFreeAnsiString( &unix_name );
      }
-@@ -3052,11 +3054,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
+@@ -3476,11 +3478,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
          else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
              status = STATUS_INVALID_INFO_CLASS;
          else
@@ -86,10 +86,10 @@ index 3a96d3b..b2b88d6 100644
      }
      else WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 01a7636..2a8c67b 100644
+index b762ceb..32db62e 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -160,7 +160,7 @@ extern NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
+@@ -164,7 +164,7 @@ extern NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
                                  FILE_INFORMATION_CLASS class ) DECLSPEC_HIDDEN;
  extern NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name ) DECLSPEC_HIDDEN;
  extern void init_directories(void) DECLSPEC_HIDDEN;

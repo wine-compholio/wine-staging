@@ -356,6 +356,7 @@ patch_enable_all ()
 	enable_winex11_key_translation="$1"
 	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
+	enable_winex11_drv_Query_server_position="$1"
 	enable_winex11_drv_mouse_coorrds="$1"
 	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
@@ -1203,6 +1204,9 @@ patch_enable ()
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
+			;;
+		winex11.drv-Query_server_position)
+			enable_winex11_drv_Query_server_position="$2"
 			;;
 		winex11.drv-mouse-coorrds)
 			enable_winex11_drv_mouse_coorrds="$2"
@@ -7185,6 +7189,21 @@ if test "$enable_winex11_wglShareLists" -eq 1; then
 	patch_apply winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Only warn about used contexts in wglShareLists.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11.drv-Query_server_position
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#15346] winex11.drv: Query the X server for the actual rect of the window before unmapping it
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/window.c
+# |
+if test "$enable_winex11_drv_Query_server_position" -eq 1; then
+	patch_apply winex11.drv-Query_server_position/0001-winex11.drv-window-Query-the-X-server-for-the-actual.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/window: Query the X server for the actual rect of the window before unmapping it.", 1 },';
 	) >> "$patchlist"
 fi
 

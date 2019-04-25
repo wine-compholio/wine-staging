@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9b6d198a3c7c8a02aa69c0d3d11829712e9778a6"
+	echo "85826158947637f790b68742a5448c483f47234f"
 }
 
 # Show version information
@@ -94,7 +94,6 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
 	enable_avifil32_IGetFrame_fnSetFormat="$1"
-	enable_avifile_dll16_AVIStreamGetFrame="$1"
 	enable_bcrypt_BCryptSecretAgreement="$1"
 	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
@@ -418,9 +417,6 @@ patch_enable ()
 			;;
 		avifil32-IGetFrame_fnSetFormat)
 			enable_avifil32_IGetFrame_fnSetFormat="$2"
-			;;
-		avifile.dll16-AVIStreamGetFrame)
-			enable_avifile_dll16_AVIStreamGetFrame="$2"
 			;;
 		bcrypt-BCryptSecretAgreement)
 			enable_bcrypt_BCryptSecretAgreement="$2"
@@ -2312,20 +2308,6 @@ if test "$enable_avifil32_IGetFrame_fnSetFormat" -eq 1; then
 	patch_apply avifil32-IGetFrame_fnSetFormat/0001-avifil32-Correctly-handle-compressed-frames-when-des.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "avifil32: Correctly handle compressed frames when desired format is specified.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset avifile.dll16-AVIStreamGetFrame
-# |
-# | Modified files:
-# |   *	dlls/avifile.dll16/Makefile.in, dlls/avifile.dll16/avifile.dll16.spec, dlls/avifile.dll16/main.c
-# |
-if test "$enable_avifile_dll16_AVIStreamGetFrame" -eq 1; then
-	patch_apply avifile.dll16-AVIStreamGetFrame/0001-avifile-Correctly-convert-result-of-AVIStreamGetFram.patch
-	patch_apply avifile.dll16-AVIStreamGetFrame/0002-avifile-Convert-between-AVISTREAMINFO-16-bit-and-AVI.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "avifile.dll16: Correctly convert result of AVIStreamGetFrame to a segptr.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "avifile.dll16: Convert between AVISTREAMINFO (16 bit) and AVISTREAMINFOA.", 1 },';
 	) >> "$patchlist"
 fi
 

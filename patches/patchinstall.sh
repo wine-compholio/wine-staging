@@ -3784,6 +3784,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	patch_apply eventfd_synchronization/0081-ntdll-Yield-during-PulseEvent.patch
 	patch_apply eventfd_synchronization/0082-ntdll-server-Check-the-value-of-WINEESYNC-instead-of.patch
 	patch_apply eventfd_synchronization/0083-esync-Update-README.patch
+	patch_apply eventfd_synchronization/0084-server-Use-default_fd_get_esync_fd-for-directory-cha.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "configure: Check for sys/eventfd.h, ppoll(), and shm_open().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "server: Create server objects for eventfd-based synchronization objects.", 1 },';
@@ -3868,6 +3869,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Yield during PulseEvent().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Check the value of WINEESYNC instead of just the presence.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "esync: Update README.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Use default_fd_get_esync_fd() for directory change notification objects.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5474,11 +5476,11 @@ fi
 # | Modified files:
 # |   *	dlls/user32/tests/winstation.c, include/wine/server_protocol.h, programs/explorer/desktop.c, server/async.c,
 # | 	server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c, server/debugger.c,
-# | 	server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c, server/handle.c, server/handle.h,
-# | 	server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c,
-# | 	server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c, server/semaphore.c,
-# | 	server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/timer.c,
-# | 	server/token.c, server/winstation.c
+# | 	server/device.c, server/directory.c, server/esync.c, server/event.c, server/fd.c, server/file.c, server/handle.c,
+# | 	server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c,
+# | 	server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c,
+# | 	server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c,
+# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
 # |
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "75aa4ab16b03a11464ab0d3e4c4cfbff0180c269"
+	echo "9b6d198a3c7c8a02aa69c0d3d11829712e9778a6"
 }
 
 # Show version information
@@ -252,7 +252,6 @@ patch_enable_all ()
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
-	enable_server_Misc_ACL="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
@@ -893,9 +892,6 @@ patch_enable ()
 			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
-			;;
-		server-Misc_ACL)
-			enable_server_Misc_ACL="$2"
 			;;
 		server-Object_Types)
 			enable_server_Object_Types="$2"
@@ -1740,13 +1736,9 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 fi
 
 if test "$enable_server_Object_Types" -eq 1; then
-	if test "$enable_server_Misc_ACL" -gt 1; then
-		abort "Patchset server-Misc_ACL disabled, but server-Object_Types depends on that."
-	fi
 	if test "$enable_server_Shared_Memory" -gt 1; then
 		abort "Patchset server-Shared_Memory disabled, but server-Object_Types depends on that."
 	fi
-	enable_server_Misc_ACL=1
 	enable_server_Shared_Memory=1
 fi
 
@@ -1766,6 +1758,13 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	fi
 	enable_ntdll_DOS_Attributes=1
 	enable_server_File_Permissions=1
+fi
+
+if test "$enable_server_Desktop_Refcount" -eq 1; then
+	if test "$enable_eventfd_synchronization" -gt 1; then
+		abort "Patchset eventfd_synchronization disabled, but server-Desktop_Refcount depends on that."
+	fi
+	enable_eventfd_synchronization=1
 fi
 
 if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
@@ -1887,6 +1886,13 @@ if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	enable_server_File_Permissions=1
 fi
 
+if test "$enable_server_File_Permissions" -eq 1; then
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but server-File_Permissions depends on that."
+	fi
+	enable_ntdll_Junction_Points=1
+fi
+
 if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
 		abort "Patchset advapi32-Token_Integrity_Level disabled, but eventfd_synchronization depends on that."
@@ -1903,9 +1909,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but eventfd_synchronization depends on that."
 	fi
-	if test "$enable_server_Misc_ACL" -gt 1; then
-		abort "Patchset server-Misc_ACL disabled, but eventfd_synchronization depends on that."
-	fi
 	if test "$enable_server_Realtime_Priority" -gt 1; then
 		abort "Patchset server-Realtime_Priority disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1920,7 +1923,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	enable_ntdll_RtlCreateUserThread=1
 	enable_ntdll_SystemRoot_Symlink=1
 	enable_ntdll_User_Shared_Data=1
-	enable_server_Misc_ACL=1
 	enable_server_Realtime_Priority=1
 	enable_server_Shared_Memory=1
 	enable_ws2_32_WSACleanup=1
@@ -2040,19 +2042,8 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	if test "$enable_advapi32_CreateRestrictedToken" -gt 1; then
 		abort "Patchset advapi32-CreateRestrictedToken disabled, but advapi32-Token_Integrity_Level depends on that."
 	fi
-	if test "$enable_server_Misc_ACL" -gt 1; then
-		abort "Patchset server-Misc_ACL disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
 	enable_Staging=1
 	enable_advapi32_CreateRestrictedToken=1
-	enable_server_Misc_ACL=1
-fi
-
-if test "$enable_advapi32_LsaLookupSids" -eq 1; then
-	if test "$enable_server_Misc_ACL" -gt 1; then
-		abort "Patchset server-Misc_ACL disabled, but advapi32-LsaLookupSids depends on that."
-	fi
-	enable_server_Misc_ACL=1
 fi
 
 
@@ -2185,27 +2176,7 @@ if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Misc_ACL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15980] GetSecurityInfo returns NULL DACL for process object
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/process.c, server/security.h, server/token.c
-# |
-if test "$enable_server_Misc_ACL" -eq 1; then
-	patch_apply server-Misc_ACL/0001-server-Add-default-security-descriptor-ownership-for.patch
-	patch_apply server-Misc_ACL/0002-server-Add-default-security-descriptor-DACL-for-proc.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor ownership for processes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Add default security descriptor DACL for processes.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset advapi32-LsaLookupSids
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Misc_ACL
 # |
 # | Modified files:
 # |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/token.c
@@ -2249,7 +2220,7 @@ fi
 # Patchset advapi32-Token_Integrity_Level
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL
+# |   *	Staging, advapi32-CreateRestrictedToken
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#40613] Basic implementation for token integrity levels and UAC handling
@@ -3708,7 +3679,7 @@ fi
 # Patchset eventfd_synchronization
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, server-Misc_ACL, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
 # | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
 # | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
 # | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
@@ -4158,6 +4129,9 @@ fi
 
 # Patchset server-File_Permissions
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Junction_Points
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38970] Improve mapping of DACL to file permissions
 # |
@@ -4188,7 +4162,7 @@ fi
 # Patchset ntdll-FileDispositionInformation
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions
+# |   *	ntdll-Junction_Points, server-File_Permissions
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/file.c, server/fd.c
@@ -4207,7 +4181,7 @@ fi
 # Patchset kernel32-CopyFileEx
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions, ntdll-FileDispositionInformation
+# |   *	ntdll-Junction_Points, server-File_Permissions, ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22692] Add support for CopyFileEx progress callback
@@ -5488,6 +5462,12 @@ fi
 
 # Patchset server-Desktop_Refcount
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
+# | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
+# | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
 # |
@@ -5528,7 +5508,7 @@ fi
 # Patchset server-Stored_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions
+# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -5559,7 +5539,7 @@ fi
 # Patchset server-Inherited_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
+# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions, server-Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c
@@ -5574,8 +5554,7 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Misc_ACL, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread,
-# | 	server-Shared_Memory
+# |   *	ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -5787,7 +5766,8 @@ fi
 # Patchset shell32-Progress_Dialog
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move
+# |   *	ntdll-Junction_Points, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
+# | 	shell32-SHFileOperation_Move
 # |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
@@ -5808,8 +5788,8 @@ fi
 # Patchset shell32-ACE_Viewer
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move,
-# | 	shell32-Progress_Dialog
+# |   *	ntdll-Junction_Points, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
+# | 	shell32-SHFileOperation_Move, shell32-Progress_Dialog
 # |
 # | Modified files:
 # |   *	dlls/aclui/Makefile.in, dlls/aclui/aclui.rc, dlls/aclui/aclui_main.c, dlls/aclui/resource.h, dlls/aclui/user_icons.bmp,
@@ -7433,7 +7413,10 @@ fi
 # Patchset ws2_32-TransmitFile
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	server-Desktop_Refcount
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
+# | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
+# | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "85826158947637f790b68742a5448c483f47234f"
+	echo "6e3f39a4c59fd529c7b532dcde1bb8c37c467b35"
 }
 
 # Show version information
@@ -89,7 +89,6 @@ patch_enable_all ()
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_advapi32_LsaLookupSids="$1"
-	enable_advapi32_SetSecurityInfo="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
@@ -403,9 +402,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupSids)
 			enable_advapi32_LsaLookupSids="$2"
-			;;
-		advapi32-SetSecurityInfo)
-			enable_advapi32_SetSecurityInfo="$2"
 			;;
 		advapi32-Token_Integrity_Level)
 			enable_advapi32_Token_Integrity_Level="$2"
@@ -2186,7 +2182,6 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	patch_apply advapi32-LsaLookupSids/0002-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0003-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
-	patch_apply advapi32-LsaLookupSids/0005-advapi32-tests-Test-prefix-and-use-of-TokenPrimaryGr.patch
 	patch_apply advapi32-LsaLookupSids/0006-server-Create-primary-group-using-DOMAIN_GROUP_RID_U.patch
 	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
 	(
@@ -2194,26 +2189,8 @@ if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
-		printf '%s\n' '+    { "Qian Hong", "advapi32/tests: Test prefix and use of TokenPrimaryGroup Sid.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-SetSecurityInfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38423] Fix the initialization of combined DACLs when the new DACL is empty
-# |
-# | Modified files:
-# |   *	dlls/advapi32/security.c
-# |
-if test "$enable_advapi32_SetSecurityInfo" -eq 1; then
-	patch_apply advapi32-SetSecurityInfo/0001-advapi32-Move-the-DACL-combining-code-into-a-separat.patch
-	patch_apply advapi32-SetSecurityInfo/0002-advapi32-Fix-the-initialization-of-combined-DACLs-wh.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "advapi32: Move the DACL combining code into a separate routine.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "advapi32: Fix the initialization of combined DACLs when the new DACL is empty.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4261,15 +4238,13 @@ fi
 # |   *	[#23934] CreateProcess does not prioritize the working directory over the system search path
 # |
 # | Modified files:
-# |   *	dlls/kernel32/path.c, dlls/kernel32/process.c, dlls/kernel32/tests/path.c
+# |   *	dlls/kernel32/process.c, dlls/kernel32/tests/path.c
 # |
 if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
 	patch_apply kernel32-NeedCurrentDirectoryForExePath/0001-kernel32-Add-SearchPath-test-demonstrating-the-prior.patch
-	patch_apply kernel32-NeedCurrentDirectoryForExePath/0002-kernel32-NeedCurrentDirectoryForExePath-does-not-use.patch
 	patch_apply kernel32-NeedCurrentDirectoryForExePath/0003-kernel32-Consider-the-working-directory-first-when-l.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: NeedCurrentDirectoryForExePath does not use the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
 	) >> "$patchlist"
 fi

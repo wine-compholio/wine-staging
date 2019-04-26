@@ -1,36 +1,37 @@
-From c5e4b050d894c7d4a677df29ae4e94e529c74896 Mon Sep 17 00:00:00 2001
+From e4f4a5fdd7688699cabbe98bedf1314df6bca246 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
-Subject: [PATCH] ntdll: Add support for junction point creation.
+Subject: ntdll: Add support for junction point creation.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- configure.ac            |   1 +
- dlls/ntdll/file.c       | 116 ++++++++++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/tests/file.c | 101 +++++++++++++++++++++++++++++++++++++++++
+ configure.ac            |   2 +
+ dlls/ntdll/file.c       | 116 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 101 ++++++++++++++++++++++++++++++++++
  include/Makefile.in     |   1 +
- include/ntifs.h         |  42 ++++++++++++++++++
+ include/ntifs.h         |  42 +++++++++++++++
  include/wine/port.h     |   9 ++++
  libs/port/Makefile.in   |   1 +
- libs/port/renameat2.c   |  47 ++++++++++++++++++++
- 8 files changed, 318 insertions(+)
+ libs/port/renameat2.c   |  55 +++++++++++++++++++
+ 8 files changed, 327 insertions(+)
  create mode 100644 include/ntifs.h
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index c2f97e0..2f0b5db 100644
+index c2f97e0f7d..10c60429e6 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2189,6 +2189,7 @@ AC_CHECK_FUNCS(\
+@@ -2189,6 +2189,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
++	renameat \
 +	renameat2 \
  	sched_yield \
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 3dafdcf..5f2da14 100644
+index 3dafdcfb44..5f2da14398 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -21,6 +21,7 @@
@@ -178,7 +179,7 @@ index 3dafdcf..5f2da14 100644
          return server_ioctl_file( handle, event, apc, apc_context, io, code,
                                    in_buffer, in_size, out_buffer, out_size );
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 8e54dbb..322dade 100644
+index 8e54dbb541..322dadefe3 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -302,7 +303,7 @@ index 8e54dbb..322dade 100644
 +    test_reparse_points();
  }
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 09c84d8..616f265 100644
+index 09c84d8254..616f265900 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
 @@ -479,6 +479,7 @@ SOURCES = \
@@ -315,7 +316,7 @@ index 09c84d8..616f265 100644
  	ntsecapi.h \
 diff --git a/include/ntifs.h b/include/ntifs.h
 new file mode 100644
-index 0000000..21d42e1
+index 0000000000..21d42e1732
 --- /dev/null
 +++ b/include/ntifs.h
 @@ -0,0 +1,42 @@
@@ -362,7 +363,7 @@ index 0000000..21d42e1
 +
 +#endif /* __WINE_NTIFS_H */
 diff --git a/include/wine/port.h b/include/wine/port.h
-index d23e2b0..26c5890 100644
+index d23e2b033f..26c5890ddb 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -317,6 +317,15 @@ double rint(double x);
@@ -382,7 +383,7 @@ index d23e2b0..26c5890 100644
  int statvfs( const char *path, struct statvfs *buf );
  #endif
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index a2e96d1..db27249 100644
+index a2e96d1500..db27249ac1 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
 @@ -97,6 +97,7 @@ C_SRCS = \
@@ -395,14 +396,14 @@ index a2e96d1..db27249 100644
  	spawn.c \
 diff --git a/libs/port/renameat2.c b/libs/port/renameat2.c
 new file mode 100644
-index 0000000..178f7f1
+index 0000000000..f46f407ec7
 --- /dev/null
 +++ b/libs/port/renameat2.c
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,55 @@
 +/*
 + * renameat2 function
 + *
-+ * Copyright 2015 Erich E. Hoover
++ * Copyright 2015-2019 Erich E. Hoover
 + *
 + * This library is free software; you can redistribute it and/or
 + * modify it under the terms of the GNU Lesser General Public
@@ -429,23 +430,31 @@ index 0000000..178f7f1
 +#include <errno.h>
 +#include <stdio.h>
 +
++#ifndef HAVE_RENAMEAT
++int renameat( int olddirfd, const char *oldpath, int newdirfd, const char *newpath )
++{
++    errno = ENOSYS;
++    return -1;
++}
++#endif
++
 +#ifndef HAVE_RENAMEAT2
 +int renameat2( int olddirfd, const char *oldpath, int newdirfd, const char *newpath,
 +               unsigned int flags )
 +{
++    if (flags == 0)
++        return renameat( olddirfd, oldpath, newdirfd, newpath );
 +#if defined(__NR_renameat2)
 +    return syscall( __NR_renameat2, olddirfd, oldpath, newdirfd, newpath, flags );
 +#elif defined(RENAME_SWAP)
 +    return renameatx_np(olddirfd, oldpath, newdirfd, newpath,
 +                        (flags & RENAME_EXCHANGE ? RENAME_SWAP : 0));
 +#else
-+    if (flags == 0)
-+        return renameat( olddirfd, oldpath, newdirfd, newpath );
 +    errno = ENOSYS;
 +    return -1;
 +#endif
 +}
 +#endif /* HAVE_RENAMEAT2 */
 -- 
-1.9.1
+2.17.1
 

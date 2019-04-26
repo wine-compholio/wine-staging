@@ -146,6 +146,7 @@ patch_enable_all ()
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
+	enable_gdi32_D3DKMTQueryStatistics="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_rotation="$1"
@@ -573,6 +574,9 @@ patch_enable ()
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
+			;;
+		gdi32-D3DKMTQueryStatistics)
+			enable_gdi32_D3DKMTQueryStatistics="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -3906,6 +3910,23 @@ if test "$enable_fsutil_Stub_Program" -eq 1; then
 	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdi32-D3DKMTQueryStatistics
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47074] gdi32: Add D3DKMTQueryStatistics stub
+# |
+# | Modified files:
+# |   *	dlls/gdi32/driver.c, dlls/gdi32/gdi32.spec, include/ddk/d3dkmthk.h
+# |
+if test "$enable_gdi32_D3DKMTQueryStatistics" -eq 1; then
+	patch_apply gdi32-D3DKMTQueryStatistics/0001-include-Add-missing-D3DKMT-typedefs.patch
+	patch_apply gdi32-D3DKMTQueryStatistics/0002-gdi32-Add-D3DKMTQueryStatistics-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add missing D3DKMT typedefs.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "gdi32: Add D3DKMTQueryStatistics stub.", 1 },';
 	) >> "$patchlist"
 fi
 

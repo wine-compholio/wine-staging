@@ -215,6 +215,7 @@ patch_enable_all ()
 	enable_ntdll_Stack_Guard_Page="$1"
 	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
+	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
@@ -780,6 +781,9 @@ patch_enable ()
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
+			;;
+		ntdll-SystemExtendedProcessInformation)
+			enable_ntdll_SystemExtendedProcessInformation="$2"
 			;;
 		ntdll-SystemInterruptInformation)
 			enable_ntdll_SystemInterruptInformation="$2"
@@ -5040,6 +5044,22 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemExtendedProcessInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46870] League of Legends 8.12+ fails to start a game in Vista+ mode (anticheat engine,
+# | 	SystemExtendedProcessInformation)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c
+# |
+if test "$enable_ntdll_SystemExtendedProcessInformation" -eq 1; then
+	patch_apply ntdll-SystemExtendedProcessInformation/0001-ntdll-Add-stub-for-NtQuerySystemInformation-SystemEx.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add stub for NtQuerySystemInformation(SystemExtendedProcessInformation).", 1 },';
 	) >> "$patchlist"
 fi
 

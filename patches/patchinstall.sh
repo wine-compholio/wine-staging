@@ -225,6 +225,7 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_Zero_mod_name="$1"
+	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_Fix_Relocation="$1"
@@ -811,6 +812,9 @@ patch_enable ()
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
+			;;
+		ntdll-aarch-TEB)
+			enable_ntdll_aarch_TEB="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -3836,7 +3840,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Yield during PulseEvent().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Check the value of WINEESYNC instead of just the presence.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "esync: Update README.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "server: Use default_fd_get_esync_fd() for directory change notification objects.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Create esync file descriptors for true file objects and use them for directory change notifications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5112,6 +5116,23 @@ if test "$enable_ntdll_Zero_mod_name" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-aarch-TEB
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38780] AArch64 platforms: register X18 (TEB) must remain reserved for Wine to run 64-bit ARM Windows applications.
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/loader.c, dlls/ntdll/relay.c
+# |
+if test "$enable_ntdll_aarch_TEB" -eq 1; then
+	patch_apply ntdll-aarch-TEB/0001-configure-Avoid-clobbering-x18-on-arm64-within-wine.patch
+	patch_apply ntdll-aarch-TEB/0002-ntdll-Always-restore-TEB-to-x18-on-aarch-64-on-retur.patch
+	(
+		printf '%s\n' '+    { "Martin Storsjo", "configure: Avoid clobbering x18 on arm64 within wine.", 1 },';
+		printf '%s\n' '+    { "Martin Storsjo", "ntdll: Always restore TEB to x18 on aarch 64 on return from calls to builtins.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-set_full_cpu_context
 # |
 # | Modified files:
@@ -5472,13 +5493,13 @@ fi
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
 # |
 # | Modified files:
-# |   *	dlls/user32/tests/winstation.c, include/wine/server_protocol.h, programs/explorer/desktop.c, server/async.c,
-# | 	server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c, server/debugger.c,
-# | 	server/device.c, server/directory.c, server/esync.c, server/event.c, server/fd.c, server/file.c, server/handle.c,
-# | 	server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c,
-# | 	server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c, server/request.c,
-# | 	server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c,
-# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
+# |   *	dlls/user32/tests/winstation.c, programs/explorer/desktop.c, server/async.c, server/atom.c, server/change.c,
+# | 	server/clipboard.c, server/completion.c, server/console.c, server/debugger.c, server/device.c, server/directory.c,
+# | 	server/esync.c, server/event.c, server/fd.c, server/file.c, server/handle.c, server/handle.h, server/hook.c,
+# | 	server/mailslot.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c, server/object.h,
+# | 	server/process.c, server/queue.c, server/registry.c, server/request.c, server/semaphore.c, server/serial.c,
+# | 	server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/timer.c, server/token.c,
+# | 	server/winstation.c
 # |
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch

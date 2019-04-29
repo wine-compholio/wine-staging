@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6e3f39a4c59fd529c7b532dcde1bb8c37c467b35"
+	echo "5bd1b2652c844a2522131bd26feb95231f718986"
 }
 
 # Show version information
@@ -290,7 +290,6 @@ patch_enable_all ()
 	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_FlashWindowEx="$1"
-	enable_user32_GetPointerType="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Implement_CascadeWindows="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
@@ -305,7 +304,6 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
-	enable_virtdisk_OpenVirtualDisk="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
@@ -1008,9 +1006,6 @@ patch_enable ()
 		user32-FlashWindowEx)
 			enable_user32_FlashWindowEx="$2"
 			;;
-		user32-GetPointerType)
-			enable_user32_GetPointerType="$2"
-			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
 			;;
@@ -1052,9 +1047,6 @@ patch_enable ()
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
-			;;
-		virtdisk-OpenVirtualDisk)
-			enable_virtdisk_OpenVirtualDisk="$2"
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
@@ -1705,13 +1697,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 		abort "Patchset windowscodecs-GIF_Encoder disabled, but windowscodecs-TIFF_Support depends on that."
 	fi
 	enable_windowscodecs_GIF_Encoder=1
-fi
-
-if test "$enable_user32_GetPointerType" -eq 1; then
-	if test "$enable_user32_Mouse_Message_Hwnd" -gt 1; then
-		abort "Patchset user32-Mouse_Message_Hwnd disabled, but user32-GetPointerType depends on that."
-	fi
-	enable_user32_Mouse_Message_Hwnd=1
 fi
 
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
@@ -6180,50 +6165,6 @@ if test "$enable_user32_FlashWindowEx" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-Mouse_Message_Hwnd
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22458] Fix issues with inserting symbols by clicking on center in Word 2007 & 2010
-# |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
-# |   *	[#9512] Make sure popups don't block access to objects underneath in DVDPro
-# |
-# | Modified files:
-# |   *	dlls/user32/message.c, dlls/user32/tests/input.c, dlls/winex11.drv/bitblt.c, server/protocol.def, server/window.c
-# |
-if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
-	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
-	patch_apply user32-Mouse_Message_Hwnd/0002-user32-tests-Add-tests-for-clicking-through-layered-.patch
-	patch_apply user32-Mouse_Message_Hwnd/0003-user32-tests-Add-tests-for-window-region-of-layered-.patch
-	patch_apply user32-Mouse_Message_Hwnd/0004-user32-tests-Add-tests-for-DC-region.patch
-	patch_apply user32-Mouse_Message_Hwnd/0005-server-Add-support-for-a-layered-window-region.-v2.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for clicking through layered window.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for window region of layered windows.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for DC region.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-GetPointerType
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	user32-Mouse_Message_Hwnd
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45765] Added GetPointerType stub
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-rtcore-ntuser-wmpointer-l1-1-0/api-ms-win-rtcore-ntuser-wmpointer-l1-1-0.spec, dlls/user32/misc.c,
-# | 	dlls/user32/tests/input.c, dlls/user32/user32.spec, include/winuser.h
-# |
-if test "$enable_user32_GetPointerType" -eq 1; then
-	patch_apply user32-GetPointerType/0001-user32-Added-GetPointerType-stub.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "user32: Added GetPointerType stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-GetSystemMetrics
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6295,6 +6236,31 @@ if test "$enable_user32_MessageBox_WS_EX_TOPMOST" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32/tests: Add some tests to see when MessageBox gains WS_EX_TOPMOST style.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: MessageBox should be topmost when MB_SYSTEMMODAL style is set.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-Mouse_Message_Hwnd
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#22458] Fix issues with inserting symbols by clicking on center in Word 2007 & 2010
+# |   *	[#12007] Fix issues with dragging layers between images in Adobe Photoshop 7.0
+# |   *	[#9512] Make sure popups don't block access to objects underneath in DVDPro
+# |
+# | Modified files:
+# |   *	dlls/user32/message.c, dlls/user32/tests/input.c, dlls/winex11.drv/bitblt.c, server/protocol.def, server/window.c
+# |
+if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
+	patch_apply user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
+	patch_apply user32-Mouse_Message_Hwnd/0002-user32-tests-Add-tests-for-clicking-through-layered-.patch
+	patch_apply user32-Mouse_Message_Hwnd/0003-user32-tests-Add-tests-for-window-region-of-layered-.patch
+	patch_apply user32-Mouse_Message_Hwnd/0004-user32-tests-Add-tests-for-DC-region.patch
+	patch_apply user32-Mouse_Message_Hwnd/0005-server-Add-support-for-a-layered-window-region.-v2.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Try harder to find a target for mouse messages.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for clicking through layered window.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for window region of layered windows.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for DC region.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 3 },';
 	) >> "$patchlist"
 fi
 
@@ -6418,21 +6384,6 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset virtdisk-OpenVirtualDisk
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45947] virtdisk: Stub OpenVirtualDisk
-# |
-# | Modified files:
-# |   *	dlls/virtdisk/virtdisk.spec, dlls/virtdisk/virtdisk_main.c, include/virtdisk.h
-# |
-if test "$enable_virtdisk_OpenVirtualDisk" -eq 1; then
-	patch_apply virtdisk-OpenVirtualDisk/0001-virtdisk-Add-stub-for-OpenVirtualDisk.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "virtdisk: Add stub for OpenVirtualDisk.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,17 +1,17 @@
-From 273149c2baf56e80063a33ebb5d143819a138436 Mon Sep 17 00:00:00 2001
+From 4cfe8631a57057a13afa650f41576c8c3ae465d5 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 11 Apr 2019 12:16:49 -0600
 Subject: ntdll: Add support for relative symlink creation.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 57 ++++++++++++++++++++++++++++++++++++-----
- dlls/ntdll/tests/file.c | 30 +++++++++++++++++-----
+ dlls/ntdll/file.c       | 58 ++++++++++++++++++++++++++++++++++++-----
+ dlls/ntdll/tests/file.c | 30 ++++++++++++++++-----
  include/ntifs.h         |  2 ++
- 3 files changed, 76 insertions(+), 13 deletions(-)
+ 3 files changed, 77 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 262d24b9d2..186156159c 100644
+index 60affd59a2..8487bb5158 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -1656,16 +1656,19 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
@@ -21,9 +21,9 @@ index 262d24b9d2..186156159c 100644
 -    BOOL src_allocated = FALSE, dest_allocated = FALSE, tempdir_created = FALSE;
 +    BOOL src_allocated = FALSE, path_allocated = FALSE, dest_allocated = FALSE;
 +    BOOL nt_dest_allocated = FALSE, tempdir_created = FALSE;
-+    ANSI_STRING unix_src, unix_dest, unix_path;
-     char tmpdir[PATH_MAX], tmplink[PATH_MAX];
+     char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
 -    ANSI_STRING unix_src, unix_dest;
++    ANSI_STRING unix_src, unix_dest, unix_path;
      char magic_dest[PATH_MAX];
      int dest_fd, needs_close;
 +    int relative_offset = 0;
@@ -50,7 +50,7 @@ index 262d24b9d2..186156159c 100644
          break;
      default:
          return STATUS_NOT_IMPLEMENTED;
-@@ -1690,16 +1695,52 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1690,17 +1695,54 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      if ((status = server_get_unix_name( handle, &unix_src )))
          goto cleanup;
      src_allocated = TRUE;
@@ -64,7 +64,8 @@ index 262d24b9d2..186156159c 100644
 +        unix_path.Buffer = RtlAllocateHeap( GetProcessHeap(), 0, unix_path.MaximumLength );
 +        path_allocated = TRUE;
 +        strcpy( unix_path.Buffer, unix_src.Buffer );
-+        dirname( unix_path.Buffer );
++        d = dirname( unix_path.Buffer );
++        if (d != unix_path.Buffer) strcpy( unix_path.Buffer, d );
 +        strcat( unix_path.Buffer, "/");
 +        unix_path.Length = strlen( unix_path.Buffer );
 +        if ((status = wine_unix_to_nt_file_name( &unix_path, &nt_path )))
@@ -82,7 +83,8 @@ index 262d24b9d2..186156159c 100644
 +        nt_dest.Length = dest_len;
 +    }
 +    nt_dest_allocated = TRUE;
-     if ((status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, FILE_OPEN, FALSE )))
+     status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
+     if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
          goto cleanup;
      dest_allocated = TRUE;
 +    if (flags == SYMLINK_FLAG_RELATIVE)
@@ -107,7 +109,7 @@ index 262d24b9d2..186156159c 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          if ((buffer->ReparseTag >> i) & 1)
-@@ -1718,7 +1759,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1719,7 +1761,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
              strcat( magic_dest, "." );
          strcat( magic_dest, "/" );
      }
@@ -116,7 +118,7 @@ index 262d24b9d2..186156159c 100644
  
      /* Produce the link in a temporary location in the same folder */
      strcpy( tmpdir, unix_src.Buffer );
-@@ -1767,7 +1808,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1769,7 +1811,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
  
  cleanup:
      if (tempdir_created) rmdir( tmpdir );

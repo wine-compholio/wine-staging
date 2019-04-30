@@ -1,4 +1,4 @@
-From e4f4a5fdd7688699cabbe98bedf1314df6bca246 Mon Sep 17 00:00:00 2001
+From 87bbbc7d6c67c2ec3e13f84a7eecccb71e486ac0 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: ntdll: Add support for junction point creation.
@@ -6,22 +6,22 @@ Subject: ntdll: Add support for junction point creation.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  configure.ac            |   2 +
- dlls/ntdll/file.c       | 116 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/file.c       | 118 ++++++++++++++++++++++++++++++++++++++++
  dlls/ntdll/tests/file.c | 101 ++++++++++++++++++++++++++++++++++
  include/Makefile.in     |   1 +
- include/ntifs.h         |  42 +++++++++++++++
- include/wine/port.h     |   9 ++++
+ include/ntifs.h         |  42 ++++++++++++++
+ include/wine/port.h     |   9 +++
  libs/port/Makefile.in   |   1 +
  libs/port/renameat2.c   |  55 +++++++++++++++++++
- 8 files changed, 327 insertions(+)
+ 8 files changed, 329 insertions(+)
  create mode 100644 include/ntifs.h
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index c2f97e0f7d..10c60429e6 100644
+index d1502bacf7..84307f0f54 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2189,6 +2189,8 @@ AC_CHECK_FUNCS(\
+@@ -2207,6 +2207,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -31,7 +31,7 @@ index c2f97e0f7d..10c60429e6 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 3dafdcfb44..5f2da14398 100644
+index 3dafdcfb44..c0992ea657 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -21,6 +21,7 @@
@@ -50,7 +50,7 @@ index 3dafdcfb44..5f2da14398 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
-@@ -1648,6 +1650,102 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
+@@ -1648,6 +1650,104 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
  }
  
  
@@ -64,7 +64,7 @@ index 3dafdcfb44..5f2da14398 100644
 +    int dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
 +    int offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
 +    WCHAR *dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
-+    char tmpdir[PATH_MAX], tmplink[PATH_MAX];
++    char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
 +    ANSI_STRING unix_src, unix_dest;
 +    char magic_dest[PATH_MAX];
 +    int dest_fd, needs_close;
@@ -80,7 +80,8 @@ index 3dafdcfb44..5f2da14398 100644
 +    src_allocated = TRUE;
 +    nt_dest.Buffer = dest;
 +    nt_dest.Length = dest_len;
-+    if ((status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, FILE_OPEN, FALSE )))
++    status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
++    if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
 +        goto cleanup;
 +    dest_allocated = TRUE;
 +
@@ -98,7 +99,8 @@ index 3dafdcfb44..5f2da14398 100644
 +
 +    /* Produce the link in a temporary location in the same folder */
 +    strcpy( tmpdir, unix_src.Buffer );
-+    dirname( tmpdir) ;
++    d = dirname( tmpdir);
++    if (d != tmpdir) strcpy( tmpdir, d );
 +    strcat( tmpdir, "/.winelink.XXXXXX" );
 +    if (mkdtemp( tmpdir ) == NULL)
 +    {
@@ -153,7 +155,7 @@ index 3dafdcfb44..5f2da14398 100644
  /**************************************************************************
   *              NtFsControlFile                 [NTDLL.@]
   *              ZwFsControlFile                 [NTDLL.@]
-@@ -1732,6 +1830,24 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1732,6 +1832,24 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
          io->Information = 0;
          status = STATUS_SUCCESS;
          break;
@@ -303,10 +305,10 @@ index 8e54dbb541..322dadefe3 100644
 +    test_reparse_points();
  }
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 09c84d8254..616f265900 100644
+index 4a0f927082..519a34c856 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
-@@ -479,6 +479,7 @@ SOURCES = \
+@@ -480,6 +480,7 @@ SOURCES = \
  	ntddvdeo.h \
  	ntdef.h \
  	ntdsapi.h \

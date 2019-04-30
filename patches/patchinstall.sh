@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5bd1b2652c844a2522131bd26feb95231f718986"
+	echo "8039941c52758113955d376bd7b6b6e1e5b5f76c"
 }
 
 # Show version information
@@ -157,7 +157,6 @@ patch_enable_all ()
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_GetBestRoute2="$1"
 	enable_iphlpapi_System_Ping="$1"
-	enable_iphlpapi_TCP_Table="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
@@ -606,9 +605,6 @@ patch_enable ()
 			;;
 		iphlpapi-System_Ping)
 			enable_iphlpapi_System_Ping="$2"
-			;;
-		iphlpapi-TCP_Table)
-			enable_iphlpapi_TCP_Table="$2"
 			;;
 		kernel32-CopyFileEx)
 			enable_kernel32_CopyFileEx="$2"
@@ -3799,7 +3795,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Let the server know when we are doing a message wait.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Avoid server_select() when waiting for critical sections.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Remove hooks that time out.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "server: Don'\''t check for a hung queue when sending low-level hooks.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Zigzag test.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "=?UTF-8?q?server:=20Try=20to=20remove=20a=20pre?= =?UTF-8?q?=C3=ABxisting=20shm=20file.?=.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtQuerySemaphore().", 1 },';
@@ -4084,21 +4079,6 @@ if test "$enable_iphlpapi_System_Ping" -eq 1; then
 	patch_apply iphlpapi-System_Ping/0001-iphlpapi-Fallback-to-system-ping-when-ICMP-permissio.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "iphlpapi: Fallback to system ping when ICMP permissions are not present.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset iphlpapi-TCP_Table
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34372] Support for AllocateAndGetTcpExTableFromStack
-# |
-# | Modified files:
-# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/ipstats.c, include/iphlpapi.h
-# |
-if test "$enable_iphlpapi_TCP_Table" -eq 1; then
-	patch_apply iphlpapi-TCP_Table/0001-iphlpapi-Implement-AllocateAndGetTcpExTableFromStack.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "iphlpapi: Implement AllocateAndGetTcpExTableFromStack.", 2 },';
 	) >> "$patchlist"
 fi
 

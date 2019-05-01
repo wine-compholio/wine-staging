@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8039941c52758113955d376bd7b6b6e1e5b5f76c"
+	echo "d48ffbdc014954907d3280a3b53eb9b478b10195"
 }
 
 # Show version information
@@ -132,7 +132,6 @@ patch_enable_all ()
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
-	enable_dinput_wheel_support="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
@@ -155,7 +154,6 @@ patch_enable_all ()
 	enable_imm32_message_on_focus="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
-	enable_iphlpapi_GetBestRoute2="$1"
 	enable_iphlpapi_System_Ping="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Debugger="$1"
@@ -301,7 +299,6 @@ patch_enable_all ()
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
-	enable_version_VerFindFileA="$1"
 	enable_version_VerQueryValue="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
@@ -531,9 +528,6 @@ patch_enable ()
 		dinput-remap-joystick)
 			enable_dinput_remap_joystick="$2"
 			;;
-		dinput-wheel-support)
-			enable_dinput_wheel_support="$2"
-			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
 			;;
@@ -599,9 +593,6 @@ patch_enable ()
 			;;
 		inseng-Implementation)
 			enable_inseng_Implementation="$2"
-			;;
-		iphlpapi-GetBestRoute2)
-			enable_iphlpapi_GetBestRoute2="$2"
 			;;
 		iphlpapi-System_Ping)
 			enable_iphlpapi_System_Ping="$2"
@@ -1037,9 +1028,6 @@ patch_enable ()
 			;;
 		uxtheme-GTK_Theming)
 			enable_uxtheme_GTK_Theming="$2"
-			;;
-		version-VerFindFileA)
-			enable_version_VerFindFileA="$2"
 			;;
 		version-VerQueryValue)
 			enable_version_VerQueryValue="$2"
@@ -2164,21 +2152,19 @@ fi
 # Patchset advapi32-LsaLookupSids
 # |
 # | Modified files:
-# |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c, server/token.c
+# |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c
 # |
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
 	patch_apply advapi32-LsaLookupSids/0001-advapi32-Initialize-buffer-length-to-zero-in-LsaLook.patch
 	patch_apply advapi32-LsaLookupSids/0002-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0003-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
-	patch_apply advapi32-LsaLookupSids/0006-server-Create-primary-group-using-DOMAIN_GROUP_RID_U.patch
 	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
-		printf '%s\n' '+    { "Qian Hong", "server: Create primary group using DOMAIN_GROUP_RID_USERS.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3120,23 +3106,6 @@ if test "$enable_dinput_remap_joystick" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-wheel-support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46989] dinput: Wheel (Wheel, Gas, Brake) axes inputs aren't recognized
-# |
-# | Modified files:
-# |   *	dlls/dinput/joystick_linux.c, dlls/winejoystick.drv/joystick_linux.c
-# |
-if test "$enable_dinput_wheel_support" -eq 1; then
-	patch_apply dinput-wheel-support/0001-winejoystick-Add-support-for-wheel-axes.patch
-	patch_apply dinput-wheel-support/0002-dinput-Map-wheel-gas-and-brake-axes-as-well.patch
-	(
-		printf '%s\n' '+    { "Tim Schumacher", "winejoystick: Add support for wheel axes.", 1 },';
-		printf '%s\n' '+    { "Tim Schumacher", "dinput: Map wheel, gas, and brake axes as well.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dsound-Fast_Mixer
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3215,14 +3184,11 @@ fi
 # | 	Vista/Win7 mode)
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/dwmapi/dwmapi_main.c, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c,
-# | 	include/dwmapi.h, include/winerror.h
+# |   *	configure, configure.ac, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c, include/dwmapi.h
 # |
 if test "$enable_dwmapi_DwmGetTransportAttributes" -eq 1; then
-	patch_apply dwmapi-DwmGetTransportAttributes/0001-dwmapi-return-DWM_E_COMPOSITIONDISABLED-instead-of-ENOTIMPL-in-DwmGetTransportAttributes.patch
 	patch_apply dwmapi-DwmGetTransportAttributes/0002-dwmapi-add-initial-tests.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "dwmapi: Return DWM_E_COMPOSITIONDISABLED instead of E_NOTIMPL in DwmGetTransportAttributes.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "dwampi: Add initial tests.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3301,13 +3267,12 @@ fi
 # |   *	configure.ac, dlls/dxva2/Makefile.in, dlls/dxva2/backend.idl, dlls/dxva2/devicemanager.c, dlls/dxva2/dxva2_private.h,
 # | 	dlls/dxva2/genericdecoder.c, dlls/dxva2/main.c, dlls/dxva2/softwareprocessor.c, dlls/dxva2/tests/Makefile.in,
 # | 	dlls/dxva2/tests/dxva2.c, dlls/dxva2/vaapi-h264.c, dlls/dxva2/vaapi-mpeg2.c, dlls/dxva2/vaapi.c,
-# | 	dlls/dxva2/videoservices.c, include/Makefile.in, include/dxva.h, include/dxva2api.idl
+# | 	dlls/dxva2/videoservices.c, include/dxva2api.idl
 # |
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	patch_apply dxva2-Video_Decoder/0001-dxva2-Implement-semi-stub-for-Direct3DDeviceManager9.patch
 	patch_apply dxva2-Video_Decoder/0002-dxva2-Implement-stubbed-interfaces-for-IDirectXVideo.patch
 	patch_apply dxva2-Video_Decoder/0004-dxva2-Implement-stubbed-DirectX-Software-VideoProces.patch
-	patch_apply dxva2-Video_Decoder/0005-include-Add-dxva.h-header-file.patch
 	patch_apply dxva2-Video_Decoder/0006-dxva2-tests-Add-tests-for-dxva2-decoder.patch
 	patch_apply dxva2-Video_Decoder/0007-dxva2-Initial-implementation-of-MPEG2-decoder-using-.patch
 	patch_apply dxva2-Video_Decoder/0008-dxva2-Implement-h264-decoder.patch
@@ -3319,7 +3284,6 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed DirectX Software VideoProcessor interface.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "include: Add dxva.h header file.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2/tests: Add tests for dxva2 decoder.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Initial implementation of MPEG2 decoder using vaapi backend.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement h264 decoder.", 1 },';
@@ -3795,6 +3759,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Let the server know when we are doing a message wait.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Avoid server_select() when waiting for critical sections.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Remove hooks that time out.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "server: Don'\''t check for a hung queue when sending low-level hooks.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "kernel32/tests: Zigzag test.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "=?UTF-8?q?server:=20Try=20to=20remove=20a=20pre?= =?UTF-8?q?=C3=ABxisting=20shm=20file.?=.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Implement NtQuerySemaphore().", 1 },';
@@ -4052,21 +4017,6 @@ if test "$enable_inseng_Implementation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset iphlpapi-GetBestRoute2
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44850] iphlpapi: Add GetBestRoute2 stub.
-# |
-# | Modified files:
-# |   *	dlls/iphlpapi/iphlpapi.spec, dlls/iphlpapi/iphlpapi_main.c
-# |
-if test "$enable_iphlpapi_GetBestRoute2" -eq 1; then
-	patch_apply iphlpapi-GetBestRoute2/0001-iphlpapi-Add-GetBestRoute2-stub.patch
-	(
-		printf '%s\n' '+    { "Austin English", "iphlpapi: Add GetBestRoute2 stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset iphlpapi-System_Ping
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4211,13 +4161,11 @@ fi
 # |   *	[#23934] CreateProcess does not prioritize the working directory over the system search path
 # |
 # | Modified files:
-# |   *	dlls/kernel32/process.c, dlls/kernel32/tests/path.c
+# |   *	dlls/kernel32/process.c
 # |
 if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
-	patch_apply kernel32-NeedCurrentDirectoryForExePath/0001-kernel32-Add-SearchPath-test-demonstrating-the-prior.patch
 	patch_apply kernel32-NeedCurrentDirectoryForExePath/0003-kernel32-Consider-the-working-directory-first-when-l.patch
 	(
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Add SearchPath test demonstrating the priority of the working directory.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6340,18 +6288,6 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Correctly render buttons with GTK >= 3.14.0.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uxtheme: Reset FPU flags before calling GTK3 functions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Fix some incorrect error codes.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset version-VerFindFileA
-# |
-# | Modified files:
-# |   *	dlls/version/tests/Makefile.in, dlls/version/tests/install.c, dlls/version/version.c
-# |
-if test "$enable_version_VerFindFileA" -eq 1; then
-	patch_apply version-VerFindFileA/0001-version-Correctly-return-VFF_CURNEDEST-in-VerFindFil.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "version: Correctly return VFF_CURNEDEST in VerFindFileA.", 1 },';
 	) >> "$patchlist"
 fi
 

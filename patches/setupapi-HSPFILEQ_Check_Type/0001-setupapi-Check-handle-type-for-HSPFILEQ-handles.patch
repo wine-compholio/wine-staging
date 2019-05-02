@@ -1,17 +1,17 @@
-From 8b63a6aa028969d43834a2a4ddd1ff1746af0d03 Mon Sep 17 00:00:00 2001
+From d666027358311859a5d245893840a5b752f2e2cc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 27 Nov 2015 21:28:50 +0100
-Subject: setupapi: Check handle type for HSPFILEQ handles.
+Subject: [PATCH] setupapi: Check handle type for HSPFILEQ handles.
 
 ---
- dlls/setupapi/queue.c | 93 +++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 93 insertions(+)
+ dlls/setupapi/queue.c | 87 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 87 insertions(+)
 
 diff --git a/dlls/setupapi/queue.c b/dlls/setupapi/queue.c
-index d57f8e1..1b27800 100644
+index c065c6e..e0d3dc5 100644
 --- a/dlls/setupapi/queue.c
 +++ b/dlls/setupapi/queue.c
-@@ -68,8 +68,11 @@ struct file_op_queue
+@@ -77,8 +77,11 @@ struct file_op_queue
      unsigned int count;
  };
  
@@ -23,7 +23,7 @@ index d57f8e1..1b27800 100644
      struct file_op_queue copy_queue;
      struct file_op_queue delete_queue;
      struct file_op_queue rename_queue;
-@@ -415,6 +418,7 @@ HSPFILEQ WINAPI SetupOpenFileQueue(void)
+@@ -434,6 +437,7 @@ HSPFILEQ WINAPI SetupOpenFileQueue(void)
  
      if (!(queue = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*queue))))
          return INVALID_HANDLE_VALUE;
@@ -31,9 +31,9 @@ index d57f8e1..1b27800 100644
      return queue;
  }
  
-@@ -426,6 +430,13 @@ BOOL WINAPI SetupCloseFileQueue( HSPFILEQ handle )
- {
+@@ -446,6 +450,13 @@ BOOL WINAPI SetupCloseFileQueue( HSPFILEQ handle )
      struct file_queue *queue = handle;
+     unsigned int i;
  
 +    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
 +    {
@@ -45,7 +45,7 @@ index d57f8e1..1b27800 100644
      free_file_op_queue( &queue->copy_queue );
      free_file_op_queue( &queue->rename_queue );
      free_file_op_queue( &queue->delete_queue );
-@@ -442,6 +453,12 @@ BOOL WINAPI SetupQueueCopyIndirectA( PSP_FILE_COPY_PARAMS_A params )
+@@ -535,6 +546,12 @@ BOOL WINAPI SetupQueueCopyIndirectW( PSP_FILE_COPY_PARAMS_W params )
      struct file_queue *queue = params->QueueHandle;
      struct file_op *op;
  
@@ -57,21 +57,8 @@ index d57f8e1..1b27800 100644
 +
      if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
      op->style      = params->CopyStyle;
-     op->src_root   = strdupAtoW( params->SourceRootPath );
-@@ -478,6 +495,12 @@ BOOL WINAPI SetupQueueCopyIndirectW( PSP_FILE_COPY_PARAMS_W params )
-     struct file_queue *queue = params->QueueHandle;
-     struct file_op *op;
- 
-+    if (!queue || queue->magic != SETUP_FILE_QUEUE_MAGIC)
-+    {
-+        SetLastError(ERROR_INVALID_HANDLE);
-+        return FALSE;
-+    }
-+
-     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
-     op->style      = params->CopyStyle;
-     op->src_root   = strdupW( params->SourceRootPath );
-@@ -612,6 +635,12 @@ BOOL WINAPI SetupQueueDeleteA( HSPFILEQ handle, PCSTR part1, PCSTR part2 )
+     op->src_path   = strdupW( params->SourcePath );
+@@ -681,6 +698,12 @@ BOOL WINAPI SetupQueueDeleteA( HSPFILEQ handle, PCSTR part1, PCSTR part2 )
      struct file_queue *queue = handle;
      struct file_op *op;
  
@@ -81,10 +68,10 @@ index d57f8e1..1b27800 100644
 +        return FALSE;
 +    }
 +
-     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
-     op->style      = 0;
-     op->src_root   = NULL;
-@@ -634,6 +663,12 @@ BOOL WINAPI SetupQueueDeleteW( HSPFILEQ handle, PCWSTR part1, PCWSTR part2 )
+     if (!(op = heap_alloc_zero( sizeof(*op) ))) return FALSE;
+     op->dst_path = strdupAtoW( part1 );
+     op->dst_file = strdupAtoW( part2 );
+@@ -697,6 +720,12 @@ BOOL WINAPI SetupQueueDeleteW( HSPFILEQ handle, PCWSTR part1, PCWSTR part2 )
      struct file_queue *queue = handle;
      struct file_op *op;
  
@@ -94,10 +81,10 @@ index d57f8e1..1b27800 100644
 +        return FALSE;
 +    }
 +
-     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
-     op->style      = 0;
-     op->src_root   = NULL;
-@@ -657,6 +692,12 @@ BOOL WINAPI SetupQueueRenameA( HSPFILEQ handle, PCSTR SourcePath, PCSTR SourceFi
+     if (!(op = heap_alloc_zero( sizeof(*op) ))) return FALSE;
+     op->dst_path = strdupW( part1 );
+     op->dst_file = strdupW( part2 );
+@@ -714,6 +743,12 @@ BOOL WINAPI SetupQueueRenameA( HSPFILEQ handle, PCSTR SourcePath, PCSTR SourceFi
      struct file_queue *queue = handle;
      struct file_op *op;
  
@@ -107,10 +94,10 @@ index d57f8e1..1b27800 100644
 +        return FALSE;
 +    }
 +
-     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
-     op->style      = 0;
-     op->src_root   = NULL;
-@@ -680,6 +721,12 @@ BOOL WINAPI SetupQueueRenameW( HSPFILEQ handle, PCWSTR SourcePath, PCWSTR Source
+     if (!(op = heap_alloc_zero( sizeof(*op) ))) return FALSE;
+     op->src_path = strdupAtoW( SourcePath );
+     op->src_file = strdupAtoW( SourceFilename );
+@@ -733,6 +768,12 @@ BOOL WINAPI SetupQueueRenameW( HSPFILEQ handle, PCWSTR SourcePath, PCWSTR Source
      struct file_queue *queue = handle;
      struct file_op *op;
  
@@ -120,10 +107,10 @@ index d57f8e1..1b27800 100644
 +        return FALSE;
 +    }
 +
-     if (!(op = HeapAlloc( GetProcessHeap(), 0, sizeof(*op) ))) return FALSE;
-     op->style      = 0;
-     op->src_root   = NULL;
-@@ -1222,6 +1269,12 @@ BOOL WINAPI SetupCommitFileQueueW( HWND owner, HSPFILEQ handle, PSP_FILE_CALLBAC
+     if (!(op = heap_alloc_zero( sizeof(*op) ))) return FALSE;
+     op->src_path = strdupW( SourcePath );
+     op->src_file = strdupW( SourceFilename );
+@@ -1310,6 +1351,12 @@ BOOL WINAPI SetupCommitFileQueueW( HWND owner, HSPFILEQ handle, PSP_FILE_CALLBAC
  
      paths.Source = paths.Target = NULL;
  
@@ -136,7 +123,7 @@ index d57f8e1..1b27800 100644
      if (!queue->copy_queue.count && !queue->delete_queue.count && !queue->rename_queue.count)
          return TRUE;  /* nothing to do */
  
-@@ -1365,6 +1418,12 @@ BOOL WINAPI SetupScanFileQueueW( HSPFILEQ handle, DWORD flags, HWND window,
+@@ -1515,6 +1562,12 @@ BOOL WINAPI SetupScanFileQueueW( HSPFILEQ handle, DWORD flags, HWND window,
  
      TRACE("%p %x %p %p %p %p\n", handle, flags, window, handler, context, result);
  
@@ -149,7 +136,7 @@ index d57f8e1..1b27800 100644
      if (!queue->copy_queue.count) return TRUE;
  
      if (flags & SPQ_SCAN_USE_CALLBACK)        notification = SPFILENOTIFY_QUEUESCAN;
-@@ -1411,6 +1470,12 @@ BOOL WINAPI SetupGetFileQueueCount( HSPFILEQ handle, UINT op, PUINT result )
+@@ -1561,6 +1614,12 @@ BOOL WINAPI SetupGetFileQueueCount( HSPFILEQ handle, UINT op, PUINT result )
  {
      struct file_queue *queue = handle;
  
@@ -162,7 +149,7 @@ index d57f8e1..1b27800 100644
      switch(op)
      {
      case FILEOP_COPY:
-@@ -1433,6 +1498,13 @@ BOOL WINAPI SetupGetFileQueueCount( HSPFILEQ handle, UINT op, PUINT result )
+@@ -1583,6 +1642,13 @@ BOOL WINAPI SetupGetFileQueueCount( HSPFILEQ handle, UINT op, PUINT result )
  BOOL WINAPI SetupGetFileQueueFlags( HSPFILEQ handle, PDWORD flags )
  {
      struct file_queue *queue = handle;
@@ -176,7 +163,7 @@ index d57f8e1..1b27800 100644
      *flags = queue->flags;
      return TRUE;
  }
-@@ -1444,6 +1516,13 @@ BOOL WINAPI SetupGetFileQueueFlags( HSPFILEQ handle, PDWORD flags )
+@@ -1594,6 +1660,13 @@ BOOL WINAPI SetupGetFileQueueFlags( HSPFILEQ handle, PDWORD flags )
  BOOL WINAPI SetupSetFileQueueFlags( HSPFILEQ handle, DWORD mask, DWORD flags )
  {
      struct file_queue *queue = handle;
@@ -190,7 +177,7 @@ index d57f8e1..1b27800 100644
      queue->flags = (queue->flags & ~mask) | flags;
      return TRUE;
  }
-@@ -1717,6 +1796,13 @@ UINT WINAPI SetupCopyErrorW( HWND parent, PCWSTR dialogTitle, PCWSTR diskname,
+@@ -1875,6 +1948,13 @@ UINT WINAPI SetupCopyErrorW( HWND parent, PCWSTR dialogTitle, PCWSTR diskname,
  DWORD WINAPI pSetupGetQueueFlags( HSPFILEQ handle )
  {
      struct file_queue *queue = handle;
@@ -204,7 +191,7 @@ index d57f8e1..1b27800 100644
      return queue->flags;
  }
  
-@@ -1726,6 +1812,13 @@ DWORD WINAPI pSetupGetQueueFlags( HSPFILEQ handle )
+@@ -1884,6 +1964,13 @@ DWORD WINAPI pSetupGetQueueFlags( HSPFILEQ handle )
  BOOL WINAPI pSetupSetQueueFlags( HSPFILEQ handle, DWORD flags )
  {
      struct file_queue *queue = handle;
@@ -219,5 +206,5 @@ index d57f8e1..1b27800 100644
      return TRUE;
  }
 -- 
-2.6.2
+1.9.1
 

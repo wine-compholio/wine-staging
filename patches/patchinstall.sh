@@ -130,6 +130,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
 	enable_dinput_axis_recalc="$1"
+	enable_dinput_joy_directX3="$1"
 	enable_dinput_joy_mappings="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
@@ -522,6 +523,9 @@ patch_enable ()
 			;;
 		dinput-axis-recalc)
 			enable_dinput_axis_recalc="$2"
+			;;
+		dinput-joy-directX3)
+			enable_dinput_joy_directX3="$2"
 			;;
 		dinput-joy-mappings)
 			enable_dinput_joy_mappings="$2"
@@ -3076,6 +3080,33 @@ if test "$enable_dinput_axis_recalc" -eq 1; then
 	patch_apply dinput-axis-recalc/0001-dinput-Recalculated-Axis-after-deadzone-change.patch
 	(
 		printf '%s\n' '+    { "Bruno Jesus", "dinput: Recalculated Axis after deadzone change.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-joy-directX3
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36764] dinput: Allow DirectX version 3 to enumerate joysticks.
+# |
+# | Modified files:
+# |   *	dlls/dinput/device.c, dlls/dinput/dinput_main.c, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
+# | 	dlls/dinput/joystick_osx.c, dlls/dinput/mouse.c, dlls/dinput/tests/dinput.c, dlls/dinput/tests/joystick.c,
+# | 	dlls/dinput/tests/mouse.c, dlls/dinput8/tests/dinput.c
+# |
+if test "$enable_dinput_joy_directX3" -eq 1; then
+	patch_apply dinput-joy-directX3/0001-dinput-Allow-Enumeration-of-joysticks-with-DirectX-3.patch
+	patch_apply dinput-joy-directX3/0002-dinput-Don-t-return-unsupported-interfaces.patch
+	patch_apply dinput-joy-directX3/0003-dinput-Return-E_NOINTERFACE-from-IDirectInputDevice2.patch
+	patch_apply dinput-joy-directX3/0004-dinput-Dont-report-we-cannot-open-a-device.patch
+	patch_apply dinput-joy-directX3/0005-dinput-Improve-EnumDevice-tracing.patch
+	patch_apply dinput-joy-directX3/0006-dinput-Support-DIDEVICEINSTANCE_DX3-for-Mouse-GetDev.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Allow Enumeration of joysticks with DirectX 3.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Don'\''t return unsupported interfaces.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Return E_NOINTERFACE from IDirectInputDevice2 QueryInterface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Dont report we cannot open a device.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Improve EnumDevice tracing.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Support DIDEVICEINSTANCE_DX3 for Mouse GetDeviceInfo.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,79 @@
+From e5eb27de156f7d250755fb3070c419e28e9d1957 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Sun, 28 Apr 2019 12:11:56 +1000
+Subject: [PATCH 6/7] dinput: Support DIDEVICEINSTANCE_DX3 for Mouse
+ GetDeviceInfo
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/dinput/mouse.c       |  5 -----
+ dlls/dinput/tests/mouse.c | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 30 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/dinput/mouse.c b/dlls/dinput/mouse.c
+index 0adba03..1e2b1d1 100644
+--- a/dlls/dinput/mouse.c
++++ b/dlls/dinput/mouse.c
+@@ -765,11 +765,6 @@ static HRESULT WINAPI SysMouseAImpl_GetDeviceInfo(
+     SysMouseImpl *This = impl_from_IDirectInputDevice8A(iface);
+     TRACE("(this=%p,%p)\n", This, pdidi);
+ 
+-    if (pdidi->dwSize != sizeof(DIDEVICEINSTANCEA)) {
+-        WARN(" dinput3 not supported yet...\n");
+-	return DI_OK;
+-    }
+-
+     fill_mouse_dideviceinstanceA(pdidi, This->base.dinput->dwVersion);
+     
+     return DI_OK;
+diff --git a/dlls/dinput/tests/mouse.c b/dlls/dinput/tests/mouse.c
+index c2d0226..c1a7ff7 100644
+--- a/dlls/dinput/tests/mouse.c
++++ b/dlls/dinput/tests/mouse.c
+@@ -198,6 +198,35 @@ static void test_acquire(IDirectInputA *pDI, HWND hwnd)
+     DestroyWindow( hwnd2 );
+ }
+ 
++static void test_GetDeviceInfo(IDirectInputA *pDI)
++{
++    HRESULT hr;
++    IDirectInputDeviceA *pMouse = NULL;
++    DIDEVICEINSTANCEA instA;
++    DIDEVICEINSTANCE_DX3A inst3A;
++
++    hr = IDirectInput_CreateDevice(pDI, &GUID_SysMouse, &pMouse, NULL);
++    ok(SUCCEEDED(hr), "IDirectInput_CreateDevice() failed: %08x\n", hr);
++    if (FAILED(hr)) return;
++
++    instA.dwSize = sizeof(instA);
++    hr = IDirectInputDevice_GetDeviceInfo(pMouse, &instA);
++    ok(SUCCEEDED(hr), "got %08x\n", hr);
++
++    inst3A.dwSize = sizeof(inst3A);
++    hr = IDirectInputDevice_GetDeviceInfo(pMouse, (DIDEVICEINSTANCEA *)&inst3A);
++    ok(SUCCEEDED(hr), "got %08x\n", hr);
++
++    ok(instA.dwSize != inst3A.dwSize, "got %d, %d \n", instA.dwSize, inst3A.dwSize);
++    ok(IsEqualGUID(&instA.guidInstance, &inst3A.guidInstance), "got %s, %s\n",
++            wine_dbgstr_guid(&instA.guidInstance), wine_dbgstr_guid(&inst3A.guidInstance) );
++    ok(IsEqualGUID(&instA.guidProduct, &inst3A.guidProduct), "got %s, %s\n",
++            wine_dbgstr_guid(&instA.guidProduct), wine_dbgstr_guid(&inst3A.guidProduct) );
++    ok(instA.dwDevType == inst3A.dwDevType, "got %d, %d\n", instA.dwDevType, inst3A.dwDevType);
++
++    if (pMouse) IUnknown_Release(pMouse);
++}
++
+ static void mouse_tests(void)
+ {
+     HRESULT hr;
+@@ -224,6 +253,7 @@ static void mouse_tests(void)
+ 
+         test_set_coop(pDI, hwnd);
+         test_acquire(pDI, hwnd);
++        test_GetDeviceInfo(pDI);
+ 
+         DestroyWindow(hwnd);
+     }
+-- 
+1.9.1
+

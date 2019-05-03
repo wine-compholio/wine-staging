@@ -130,6 +130,7 @@ patch_enable_all ()
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
 	enable_dinput_axis_recalc="$1"
+	enable_dinput_joy_mappings="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
 	enable_dsound_EAX="$1"
@@ -521,6 +522,9 @@ patch_enable ()
 			;;
 		dinput-axis-recalc)
 			enable_dinput_axis_recalc="$2"
+			;;
+		dinput-joy-mappings)
+			enable_dinput_joy_mappings="$2"
 			;;
 		dinput-reconnect-joystick)
 			enable_dinput_reconnect_joystick="$2"
@@ -3072,6 +3076,26 @@ if test "$enable_dinput_axis_recalc" -eq 1; then
 	patch_apply dinput-axis-recalc/0001-dinput-Recalculated-Axis-after-deadzone-change.patch
 	(
 		printf '%s\n' '+    { "Bruno Jesus", "dinput: Recalculated Axis after deadzone change.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-joy-mappings
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34108] dinput: Improve support for user Joystick configuration.
+# |
+# | Modified files:
+# |   *	dlls/dinput/config.c, dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput/dinput_main.c,
+# | 	dlls/dinput/joystick.c, dlls/dinput/keyboard.c, dlls/dinput/mouse.c, dlls/dinput8/tests/device.c
+# |
+if test "$enable_dinput_joy_mappings" -eq 1; then
+	patch_apply dinput-joy-mappings/0001-dinput-Load-users-Joystick-mappings.patch
+	patch_apply dinput-joy-mappings/0002-dinput-Allow-empty-Joystick-mappings.patch
+	patch_apply dinput-joy-mappings/0003-dinput-Support-username-in-Config-dialog.patch
+	(
+		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Load users Joystick mappings.", 1 },';
+		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Allow empty Joystick mappings.", 1 },';
+		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Support username in Config dialog.", 1 },';
 	) >> "$patchlist"
 fi
 

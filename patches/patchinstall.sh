@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0ece679210897774b3b43e483658fe6511a84676"
+	echo "b479382737f9ee110bc61b1dd765c5b81d56c900"
 }
 
 # Show version information
@@ -92,7 +92,6 @@ patch_enable_all ()
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
-	enable_avifil32_IGetFrame_fnSetFormat="$1"
 	enable_bcrypt_BCryptSecretAgreement="$1"
 	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
@@ -263,7 +262,6 @@ patch_enable_all ()
 	enable_server_device_manager_destroy="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_Display_Device="$1"
-	enable_setupapi_HSPFILEQ_Check_Type="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -409,9 +407,6 @@ patch_enable ()
 			;;
 		atl-AtlAxDialogBox)
 			enable_atl_AtlAxDialogBox="$2"
-			;;
-		avifil32-IGetFrame_fnSetFormat)
-			enable_avifil32_IGetFrame_fnSetFormat="$2"
 			;;
 		bcrypt-BCryptSecretAgreement)
 			enable_bcrypt_BCryptSecretAgreement="$2"
@@ -922,9 +917,6 @@ patch_enable ()
 			;;
 		setupapi-Display_Device)
 			enable_setupapi_Display_Device="$2"
-			;;
-		setupapi-HSPFILEQ_Check_Type)
-			enable_setupapi_HSPFILEQ_Check_Type="$2"
 			;;
 		setupapi-SPFILENOTIFY_FILEINCABINET)
 			enable_setupapi_SPFILENOTIFY_FILEINCABINET="$2"
@@ -2263,18 +2255,6 @@ if test "$enable_atl_AtlAxDialogBox" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset avifil32-IGetFrame_fnSetFormat
-# |
-# | Modified files:
-# |   *	dlls/avifil32/getframe.c
-# |
-if test "$enable_avifil32_IGetFrame_fnSetFormat" -eq 1; then
-	patch_apply avifil32-IGetFrame_fnSetFormat/0001-avifil32-Correctly-handle-compressed-frames-when-des.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "avifil32: Correctly handle compressed frames when desired format is specified.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset bcrypt-BCryptSecretAgreement
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3090,19 +3070,16 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/dinput/device.c, dlls/dinput/dinput_main.c, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
-# | 	dlls/dinput/joystick_osx.c, dlls/dinput/mouse.c, dlls/dinput/tests/dinput.c, dlls/dinput/tests/joystick.c,
-# | 	dlls/dinput/tests/mouse.c, dlls/dinput8/tests/dinput.c
+# | 	dlls/dinput/joystick_osx.c, dlls/dinput/mouse.c, dlls/dinput/tests/joystick.c, dlls/dinput/tests/mouse.c
 # |
 if test "$enable_dinput_joy_directX3" -eq 1; then
 	patch_apply dinput-joy-directX3/0001-dinput-Allow-Enumeration-of-joysticks-with-DirectX-3.patch
-	patch_apply dinput-joy-directX3/0002-dinput-Don-t-return-unsupported-interfaces.patch
 	patch_apply dinput-joy-directX3/0003-dinput-Return-E_NOINTERFACE-from-IDirectInputDevice2.patch
 	patch_apply dinput-joy-directX3/0004-dinput-Dont-report-we-cannot-open-a-device.patch
 	patch_apply dinput-joy-directX3/0005-dinput-Improve-EnumDevice-tracing.patch
 	patch_apply dinput-joy-directX3/0006-dinput-Support-DIDEVICEINSTANCE_DX3-for-Mouse-GetDev.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Allow Enumeration of joysticks with DirectX 3.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Don'\''t return unsupported interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Return E_NOINTERFACE from IDirectInputDevice2 QueryInterface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Dont report we cannot open a device.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Improve EnumDevice tracing.", 1 },';
@@ -3239,12 +3216,12 @@ fi
 # | 	Vista/Win7 mode)
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c, include/dwmapi.h
+# |   *	configure, configure.ac, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c
 # |
 if test "$enable_dwmapi_DwmGetTransportAttributes" -eq 1; then
 	patch_apply dwmapi-DwmGetTransportAttributes/0002-dwmapi-add-initial-tests.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "dwampi: Add initial tests.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "dwmapi: Add initial tests.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5652,21 +5629,6 @@ if test "$enable_setupapi_Display_Device" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-HSPFILEQ_Check_Type
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12332] Check handle type for HSPFILEQ handles
-# |
-# | Modified files:
-# |   *	dlls/setupapi/queue.c
-# |
-if test "$enable_setupapi_HSPFILEQ_Check_Type" -eq 1; then
-	patch_apply setupapi-HSPFILEQ_Check_Type/0001-setupapi-Check-handle-type-for-HSPFILEQ-handles.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Check handle type for HSPFILEQ handles.", 1 },';
 	) >> "$patchlist"
 fi
 

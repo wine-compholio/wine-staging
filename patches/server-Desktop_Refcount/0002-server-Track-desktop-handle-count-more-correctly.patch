@@ -1,4 +1,4 @@
-From 64eb8d1af7948f239a48a47c346445added70a94 Mon Sep 17 00:00:00 2001
+From 7d35e2176637947cd0d8072830408db42a4037d8 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 4 Dec 2015 01:22:29 +0100
 Subject: [PATCH] server: Track desktop handle count more correctly.
@@ -13,14 +13,15 @@ Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
  server/handle.c             |  3 +-
  server/handle.h             |  2 +-
  server/process.c            |  1 -
+ server/sock.c               |  2 +-
  server/winstation.c         | 88 +++++++++++++++++++------------------
- 5 files changed, 65 insertions(+), 47 deletions(-)
+ 6 files changed, 66 insertions(+), 48 deletions(-)
 
 diff --git a/programs/explorer/desktop.c b/programs/explorer/desktop.c
-index 27b9b24901..381012ac86 100644
+index 2857fcfca..f45bd9d43 100644
 --- a/programs/explorer/desktop.c
 +++ b/programs/explorer/desktop.c
-@@ -37,6 +37,8 @@
+@@ -34,6 +34,8 @@
  
  WINE_DEFAULT_DEBUG_CHANNEL(explorer);
  
@@ -29,7 +30,7 @@ index 27b9b24901..381012ac86 100644
  #define DESKTOP_CLASS_ATOM ((LPCWSTR)MAKEINTATOM(32769))
  #define DESKTOP_ALL_ACCESS 0x01ff
  
-@@ -1030,8 +1032,22 @@ void manage_desktop( WCHAR *arg )
+@@ -1009,8 +1011,22 @@ void manage_desktop( WCHAR *arg )
      /* run the desktop message loop */
      if (hwnd)
      {
@@ -54,7 +55,7 @@ index 27b9b24901..381012ac86 100644
      }
  
 diff --git a/server/handle.c b/server/handle.c
-index 879098aee8..0aa5aa52bb 100644
+index 879098aee..0aa5aa52b 100644
 --- a/server/handle.c
 +++ b/server/handle.c
 @@ -499,7 +499,7 @@ obj_handle_t find_inherited_handle( struct process *process, const struct object
@@ -75,7 +76,7 @@ index 879098aee8..0aa5aa52bb 100644
      }
      return 0;
 diff --git a/server/handle.h b/server/handle.h
-index f1deb79fb5..13478368fa 100644
+index f1deb79fb..13478368f 100644
 --- a/server/handle.h
 +++ b/server/handle.h
 @@ -49,7 +49,7 @@ extern obj_handle_t open_object( struct process *process, obj_handle_t parent, u
@@ -88,7 +89,7 @@ index f1deb79fb5..13478368fa 100644
  extern struct handle_table *alloc_handle_table( struct process *process, int count );
  extern struct handle_table *copy_handle_table( struct process *process, struct process *parent );
 diff --git a/server/process.c b/server/process.c
-index e6568ecebb..3221b15da5 100644
+index e6568eceb..3221b15da 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -899,7 +899,6 @@ static void process_killed( struct process *process )
@@ -99,8 +100,20 @@ index e6568ecebb..3221b15da5 100644
      process->winstation = 0;
      process->desktop = 0;
      close_process_handles( process );
+diff --git a/server/sock.c b/server/sock.c
+index f951f23d6..d373768c9 100644
+--- a/server/sock.c
++++ b/server/sock.c
+@@ -1344,6 +1344,6 @@ DECL_HANDLER(socket_cleanup)
+     unsigned int index = 0;
+     obj_handle_t sock;
+ 
+-    while ((sock = enumerate_handles(current->process, &sock_ops, &index)))
++    while ((sock = enumerate_handles(current->process, &sock_ops, &index, NULL)))
+         close_handle(current->process, sock);
+ }
 diff --git a/server/winstation.c b/server/winstation.c
-index d7e8a5c800..f9c0054962 100644
+index d7e8a5c80..f9c005496 100644
 --- a/server/winstation.c
 +++ b/server/winstation.c
 @@ -53,6 +53,7 @@ static unsigned int winstation_map_access( struct object *obj, unsigned int acce
@@ -249,5 +262,5 @@ index d7e8a5c800..f9c0054962 100644
          remove_desktop_user( desktop );
          release_object( desktop );
 -- 
-2.20.1
+2.21.0
 

@@ -1737,7 +1737,11 @@ if test "$enable_server_Desktop_Refcount" -eq 1; then
 	if test "$enable_eventfd_synchronization" -gt 1; then
 		abort "Patchset eventfd_synchronization disabled, but server-Desktop_Refcount depends on that."
 	fi
+	if test "$enable_ws2_32_WSACleanup" -gt 1; then
+		abort "Patchset ws2_32-WSACleanup disabled, but server-Desktop_Refcount depends on that."
+	fi
 	enable_eventfd_synchronization=1
+	enable_ws2_32_WSACleanup=1
 fi
 
 if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then

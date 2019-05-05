@@ -1793,13 +1793,6 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 	enable_winebuild_Fake_Dlls=1
 fi
 
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_User_Shared_Data=1
-fi
-
 if test "$enable_ntdll_MemoryWorkingSetExInformation" -eq 1; then
 	if test "$enable_ntdll_NtQueryVirtualMemory" -gt 1; then
 		abort "Patchset ntdll-NtQueryVirtualMemory disabled, but ntdll-MemoryWorkingSetExInformation depends on that."
@@ -1935,6 +1928,27 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	enable_ntdll_ThreadTime=1
 fi
 
+if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
+	if test "$enable_ntdll_Exception" -gt 1; then
+		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
+	fi
+	enable_ntdll_Exception=1
+fi
+
+if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
+	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
+		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-RtlCreateUserThread depends on that."
+	fi
+	enable_winebuild_Fake_Dlls=1
+fi
+
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
+		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	enable_ntdll_User_Shared_Data=1
+fi
+
 if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 	if test "$enable_ntdll_Hide_Wine_Exports" -gt 1; then
 		abort "Patchset ntdll-Hide_Wine_Exports disabled, but ntdll-User_Shared_Data depends on that."
@@ -1947,13 +1961,6 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
 	fi
 	enable_ntdll_ThreadTime=1
-fi
-
-if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
-	if test "$enable_ntdll_Exception" -gt 1; then
-		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
-	fi
-	enable_ntdll_Exception=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -3377,51 +3384,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-RtlCreateUserThread
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
-# |
-if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
-	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Exception
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
-# |
-# | Modified files:
-# |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
-# |
-if test "$enable_ntdll_Exception" -eq 1; then
-	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-SystemRoot_Symlink
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Exception
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c
-# |
-if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
-	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3488,6 +3450,100 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl: Update USER_SHARED_DATA before accessing memory.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Create thread to update user_shared_data time values when necessary.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll/tests: Test updating TickCount in user_shared_data.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winebuild-Fake_Dlls
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
+# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
+# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
+# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
+# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
+# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c,
+# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
+# | 	include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c,
+# | 	tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c,
+# | 	tools/winebuild/utils.c
+# |
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
+	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
+	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
+	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
+	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
+	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
+	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlCreateUserThread
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
+# |
+if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
+	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
+	(
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Exception
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
+# |
+# | Modified files:
+# |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
+# |
+if test "$enable_ntdll_Exception" -eq 1; then
+	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemRoot_Symlink
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Exception
+# |
+# | Modified files:
+# |   *	dlls/ntdll/om.c
+# |
+if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
+	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3631,10 +3687,10 @@ fi
 # Patchset eventfd_synchronization
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
-# | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
-# | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-ThreadTime, ntdll-
+# | 	Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
+# | 	SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4760,52 +4816,6 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
-# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
-# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
-# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
-# |
-# | Modified files:
-# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
-# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
-# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c,
-# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
-# | 	include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c,
-# | 	tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c,
-# | 	tools/winebuild/utils.c
-# |
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
-	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
-	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
-	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
-	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
-	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
-	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtContinue
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -5433,10 +5443,10 @@ fi
 # Patchset server-Desktop_Refcount
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
-# | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
-# | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-ThreadTime, ntdll-
+# | 	Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
+# | 	SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -7322,10 +7332,11 @@ fi
 # Patchset ws2_32-TransmitFile
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-
-# | 	User_Shared_Data, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage,
-# | 	server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-ThreadTime, ntdll-
+# | 	Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
+# | 	SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-
+# | 	Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b479382737f9ee110bc61b1dd765c5b81d56c900"
+	echo "10dcee21c4b28b7f1cedc9ade01c09616521b628"
 }
 
 # Show version information
@@ -226,7 +226,6 @@ patch_enable_all ()
 	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
-	enable_ntoskrnl_exe_Fix_Relocation="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -809,9 +808,6 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
-			;;
-		ntoskrnl.exe-Fix_Relocation)
-			enable_ntoskrnl_exe_Fix_Relocation="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -3080,21 +3076,13 @@ fi
 # |   *	[#36764] dinput: Allow DirectX version 3 to enumerate joysticks.
 # |
 # | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/dinput_main.c, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
-# | 	dlls/dinput/joystick_osx.c, dlls/dinput/mouse.c, dlls/dinput/tests/joystick.c, dlls/dinput/tests/mouse.c
+# |   *	dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c, dlls/dinput/joystick_osx.c,
+# | 	dlls/dinput/tests/joystick.c
 # |
 if test "$enable_dinput_joy_directX3" -eq 1; then
 	patch_apply dinput-joy-directX3/0001-dinput-Allow-Enumeration-of-joysticks-with-DirectX-3.patch
-	patch_apply dinput-joy-directX3/0003-dinput-Return-E_NOINTERFACE-from-IDirectInputDevice2.patch
-	patch_apply dinput-joy-directX3/0004-dinput-Dont-report-we-cannot-open-a-device.patch
-	patch_apply dinput-joy-directX3/0005-dinput-Improve-EnumDevice-tracing.patch
-	patch_apply dinput-joy-directX3/0006-dinput-Support-DIDEVICEINSTANCE_DX3-for-Mouse-GetDev.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Allow Enumeration of joysticks with DirectX 3.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Return E_NOINTERFACE from IDirectInputDevice2 QueryInterface.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Dont report we cannot open a device.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Improve EnumDevice tracing.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Support DIDEVICEINSTANCE_DX3 for Mouse GetDeviceInfo.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5115,21 +5103,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl.exe-Fix_Relocation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28254] Fix crash of winedevice when relocation entry crosses page boundary
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c
-# |
-if test "$enable_ntoskrnl_exe_Fix_Relocation" -eq 1; then
-	patch_apply ntoskrnl.exe-Fix_Relocation/0001-ntoskrnl.exe-Avoid-invalid-memory-access-when-reloca.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntoskrnl.exe: Avoid invalid memory access when relocation block addresses memory outside of the current page.", 1 },';
 	) >> "$patchlist"
 fi
 

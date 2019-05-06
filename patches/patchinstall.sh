@@ -3074,15 +3074,18 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36764] dinput: Allow DirectX version 3 to enumerate joysticks.
+# |   *	[#47123] dinput: Use heuristics to guess if a device is a gamepad or a joystick.
 # |
 # | Modified files:
-# |   *	dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c, dlls/dinput/joystick_osx.c,
-# | 	dlls/dinput/tests/joystick.c
+# |   *	dlls/dinput/dinput_private.h, dlls/dinput/joystick.c, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
+# | 	dlls/dinput/joystick_osx.c, dlls/dinput/tests/joystick.c
 # |
 if test "$enable_dinput_joy_directX3" -eq 1; then
 	patch_apply dinput-joy-directX3/0001-dinput-Allow-Enumeration-of-joysticks-with-DirectX-3.patch
+	patch_apply dinput-joy-directX3/0002--dinput-Use-heuristics-to-guess-if-a-device-is-a-game.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Allow Enumeration of joysticks with DirectX 3.", 1 },';
+		printf '%s\n' '+    { "Andrew Eikum", "dinput: Use heuristics to guess if a device is a gamepad or a joystick.", 1 },';
 	) >> "$patchlist"
 fi
 

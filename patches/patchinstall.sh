@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "10dcee21c4b28b7f1cedc9ade01c09616521b628"
+	echo "622422e67bfd9da487102aee4ca42681a24a8e65"
 }
 
 # Show version information
@@ -3077,15 +3077,13 @@ fi
 # |   *	[#47123] dinput: Use heuristics to guess if a device is a gamepad or a joystick.
 # |
 # | Modified files:
-# |   *	dlls/dinput/dinput_private.h, dlls/dinput/joystick.c, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
-# | 	dlls/dinput/joystick_osx.c, dlls/dinput/tests/joystick.c
+# |   *	dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c, dlls/dinput/joystick_osx.c,
+# | 	dlls/dinput/tests/joystick.c
 # |
 if test "$enable_dinput_joy_directX3" -eq 1; then
 	patch_apply dinput-joy-directX3/0001-dinput-Allow-Enumeration-of-joysticks-with-DirectX-3.patch
-	patch_apply dinput-joy-directX3/0002--dinput-Use-heuristics-to-guess-if-a-device-is-a-game.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Allow Enumeration of joysticks with DirectX 3.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "dinput: Use heuristics to guess if a device is a gamepad or a joystick.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6605,7 +6603,7 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | Modified files:
-# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0042-wined3d-Reset-context-before-destruction.patch

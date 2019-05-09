@@ -1,4 +1,4 @@
-From 65d17c2e8b3048f2e97fdec578509e207055aa07 Mon Sep 17 00:00:00 2001
+From f1311cedfacb7ac5ecb35fa11233457ed25efa0f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 18 Aug 2017 23:51:59 +0200
 Subject: [PATCH] wined3d: Implement dual source blending.
@@ -14,10 +14,10 @@ Subject: [PATCH] wined3d: Implement dual source blending.
  7 files changed, 75 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/d3d11/tests/d3d11.c b/dlls/d3d11/tests/d3d11.c
-index 14ffa4e0196..2047bb83103 100644
+index 4b2f435..d6d4f0a 100644
 --- a/dlls/d3d11/tests/d3d11.c
 +++ b/dlls/d3d11/tests/d3d11.c
-@@ -29294,7 +29294,7 @@ static void test_dual_blending(void)
+@@ -29441,7 +29441,7 @@ static void test_dual_blending(void)
      ID3D11DeviceContext_ClearRenderTargetView(context, rtv[1], white);
      ID3D11DeviceContext_Draw(context, 3, 0);
  
@@ -27,10 +27,10 @@ index 14ffa4e0196..2047bb83103 100644
  
      ID3D11BlendState_Release(blend_state);
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index daa71791970..1b8282be964 100644
+index 319d613..db00828 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -2930,6 +2930,12 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
+@@ -2924,6 +2924,12 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
          gl_info->limits.buffers = min(MAX_RENDER_TARGET_VIEWS, gl_max);
          TRACE("Max draw buffers: %u.\n", gl_max);
      }
@@ -43,7 +43,7 @@ index daa71791970..1b8282be964 100644
      if (gl_info->supported[ARB_MULTITEXTURE])
      {
          if (gl_info->supported[WINED3D_GL_LEGACY_CONTEXT])
-@@ -3760,6 +3766,10 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
+@@ -3750,6 +3756,10 @@ static BOOL wined3d_adapter_init_gl_caps(struct wined3d_adapter *adapter,
  
      TRACE("Max texture stages: %u.\n", d3d_info->limits.ffp_blend_stages);
  
@@ -55,10 +55,10 @@ index daa71791970..1b8282be964 100644
      {
          /* We do not want to deal with re-creating immutable texture storage
 diff --git a/dlls/wined3d/context.c b/dlls/wined3d/context.c
-index 6d270a7eb69..50f61d9574e 100644
+index 97d7656..983bc96 100644
 --- a/dlls/wined3d/context.c
 +++ b/dlls/wined3d/context.c
-@@ -3160,10 +3160,20 @@ static unsigned int find_draw_buffers_mask(const struct wined3d_context *context
+@@ -3142,10 +3142,20 @@ static unsigned int find_draw_buffers_mask(const struct wined3d_context *context
      else if (!context->render_offscreen)
          return context_generate_rt_mask_from_resource(rts[0]->resource);
  
@@ -81,10 +81,10 @@ index 6d270a7eb69..50f61d9574e 100644
      {
          i = wined3d_bit_scan(&mask);
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index ebc01595778..84899be0041 100644
+index 6493e7f..ef92ec1 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -3067,6 +3067,7 @@ static void shader_glsl_get_register_name(const struct wined3d_shader_register *
+@@ -3094,6 +3094,7 @@ static void shader_glsl_get_register_name(const struct wined3d_shader_register *
              break;
  
          case WINED3DSPR_COLOROUT:
@@ -92,7 +92,7 @@ index ebc01595778..84899be0041 100644
              if (reg->idx[0].offset >= gl_info->limits.buffers)
                  WARN("Write to render target %u, only %d supported.\n",
                          reg->idx[0].offset, gl_info->limits.buffers);
-@@ -7991,7 +7992,10 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
+@@ -7998,7 +7999,10 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
      {
          const struct wined3d_shader_signature *output_signature = &shader->output_signature;
  
@@ -104,7 +104,7 @@ index ebc01595778..84899be0041 100644
          if (output_signature->element_count)
          {
              for (i = 0; i < output_signature->element_count; ++i)
-@@ -8006,7 +8010,12 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
+@@ -8013,7 +8017,12 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
                      continue;
                  }
                  if (shader_glsl_use_explicit_attrib_location(gl_info))
@@ -118,7 +118,7 @@ index ebc01595778..84899be0041 100644
                  shader_addline(buffer, "out %s4 color_out%u;\n",
                          component_type_info[output->component_type].glsl_vector_type, output->semantic_idx);
              }
-@@ -8019,7 +8028,12 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
+@@ -8026,7 +8035,12 @@ static GLuint shader_glsl_generate_pshader(const struct wined3d_context *context
              {
                  i = wined3d_bit_scan(&mask);
                  if (shader_glsl_use_explicit_attrib_location(gl_info))
@@ -133,10 +133,10 @@ index ebc01595778..84899be0041 100644
              }
          }
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 83a793d5229..2db4a3cbc21 100644
+index 609b574..138b2dd 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -4147,6 +4147,8 @@ void find_ps_compile_args(const struct wined3d_state *state, const struct wined3
+@@ -4137,6 +4137,8 @@ void find_ps_compile_args(const struct wined3d_state *state, const struct wined3
                  args->rt_alpha_swizzle |= 1u << i;
          }
      }
@@ -146,7 +146,7 @@ index 83a793d5229..2db4a3cbc21 100644
  
  static HRESULT pixel_shader_init(struct wined3d_shader *shader, struct wined3d_device *device,
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index f071f30b575..2d44e68ac2e 100644
+index 0f35f2a..8ff0ba6 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
 @@ -533,12 +533,14 @@ static void state_blend(struct wined3d_context *context, const struct wined3d_st
@@ -189,10 +189,10 @@ index f071f30b575..2d44e68ac2e 100644
              state->render_states[WINED3D_RS_SRCBLEND],
              state->render_states[WINED3D_RS_DESTBLEND], rt_format);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 2137c69379e..09af9752a29 100644
+index 0c315af..8c454a0 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -196,6 +196,7 @@ struct wined3d_d3d_info
+@@ -197,6 +197,7 @@ struct wined3d_d3d_info
  {
      struct wined3d_d3d_limits limits;
      struct wined3d_ffp_attrib_ops ffp_attrib_ops;
@@ -200,7 +200,7 @@ index 2137c69379e..09af9752a29 100644
      unsigned int wined3d_creation_flags;
      unsigned int xyzrhw : 1;
      unsigned int emulated_flatshading : 1;
-@@ -1374,7 +1375,8 @@ struct ps_compile_args
+@@ -1384,7 +1385,8 @@ struct ps_compile_args
      DWORD alpha_test_func : 3;
      DWORD render_offscreen : 1;
      DWORD rt_alpha_swizzle : 8; /* MAX_RENDER_TARGET_VIEWS, 8 */
@@ -210,17 +210,17 @@ index 2137c69379e..09af9752a29 100644
  };
  
  enum fog_src_type
-@@ -1935,7 +1937,8 @@ struct wined3d_context
+@@ -1944,7 +1946,8 @@ struct wined3d_context
      DWORD shader_update_mask : 6; /* WINED3D_SHADER_TYPE_COUNT, 6 */
      DWORD clip_distance_mask : 8; /* WINED3D_MAX_CLIP_DISTANCES, 8 */
      DWORD num_untracked_materials : 2;  /* Max value 2 */
--    DWORD padding : 7;
+-    DWORD padding : 8;
 +    DWORD last_was_dual_blend : 1;
-+    DWORD padding : 6;
++    DWORD padding : 7;
  
      DWORD constant_update_mask;
      DWORD numbered_array_mask;
-@@ -2565,6 +2568,7 @@ struct wined3d_fbo_ops
+@@ -2605,6 +2608,7 @@ struct wined3d_fbo_ops
  struct wined3d_gl_limits
  {
      UINT buffers;
@@ -228,7 +228,7 @@ index 2137c69379e..09af9752a29 100644
      UINT lights;
      UINT textures;
      UINT texture_coords;
-@@ -2976,6 +2980,22 @@ struct wined3d_state
+@@ -3070,6 +3074,22 @@ struct wined3d_state
      struct wined3d_rasterizer_state *rasterizer_state;
  };
  
@@ -252,5 +252,5 @@ index 2137c69379e..09af9752a29 100644
  {
      GLuint tex_1d;
 -- 
-2.20.1
+1.9.1
 

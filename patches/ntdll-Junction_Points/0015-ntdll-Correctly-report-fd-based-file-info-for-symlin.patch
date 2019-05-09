@@ -1,0 +1,137 @@
+From 4f8611e2dfc7fb70e13a6f05949257e5d441328a Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Wed, 1 May 2019 19:46:03 -0600
+Subject: ntdll: Correctly report fd-based file info for symlinks.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
+---
+ dlls/ntdll/file.c | 64 ++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 46 insertions(+), 18 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 8336392ddb..934577bfba 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -141,18 +141,6 @@ static inline ULONG get_file_attributes( const struct stat *st )
+     return attr;
+ }
+ 
+-/* get the stat info and file attributes for a file (by file descriptor) */
+-int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+-{
+-    int ret;
+-
+-    *attr = 0;
+-    ret = fstat( fd, st );
+-    if (ret == -1) return ret;
+-    *attr |= get_file_attributes( st );
+-    return ret;
+-}
+-
+ /* get the stat info and file attributes for a file (by name) */
+ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+ {
+@@ -175,6 +163,46 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+     return ret;
+ }
+ 
++/* get the stat info and file attributes for a file (by file descriptor) */
++int fd_get_file_info( HANDLE h, int fd, struct stat *st, ULONG *attr )
++{
++    ANSI_STRING unix_src;
++    struct stat tmp;
++    int ret = -1;
++
++    /* if this handle is to a symlink then we need to return information about the symlink */
++    if (server_get_unix_name( h, &unix_src ) != STATUS_SUCCESS)
++        return ret;
++    ret = get_file_info( unix_src.Buffer, st, attr);
++    RtlFreeAnsiString( &unix_src );
++    if (ret == -1) return ret;
++    /* but return the times from the file itself */
++    ret = fstat( fd, &tmp );
++    if (ret == -1) return ret;
++#if defined(HAVE_STRUCT_STAT_ST_ATIM)
++    st->st_atim = tmp.st_atim;
++#elif defined(HAVE_STRUCT_STAT_ST_ATIMESPEC)
++    st->st_atimespec = tmp.st_atimespec;
++#else
++    st->st_atime = tmp.st_atime;
++#endif
++#if defined(HAVE_STRUCT_STAT_ST_MTIM)
++    st->st_mtim = tmp.st_mtim;
++#elif defined(HAVE_STRUCT_STAT_ST_MTIMESPEC)
++    st->st_mtimespec = tmp.st_mtimespec;
++#else
++    st->st_mtime = tmp.st_mtime;
++#endif
++#if defined(HAVE_STRUCT_STAT_ST_CTIM)
++    st->st_ctim = tmp.st_ctim;
++#elif defined(HAVE_STRUCT_STAT_ST_CTIMESPEC)
++    st->st_ctimespec = tmp.st_ctimespec;
++#else
++    st->st_ctime = tmp.st_ctime;
++#endif
++    return ret;
++}
++
+ /**************************************************************************
+  *                 FILE_CreateFile                    (internal)
+  * Open a file.
+@@ -2832,7 +2860,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+     switch (class)
+     {
+     case FileBasicInformation:
+-        if (fd_get_file_info( fd, &st, &attr ) == -1)
++        if (fd_get_file_info( hFile, fd, &st, &attr ) == -1)
+             io->u.Status = FILE_GetNtStatus();
+         else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
+             io->u.Status = STATUS_INVALID_INFO_CLASS;
+@@ -2843,7 +2871,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+         {
+             FILE_STANDARD_INFORMATION *info = ptr;
+ 
+-            if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
++            if (fd_get_file_info( hFile, fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
+             else
+             {
+                 fill_file_info( &st, attr, info, class );
+@@ -2860,7 +2888,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+         }
+         break;
+     case FileInternalInformation:
+-        if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
++        if (fd_get_file_info( hFile, fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
+         else fill_file_info( &st, attr, ptr, class );
+         break;
+     case FileEaInformation:
+@@ -2870,7 +2898,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+         }
+         break;
+     case FileEndOfFileInformation:
+-        if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
++        if (fd_get_file_info( hFile, fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
+         else fill_file_info( &st, attr, ptr, class );
+         break;
+     case FileAllInformation:
+@@ -2878,7 +2906,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+             FILE_ALL_INFORMATION *info = ptr;
+             ANSI_STRING unix_name;
+ 
+-            if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
++            if (fd_get_file_info( hFile, fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
+             else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
+                 io->u.Status = STATUS_INVALID_INFO_CLASS;
+             else if (!(io->u.Status = server_get_unix_name( hFile, &unix_name )))
+@@ -2986,7 +3014,7 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE hFile, PIO_STATUS_BLOCK io,
+         }
+         break;
+     case FileIdInformation:
+-        if (fd_get_file_info( fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
++        if (fd_get_file_info( hFile, fd, &st, &attr ) == -1) io->u.Status = FILE_GetNtStatus();
+         else
+         {
+             FILE_ID_INFORMATION *info = ptr;
+-- 
+2.17.1
+

@@ -1,7 +1,8 @@
-From c65dec8465c321f09ee3bfd0317994da8cd0c0c1 Mon Sep 17 00:00:00 2001
+From 347997c4118fa01fbf87cf7cadb6ba04a83a97c4 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 00:08:52 -0600
-Subject: ntdll: Implement storing DOS attributes in NtSetInformationFile.
+Subject: [PATCH] ntdll: Implement storing DOS attributes in
+ NtSetInformationFile.
 
 ---
  dlls/ntdll/file.c       | 54 +++++++++++++++++++++++++++++++------------------
@@ -11,11 +12,11 @@ Subject: ntdll: Implement storing DOS attributes in NtSetInformationFile.
  4 files changed, 60 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index b977e45..521ab64 100644
+index 6743d37..12d47ae 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -149,6 +149,39 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
-     return ret;
+@@ -157,6 +157,39 @@ static inline ULONG get_file_attributes( const struct stat *st )
+     return attr;
  }
  
 +/* set the stat info and file attributes for a file (by file descriptor) */
@@ -54,7 +55,7 @@ index b977e45..521ab64 100644
  /* get the stat info and file attributes for a file (by name) */
  int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
-@@ -2320,7 +2353,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -3097,7 +3130,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
      case FileBasicInformation:
          if (len >= sizeof(FILE_BASIC_INFORMATION))
          {
@@ -62,7 +63,7 @@ index b977e45..521ab64 100644
              const FILE_BASIC_INFORMATION *info = ptr;
  
              if ((io->u.Status = server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL )))
-@@ -2330,25 +2362,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -3107,25 +3139,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
                  io->u.Status = set_file_times( fd, &info->LastWriteTime, &info->LastAccessTime );
  
              if (io->u.Status == STATUS_SUCCESS && info->FileAttributes)
@@ -90,10 +91,10 @@ index b977e45..521ab64 100644
              if (needs_close) close( fd );
          }
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index d70ed6b..7a8e5d4 100644
+index d0646aa..39f9013 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -1234,7 +1234,7 @@ static void test_file_basic_information(void)
+@@ -1341,7 +1341,7 @@ static void test_file_basic_information(void)
      memset(&fbi, 0, sizeof(fbi));
      res = pNtQueryInformationFile(h, &io, &fbi, sizeof fbi, FileBasicInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes\n");
@@ -102,7 +103,7 @@ index d70ed6b..7a8e5d4 100644
  
      /* Then HIDDEN */
      memset(&fbi, 0, sizeof(fbi));
-@@ -1247,7 +1247,7 @@ static void test_file_basic_information(void)
+@@ -1354,7 +1354,7 @@ static void test_file_basic_information(void)
      memset(&fbi, 0, sizeof(fbi));
      res = pNtQueryInformationFile(h, &io, &fbi, sizeof fbi, FileBasicInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes\n");
@@ -111,7 +112,7 @@ index d70ed6b..7a8e5d4 100644
  
      /* Check NORMAL last of all (to make sure we can clear attributes) */
      memset(&fbi, 0, sizeof(fbi));
-@@ -1304,7 +1304,7 @@ static void test_file_all_information(void)
+@@ -1411,7 +1411,7 @@ static void test_file_all_information(void)
      memset(&fai_buf.fai, 0, sizeof(fai_buf.fai));
      res = pNtQueryInformationFile(h, &io, &fai_buf.fai, sizeof fai_buf, FileAllInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes, res %x\n", res);
@@ -120,7 +121,7 @@ index d70ed6b..7a8e5d4 100644
  
      /* Then HIDDEN */
      memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
-@@ -1317,7 +1317,7 @@ static void test_file_all_information(void)
+@@ -1424,7 +1424,7 @@ static void test_file_all_information(void)
      memset(&fai_buf.fai, 0, sizeof(fai_buf.fai));
      res = pNtQueryInformationFile(h, &io, &fai_buf.fai, sizeof fai_buf, FileAllInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes\n");
@@ -130,10 +131,10 @@ index d70ed6b..7a8e5d4 100644
      /* Check NORMAL last of all (to make sure we can clear attributes) */
      memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 7977eb9..cc572f3 100644
+index de6b995..c075958 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -370,6 +370,8 @@ extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
+@@ -351,6 +351,8 @@ extern int mkstemps(char *template, int suffix_len);
  #endif
  
  extern int xattr_fget( int filedes, const char *name, void *value, size_t size );

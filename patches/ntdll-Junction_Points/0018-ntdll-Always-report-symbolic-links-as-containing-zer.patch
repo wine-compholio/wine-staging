@@ -1,0 +1,93 @@
+From 5eb8e81e70075947729f70e59825d472db8faf2a Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Wed, 1 May 2019 12:06:20 -0600
+Subject: ntdll: Always report symbolic links as containing zero bytes.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
+---
+ dlls/ntdll/file.c       |  2 ++
+ dlls/ntdll/tests/file.c | 27 +++++++++++++++++++++++++--
+ 2 files changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 934577bfba..cf98b1cfdd 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -153,6 +153,8 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+     {
+         BOOL is_dir;
+ 
++        /* symbolic links always report size 0 */
++        st->st_size = 0;
+         /* symbolic links (either junction points or NT symlinks) are "reparse points" */
+         *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+         /* whether a reparse point is a file or a directory is stored inside the link target */
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 5f42ad5e0b..36c021acd7 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -4897,6 +4897,7 @@ static void test_reparse_points(void)
+     REPARSE_DATA_BUFFER *buffer = NULL;
+     DWORD dwret, dwLen, dwFlags, err;
+     INT buffer_len, string_len;
++    WCHAR buf[] = {0,0,0,0};
+     HANDLE handle, token;
+     IO_STATUS_BLOCK iosb;
+     UNICODE_STRING nameW;
+@@ -5024,8 +5025,6 @@ static void test_reparse_points(void)
+        "Unexpected junction point attributes (0x%x != 0x410)!\n", dwret);
+     bret = RemoveDirectoryW(target_path);
+     ok(bret, "Failed to delete junction point target!\n");
+-    bret = CreateDirectoryW(target_path, NULL);
+-    ok(bret, "Failed to create junction point target directory.\n");
+ 
+     /* Establish permissions for symlink creation */
+     bret = OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &token);
+@@ -5050,6 +5049,13 @@ static void test_reparse_points(void)
+     /* Delete the junction point directory and create a blank slate for symlink tests */
+     bret = RemoveDirectoryW(reparse_path);
+     ok(bret, "Failed to delete junction point!\n");
++    handle = CreateFileW(target_path, GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW, 0, 0);
++    ok(handle != INVALID_HANDLE_VALUE, "Failed to create symlink target file.\n");
++    bret = WriteFile(handle, fooW, sizeof(fooW), NULL, NULL);
++    ok(bret, "Failed to write data to the symlink target file.\n");
++    ok(GetFileSize(handle, NULL) == sizeof(fooW), "target size is incorrect (%d vs %d)\n",
++       GetFileSize(handle, NULL), sizeof(fooW));
++    CloseHandle(handle);
+ 
+     /* Create the file symlink */
+     HeapFree(GetProcessHeap(), 0, buffer);
+@@ -5067,6 +5073,19 @@ static void test_reparse_points(void)
+     ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
+     CloseHandle(handle);
+ 
++    /* Check the size of the symlink */
++    handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
++                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
++    ok(handle != INVALID_HANDLE_VALUE, "Failed to open symlink file.\n");
++    ok(GetFileSize(handle, NULL) == 0, "symlink size is not zero\n");
++    bret = ReadFile(handle, &buf, sizeof(buf), &dwLen, NULL);
++    ok(bret, "Failed to read data from the symlink.\n");
++    ok(dwLen == sizeof(fooW), "Length of symlink target data does not match (%d != %d).\n",
++       dwLen, sizeof(fooW));
++    ok(!memcmp(fooW, &buf, sizeof(fooW)), "Symlink target data does not match (%s != %s).\n",
++       wine_dbgstr_wn(buf, dwLen), wine_dbgstr_w(fooW));
++    CloseHandle(handle);
++
+     /* Check deleting a file symlink as if it were a directory */
+     bret = RemoveDirectoryW(reparse_path);
+     ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
+@@ -5088,6 +5107,10 @@ static void test_reparse_points(void)
+     dwret = GetFileAttributesW(reparse_path);
+     ok(dwret != (DWORD)~0, "Path doesn't exist (attributes: 0x%x)!\n", dwret);
+     ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
++    bret = DeleteFileW(target_path);
++    ok(bret, "Failed to delete symlink target!\n");
++    bret = CreateDirectoryW(target_path, NULL);
++    ok(bret, "Failed to create symlink target directory.\n");
+ 
+     /* Create the directory symlink */
+     HeapFree(GetProcessHeap(), 0, buffer);
+-- 
+2.17.1
+

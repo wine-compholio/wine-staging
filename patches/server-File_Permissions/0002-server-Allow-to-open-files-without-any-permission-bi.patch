@@ -1,4 +1,4 @@
-From 987c69eed0950c375af8eeb97dda539f9a636677 Mon Sep 17 00:00:00 2001
+From feeebcd6395d58018766047dcf0d8debc0e3d97d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 3 Apr 2015 03:58:47 +0200
 Subject: [PATCH] server: Allow to open files without any permission bits. (try
@@ -13,10 +13,10 @@ Changes in v2:
  2 files changed, 32 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 56251db..a5ab606 100644
+index 7f27c79..9ebc40a 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3718,17 +3718,13 @@ static void test_CreateDirectoryA(void)
+@@ -3781,17 +3781,13 @@ static void test_CreateDirectoryA(void)
      error = pGetNamedSecurityInfoA(tmpfile, SE_FILE_OBJECT,
                                     OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
@@ -40,7 +40,7 @@ index 56251db..a5ab606 100644
      CloseHandle(hTemp);
  
      /* Test inheritance of ACLs in NtCreateFile without security descriptor */
-@@ -3798,17 +3794,13 @@ static void test_CreateDirectoryA(void)
+@@ -3861,17 +3857,13 @@ static void test_CreateDirectoryA(void)
      error = pGetNamedSecurityInfoA(tmpfile, SE_FILE_OBJECT,
                                     OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
                                     (PSID *)&owner, NULL, &pDacl, NULL, &pSD);
@@ -65,10 +65,10 @@ index 56251db..a5ab606 100644
  
  done:
 diff --git a/server/fd.c b/server/fd.c
-index ac046c9..770cc0d 100644
+index 0ee86ef..da486b7 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1817,6 +1817,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1824,6 +1824,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      struct fd *fd;
      int root_fd = -1;
      int rw_mode;
@@ -76,10 +76,10 @@ index ac046c9..770cc0d 100644
      int created = (flags & O_CREAT);
  
      if (((options & FILE_DELETE_ON_CLOSE) && !(access & DELETE)) ||
-@@ -1878,10 +1879,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
-             if ((access & FILE_UNIX_WRITE_ACCESS) || (flags & O_CREAT))
-                 fd->unix_fd = open( name, O_RDONLY | (flags & ~(O_TRUNC | O_CREAT | O_EXCL)), *mode );
+@@ -1892,10 +1893,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+             fd->unix_fd = open( name, rw_mode | O_SYMLINK | (flags & ~O_TRUNC), *mode );
          }
+ #endif
 +        else if (errno == EACCES)
 +        {
 +            /* try to change permissions temporarily to open a file descriptor */
@@ -105,7 +105,7 @@ index ac046c9..770cc0d 100644
              goto error;
          }
      }
-@@ -1889,6 +1908,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1903,6 +1922,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      closed_fd->unix_fd = fd->unix_fd;
      closed_fd->unlink = 0;
      closed_fd->unix_name = fd->unix_name;

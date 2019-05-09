@@ -1,0 +1,68 @@
+From 1cb09e87cf0fd0a805849f3483d2b3b7bed5ec18 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Tue, 30 Apr 2019 16:24:54 -0600
+Subject: ntdll: Allow creation of dangling reparse points to non-existent
+ paths.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
+---
+ dlls/ntdll/directory.c | 14 ++++++++++++++
+ dlls/ntdll/file.c      |  3 ++-
+ include/winternl.h     |  1 +
+ 3 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
+index bbdbbe9781..cca1e3c4a8 100644
+--- a/dlls/ntdll/directory.c
++++ b/dlls/ntdll/directory.c
+@@ -2705,6 +2705,20 @@ static NTSTATUS lookup_unix_name( const WCHAR *name, int name_len, char **buffer
+                 status = STATUS_OBJECT_NAME_COLLISION;
+             }
+         }
++        else if (disposition == FILE_WINE_PATH && status == STATUS_OBJECT_PATH_NOT_FOUND)
++        {
++            ret = ntdll_wcstoumbs( 0, name, end - name, unix_name + pos + 1,
++                                   MAX_DIR_ENTRY_LEN, NULL, &used_default );
++            if (ret > 0 && !used_default)
++            {
++                unix_name[pos] = '/';
++                unix_name[pos + 1 + ret] = 0;
++                status = STATUS_NO_SUCH_FILE;
++                pos += strlen( unix_name + pos );
++                name = next;
++                continue;
++            }
++        }
+ 
+         if (status != STATUS_SUCCESS) break;
+ 
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 03a07d46cd..04d34dd572 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -1722,8 +1722,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+         RtlCreateUnicodeString( &nt_dest, dest );
+         nt_dest.Length = dest_len;
+     }
++
+     nt_dest_allocated = TRUE;
+-    status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
++    status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, FILE_WINE_PATH, FALSE );
+     if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
+         goto cleanup;
+     dest_allocated = TRUE;
+diff --git a/include/winternl.h b/include/winternl.h
+index 2b3fb947b9..7f6b2f57ba 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -1788,6 +1788,7 @@ typedef struct _RTL_HANDLE_TABLE
+ #define FILE_OVERWRITE                  4
+ #define FILE_OVERWRITE_IF               5
+ #define FILE_MAXIMUM_DISPOSITION        5
++#define FILE_WINE_PATH                  6
+ 
+ /* Characteristics of a File System */
+ #define FILE_REMOVABLE_MEDIA                      0x00000001
+-- 
+2.17.1
+

@@ -3332,9 +3332,9 @@ fi
 # |   *	[#12401] Support for Junction Points
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/ntdll/file.c,
-# | 	dlls/ntdll/tests/file.c, include/Makefile.in, include/ntifs.h, include/wine/port.h, libs/port/Makefile.in,
-# | 	libs/port/renameat2.c, server/fd.c
+# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/msvcp120/tests/msvcp120.c,
+# | 	dlls/msvcp140/tests/msvcp140.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/Makefile.in,
+# | 	include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, server/fd.c
 # |
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
@@ -3349,10 +3349,14 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0010-ntdll-Add-support-for-relative-symlink-creation.patch
 	patch_apply ntdll-Junction_Points/0011-ntdll-Add-support-for-reading-relative-symlinks.patch
 	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
-	patch_apply ntdll-Junction_Points/0013-ntdll-Correctly-report-file-symbolic-links-as-files.patch
-	patch_apply ntdll-Junction_Points/0014-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
-	patch_apply ntdll-Junction_Points/0015-server-Properly-handle-file-symlink-deletion.patch
-	patch_apply ntdll-Junction_Points/0016-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
+	patch_apply ntdll-Junction_Points/0013-ntdll-Allow-creation-of-dangling-reparse-points-to-n.patch
+	patch_apply ntdll-Junction_Points/0014-ntdll-Correctly-report-file-symbolic-links-as-files.patch
+	patch_apply ntdll-Junction_Points/0015-ntdll-Correctly-report-fd-based-file-info-for-symlin.patch
+	patch_apply ntdll-Junction_Points/0016-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
+	patch_apply ntdll-Junction_Points/0017-server-Properly-handle-file-symlink-deletion.patch
+	patch_apply ntdll-Junction_Points/0018-ntdll-Always-report-symbolic-links-as-containing-zer.patch
+	patch_apply ntdll-Junction_Points/0019-ntdll-Find-dangling-symlinks-quickly.patch
+	patch_apply ntdll-Junction_Points/0020-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
@@ -3366,9 +3370,13 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for relative symlink creation.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading relative symlinks.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Allow creation of dangling reparse points to non-existent paths.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report fd-based file info for symlinks.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Find dangling symlinks quickly.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse points.", 1 },';
 	) >> "$patchlist"
 fi

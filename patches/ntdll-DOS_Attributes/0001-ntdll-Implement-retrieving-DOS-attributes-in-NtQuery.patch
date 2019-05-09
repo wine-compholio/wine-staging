@@ -1,4 +1,4 @@
-From 935694ac40ed4b264ef0ede519bd8b9b2f1f28de Mon Sep 17 00:00:00 2001
+From 78f4401a1e5d50097be8dd8458273ef1d4a548a7 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
@@ -6,15 +6,15 @@ Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
 
 ---
  configure.ac          | 12 ++++++++++++
- dlls/ntdll/file.c     | 22 +++++++++++++++++++++-
+ dlls/ntdll/file.c     | 16 ++++++++++++++++
  include/wine/port.h   |  8 ++++++++
  libs/port/Makefile.in |  4 +++-
  libs/port/xattr.c     | 39 +++++++++++++++++++++++++++++++++++++++
- 5 files changed, 83 insertions(+), 2 deletions(-)
+ 5 files changed, 78 insertions(+), 1 deletion(-)
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index 1905733..6f0429e 100644
+index 9385d20..60d43d3 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -85,6 +85,7 @@ AC_ARG_WITH(udev,      AS_HELP_STRING([--without-udev],[do not use udev (plug an
@@ -25,7 +25,7 @@ index 1905733..6f0429e 100644
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
  AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -698,6 +699,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -711,6 +712,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -44,7 +44,7 @@ index 1905733..6f0429e 100644
  
  AC_SUBST(DLLFLAGS,"-D_REENTRANT")
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 919eaea..1ffa675 100644
+index b70477e..2c99c1d 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -127,6 +127,22 @@ static const WCHAR ntfsW[] = {'N','T','F','S'};
@@ -70,24 +70,6 @@ index 919eaea..1ffa675 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -144,12 +160,16 @@ static inline ULONG get_file_attributes( const struct stat *st )
- /* get the stat info and file attributes for a file (by file descriptor) */
- int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
- {
--    int ret;
-+    char hexattr[11];
-+    int len, ret;
- 
-     *attr = 0;
-     ret = fstat( fd, st );
-     if (ret == -1) return ret;
-     *attr |= get_file_attributes( st );
-+    len = xattr_fget( fd, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
-+    if (len == -1) return ret;
-+    *attr |= get_file_xattr( hexattr, len );
-     return ret;
- }
- 
 diff --git a/include/wine/port.h b/include/wine/port.h
 index 19c8682..eaa23bc 100644
 --- a/include/wine/port.h

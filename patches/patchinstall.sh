@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9bcaf9769c5ae834f0f6e8fe2b28a85b286833b0"
+	echo "aaf9c833ee1b9dca8cffcb2a60c96093fdd36405"
 }
 
 # Show version information
@@ -303,7 +303,6 @@ patch_enable_all ()
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_TIFF_Support="$1"
-	enable_windowscodecs_png_network="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
@@ -1039,9 +1038,6 @@ patch_enable ()
 			;;
 		windowscodecs-TIFF_Support)
 			enable_windowscodecs_TIFF_Support="$2"
-			;;
-		windowscodecs-png-network)
-			enable_windowscodecs_png_network="$2"
 			;;
 		wine.inf-Directory_ContextMenuHandlers)
 			enable_wine_inf_Directory_ContextMenuHandlers="$2"
@@ -6394,21 +6390,6 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset windowscodecs-png-network
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46558] windowscodecs: Byte swap png read/write for 16-bpp data.
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/pngformat.c
-# |
-if test "$enable_windowscodecs_png_network" -eq 1; then
-	patch_apply windowscodecs-png-network/0001-windowscodecs-Byte-swap-png-read-write-for-16-bpp-da.patch
-	(
-		printf '%s\n' '+    { "Bryon Roche", "windowscodecs: Byte swap png read/write for 16-bpp data.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,16 +1,16 @@
-From 20171f2a705fdf94966e9661d360ac70bb92cb8e Mon Sep 17 00:00:00 2001
+From 9a808d848f2a57140822c31047ce882c75d74b99 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 12:00:51 -0600
 Subject: ntdll: Correctly report file symbolic links as files.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 118 ++++++++++++++++++++++++++--------------
+ dlls/ntdll/file.c       | 120 ++++++++++++++++++++++++++--------------
  dlls/ntdll/tests/file.c |   8 +--
- 2 files changed, 82 insertions(+), 44 deletions(-)
+ 2 files changed, 84 insertions(+), 44 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 04d34dd572..8336392ddb 100644
+index 04d34dd572..57d7d334d5 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -124,6 +124,9 @@ mode_t FILE_umask = 0;
@@ -23,7 +23,7 @@ index 04d34dd572..8336392ddb 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -160,10 +163,13 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -160,10 +163,15 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
      if (ret == -1) return ret;
      if (S_ISLNK( st->st_mode ))
      {
@@ -33,6 +33,8 @@ index 04d34dd572..8336392ddb 100644
 -        if (S_ISDIR( st->st_mode )) *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
 +        BOOL is_dir;
 +
++        /* return information about the destination (unless this is a dangling symlink) */
++        stat( path, st );
 +        /* symbolic links (either junction points or NT symlinks) are "reparse points" */
 +        *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
 +        /* whether a reparse point is a file or a directory is stored inside the link target */
@@ -41,7 +43,7 @@ index 04d34dd572..8336392ddb 100644
      }
      *attr |= get_file_attributes( st );
      return ret;
-@@ -1826,48 +1832,33 @@ cleanup:
+@@ -1826,48 +1834,33 @@ cleanup:
  }
  
  
@@ -105,7 +107,7 @@ index 04d34dd572..8336392ddb 100644
          p++;
      }
      if (*p++ != '/')
-@@ -1875,7 +1866,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -1875,7 +1868,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
          status = STATUS_NOT_IMPLEMENTED;
          goto cleanup;
      }
@@ -114,7 +116,7 @@ index 04d34dd572..8336392ddb 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          char c = *p++;
-@@ -1890,21 +1881,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -1890,21 +1883,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
              status = STATUS_NOT_IMPLEMENTED;
              goto cleanup;
          }

@@ -95,6 +95,7 @@ patch_enable_all ()
 	enable_bcrypt_BCryptSecretAgreement="$1"
 	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
+	enable_comctl32_alpha_bitmaps="$1"
 	enable_comctrl_rebar_capture="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -414,6 +415,9 @@ patch_enable ()
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
+			;;
+		comctl32-alpha-bitmaps)
+			enable_comctl32_alpha_bitmaps="$2"
 			;;
 		comctrl-rebar-capture)
 			enable_comctrl_rebar_capture="$2"
@@ -2306,6 +2310,23 @@ if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "comctl32: Preserve custom colors between subitems.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-alpha-bitmaps
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47018] Paint 32-bpp bitmaps with an alpha channel using GdiAlphaBlend
+# |
+# | Modified files:
+# |   *	dlls/comctl32/static.c
+# |
+if test "$enable_comctl32_alpha_bitmaps" -eq 1; then
+	patch_apply comctl32-alpha-bitmaps/0001-comctl32-Switch-to-using-a-structure-for-extra-stora.patch
+	patch_apply comctl32-alpha-bitmaps/0002-comctl32-Paint-32-bpp-bitmaps-with-an-alpha-channel-.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Switch to using a structure for extra storage.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Paint 32-bpp bitmaps with an alpha channel using GdiAlphaBlend.", 1 },';
 	) >> "$patchlist"
 fi
 

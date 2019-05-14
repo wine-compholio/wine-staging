@@ -1,4 +1,4 @@
-From 86e5afc80f75ccef2f6f7215a6c1f281c7d4fd39 Mon Sep 17 00:00:00 2001
+From 7d80b158b2cb555c16e82d3422c25356b78b4d53 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Tue, 22 Mar 2016 23:46:30 +0800
 Subject: [PATCH] windowscodecs: Improve compatibility of IMILBitmapSource
@@ -7,14 +7,23 @@ Subject: [PATCH] windowscodecs: Improve compatibility of IMILBitmapSource
 Based on Focht's investigation. This makes the test application attached
 to the bug 34764 work.
 ---
- dlls/windowscodecs/bitmap.c            | 184 ++++++++++++++++++++++++++-------
- dlls/windowscodecs/wincodecs_private.h |  58 +++++++++--
- 2 files changed, 197 insertions(+), 45 deletions(-)
+ dlls/windowscodecs/bitmap.c            | 186 +++++++++++++++++++------
+ dlls/windowscodecs/wincodecs_private.h |  58 +++++++-
+ 2 files changed, 198 insertions(+), 46 deletions(-)
 
 diff --git a/dlls/windowscodecs/bitmap.c b/dlls/windowscodecs/bitmap.c
-index f841496..734c211 100644
+index e8fe822e84..30a36535f4 100644
 --- a/dlls/windowscodecs/bitmap.c
 +++ b/dlls/windowscodecs/bitmap.c
+@@ -27,7 +27,7 @@
+ #include "objbase.h"
+ 
+ #include "wincodecs_private.h"
+-
++#include "wine/asm.h"
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(wincodecs);
 @@ -137,6 +137,7 @@ static HRESULT WINAPI BitmapLockImpl_QueryInterface(IWICBitmapLock *iface, REFII
      }
      else
@@ -331,10 +340,10 @@ index f841496..734c211 100644
  
  HRESULT BitmapImpl_Create(UINT uiWidth, UINT uiHeight, UINT stride, UINT datasize, void *view,
 diff --git a/dlls/windowscodecs/wincodecs_private.h b/dlls/windowscodecs/wincodecs_private.h
-index 0274ece..0c256be 100644
+index 2221cc7dce..34a417d130 100644
 --- a/dlls/windowscodecs/wincodecs_private.h
 +++ b/dlls/windowscodecs/wincodecs_private.h
-@@ -31,7 +31,13 @@ DEFINE_GUID(GUID_WineContainerFormatTga, 0x0c44fda1,0xa5c5,0x4298,0x96,0x85,0x47
+@@ -33,7 +33,13 @@ DEFINE_GUID(GUID_WineContainerFormatTga, 0x0c44fda1,0xa5c5,0x4298,0x96,0x85,0x47
  
  DEFINE_GUID(GUID_VendorWine, 0xddf46da1,0x7dc1,0x404e,0x98,0xf2,0xef,0xa4,0x8d,0xfc,0x95,0x0a);
  
@@ -348,7 +357,7 @@ index 0274ece..0c256be 100644
  #define INTERFACE IMILBitmapSource
  DECLARE_INTERFACE_(IMILBitmapSource,IUnknown)
  {
-@@ -39,16 +45,39 @@ DECLARE_INTERFACE_(IMILBitmapSource,IUnknown)
+@@ -41,16 +47,39 @@ DECLARE_INTERFACE_(IMILBitmapSource,IUnknown)
      STDMETHOD_(HRESULT,QueryInterface)(THIS_ REFIID,void **) PURE;
      STDMETHOD_(ULONG,AddRef)(THIS) PURE;
      STDMETHOD_(ULONG,Release)(THIS) PURE;
@@ -394,7 +403,7 @@ index 0274ece..0c256be 100644
  #define INTERFACE IMILUnknown1
  DECLARE_INTERFACE_(IMILUnknown1,IUnknown)
  {
-@@ -56,6 +85,19 @@ DECLARE_INTERFACE_(IMILUnknown1,IUnknown)
+@@ -58,6 +87,19 @@ DECLARE_INTERFACE_(IMILUnknown1,IUnknown)
      STDMETHOD_(HRESULT,QueryInterface)(THIS_ REFIID,void **) PURE;
      STDMETHOD_(ULONG,AddRef)(THIS) PURE;
      STDMETHOD_(ULONG,Release)(THIS) PURE;
@@ -414,7 +423,7 @@ index 0274ece..0c256be 100644
  };
  #undef INTERFACE
  
-@@ -67,7 +109,9 @@ DECLARE_INTERFACE_(IMILUnknown2,IUnknown)
+@@ -69,7 +111,9 @@ DECLARE_INTERFACE_(IMILUnknown2,IUnknown)
      STDMETHOD_(ULONG,AddRef)(THIS) PURE;
      STDMETHOD_(ULONG,Release)(THIS) PURE;
      /*** unknown methods ***/
@@ -426,5 +435,5 @@ index 0274ece..0c256be 100644
  #undef INTERFACE
  
 -- 
-1.9.1
+2.20.1
 

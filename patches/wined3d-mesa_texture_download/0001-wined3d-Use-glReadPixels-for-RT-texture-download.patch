@@ -1,20 +1,22 @@
-From db68f510b12411a5efc5b27c7bd6156e95760bae Mon Sep 17 00:00:00 2001
+From 96a14002a93d7c058944649b0720159f98a75f71 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Sun, 30 Sep 2018 12:02:00 -0500
 Subject: [PATCH] wined3d: Use glReadPixels for RT texture download.
 
 Signed-off-by: Andrew Wesie <awesie@gmail.com>
 ---
- dlls/wined3d/texture.c | 19 +++++++++++++++++++
- 1 file changed, 19 insertions(+)
+ dlls/wined3d/texture.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
 
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index 05f210f6..e7c47260 100644
+index b865c9c..b2e5ea3 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -2394,11 +2394,13 @@ void wined3d_texture_download_data(struct wined3d_texture *texture, unsigned int
+@@ -2366,12 +2366,15 @@ void wined3d_texture_download_data(struct wined3d_texture *texture, unsigned int
+         struct wined3d_context *context, const struct wined3d_bo_address *data)
  {
      const struct wined3d_gl_info *gl_info = context->gl_info;
++    struct wined3d_context_gl *context_gl = wined3d_context_gl(context);
      const struct wined3d_format_gl *format_gl;
 +    struct wined3d_texture_sub_resource *sub_resource;
      unsigned int level;
@@ -26,7 +28,7 @@ index 05f210f6..e7c47260 100644
      level = sub_resource_idx % texture->level_count;
  
      if ((texture->resource.type == WINED3D_RTYPE_TEXTURE_2D
-@@ -2432,6 +2434,23 @@ void wined3d_texture_download_data(struct wined3d_texture *texture, unsigned int
+@@ -2405,6 +2408,23 @@ void wined3d_texture_download_data(struct wined3d_texture *texture, unsigned int
          GL_EXTCALL(glGetCompressedTexImage(target, level, data->addr));
          checkGLcall("glGetCompressedTexImage");
      }
@@ -36,9 +38,9 @@ index 05f210f6..e7c47260 100644
 +        TRACE("Downloading (glReadPixels) texture %p, %u, level %u, format %#x, type %#x, data %p.\n",
 +                texture, sub_resource_idx, level, format_gl->format, format_gl->type, data->addr);
 +
-+        context_apply_fbo_state_blit(context, GL_READ_FRAMEBUFFER, &texture->resource, sub_resource_idx, NULL,
++        wined3d_context_gl_apply_fbo_state_blit(context_gl, GL_READ_FRAMEBUFFER, &texture->resource, sub_resource_idx, NULL,
 +                0, sub_resource->locations & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB));
-+        context_check_fbo_status(context, GL_READ_FRAMEBUFFER);
++        wined3d_context_gl_check_fbo_status(context_gl, GL_READ_FRAMEBUFFER);
 +        context_invalidate_state(context, STATE_FRAMEBUFFER);
 +        gl_info->gl_ops.gl.p_glReadBuffer(GL_COLOR_ATTACHMENT0);
 +        checkGLcall("glReadBuffer()");
@@ -51,5 +53,5 @@ index 05f210f6..e7c47260 100644
      {
          TRACE("Downloading texture %p, %u, level %u, format %#x, type %#x, data %p.\n",
 -- 
-2.19.1
+1.9.1
 

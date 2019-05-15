@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "99114803b80f6e687f1d4ed11e0808b821cdbf22"
+	echo "042e0625695a82aa71ddf825c693680d5d8aa0dd"
 }
 
 # Show version information
@@ -301,7 +301,6 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
-	enable_windowscodecs_IMILBitmapSource="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
@@ -1032,9 +1031,6 @@ patch_enable ()
 			;;
 		windowscodecs-GIF_Encoder)
 			enable_windowscodecs_GIF_Encoder="$2"
-			;;
-		windowscodecs-IMILBitmapSource)
-			enable_windowscodecs_IMILBitmapSource="$2"
 			;;
 		windowscodecs-TIFF_Support)
 			enable_windowscodecs_TIFF_Support="$2"
@@ -6340,23 +6336,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset windowscodecs-IMILBitmapSource
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34764] Improve compatibility of IMILBitmapSource interface
-# |
-# | Modified files:
-# |   *	dlls/windowscodecs/bitmap.c, dlls/windowscodecs/scaler.c, dlls/windowscodecs/wincodecs_private.h
-# |
-if test "$enable_windowscodecs_IMILBitmapSource" -eq 1; then
-	patch_apply windowscodecs-IMILBitmapSource/0001-windowscodecs-Improve-compatibility-of-IMILBitmapSou.patch
-	patch_apply windowscodecs-IMILBitmapSource/0002-windowscodecs-Add-support-for-IMILBitmapScaler-inter.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Improve compatibility of IMILBitmapSource interface.", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for IMILBitmapScaler interface.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset windowscodecs-TIFF_Support
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -7411,13 +7390,15 @@ fi
 # | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/xapo.idl, include/xaudio2.idl
 # |
 if test "$enable_xaudio2_revert" -eq 1; then
-	patch_apply xaudio2-revert/0001-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
-	patch_apply xaudio2-revert/0002-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
-	patch_apply xaudio2-revert/0003-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
-	patch_apply xaudio2-revert/0004-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
-	patch_apply xaudio2-revert/0005-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
-	patch_apply xaudio2-revert/0006-Revert-xaudio2-Rewrite-to-use-FAudio.patch
+	patch_apply xaudio2-revert/0001-Revert-xaudio2-Fix-32-bit-build.patch
+	patch_apply xaudio2-revert/0002-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
+	patch_apply xaudio2-revert/0003-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
+	patch_apply xaudio2-revert/0004-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
+	patch_apply xaudio2-revert/0005-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
+	patch_apply xaudio2-revert/0006-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
+	patch_apply xaudio2-revert/0007-Revert-xaudio2-Rewrite-to-use-FAudio.patch
 	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix 32-bit build.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7/tests: Remove redundant not-NULL checks (coccinellery).\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7: Add a trailing '\''\\n'\'' to an ERR() message.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: IXAPO::Process out parameter should not be const.\".", 1 },';

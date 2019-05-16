@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "042e0625695a82aa71ddf825c693680d5d8aa0dd"
+	echo "07e249e431c5009fa6ab8d274b4a8fe62a286358"
 }
 
 # Show version information
@@ -153,6 +153,7 @@ patch_enable_all ()
 	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
+	enable_include_macos_compile="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
@@ -587,6 +588,9 @@ patch_enable ()
 			;;
 		imm32-message_on_focus)
 			enable_imm32_message_on_focus="$2"
+			;;
+		include-macos-compile)
+			enable_include_macos_compile="$2"
 			;;
 		include-winsock)
 			enable_include_winsock="$2"
@@ -4070,6 +4074,18 @@ if test "$enable_imm32_message_on_focus" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset include-macos-compile
+# |
+# | Modified files:
+# |   *	include/winerror.h
+# |
+if test "$enable_include_macos_compile" -eq 1; then
+	patch_apply include-macos-compile/0001-include-Stop-macro-redefined-on-the-mac-build.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Stop macro redefined on the mac build.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset include-winsock
 # |
 # | Modified files:
@@ -7397,6 +7413,7 @@ if test "$enable_xaudio2_revert" -eq 1; then
 	patch_apply xaudio2-revert/0005-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
 	patch_apply xaudio2-revert/0006-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
 	patch_apply xaudio2-revert/0007-Revert-xaudio2-Rewrite-to-use-FAudio.patch
+	patch_apply xaudio2-revert/0008-xaudio2_7-Fix-build.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix 32-bit build.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7/tests: Remove redundant not-NULL checks (coccinellery).\".", 1 },';
@@ -7405,6 +7422,7 @@ if test "$enable_xaudio2_revert" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: IXAudio23 needs its own interface, for XAUDIO23_VOICE_SENDS parameters.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix uninitialized variable access (Valgrind).\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Rewrite to use FAudio.\".", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Fix build.", 1 },';
 	) >> "$patchlist"
 fi
 

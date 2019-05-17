@@ -1,33 +1,33 @@
-From 73e2cbc67a4f85480a0fb36064c8df6408405c8b Mon Sep 17 00:00:00 2001
+From e36139ae4147ded5ca4e18239ff87e02dac0af51 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 16 May 2017 04:37:52 +0200
 Subject: krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack
  address.
 
 ---
- dlls/dbghelp/cpu_i386.c               |  6 +++---
- dlls/krnl386.exe16/kernel.c           |  6 +++---
- dlls/krnl386.exe16/kernel16_private.h | 11 ++++++-----
- dlls/krnl386.exe16/ne_module.c        |  6 +++---
- dlls/krnl386.exe16/ne_segment.c       | 20 +++++++++----------
- dlls/krnl386.exe16/task.c             | 14 +++++++-------
- dlls/krnl386.exe16/thunk.c            | 36 +++++++++++++++++------------------
- dlls/krnl386.exe16/wowthunk.c         | 20 +++++++++----------
+ dlls/dbghelp/cpu_i386.c               |  6 ++---
+ dlls/krnl386.exe16/kernel.c           |  6 ++---
+ dlls/krnl386.exe16/kernel16_private.h | 11 ++++----
+ dlls/krnl386.exe16/ne_module.c        |  6 ++---
+ dlls/krnl386.exe16/ne_segment.c       | 20 +++++++--------
+ dlls/krnl386.exe16/task.c             | 14 +++++------
+ dlls/krnl386.exe16/thunk.c            | 36 +++++++++++++--------------
+ dlls/krnl386.exe16/wowthunk.c         | 20 +++++++--------
  dlls/ntdll/signal_i386.c              |  2 +-
  dlls/system.drv16/system.c            |  2 +-
- dlls/toolhelp.dll16/toolhelp.c        |  6 +++---
- dlls/user.exe16/message.c             | 16 ++++++++--------
- dlls/user.exe16/user.c                |  4 ++--
+ dlls/toolhelp.dll16/toolhelp.c        |  6 ++---
+ dlls/user.exe16/message.c             | 16 ++++++------
+ dlls/user.exe16/user.c                |  4 +--
  dlls/user.exe16/window.c              |  2 +-
  include/winternl.h                    |  2 +-
  tools/winebuild/relay.c               |  2 +-
  16 files changed, 78 insertions(+), 77 deletions(-)
 
 diff --git a/dlls/dbghelp/cpu_i386.c b/dlls/dbghelp/cpu_i386.c
-index 37b2e25..ed80709 100644
+index 9704cfda5..7a3e08a99 100644
 --- a/dlls/dbghelp/cpu_i386.c
 +++ b/dlls/dbghelp/cpu_i386.c
-@@ -213,16 +213,16 @@ static BOOL i386_stack_walk(struct cpu_stack_walk* csw, LPSTACKFRAME64 frame, CO
+@@ -213,16 +213,16 @@ static BOOL i386_stack_walk(struct cpu_stack_walk *csw, STACKFRAME64 *frame,
          /* Init done */
          set_curr_mode((frame->AddrPC.Mode == AddrModeFlat) ? stm_32bit : stm_16bit);
  
@@ -48,7 +48,7 @@ index 37b2e25..ed80709 100644
              }
              next_switch = p;
 diff --git a/dlls/krnl386.exe16/kernel.c b/dlls/krnl386.exe16/kernel.c
-index 0a66d1e..17b0c15 100644
+index 0a66d1e61..17b0c156c 100644
 --- a/dlls/krnl386.exe16/kernel.c
 +++ b/dlls/krnl386.exe16/kernel.c
 @@ -45,8 +45,8 @@ static void thread_attach(void)
@@ -72,10 +72,10 @@ index 0a66d1e..17b0c15 100644
  }
  
 diff --git a/dlls/krnl386.exe16/kernel16_private.h b/dlls/krnl386.exe16/kernel16_private.h
-index 1f8f730..2b18811 100644
+index 284b06374..2f5b006e5 100644
 --- a/dlls/krnl386.exe16/kernel16_private.h
 +++ b/dlls/krnl386.exe16/kernel16_private.h
-@@ -168,7 +168,7 @@ extern THHOOK *pThhook DECLSPEC_HIDDEN;
+@@ -170,7 +170,7 @@ extern THHOOK *pThhook DECLSPEC_HIDDEN;
      (((offset)+(size) <= pModule->mapping_size) ? \
       (memcpy( buffer, (const char *)pModule->mapping + (offset), (size) ), TRUE) : FALSE)
  
@@ -84,7 +84,7 @@ index 1f8f730..2b18811 100644
  #define CURRENT_DS      (CURRENT_STACK16->ds)
  
  /* push bytes on the 16-bit stack of a thread; return a segptr to the first pushed byte */
-@@ -176,8 +176,8 @@ static inline SEGPTR stack16_push( int size )
+@@ -178,8 +178,8 @@ static inline SEGPTR stack16_push( int size )
  {
      STACK16FRAME *frame = CURRENT_STACK16;
      memmove( (char*)frame - size, frame, sizeof(*frame) );
@@ -95,7 +95,7 @@ index 1f8f730..2b18811 100644
  }
  
  /* pop bytes from the 16-bit stack of a thread */
-@@ -185,7 +185,7 @@ static inline void stack16_pop( int size )
+@@ -187,7 +187,7 @@ static inline void stack16_pop( int size )
  {
      STACK16FRAME *frame = CURRENT_STACK16;
      memmove( (char*)frame + size, frame, sizeof(*frame) );
@@ -104,7 +104,7 @@ index 1f8f730..2b18811 100644
  }
  
  /* dosmem.c */
-@@ -271,11 +271,12 @@ struct tagSYSLEVEL;
+@@ -273,11 +273,12 @@ struct tagSYSLEVEL;
  
  struct kernel_thread_data
  {
@@ -119,10 +119,10 @@ index 1f8f730..2b18811 100644
  
  static inline struct kernel_thread_data *kernel_get_thread_data(void)
 diff --git a/dlls/krnl386.exe16/ne_module.c b/dlls/krnl386.exe16/ne_module.c
-index 14f8075..965f154 100644
+index 357a0e98d..4b0b6a0b1 100644
 --- a/dlls/krnl386.exe16/ne_module.c
 +++ b/dlls/krnl386.exe16/ne_module.c
-@@ -1244,7 +1244,7 @@ DWORD NE_StartTask(void)
+@@ -1217,7 +1217,7 @@ DWORD NE_StartTask(void)
              sp = pSegTable[SELECTOROF(pModule->ne_sssp)-1].minsize + pModule->ne_stack;
          sp &= ~1;
          sp -= sizeof(STACK16FRAME);
@@ -131,7 +131,7 @@ index 14f8075..965f154 100644
  
          /* Registers at initialization must be:
           * ax   zero
-@@ -1274,8 +1274,8 @@ DWORD NE_StartTask(void)
+@@ -1245,8 +1245,8 @@ DWORD NE_StartTask(void)
  
          TRACE("Starting main program: cs:ip=%04x:%04x ds=%04x ss:sp=%04x:%04x\n",
                context.SegCs, context.Eip, context.SegDs,
@@ -143,7 +143,7 @@ index 14f8075..965f154 100644
          WOWCallback16Ex( 0, WCB16_REGS, 0, NULL, (DWORD *)&context );
          ExitThread( LOWORD(context.Eax) );
 diff --git a/dlls/krnl386.exe16/ne_segment.c b/dlls/krnl386.exe16/ne_segment.c
-index 1ceb714..51b8261 100644
+index 000c5760f..30ace05e5 100644
 --- a/dlls/krnl386.exe16/ne_segment.c
 +++ b/dlls/krnl386.exe16/ne_segment.c
 @@ -378,9 +378,9 @@ BOOL NE_LoadSegment( NE_MODULE *pModule, WORD segnum )
@@ -190,8 +190,8 @@ index 1ceb714..51b8261 100644
  
          for (i = 2; i <= pModule->ne_cseg; i++)
              if (!NE_LoadSegment( pModule, i )) return FALSE;
-@@ -693,7 +693,7 @@ static BOOL NE_InitDLL( NE_MODULE *pModule )
-     context.SegGs = wine_get_gs();
+@@ -691,7 +691,7 @@ static BOOL NE_InitDLL( NE_MODULE *pModule )
+     context.SegEs = ds;   /* who knows ... */
      context.SegCs = SEL(pSegTable[SELECTOROF(pModule->ne_csip)-1].hSeg);
      context.Eip   = OFFSETOF(pModule->ne_csip);
 -    context.Ebp   = OFFSETOF(NtCurrentTeb()->WOW32Reserved) + FIELD_OFFSET(STACK16FRAME,bp);
@@ -199,8 +199,8 @@ index 1ceb714..51b8261 100644
  
      pModule->ne_csip = 0;  /* Don't initialize it twice */
      TRACE_(dll)("Calling LibMain for %.*s, cs:ip=%04x:%04x ds=%04x di=%04x cx=%04x\n",
-@@ -798,7 +798,7 @@ static void NE_CallDllEntryPoint( NE_MODULE *pModule, DWORD dwReason )
-         context.SegGs = wine_get_gs();
+@@ -794,7 +794,7 @@ static void NE_CallDllEntryPoint( NE_MODULE *pModule, DWORD dwReason )
+         context.SegEs = ds;   /* who knows ... */
          context.SegCs = HIWORD(entryPoint);
          context.Eip   = LOWORD(entryPoint);
 -        context.Ebp   = OFFSETOF(NtCurrentTeb()->WOW32Reserved) + FIELD_OFFSET(STACK16FRAME,bp);
@@ -209,7 +209,7 @@ index 1ceb714..51b8261 100644
          args[7] = HIWORD(dwReason);
          args[6] = LOWORD(dwReason);
 diff --git a/dlls/krnl386.exe16/task.c b/dlls/krnl386.exe16/task.c
-index 84d4bf3..ff69b37 100644
+index 84d4bf33a..ff69b37cd 100644
 --- a/dlls/krnl386.exe16/task.c
 +++ b/dlls/krnl386.exe16/task.c
 @@ -630,7 +630,7 @@ void WINAPI InitTask16( CONTEXT *context )
@@ -267,10 +267,10 @@ index 84d4bf3..ff69b37 100644
      context->Esp   = OFFSETOF(pData->old_ss_sp) - sizeof(DWORD); /*ret addr*/
      pData->old_ss_sp = 0;
 diff --git a/dlls/krnl386.exe16/thunk.c b/dlls/krnl386.exe16/thunk.c
-index 737f6a8..d464fa6 100644
+index c8ad3824c..69f6f3b2e 100644
 --- a/dlls/krnl386.exe16/thunk.c
 +++ b/dlls/krnl386.exe16/thunk.c
-@@ -437,7 +437,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
+@@ -435,7 +435,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
      context16.Eip   = LOWORD(context->Edx);
      /* point EBP to the STACK16FRAME on the stack
       * for the call_to_16 to set up the register content on calling */
@@ -279,7 +279,7 @@ index 737f6a8..d464fa6 100644
  
      /*
       * used to be (problematic):
-@@ -459,7 +459,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
+@@ -457,7 +457,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
       * the number of parameters that the Win16 function
       * accepted (that it popped from the corresponding Win16 stack) */
      context->Esp +=   LOWORD(context16.Esp) -
@@ -288,8 +288,8 @@ index 737f6a8..d464fa6 100644
  }
  DEFINE_REGS_ENTRYPOINT( QT_Thunk )
  
-@@ -565,7 +565,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
-     context16.SegGs = wine_get_gs();
+@@ -561,7 +561,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
+ 
      context16.SegCs = HIWORD(callTarget);
      context16.Eip   = LOWORD(callTarget);
 -    context16.Ebp   = OFFSETOF(NtCurrentTeb()->WOW32Reserved) + FIELD_OFFSET(STACK16FRAME,bp);
@@ -297,7 +297,7 @@ index 737f6a8..d464fa6 100644
  
      argsize  = context->Ebp-context->Esp-0x40;
      if (argsize > sizeof(newstack)) argsize = sizeof(newstack);
-@@ -577,8 +577,8 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
+@@ -573,8 +573,8 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
  	if (mapESPrelative & (1 << i))
  	{
  	    SEGPTR *arg = (SEGPTR *)newstack[i];
@@ -308,7 +308,7 @@ index 737f6a8..d464fa6 100644
                                + (*(LPBYTE *)arg - oldstack));
  	}
  
-@@ -588,7 +588,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
+@@ -584,7 +584,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
      context->Ecx = context16.Ecx;
  
      context->Esp +=   LOWORD(context16.Esp) -
@@ -317,7 +317,7 @@ index 737f6a8..d464fa6 100644
  
      /* Copy modified buffers back to 32-bit stack */
      memcpy( oldstack, newstack, argsize );
-@@ -725,7 +725,7 @@ void WINAPI __regs_Common32ThkLS( CONTEXT *context )
+@@ -719,7 +719,7 @@ void WINAPI __regs_Common32ThkLS( CONTEXT *context )
      context16.Edi   = LOWORD(context->Ecx);
      context16.SegCs = HIWORD(context->Eax);
      context16.Eip   = LOWORD(context->Eax);
@@ -326,8 +326,8 @@ index 737f6a8..d464fa6 100644
  
      argsize = HIWORD(context->Edx) * 4;
  
-@@ -783,7 +783,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
-     context16.SegGs = wine_get_gs();
+@@ -775,7 +775,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
+ 
      context16.SegCs = HIWORD(context->Edx);
      context16.Eip   = LOWORD(context->Edx);
 -    context16.Ebp   = OFFSETOF(NtCurrentTeb()->WOW32Reserved) + FIELD_OFFSET(STACK16FRAME,bp);
@@ -335,7 +335,7 @@ index 737f6a8..d464fa6 100644
  
      argsize = 2 * *(WORD *)context->Esp + 2;
  
-@@ -796,7 +796,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
+@@ -788,7 +788,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
              (LPBYTE)CURRENT_STACK16 - argsize, argsize );
  
      context->Esp +=   LOWORD(context16.Esp) -
@@ -344,7 +344,7 @@ index 737f6a8..d464fa6 100644
  }
  DEFINE_REGS_ENTRYPOINT( OT_32ThkLSF )
  
-@@ -1252,26 +1252,26 @@ void WINAPI __regs_K32Thk1632Prolog( CONTEXT *context )
+@@ -1240,26 +1240,26 @@ void WINAPI __regs_K32Thk1632Prolog( CONTEXT *context )
        DWORD argSize = context->Ebp - context->Esp;
        char *stack16 = (char *)context->Esp - 4;
        STACK16FRAME *frame16 = (STACK16FRAME *)stack16 - 1;
@@ -375,7 +375,7 @@ index 737f6a8..d464fa6 100644
     }
  
      /* entry_point is never used again once the entry point has
-@@ -1294,7 +1294,7 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
+@@ -1282,7 +1282,7 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
     if (   code[5] == 0xFF && code[6] == 0x55 && code[7] == 0xFC
         && code[13] == 0x66 && code[14] == 0xCB)
     {
@@ -384,7 +384,7 @@ index 737f6a8..d464fa6 100644
        char *stack16 = (char *)(frame16 + 1);
        DWORD argSize = frame16->ebp - (DWORD)stack16;
        char *stack32 = (char *)frame16->frame32 - argSize;
-@@ -1302,15 +1302,15 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
+@@ -1290,15 +1290,15 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
        DWORD nArgsPopped = context->Esp - (DWORD)stack32;
  
        TRACE("before SYSTHUNK hack: EBP: %08x ESP: %08x cur_stack: %p\n",
@@ -403,7 +403,7 @@ index 737f6a8..d464fa6 100644
     }
  }
  DEFINE_REGS_ENTRYPOINT( K32Thk1632Epilog )
-@@ -2325,7 +2325,7 @@ void WINAPI Throw16( LPCATCHBUF lpbuf, INT16 retval, CONTEXT *context )
+@@ -2313,7 +2313,7 @@ void WINAPI Throw16( LPCATCHBUF lpbuf, INT16 retval, CONTEXT *context )
      frame32 = pFrame->frame32;
      while (frame32 && frame32->frame16)
      {
@@ -413,7 +413,7 @@ index 737f6a8..d464fa6 100644
          if (OFFSETOF(frame32->frame16) > lpbuf[2])
          {
 diff --git a/dlls/krnl386.exe16/wowthunk.c b/dlls/krnl386.exe16/wowthunk.c
-index da82995..cf9caad 100644
+index da829950b..cf9caad44 100644
 --- a/dlls/krnl386.exe16/wowthunk.c
 +++ b/dlls/krnl386.exe16/wowthunk.c
 @@ -135,7 +135,7 @@ static DWORD call16_handler( EXCEPTION_RECORD *record, EXCEPTION_REGISTRATION_RE
@@ -473,10 +473,10 @@ index da82995..cf9caad 100644
          }
      }
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 2363085..0ad5e1a 100644
+index b4e88d125..7c6e1b50c 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -839,7 +839,7 @@ static inline void *init_handler( const ucontext_t *sigcontext, WORD *fs, WORD *
+@@ -846,7 +846,7 @@ static inline void *init_handler( const ucontext_t *sigcontext, WORD *fs, WORD *
           * SS is still non-system segment. This is why both CS and SS
           * are checked.
           */
@@ -486,11 +486,11 @@ index 2363085..0ad5e1a 100644
      return (void *)(ESP_sig(sigcontext) & ~3);
  }
 diff --git a/dlls/system.drv16/system.c b/dlls/system.drv16/system.c
-index 8bb5cf9..ddd3913 100644
+index b6fd51c05..695ad7b60 100644
 --- a/dlls/system.drv16/system.c
 +++ b/dlls/system.drv16/system.c
-@@ -72,7 +72,7 @@ static void CALLBACK SYSTEM_TimerTick( LPVOID arg, DWORD low, DWORD high )
-             context.SegGs = wine_get_gs();
+@@ -70,7 +70,7 @@ static void CALLBACK SYSTEM_TimerTick( LPVOID arg, DWORD low, DWORD high )
+             memset( &context, 0, sizeof(context) );
              context.SegCs = SELECTOROF( proc );
              context.Eip   = OFFSETOF( proc );
 -            context.Ebp   = OFFSETOF(NtCurrentTeb()->WOW32Reserved) + FIELD_OFFSET(STACK16FRAME, bp);
@@ -499,10 +499,10 @@ index 8bb5cf9..ddd3913 100644
  
              WOWCallback16Ex( 0, WCB16_REGS, 0, NULL, (DWORD *)&context );
 diff --git a/dlls/toolhelp.dll16/toolhelp.c b/dlls/toolhelp.dll16/toolhelp.c
-index cf5e6ef..531e622 100644
+index 47c2d2da0..9c05d7921 100644
 --- a/dlls/toolhelp.dll16/toolhelp.c
 +++ b/dlls/toolhelp.dll16/toolhelp.c
-@@ -460,8 +460,8 @@ BOOL16 WINAPI TaskNext16( TASKENTRY *lpte )
+@@ -461,8 +461,8 @@ BOOL16 WINAPI TaskNext16( TASKENTRY *lpte )
      lpte->hTaskParent   = pTask->hParent;
      lpte->hInst         = pTask->hInstance;
      lpte->hModule       = pTask->hModule;
@@ -513,7 +513,7 @@ index cf5e6ef..531e622 100644
      lpte->wStackTop     = pInstData->stacktop;
      lpte->wStackMinimum = pInstData->stackmin;
      lpte->wStackBottom  = pInstData->stackbottom;
-@@ -693,7 +693,7 @@ BOOL16 WINAPI TimerCount16( TIMERINFO *pTimerInfo )
+@@ -694,7 +694,7 @@ BOOL16 WINAPI TimerCount16( TIMERINFO *pTimerInfo )
   */
  BOOL16 WINAPI SystemHeapInfo16( SYSHEAPINFO *pHeapInfo )
  {
@@ -523,10 +523,10 @@ index cf5e6ef..531e622 100644
      WORD user = LoadLibrary16( "USER.EXE" );
      WORD gdi = LoadLibrary16( "GDI.EXE" );
 diff --git a/dlls/user.exe16/message.c b/dlls/user.exe16/message.c
-index 290f36b..7f2d4a7 100644
+index c0b60ad95..bdbac17b5 100644
 --- a/dlls/user.exe16/message.c
 +++ b/dlls/user.exe16/message.c
-@@ -249,13 +249,13 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
+@@ -250,13 +250,13 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
      /* Window procedures want ax = hInstance, ds = es = ss */
  
      memset(&context, 0, sizeof(context));
@@ -542,7 +542,7 @@ index 290f36b..7f2d4a7 100644
  
      if (lParam)
      {
-@@ -278,7 +278,7 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
+@@ -279,7 +279,7 @@ static LRESULT call_window_proc16( HWND16 hwnd, UINT16 msg, WPARAM16 wParam, LPA
          if (size)
          {
              memcpy( &args.u, MapSL(lParam), size );
@@ -551,7 +551,7 @@ index 290f36b..7f2d4a7 100644
          }
      }
  
-@@ -2103,7 +2103,7 @@ static LRESULT combo_proc16( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+@@ -2104,7 +2104,7 @@ static LRESULT combo_proc16( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
  
  static void edit_lock_buffer( HWND hwnd )
  {
@@ -560,7 +560,7 @@ index 290f36b..7f2d4a7 100644
      HLOCAL16 hloc16 = GetWindowWord( hwnd, GWW_HANDLE16 );
      HANDLE16 oldDS;
      HLOCAL hloc32;
-@@ -2129,7 +2129,7 @@ static void edit_lock_buffer( HWND hwnd )
+@@ -2130,7 +2130,7 @@ static void edit_lock_buffer( HWND hwnd )
  
  static void edit_unlock_buffer( HWND hwnd )
  {
@@ -569,7 +569,7 @@ index 290f36b..7f2d4a7 100644
      HLOCAL16 hloc16 = GetWindowWord( hwnd, GWW_HANDLE16 );
      HANDLE16 oldDS;
      HLOCAL hloc32;
-@@ -2166,7 +2166,7 @@ static HLOCAL16 edit_get_handle( HWND hwnd )
+@@ -2167,7 +2167,7 @@ static HLOCAL16 edit_get_handle( HWND hwnd )
      if (!(hloc = (HLOCAL)wow_handlers32.edit_proc( hwnd, EM_GETHANDLE, 0, 0, FALSE ))) return 0;
      alloc_size = LocalSize( hloc );
  
@@ -578,7 +578,7 @@ index 290f36b..7f2d4a7 100644
      oldDS = stack16->ds;
      stack16->ds = GetWindowLongPtrW( hwnd, GWLP_HINSTANCE );
  
-@@ -2204,7 +2204,7 @@ done:
+@@ -2205,7 +2205,7 @@ done:
  
  static void edit_set_handle( HWND hwnd, HLOCAL16 hloc16 )
  {
@@ -587,7 +587,7 @@ index 290f36b..7f2d4a7 100644
      HINSTANCE16 hInstance = GetWindowLongPtrW( hwnd, GWLP_HINSTANCE );
      HANDLE16 oldDS = stack16->ds;
      HLOCAL hloc32;
-@@ -2234,7 +2234,7 @@ static void edit_destroy_handle( HWND hwnd )
+@@ -2235,7 +2235,7 @@ static void edit_destroy_handle( HWND hwnd )
      HLOCAL16 hloc16 = GetWindowWord( hwnd, GWW_HANDLE16 );
      if (hloc16)
      {
@@ -597,7 +597,7 @@ index 290f36b..7f2d4a7 100644
  
          stack16->ds = GetWindowLongPtrW( hwnd, GWLP_HINSTANCE );
 diff --git a/dlls/user.exe16/user.c b/dlls/user.exe16/user.c
-index 27b9279..deec596 100644
+index 27b927938..deec596f7 100644
 --- a/dlls/user.exe16/user.c
 +++ b/dlls/user.exe16/user.c
 @@ -1394,7 +1394,7 @@ DWORD WINAPI GetTabbedTextExtent16( HDC16 hdc, LPCSTR lpstr, INT16 count,
@@ -619,7 +619,7 @@ index 27b9279..deec596 100644
      int userPercent, gdiPercent;
  
 diff --git a/dlls/user.exe16/window.c b/dlls/user.exe16/window.c
-index e81d9ac..afe40b2 100644
+index 10f1389f0..a15bf57e4 100644
 --- a/dlls/user.exe16/window.c
 +++ b/dlls/user.exe16/window.c
 @@ -455,7 +455,7 @@ HWND16 WINAPI GetParent16( HWND16 hwnd )
@@ -632,7 +632,7 @@ index e81d9ac..afe40b2 100644
      /* don't use WIN_Handle32 here, we don't care about the full handle */
      return IsWindow( HWND_32(hwnd) );
 diff --git a/include/winternl.h b/include/winternl.h
-index 58c475d..f7d2f6d 100644
+index e7f89b005..0e8cf30d7 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -360,7 +360,7 @@ typedef struct _TEB
@@ -645,7 +645,7 @@ index 58c475d..f7d2f6d 100644
      ACTIVATION_CONTEXT_STACK     ActivationContextStack;            /* 1a8/02c8 */
      BYTE                         SpareBytes1[24];                   /* 1bc/02e8 */
 diff --git a/tools/winebuild/relay.c b/tools/winebuild/relay.c
-index 1adbda0..061bf03 100644
+index 3b1f4cd18..35cbc440e 100644
 --- a/tools/winebuild/relay.c
 +++ b/tools/winebuild/relay.c
 @@ -31,7 +31,7 @@
@@ -658,5 +658,5 @@ index 1adbda0..061bf03 100644
  /* fix this if the x86_thread_data structure is changed */
  #define GS_OFFSET  0x1d8  /* FIELD_OFFSET(TEB,SystemReserved2) + FIELD_OFFSET(struct x86_thread_data,gs) */
 -- 
-2.7.4
+2.21.0
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "07e249e431c5009fa6ab8d274b4a8fe62a286358"
+	echo "61aea5a9879f41224022d4775cce28d28618ea89"
 }
 
 # Show version information
@@ -2041,15 +2041,14 @@ fi
 # Patchset Compiler_Warnings
 # |
 # | Modified files:
-# |   *	dlls/amstream/mediastreamfilter.c, dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/dc_render_target.c,
-# | 	dlls/d2d1/device.c, dlls/d2d1/geometry.c, dlls/d2d1/hwnd_render_target.c, dlls/d2d1/state_block.c, dlls/d3d11/view.c,
-# | 	dlls/d3d8/texture.c, dlls/d3d9/texture.c, dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c,
-# | 	dlls/evr/evr.c, dlls/msxml3/schema.c, dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c,
-# | 	dlls/windowscodecs/info.c, dlls/wsdapi/msgparams.c, include/wine/list.h, include/wine/rbtree.h, include/winnt.h
+# |   *	dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/dc_render_target.c, dlls/d2d1/device.c, dlls/d2d1/geometry.c,
+# | 	dlls/d2d1/hwnd_render_target.c, dlls/d2d1/state_block.c, dlls/d3d11/view.c, dlls/d3d8/texture.c, dlls/d3d9/texture.c,
+# | 	dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/evr/evr.c, dlls/msxml3/schema.c,
+# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/windowscodecs/info.c, dlls/wsdapi/msgparams.c,
+# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-windowscodecs-Avoid-implicit-cast-of-interface-point.patch
-	patch_apply Compiler_Warnings/0020-amstream-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0021-d2d1-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0022-d3d11-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0023-d3d8-Avoid-implicit-cast-of-interface-pointer.patch
@@ -2065,7 +2064,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0033-evr-Avoid-implicit-cast-of-interface-pointer.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs: Avoid implicit cast of interface pointer.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "amstream: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d11: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d3d8: Avoid implicit cast of interface pointer.", 1 },';
@@ -4077,14 +4075,12 @@ fi
 # Patchset include-macos-compile
 # |
 # | Modified files:
-# |   *	dlls/wineqtdecoder/qtvdecoder.c, include/winerror.h
+# |   *	include/winerror.h
 # |
 if test "$enable_include_macos_compile" -eq 1; then
 	patch_apply include-macos-compile/0001-include-Stop-macro-redefined-on-the-mac-build.patch
-	patch_apply include-macos-compile/0002-wineqtdecoder-Fix-compile-on-MacOS.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Stop macro redefined on the mac build.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wineqtdecoder: Fix compile on MacOS.", 1 },';
 	) >> "$patchlist"
 fi
 

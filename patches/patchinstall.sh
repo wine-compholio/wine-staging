@@ -4077,12 +4077,14 @@ fi
 # Patchset include-macos-compile
 # |
 # | Modified files:
-# |   *	include/winerror.h
+# |   *	dlls/wineqtdecoder/qtvdecoder.c, include/winerror.h
 # |
 if test "$enable_include_macos_compile" -eq 1; then
 	patch_apply include-macos-compile/0001-include-Stop-macro-redefined-on-the-mac-build.patch
+	patch_apply include-macos-compile/0002-wineqtdecoder-Fix-compile-on-MacOS.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Stop macro redefined on the mac build.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wineqtdecoder: Fix compile on MacOS.", 1 },';
 	) >> "$patchlist"
 fi
 

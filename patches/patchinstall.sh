@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "21ae9ba1ba8ddba3ba49e916ef2b7fbd5ae9713d"
+	echo "6a610a325809d47f48bc72f3a757e1a62b193ea8"
 }
 
 # Show version information
@@ -2262,7 +2262,7 @@ fi
 # |   *	[#46564] Add BCryptDestroySecret/BCryptSecretAgreement stubs.
 # |
 # | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, include/bcrypt.h
+# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/ncrypt/ncrypt.spec, include/bcrypt.h
 # |
 if test "$enable_bcrypt_BCryptSecretAgreement" -eq 1; then
 	patch_apply bcrypt-BCryptSecretAgreement/0001-bcrypt-Add-BCryptDestroySecret-BCryptSecretAgreement.patch

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6a610a325809d47f48bc72f3a757e1a62b193ea8"
+	echo "9cfe6094773929d9dd61db51da094324337ecab0"
 }
 
 # Show version information
@@ -153,7 +153,6 @@ patch_enable_all ()
 	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
-	enable_include_macos_compile="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
@@ -588,9 +587,6 @@ patch_enable ()
 			;;
 		imm32-message_on_focus)
 			enable_imm32_message_on_focus="$2"
-			;;
-		include-macos-compile)
-			enable_include_macos_compile="$2"
 			;;
 		include-winsock)
 			enable_include_winsock="$2"
@@ -4069,18 +4065,6 @@ if test "$enable_imm32_message_on_focus" -eq 1; then
 	patch_apply imm32-message_on_focus/0001-imm32-Only-generate-WM_IME_SETCONTEXT-message-if-win.patch
 	(
 		printf '%s\n' '+    { "Gijs Vermeulen", "imm32: Only generate '\''WM_IME_SETCONTEXT'\'' message if window has focus.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset include-macos-compile
-# |
-# | Modified files:
-# |   *	include/winerror.h
-# |
-if test "$enable_include_macos_compile" -eq 1; then
-	patch_apply include-macos-compile/0001-include-Stop-macro-redefined-on-the-mac-build.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Stop macro redefined on the mac build.", 1 },';
 	) >> "$patchlist"
 fi
 

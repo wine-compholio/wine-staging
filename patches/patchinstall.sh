@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9cfe6094773929d9dd61db51da094324337ecab0"
+	echo "27bf52d12c0eb13ec797a5d81177954faac00fa4"
 }
 
 # Show version information
@@ -7388,15 +7388,17 @@ fi
 # | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/xapo.idl, include/xaudio2.idl
 # |
 if test "$enable_xaudio2_revert" -eq 1; then
-	patch_apply xaudio2-revert/0001-Revert-xaudio2-Fix-32-bit-build.patch
-	patch_apply xaudio2-revert/0002-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
-	patch_apply xaudio2-revert/0003-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
-	patch_apply xaudio2-revert/0004-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
-	patch_apply xaudio2-revert/0005-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
-	patch_apply xaudio2-revert/0006-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
-	patch_apply xaudio2-revert/0007-Revert-xaudio2-Rewrite-to-use-FAudio.patch
-	patch_apply xaudio2-revert/0008-xaudio2_7-Fix-build.patch
+	patch_apply xaudio2-revert/0001-Revert-xaudio2-Use-new-features-from-FAudio-19.06-bu.patch
+	patch_apply xaudio2-revert/0002-Revert-xaudio2-Fix-32-bit-build.patch
+	patch_apply xaudio2-revert/0003-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
+	patch_apply xaudio2-revert/0004-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
+	patch_apply xaudio2-revert/0005-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
+	patch_apply xaudio2-revert/0006-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
+	patch_apply xaudio2-revert/0007-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
+	patch_apply xaudio2-revert/0008-Revert-xaudio2-Rewrite-to-use-FAudio.patch
+	patch_apply xaudio2-revert/0009-xaudio2_7-Fix-build.patch
 	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Use new features from FAudio 19.06 (but keep compatibility for <=19.05).\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix 32-bit build.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7/tests: Remove redundant not-NULL checks (coccinellery).\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2_7: Add a trailing '\''\\n'\'' to an ERR() message.\".", 1 },';

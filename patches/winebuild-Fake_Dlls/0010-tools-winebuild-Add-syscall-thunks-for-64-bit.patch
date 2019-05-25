@@ -1,4 +1,4 @@
-From 44cc514c7d00a562240b2180a342e3f647215c1c Mon Sep 17 00:00:00 2001
+From 0271fdb03e27e20d21305fcc263e588fc2ecb2a5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -6,11 +6,11 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 ---
  dlls/kernel32/tests/loader.c |   7 +-
  dlls/ntdll/signal_x86_64.c   |   3 +
- dlls/ntdll/thread.c          |   9 ++
+ dlls/ntdll/thread.c          |  10 ++
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 221 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 238 insertions(+), 8 deletions(-)
+ 6 files changed, 239 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index d9b349408..6f9673286 100644
@@ -61,7 +61,7 @@ index c2151f78c..cdbc87c70 100644
      return status;
  }
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index eeb4c1e27..c2ace3c03 100644
+index eeb4c1e27..1dbb54541 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -60,6 +60,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
@@ -73,7 +73,7 @@ index eeb4c1e27..c2ace3c03 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -298,6 +300,13 @@ void thread_init(void)
+@@ -298,6 +300,14 @@ void thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
@@ -82,6 +82,7 @@ index eeb4c1e27..c2ace3c03 100644
 +#endif
 +    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
 +     * Chromium; see output_syscall_thunks_x64() in winebuild. */
++    user_shared_data->SystemCallPad[0] = 1;
 +    user_shared_data_external->SystemCallPad[0] = 1;
 +
      /*
@@ -117,7 +118,7 @@ index da832de0e..a09b9954b 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 8df1261e3..086ff747c 100644
+index 5be9f4088..358431efb 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -372,11 +372,11 @@ static void output_relay_debug( DLLSPEC *spec )

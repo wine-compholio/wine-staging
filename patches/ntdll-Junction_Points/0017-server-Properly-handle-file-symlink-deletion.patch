@@ -1,4 +1,4 @@
-From 160758d1973e49d5bb9d76d203fe1d0a8f676240 Mon Sep 17 00:00:00 2001
+From 356b2d92b5690c529408a99ac81d9c47d495a39b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 13:41:07 -0600
 Subject: server: Properly handle file symlink deletion.
@@ -6,8 +6,8 @@ Subject: server: Properly handle file symlink deletion.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  dlls/ntdll/tests/file.c |  6 ++--
- server/fd.c             | 75 ++++++++++++++++++++++++++++++++++++++---
- 2 files changed, 73 insertions(+), 8 deletions(-)
+ server/fd.c             | 76 ++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 74 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
 index 2f5ee0618c..5f42ad5e0b 100644
@@ -32,7 +32,7 @@ index 2f5ee0618c..5f42ad5e0b 100644
      /* Create the directory symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
 diff --git a/server/fd.c b/server/fd.c
-index 5d80e218b9..e74fef6a19 100644
+index 5d80e218b9..ac1c3f85a1 100644
 --- a/server/fd.c
 +++ b/server/fd.c
 @@ -105,6 +105,10 @@
@@ -141,12 +141,13 @@ index 5d80e218b9..e74fef6a19 100644
  
          if (!inode)
          {
-@@ -1848,13 +1907,19 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1848,13 +1907,20 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
          list_add_head( &inode->open, &fd->inode_entry );
          closed_fd = NULL;
  
 +        /* decode symlink type */
 +        fstat( fd->unix_fd, &st );
++        *mode = st.st_mode;
 +        is_dir = S_ISDIR(st.st_mode);
 +        if (is_link)
 +            decode_symlink(fd->unix_name, &is_dir);

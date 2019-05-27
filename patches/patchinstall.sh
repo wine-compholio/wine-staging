@@ -320,7 +320,6 @@ patch_enable_all ()
 	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
-	enable_wined3d_Restore_DirectX10_Support="$1"
 	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_UAV_Counters="$1"
@@ -1088,9 +1087,6 @@ patch_enable ()
 			;;
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
-			;;
-		wined3d-Restore-DirectX10-Support)
-			enable_wined3d_Restore_DirectX10_Support="$2"
 			;;
 		wined3d-SWVP-shaders)
 			enable_wined3d_SWVP_shaders="$2"
@@ -4339,7 +4335,7 @@ fi
 # Patchset libs-Debug_Channel
 # |
 # | Modified files:
-# |   *	libs/wine/debug.c
+# |   *	dlls/ntdll/debugtools.c
 # |
 if test "$enable_libs_Debug_Channel" -eq 1; then
 	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch
@@ -6646,21 +6642,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "d3d9/tests: Check MaxVertexBlendMatrixIndex capability.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "wined3d: Allow higher world matrix states.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "wined3d: Support indexed vertex blending.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Restore-DirectX10-Support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45975] Allow Direct 10 to work with legacy nVidia drivers.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/adapter_gl.c
-# |
-if test "$enable_wined3d_Restore_DirectX10_Support" -eq 1; then
-	patch_apply wined3d-Restore-DirectX10-Support/0001-wined3d-Remove-check-for-Polygon-offset-clamping.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wined3d: Remove check for Polygon offset clamping.", 1 },';
 	) >> "$patchlist"
 fi
 

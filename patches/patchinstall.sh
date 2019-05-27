@@ -122,7 +122,6 @@ patch_enable_all ()
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
-	enable_ddraw_Fix_Typos="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
@@ -493,9 +492,6 @@ patch_enable ()
 			;;
 		ddraw-EnumSurfaces)
 			enable_ddraw_EnumSurfaces="$2"
-			;;
-		ddraw-Fix_Typos)
-			enable_ddraw_Fix_Typos="$2"
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
@@ -2948,18 +2944,6 @@ if test "$enable_ddraw_EnumSurfaces" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirectDraw7::EnumSurfaces.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED flag in ddraw7_EnumSurfaces.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ddraw-Fix_Typos
-# |
-# | Modified files:
-# |   *	dlls/ddraw/tests/dsurface.c
-# |
-if test "$enable_ddraw_Fix_Typos" -eq 1; then
-	patch_apply ddraw-Fix_Typos/0001-ddraw-tests-Fix-function-name-in-multiple-ok-message.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ddraw/tests: Fix function name in multiple ok() messages.", 1 },';
 	) >> "$patchlist"
 fi
 

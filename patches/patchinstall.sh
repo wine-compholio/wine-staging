@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3139727a97a91b91e74d57ec97a8c19b0093b68e"
+	echo "6d05fae6f7ebab83a2f1c6621d9619bbe91833fd"
 }
 
 # Show version information
@@ -92,7 +92,6 @@ patch_enable_all ()
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
-	enable_bcrypt_BCryptSecretAgreement="$1"
 	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_alpha_bitmaps="$1"
@@ -402,9 +401,6 @@ patch_enable ()
 			;;
 		atl-AtlAxDialogBox)
 			enable_atl_AtlAxDialogBox="$2"
-			;;
-		bcrypt-BCryptSecretAgreement)
-			enable_bcrypt_BCryptSecretAgreement="$2"
 			;;
 		combase-GetRestrictedErrorInfo)
 			enable_combase_GetRestrictedErrorInfo="$2"
@@ -2241,23 +2237,6 @@ if test "$enable_atl_AtlAxDialogBox" -eq 1; then
 	patch_apply atl-AtlAxDialogBox/0001-atl-Implement-AtlAxDialogBox-A-W.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "atl: Implement AtlAxDialogBox[A,W].", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset bcrypt-BCryptSecretAgreement
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46564] Add BCryptDestroySecret/BCryptSecretAgreement stubs.
-# |
-# | Modified files:
-# |   *	dlls/bcrypt/bcrypt.spec, dlls/bcrypt/bcrypt_main.c, dlls/ncrypt/ncrypt.spec, include/bcrypt.h
-# |
-if test "$enable_bcrypt_BCryptSecretAgreement" -eq 1; then
-	patch_apply bcrypt-BCryptSecretAgreement/0001-bcrypt-Add-BCryptDestroySecret-BCryptSecretAgreement.patch
-	patch_apply bcrypt-BCryptSecretAgreement/0002-bcrypt-Add-BCryptDeriveKey-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "bcrypt: Add BCryptDestroySecret/BCryptSecretAgreement stubs.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "bcrypt: Add BCryptDeriveKey stub.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5373,7 +5352,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	patch_apply riched20-IText_Interface/0003-riched20-Stub-for-ITextPara-interface-and-implement-.patch
 	patch_apply riched20-IText_Interface/0004-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch
 	patch_apply riched20-IText_Interface/0005-riched20-Implement-ITextRange-GetText.patch
-	patch_apply riched20-IText_Interface/0006-riched20-Implement-ITextRange-SetRange.patch
 	patch_apply riched20-IText_Interface/0007-riched20-Implement-ITextRange-IsEqual.patch
 	patch_apply riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch
 	patch_apply riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch
@@ -5384,7 +5362,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetText.", 1 },';
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::SetRange.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::IsEqual.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6d05fae6f7ebab83a2f1c6621d9619bbe91833fd"
+	echo "d535df42f665a097ec721b10fb49d7b18f899be9"
 }
 
 # Show version information
@@ -3300,12 +3300,11 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
 	patch_apply ntdll-Junction_Points/0013-ntdll-Allow-creation-of-dangling-reparse-points-to-n.patch
 	patch_apply ntdll-Junction_Points/0014-ntdll-Correctly-report-file-symbolic-links-as-files.patch
-	patch_apply ntdll-Junction_Points/0015-ntdll-Correctly-report-fd-based-file-info-for-symlin.patch
-	patch_apply ntdll-Junction_Points/0016-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
-	patch_apply ntdll-Junction_Points/0017-server-Properly-handle-file-symlink-deletion.patch
-	patch_apply ntdll-Junction_Points/0018-ntdll-Always-report-symbolic-links-as-containing-zer.patch
-	patch_apply ntdll-Junction_Points/0019-ntdll-Find-dangling-symlinks-quickly.patch
-	patch_apply ntdll-Junction_Points/0020-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
+	patch_apply ntdll-Junction_Points/0015-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
+	patch_apply ntdll-Junction_Points/0016-server-Properly-handle-file-symlink-deletion.patch
+	patch_apply ntdll-Junction_Points/0017-ntdll-Always-report-symbolic-links-as-containing-zer.patch
+	patch_apply ntdll-Junction_Points/0018-ntdll-Find-dangling-symlinks-quickly.patch
+	patch_apply ntdll-Junction_Points/0019-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
@@ -3321,7 +3320,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Allow creation of dangling reparse points to non-existent paths.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report fd-based file info for symlinks.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';

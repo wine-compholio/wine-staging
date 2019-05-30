@@ -1,4 +1,4 @@
-From ac69cecc3f024819efae83723b77d9f310b43251 Mon Sep 17 00:00:00 2001
+From 824e8fa59621da5b509297d25a95cad8d4562e68 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 11 Apr 2019 17:57:53 -0600
 Subject: ntdll: Add support for file symlinks.
@@ -6,14 +6,14 @@ Subject: ntdll: Add support for file symlinks.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  dlls/ntdll/file.c       | 27 ++++++++++++++++++++++-----
- dlls/ntdll/tests/file.c | 33 +++++++++++++++++++++++++++++++++
- 2 files changed, 55 insertions(+), 5 deletions(-)
+ dlls/ntdll/tests/file.c | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 51 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 5df2d8c3fa..03a07d46cd 100644
+index 7af9c6635a..2f10472eeb 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1665,6 +1665,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1656,6 +1656,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      int relative_offset = 0;
      UNICODE_STRING nt_dest;
      int dest_len, offset;
@@ -21,7 +21,7 @@ index 5df2d8c3fa..03a07d46cd 100644
      NTSTATUS status;
      struct stat st;
      WCHAR *dest;
-@@ -1757,7 +1758,8 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1748,7 +1749,8 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
              status = FILE_GetNtStatus();
              goto cleanup;
          }
@@ -31,7 +31,7 @@ index 5df2d8c3fa..03a07d46cd 100644
              strcat( magic_dest, "." );
          strcat( magic_dest, "/" );
      }
-@@ -1784,8 +1786,11 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1775,8 +1777,11 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      /* Atomically move the link into position */
      if (!renameat2( -1, tmplink, -1, unix_src.Buffer, RENAME_EXCHANGE ))
      {
@@ -45,7 +45,7 @@ index 5df2d8c3fa..03a07d46cd 100644
      }
      else if (errno == ENOSYS)
      {
-@@ -1994,6 +1999,7 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+@@ -1985,6 +1990,7 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
      BOOL tempdir_created = FALSE;
      int dest_fd, needs_close;
      ANSI_STRING unix_name;
@@ -53,7 +53,7 @@ index 5df2d8c3fa..03a07d46cd 100644
      NTSTATUS status;
      struct stat st;
  
-@@ -2005,12 +2011,13 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+@@ -1996,12 +2002,13 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
  
      TRACE("Deleting symlink %s\n", unix_name.Buffer);
  
@@ -68,7 +68,7 @@ index 5df2d8c3fa..03a07d46cd 100644
      strcpy( tmpdir, unix_name.Buffer );
      d = dirname( tmpdir);
      if (d != tmpdir) strcpy( tmpdir, d );
-@@ -2023,11 +2030,21 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+@@ -2014,11 +2021,21 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
      tempdir_created = TRUE;
      strcpy( tmpfile, tmpdir );
      strcat( tmpfile, "/tmpfile" );
@@ -92,10 +92,10 @@ index 5df2d8c3fa..03a07d46cd 100644
      lchown( tmpfile, st.st_uid, st.st_gid );
      /* Atomically move the directory into position */
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index c13ee84bf0..5bf8ebf704 100644
+index a17e792ae0..b904bc1f2d 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5050,6 +5050,39 @@ static void test_reparse_points(void)
+@@ -5050,6 +5050,35 @@ static void test_reparse_points(void)
      /* Delete the junction point directory and create a blank slate for symlink tests */
      bret = RemoveDirectoryW(reparse_path);
      ok(bret, "Failed to delete junction point!\n");
@@ -104,11 +104,7 @@ index c13ee84bf0..5bf8ebf704 100644
 +    HeapFree(GetProcessHeap(), 0, buffer);
 +    handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW,
 +                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
-+    if (handle == INVALID_HANDLE_VALUE)
-+    {
-+        win_skip("Failed to open symlink file handle (0x%x).\n", GetLastError());
-+        goto cleanup;
-+    }
++    ok(handle != INVALID_HANDLE_VALUE, "Failed to create symlink file.\n");
 +    dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
 +    ok(dwret == STATUS_SUCCESS, "Failed to get symlink file's attributes (0x%x).\n", dwret);
 +    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_SYMLINK, 0, &buffer);

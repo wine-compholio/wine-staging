@@ -1,22 +1,22 @@
-From 347997c4118fa01fbf87cf7cadb6ba04a83a97c4 Mon Sep 17 00:00:00 2001
+From 9dc5bc2dda6026276cc44db68f51dcba2394a6de Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 00:08:52 -0600
 Subject: [PATCH] ntdll: Implement storing DOS attributes in
  NtSetInformationFile.
 
 ---
- dlls/ntdll/file.c       | 54 +++++++++++++++++++++++++++++++------------------
- dlls/ntdll/tests/file.c |  8 ++++----
+ dlls/ntdll/file.c       | 54 ++++++++++++++++++++++++++---------------
+ dlls/ntdll/tests/file.c |  8 +++---
  include/wine/port.h     |  2 ++
- libs/port/xattr.c       | 20 ++++++++++++++++++
+ libs/port/xattr.c       | 20 +++++++++++++++
  4 files changed, 60 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 6743d37..12d47ae 100644
+index bdc3faacac7..d968f06b02d 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -157,6 +157,39 @@ static inline ULONG get_file_attributes( const struct stat *st )
-     return attr;
+@@ -169,6 +169,39 @@ int fd_get_file_info( int fd, struct stat *st, ULONG *attr )
+     return ret;
  }
  
 +/* set the stat info and file attributes for a file (by file descriptor) */
@@ -55,7 +55,7 @@ index 6743d37..12d47ae 100644
  /* get the stat info and file attributes for a file (by name) */
  int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
-@@ -3097,7 +3130,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -3062,7 +3095,6 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
      case FileBasicInformation:
          if (len >= sizeof(FILE_BASIC_INFORMATION))
          {
@@ -63,7 +63,7 @@ index 6743d37..12d47ae 100644
              const FILE_BASIC_INFORMATION *info = ptr;
  
              if ((io->u.Status = server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL )))
-@@ -3107,25 +3139,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
+@@ -3072,25 +3104,7 @@ NTSTATUS WINAPI NtSetInformationFile(HANDLE handle, PIO_STATUS_BLOCK io,
                  io->u.Status = set_file_times( fd, &info->LastWriteTime, &info->LastAccessTime );
  
              if (io->u.Status == STATUS_SUCCESS && info->FileAttributes)
@@ -91,7 +91,7 @@ index 6743d37..12d47ae 100644
              if (needs_close) close( fd );
          }
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index d0646aa..39f9013 100644
+index 8336bba8739..ce1d763c121 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -1341,7 +1341,7 @@ static void test_file_basic_information(void)
@@ -131,7 +131,7 @@ index d0646aa..39f9013 100644
      /* Check NORMAL last of all (to make sure we can clear attributes) */
      memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
 diff --git a/include/wine/port.h b/include/wine/port.h
-index de6b995..c075958 100644
+index de6b9955ecc..c0759584131 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -351,6 +351,8 @@ extern int mkstemps(char *template, int suffix_len);
@@ -144,7 +144,7 @@ index de6b995..c075958 100644
  
  /* Interlocked functions */
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 88e900d..6918c99 100644
+index 88e900dac6d..6918c9956cc 100644
 --- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
 @@ -38,6 +38,26 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
@@ -175,5 +175,5 @@ index 88e900d..6918c99 100644
  {
  #if defined(HAVE_ATTR_XATTR_H)
 -- 
-1.9.1
+2.17.1
 

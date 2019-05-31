@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d535df42f665a097ec721b10fb49d7b18f899be9"
+	echo "1d9a3f6d12322891a2af4aadd66a92ea66479233"
 }
 
 # Show version information
@@ -112,7 +112,6 @@ patch_enable_all ()
 	enable_d3dx9_36_D3DXSHProjectCubeMap="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
-	enable_d3dx9_36_DXTn="$1"
 	enable_d3dx9_36_DrawText="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
@@ -461,9 +460,6 @@ patch_enable ()
 			;;
 		d3dx9_36-DDS)
 			enable_d3dx9_36_DDS="$2"
-			;;
-		d3dx9_36-DXTn)
-			enable_d3dx9_36_DXTn="$2"
 			;;
 		d3dx9_36-DrawText)
 			enable_d3dx9_36_DrawText="$2"
@@ -1641,6 +1637,13 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 	enable_wined3d_SWVP_shaders=1
 fi
 
+if test "$enable_wined3d_DXTn" -eq 1; then
+	if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -gt 1; then
+		abort "Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM disabled, but wined3d-DXTn depends on that."
+	fi
+	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM=1
+fi
+
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	if test "$enable_wineboot_DriveSerial" -gt 1; then
 		abort "Patchset wineboot-DriveSerial disabled, but wineboot-ProxySettings depends on that."
@@ -1843,6 +1846,9 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
 		abort "Patchset advapi32-Token_Integrity_Level disabled, but eventfd_synchronization depends on that."
 	fi
+	if test "$enable_kernel32_K32GetPerformanceInfo" -gt 1; then
+		abort "Patchset kernel32-K32GetPerformanceInfo disabled, but eventfd_synchronization depends on that."
+	fi
 	if test "$enable_ntdll_Junction_Points" -gt 1; then
 		abort "Patchset ntdll-Junction_Points disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1865,6 +1871,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but eventfd_synchronization depends on that."
 	fi
 	enable_advapi32_Token_Integrity_Level=1
+	enable_kernel32_K32GetPerformanceInfo=1
 	enable_ntdll_Junction_Points=1
 	enable_ntdll_RtlCreateUserThread=1
 	enable_ntdll_SystemRoot_Symlink=1
@@ -1965,20 +1972,6 @@ if test "$enable_ddraw_Texture_Wrong_Caps" -eq 1; then
 		abort "Patchset ddraw-Rendering_Targets disabled, but ddraw-Texture_Wrong_Caps depends on that."
 	fi
 	enable_ddraw_Rendering_Targets=1
-fi
-
-if test "$enable_d3dx9_36_DXTn" -eq 1; then
-	if test "$enable_wined3d_DXTn" -gt 1; then
-		abort "Patchset wined3d-DXTn disabled, but d3dx9_36-DXTn depends on that."
-	fi
-	enable_wined3d_DXTn=1
-fi
-
-if test "$enable_wined3d_DXTn" -eq 1; then
-	if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -gt 1; then
-		abort "Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM disabled, but wined3d-DXTn depends on that."
-	fi
-	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM=1
 fi
 
 if test "$enable_d3d11_Deferred_Context" -eq 1; then
@@ -2740,68 +2733,6 @@ if test "$enable_d3dx9_36_DDS" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44888] Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
-	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
-	(
-		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-DXTn
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-WINED3DFMT_B8G8R8X8_UNORM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
-# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
-# |   *	[#17913] Port Royale doesn't display ocean correctly
-# |
-# | Modified files:
-# |   *	dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/dxtn.h, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_DXTn" -eq 1; then
-	patch_apply wined3d-DXTn/0001-wined3d-add-DXTn-support.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Add DXTn support.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-DXTn
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-WINED3DFMT_B8G8R8X8_UNORM, wined3d-DXTn
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33768] Fix texture corruption in CSI: Fatal Conspiracy
-# |   *	[#37391] Exception during start of fr-043 caused by missing DXTn support
-# |   *	[#34692] Fix wrong colors in Wolfenstein (2009)
-# |   *	[#24983] Fix crash in Space Rangers2 caused by missing DXTn support
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_24/Makefile.in, dlls/d3dx9_25/Makefile.in, dlls/d3dx9_26/Makefile.in, dlls/d3dx9_27/Makefile.in,
-# | 	dlls/d3dx9_28/Makefile.in, dlls/d3dx9_29/Makefile.in, dlls/d3dx9_30/Makefile.in, dlls/d3dx9_31/Makefile.in,
-# | 	dlls/d3dx9_32/Makefile.in, dlls/d3dx9_33/Makefile.in, dlls/d3dx9_34/Makefile.in, dlls/d3dx9_35/Makefile.in,
-# | 	dlls/d3dx9_36/Makefile.in, dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c, dlls/d3dx9_37/Makefile.in,
-# | 	dlls/d3dx9_38/Makefile.in, dlls/d3dx9_39/Makefile.in, dlls/d3dx9_40/Makefile.in, dlls/d3dx9_41/Makefile.in,
-# | 	dlls/d3dx9_42/Makefile.in, dlls/d3dx9_43/Makefile.in
-# |
-if test "$enable_d3dx9_36_DXTn" -eq 1; then
-	patch_apply d3dx9_36-DXTn/0001-d3dx9_36-Add-dxtn-support.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add DXTn support.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-DrawText
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3275,6 +3206,18 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset kernel32-K32GetPerformanceInfo
+# |
+# | Modified files:
+# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
+# |
+if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
+	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3631,10 +3574,10 @@ fi
 # Patchset eventfd_synchronization
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-ThreadTime, ntdll-
-# | 	Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
-# | 	SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
+# | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-
+# | 	Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4176,18 +4119,6 @@ if test "$enable_kernel32_Job_Tests" -eq 1; then
 	patch_apply kernel32-Job_Tests/0001-kernel32-tests-Add-tests-for-job-object-accounting.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "kernel32/tests: Add tests for job object accounting.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-K32GetPerformanceInfo
-# |
-# | Modified files:
-# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
-# |
-if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
-	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5370,10 +5301,11 @@ fi
 # Patchset server-Desktop_Refcount
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-ThreadTime, ntdll-
-# | 	Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
-# | 	SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
+# | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-
+# | 	Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup,
+# | 	eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -6535,6 +6467,42 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44888] Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
+	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
+	(
+		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-DXTn
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	wined3d-WINED3DFMT_B8G8R8X8_UNORM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
+# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
+# |   *	[#17913] Port Royale doesn't display ocean correctly
+# |
+# | Modified files:
+# |   *	dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/dxtn.h, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
+# | 	include/wine/wined3d.h
+# |
+if test "$enable_wined3d_DXTn" -eq 1; then
+	patch_apply wined3d-DXTn/0001-wined3d-add-DXTn-support.patch
+	(
+		printf '%s\n' '+    { "Christian Costa", "wined3d: Add DXTn support.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | Modified files:
@@ -7212,11 +7180,11 @@ fi
 # Patchset ws2_32-TransmitFile
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-Junction_Points, ntdll-ThreadTime, ntdll-
-# | 	Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-Exception, ntdll-
-# | 	SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-
-# | 	Desktop_Refcount
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
+# | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-
+# | 	Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup,
+# | 	eventfd_synchronization, server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

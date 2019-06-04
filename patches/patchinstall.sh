@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c92fddae8661233e7699e1914987f0cc4caa8217"
+	echo "7d77d330a5b60be918dbf17d9d9ca357d93bff29"
 }
 
 # Show version information
@@ -3192,6 +3192,7 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	patch_apply dxva2-Video_Decoder/0010-dxva2-Fill-h264-luma-and-chroma-weights-offsets-with.patch
 	patch_apply dxva2-Video_Decoder/0011-dxva2-Always-destroy-buffers-when-calling-vaRenderPi.patch
 	patch_apply dxva2-Video_Decoder/0012-dxva2-Only-declare-debug-channels-when-they-are-actu.patch
+	patch_apply dxva2-Video_Decoder/0013-Revert-dxva2-Build-with-msvcrt.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
@@ -3203,6 +3204,7 @@ if test "$enable_dxva2_Video_Decoder" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "dxva2: Only declare debug channels when they are actually used.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"dxva2: Build with msvcrt.\".", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7d77d330a5b60be918dbf17d9d9ca357d93bff29"
+	echo "4d5c874f42e27ac992f361c71490985d7553571a"
 }
 
 # Show version information
@@ -2020,9 +2020,9 @@ fi
 # | Modified files:
 # |   *	dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/dc_render_target.c, dlls/d2d1/device.c, dlls/d2d1/geometry.c,
 # | 	dlls/d2d1/hwnd_render_target.c, dlls/d2d1/state_block.c, dlls/d3d11/view.c, dlls/d3d8/texture.c, dlls/d3d9/texture.c,
-# | 	dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/evr/evr.c, dlls/msxml3/schema.c,
-# | 	dlls/oleaut32/oleaut.c, dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/windowscodecs/info.c, dlls/wsdapi/msgparams.c,
-# | 	include/wine/list.h, include/wine/rbtree.h, include/winnt.h
+# | 	dlls/ddraw/viewport.c, dlls/dwrite/font.c, dlls/dwrite/layout.c, dlls/msxml3/schema.c, dlls/oleaut32/oleaut.c,
+# | 	dlls/rpcrt4/cstub.c, dlls/vbscript/vbdisp.c, dlls/windowscodecs/info.c, dlls/wsdapi/msgparams.c, include/wine/list.h,
+# | 	include/wine/rbtree.h, include/winnt.h
 # |
 if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0001-windowscodecs-Avoid-implicit-cast-of-interface-point.patch
@@ -2038,7 +2038,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 	patch_apply Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
 	patch_apply Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
 	patch_apply Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
-	patch_apply Compiler_Warnings/0033-evr-Avoid-implicit-cast-of-interface-pointer.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "d2d1: Avoid implicit cast of interface pointer.", 1 },';
@@ -2053,7 +2052,6 @@ if test "$enable_Compiler_Warnings" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "vbscript: Avoid implicit cast of interface pointer.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "include: Check element type in CONTAINING_RECORD and similar macros.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "wsdapi: Avoid implicit cast of interface pointer.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "evr: Avoid implicit cast of interface pointer.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From f43e1e4f9fd62217be81ce0c2f25a1237855e564 Mon Sep 17 00:00:00 2001
+From 3d71df14a8a79f7827591f76eab7e3dbb3b9aa1a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 5 Sep 2016 15:31:29 +0200
 Subject: [PATCH] inseng: Implement CIF reader and download functions.
@@ -6,25 +6,27 @@ Subject: [PATCH] inseng: Implement CIF reader and download functions.
 FIXME: Needs splitting.
 ---
  dlls/inseng/Makefile.in      |    7 +-
- dlls/inseng/icif.c           | 1745 ++++++++++++++++++++++++++++++++++++++++++
- dlls/inseng/inf.c            |  443 +++++++++++
+ dlls/inseng/icif.c           | 1745 ++++++++++++++++++++++++++++++++++
+ dlls/inseng/inf.c            |  443 +++++++++
  dlls/inseng/inseng.spec      |    4 +-
- dlls/inseng/inseng_main.c    |  990 +++++++++++++++++++++++-
+ dlls/inseng/inseng_main.c    |  990 ++++++++++++++++++-
  dlls/inseng/inseng_private.h |   79 ++
- include/inseng.idl           |  276 ++++++-
+ include/inseng.idl           |  276 +++++-
  7 files changed, 3490 insertions(+), 54 deletions(-)
  create mode 100644 dlls/inseng/icif.c
  create mode 100644 dlls/inseng/inf.c
  create mode 100644 dlls/inseng/inseng_private.h
 
 diff --git a/dlls/inseng/Makefile.in b/dlls/inseng/Makefile.in
-index 652e06b..d0aaa66 100644
+index 797a0d2b46f..d58b88377f3 100644
 --- a/dlls/inseng/Makefile.in
 +++ b/dlls/inseng/Makefile.in
-@@ -1,6 +1,9 @@
+@@ -1,8 +1,11 @@
  MODULE    = inseng.dll
 -IMPORTS   = uuid ole32 advapi32
 +IMPORTS   = uuid ole32 advapi32 urlmon shlwapi
+ 
+ EXTRADLLFLAGS = -mno-cygwin
  
 -C_SRCS = inseng_main.c
 +C_SRCS = \
@@ -35,7 +37,7 @@ index 652e06b..d0aaa66 100644
  IDL_SRCS = inseng_classes.idl
 diff --git a/dlls/inseng/icif.c b/dlls/inseng/icif.c
 new file mode 100644
-index 0000000..f7bf0a0
+index 00000000000..f7bf0a07077
 --- /dev/null
 +++ b/dlls/inseng/icif.c
 @@ -0,0 +1,1745 @@
@@ -59,7 +61,7 @@ index 0000000..f7bf0a0
 +
 +#define COBJMACROS
 +
-+#include "config.h"
++
 +
 +#include <stdarg.h>
 +#include <string.h>
@@ -1786,7 +1788,7 @@ index 0000000..f7bf0a0
 +}
 diff --git a/dlls/inseng/inf.c b/dlls/inseng/inf.c
 new file mode 100644
-index 0000000..bead72c
+index 00000000000..bead72c082c
 --- /dev/null
 +++ b/dlls/inseng/inf.c
 @@ -0,0 +1,443 @@
@@ -2234,7 +2236,7 @@ index 0000000..bead72c
 +    return hr;
 +}
 diff --git a/dlls/inseng/inseng.spec b/dlls/inseng/inseng.spec
-index 82c0b4d..7ae46fa 100644
+index 82c0b4d5fe1..7ae46fad3a7 100644
 --- a/dlls/inseng/inseng.spec
 +++ b/dlls/inseng/inseng.spec
 @@ -7,6 +7,6 @@
@@ -2247,7 +2249,7 @@ index 82c0b4d..7ae46fa 100644
 +@ stdcall GetICifRWFileFromFile(ptr str)
  @ stub PurgeDownloadDirectory
 diff --git a/dlls/inseng/inseng_main.c b/dlls/inseng/inseng_main.c
-index 93649e2..f2e0ea5 100644
+index 631a9364e39..afa13873c08 100644
 --- a/dlls/inseng/inseng_main.c
 +++ b/dlls/inseng/inseng_main.c
 @@ -2,6 +2,7 @@
@@ -2258,7 +2260,7 @@ index 93649e2..f2e0ea5 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -29,19 +30,70 @@
+@@ -28,19 +29,70 @@
  #include "winuser.h"
  #include "ole2.h"
  #include "rpcproxy.h"
@@ -2330,7 +2332,7 @@ index 93649e2..f2e0ea5 100644
  };
  
  static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
-@@ -49,6 +101,250 @@ static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
+@@ -48,6 +100,250 @@ static inline InstallEngine *impl_from_IInstallEngine2(IInstallEngine2 *iface)
      return CONTAINING_RECORD(iface, InstallEngine, IInstallEngine2_iface);
  }
  
@@ -2581,7 +2583,7 @@ index 93649e2..f2e0ea5 100644
  static HRESULT WINAPI InstallEngine_QueryInterface(IInstallEngine2 *iface, REFIID riid, void **ppv)
  {
      InstallEngine *This = impl_from_IInstallEngine2(iface);
-@@ -62,13 +358,16 @@ static HRESULT WINAPI InstallEngine_QueryInterface(IInstallEngine2 *iface, REFII
+@@ -61,13 +357,16 @@ static HRESULT WINAPI InstallEngine_QueryInterface(IInstallEngine2 *iface, REFII
      }else if(IsEqualGUID(&IID_IInstallEngine2, riid)) {
          TRACE("(%p)->(IID_IInstallEngine2 %p)\n", This, ppv);
          *ppv = &This->IInstallEngine2_iface;
@@ -2600,7 +2602,7 @@ index 93649e2..f2e0ea5 100644
      return S_OK;
  }
  
-@@ -89,181 +388,726 @@ static ULONG WINAPI InstallEngine_Release(IInstallEngine2 *iface)
+@@ -88,181 +387,726 @@ static ULONG WINAPI InstallEngine_Release(IInstallEngine2 *iface)
  
      TRACE("(%p) ref=%d\n", This, ref);
  
@@ -3363,7 +3365,7 @@ index 93649e2..f2e0ea5 100644
      InstallEngine_QueryInterface,
      InstallEngine_AddRef,
      InstallEngine_Release,
-@@ -293,6 +1137,70 @@ static const IInstallEngine2Vtbl InstallEngine2Vtbl = {
+@@ -292,6 +1136,70 @@ static const IInstallEngine2Vtbl InstallEngine2Vtbl = {
      InstallEngine2_GetICifFile
  };
  
@@ -3434,7 +3436,7 @@ index 93649e2..f2e0ea5 100644
  static HRESULT WINAPI ClassFactory_QueryInterface(IClassFactory *iface, REFIID riid, void **ppv)
  {
      *ppv = NULL;
-@@ -337,12 +1245,14 @@ static HRESULT WINAPI InstallEngineCF_CreateInstance(IClassFactory *iface, IUnkn
+@@ -336,12 +1244,14 @@ static HRESULT WINAPI InstallEngineCF_CreateInstance(IClassFactory *iface, IUnkn
  
      TRACE("(%p %s %p)\n", outer, debugstr_guid(riid), ppv);
  
@@ -3452,7 +3454,7 @@ index 93649e2..f2e0ea5 100644
      IInstallEngine2_Release(&engine->IInstallEngine2_iface);
 diff --git a/dlls/inseng/inseng_private.h b/dlls/inseng/inseng_private.h
 new file mode 100644
-index 0000000..1a649e2
+index 00000000000..1a649e251ec
 --- /dev/null
 +++ b/dlls/inseng/inseng_private.h
 @@ -0,0 +1,79 @@
@@ -3481,7 +3483,7 @@ index 0000000..1a649e2
 +#include "rpcproxy.h"
 +#include "inseng.h"
 +#include "wine/heap.h"
-+#include "wine/unicode.h"
++
 +
 +static inline char *strdupA(const char *src)
 +{
@@ -3494,8 +3496,8 @@ index 0000000..1a649e2
 +{
 +    WCHAR *dest;
 +    if (!src) return NULL;
-+    dest = HeapAlloc(GetProcessHeap(), 0, (strlenW(src) + 1) * sizeof(WCHAR));
-+    if (dest) strcpyW(dest, src);
++    dest = HeapAlloc(GetProcessHeap(), 0, (lstrlenW(src) + 1) * sizeof(WCHAR));
++    if (dest) lstrcpyW(dest, src);
 +    return dest;
 +}
 +
@@ -3536,7 +3538,7 @@ index 0000000..1a649e2
 +void component_set_installed(ICifComponent *iface, BOOL value) DECLSPEC_HIDDEN;
 + char *component_get_id(ICifComponent *iface) DECLSPEC_HIDDEN;
 diff --git a/include/inseng.idl b/include/inseng.idl
-index 8a3f4c4..8292741 100644
+index 8a3f4c4d270..82927418a99 100644
 --- a/include/inseng.idl
 +++ b/include/inseng.idl
 @@ -1,5 +1,6 @@
@@ -3837,10 +3839,11 @@ index 8a3f4c4..8292741 100644
  }
  
  [
-@@ -122,6 +365,16 @@ interface IInstallEngine2 : IInstallEngine
+@@ -121,6 +364,16 @@ interface IInstallEngine2 : IInstallEngine
+     HRESULT GetICifFile(ICifFile **cif_file);
  }
  
- [
++[
 +    uuid(6e449687-c509-11cf-aafa-00aa00b6015c),
 +    local
 +]
@@ -3850,10 +3853,9 @@ index 8a3f4c4..8292741 100644
 +    HRESULT GetInstallProgress(INSTALLPROGRESS *progress);
 +}
 +
-+[
+ [
      helpstring("Microsoft Active Setup Engine"),
      threading(apartment),
-     uuid(6e449686-c509-11cf-aafa-00aa00b6015c)
 @@ -134,3 +387,6 @@ coclass InstallEngine { }
      uuid(bfc880f1-7484-11d0-8309-00aa00b6015c)
  ]
@@ -3862,5 +3864,5 @@ index 8a3f4c4..8292741 100644
 +cpp_quote("HRESULT WINAPI GetICifFileFromFile(ICifFile **, const char *);")
 +cpp_quote("HRESULT WINAPI GetICifRWFileFromFile(ICifRWFile **, const char *);")
 -- 
-1.9.1
+2.17.1
 

@@ -126,6 +126,7 @@ patch_enable_all ()
 	enable_ddraw_Texture_Wrong_Caps="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
+	enable_dinput_SetActionMap_genre="$1"
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_joy_mappings="$1"
 	enable_dinput_reconnect_joystick="$1"
@@ -503,6 +504,9 @@ patch_enable ()
 			;;
 		ddraw-version-check)
 			enable_ddraw_version_check="$2"
+			;;
+		dinput-SetActionMap-genre)
+			enable_dinput_SetActionMap_genre="$2"
 			;;
 		dinput-axis-recalc)
 			enable_dinput_axis_recalc="$2"
@@ -1964,6 +1968,13 @@ if test "$enable_dsound_EAX" -eq 1; then
 	enable_dsound_Fast_Mixer=1
 fi
 
+if test "$enable_dinput_SetActionMap_genre" -eq 1; then
+	if test "$enable_dinput_joy_mappings" -gt 1; then
+		abort "Patchset dinput-joy-mappings disabled, but dinput-SetActionMap-genre depends on that."
+	fi
+	enable_dinput_joy_mappings=1
+fi
+
 if test "$enable_ddraw_version_check" -eq 1; then
 	if test "$enable_ddraw_Device_Caps" -gt 1; then
 		abort "Patchset ddraw-Device_Caps disabled, but ddraw-version-check depends on that."
@@ -2954,21 +2965,6 @@ if test "$enable_ddraw_version_check" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-axis-recalc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41317] dinput: Recalculated Axis after deadzone change.
-# |
-# | Modified files:
-# |   *	dlls/dinput/joystick.c
-# |
-if test "$enable_dinput_axis_recalc" -eq 1; then
-	patch_apply dinput-axis-recalc/0001-dinput-Recalculated-Axis-after-deadzone-change.patch
-	(
-		printf '%s\n' '+    { "Bruno Jesus", "dinput: Recalculated Axis after deadzone change.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-joy-mappings
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2986,6 +2982,41 @@ if test "$enable_dinput_joy_mappings" -eq 1; then
 		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Load users Joystick mappings.", 1 },';
 		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Allow empty Joystick mappings.", 1 },';
 		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Support username in Config dialog.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-SetActionMap-genre
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	dinput-joy-mappings
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47326] dinput: Allow mapping of controls based of genre type.
+# |
+# | Modified files:
+# |   *	dlls/dinput/device.c, dlls/dinput/dinput_main.c
+# |
+if test "$enable_dinput_SetActionMap_genre" -eq 1; then
+	patch_apply dinput-SetActionMap-genre/0001-dinput-Allow-mapping-of-controls-based-of-Genre-type.patch
+	patch_apply dinput-SetActionMap-genre/0002-dinput-Improved-tracing-of-Semantic-value.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Allow mapping of controls based of Genre type.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Improved tracing of Semantic value.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dinput-axis-recalc
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41317] dinput: Recalculated Axis after deadzone change.
+# |
+# | Modified files:
+# |   *	dlls/dinput/joystick.c
+# |
+if test "$enable_dinput_axis_recalc" -eq 1; then
+	patch_apply dinput-axis-recalc/0001-dinput-Recalculated-Axis-after-deadzone-change.patch
+	(
+		printf '%s\n' '+    { "Bruno Jesus", "dinput: Recalculated Axis after deadzone change.", 1 },';
 	) >> "$patchlist"
 fi
 

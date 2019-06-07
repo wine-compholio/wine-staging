@@ -221,6 +221,7 @@ patch_enable_all ()
 	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
+	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -787,6 +788,9 @@ patch_enable ()
 			;;
 		ntdll-aarch-TEB)
 			enable_ntdll_aarch_TEB="$2"
+			;;
+		ntdll-ext4-case-folder)
+			enable_ntdll_ext4_case_folder="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -4964,6 +4968,23 @@ if test "$enable_ntdll_aarch_TEB" -eq 1; then
 	(
 		printf '%s\n' '+    { "Martin Storsjo", "configure: Avoid clobbering x18 on arm64 within wine.", 1 },';
 		printf '%s\n' '+    { "Martin Storsjo", "ntdll: Always restore TEB to x18 on aarch 64 on return from calls to builtins.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ext4-case-folder
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47099] Support for EXT4 case folding per directory.
+# |
+# | Modified files:
+# |   *	dlls/ntdll/directory.c, dlls/ntdll/server.c
+# |
+if test "$enable_ntdll_ext4_case_folder" -eq 1; then
+	patch_apply ntdll-ext4-case-folder/0001-ntdll-directory-Add-support-for-EXT4-case-folding-pe.patch
+	patch_apply ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "ntdll/directory: Add support for EXT4 case folding per directory.", 1 },';
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "ntdll/server: Mark drive_c as case-insensitive when created.", 1 },';
 	) >> "$patchlist"
 fi
 

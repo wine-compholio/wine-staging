@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "48a74277f5f9e0c87d8c01457236a89d94cb71d3"
+	echo "78f74446b9806f63a27c2d643b8e29156b5bdcbe"
 }
 
 # Show version information
@@ -5328,24 +5328,12 @@ fi
 # |   *	dlls/riched20/richole.c, dlls/riched20/run.c, dlls/riched20/tests/richole.c
 # |
 if test "$enable_riched20_IText_Interface" -eq 1; then
-	patch_apply riched20-IText_Interface/0001-riched20-Implement-IText-Selection-Range-Set-Start-E.patch
-	patch_apply riched20-IText_Interface/0002-riched20-Stub-for-ITextFont-interface-and-implement-.patch
 	patch_apply riched20-IText_Interface/0003-riched20-Stub-for-ITextPara-interface-and-implement-.patch
 	patch_apply riched20-IText_Interface/0004-riched20-Fix-ME_RunOfsFromCharOfs-when-nCharOfs-strl.patch
-	patch_apply riched20-IText_Interface/0005-riched20-Implement-ITextRange-GetText.patch
-	patch_apply riched20-IText_Interface/0007-riched20-Implement-ITextRange-IsEqual.patch
-	patch_apply riched20-IText_Interface/0008-riched20-Implement-ITextRange-GetStoryLength.patch
-	patch_apply riched20-IText_Interface/0009-riched20-Implement-ITextSelection-GetStoryLength.patch
 	patch_apply riched20-IText_Interface/0010-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
 	(
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement IText{Selection, Range}::Set{Start, End}.", 1 },';
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextFont interface and implement ITextRange::GetFont and ITextSelection::GetFont.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetText.", 1 },';
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::IsEqual.", 1 },';
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextRange::GetStoryLength.", 1 },';
-		printf '%s\n' '+    { "Jactry Zeng", "riched20: Implement ITextSelection::GetStoryLength.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
 	) >> "$patchlist"
 fi

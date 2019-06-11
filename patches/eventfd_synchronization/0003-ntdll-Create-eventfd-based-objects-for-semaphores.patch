@@ -1,10 +1,9 @@
-From 4df197cdb567f731bec385786ccda35499d656b4 Mon Sep 17 00:00:00 2001
+From 43baedbee4f25d88f8af30c216b888f5161e62df Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Thu, 7 Jun 2018 20:29:21 -0500
-Subject: [PATCH 03/83] ntdll: Create eventfd-based objects for semaphores.
+Subject: [PATCH] ntdll: Create eventfd-based objects for semaphores.
 
 This patch break things, of course. That is fine. Its purpose is to prevent a Massive Patch Munge.
-
 ---
  dlls/ntdll/Makefile.in  |   1 +
  dlls/ntdll/esync.c      | 141 ++++++++++++++++++++++++++++++++++++++++
@@ -17,7 +16,7 @@ This patch break things, of course. That is fine. Its purpose is to prevent a Ma
  create mode 100644 dlls/ntdll/esync.h
 
 diff --git a/dlls/ntdll/Makefile.in b/dlls/ntdll/Makefile.in
-index ed4bb94e4..b75e8308a 100644
+index ed4bb94e4dc..b75e8308ac7 100644
 --- a/dlls/ntdll/Makefile.in
 +++ b/dlls/ntdll/Makefile.in
 @@ -15,6 +15,7 @@ C_SRCS = \
@@ -30,7 +29,7 @@ index ed4bb94e4..b75e8308a 100644
  	handletable.c \
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
 new file mode 100644
-index 000000000..da35bdf85
+index 00000000000..da35bdf854a
 --- /dev/null
 +++ b/dlls/ntdll/esync.c
 @@ -0,0 +1,141 @@
@@ -177,7 +176,7 @@ index 000000000..da35bdf85
 +}
 diff --git a/dlls/ntdll/esync.h b/dlls/ntdll/esync.h
 new file mode 100644
-index 000000000..1a88170cf
+index 00000000000..1a88170cfc4
 --- /dev/null
 +++ b/dlls/ntdll/esync.h
 @@ -0,0 +1,32 @@
@@ -214,10 +213,10 @@ index 000000000..1a88170cf
 + * "server_fd_section" or something similar. */
 +extern RTL_CRITICAL_SECTION fd_cache_section;
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 17d87cd52..dad0996c4 100644
+index 11463146da0..a370256245c 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -107,6 +107,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *
+@@ -106,6 +106,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *
  extern int server_remove_fd_from_cache( HANDLE handle ) DECLSPEC_HIDDEN;
  extern int server_get_unix_fd( HANDLE handle, unsigned int access, int *unix_fd,
                                 int *needs_close, enum server_fd_type *type, unsigned int *options ) DECLSPEC_HIDDEN;
@@ -226,7 +225,7 @@ index 17d87cd52..dad0996c4 100644
  extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct object_attributes **ret,
                                           data_size_t *ret_len ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index d2d238968..dcb355a65 100644
+index 43dfe9303bb..46f1cae3f1f 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
 @@ -81,6 +81,7 @@
@@ -254,7 +253,7 @@ index d2d238968..dcb355a65 100644
  
  /* atomically exchange a 64-bit value */
  static inline LONG64 interlocked_xchg64( LONG64 *dest, LONG64 val )
-@@ -773,7 +774,7 @@ void CDECL wine_server_send_fd( int fd )
+@@ -764,7 +765,7 @@ void CDECL wine_server_send_fd( int fd )
   *
   * Receive a file descriptor passed from the server.
   */
@@ -264,7 +263,7 @@ index d2d238968..dcb355a65 100644
      struct iovec vec;
      struct msghdr msghdr;
 diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
-index b74bebf08..c259267fb 100644
+index 8974c7ed907..3939ce1ba78 100644
 --- a/dlls/ntdll/sync.c
 +++ b/dlls/ntdll/sync.c
 @@ -59,7 +59,9 @@
@@ -275,9 +274,9 @@ index b74bebf08..c259267fb 100644
  #include "ntdll_misc.h"
 +#include "esync.h"
  
- WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+ WINE_DEFAULT_DEBUG_CHANNEL(sync);
  
-@@ -248,6 +250,9 @@ NTSTATUS WINAPI NtCreateSemaphore( OUT PHANDLE SemaphoreHandle,
+@@ -249,6 +251,9 @@ NTSTATUS WINAPI NtCreateSemaphore( OUT PHANDLE SemaphoreHandle,
      if (MaximumCount <= 0 || InitialCount < 0 || InitialCount > MaximumCount)
          return STATUS_INVALID_PARAMETER;
  

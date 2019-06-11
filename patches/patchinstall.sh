@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "78f74446b9806f63a27c2d643b8e29156b5bdcbe"
+	echo "83ca9a95de80083d906a2aeb5d1e5ca2ed611199"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 4.9"
+	echo "Wine Staging 4.10"
 	echo "Copyright (C) 2014-2019 the Wine Staging project authors."
 	echo "Copyright (C) 2018-2019 Alistair Leslie-Hughes"
 	echo ""
@@ -2839,17 +2839,14 @@ fi
 # |   *	[#27002] Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps
 # |
 # | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/ddraw1.c, dlls/ddraw/tests/ddraw2.c, dlls/ddraw/tests/ddraw4.c,
-# | 	dlls/ddraw/tests/ddraw7.c
+# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/ddraw7.c
 # |
 if test "$enable_ddraw_Device_Caps" -eq 1; then
 	patch_apply ddraw-Device_Caps/0001-ddraw-Don-t-set-HWTRANSFORMANDLIGHT-flag-on-d3d7-RGB.patch
 	patch_apply ddraw-Device_Caps/0002-ddraw-Set-dwZBufferBitDepth-in-ddraw7_GetCaps.patch
-	patch_apply ddraw-Device_Caps/0003-ddraw-Set-ddsOldCaps-correctly-in-ddraw7_GetCaps.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Don'\''t set HWTRANSFORMANDLIGHT flag on d3d7 RGB device.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ddraw: Set dwZBufferBitDepth in ddraw7_GetCaps.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ddraw: Set ddsOldCaps correctly in ddraw7_GetCaps.", 1 },';
 	) >> "$patchlist"
 fi
 

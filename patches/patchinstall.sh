@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "83ca9a95de80083d906a2aeb5d1e5ca2ed611199"
+	echo "c13351c05af43aa542938e0c0935b154a8166905"
 }
 
 # Show version information
@@ -3891,21 +3891,14 @@ fi
 # |   *	[#41258] Return a more reasonable display DeviceID
 # |
 # | Modified files:
-# |   *	dlls/gdi32/driver.c, dlls/user32/misc.c, dlls/user32/tests/monitor.c, dlls/winemac.drv/display.c,
-# | 	dlls/winex11.drv/xinerama.c
+# |   *	dlls/gdi32/driver.c, dlls/winemac.drv/display.c
 # |
 if test "$enable_gdi32_MultiMonitor" -eq 1; then
 	patch_apply gdi32-MultiMonitor/0001-gdi32-Also-accept-.-DISPLAY-n-devices-names-with-n-o.patch
-	patch_apply gdi32-MultiMonitor/0002-winex11-Make-GetMonitorInfo-give-a-different-device-.patch
-	patch_apply gdi32-MultiMonitor/0003-user32-Implement-EnumDisplayDevicesW-based-on-EnumDi.patch
 	patch_apply gdi32-MultiMonitor/0004-winemac-Make-GetMonitorInfo-give-a-different-device-.patch
-	patch_apply gdi32-MultiMonitor/0005-user32-Return-a-more-reasonable-display-DeviceID.patch
 	(
 		printf '%s\n' '+    { "Ken Thomases", "gdi32: Also accept \"\\\\.\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },';
-		printf '%s\n' '+    { "Ken Thomases", "winex11: Make GetMonitorInfo() give a different device name (\\.\\DISPLAY<n>) to each monitor.", 1 },';
-		printf '%s\n' '+    { "Ken Thomases", "user32: Implement EnumDisplayDevicesW() based on EnumDisplayMonitors() and GetMonitorInfoW().", 1 },';
 		printf '%s\n' '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\.\\DISPLAY<n>) to each monitor.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Return a more reasonable display DeviceID.", 1 },';
 	) >> "$patchlist"
 fi
 

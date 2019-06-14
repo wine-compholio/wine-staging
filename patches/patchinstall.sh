@@ -259,7 +259,6 @@ patch_enable_all ()
 	enable_server_Timestamp_Compat="$1"
 	enable_server_device_manager_destroy="$1"
 	enable_setupapi_DiskSpaceList="$1"
-	enable_setupapi_Display_Device="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
 	enable_setupapi_SetupPromptForDisk="$1"
@@ -903,9 +902,6 @@ patch_enable ()
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
-			;;
-		setupapi-Display_Device)
-			enable_setupapi_Display_Device="$2"
 			;;
 		setupapi-SPFILENOTIFY_FILEINCABINET)
 			enable_setupapi_SPFILENOTIFY_FILEINCABINET="$2"
@@ -5513,25 +5509,6 @@ if test "$enable_setupapi_DiskSpaceList" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Ignore deletion of added files in SetupAddToDiskSpaceList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi: ImplementSetupAddSectionToDiskSpaceList.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SetupAddInstallSectionToDiskSpaceList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-Display_Device
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#35345] Fix enumeration of display driver properties using setupapi
-# |
-# | Modified files:
-# |   *	dlls/setupapi/devinst.c, dlls/setupapi/tests/devinst.c, loader/wine.inf.in
-# |
-if test "$enable_setupapi_Display_Device" -eq 1; then
-	patch_apply setupapi-Display_Device/0001-setupapi-Create-registry-keys-for-display-devices-an.patch
-	patch_apply setupapi-Display_Device/0002-setupapi-Handle-the-case-that-a-full-driver-path-is-.patch
-	patch_apply setupapi-Display_Device/0003-setupapi-Also-create-HardwareId-registry-key-for-dis.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Create registry keys for display devices and display drivers.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Handle the case that a full driver path is passed to SetupDiGetClassDevs.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Also create HardwareId registry key for display devices.", 1 },';
 	) >> "$patchlist"
 fi
 

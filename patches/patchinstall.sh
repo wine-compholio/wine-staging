@@ -4142,6 +4142,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42125] Various PE loader fixes for 8k demos
+# |   *	[#38176] Optical Circuit 4K demo crashes on startup
 # |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/kernel32/tests/loader.c, dlls/ntdll/virtual.c, server/mapping.c

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4aa7fbe0561e6a27f098a05a63c5a7d12397e678"
+	echo "1bc9c4fdb2e6c2762105c14cdafb7d4ea3370625"
 }
 
 # Show version information
@@ -347,7 +347,6 @@ patch_enable_all ()
 	enable_winex11_wglShareLists="$1"
 	enable_winex11_drv_Query_server_position="$1"
 	enable_winex11_drv_mouse_coorrds="$1"
-	enable_winhttp_System_Proxy_Autoconfig="$1"
 	enable_wininet_Cleanup="$1"
 	enable_wininet_Http_Decoding="$1"
 	enable_winmm_Delay_Import_Depends="$1"
@@ -1166,9 +1165,6 @@ patch_enable ()
 			;;
 		winex11.drv-mouse-coorrds)
 			enable_winex11_drv_mouse_coorrds="$2"
-			;;
-		winhttp-System_Proxy_Autoconfig)
-			enable_winhttp_System_Proxy_Autoconfig="$2"
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
@@ -7011,18 +7007,6 @@ if test "$enable_winex11_drv_mouse_coorrds" -eq 1; then
 	patch_apply winex11.drv-mouse-coorrds/0001-winex11.drv-mouse-Use-root-relative-coordinates-for-ev.patch
 	(
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/mouse: Use root-relative coordinates for events, if possible.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winhttp-System_Proxy_Autoconfig
-# |
-# | Modified files:
-# |   *	dlls/wininet/internet.c
-# |
-if test "$enable_winhttp_System_Proxy_Autoconfig" -eq 1; then
-	patch_apply winhttp-System_Proxy_Autoconfig/0002-wininet-Silence-wininet-no-support-on-this-platform-.patch
-	(
-		printf '%s\n' '+    { "Jarkko Korpi", "wininet: Silence wininet no support on this platform message.", 1 },';
 	) >> "$patchlist"
 fi
 

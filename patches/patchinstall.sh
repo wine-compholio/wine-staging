@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1bc9c4fdb2e6c2762105c14cdafb7d4ea3370625"
+	echo "48f93bc3290596b8da4455496fa88cd13ea6f3c9"
 }
 
 # Show version information
@@ -137,7 +137,6 @@ patch_enable_all ()
 	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
-	enable_dxgi_MakeWindowAssociation="$1"
 	enable_dxva2_Video_Decoder="$1"
 	enable_eventfd_synchronization="$1"
 	enable_explorer_Video_Registry_Key="$1"
@@ -535,9 +534,6 @@ patch_enable ()
 			;;
 		dxdiagn-GetChildContainer_Leaf_Nodes)
 			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
-			;;
-		dxgi-MakeWindowAssociation)
-			enable_dxgi_MakeWindowAssociation="$2"
 			;;
 		dxva2-Video_Decoder)
 			enable_dxva2_Video_Decoder="$2"
@@ -3180,18 +3176,6 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxgi-MakeWindowAssociation
-# |
-# | Modified files:
-# |   *	dlls/dxgi/dxgi_private.h, dlls/dxgi/factory.c
-# |
-if test "$enable_dxgi_MakeWindowAssociation" -eq 1; then
-	patch_apply dxgi-MakeWindowAssociation/0001-dxgi-Improve-stubs-for-MakeWindowAssociation-and-Get.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "dxgi: Improve stubs for MakeWindowAssociation and GetWindowAssociation.", 1 },';
 	) >> "$patchlist"
 fi
 

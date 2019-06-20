@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "48f93bc3290596b8da4455496fa88cd13ea6f3c9"
+	echo "cce8074aa9fb2191faba25ce7fd24e2678d3bd17"
 }
 
 # Show version information
@@ -5770,7 +5770,7 @@ fi
 # Patchset shlwapi-UrlCombine
 # |
 # | Modified files:
-# |   *	dlls/shlwapi/tests/url.c, dlls/shlwapi/url.c
+# |   *	dlls/shlwapi/tests/url.c
 # |
 if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	patch_apply shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch

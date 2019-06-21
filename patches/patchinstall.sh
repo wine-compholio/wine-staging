@@ -170,6 +170,7 @@ patch_enable_all ()
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
+	enable_mshtml_TranslateAccelerator="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msvcrt_Math_Precision="$1"
 	enable_ntdll_APC_Performance="$1"
@@ -633,6 +634,9 @@ patch_enable ()
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
+			;;
+		mshtml-TranslateAccelerator)
+			enable_mshtml_TranslateAccelerator="$2"
 			;;
 		msi-msi_vcl_get_cost)
 			enable_msi_msi_vcl_get_cost="$2"
@@ -4316,6 +4320,21 @@ if test "$enable_mshtml_HTMLLocation_put_hash" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset mshtml-TranslateAccelerator
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37058] mshtml: Improve IOleInPlaceActiveObject TranslateAccelerator
+# |
+# | Modified files:
+# |   *	dlls/mshtml/oleobj.c
+# |
+if test "$enable_mshtml_TranslateAccelerator" -eq 1; then
+	patch_apply mshtml-TranslateAccelerator/0001-mshtml-Improve-IOleInPlaceActiveObject-TranslateAcce.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "mshtml: Improve IOleInPlaceActiveObject TranslateAccelerator.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset msi-msi_vcl_get_cost
 # |
 # | Modified files:
@@ -5770,7 +5789,7 @@ fi
 # Patchset shlwapi-UrlCombine
 # |
 # | Modified files:
-# |   *	dlls/shlwapi/tests/url.c
+# |   *	dlls/kernelbase/path.c, dlls/shlwapi/tests/url.c
 # |
 if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	patch_apply shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch

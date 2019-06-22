@@ -1,4 +1,4 @@
-From 8e59420b744b29a736d3082aae7fc7a94ba9246b Mon Sep 17 00:00:00 2001
+From 0dbb12f12b3637dbf512cd0c0d719c901d57e63d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -8,16 +8,16 @@ Based on a patch by Erich E. Hoover.
  dlls/ntdll/signal_i386.c     |   6 +-
  dlls/ntdll/tests/exception.c |   2 +
  include/winternl.h           |   2 +-
- tools/winebuild/build.h      |   8 ++-
+ tools/winebuild/build.h      |   7 +++
  tools/winebuild/import.c     |  10 ++--
  tools/winebuild/parser.c     |  59 ++++++++++++++++++++
  tools/winebuild/spec16.c     |  22 +-------
  tools/winebuild/spec32.c     | 104 +++++++++++++++++++++++++++++++++++
  tools/winebuild/utils.c      |  21 +++++++
- 9 files changed, 206 insertions(+), 28 deletions(-)
+ 9 files changed, 206 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 7c6e1b50c..a62fbd4bf 100644
+index 93eb142ab3f..5542d4b5e8e 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -427,6 +427,9 @@ static size_t signal_stack_size;
@@ -48,7 +48,7 @@ index 7c6e1b50c..a62fbd4bf 100644
          if (!(thread_data->fs = wine_ldt_alloc_fs()))
          {
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index ada28c91e..3ed8fa082 100644
+index ada28c91ebd..3ed8fa08213 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
 @@ -1651,6 +1651,8 @@ static void test_thread_context(void)
@@ -61,7 +61,7 @@ index ada28c91e..3ed8fa082 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/include/winternl.h b/include/winternl.h
-index 0e8cf30d7..4ec65ca63 100644
+index 2351df010b0..68bceddef68 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -357,7 +357,7 @@ typedef struct _TEB
@@ -74,10 +74,10 @@ index 0e8cf30d7..4ec65ca63 100644
      ULONG                        FpSoftwareStatusRegister;          /* 0c8/010c */
      PVOID                        SystemReserved1[54];               /* 0cc/0110 used for krnl386.exe16 private data in Wine */
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
-index 49473c768..0b7cb370b 100644
+index 43a0dd20e82..eb63b661c7f 100644
 --- a/tools/winebuild/build.h
 +++ b/tools/winebuild/build.h
-@@ -103,6 +103,7 @@ typedef struct
+@@ -105,6 +105,7 @@ typedef struct
      int         flags;
      char       *name;         /* public name of this function */
      char       *link_name;    /* name of the C symbol to link to */
@@ -85,7 +85,7 @@ index 49473c768..0b7cb370b 100644
      char       *export_name;  /* name exported under for noname exports */
      union
      {
-@@ -129,6 +130,7 @@ typedef struct
+@@ -131,6 +132,7 @@ typedef struct
      int              alloc_entry_points; /* number of allocated entry points */
      int              nb_names;           /* number of entry points with names */
      unsigned int     nb_resources;       /* number of resources */
@@ -93,7 +93,7 @@ index 49473c768..0b7cb370b 100644
      int              characteristics;    /* characteristics for the PE header */
      int              dll_characteristics;/* DLL characteristics for the PE header */
      int              subsystem;          /* subsystem id */
-@@ -138,6 +140,7 @@ typedef struct
+@@ -140,6 +142,7 @@ typedef struct
      ORDDEF         **names;              /* array of entry point names (points into entry_points) */
      ORDDEF         **ordinals;           /* array of dll ordinals (points into entry_points) */
      struct resource *resources;          /* array of dll resources (format differs between Win16/Win32) */
@@ -101,18 +101,18 @@ index 49473c768..0b7cb370b 100644
  } DLLSPEC;
  
  enum target_cpu
-@@ -179,8 +182,9 @@ struct strarray
- #define FLAG_FORWARD   0x200  /* function is a forwarded name */
- #define FLAG_EXT_LINK  0x400  /* function links to an external symbol */
- #define FLAG_EXPORT32  0x800  /* 32-bit export in 16-bit spec file */
-+#define FLAG_SYSCALL   0x1000  /* function should be called through a syscall thunk */
+@@ -182,8 +185,10 @@ struct strarray
+ #define FLAG_FORWARD   0x1000  /* function is a forwarded name */
+ #define FLAG_EXT_LINK  0x2000  /* function links to an external symbol */
+ #define FLAG_EXPORT32  0x4000  /* 32-bit export in 16-bit spec file */
++#define FLAG_SYSCALL   0x8000  /* function should be called through a syscall thunk */
  
--#define FLAG_CPU(cpu)  (0x01000 << (cpu))
-+#define FLAG_CPU(cpu)  (0x02000 << (cpu))
+ #define FLAG_CPU(cpu)  (0x10000 << (cpu))
++
  #define FLAG_CPU_MASK  (FLAG_CPU(CPU_LAST + 1) - FLAG_CPU(0))
  #define FLAG_CPU_WIN64 (FLAG_CPU(CPU_x86_64) | FLAG_CPU(CPU_ARM64))
  #define FLAG_CPU_WIN32 (FLAG_CPU_MASK & ~FLAG_CPU_WIN64)
-@@ -323,6 +327,8 @@ extern void add_16bit_exports( DLLSPEC *spec32, DLLSPEC *spec16 );
+@@ -325,6 +330,8 @@ extern void add_16bit_exports( DLLSPEC *spec32, DLLSPEC *spec16 );
  extern int parse_spec_file( FILE *file, DLLSPEC *spec );
  extern int parse_def_file( FILE *file, DLLSPEC *spec );
  
@@ -122,10 +122,10 @@ index 49473c768..0b7cb370b 100644
  
  extern int byte_swapped;
 diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
-index d8abc9d03..9c7c605b6 100644
+index 8c32b738a23..599281674f2 100644
 --- a/tools/winebuild/import.c
 +++ b/tools/winebuild/import.c
-@@ -454,6 +454,7 @@ static void check_undefined_forwards( DLLSPEC *spec )
+@@ -541,6 +541,7 @@ static void check_undefined_forwards( DLLSPEC *spec )
  /* flag the dll exports that link to an undefined symbol */
  static void check_undefined_exports( DLLSPEC *spec )
  {
@@ -133,7 +133,7 @@ index d8abc9d03..9c7c605b6 100644
      int i;
  
      for (i = 0; i < spec->nb_entry_points; i++)
-@@ -461,7 +462,8 @@ static void check_undefined_exports( DLLSPEC *spec )
+@@ -548,7 +549,8 @@ static void check_undefined_exports( DLLSPEC *spec )
          ORDDEF *odp = &spec->entry_points[i];
          if (odp->type == TYPE_STUB || odp->type == TYPE_ABS || odp->type == TYPE_VARIABLE) continue;
          if (odp->flags & FLAG_FORWARD) continue;
@@ -143,7 +143,7 @@ index d8abc9d03..9c7c605b6 100644
          {
              switch(odp->type)
              {
-@@ -472,14 +474,14 @@ static void check_undefined_exports( DLLSPEC *spec )
+@@ -559,14 +561,14 @@ static void check_undefined_exports( DLLSPEC *spec )
                  if (link_ext_symbols)
                  {
                      odp->flags |= FLAG_EXT_LINK;
@@ -162,10 +162,10 @@ index d8abc9d03..9c7c605b6 100644
              }
          }
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index bec9f523e..da832de0e 100644
+index 3191efaf9ea..f440881a0ec 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
-@@ -540,6 +540,24 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
+@@ -541,6 +541,24 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
  }
  
  
@@ -190,7 +190,7 @@ index bec9f523e..da832de0e 100644
  /*******************************************************************
   *         parse_spec_ordinal
   *
-@@ -615,6 +633,14 @@ static int parse_spec_ordinal( int ordinal, DLLSPEC *spec )
+@@ -616,6 +634,14 @@ static int parse_spec_ordinal( int ordinal, DLLSPEC *spec )
          assert( 0 );
      }
  
@@ -205,7 +205,7 @@ index bec9f523e..da832de0e 100644
      if ((odp->flags & FLAG_CPU_MASK) && !(odp->flags & FLAG_CPU(target_cpu)))
      {
          /* ignore this entry point */
-@@ -812,6 +838,37 @@ static void assign_ordinals( DLLSPEC *spec )
+@@ -813,6 +839,37 @@ static void assign_ordinals( DLLSPEC *spec )
  }
  
  
@@ -243,7 +243,7 @@ index bec9f523e..da832de0e 100644
  /*******************************************************************
   *         add_16bit_exports
   *
-@@ -913,6 +970,8 @@ int parse_spec_file( FILE *file, DLLSPEC *spec )
+@@ -914,6 +971,8 @@ int parse_spec_file( FILE *file, DLLSPEC *spec )
      current_line = 0;  /* no longer parsing the input file */
      assign_names( spec );
      assign_ordinals( spec );
@@ -253,7 +253,7 @@ index bec9f523e..da832de0e 100644
  }
  
 diff --git a/tools/winebuild/spec16.c b/tools/winebuild/spec16.c
-index b21f47277..24a8f1054 100644
+index 3a7e457282a..a179175b8c1 100644
 --- a/tools/winebuild/spec16.c
 +++ b/tools/winebuild/spec16.c
 @@ -495,27 +495,6 @@ static int relay_type_compare( const void *e1, const void *e2 )
@@ -293,7 +293,7 @@ index b21f47277..24a8f1054 100644
          entry_point->u.func.nb_args = 0;
          assert( !spec->ordinals[0] );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index a0aa01754..6ae34a676 100644
+index 855e6d8739f..119e1079940 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -371,6 +371,109 @@ static void output_relay_debug( DLLSPEC *spec )
@@ -406,7 +406,7 @@ index a0aa01754..6ae34a676 100644
  /*******************************************************************
   *         output_exports
   *
-@@ -714,6 +817,7 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -767,6 +870,7 @@ void output_spec32_file( DLLSPEC *spec )
      open_output_file();
      output_standard_file_header();
      output_module( spec );
@@ -415,7 +415,7 @@ index a0aa01754..6ae34a676 100644
      output_exports( spec );
      output_imports( spec );
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index dbfe7a4ba..5796af2f6 100644
+index 31a6b283713..74fc8a16bcf 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
 @@ -838,6 +838,7 @@ void free_dll_spec( DLLSPEC *spec )
@@ -458,5 +458,5 @@ index dbfe7a4ba..5796af2f6 100644
 +    return j + 1;
 +}
 -- 
-2.21.0
+2.20.1
 

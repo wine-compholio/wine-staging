@@ -1,4 +1,4 @@
-From 8ed9e258d5232b7c207a5d05bce72985a6f0677c Mon Sep 17 00:00:00 2001
+From 221f88c7bb5155b55428319fff84cfbc275667ed Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Thu, 4 Apr 2019 02:25:00 +0300
 Subject: [PATCH] ddraw: Allow setting texture without DDSCAPS_TEXTURE for
@@ -11,10 +11,10 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  2 files changed, 141 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ddraw/device.c b/dlls/ddraw/device.c
-index 1d2cb4dce11..fb14719a853 100644
+index ab222e30eb2..4613c2cd357 100644
 --- a/dlls/ddraw/device.c
 +++ b/dlls/ddraw/device.c
-@@ -2950,10 +2950,8 @@ static HRESULT WINAPI d3d_device3_SetLightState(IDirect3DDevice3 *iface,
+@@ -2902,10 +2902,8 @@ static HRESULT WINAPI d3d_device3_SetLightState(IDirect3DDevice3 *iface,
                  wined3d_mutex_unlock();
                  return DDERR_INVALIDPARAMS;
              }
@@ -25,7 +25,7 @@ index 1d2cb4dce11..fb14719a853 100644
          device->material = value;
      }
      else if (state == D3DLIGHTSTATE_COLORMODEL)
-@@ -4834,7 +4832,8 @@ static HRESULT d3d_device7_SetTexture(IDirect3DDevice7 *iface,
+@@ -4786,7 +4784,8 @@ static HRESULT d3d_device7_SetTexture(IDirect3DDevice7 *iface,
      struct ddraw_surface *surf = unsafe_impl_from_IDirectDrawSurface7(texture);
      struct wined3d_texture *wined3d_texture = NULL;
  
@@ -35,19 +35,16 @@ index 1d2cb4dce11..fb14719a853 100644
  
      if (surf && (surf->surface_desc.ddsCaps.dwCaps & DDSCAPS_TEXTURE))
          wined3d_texture = surf->wined3d_texture;
-@@ -4870,8 +4869,8 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
+@@ -4822,13 +4821,24 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
  {
      struct d3d_device *device = impl_from_IDirect3DDevice3(iface);
      struct ddraw_surface *tex = unsafe_impl_from_IDirect3DTexture2(texture);
-+    struct wined3d_texture *wined3d_texture;
-     DWORD texmapblend;
 -    HRESULT hr;
++    struct wined3d_texture *wined3d_texture;
  
      TRACE("iface %p, stage %u, texture %p.\n", iface, stage, texture);
  
-@@ -4880,7 +4879,18 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
-     if (device->legacyTextureBlending)
-         IDirect3DDevice3_GetRenderState(iface, D3DRENDERSTATE_TEXTUREMAPBLEND, &texmapblend);
+     wined3d_mutex_lock();
  
 -    hr = IDirect3DDevice7_SetTexture(&device->IDirect3DDevice7_iface, stage, &tex->IDirectDrawSurface7_iface);
 +    if (tex && ((tex->surface_desc.ddsCaps.dwCaps & DDSCAPS_TEXTURE) || !device->hw))
@@ -63,9 +60,9 @@ index 1d2cb4dce11..fb14719a853 100644
 +
 +    wined3d_device_set_texture(device->wined3d_device, stage, wined3d_texture);
  
-     if (device->legacyTextureBlending && texmapblend == D3DTBLEND_MODULATE)
+     if (device->legacyTextureBlending && device->texture_map_blend == D3DTBLEND_MODULATE)
      {
-@@ -4912,7 +4922,7 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
+@@ -4860,7 +4870,7 @@ static HRESULT WINAPI d3d_device3_SetTexture(IDirect3DDevice3 *iface,
  
      wined3d_mutex_unlock();
  
@@ -75,7 +72,7 @@ index 1d2cb4dce11..fb14719a853 100644
  
  static const struct tss_lookup
 diff --git a/dlls/ddraw/tests/ddraw4.c b/dlls/ddraw/tests/ddraw4.c
-index 77ae359a9ca..93f3c589373 100644
+index 6a8ecde93ad..2188e4eb03f 100644
 --- a/dlls/ddraw/tests/ddraw4.c
 +++ b/dlls/ddraw/tests/ddraw4.c
 @@ -330,7 +330,7 @@ static IDirectDraw4 *create_ddraw(void)
@@ -137,7 +134,7 @@ index 77ae359a9ca..93f3c589373 100644
  static IDirect3DViewport3 *create_viewport(IDirect3DDevice3 *device, UINT x, UINT y, UINT w, UINT h)
  {
      IDirect3DViewport3 *viewport;
-@@ -16215,6 +16226,116 @@ static void test_caps(void)
+@@ -16308,6 +16319,116 @@ static void test_caps(void)
      IDirectDraw4_Release(ddraw);
  }
  
@@ -254,7 +251,7 @@ index 77ae359a9ca..93f3c589373 100644
  START_TEST(ddraw4)
  {
      DDDEVICEIDENTIFIER identifier;
-@@ -16348,4 +16469,5 @@ START_TEST(ddraw4)
+@@ -16441,4 +16562,5 @@ START_TEST(ddraw4)
      test_alphatest();
      test_clipper_refcount();
      test_caps();

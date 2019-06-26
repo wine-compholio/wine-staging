@@ -1,29 +1,29 @@
-From 57e066e3be063d122243daa149ef327c2594901a Mon Sep 17 00:00:00 2001
+From 0ae9f7c32cf873611ce5ed7f341f5979690f2318 Mon Sep 17 00:00:00 2001
 From: Jeremy White <jwhite@codeweavers.com>
 Date: Thu, 29 Mar 2018 11:58:25 +1100
 Subject: [PATCH] winemapi: Directly use xdg-email if available, enabling file
  attachments.
 
-This addresses https://bugs.winehq.org/show_bug.cgi?id=11770 for systems with xdg-email.
-
 v2:
 Use new heap_* function.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=11770
 
 Signed-off-by: Jeremy White <jwhite@codeweavers.com>
 ---
  dlls/winemapi/Makefile.in        |   3 +-
  dlls/winemapi/sendmail.c         |  48 ++++--
  dlls/winemapi/winemapi_private.h |  27 ++++
- dlls/winemapi/xdg-email.c        | 246 +++++++++++++++++++++++++++++++
- 4 files changed, 309 insertions(+), 15 deletions(-)
+ dlls/winemapi/xdg-email.c        | 241 +++++++++++++++++++++++++++++++
+ 4 files changed, 304 insertions(+), 15 deletions(-)
  create mode 100644 dlls/winemapi/winemapi_private.h
  create mode 100644 dlls/winemapi/xdg-email.c
 
 diff --git a/dlls/winemapi/Makefile.in b/dlls/winemapi/Makefile.in
-index 813ee42b349..d6f79b403da 100644
+index 84ff227e1cb..4fd83830aea 100644
 --- a/dlls/winemapi/Makefile.in
 +++ b/dlls/winemapi/Makefile.in
-@@ -3,4 +3,5 @@ IMPORTS   = shlwapi shell32 mapi32
+@@ -5,4 +5,5 @@ EXTRADLLFLAGS = -mno-cygwin
  
  C_SRCS = \
  	main.c \
@@ -31,10 +31,10 @@ index 813ee42b349..d6f79b403da 100644
 +	sendmail.c \
 +	xdg-email.c
 diff --git a/dlls/winemapi/sendmail.c b/dlls/winemapi/sendmail.c
-index cfb27e55c95..d5625686e9e 100644
+index ca1b6c59df1..e288837a33d 100644
 --- a/dlls/winemapi/sendmail.c
 +++ b/dlls/winemapi/sendmail.c
-@@ -37,6 +37,8 @@
+@@ -34,6 +34,8 @@
  #include "winternl.h"
  #include "wine/debug.h"
  
@@ -43,7 +43,7 @@ index cfb27e55c95..d5625686e9e 100644
  WINE_DEFAULT_DEBUG_CHANNEL(winemapi);
  
  /* Escapes a string for use in mailto: URL */
-@@ -71,23 +73,12 @@ static char *escape_string(char *in, char *empty_string)
+@@ -68,23 +70,12 @@ static char *escape_string(char *in, char *empty_string)
  }
  
  /**************************************************************************
@@ -70,7 +70,7 @@ index cfb27e55c95..d5625686e9e 100644
      lpMapiMessage message, FLAGS flags, ULONG reserved)
  {
      ULONG ret = MAPI_E_FAILURE;
-@@ -292,6 +283,35 @@ exit:
+@@ -289,6 +280,35 @@ exit:
      return ret;
  }
  
@@ -141,10 +141,10 @@ index 00000000000..a8bb8c5e075
 +#endif /* __WINEMAPI_PRIVATE_INCLUDED__ */
 diff --git a/dlls/winemapi/xdg-email.c b/dlls/winemapi/xdg-email.c
 new file mode 100644
-index 00000000000..6b420663a26
+index 00000000000..08a9b49cc7f
 --- /dev/null
 +++ b/dlls/winemapi/xdg-email.c
-@@ -0,0 +1,246 @@
+@@ -0,0 +1,241 @@
 +/*
 + * MAPISendMail implementation for xdg-email
 + *
@@ -165,9 +165,6 @@ index 00000000000..6b420663a26
 + * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 + */
 +
-+#include "config.h"
-+#include "wine/port.h"
-+
 +#include <stdarg.h>
 +
 +#define COBJMACROS
@@ -177,11 +174,9 @@ index 00000000000..6b420663a26
 +#include "winerror.h"
 +#include "winnls.h"
 +#include "mapi.h"
++#include "process.h"
 +#include "wine/heap.h"
 +#include "wine/debug.h"
-+#ifdef HAVE_UNISTD_H
-+#include <unistd.h>
-+#endif
 +
 +#include "winemapi_private.h"
 +
@@ -392,5 +387,5 @@ index 00000000000..6b420663a26
 +    return ret;
 +}
 -- 
-2.20.1
+2.17.1
 

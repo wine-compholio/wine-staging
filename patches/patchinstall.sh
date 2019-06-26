@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "887a57fadd00b39b266b421fe1a04ab09e0d917d"
+	echo "6e9746158030c4a8f876bf411e598e2b42ff1032"
 }
 
 # Show version information
@@ -347,7 +347,6 @@ patch_enable_all ()
 	enable_winex11_drv_Query_server_position="$1"
 	enable_winex11_drv_mouse_coorrds="$1"
 	enable_wininet_Cleanup="$1"
-	enable_wininet_Http_Decoding="$1"
 	enable_winmm_Delay_Import_Depends="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintab32_improvements="$1"
@@ -1164,9 +1163,6 @@ patch_enable ()
 			;;
 		wininet-Cleanup)
 			enable_wininet_Cleanup="$2"
-			;;
-		wininet-Http_Decoding)
-			enable_wininet_Http_Decoding="$2"
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
@@ -2102,8 +2098,8 @@ fi
 # |   *	[#25834] Implement advapi32.CreateRestrictedToken
 # |
 # | Modified files:
-# |   *	dlls/advapi32/security.c, dlls/advapi32/tests/security.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/winnt.h,
-# | 	include/winternl.h, server/process.c, server/protocol.def, server/security.h, server/token.c
+# |   *	dlls/kernelbase/security.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/winnt.h, include/winternl.h,
+# | 	server/process.c, server/protocol.def, server/security.h, server/token.c
 # |
 if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
 	patch_apply advapi32-CreateRestrictedToken/0001-ntdll-Implement-NtFilterToken.patch
@@ -7012,21 +7008,6 @@ if test "$enable_wininet_Cleanup" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "wininet/tests: Check cookie behaviour when overriding host.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wininet: Strip filename if no path is set in cookie.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wininet: Replacing header fields should fail if they do not exist yet.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wininet-Http_Decoding
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42374] Allow to set INTERNET_OPTION_HTTP_DECODING on wininet sessions and connections
-# |
-# | Modified files:
-# |   *	dlls/wininet/http.c, dlls/wininet/internet.c, dlls/wininet/internet.h, dlls/wininet/tests/http.c
-# |
-if test "$enable_wininet_Http_Decoding" -eq 1; then
-	patch_apply wininet-Http_Decoding/0001-wininet-Allow-to-set-INTERNET_OPTION_HTTP_DECODING-o.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wininet: Allow to set INTERNET_OPTION_HTTP_DECODING on sessions and connections.", 1 },';
 	) >> "$patchlist"
 fi
 

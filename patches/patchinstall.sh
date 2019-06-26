@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d83b71ebfdfe83704c313d7c11e8c87c9a8b0419"
+	echo "887a57fadd00b39b266b421fe1a04ab09e0d917d"
 }
 
 # Show version information
@@ -102,7 +102,6 @@ patch_enable_all ()
 	enable_crypt32_MS_Root_Certs="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
-	enable_d3d9_DesktopWindow="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
@@ -430,9 +429,6 @@ patch_enable ()
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
-			;;
-		d3d9-DesktopWindow)
-			enable_d3d9_DesktopWindow="$2"
 			;;
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
@@ -2576,21 +2572,6 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3d9-DesktopWindow
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18490] Allow to set pixel format for desktop window
-# |
-# | Modified files:
-# |   *	dlls/d3d10_1/tests/d3d10_1.c, dlls/d3d11/tests/d3d11.c, dlls/d3d9/tests/device.c, dlls/winex11.drv/opengl.c
-# |
-if test "$enable_d3d9_DesktopWindow" -eq 1; then
-	patch_apply d3d9-DesktopWindow/0001-winex11.drv-Allow-changing-the-opengl-pixel-format-o.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow changing the opengl pixel format on the desktop window.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3d9-Tests
 # |
 # | Modified files:
@@ -3871,13 +3852,11 @@ fi
 # |   *	[#41258] Return a more reasonable display DeviceID
 # |
 # | Modified files:
-# |   *	dlls/gdi32/driver.c, dlls/winemac.drv/display.c
+# |   *	dlls/winemac.drv/display.c
 # |
 if test "$enable_gdi32_MultiMonitor" -eq 1; then
-	patch_apply gdi32-MultiMonitor/0001-gdi32-Also-accept-.-DISPLAY-n-devices-names-with-n-o.patch
 	patch_apply gdi32-MultiMonitor/0004-winemac-Make-GetMonitorInfo-give-a-different-device-.patch
 	(
-		printf '%s\n' '+    { "Ken Thomases", "gdi32: Also accept \"\\\\.\\DISPLAY<n>\" devices names with <n> other than 1 as display devices.", 1 },';
 		printf '%s\n' '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\.\\DISPLAY<n>) to each monitor.", 1 },';
 	) >> "$patchlist"
 fi
@@ -6178,11 +6157,13 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0003-uxtheme-Correctly-render-buttons-with-GTK-3.14.0.patch
 	patch_apply uxtheme-GTK_Theming/0004-uxtheme-Reset-FPU-flags-before-calling-GTK3-function.patch
 	patch_apply uxtheme-GTK_Theming/0005-uxtheme-Fix-some-incorrect-error-codes.patch
+	patch_apply uxtheme-GTK_Theming/0006-uxtheme-Dont-build-with-msvcrt.patch
 	(
 		printf '%s\n' '+    { "Ivan Akulinchev", "uxtheme: Initial implementation of GTK backend.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Correctly render buttons with GTK >= 3.14.0.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uxtheme: Reset FPU flags before calling GTK3 functions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Fix some incorrect error codes.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uxtheme: Dont build with msvcrt.", 1 },';
 	) >> "$patchlist"
 fi
 

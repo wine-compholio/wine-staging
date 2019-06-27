@@ -1,4 +1,4 @@
-From 54e5b6327bac8709f264ef8effe6b629aa264a8a Mon Sep 17 00:00:00 2001
+From eeaa9812622dc94fd6eb73c4b2a11081c5e8fabf Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 13:17:01 +0300
 Subject: [PATCH] wined3d: Use UBO for vertex shader float constants if
@@ -17,7 +17,7 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  8 files changed, 149 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/d3d8/directx.c b/dlls/d3d8/directx.c
-index f78ff3e5af..847cfd17bf 100644
+index f78ff3e5af7..847cfd17bf6 100644
 --- a/dlls/d3d8/directx.c
 +++ b/dlls/d3d8/directx.c
 @@ -420,7 +420,7 @@ BOOL d3d8_init(struct d3d8 *d3d8)
@@ -30,7 +30,7 @@ index f78ff3e5af..847cfd17bf 100644
      d3d8->IDirect3D8_iface.lpVtbl = &d3d8_vtbl;
      d3d8->refcount = 1;
 diff --git a/dlls/d3d9/directx.c b/dlls/d3d9/directx.c
-index c507991aaa..7cdf5ddbb9 100644
+index c507991aaa4..7cdf5ddbb9a 100644
 --- a/dlls/d3d9/directx.c
 +++ b/dlls/d3d9/directx.c
 @@ -585,7 +585,7 @@ BOOL d3d9_init(struct d3d9 *d3d9, BOOL extended)
@@ -43,10 +43,10 @@ index c507991aaa..7cdf5ddbb9 100644
      if (!extended)
          flags |= WINED3D_VIDMEM_ACCOUNTING;
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index c8ebe34643..4071ed0f82 100644
+index 98719ce57f7..fe64dcfdf02 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -3122,6 +3122,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
+@@ -3140,6 +3140,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info, struct
              gl_info->limits.uniform_blocks[WINED3D_SHADER_TYPE_VERTEX] = min(gl_max, WINED3D_MAX_CBS);
              TRACE("Max vertex uniform blocks: %u (%d).\n",
                      gl_info->limits.uniform_blocks[WINED3D_SHADER_TYPE_VERTEX], gl_max);
@@ -57,7 +57,7 @@ index c8ebe34643..4071ed0f82 100644
      }
      if (gl_info->supported[ARB_TESSELLATION_SHADER])
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 80e58ccb72..0bc81d07fe 100644
+index 394c6673b2b..8ad76314343 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -138,6 +138,10 @@ struct shader_glsl_priv
@@ -220,15 +220,15 @@ index 80e58ccb72..0bc81d07fe 100644
      for (i = start; i < count + start; ++i)
      {
          update_heap_entry(heap, i, priv->next_constant_version);
-@@ -2141,6 +2222,7 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
-     const struct wined3d_shader_version *version = &reg_maps->shader_version;
+@@ -2142,6 +2223,7 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
      const struct vs_compile_args *vs_args = ctx_priv->cur_vs_args;
      const struct ps_compile_args *ps_args = ctx_priv->cur_ps_args;
-+    struct shader_glsl_priv *priv = context->device->shader_priv;
-     const struct wined3d_gl_info *gl_info = context->gl_info;
+     const struct wined3d_gl_info *gl_info = context_gl->c.gl_info;
++    struct shader_glsl_priv *priv = shader->device->shader_priv;
      const struct wined3d_shader_indexable_temp *idx_temp_reg;
      unsigned int uniform_block_base, uniform_block_count;
-@@ -2161,7 +2243,15 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
+     const struct wined3d_shader_lconst *lconst;
+@@ -2161,7 +2243,15 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
      }
  
      /* Declare the constants (aka uniforms) */
@@ -245,7 +245,7 @@ index 80e58ccb72..0bc81d07fe 100644
      {
          unsigned max_constantsF;
  
-@@ -2226,11 +2316,12 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
+@@ -2226,11 +2316,12 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
              }
              else
              {
@@ -260,7 +260,7 @@ index 80e58ccb72..0bc81d07fe 100644
      }
  
      /* Always declare the full set of constants, the compiler can remove the
-@@ -9815,17 +9906,36 @@ static struct glsl_ffp_fragment_shader *shader_glsl_find_ffp_fragment_shader(str
+@@ -9835,17 +9926,36 @@ static struct glsl_ffp_fragment_shader *shader_glsl_find_ffp_fragment_shader(str
  
  
  static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *gl_info,
@@ -302,7 +302,7 @@ index 80e58ccb72..0bc81d07fe 100644
  
      for (i = 0; i < WINED3D_MAX_CONSTS_I; ++i)
      {
-@@ -10900,6 +11010,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -10920,6 +11030,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
          const struct fragment_pipeline *fragment_pipe)
  {
      SIZE_T stack_size = wined3d_log2i(max(WINED3D_MAX_VS_CONSTS_F, WINED3D_MAX_PS_CONSTS_F)) + 1;
@@ -310,7 +310,7 @@ index 80e58ccb72..0bc81d07fe 100644
      struct fragment_caps fragment_caps;
      void *vertex_priv, *fragment_priv;
      struct shader_glsl_priv *priv;
-@@ -10907,6 +11018,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -10927,6 +11038,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
      if (!(priv = heap_alloc_zero(sizeof(*priv))))
          return E_OUTOFMEMORY;
  
@@ -319,7 +319,7 @@ index 80e58ccb72..0bc81d07fe 100644
      string_buffer_list_init(&priv->string_buffers);
  
      if (!(vertex_priv = vertex_pipe->vp_alloc(&glsl_shader_backend, priv)))
-@@ -10961,6 +11074,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -10981,6 +11094,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
      device->fragment_priv = fragment_priv;
      device->shader_priv = priv;
  
@@ -328,7 +328,7 @@ index 80e58ccb72..0bc81d07fe 100644
      return WINED3D_OK;
  
  fail:
-@@ -10988,6 +11103,13 @@ static void shader_glsl_free(struct wined3d_device *device, struct wined3d_conte
+@@ -11008,6 +11123,13 @@ static void shader_glsl_free(struct wined3d_device *device, struct wined3d_conte
      priv->fragment_pipe->free_private(device, context);
      priv->vertex_pipe->vp_free(device, context);
  
@@ -343,7 +343,7 @@ index 80e58ccb72..0bc81d07fe 100644
      device->shader_priv = NULL;
  }
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index a8fee07c6c..d7fdc9cfdb 100644
+index 52c817ea399..8986d9e9f71 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
 @@ -764,6 +764,8 @@ static BOOL shader_record_register_usage(struct wined3d_shader *shader, struct w
@@ -356,10 +356,10 @@ index a8fee07c6c..d7fdc9cfdb 100644
                  }
              }
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index 06b30ba5e1..4d5b8be65a 100644
+index e3377924363..f12b1c05c6f 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
-@@ -4389,6 +4389,11 @@ static void state_cb(struct wined3d_context *context, const struct wined3d_state
+@@ -4399,6 +4399,11 @@ static void state_cb(struct wined3d_context *context, const struct wined3d_state
      unsigned int i, base, count;
  
      TRACE("context %p, state %p, state_id %#x.\n", context, state, state_id);
@@ -372,10 +372,10 @@ index 06b30ba5e1..4d5b8be65a 100644
      if (STATE_IS_GRAPHICS_CONSTANT_BUFFER(state_id))
          shader_type = state_id - STATE_GRAPHICS_CONSTANT_BUFFER(0);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index b6f4b67018..0f82fc8e49 100644
+index c9bd5283795..b4ea81a7a74 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1065,6 +1065,7 @@ struct wined3d_shader_reg_maps
+@@ -1066,6 +1066,7 @@ struct wined3d_shader_reg_maps
      struct wined3d_shader_tgsm *tgsm;
      SIZE_T tgsm_capacity;
      unsigned int tgsm_count;
@@ -383,7 +383,7 @@ index b6f4b67018..0f82fc8e49 100644
  };
  
  /* Keeps track of details for TEX_M#x# instructions which need to maintain
-@@ -2643,6 +2644,7 @@ struct wined3d_gl_limits
+@@ -2647,6 +2648,7 @@ struct wined3d_gl_limits
      UINT glsl_varyings;
      UINT glsl_vs_float_constants;
      UINT glsl_ps_float_constants;
@@ -392,10 +392,10 @@ index b6f4b67018..0f82fc8e49 100644
      UINT arb_vs_float_constants;
      UINT arb_vs_native_constants;
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index abef3f0ad0..86e324a0df 100644
+index b2cc5b85e18..c52126aca8e 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -1335,6 +1335,7 @@ enum wined3d_shader_type
+@@ -1337,6 +1337,7 @@ enum wined3d_shader_type
  #define WINED3D_NO_PRIMITIVE_RESTART                            0x00000800
  #define WINED3D_LEGACY_CUBEMAP_FILTERING                        0x00001000
  #define WINED3D_NORMALIZED_DEPTH_BIAS                           0x00002000
@@ -404,5 +404,5 @@ index abef3f0ad0..86e324a0df 100644
  #define WINED3D_RESZ_CODE                                       0x7fa05000
  
 -- 
-2.20.1
+2.17.1
 

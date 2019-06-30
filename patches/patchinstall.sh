@@ -289,6 +289,7 @@ patch_enable_all ()
 	enable_user32_Implement_CascadeWindows="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
+	enable_user32_LoadKeyboardLayoutEx="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
@@ -992,6 +993,9 @@ patch_enable ()
 			;;
 		user32-ListBox_Size)
 			enable_user32_ListBox_Size="$2"
+			;;
+		user32-LoadKeyboardLayoutEx)
+			enable_user32_LoadKeyboardLayoutEx="$2"
 			;;
 		user32-MessageBox_WS_EX_TOPMOST)
 			enable_user32_MessageBox_WS_EX_TOPMOST="$2"
@@ -6066,6 +6070,21 @@ if test "$enable_user32_ListBox_Size" -eq 1; then
 	patch_apply user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "user32: Fix calculation of listbox size when horizontal scrollbar is present.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-LoadKeyboardLayoutEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28170] user32: Added LoadKeyboardLayoutEx stub.
+# |
+# | Modified files:
+# |   *	dlls/user32/input.c, dlls/user32/user32.spec
+# |
+if test "$enable_user32_LoadKeyboardLayoutEx" -eq 1; then
+	patch_apply user32-LoadKeyboardLayoutEx/0001-user32-Added-LoadKeyboardLayoutEx-stub.patch
+	(
+		printf '%s\n' '+    { "Austin English", "user32: Added LoadKeyboardLayoutEx stub.", 1 },';
 	) >> "$patchlist"
 fi
 

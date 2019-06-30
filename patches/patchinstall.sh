@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
+	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
@@ -1098,6 +1099,9 @@ patch_enable ()
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
+			;;
+		wined3d-unset-flip-gdi)
+			enable_wined3d_unset_flip_gdi="$2"
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
@@ -6640,6 +6644,21 @@ if test "$enable_wined3d_mesa_texture_download" -eq 1; then
 	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-unset-flip-gdi
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47419] wined3d: Dont set DDSCAPS_FLIP for gdi renderer.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/adapter_gl.c, dlls/wined3d/adapter_vk.c, dlls/wined3d/directx.c
+# |
+if test "$enable_wined3d_unset_flip_gdi" -eq 1; then
+	patch_apply wined3d-unset-flip-gdi/0001-wined3d-Dont-set-DDSCAPS_FLIP-for-gdi-renderer.patch
+	(
+		printf '%s\n' '+    { "Henri Verbeet", "wined3d: Dont set DDSCAPS_FLIP for gdi renderer.", 1 },';
 	) >> "$patchlist"
 fi
 

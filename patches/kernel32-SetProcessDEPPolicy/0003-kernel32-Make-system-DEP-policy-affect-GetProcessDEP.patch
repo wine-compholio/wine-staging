@@ -1,0 +1,43 @@
+From 76e5668f6371a5e3fe8bc524fc25080e375fb680 Mon Sep 17 00:00:00 2001
+From: "Olivier F. R. Dierick" <o.dierick@piezo-forte.be>
+Date: Tue, 19 Apr 2016 07:36:41 +0200
+Subject: [PATCH 3/3] kernel32: Make system DEP policy affect
+ GetProcessDEPPolicy().
+
+---
+ dlls/kernel32/process.c | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 6bf31516ca..2446491b10 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -4629,14 +4629,21 @@ BOOL WINAPI GetProcessDEPPolicy(HANDLE process, LPDWORD flags, PBOOL permanent)
+         if (flags)
+         {
+             *flags = 0;
+-            if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
+-                *flags |= PROCESS_DEP_ENABLE;
+-            if (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION)
+-                *flags |= PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION;
++            if (system_DEP_policy != AlwaysOff)
++            {
++                if (dep_flags & MEM_EXECUTE_OPTION_DISABLE || system_DEP_policy == AlwaysOn)
++                    *flags |= PROCESS_DEP_ENABLE;
++                if (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION)
++                    *flags |= PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION;
++            }
+         }
+ 
+         if (permanent)
++        {
+             *permanent = (dep_flags & MEM_EXECUTE_OPTION_PERMANENT) != 0;
++            if (system_DEP_policy == AlwaysOn || system_DEP_policy == AlwaysOff)
++                *permanent = TRUE;
++        }
+ 
+     }
+     if (status) SetLastError( RtlNtStatusToDosError(status) );
+-- 
+2.17.1
+

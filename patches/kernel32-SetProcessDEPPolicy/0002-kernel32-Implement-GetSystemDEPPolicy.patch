@@ -1,0 +1,100 @@
+From 9e92b5b796193d5de1c342576df7ecc07bc09c7d Mon Sep 17 00:00:00 2001
+From: "Olivier F. R. Dierick" <o.dierick@piezo-forte.be>
+Date: Tue, 19 Apr 2016 07:33:32 +0200
+Subject: [PATCH 2/3] kernel32: Implement GetSystemDEPPolicy().
+
+---
+ dlls/kernel32/process.c | 70 +++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 68 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 7a89207388..6bf31516ca 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -56,6 +56,7 @@
+ #define WIN32_NO_STATUS
+ #include "winternl.h"
+ #include "kernel_private.h"
++#include "winreg.h"
+ #include "psapi.h"
+ #include "wine/exception.h"
+ #include "wine/library.h"
+@@ -4369,8 +4370,73 @@ DWORD WINAPI WTSGetActiveConsoleSessionId(void)
+  */
+ DEP_SYSTEM_POLICY_TYPE WINAPI GetSystemDEPPolicy(void)
+ {
+-    FIXME("stub\n");
+-    return OptIn;
++    char buffer[MAX_PATH+10];
++    DWORD size = sizeof(buffer);
++    HKEY hkey = 0;
++    HKEY appkey = 0;
++    DWORD len, tmpvalue;
++    WINADVAPI LSTATUS   (WINAPI *pRegOpenKeyA)(HKEY,LPCSTR,PHKEY);
++    WINADVAPI LSTATUS   (WINAPI *pRegQueryValueExA)(HKEY,LPCSTR,LPDWORD,LPDWORD,LPBYTE,LPDWORD);
++    WINADVAPI LSTATUS   (WINAPI *pRegCloseKey)(HKEY);
++
++    TRACE("()\n");
++
++    pRegOpenKeyA = (void*)GetProcAddress(GetModuleHandleA("advapi32"), "RegOpenKeyA");
++    pRegQueryValueExA = (void*)GetProcAddress(GetModuleHandleA("advapi32"), "RegQueryValueExA");
++    pRegCloseKey = (void*)GetProcAddress(GetModuleHandleA("advapi32"), "RegCloseKey");
++    if ( !pRegOpenKeyA || !pRegQueryValueExA || !pRegCloseKey ) return OptIn;
++
++    /* @@ Wine registry key: HKCU\Software\Wine\Boot.ini */
++    if ( pRegOpenKeyA( HKEY_CURRENT_USER, "Software\\Wine\\Boot.ini", &hkey ) ) hkey = 0;
++
++    len = GetModuleFileNameA( 0, buffer, MAX_PATH );
++    if (len && len < MAX_PATH)
++    {
++        HKEY tmpkey;
++        /* @@ Wine registry key: HKCU\Software\Wine\AppDefaults\app.exe\Boot.ini */
++        if (!pRegOpenKeyA( HKEY_CURRENT_USER, "Software\\Wine\\AppDefaults", &tmpkey ))
++        {
++            char *p, *appname = buffer;
++            if ((p = strrchr( appname, '/' ))) appname = p + 1;
++            if ((p = strrchr( appname, '\\' ))) appname = p + 1;
++            strcat( appname, "\\Boot.ini" );
++            TRACE("appname = [%s]\n", appname);
++            if (pRegOpenKeyA( tmpkey, appname, &appkey )) appkey = 0;
++            pRegCloseKey( tmpkey );
++        }
++    }
++
++    if (hkey || appkey)
++    {
++        if ((appkey && !pRegQueryValueExA(appkey, "NoExecute", 0, NULL, (BYTE *)buffer, &size)) ||
++            (hkey && !pRegQueryValueExA(hkey, "NoExecute", 0, NULL, (BYTE *)buffer, &size)))
++        {
++            if (!strcmp(buffer,"OptIn"))
++            {
++                TRACE("System DEP policy set to OptIn\n");
++                system_DEP_policy = OptIn;
++            }
++            else if (!strcmp(buffer,"OptOut"))
++            {
++                TRACE("System DEP policy set to OptOut\n");
++                system_DEP_policy = OptIn;
++            }
++            else if (!strcmp(buffer,"AlwaysOn"))
++            {
++                TRACE("System DEP policy set to AlwaysOn\n");
++                system_DEP_policy = AlwaysOn;
++            }
++            else if (!strcmp(buffer,"AlwaysOff"))
++            {
++                TRACE("System DEP policy set to AlwaysOff\n");
++                system_DEP_policy = AlwaysOff;
++            }
++        }
++    }
++
++    if (appkey) pRegCloseKey( appkey );
++    if (hkey) pRegCloseKey( hkey );
++    return system_DEP_policy;
+ }
+ 
+ /**********************************************************************
+-- 
+2.17.1
+

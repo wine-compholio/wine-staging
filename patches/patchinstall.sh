@@ -161,6 +161,7 @@ patch_enable_all ()
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
+	enable_kernel32_SetProcessDEPPolicy="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
@@ -607,6 +608,9 @@ patch_enable ()
 			;;
 		kernel32-SCSI_Sysfs)
 			enable_kernel32_SCSI_Sysfs="$2"
+			;;
+		kernel32-SetProcessDEPPolicy)
+			enable_kernel32_SetProcessDEPPolicy="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -4180,6 +4184,25 @@ if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Convert scsi device type in SCSI_getprocentry.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for reading scsi devices from sysfs.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-SetProcessDEPPolicy
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#24125] kernel32: Implement SetProcessDEPPolicy.
+# |
+# | Modified files:
+# |   *	dlls/kernel32/process.c
+# |
+if test "$enable_kernel32_SetProcessDEPPolicy" -eq 1; then
+	patch_apply kernel32-SetProcessDEPPolicy/0001-kernel32-Implement-SetProcessDEPPolicy.patch
+	patch_apply kernel32-SetProcessDEPPolicy/0002-kernel32-Implement-GetSystemDEPPolicy.patch
+	patch_apply kernel32-SetProcessDEPPolicy/0003-kernel32-Make-system-DEP-policy-affect-GetProcessDEP.patch
+	(
+		printf '%s\n' '+    { "Olivier F. R. Dierick", "kernel32: Implement SetProcessDEPPolicy().", 1 },';
+		printf '%s\n' '+    { "Olivier F. R. Dierick", "kernel32: Implement GetSystemDEPPolicy().", 1 },';
+		printf '%s\n' '+    { "Olivier F. R. Dierick", "kernel32: Make system DEP policy affect GetProcessDEPPolicy().", 1 },';
 	) >> "$patchlist"
 fi
 

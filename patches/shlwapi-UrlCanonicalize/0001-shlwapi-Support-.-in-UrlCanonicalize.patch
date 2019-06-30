@@ -1,0 +1,70 @@
+From d1a351c80c4c8c7133d76ace60271736d5220c01 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Fri, 28 Jun 2019 09:57:31 +1000
+Subject: [PATCH] shlwapi: Support ./ in UrlCanonicalize.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=23166
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ dlls/kernelbase/path.c   | 15 +++++++++++++++
+ dlls/shlwapi/tests/url.c |  4 ++++
+ 2 files changed, 19 insertions(+)
+
+diff --git a/dlls/kernelbase/path.c b/dlls/kernelbase/path.c
+index 82708be544..83922c0278 100644
+--- a/dlls/kernelbase/path.c
++++ b/dlls/kernelbase/path.c
+@@ -3593,6 +3593,7 @@ HRESULT WINAPI UrlCanonicalizeW(const WCHAR *src_url, WCHAR *canonicalized, DWOR
+      *         4   have //  5,3
+      *         5   have 1[+] alnum  6,3
+      *         6   have location (found /) save root location
++     *         7   have ./
+      */
+ 
+     wk1 = url;
+@@ -3619,6 +3620,11 @@ HRESULT WINAPI UrlCanonicalizeW(const WCHAR *src_url, WCHAR *canonicalized, DWOR
+         state = 5;
+         is_file_url = TRUE;
+     }
++    else if (url[0] == '.' && url[1] == '/')
++    {
++        state = 7;
++        is_file_url = TRUE;
++    }
+ 
+     while (*wk1)
+     {
+@@ -3823,6 +3829,15 @@ HRESULT WINAPI UrlCanonicalizeW(const WCHAR *src_url, WCHAR *canonicalized, DWOR
+             }
+             *wk2 = '\0';
+             break;
++        case 7:
++            if (flags & URL_DONT_SIMPLIFY)
++            {
++                state = 3;
++                break;
++            }
++            wk1 += 2;
++            state = 6;
++            break;
+         default:
+             FIXME("how did we get here - state=%d\n", state);
+             heap_free(url_copy);
+diff --git a/dlls/shlwapi/tests/url.c b/dlls/shlwapi/tests/url.c
+index d30737f60a..96635c9836 100644
+--- a/dlls/shlwapi/tests/url.c
++++ b/dlls/shlwapi/tests/url.c
+@@ -204,6 +204,10 @@ static const TEST_URL_CANONICALIZE TEST_CANONICALIZE[] = {
+     {"///A/../B", URL_WININET_COMPATIBILITY, S_OK, "///B", FALSE},
+     {"A", 0, S_OK, "A", FALSE},
+     {"../A", 0, S_OK, "../A", FALSE},
++    {"./A", 0, S_OK, "A", FALSE},
++    {"./A/./B", 0, S_OK, "A/B", FALSE},
++    {"./A", URL_DONT_SIMPLIFY, S_OK, "./A", FALSE},
++    {"A/./B", 0, S_OK, "A/B", TRUE},
+     {"A/../B", 0, S_OK, "B", TRUE},
+     {"/uri-res/N2R?urn:sha1:B3K", URL_DONT_ESCAPE_EXTRA_INFO | URL_WININET_COMPATIBILITY /*0x82000000*/, S_OK, "/uri-res/N2R?urn:sha1:B3K", FALSE} /*LimeWire online installer calls this*/,
+     {"http:www.winehq.org/dir/../index.html", 0, S_OK, "http:www.winehq.org/index.html"},
+-- 
+2.17.1
+

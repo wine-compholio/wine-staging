@@ -274,6 +274,7 @@ patch_enable_all ()
 	enable_shell32_UnixFS="$1"
 	enable_shlwapi_AssocGetPerceivedType="$1"
 	enable_shlwapi_SHAddDataBlock="$1"
+	enable_shlwapi_UrlCanonicalize="$1"
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
@@ -944,6 +945,9 @@ patch_enable ()
 			;;
 		shlwapi-SHAddDataBlock)
 			enable_shlwapi_SHAddDataBlock="$2"
+			;;
+		shlwapi-UrlCanonicalize)
+			enable_shlwapi_UrlCanonicalize="$2"
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
@@ -5758,6 +5762,21 @@ if test "$enable_shlwapi_SHAddDataBlock" -eq 1; then
 	patch_apply shlwapi-SHAddDataBlock/0001-shlwapi-Fix-the-return-value-of-SHAddDataBlock.patch
 	(
 		printf '%s\n' '+    { "Hermès BÉLUSCA-MAÏTO", "shlwapi: Fix the return value of SHAddDataBlock.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset shlwapi-UrlCanonicalize
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23166] shlwapi: Support ./ in UrlCanonicalize.
+# |
+# | Modified files:
+# |   *	dlls/kernelbase/path.c, dlls/shlwapi/tests/url.c
+# |
+if test "$enable_shlwapi_UrlCanonicalize" -eq 1; then
+	patch_apply shlwapi-UrlCanonicalize/0001-shlwapi-Support-.-in-UrlCanonicalize.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "shlwapi: Support ./ in UrlCanonicalize.", 1 },';
 	) >> "$patchlist"
 fi
 

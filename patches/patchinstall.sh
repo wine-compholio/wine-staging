@@ -166,6 +166,7 @@ patch_enable_all ()
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
+	enable_loader_KeyboardLayouts="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -624,6 +625,9 @@ patch_enable ()
 			;;
 		libs-Unicode_Collation)
 			enable_libs_Unicode_Collation="$2"
+			;;
+		loader-KeyboardLayouts)
+			enable_loader_KeyboardLayouts="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4265,6 +4269,21 @@ if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset loader-KeyboardLayouts
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47439] loader: Add Keyboard Layouts registry enteries.
+# |
+# | Modified files:
+# |   *	loader/wine.inf.in
+# |
+if test "$enable_loader_KeyboardLayouts" -eq 1; then
+	patch_apply loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
 	) >> "$patchlist"
 fi
 

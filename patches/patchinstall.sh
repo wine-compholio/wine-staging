@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "95be042be3f116db38eb4a255c2667a6b46fcc1e"
+	echo "436fb03a87ae6dcbbbe149e401942b7eb8369f51"
 }
 
 # Show version information
@@ -7347,20 +7347,25 @@ fi
 # | 	dlls/xaudio2_6/Makefile.in, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/compat.c, dlls/xaudio2_7/tests/xaudio2.c,
 # | 	dlls/xaudio2_7/x3daudio.c, dlls/xaudio2_7/xapo.c, dlls/xaudio2_7/xapofx.c, dlls/xaudio2_7/xaudio_allocator.c,
 # | 	dlls/xaudio2_7/xaudio_classes.idl, dlls/xaudio2_7/xaudio_dll.c, dlls/xaudio2_7/xaudio_private.h,
-# | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_9/Makefile.in, include/config.h.in, include/xapo.idl, include/xaudio2.idl
+# | 	dlls/xaudio2_8/Makefile.in, dlls/xaudio2_8/xaudio2_8.spec, dlls/xaudio2_9/Makefile.in, dlls/xaudio2_9/xaudio2_9.spec,
+# | 	include/config.h.in, include/xapo.idl, include/xaudio2.idl
 # |
 if test "$enable_xaudio2_revert" -eq 1; then
-	patch_apply xaudio2-revert/0001-Revert-xaudio2-Fix-some-TRACE-calls-erroneously-mark.patch
-	patch_apply xaudio2-revert/0002-Revert-xaudio2-Use-new-features-from-FAudio-19.06-bu.patch
-	patch_apply xaudio2-revert/0003-Revert-xaudio2-Fix-32-bit-build.patch
-	patch_apply xaudio2-revert/0004-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
-	patch_apply xaudio2-revert/0005-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
-	patch_apply xaudio2-revert/0006-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
-	patch_apply xaudio2-revert/0007-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
-	patch_apply xaudio2-revert/0008-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
-	patch_apply xaudio2-revert/0009-Revert-xaudio2-Rewrite-to-use-FAudio.patch
-	patch_apply xaudio2-revert/0010-xaudio2_7-Fix-build.patch
+	patch_apply xaudio2-revert/0001-Revert-xaudio2-Export-functions-by-ordinal.patch
+	patch_apply xaudio2-revert/0002-Revert-xaudio2-Add-TRACE-functions-to-CreateAudioRev.patch
+	patch_apply xaudio2-revert/0003-Revert-xaudio2-Fix-some-TRACE-calls-erroneously-mark.patch
+	patch_apply xaudio2-revert/0004-Revert-xaudio2-Use-new-features-from-FAudio-19.06-bu.patch
+	patch_apply xaudio2-revert/0005-Revert-xaudio2-Fix-32-bit-build.patch
+	patch_apply xaudio2-revert/0006-Revert-xaudio2_7-tests-Remove-redundant-not-NULL-che.patch
+	patch_apply xaudio2-revert/0007-Revert-xaudio2_7-Add-a-trailing-n-to-an-ERR-message.patch
+	patch_apply xaudio2-revert/0008-Revert-xaudio2-IXAPO-Process-out-parameter-should-no.patch
+	patch_apply xaudio2-revert/0009-Revert-xaudio2-IXAudio23-needs-its-own-interface-for.patch
+	patch_apply xaudio2-revert/0010-Revert-xaudio2-Fix-uninitialized-variable-access-Val.patch
+	patch_apply xaudio2-revert/0011-Revert-xaudio2-Rewrite-to-use-FAudio.patch
+	patch_apply xaudio2-revert/0012-xaudio2_7-Fix-build.patch
 	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Export functions by ordinal.\".", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Add TRACE functions to CreateAudioReverb/CreateAudioVolumeMeter.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix some TRACE calls erroneously marked as stubs.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Use new features from FAudio 19.06 (but keep compatibility for <=19.05).\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"xaudio2: Fix 32-bit build.\".", 1 },';

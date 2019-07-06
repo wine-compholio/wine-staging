@@ -1,4 +1,4 @@
-From 216028748c99e8ea03c913b7885e2e97c6c0fbca Mon Sep 17 00:00:00 2001
+From 241237ce6d96ac33915e002518b550d41baaf413 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Fri, 15 Jun 2018 14:12:22 -0500
 Subject: [PATCH] server, ntdll: Implement alertable waits.
@@ -16,7 +16,7 @@ We do this quite simply by waiting on an extra eventfd descriptor, which the ser
  8 files changed, 121 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index 119a36f36..8a41f6961 100644
+index 119a36f3611..8a41f6961f9 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -684,19 +684,43 @@ static int do_poll( struct pollfd *fds, nfds_t nfds, ULONGLONG *end )
@@ -196,10 +196,10 @@ index 119a36f36..8a41f6961 100644
  
  NTSTATUS esync_signal_and_wait( HANDLE signal, HANDLE wait, BOOLEAN alertable,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 951c9b7f9..5574e24fd 100644
+index 31714f90516..009dd33ede0 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -241,6 +241,7 @@ struct ntdll_thread_data
+@@ -239,6 +239,7 @@ struct ntdll_thread_data
  {
      struct debug_info *debug_info;    /* info for debugstr functions */
      int                esync_queue_fd;/* fd to wait on for driver events */
@@ -208,10 +208,10 @@ index 951c9b7f9..5574e24fd 100644
      int                request_fd;    /* fd for sending server requests */
      int                reply_fd;      /* fd for receiving server replies */
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 1d55162a6..dd553a864 100644
+index 95c175aa7fe..711505242c0 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -319,6 +319,7 @@ void thread_init(void)
+@@ -328,6 +328,7 @@ void thread_init(void)
      thread_data->wait_fd[0] = -1;
      thread_data->wait_fd[1] = -1;
      thread_data->esync_queue_fd = -1;
@@ -219,7 +219,7 @@ index 1d55162a6..dd553a864 100644
  
      signal_init_thread( teb );
      virtual_init_threading();
-@@ -691,6 +692,7 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT
+@@ -706,6 +707,7 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
      thread_data->esync_queue_fd = -1;
@@ -228,7 +228,7 @@ index 1d55162a6..dd553a864 100644
      pthread_attr_init( &pthread_attr );
      pthread_attr_setstack( &pthread_attr, teb->DeallocationStack,
 diff --git a/server/esync.c b/server/esync.c
-index 5ef4dd282..4fb42e6f9 100644
+index 5ef4dd282ee..4fb42e6f9d2 100644
 --- a/server/esync.c
 +++ b/server/esync.c
 @@ -247,19 +247,25 @@ int esync_create_fd( int initval, int flags )
@@ -272,7 +272,7 @@ index 5ef4dd282..4fb42e6f9 100644
 +    send_client_fd( current->process, current->esync_apc_fd, current->id );
 +}
 diff --git a/server/esync.h b/server/esync.h
-index aeb58c546..cea025d93 100644
+index aeb58c5469c..cea025d9308 100644
 --- a/server/esync.h
 +++ b/server/esync.h
 @@ -21,6 +21,7 @@
@@ -284,10 +284,10 @@ index aeb58c546..cea025d93 100644
  void esync_clear( int fd );
  
 diff --git a/server/protocol.def b/server/protocol.def
-index 4002ee642..ce165b71b 100644
+index 65a6696e38f..d577edc0e02 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4032,6 +4032,11 @@ struct handle_info
+@@ -4054,6 +4054,11 @@ struct handle_info
      unsigned int shm_idx;       /* this object's index into the shm section */
  @END
  
@@ -300,7 +300,7 @@ index 4002ee642..ce165b71b 100644
  {
      ESYNC_SEMAPHORE = 1,
 diff --git a/server/thread.c b/server/thread.c
-index 7c8ff1d5d..0e02630b9 100644
+index 9a014b15459..4b4e342243c 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -188,6 +188,7 @@ static inline void init_thread_structure( struct thread *thread )
@@ -310,8 +310,8 @@ index 7c8ff1d5d..0e02630b9 100644
 +    thread->esync_apc_fd    = -1;
      thread->debug_ctx       = NULL;
      thread->debug_event     = NULL;
-     thread->debug_break     = 0;
-@@ -297,7 +298,10 @@ struct thread *create_thread( int fd, struct process *process, const struct secu
+     thread->system_regs     = 0;
+@@ -296,7 +297,10 @@ struct thread *create_thread( int fd, struct process *process, const struct secu
      }
  
      if (do_esync())
@@ -322,7 +322,7 @@ index 7c8ff1d5d..0e02630b9 100644
  
      set_fd_events( thread->request_fd, POLLIN );  /* start listening to events */
      add_process_thread( thread->process, thread );
-@@ -1052,8 +1056,13 @@ static int queue_apc( struct process *process, struct thread *thread, struct thr
+@@ -1051,8 +1055,13 @@ static int queue_apc( struct process *process, struct thread *thread, struct thr
      grab_object( apc );
      list_add_tail( queue, &apc->entry );
      if (!list_prev( queue, &apc->entry ))  /* first one */
@@ -336,7 +336,7 @@ index 7c8ff1d5d..0e02630b9 100644
      return 1;
  }
  
-@@ -1100,6 +1109,10 @@ static struct thread_apc *thread_dequeue_apc( struct thread *thread, int system_
+@@ -1099,6 +1108,10 @@ static struct thread_apc *thread_dequeue_apc( struct thread *thread, int system_
          apc = LIST_ENTRY( ptr, struct thread_apc, entry );
          list_remove( ptr );
      }
@@ -348,7 +348,7 @@ index 7c8ff1d5d..0e02630b9 100644
  }
  
 diff --git a/server/thread.h b/server/thread.h
-index 46064cb4a..36ccb9207 100644
+index 29bf6b51359..620f8aa9c81 100644
 --- a/server/thread.h
 +++ b/server/thread.h
 @@ -55,6 +55,7 @@ struct thread
@@ -358,7 +358,7 @@ index 46064cb4a..36ccb9207 100644
 +    int                    esync_apc_fd;  /* esync apc fd (signalled when APCs are present) */
      struct debug_ctx      *debug_ctx;     /* debugger context if this thread is a debugger */
      struct debug_event    *debug_event;   /* debug event being sent to debugger */
-     int                    debug_break;   /* debug breakpoint pending? */
+     unsigned int           system_regs;   /* which system regs have been set */
 -- 
-2.21.0
+2.20.1
 

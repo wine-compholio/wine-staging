@@ -1,14 +1,14 @@
-From b83937f062380afb686fe503fe72c0d96a9843f4 Mon Sep 17 00:00:00 2001
+From 18a06bed97bbc5a3821d91d112826bd0cf09daf8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 3 Mar 2016 04:52:35 +0100
-Subject: setupapi: Rewrite DiskSpaceList logic using lists.
+Subject: [PATCH] setupapi: Rewrite DiskSpaceList logic using lists.
 
 ---
- dlls/setupapi/diskspace.c | 184 +++++++++++++++++++++++++---------------------
- 1 file changed, 102 insertions(+), 82 deletions(-)
+ dlls/setupapi/diskspace.c | 183 +++++++++++++++++++++-----------------
+ 1 file changed, 101 insertions(+), 82 deletions(-)
 
 diff --git a/dlls/setupapi/diskspace.c b/dlls/setupapi/diskspace.c
-index 1ca45f9..7c33542 100644
+index f5e79d5327..4f047dd2b5 100644
 --- a/dlls/setupapi/diskspace.c
 +++ b/dlls/setupapi/diskspace.c
 @@ -1,6 +1,7 @@
@@ -19,11 +19,10 @@ index 1ca45f9..7c33542 100644
   * Copyright 2004 CodeWeavers (Aric Stewart)
   *
   * This library is free software; you can redistribute it and/or
-@@ -27,69 +28,51 @@
+@@ -27,69 +28,50 @@
  #include "winnls.h"
  #include "winreg.h"
  #include "setupapi.h"
-+#include "wine/unicode.h"
 +#include "wine/list.h"
  #include "wine/debug.h"
 +#include "setupapi_private.h"
@@ -114,7 +113,7 @@ index 1ca45f9..7c33542 100644
      return list;
  }
  
-@@ -105,32 +88,58 @@ HDSKSPC WINAPI SetupCreateDiskSpaceListA(PVOID Reserved1, DWORD Reserved2, UINT
+@@ -105,32 +87,58 @@ HDSKSPC WINAPI SetupCreateDiskSpaceListA(PVOID Reserved1, DWORD Reserved2, UINT
  /***********************************************************************
   *		SetupDuplicateDiskSpaceListW  (SETUPAPI.@)
   */
@@ -179,7 +178,7 @@ index 1ca45f9..7c33542 100644
  }
  
  /***********************************************************************
-@@ -155,55 +164,51 @@ BOOL WINAPI SetupAddInstallSectionToDiskSpaceListA(HDSKSPC DiskSpace,
+@@ -155,55 +163,51 @@ BOOL WINAPI SetupAddInstallSectionToDiskSpaceListA(HDSKSPC DiskSpace,
  /***********************************************************************
  *		SetupQuerySpaceRequiredOnDriveW  (SETUPAPI.@)
  */
@@ -231,11 +230,11 @@ index 1ca45f9..7c33542 100644
 -    TRACE("Looking for drive %s\n",debugstr_w(driveW));
 - 
 -    for (i = 0; i < list->dwDriveCount; i++)
-+    if (tolowerW(drivespec[0]) < 'a' || tolowerW(drivespec[0]) > 'z' ||
++    if (towlower(drivespec[0]) < 'a' || towlower(drivespec[0]) > 'z' ||
 +        drivespec[1] != ':' || drivespec[2] != 0)
      {
 -        TRACE("checking drive %s\n",debugstr_w(list->Drives[i].lpzName));
--        if (lstrcmpW(driveW,list->Drives[i].lpzName)==0)
+-        if (wcscmp(driveW,list->Drives[i].lpzName)==0)
 -        {
 -            rc = TRUE;
 -            *SpaceRequired = list->Drives[i].dwWantedSpace;
@@ -249,7 +248,7 @@ index 1ca45f9..7c33542 100644
 -    HeapFree(GetProcessHeap(), 0, driveW);
 +    LIST_FOR_EACH_ENTRY(file, &list->files, struct file_entry, entry)
 +    {
-+        if (tolowerW(file->path[0]) == tolowerW(drivespec[0]) &&
++        if (towlower(file->path[0]) == towlower(drivespec[0]) &&
 +            file->path[1] == ':' && file->path[2] == '\\')
 +            sum += file->size;
 +    }
@@ -261,7 +260,7 @@ index 1ca45f9..7c33542 100644
  }
  
  /***********************************************************************
-@@ -253,10 +258,25 @@ BOOL WINAPI SetupQuerySpaceRequiredOnDriveA(HDSKSPC DiskSpace,
+@@ -253,10 +257,25 @@ BOOL WINAPI SetupQuerySpaceRequiredOnDriveA(HDSKSPC DiskSpace,
  /***********************************************************************
  *		SetupDestroyDiskSpaceList  (SETUPAPI.@)
  */
@@ -291,5 +290,5 @@ index 1ca45f9..7c33542 100644
  }
  
 -- 
-2.7.1
+2.20.1
 

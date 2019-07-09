@@ -4351,12 +4351,14 @@ fi
 # |   *	[#47439] loader: Add Keyboard Layouts registry enteries.
 # |
 # | Modified files:
-# |   *	loader/wine.inf.in
+# |   *	dlls/user32/driver.c, dlls/user32/tests/input.c, loader/wine.inf.in
 # |
 if test "$enable_loader_KeyboardLayouts" -eq 1; then
 	patch_apply loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
+	patch_apply loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Improve GetKeyboardLayoutList.", 1 },';
 	) >> "$patchlist"
 fi
 

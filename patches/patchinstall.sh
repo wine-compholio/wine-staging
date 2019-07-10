@@ -168,6 +168,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_KeyboardLayouts="$1"
+	enable_mailing_list_patches="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -633,6 +634,9 @@ patch_enable ()
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
+			;;
+		mailing-list-patches)
+			enable_mailing_list_patches="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -2033,6 +2037,13 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_advapi32_CreateRestrictedToken=1
 fi
 
+if test "$enable_Compiler_Warnings" -eq 1; then
+	if test "$enable_mailing_list_patches" -gt 1; then
+		abort "Patchset mailing-list-patches disabled, but Compiler_Warnings depends on that."
+	fi
+	enable_mailing_list_patches=1
+fi
+
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2049,7 +2060,72 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
+# Patchset mailing-list-patches
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
+# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/d3drm/tests/d3drm.c, dlls/d3drm/viewport.c,
+# | 	dlls/dxgi/swapchain.c, dlls/dxgi/tests/dxgi.c, dlls/evr/Makefile.in, dlls/evr/evr.c, dlls/evr/main.c,
+# | 	dlls/gdi32/freetype.c, dlls/ntdll/directory.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h,
+# | 	dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c,
+# | 	dlls/strmbase/strmbase_private.h, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h,
+# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
+# | 	include/d3drm.h, include/d3drmobj.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
+# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# |
+if test "$enable_mailing_list_patches" -eq 1; then
+	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
+	patch_apply mailing-list-patches/0002-winebus.sys-Implement-AddDevice.patch
+	patch_apply mailing-list-patches/0003-wineboot-Create-a-root-enumerated-device-object-for-.patch
+	patch_apply mailing-list-patches/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
+	patch_apply mailing-list-patches/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
+	patch_apply mailing-list-patches/0006-cryptext-Implement-CryptExtOpenCER.patch
+	patch_apply mailing-list-patches/0007-dxgi-tests-Test-output-after-using-Alt-Enter-to-swit.patch
+	patch_apply mailing-list-patches/0008-dxgi-Fix-possible-null-output-from-d3d11_swapchain_G.patch
+	patch_apply mailing-list-patches/0009-d3drm-Check-for-NULL-pointer-in-d3drm_viewport2_GetD.patch
+	patch_apply mailing-list-patches/0010-d3drm-Check-for-NULL-pointer-in-d3drm_viewport2_GetD.patch
+	patch_apply mailing-list-patches/0011-d3drm-Return-error-if-setting-viewport-field-of-view.patch
+	patch_apply mailing-list-patches/0012-strmbase-Remove-unused-wine-unicode.h-import.patch
+	patch_apply mailing-list-patches/0013-qedit-Build-with-msvcrt.patch
+	patch_apply mailing-list-patches/0014-qedit-Share-source-with-strmbase.patch
+	patch_apply mailing-list-patches/0015-evr-Build-with-msvcrt.patch
+	patch_apply mailing-list-patches/0016-evr-Share-source-with-strmbase.patch
+	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
+	patch_apply mailing-list-patches/0018-d3drm-Correct-paramater-count-of-several-interface-d.patch
+	patch_apply mailing-list-patches/0019-shell32-add-SHMultiFileProperties-stub.patch
+	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
+	patch_apply mailing-list-patches/0021-Define-AT_NO_AUTOMOUNT-if-needed.patch
+	patch_apply mailing-list-patches/0022-gdi32-Use-the-correct-type-for-the-final-parameter-o.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "wineboot: Create a root-enumerated device object for winebus.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "cryptext: Implement CryptExtOpenCER.", 1 },';
+		printf '%s\n' '+    { "Zhiyi Zhang", "dxgi/tests: Test output after using Alt+Enter to switch fullscreen.", 1 },';
+		printf '%s\n' '+    { "Zhiyi Zhang", "dxgi: Fix possible null output from d3d11_swapchain_GetFullscreenState.", 1 },';
+		printf '%s\n' '+    { "Jeff Smith", "d3drm: Check for NULL pointer in d3drm_viewport2_GetDevice().", 1 },';
+		printf '%s\n' '+    { "Jeff Smith", "d3drm: Check for NULL pointer in d3drm_viewport2_GetDirect3DViewport().", 1 },';
+		printf '%s\n' '+    { "Jeff Smith", "d3drm: Return error if setting viewport field-of-view to zero or negative value.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "strmbase: Remove unused wine/unicode.h import.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "qedit: Build with msvcrt.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "qedit: Share source with strmbase.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "evr: Build with msvcrt.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "evr: Share source with strmbase.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
+		printf '%s\n' '+    { "Jeff Smith", "d3drm: Correct paramater count of several interface defines.", 1 },';
+		printf '%s\n' '+    { "Austin English", "shell32: Add SHMultiFileProperties stub.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "Define AT_NO_AUTOMOUNT if needed.", 1 },';
+		printf '%s\n' '+    { "Huw Davies", "gdi32: Use the correct type for the final parameter of FSOpenResourceFile().", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset Compiler_Warnings
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	mailing-list-patches
 # |
 # | Modified files:
 # |   *	dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/dc_render_target.c, dlls/d2d1/geometry.c,
@@ -6503,7 +6579,7 @@ fi
 # |   *	[#17823] Assign a drive serial number during prefix creation/update
 # |
 # | Modified files:
-# |   *	programs/wineboot/wineboot.c
+# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
 # |
 if test "$enable_wineboot_DriveSerial" -eq 1; then
 	patch_apply wineboot-DriveSerial/0001-wineboot-Assign-a-drive-serial-number-during-prefix-.patch
@@ -6551,7 +6627,7 @@ fi
 # |   *	[#42024] Create ProxyEnable key on wineprefix update
 # |
 # | Modified files:
-# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# |   *	programs/wineboot/wineboot.c
 # |
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch

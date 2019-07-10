@@ -1,0 +1,85 @@
+From cf2328c46895754b40bf6017d2c300f7a153d0c4 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Thu, 27 Jun 2019 22:30:16 -0500
+Subject: [PATCH] winebus.sys: Initialize and teardown the HID backends while
+ the bus FDO is still extant.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/winebus.sys/main.c | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/winebus.sys/main.c b/dlls/winebus.sys/main.c
+index d9ceb83760..b96e38c538 100644
+--- a/dlls/winebus.sys/main.c
++++ b/dlls/winebus.sys/main.c
+@@ -475,16 +475,31 @@ static NTSTATUS handle_IRP_MN_QUERY_ID(DEVICE_OBJECT *device, IRP *irp)
+ 
+ static NTSTATUS fdo_pnp_dispatch(DEVICE_OBJECT *device, IRP *irp)
+ {
++    static const WCHAR SDL_enabledW[] = {'E','n','a','b','l','e',' ','S','D','L',0};
++    static const UNICODE_STRING SDL_enabled = {sizeof(SDL_enabledW) - sizeof(WCHAR), sizeof(SDL_enabledW), (WCHAR*)SDL_enabledW};
+     IO_STACK_LOCATION *irpsp = IoGetCurrentIrpStackLocation(irp);
+     NTSTATUS ret;
+ 
+     switch (irpsp->MinorFunction)
+     {
+     case IRP_MN_START_DEVICE:
++        if (check_bus_option(&SDL_enabled, 1))
++        {
++            if (sdl_driver_init() == STATUS_SUCCESS)
++                return STATUS_SUCCESS;
++        }
++        udev_driver_init();
++        iohid_driver_init();
++        irp->IoStatus.u.Status = STATUS_SUCCESS;
++        break;
+     case IRP_MN_SURPRISE_REMOVAL:
+         irp->IoStatus.u.Status = STATUS_SUCCESS;
+         break;
+     case IRP_MN_REMOVE_DEVICE:
++        udev_driver_unload();
++        iohid_driver_unload();
++        sdl_driver_unload();
++
+         irp->IoStatus.u.Status = STATUS_SUCCESS;
+         IoSkipCurrentIrpStackLocation(irp);
+         ret = IoCallDriver(bus_pdo, irp);
+@@ -829,9 +844,6 @@ static NTSTATUS WINAPI driver_add_device(DRIVER_OBJECT *driver, DEVICE_OBJECT *p
+ 
+ static void WINAPI driver_unload(DRIVER_OBJECT *driver)
+ {
+-    udev_driver_unload();
+-    iohid_driver_unload();
+-    sdl_driver_unload();
+     NtClose(driver_key);
+ }
+ 
+@@ -907,8 +919,6 @@ static void mouse_device_create(void)
+ 
+ NTSTATUS WINAPI DriverEntry( DRIVER_OBJECT *driver, UNICODE_STRING *path )
+ {
+-    static const WCHAR SDL_enabledW[] = {'E','n','a','b','l','e',' ','S','D','L',0};
+-    static const UNICODE_STRING SDL_enabled = {sizeof(SDL_enabledW) - sizeof(WCHAR), sizeof(SDL_enabledW), (WCHAR*)SDL_enabledW};
+     OBJECT_ATTRIBUTES attr = {0};
+     NTSTATUS ret;
+ 
+@@ -927,15 +937,5 @@ NTSTATUS WINAPI DriverEntry( DRIVER_OBJECT *driver, UNICODE_STRING *path )
+     driver->DriverExtension->AddDevice = driver_add_device;
+     driver->DriverUnload = driver_unload;
+ 
+-    mouse_device_create();
+-
+-    if (check_bus_option(&SDL_enabled, 1))
+-    {
+-        if (sdl_driver_init() == STATUS_SUCCESS)
+-            return STATUS_SUCCESS;
+-    }
+-    udev_driver_init();
+-    iohid_driver_init();
+-
+     return STATUS_SUCCESS;
+ }
+-- 
+2.17.1
+

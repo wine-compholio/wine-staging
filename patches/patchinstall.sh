@@ -2063,15 +2063,16 @@ fi
 # Patchset mailing-list-patches
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
+# |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
 # | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/d3drm/tests/d3drm.c, dlls/d3drm/viewport.c,
 # | 	dlls/dxgi/swapchain.c, dlls/dxgi/tests/dxgi.c, dlls/evr/Makefile.in, dlls/evr/evr.c, dlls/evr/main.c,
-# | 	dlls/gdi32/freetype.c, dlls/ntdll/directory.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h,
-# | 	dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c,
-# | 	dlls/strmbase/strmbase_private.h, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h,
-# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
-# | 	include/d3drm.h, include/d3drmobj.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
-# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# | 	dlls/gdi32/freetype.c, dlls/mscoree/mscoree_main.c, dlls/mscorwks/Makefile.in, dlls/mscorwks/mscorwks.spec,
+# | 	dlls/ntdll/directory.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c,
+# | 	dlls/qedit/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c, dlls/strmbase/strmbase_private.h,
+# | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
+# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, include/Makefile.in, include/d3drm.h,
+# | 	include/d3drmobj.h, include/strongname.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
+# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c, tools/make_specfiles
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
@@ -2096,6 +2097,10 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
 	patch_apply mailing-list-patches/0021-Define-AT_NO_AUTOMOUNT-if-needed.patch
 	patch_apply mailing-list-patches/0022-gdi32-Use-the-correct-type-for-the-final-parameter-o.patch
+	patch_apply mailing-list-patches/0023-mscorwks-New-DLL.patch
+	patch_apply mailing-list-patches/0024-include-Add-strongname.h.patch
+	patch_apply mailing-list-patches/0025-mscoree-Fix-the-signature-for-StrongNameSignatureVer.patch
+	patch_apply mailing-list-patches/0026-mscoree-Fake-success-from-StrongNameSignatureVerific.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
@@ -2119,6 +2124,10 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "Define AT_NO_AUTOMOUNT if needed.", 1 },';
 		printf '%s\n' '+    { "Huw Davies", "gdi32: Use the correct type for the final parameter of FSOpenResourceFile().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "mscorwks: New DLL.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "include: Add strongname.h.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "mscoree: Fix the signature for StrongNameSignatureVerification[Ex]().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "mscoree: Fake success from StrongNameSignatureVerificationEx().", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6579,7 +6588,7 @@ fi
 # |   *	[#17823] Assign a drive serial number during prefix creation/update
 # |
 # | Modified files:
-# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# |   *	programs/wineboot/wineboot.c
 # |
 if test "$enable_wineboot_DriveSerial" -eq 1; then
 	patch_apply wineboot-DriveSerial/0001-wineboot-Assign-a-drive-serial-number-during-prefix-.patch
@@ -6627,7 +6636,7 @@ fi
 # |   *	[#42024] Create ProxyEnable key on wineprefix update
 # |
 # | Modified files:
-# |   *	programs/wineboot/wineboot.c
+# |   *	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
 # |
 if test "$enable_wineboot_ProxySettings" -eq 1; then
 	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch

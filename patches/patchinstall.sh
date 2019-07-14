@@ -117,6 +117,7 @@ patch_enable_all ()
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
+	enable_dbgeng_IDebugClient7="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
@@ -482,6 +483,9 @@ patch_enable ()
 			;;
 		d3dx9_36-UpdateSkinnedMesh)
 			enable_d3dx9_36_UpdateSkinnedMesh="$2"
+			;;
+		dbgeng-IDebugClient7)
+			enable_dbgeng_IDebugClient7="$2"
 			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
@@ -2973,6 +2977,25 @@ if test "$enable_d3dx9_36_UpdateSkinnedMesh" -eq 1; then
 	patch_apply d3dx9_36-UpdateSkinnedMesh/0001-d3dx9_36-Implement-ID3DXSkinInfoImpl_UpdateSkinnedMe.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement ID3DXSkinInfoImpl_UpdateSkinnedMesh.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dbgeng-IDebugClient7
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44958] dbgeng: Support IDebugClient7 interface.
+# |
+# | Modified files:
+# |   *	dlls/dbgeng/dbgeng.c, include/dbgeng.h
+# |
+if test "$enable_dbgeng_IDebugClient7" -eq 1; then
+	patch_apply dbgeng-IDebugClient7/0001-include-Add-IDebugClient2-7-interfaces.patch
+	patch_apply dbgeng-IDebugClient7/0002-dbgeng-Support-interfaces-IDebugClient2-4.patch
+	patch_apply dbgeng-IDebugClient7/0003-dbgeng-Support-IDebugClient5-7-interfaces.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDebugClient2-7 interfaces.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dbgeng: Support interfaces IDebugClient2-4.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dbgeng: Support IDebugClient5-7 interfaces.", 1 },';
 	) >> "$patchlist"
 fi
 

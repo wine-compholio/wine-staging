@@ -333,6 +333,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
+	enable_wined3d_swapchain_buffers="$1"
 	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -1131,6 +1132,9 @@ patch_enable ()
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
+			;;
+		wined3d-swapchain-buffers)
+			enable_wined3d_swapchain_buffers="$2"
 			;;
 		wined3d-unset-flip-gdi)
 			enable_wined3d_unset_flip_gdi="$2"
@@ -6894,6 +6898,21 @@ if test "$enable_wined3d_mesa_texture_download" -eq 1; then
 	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-swapchain-buffers
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47479] wined3d: Correctly switch swapchain buffer.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c
+# |
+if test "$enable_wined3d_swapchain_buffers" -eq 1; then
+	patch_apply wined3d-swapchain-buffers/0001-wined3d-Correctly-switch-swapchain-buffer.patch
+	(
+		printf '%s\n' '+    { "Henri Verbeet", "wined3d: Correctly switch swapchain buffer.", 1 },';
 	) >> "$patchlist"
 fi
 

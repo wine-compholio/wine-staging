@@ -172,6 +172,7 @@ patch_enable_all ()
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
+	enable_msctf_ITfActiveLanguageProfileNotifySink="$1"
 	enable_mshtml_HTMLLocation_put_hash="$1"
 	enable_mshtml_TranslateAccelerator="$1"
 	enable_msi_msi_vcl_get_cost="$1"
@@ -646,6 +647,9 @@ patch_enable ()
 			;;
 		mscoree-CorValidateImage)
 			enable_mscoree_CorValidateImage="$2"
+			;;
+		msctf-ITfActiveLanguageProfileNotifySink)
+			enable_msctf_ITfActiveLanguageProfileNotifySink="$2"
 			;;
 		mshtml-HTMLLocation_put_hash)
 			enable_mshtml_HTMLLocation_put_hash="$2"
@@ -4495,6 +4499,21 @@ if test "$enable_mscoree_CorValidateImage" -eq 1; then
 	patch_apply mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "mscoree: Implement semi-stub for _CorValidateImage.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset msctf-ITfActiveLanguageProfileNotifySink
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44502] msctf: Added ITfActiveLanguageProfileNotifySink support in ITfSource.
+# |
+# | Modified files:
+# |   *	dlls/msctf/msctf_internal.h, dlls/msctf/threadmgr.c
+# |
+if test "$enable_msctf_ITfActiveLanguageProfileNotifySink" -eq 1; then
+	patch_apply msctf-ITfActiveLanguageProfileNotifySink/0001-msctf-Added-ITfActiveLanguageProfileNotifySink-suppo.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "msctf: Added ITfActiveLanguageProfileNotifySink support in ITfSource.", 1 },';
 	) >> "$patchlist"
 fi
 

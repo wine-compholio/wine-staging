@@ -92,6 +92,7 @@ patch_enable_all ()
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
+	enable_cmd_launch_association="$1"
 	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_alpha_bitmaps="$1"
@@ -406,6 +407,9 @@ patch_enable ()
 			;;
 		atl-AtlAxDialogBox)
 			enable_atl_AtlAxDialogBox="$2"
+			;;
+		cmd-launch-association)
+			enable_cmd_launch_association="$2"
 			;;
 		combase-GetRestrictedErrorInfo)
 			enable_combase_GetRestrictedErrorInfo="$2"
@@ -2332,6 +2336,24 @@ if test "$enable_atl_AtlAxDialogBox" -eq 1; then
 	patch_apply atl-AtlAxDialogBox/0001-atl-Implement-AtlAxDialogBox-A-W.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "atl: Implement AtlAxDialogBox[A,W].", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset cmd-launch-association
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18154] cmd: Support for launching programs based on file association
+# |
+# | Modified files:
+# |   *	programs/cmd/builtins.c, programs/cmd/tests/test_builtins.cmd, programs/cmd/tests/test_builtins.cmd.exp,
+# | 	programs/cmd/wcmdmain.c
+# |
+if test "$enable_cmd_launch_association" -eq 1; then
+	patch_apply cmd-launch-association/0001-cmd-Support-for-launching-programs-based-on-file-ass.patch
+	patch_apply cmd-launch-association/0002-cmd-ftype-failed-to-clear-file-associations.patch
+	(
+		printf '%s\n' '+    { "Jason Edmeades", "cmd: Support for launching programs based on file association.", 1 },';
+		printf '%s\n' '+    { "Jason Edmeades", "cmd: Ftype failed to clear file associations.", 1 },';
 	) >> "$patchlist"
 fi
 

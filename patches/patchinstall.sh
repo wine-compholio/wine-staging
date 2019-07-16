@@ -2041,6 +2041,10 @@ fi
 
 # Patchset mailing-list-patches
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47411] shell32: Add SHMultiFileProperties stub
+# |   *	[#47445] Define AT_NO_AUTOMOUNT if needed.
+# |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
 # | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/d3drm/tests/d3drm.c, dlls/d3drm/viewport.c,

@@ -2051,11 +2051,11 @@ fi
 # | 	dlls/dxgi/swapchain.c, dlls/dxgi/tests/dxgi.c, dlls/evr/Makefile.in, dlls/evr/evr.c, dlls/evr/main.c,
 # | 	dlls/gdi32/freetype.c, dlls/mscoree/mscoree_main.c, dlls/mscorwks/Makefile.in, dlls/mscorwks/mscorwks.spec,
 # | 	dlls/ntdll/directory.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c,
-# | 	dlls/qedit/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c, dlls/strmbase/strmbase_private.h,
-# | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
-# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, include/Makefile.in, include/d3drm.h,
-# | 	include/d3drmobj.h, include/strongname.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
-# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c, tools/make_specfiles
+# | 	dlls/qedit/Makefile.in, dlls/shell32/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c,
+# | 	dlls/strmbase/strmbase_private.h, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h,
+# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
+# | 	include/Makefile.in, include/d3drm.h, include/d3drmobj.h, include/strongname.h, loader/Makefile.in, loader/wine.inf.in,
+# | 	loader/winebus.inf.in, programs/wineboot/Makefile.in, programs/wineboot/wineboot.c, tools/make_specfiles
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
@@ -2084,6 +2084,7 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0024-include-Add-strongname.h.patch
 	patch_apply mailing-list-patches/0025-mscoree-Fix-the-signature-for-StrongNameSignatureVer.patch
 	patch_apply mailing-list-patches/0026-mscoree-Fake-success-from-StrongNameSignatureVerific.patch
+	patch_apply mailing-list-patches/0027-shell32-On-macOS-don-t-link-against-CoreServices.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
@@ -2111,6 +2112,7 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "include: Add strongname.h.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "mscoree: Fix the signature for StrongNameSignatureVerification[Ex]().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "mscoree: Fake success from StrongNameSignatureVerificationEx().", 1 },';
+		printf '%s\n' '+    { "Huw Davies", "shell32: On macOS don'\''t link against CoreServices.", 1 },';
 	) >> "$patchlist"
 fi
 

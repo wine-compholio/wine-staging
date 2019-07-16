@@ -106,6 +106,7 @@ patch_enable_all ()
 	enable_d3dx9_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
+	enable_d3dx9_36_D3DXCreateKeyframedAnimationSet="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
 	enable_d3dx9_36_D3DXOptimizeVertices="$1"
 	enable_d3dx9_36_D3DXSHProjectCubeMap="$1"
@@ -447,6 +448,9 @@ patch_enable ()
 			;;
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
+			;;
+		d3dx9_36-D3DXCreateKeyframedAnimationSet)
+			enable_d3dx9_36_D3DXCreateKeyframedAnimationSet="$2"
 			;;
 		d3dx9_36-D3DXDisassembleShader)
 			enable_d3dx9_36_D3DXDisassembleShader="$2"
@@ -2715,6 +2719,21 @@ if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-D3DXCreateKeyframedAnimationSet
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45481] d3dx9_36: Implement D3DXCreateKeyframedAnimationSet
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/animation.c, dlls/d3dx9_36/tests/mesh.c
+# |
+if test "$enable_d3dx9_36_D3DXCreateKeyframedAnimationSet" -eq 1; then
+	patch_apply d3dx9_36-D3DXCreateKeyframedAnimationSet/0001-d3dx9_36-Implement-D3DXCreateKeyframedAnimationSet.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXCreateKeyframedAnimationSet.", 1 },';
 	) >> "$patchlist"
 fi
 

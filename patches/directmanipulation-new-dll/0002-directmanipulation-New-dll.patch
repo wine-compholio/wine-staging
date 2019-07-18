@@ -1,0 +1,198 @@
+From 85a1801f45e59803456511a1ff3b4554ad79a23b Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Wed, 17 Jul 2019 09:26:16 +1000
+Subject: [PATCH 2/4] directmanipulation: New dll
+
+Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+---
+ configure                                     |  2 +
+ configure.ac                                  |  1 +
+ dlls/directmanipulation/Makefile.in           |  8 +++
+ dlls/directmanipulation/directmanip.idl       | 38 +++++++++++
+ dlls/directmanipulation/directmanipulation.c  | 67 +++++++++++++++++++
+ .../directmanipulation.spec                   |  6 ++
+ 6 files changed, 122 insertions(+)
+ create mode 100644 dlls/directmanipulation/Makefile.in
+ create mode 100644 dlls/directmanipulation/directmanip.idl
+ create mode 100644 dlls/directmanipulation/directmanipulation.c
+ create mode 100644 dlls/directmanipulation/directmanipulation.spec
+
+diff --git a/configure b/configure
+index f1de2c4052..bc376a6686 100755
+--- a/configure
++++ b/configure
+@@ -1231,6 +1231,7 @@ enable_dhtmled_ocx
+ enable_difxapi
+ enable_dinput
+ enable_dinput8
++enable_directmanipulation
+ enable_dispex
+ enable_dmband
+ enable_dmcompos
+@@ -20162,6 +20163,7 @@ wine_fn_config_makefile dlls/dinput enable_dinput
+ wine_fn_config_makefile dlls/dinput/tests enable_tests
+ wine_fn_config_makefile dlls/dinput8 enable_dinput8
+ wine_fn_config_makefile dlls/dinput8/tests enable_tests
++wine_fn_config_makefile dlls/directmanipulation enable_directmanipulation
+ wine_fn_config_makefile dlls/dispdib.dll16 enable_win16
+ wine_fn_config_makefile dlls/dispex enable_dispex
+ wine_fn_config_makefile dlls/dispex/tests enable_tests
+diff --git a/configure.ac b/configure.ac
+index a7c45ace73..51519fdd9b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3148,6 +3148,7 @@ WINE_CONFIG_MAKEFILE(dlls/dinput)
+ WINE_CONFIG_MAKEFILE(dlls/dinput/tests)
+ WINE_CONFIG_MAKEFILE(dlls/dinput8)
+ WINE_CONFIG_MAKEFILE(dlls/dinput8/tests)
++WINE_CONFIG_MAKEFILE(dlls/directmanipulation)
+ WINE_CONFIG_MAKEFILE(dlls/dispdib.dll16,enable_win16)
+ WINE_CONFIG_MAKEFILE(dlls/dispex)
+ WINE_CONFIG_MAKEFILE(dlls/dispex/tests)
+diff --git a/dlls/directmanipulation/Makefile.in b/dlls/directmanipulation/Makefile.in
+new file mode 100644
+index 0000000000..331c2a8420
+--- /dev/null
++++ b/dlls/directmanipulation/Makefile.in
+@@ -0,0 +1,8 @@
++MODULE    = directmanipulation.dll
++
++EXTRADLLFLAGS = -mno-cygwin
++
++IDL_SRCS = directmanip.idl
++
++C_SRCS = \
++	directmanipulation.c
+diff --git a/dlls/directmanipulation/directmanip.idl b/dlls/directmanipulation/directmanip.idl
+new file mode 100644
+index 0000000000..ff00668ba5
+--- /dev/null
++++ b/dlls/directmanipulation/directmanip.idl
+@@ -0,0 +1,38 @@
++/*
++ * Copyright 2019 Alistair Leslie-Hughes
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++#pragma makedep register
++
++[
++    uuid(54e211b6-3650-4f75-8334-fa359598e1c5),
++    threading(both)
++]
++coclass DirectManipulationManager
++{
++    interface IDirectManipulationManager2;
++    [default] interface IDirectManipulationManager;
++}
++
++[
++    uuid(99793286-77cc-4b57-96db-3b354f6f9fb5),
++    threading(both)
++]
++coclass DirectManipulationSharedManager
++{
++    interface IDirectManipulationManager2;
++    [default] interface IDirectManipulationManager;
++}
+diff --git a/dlls/directmanipulation/directmanipulation.c b/dlls/directmanipulation/directmanipulation.c
+new file mode 100644
+index 0000000000..136b2976a4
+--- /dev/null
++++ b/dlls/directmanipulation/directmanipulation.c
+@@ -0,0 +1,67 @@
++/*
++ * Copyright 2019 Alistair Leslie-Hughes
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "oleidl.h"
++#include "rpcproxy.h"
++#include "wine/debug.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(manipulation);
++
++static HINSTANCE dm_instance;
++
++BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
++{
++    TRACE("(%p, %u, %p)\n", instance, reason, reserved);
++
++    switch (reason)
++    {
++        case DLL_WINE_PREATTACH:
++            return FALSE;    /* prefer native version */
++        case DLL_PROCESS_ATTACH:
++            dm_instance = instance;
++            DisableThreadLibraryCalls(instance);
++            break;
++    }
++
++    return TRUE;
++}
++
++HRESULT WINAPI DllRegisterServer(void)
++{
++    return __wine_register_resources( dm_instance );
++}
++
++HRESULT WINAPI DllUnregisterServer(void)
++{
++    return __wine_unregister_resources( dm_instance );
++}
++
++HRESULT WINAPI DllCanUnloadNow(void)
++{
++    return S_FALSE;
++}
++
++HRESULT WINAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
++{
++    FIXME("(%s,%s,%p): no interface found.\n", debugstr_guid(rclsid), debugstr_guid(riid), ppv);
++    return CLASS_E_CLASSNOTAVAILABLE;
++}
+\ No newline at end of file
+diff --git a/dlls/directmanipulation/directmanipulation.spec b/dlls/directmanipulation/directmanipulation.spec
+new file mode 100644
+index 0000000000..3f0004daeb
+--- /dev/null
++++ b/dlls/directmanipulation/directmanipulation.spec
+@@ -0,0 +1,6 @@
++@ stub InitializeDManipHook
++@ stdcall -private DllCanUnloadNow()
++@ stub DllGetActivationFactory
++@ stdcall -private DllGetClassObject(ptr ptr ptr)
++@ stdcall -private DllRegisterServer()
++@ stdcall -private DllUnregisterServer()
+-- 
+2.17.1
+

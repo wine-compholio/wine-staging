@@ -134,6 +134,7 @@ patch_enable_all ()
 	enable_dinput_joy_mappings="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
+	enable_directmanipulation_new_dll="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
@@ -533,6 +534,9 @@ patch_enable ()
 			;;
 		dinput-remap-joystick)
 			enable_dinput_remap_joystick="$2"
+			;;
+		directmanipulation-new-dll)
+			enable_directmanipulation_new_dll="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3248,6 +3252,29 @@ if test "$enable_dinput_remap_joystick" -eq 1; then
 	patch_apply dinput-remap-joystick/0001-dinput-Allow-remapping-of-joystick-buttons.patch
 	(
 		printf '%s\n' '+    { "Andrew Church", "dinput: Allow remapping of joystick buttons.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset directmanipulation-new-dll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44865] directmanipulation: New DLL.
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/directmanipulation/Makefile.in, dlls/directmanipulation/directmanip.idl,
+# | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/directmanipulation.spec, dlls/uuid/uuid.c,
+# | 	include/Makefile.in, include/directmanipulation.idl
+# |
+if test "$enable_directmanipulation_new_dll" -eq 1; then
+	patch_apply directmanipulation-new-dll/0001-include-Add-directmanipulation.idl.patch
+	patch_apply directmanipulation-new-dll/0002-directmanipulation-New-dll.patch
+	patch_apply directmanipulation-new-dll/0003-uuid-Add-directmanipulation.h.patch
+	patch_apply directmanipulation-new-dll/0004-directmanipulation-Create-DirectManipulationManager-.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uuid: Add directmanipulation.h.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Create DirectManipulationManager/DirectManipulationSharedManager objects.", 1 },';
 	) >> "$patchlist"
 fi
 

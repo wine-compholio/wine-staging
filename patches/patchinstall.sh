@@ -3270,11 +3270,15 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 	patch_apply directmanipulation-new-dll/0002-directmanipulation-New-dll.patch
 	patch_apply directmanipulation-new-dll/0003-uuid-Add-directmanipulation.h.patch
 	patch_apply directmanipulation-new-dll/0004-directmanipulation-Create-DirectManipulationManager-.patch
+	patch_apply directmanipulation-new-dll/0005-include-Add-DCompManipulationCompositor-coclass-and-.patch
+	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uuid: Add directmanipulation.h.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Create DirectManipulationManager/DirectManipulationSharedManager objects.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add DCompManipulationCompositor coclass and supporting interfaces.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
 	) >> "$patchlist"
 fi
 

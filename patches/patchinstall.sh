@@ -2064,7 +2064,8 @@ fi
 # | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
 # | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/winex11.drv/display.c,
 # | 	include/Makefile.in, include/d3drm.h, include/d3drmobj.h, include/strongname.h, loader/Makefile.in, loader/wine.inf.in,
-# | 	loader/winebus.inf.in, programs/wineboot/Makefile.in, programs/wineboot/wineboot.c, tools/make_specfiles
+# | 	loader/winebus.inf.in, programs/services/services.c, programs/wineboot/Makefile.in, programs/wineboot/wineboot.c,
+# | 	tools/make_specfiles
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
@@ -2099,6 +2100,7 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0030-setupapi-Support-full-path-enumerator-in-SetupDiGetC.patch
 	patch_apply mailing-list-patches/0031-winex11.drv-Add-DriverDateData-registry-property-to-.patch
 	patch_apply mailing-list-patches/0032-dxgi-Obey-image-count-limits-for-Vulkan-swapchains.patch
+	patch_apply mailing-list-patches/0033-services-Fix-the-arguments-to-is_root_pnp_service.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
@@ -2132,6 +2134,7 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zhiyi Zhang", "setupapi: Support full path enumerator in SetupDiGetClassDevs.", 1 },';
 		printf '%s\n' '+    { "Zhiyi Zhang", "winex11.drv: Add DriverDateData registry property to display adapters.", 1 },';
 		printf '%s\n' '+    { "Józef Kucia", "dxgi: Obey image count limits for Vulkan swapchains.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "services: Fix the arguments to is_root_pnp_service().", 1 },';
 	) >> "$patchlist"
 fi
 

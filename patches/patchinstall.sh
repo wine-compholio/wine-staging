@@ -3275,6 +3275,7 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 	patch_apply directmanipulation-new-dll/0004-directmanipulation-Create-DirectManipulationManager-.patch
 	patch_apply directmanipulation-new-dll/0005-include-Add-DCompManipulationCompositor-coclass-and-.patch
 	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
+	patch_apply directmanipulation-new-dll/0007-directmanipulation-Supprot-IDirectManipulationFrameI.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
@@ -3282,6 +3283,7 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Create DirectManipulationManager/DirectManipulationSharedManager objects.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add DCompManipulationCompositor coclass and supporting interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Supprot IDirectManipulationFrameInfoProvider interface in IDirectManipulationCompositor.", 1 },';
 	) >> "$patchlist"
 fi
 

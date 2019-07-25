@@ -3280,6 +3280,10 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 	patch_apply directmanipulation-new-dll/0005-include-Add-DCompManipulationCompositor-coclass-and-.patch
 	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
 	patch_apply directmanipulation-new-dll/0007-directmanipulation-Supprot-IDirectManipulationFrameI.patch
+	patch_apply directmanipulation-new-dll/0008-directmanipulation-Implement-IDirectManipulationMana.patch
+	patch_apply directmanipulation-new-dll/0009-directmanipulation-Implement-IDirectManipulationComp.patch
+	patch_apply directmanipulation-new-dll/0010-include-Add-IDirectManipulationViewport2-interface.patch
+	patch_apply directmanipulation-new-dll/0011-directmanipulation-Implement-IDirectManipulationMana.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
@@ -3288,6 +3292,10 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add DCompManipulationCompositor coclass and supporting interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Supprot IDirectManipulationFrameInfoProvider interface in IDirectManipulationCompositor.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 GetUpdateManager.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationCompositor SetUpdateManager.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDirectManipulationViewport2 interface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 CreateViewport.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -6356,14 +6356,17 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45968] user32: Implement CascadeWindows
+# |   *	[#46197] user32: Implement TileWindows
 # |
 # | Modified files:
 # |   *	dlls/user32/mdi.c
 # |
 if test "$enable_user32_Implement_CascadeWindows" -eq 1; then
 	patch_apply user32-Implement-CascadeWindows/0001-user32-Implement-CascadeWindows.patch
+	patch_apply user32-Implement-CascadeWindows/0002-user32-Implement-TileWindows.patch
 	(
 		printf '%s\n' '+    { "katahiromz", "user32: Implement CascadeWindows.", 1 },';
+		printf '%s\n' '+    { "Hirofumi Katayama", "user32: Implement TileWindows.", 1 },';
 	) >> "$patchlist"
 fi
 

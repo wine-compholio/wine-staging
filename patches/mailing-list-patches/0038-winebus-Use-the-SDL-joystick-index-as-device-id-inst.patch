@@ -1,0 +1,102 @@
+From f074fb7a491d062a31fdb67d84ebfb454495a1d6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 25 Jul 2019 16:23:52 +0200
+Subject: [PATCH 3/3] winebus: Use the SDL joystick index as device id instead
+ of instance id
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Some games are using the HID device id as the gamepad index for xinput
+API. When hotplugging devices, SDL increases its instances id and it
+doesn't match anymore with xinput gamepad numbers.
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/winebus.sys/bus_sdl.c | 26 +++++++++++++++-----------
+ 1 file changed, 15 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/winebus.sys/bus_sdl.c b/dlls/winebus.sys/bus_sdl.c
+index 781deda7670..3bd27ca5bf0 100644
+--- a/dlls/winebus.sys/bus_sdl.c
++++ b/dlls/winebus.sys/bus_sdl.c
+@@ -744,17 +744,21 @@ static const platform_vtbl sdl_vtbl =
+     set_feature_report,
+ };
+ 
++static int compare_joystick_id(DEVICE_OBJECT *device, void* context)
++{
++    return impl_from_DEVICE_OBJECT(device)->id - PtrToUlong(context);
++}
++
+ static BOOL set_report_from_event(SDL_Event *event)
+ {
+     DEVICE_OBJECT *device;
+     struct platform_private *private;
+     /* All the events coming in will have 'which' as a 3rd field */
+-    SDL_JoystickID index = ((SDL_JoyButtonEvent*)event)->which;
+-
+-    device = bus_find_hid_device(&sdl_vtbl, ULongToPtr(index));
++    SDL_JoystickID id = ((SDL_JoyButtonEvent*)event)->which;
++    device = bus_enumerate_hid_devices(&sdl_vtbl, compare_joystick_id, ULongToPtr(id));
+     if (!device)
+     {
+-        ERR("Failed to find device at index %i\n",index);
++        ERR("Failed to find device at index %i\n",id);
+         return FALSE;
+     }
+     private = impl_from_DEVICE_OBJECT(device);
+@@ -814,11 +818,11 @@ static BOOL set_mapped_report_from_event(SDL_Event *event)
+     DEVICE_OBJECT *device;
+     struct platform_private *private;
+     /* All the events coming in will have 'which' as a 3rd field */
+-    int index = ((SDL_ControllerButtonEvent*)event)->which;
+-    device = bus_find_hid_device(&sdl_vtbl, ULongToPtr(index));
++    SDL_JoystickID id = ((SDL_ControllerButtonEvent*)event)->which;
++    device = bus_enumerate_hid_devices(&sdl_vtbl, compare_joystick_id, ULongToPtr(id));
+     if (!device)
+     {
+-        ERR("Failed to find device at index %i\n",index);
++        ERR("Failed to find device at index %i\n",id);
+         return FALSE;
+     }
+     private = impl_from_DEVICE_OBJECT(device);
+@@ -878,7 +882,7 @@ static BOOL set_mapped_report_from_event(SDL_Event *event)
+     return FALSE;
+ }
+ 
+-static void try_remove_device(SDL_JoystickID index)
++static void try_remove_device(SDL_JoystickID id)
+ {
+     DEVICE_OBJECT *device = NULL;
+     struct platform_private *private;
+@@ -886,7 +890,7 @@ static void try_remove_device(SDL_JoystickID index)
+     SDL_GameController *sdl_controller;
+     SDL_Haptic *sdl_haptic;
+ 
+-    device = bus_find_hid_device(&sdl_vtbl, ULongToPtr(index));
++    device = bus_enumerate_hid_devices(&sdl_vtbl, compare_joystick_id, ULongToPtr(id));
+     if (!device) return;
+ 
+     private = impl_from_DEVICE_OBJECT(device);
+@@ -905,7 +909,7 @@ static void try_remove_device(SDL_JoystickID index)
+         pSDL_HapticClose(sdl_haptic);
+ }
+ 
+-static void try_add_device(SDL_JoystickID index)
++static void try_add_device(unsigned int index)
+ {
+     DWORD vid = 0, pid = 0, version = 0;
+     DEVICE_OBJECT *device = NULL;
+@@ -967,7 +971,7 @@ static void try_add_device(SDL_JoystickID index)
+         input = 0;
+ 
+     device = bus_create_hid_device(sdl_busidW, vid, pid,
+-            input, version, id, serial, is_xbox_gamepad, &GUID_DEVCLASS_SDL,
++            input, version, index, serial, is_xbox_gamepad, &GUID_DEVCLASS_SDL,
+             &sdl_vtbl, sizeof(struct platform_private));
+ 
+     if (device)
+-- 
+2.17.1
+

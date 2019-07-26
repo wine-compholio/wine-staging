@@ -2062,9 +2062,10 @@ fi
 # | 	dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in, dlls/setupapi/devinst.c, dlls/setupapi/tests/devinst.c,
 # | 	dlls/shell32/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c, dlls/strmbase/strmbase_private.h,
 # | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
-# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/winex11.drv/display.c,
-# | 	dlls/winex11.drv/mouse.c, include/Makefile.in, include/d3drm.h, include/d3drmobj.h, include/msvcrt/limits.h,
-# | 	include/strongname.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/services/services.c,
+# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/wined3d/adapter_gl.c,
+# | 	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h, dlls/winex11.drv/display.c, dlls/winex11.drv/mouse.c,
+# | 	include/Makefile.in, include/d3drm.h, include/d3drmobj.h, include/msvcrt/limits.h, include/strongname.h,
+# | 	loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/services/services.c,
 # | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c, tools/make_specfiles
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
@@ -2103,6 +2104,9 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0033-services-Fix-the-arguments-to-is_root_pnp_service.patch
 	patch_apply mailing-list-patches/0034-msvcrt-Do-not-use-casting-in-min-max-macros.patch
 	patch_apply mailing-list-patches/0035-winex11.drv-Ignore-XGrabPointer-induced-warp-events-.patch
+	patch_apply mailing-list-patches/0036-Add-a-list-of-mac-relevant-graphics-cards.patch
+	patch_apply mailing-list-patches/0037-ntoskrnl-Update-the-interface-if-it-is-already-in-th.patch
+	patch_apply mailing-list-patches/0038-winebus-Use-the-SDL-joystick-index-as-device-id-inst.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
@@ -2139,6 +2143,9 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "services: Fix the arguments to is_root_pnp_service().", 1 },';
 		printf '%s\n' '+    { "Peter Dons Tychsen", "msvcrt: Do not use casting in min/max macros.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Ignore XGrabPointer-induced warp events as well.", 1 },';
+		printf '%s\n' '+    { "Kristján Gerhardsson", "Add a list of mac relevant graphics cards.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "ntoskrnl: Update the interface if it is already in the device_interfaces tree.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winebus: Use the SDL joystick index as device id instead of instance id.", 1 },';
 	) >> "$patchlist"
 fi
 

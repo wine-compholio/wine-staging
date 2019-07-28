@@ -3276,7 +3276,8 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/directmanipulation/Makefile.in, dlls/directmanipulation/directmanip.idl,
-# | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/directmanipulation.spec, dlls/uuid/uuid.c,
+# | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/directmanipulation.spec,
+# | 	dlls/directmanipulation/tests/Makefile.in, dlls/directmanipulation/tests/manipulation.c, dlls/uuid/uuid.c,
 # | 	include/Makefile.in, include/directmanipulation.idl
 # |
 if test "$enable_directmanipulation_new_dll" -eq 1; then
@@ -3291,6 +3292,7 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 	patch_apply directmanipulation-new-dll/0009-directmanipulation-Implement-IDirectManipulationComp.patch
 	patch_apply directmanipulation-new-dll/0010-include-Add-IDirectManipulationViewport2-interface.patch
 	patch_apply directmanipulation-new-dll/0011-directmanipulation-Implement-IDirectManipulationMana.patch
+	patch_apply directmanipulation-new-dll/0012-directmanipulation-tests-Initial-tests.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
@@ -3303,6 +3305,7 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationCompositor SetUpdateManager.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDirectManipulationViewport2 interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 CreateViewport.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation/tests: Initial tests.", 1 },';
 	) >> "$patchlist"
 fi
 

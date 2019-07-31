@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "82543e7858758025b50bb5556cbedc43f4d628c4"
+	echo "fdf8d7176f59043999b34ff4facdcbee14a7d6aa"
 }
 
 # Show version information
@@ -336,7 +336,6 @@ patch_enable_all ()
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
-	enable_wined3d_swapchain_buffers="$1"
 	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
 	enable_winedbg_Process_Arguments="$1"
@@ -1140,9 +1139,6 @@ patch_enable ()
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
-			;;
-		wined3d-swapchain-buffers)
-			enable_wined3d_swapchain_buffers="$2"
 			;;
 		wined3d-unset-flip-gdi)
 			enable_wined3d_unset_flip_gdi="$2"
@@ -2055,18 +2051,13 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
-# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/d3drm/tests/d3drm.c, dlls/d3drm/viewport.c,
-# | 	dlls/dbghelp/pe_module.c, dlls/dxgi/swapchain.c, dlls/dxgi/tests/dxgi.c, dlls/evr/Makefile.in, dlls/evr/evr.c,
-# | 	dlls/evr/main.c, dlls/gdi32/freetype.c, dlls/mscoree/mscoree_main.c, dlls/mscorwks/Makefile.in,
-# | 	dlls/mscorwks/mscorwks.spec, dlls/ntdll/directory.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h,
-# | 	dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in, dlls/setupapi/devinst.c, dlls/setupapi/tests/devinst.c,
-# | 	dlls/shell32/Makefile.in, dlls/shell32/shell32.spec, dlls/shell32/shlfileop.c, dlls/strmbase/strmbase_private.h,
+# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/dbghelp/pe_module.c, dlls/evr/Makefile.in,
+# | 	dlls/evr/evr.c, dlls/evr/main.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h,
+# | 	dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in, dlls/shell32/Makefile.in, dlls/strmbase/strmbase_private.h,
 # | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
-# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/wined3d/adapter_gl.c,
-# | 	dlls/wined3d/directx.c, dlls/wined3d/wined3d_private.h, dlls/winex11.drv/display.c, dlls/winex11.drv/mouse.c,
-# | 	include/Makefile.in, include/d3drm.h, include/d3drmobj.h, include/msvcrt/limits.h, include/strongname.h,
-# | 	loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/services/services.c,
-# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c, tools/make_specfiles
+# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c,
+# | 	include/msvcrt/limits.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/wineboot/Makefile.in,
+# | 	programs/wineboot/wineboot.c
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
@@ -2075,36 +2066,18 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
 	patch_apply mailing-list-patches/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
 	patch_apply mailing-list-patches/0006-cryptext-Implement-CryptExtOpenCER.patch
-	patch_apply mailing-list-patches/0007-dxgi-tests-Test-output-after-using-Alt-Enter-to-swit.patch
-	patch_apply mailing-list-patches/0008-dxgi-Fix-possible-null-output-from-d3d11_swapchain_G.patch
-	patch_apply mailing-list-patches/0009-d3drm-Check-for-NULL-pointer-in-d3drm_viewport2_GetD.patch
-	patch_apply mailing-list-patches/0010-d3drm-Check-for-NULL-pointer-in-d3drm_viewport2_GetD.patch
-	patch_apply mailing-list-patches/0011-d3drm-Return-error-if-setting-viewport-field-of-view.patch
 	patch_apply mailing-list-patches/0012-strmbase-Remove-unused-wine-unicode.h-import.patch
 	patch_apply mailing-list-patches/0013-qedit-Build-with-msvcrt.patch
 	patch_apply mailing-list-patches/0014-qedit-Share-source-with-strmbase.patch
 	patch_apply mailing-list-patches/0015-evr-Build-with-msvcrt.patch
 	patch_apply mailing-list-patches/0016-evr-Share-source-with-strmbase.patch
 	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
-	patch_apply mailing-list-patches/0018-d3drm-Correct-paramater-count-of-several-interface-d.patch
-	patch_apply mailing-list-patches/0019-shell32-add-SHMultiFileProperties-stub.patch
 	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
-	patch_apply mailing-list-patches/0021-Define-AT_NO_AUTOMOUNT-if-needed.patch
-	patch_apply mailing-list-patches/0022-gdi32-Use-the-correct-type-for-the-final-parameter-o.patch
-	patch_apply mailing-list-patches/0023-mscorwks-New-DLL.patch
-	patch_apply mailing-list-patches/0024-include-Add-strongname.h.patch
-	patch_apply mailing-list-patches/0025-mscoree-Fix-the-signature-for-StrongNameSignatureVer.patch
-	patch_apply mailing-list-patches/0026-mscoree-Fake-success-from-StrongNameSignatureVerific.patch
 	patch_apply mailing-list-patches/0027-shell32-On-macOS-don-t-link-against-CoreServices.patch
 	patch_apply mailing-list-patches/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
 	patch_apply mailing-list-patches/0029-dbghelp-Return-NULL-instead-of-IMAGE_NO_MAP-when-PE-.patch
-	patch_apply mailing-list-patches/0030-setupapi-Support-full-path-enumerator-in-SetupDiGetC.patch
-	patch_apply mailing-list-patches/0031-winex11.drv-Add-DriverDateData-registry-property-to-.patch
-	patch_apply mailing-list-patches/0032-dxgi-Obey-image-count-limits-for-Vulkan-swapchains.patch
-	patch_apply mailing-list-patches/0033-services-Fix-the-arguments-to-is_root_pnp_service.patch
 	patch_apply mailing-list-patches/0034-msvcrt-Do-not-use-casting-in-min-max-macros.patch
 	patch_apply mailing-list-patches/0035-winex11.drv-Ignore-XGrabPointer-induced-warp-events-.patch
-	patch_apply mailing-list-patches/0036-Add-a-list-of-mac-relevant-graphics-cards.patch
 	patch_apply mailing-list-patches/0037-ntoskrnl-Update-the-interface-if-it-is-already-in-th.patch
 	patch_apply mailing-list-patches/0038-winebus-Use-the-SDL-joystick-index-as-device-id-inst.patch
 	(
@@ -2114,36 +2087,18 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "cryptext: Implement CryptExtOpenCER.", 1 },';
-		printf '%s\n' '+    { "Zhiyi Zhang", "dxgi/tests: Test output after using Alt+Enter to switch fullscreen.", 1 },';
-		printf '%s\n' '+    { "Zhiyi Zhang", "dxgi: Fix possible null output from d3d11_swapchain_GetFullscreenState.", 1 },';
-		printf '%s\n' '+    { "Jeff Smith", "d3drm: Check for NULL pointer in d3drm_viewport2_GetDevice().", 1 },';
-		printf '%s\n' '+    { "Jeff Smith", "d3drm: Check for NULL pointer in d3drm_viewport2_GetDirect3DViewport().", 1 },';
-		printf '%s\n' '+    { "Jeff Smith", "d3drm: Return error if setting viewport field-of-view to zero or negative value.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "strmbase: Remove unused wine/unicode.h import.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "qedit: Build with msvcrt.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "qedit: Share source with strmbase.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "evr: Build with msvcrt.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "evr: Share source with strmbase.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
-		printf '%s\n' '+    { "Jeff Smith", "d3drm: Correct paramater count of several interface defines.", 1 },';
-		printf '%s\n' '+    { "Austin English", "shell32: Add SHMultiFileProperties stub.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
-		printf '%s\n' '+    { "Gabriel Ivăncescu", "Define AT_NO_AUTOMOUNT if needed.", 1 },';
-		printf '%s\n' '+    { "Huw Davies", "gdi32: Use the correct type for the final parameter of FSOpenResourceFile().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "mscorwks: New DLL.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "include: Add strongname.h.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "mscoree: Fix the signature for StrongNameSignatureVerification[Ex]().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "mscoree: Fake success from StrongNameSignatureVerificationEx().", 1 },';
 		printf '%s\n' '+    { "Huw Davies", "shell32: On macOS don'\''t link against CoreServices.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
 		printf '%s\n' '+    { "Conor McCarthy", "dbghelp: Return NULL instead of IMAGE_NO_MAP when PE file mapping fails.", 1 },';
-		printf '%s\n' '+    { "Zhiyi Zhang", "setupapi: Support full path enumerator in SetupDiGetClassDevs.", 1 },';
-		printf '%s\n' '+    { "Zhiyi Zhang", "winex11.drv: Add DriverDateData registry property to display adapters.", 1 },';
-		printf '%s\n' '+    { "Józef Kucia", "dxgi: Obey image count limits for Vulkan swapchains.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "services: Fix the arguments to is_root_pnp_service().", 1 },';
 		printf '%s\n' '+    { "Peter Dons Tychsen", "msvcrt: Do not use casting in min/max macros.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Ignore XGrabPointer-induced warp events as well.", 1 },';
-		printf '%s\n' '+    { "Kristján Gerhardsson", "Add a list of mac relevant graphics cards.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "ntoskrnl: Update the interface if it is already in the device_interfaces tree.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus: Use the SDL joystick index as device id instead of instance id.", 1 },';
 	) >> "$patchlist"
@@ -6980,21 +6935,6 @@ if test "$enable_wined3d_mesa_texture_download" -eq 1; then
 	patch_apply wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
 	(
 		printf '%s\n' '+    { "Andrew Wesie", "wined3d: Use glReadPixels for RT texture download.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-swapchain-buffers
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47479] wined3d: Correctly switch swapchain buffer.
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c, dlls/wined3d/swapchain.c
-# |
-if test "$enable_wined3d_swapchain_buffers" -eq 1; then
-	patch_apply wined3d-swapchain-buffers/0001-wined3d-Correctly-switch-swapchain-buffer.patch
-	(
-		printf '%s\n' '+    { "Henri Verbeet", "wined3d: Correctly switch swapchain buffer.", 1 },';
 	) >> "$patchlist"
 fi
 

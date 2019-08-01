@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fdf8d7176f59043999b34ff4facdcbee14a7d6aa"
+	echo "559842ffc15f85b54a8731b6c6603468f9dd740b"
 }
 
 # Show version information
@@ -211,7 +211,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
-	enable_ntdll_RtlCaptureStackBackTrace="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlIpv4StringToAddress="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
@@ -764,9 +763,6 @@ patch_enable ()
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
-			;;
-		ntdll-RtlCaptureStackBackTrace)
-			enable_ntdll_RtlCaptureStackBackTrace="$2"
 			;;
 		ntdll-RtlCreateUserThread)
 			enable_ntdll_RtlCreateUserThread="$2"
@@ -5056,21 +5052,6 @@ if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlCaptureStackBackTrace
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40868] Silence FIXME in RtlCaptureStackBackTrace stub function
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_RtlCaptureStackBackTrace" -eq 1; then
-	patch_apply ntdll-RtlCaptureStackBackTrace/0001-ntdll-Silence-FIXME-in-RtlCaptureStackBackTrace-stub.patch
-	(
-		printf '%s\n' '+    { "Jarkko Korpi", "ntdll: Silence FIXME in RtlCaptureStackBackTrace stub function.", 1 },';
 	) >> "$patchlist"
 fi
 

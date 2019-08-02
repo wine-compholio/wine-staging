@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "559842ffc15f85b54a8731b6c6603468f9dd740b"
+	echo "21c1ab7a737246f63a0ce6a6262d6953cd23ab0f"
 }
 
 # Show version information
@@ -146,7 +146,6 @@ patch_enable_all ()
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
-	enable_gdi32_D3DKMTQueryStatistics="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_rotation="$1"
@@ -568,9 +567,6 @@ patch_enable ()
 			;;
 		fsutil-Stub_Program)
 			enable_fsutil_Stub_Program="$2"
-			;;
-		gdi32-D3DKMTQueryStatistics)
-			enable_gdi32_D3DKMTQueryStatistics="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -2047,13 +2043,12 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
-# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/dbghelp/pe_module.c, dlls/evr/Makefile.in,
-# | 	dlls/evr/evr.c, dlls/evr/main.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h,
-# | 	dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in, dlls/shell32/Makefile.in, dlls/strmbase/strmbase_private.h,
-# | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
-# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c,
-# | 	include/msvcrt/limits.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/wineboot/Makefile.in,
-# | 	programs/wineboot/wineboot.c
+# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/evr/Makefile.in, dlls/evr/evr.c, dlls/evr/main.c,
+# | 	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in,
+# | 	dlls/strmbase/strmbase_private.h, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h,
+# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
+# | 	dlls/winex11.drv/mouse.c, include/msvcrt/limits.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
+# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
@@ -2069,9 +2064,7 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0016-evr-Share-source-with-strmbase.patch
 	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
 	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
-	patch_apply mailing-list-patches/0027-shell32-On-macOS-don-t-link-against-CoreServices.patch
 	patch_apply mailing-list-patches/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
-	patch_apply mailing-list-patches/0029-dbghelp-Return-NULL-instead-of-IMAGE_NO_MAP-when-PE-.patch
 	patch_apply mailing-list-patches/0034-msvcrt-Do-not-use-casting-in-min-max-macros.patch
 	patch_apply mailing-list-patches/0035-winex11.drv-Ignore-XGrabPointer-induced-warp-events-.patch
 	patch_apply mailing-list-patches/0037-ntoskrnl-Update-the-interface-if-it-is-already-in-th.patch
@@ -2090,9 +2083,7 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "evr: Share source with strmbase.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
-		printf '%s\n' '+    { "Huw Davies", "shell32: On macOS don'\''t link against CoreServices.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
-		printf '%s\n' '+    { "Conor McCarthy", "dbghelp: Return NULL instead of IMAGE_NO_MAP when PE file mapping fails.", 1 },';
 		printf '%s\n' '+    { "Peter Dons Tychsen", "msvcrt: Do not use casting in min/max macros.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Ignore XGrabPointer-induced warp events as well.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "ntoskrnl: Update the interface if it is already in the device_interfaces tree.", 1 },';
@@ -2219,13 +2210,11 @@ fi
 # |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c
 # |
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
-	patch_apply advapi32-LsaLookupSids/0001-advapi32-Initialize-buffer-length-to-zero-in-LsaLook.patch
 	patch_apply advapi32-LsaLookupSids/0002-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0003-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
 	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
 	(
-		printf '%s\n' '+    { "Qian Hong", "advapi32: Initialize buffer length to zero in LsaLookupSids to prevent crash.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
@@ -4051,23 +4040,6 @@ if test "$enable_fsutil_Stub_Program" -eq 1; then
 	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdi32-D3DKMTQueryStatistics
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47074] gdi32: Add D3DKMTQueryStatistics stub
-# |
-# | Modified files:
-# |   *	dlls/gdi32/driver.c, dlls/gdi32/gdi32.spec, include/ddk/d3dkmthk.h
-# |
-if test "$enable_gdi32_D3DKMTQueryStatistics" -eq 1; then
-	patch_apply gdi32-D3DKMTQueryStatistics/0001-include-Add-missing-D3DKMT-typedefs.patch
-	patch_apply gdi32-D3DKMTQueryStatistics/0002-gdi32-Add-D3DKMTQueryStatistics-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add missing D3DKMT typedefs.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "gdi32: Add D3DKMTQueryStatistics stub.", 1 },';
 	) >> "$patchlist"
 fi
 

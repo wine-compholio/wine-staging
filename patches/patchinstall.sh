@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "21c1ab7a737246f63a0ce6a6262d6953cd23ab0f"
+	echo "15dd8e2b981ca32cae94409153627b3300bbeab8"
 }
 
 # Show version information
@@ -2047,11 +2047,10 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
-# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/evr/Makefile.in, dlls/evr/evr.c, dlls/evr/main.c,
-# | 	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c, dlls/qedit/Makefile.in,
-# | 	dlls/strmbase/strmbase_private.h, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h,
-# | 	dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c,
-# | 	dlls/winex11.drv/mouse.c, include/msvcrt/limits.h, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
+# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/ntoskrnl.exe/ntoskrnl.c,
+# | 	dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c,
+# | 	dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c,
+# | 	dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
 # | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
@@ -2061,15 +2060,9 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
 	patch_apply mailing-list-patches/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
 	patch_apply mailing-list-patches/0006-cryptext-Implement-CryptExtOpenCER.patch
-	patch_apply mailing-list-patches/0012-strmbase-Remove-unused-wine-unicode.h-import.patch
-	patch_apply mailing-list-patches/0013-qedit-Build-with-msvcrt.patch
-	patch_apply mailing-list-patches/0014-qedit-Share-source-with-strmbase.patch
-	patch_apply mailing-list-patches/0015-evr-Build-with-msvcrt.patch
-	patch_apply mailing-list-patches/0016-evr-Share-source-with-strmbase.patch
 	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
 	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
 	patch_apply mailing-list-patches/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
-	patch_apply mailing-list-patches/0034-msvcrt-Do-not-use-casting-in-min-max-macros.patch
 	patch_apply mailing-list-patches/0035-winex11.drv-Ignore-XGrabPointer-induced-warp-events-.patch
 	patch_apply mailing-list-patches/0037-ntoskrnl-Update-the-interface-if-it-is-already-in-th.patch
 	patch_apply mailing-list-patches/0038-winebus-Use-the-SDL-joystick-index-as-device-id-inst.patch
@@ -2080,15 +2073,9 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "cryptext: Implement CryptExtOpenCER.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "strmbase: Remove unused wine/unicode.h import.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "qedit: Build with msvcrt.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "qedit: Share source with strmbase.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "evr: Build with msvcrt.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "evr: Share source with strmbase.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
-		printf '%s\n' '+    { "Peter Dons Tychsen", "msvcrt: Do not use casting in min/max macros.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Ignore XGrabPointer-induced warp events as well.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "ntoskrnl: Update the interface if it is already in the device_interfaces tree.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus: Use the SDL joystick index as device id instead of instance id.", 1 },';
@@ -6762,13 +6749,11 @@ fi
 # Patchset wined3d-CSMT_Main
 # |
 # | Modified files:
-# |   *	dlls/wined3d/adapter_gl.c, dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
+# |   *	dlls/wined3d/cs.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_private.h
 # |
 if test "$enable_wined3d_CSMT_Main" -eq 1; then
-	patch_apply wined3d-CSMT_Main/0042-wined3d-Reset-context-before-destruction.patch
 	patch_apply wined3d-CSMT_Main/0045-wined3d-Improve-wined3d_cs_emit_update_sub_resource.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Reset context before destruction.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
 	) >> "$patchlist"
 fi

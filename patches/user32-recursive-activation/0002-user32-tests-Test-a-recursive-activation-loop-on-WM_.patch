@@ -1,0 +1,140 @@
+From 064570eb530a73e822bf19ccb9bc31cd3654c504 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Mon, 22 Jul 2019 15:29:26 +0300
+Subject: [PATCH 2/2] user32/tests: Test a recursive activation loop on
+ WM_ACTIVATE
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Windows only sends the activation messages and hooks once, until the
+SetActiveWindow completes for that window.
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+---
+ dlls/user32/tests/msg.c | 81 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 81 insertions(+)
+
+diff --git a/dlls/user32/tests/msg.c b/dlls/user32/tests/msg.c
+index 64f7eeecf3..191e7bfffb 100644
+--- a/dlls/user32/tests/msg.c
++++ b/dlls/user32/tests/msg.c
+@@ -4772,6 +4772,39 @@ static void test_showwindow(void)
+     flush_sequence();
+ }
+ 
++static void test_recursive_activation(void)
++{
++    static const struct message seq[] =
++    {
++        { HCBT_ACTIVATE, hook },
++        { WM_NCACTIVATE, sent|wparam, TRUE },
++        { WM_ACTIVATE, sent|wparam, WA_ACTIVE },
++        { HCBT_ACTIVATE, hook },
++        { WM_NCACTIVATE, sent|wparam, FALSE },
++        { WM_ACTIVATE, sent|wparam, WA_INACTIVE },
++        { WM_SETFOCUS, sent|optional },
++        { 0 }
++    };
++    HWND hwnd, recursive;
++
++    hwnd = CreateWindowExA(0, "SimpleWindowClass", NULL, WS_OVERLAPPED|WS_VISIBLE,
++                              100, 100, 200, 200, 0, 0, 0, NULL);
++    ok(hwnd != 0, "Failed to create simple window\n");
++
++    recursive = CreateWindowExA(0, "RecursiveActivationClass", NULL, WS_OVERLAPPED|WS_VISIBLE,
++                                10, 10, 50, 50, hwnd, 0, 0, NULL);
++    ok(recursive != 0, "Failed to create recursive activation window\n");
++    SetActiveWindow(hwnd);
++
++    flush_sequence();
++    SetActiveWindow(recursive);
++    ok_sequence(seq, "Recursive Activation", FALSE);
++
++    DestroyWindow(recursive);
++    DestroyWindow(hwnd);
++    flush_sequence();
++}
++
+ static void test_sys_menu(void)
+ {
+     HWND hwnd;
+@@ -9699,6 +9732,48 @@ static LRESULT WINAPI ShowWindowProcA(HWND hwnd, UINT message, WPARAM wParam, LP
+     return ret;
+ }
+ 
++static LRESULT WINAPI recursive_activation_wndprocA(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
++{
++    static LONG defwndproc_counter = 0;
++    struct recvd_message msg;
++    LRESULT ret;
++
++    switch (message)
++    {
++    /* log only specific messages we are interested in */
++    case WM_NCACTIVATE:
++    case WM_ACTIVATE:
++    case WM_SETFOCUS:
++    case WM_KILLFOCUS:
++        break;
++    default:
++        return DefWindowProcA(hwnd, message, wParam, lParam);
++    }
++
++    msg.hwnd = hwnd;
++    msg.message = message;
++    msg.flags = sent|wparam|lparam;
++    if (defwndproc_counter) msg.flags |= defwinproc;
++    msg.wParam = wParam;
++    msg.lParam = lParam;
++    msg.descr = "recursive_activation";
++    add_message(&msg);
++
++    /* recursively activate ourselves by first losing activation and changing it back */
++    if (message == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE)
++    {
++        SetActiveWindow((HWND)lParam);
++        SetActiveWindow(hwnd);
++        return 0;
++    }
++
++    defwndproc_counter++;
++    ret = DefWindowProcA(hwnd, message, wParam, lParam);
++    defwndproc_counter--;
++
++    return ret;
++}
++
+ static LRESULT WINAPI PaintLoopProcA(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+ {
+     switch (msg)
+@@ -9796,6 +9871,10 @@ static BOOL RegisterWindowClasses(void)
+     cls.lpszClassName = "ShowWindowClass";
+     if(!RegisterClassA(&cls)) return FALSE;
+ 
++    cls.lpfnWndProc = recursive_activation_wndprocA;
++    cls.lpszClassName = "RecursiveActivationClass";
++    if(!RegisterClassA(&cls)) return FALSE;
++
+     cls.lpfnWndProc = PopupMsgCheckProcA;
+     cls.lpszClassName = "TestPopupClass";
+     if(!RegisterClassA(&cls)) return FALSE;
+@@ -9851,6 +9930,7 @@ static BOOL is_our_logged_class(HWND hwnd)
+     {
+ 	if (!lstrcmpiA(buf, "TestWindowClass") ||
+ 	    !lstrcmpiA(buf, "ShowWindowClass") ||
++	    !lstrcmpiA(buf, "RecursiveActivationClass") ||
+ 	    !lstrcmpiA(buf, "TestParentClass") ||
+ 	    !lstrcmpiA(buf, "TestPopupClass") ||
+ 	    !lstrcmpiA(buf, "SimpleWindowClass") ||
+@@ -17756,6 +17836,7 @@ START_TEST(msg)
+     test_messages();
+     test_setwindowpos();
+     test_showwindow();
++    test_recursive_activation();
+     invisible_parent_tests();
+     test_mdi_messages();
+     test_button_messages();
+-- 
+2.17.1
+

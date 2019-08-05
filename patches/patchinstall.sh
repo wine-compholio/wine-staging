@@ -303,6 +303,7 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
+	enable_user32_recursive_activation="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
@@ -1038,6 +1039,9 @@ patch_enable ()
 			;;
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
+			;;
+		user32-recursive-activation)
+			enable_user32_recursive_activation="$2"
 			;;
 		uxtheme-CloseThemeClass)
 			enable_uxtheme_CloseThemeClass="$2"
@@ -6424,6 +6428,23 @@ if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32/msgbox: Support WM_COPY Message.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32/msgbox: Use a windows hook to trap Ctrl+C.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-recursive-activation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46274] user32: Prevent a recursive loop with the activation messages.
+# |
+# | Modified files:
+# |   *	dlls/user32/focus.c, dlls/user32/tests/msg.c, dlls/user32/win.h
+# |
+if test "$enable_user32_recursive_activation" -eq 1; then
+	patch_apply user32-recursive-activation/0001-user32-focus-Prevent-a-recursive-loop-with-the-activ.patch
+	patch_apply user32-recursive-activation/0002-user32-tests-Test-a-recursive-activation-loop-on-WM_.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "user32/focus: Prevent a recursive loop with the activation messages.", 1 },';
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "user32/tests: Test a recursive activation loop on WM_ACTIVATE.", 1 },';
 	) >> "$patchlist"
 fi
 

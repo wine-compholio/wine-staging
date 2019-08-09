@@ -1,4 +1,4 @@
-From e13e9f7a5403d5aa7598bd788d9566ce445d3d67 Mon Sep 17 00:00:00 2001
+From 08285be7bf233a38a95b0902c6bac9b24e1fe34f Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Fri, 8 Jun 2018 22:04:29 -0500
 Subject: [PATCH] server: Create eventfd file descriptors for thread objects.
@@ -9,7 +9,7 @@ Subject: [PATCH] server: Create eventfd file descriptors for thread objects.
  2 files changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/server/thread.c b/server/thread.c
-index a7dcf1088af..1bd09ff4810 100644
+index f5bf4a8d2..b3da4a2f4 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -133,6 +133,7 @@ static const struct object_ops thread_apc_ops =
@@ -35,9 +35,9 @@ index a7dcf1088af..1bd09ff4810 100644
      thread->entry_point     = 0;
 +    thread->esync_fd        = -1;
      thread->debug_ctx       = NULL;
-     thread->debug_event     = NULL;
      thread->system_regs     = 0;
-@@ -293,6 +295,9 @@ struct thread *create_thread( int fd, struct process *process, const struct secu
+     thread->queue           = NULL;
+@@ -292,6 +294,9 @@ struct thread *create_thread( int fd, struct process *process, const struct secu
          return NULL;
      }
  
@@ -47,7 +47,7 @@ index a7dcf1088af..1bd09ff4810 100644
      set_fd_events( thread->request_fd, POLLIN );  /* start listening to events */
      add_process_thread( thread->process, thread );
      return thread;
-@@ -371,6 +376,9 @@ static void destroy_thread( struct object *obj )
+@@ -370,6 +375,9 @@ static void destroy_thread( struct object *obj )
      if (thread->exit_poll) remove_timeout_user( thread->exit_poll );
      if (thread->id) free_ptid( thread->id );
      if (thread->token) release_object( thread->token );
@@ -57,7 +57,7 @@ index a7dcf1088af..1bd09ff4810 100644
  }
  
  /* dump a thread on stdout for debugging purposes */
-@@ -396,6 +404,12 @@ static int thread_signaled( struct object *obj, struct wait_queue_entry *entry )
+@@ -395,6 +403,12 @@ static int thread_signaled( struct object *obj, struct wait_queue_entry *entry )
      return mythread->state == TERMINATED && !mythread->exit_poll;
  }
  
@@ -71,7 +71,7 @@ index a7dcf1088af..1bd09ff4810 100644
  {
      if (access & GENERIC_READ)    access |= STANDARD_RIGHTS_READ | THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT;
 diff --git a/server/thread.h b/server/thread.h
-index d2b511145b9..29bf6b51359 100644
+index 382b10b5b..dd06333fd 100644
 --- a/server/thread.h
 +++ b/server/thread.h
 @@ -54,6 +54,7 @@ struct thread
@@ -80,8 +80,8 @@ index d2b511145b9..29bf6b51359 100644
      struct list            mutex_list;    /* list of currently owned mutexes */
 +    int                    esync_fd;      /* esync file descriptor (signalled on exit) */
      struct debug_ctx      *debug_ctx;     /* debugger context if this thread is a debugger */
-     struct debug_event    *debug_event;   /* debug event being sent to debugger */
      unsigned int           system_regs;   /* which system regs have been set */
+     struct msg_queue      *queue;         /* message queue */
 -- 
-2.20.1
+2.22.0
 

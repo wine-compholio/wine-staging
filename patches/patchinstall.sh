@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6e3d68b14120563fd584fe9c5a27885f51e7ae66"
+	echo "5e8ded1646579a597c029531f2612930b17c7627"
 }
 
 # Show version information
@@ -1794,6 +1794,13 @@ if test "$enable_ntdll_HashLinks" -eq 1; then
 		abort "Patchset ntdll-LDR_MODULE disabled, but ntdll-HashLinks depends on that."
 	fi
 	enable_ntdll_LDR_MODULE=1
+fi
+
+if test "$enable_ntdll_DOS_Attributes" -eq 1; then
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but ntdll-DOS_Attributes depends on that."
+	fi
+	enable_ntdll_Junction_Points=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -4674,6 +4681,9 @@ fi
 
 # Patchset ntdll-DOS_Attributes
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Junction_Points
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#9158] Support for DOS hidden/system file attributes
 # |   *	[#15679] cygwin symlinks not working in wine
@@ -5607,7 +5617,7 @@ fi
 # Patchset server-Stored_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions
+# |   *	ntdll-Junction_Points, ntdll-DOS_Attributes, server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -5638,7 +5648,7 @@ fi
 # Patchset server-Inherited_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions, server-Stored_ACLs
+# |   *	ntdll-Junction_Points, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c

@@ -1,14 +1,14 @@
-From c86938426ec3acafea2faa8d9ad24a065f44fbd1 Mon Sep 17 00:00:00 2001
+From 8cfc4d7d949ff0f48e9fc9b64c953c57b7d91ca2 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 7 Jan 2016 17:38:17 +0800
-Subject: widl: Add support for structures.
+Subject: [PATCH] widl: Add support for structures.
 
 ---
  tools/widl/write_sltg.c | 584 +++++++++++++++++++++++++++++++++++++---
  1 file changed, 551 insertions(+), 33 deletions(-)
 
 diff --git a/tools/widl/write_sltg.c b/tools/widl/write_sltg.c
-index c4ddaed9..f71d3d5b 100644
+index c4ddaed9441..a03e9688bd2 100644
 --- a/tools/widl/write_sltg.c
 +++ b/tools/widl/write_sltg.c
 @@ -1,7 +1,7 @@
@@ -293,8 +293,7 @@ index c4ddaed9..f71d3d5b 100644
  
 -static void add_structure_typeinfo(struct sltg_typelib *typelib, type_t *type)
 +static const char *add_typeinfo_block(struct sltg_typelib *typelib, const type_t *type)
- {
--    error("add_structure_typeinfo: %s not implemented\n", type->name);
++{
 +    const char *index_name, *other_name;
 +    void *block;
 +    short *p;
@@ -369,7 +368,8 @@ index c4ddaed9..f71d3d5b 100644
 +}
 +
 +static int get_element_size(type_t *type)
-+{
+ {
+-    error("add_structure_typeinfo: %s not implemented\n", type->name);
 +    int vt = get_type_vt(type);
 +
 +    switch (vt)
@@ -453,7 +453,7 @@ index c4ddaed9..f71d3d5b 100644
 +            num_dims++;
 +            elements *= type_array_get_dim(atype);
 +
-+            atype = type_array_get_element(atype);
++            atype = type_array_get_element_type(atype);
 +        }
 +
 +        chat("write_var_desc: VT_CARRAY: %d dimensions, %d elements\n", num_dims, elements);
@@ -465,7 +465,7 @@ index c4ddaed9..f71d3d5b 100644
 +
 +        array->cDims = num_dims;
 +        array->fFeatures = 0x0004; /* FADF_EMBEDDED */
-+        array->cbElements = get_element_size(type_array_get_element(type));
++        array->cbElements = get_element_size(type_array_get_element_type(type));
 +        array->cLocks = 0;
 +        array->pvData = NULL;
 +
@@ -478,7 +478,7 @@ index c4ddaed9..f71d3d5b 100644
 +            bound[1] = 0;
 +            bound += 2;
 +
-+            atype = type_array_get_element(atype);
++            atype = type_array_get_element_type(atype);
 +        }
 +
 +        append_data(data, array, size);
@@ -499,7 +499,7 @@ index c4ddaed9..f71d3d5b 100644
 +
 +    if (vt == VT_PTR)
 +    {
-+        type_t *ref = is_ptr(type) ? type_pointer_get_ref(type) : type_array_get_element(type);
++        type_t *ref = is_ptr(type) ? type_pointer_get_ref_type(type) : type_array_get_element_type(type);
 +
 +        if (is_ptr(ref))
 +        {
@@ -553,13 +553,13 @@ index c4ddaed9..f71d3d5b 100644
 +        LIST_FOR_EACH_ENTRY(var, type_struct_get_fields(type), var_t, entry)
 +        {
 +            chat("add_structure_typeinfo: var %p, name %s, type %p\n",
-+                 var, var->name, var->type);
++                 var, var->name, var->declspec.type);
 +
 +            init_sltg_data(&var_data[i]);
 +
 +            var_data_size += sizeof(struct sltg_variable);
 +
-+            type_desc_offset[i] = write_var_desc(&var_data[i], var->type, 0, var_data_size);
++            type_desc_offset[i] = write_var_desc(&var_data[i], var->declspec.type, 0, var_data_size);
 +            dump_var_desc(var_data[i].data, var_data[i].size);
 +
 +            if (var_data[i].size > sizeof(short))
@@ -759,5 +759,5 @@ index c4ddaed9..f71d3d5b 100644
      sltg.n_file_blocks = 0;
      sltg.first_block = 1;
 -- 
-2.19.1
+2.17.1
 

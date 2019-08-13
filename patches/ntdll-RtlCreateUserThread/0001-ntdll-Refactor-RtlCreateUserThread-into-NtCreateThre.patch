@@ -1,4 +1,4 @@
-From 0621f527e51061a9693e7e1fdcc584afe8a8a5eb Mon Sep 17 00:00:00 2001
+From d5665101d6779856aedd2f354021a303a2be21d9 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:22:59 -0500
 Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
@@ -7,15 +7,15 @@ League of Legends hooks NtCreateThread or NtCreateThreadEx (depending on the
 reported version), and expects it to be called whenever a thread is created.
 ---
  dlls/ntdll/ntdll.spec |   2 +-
- dlls/ntdll/thread.c   | 192 ++++++++++++++++++++++++++++++++++--------
+ dlls/ntdll/thread.c   | 194 ++++++++++++++++++++++++++++++++++--------
  include/winternl.h    |  25 ++++++
- 3 files changed, 184 insertions(+), 35 deletions(-)
+ 3 files changed, 185 insertions(+), 36 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 675e2a536b3..26b0d85626b 100644
+index 5d60528b71d..164effb78f3 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -155,7 +155,7 @@
+@@ -175,7 +175,7 @@
  @ stdcall NtCreateSection(ptr long ptr ptr long long long)
  @ stdcall NtCreateSemaphore(ptr long ptr long long)
  @ stdcall NtCreateSymbolicLinkObject(ptr long ptr ptr)
@@ -25,10 +25,10 @@ index 675e2a536b3..26b0d85626b 100644
  @ stdcall NtCreateTimer(ptr long ptr long)
  @ stub NtCreateToken
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 8af84b06b5c..aaa2cc1022b 100644
+index 6552c486824..db291369c08 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -542,34 +542,18 @@ static void start_thread( struct startup_info *info )
+@@ -543,34 +543,18 @@ static void start_thread( struct startup_info *info )
  /***********************************************************************
   *              NtCreateThreadEx   (NTDLL.@)
   */
@@ -68,7 +68,7 @@ index 8af84b06b5c..aaa2cc1022b 100644
      HANDLE handle = 0, actctx = 0;
      TEB *teb = NULL;
      DWORD tid = 0;
-@@ -580,6 +564,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -581,6 +565,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      struct object_attributes *objattr = NULL;
      INITIAL_TEB stack;
  
@@ -102,7 +102,7 @@ index 8af84b06b5c..aaa2cc1022b 100644
      if (process != NtCurrentProcess())
      {
          apc_call_t call;
-@@ -605,12 +616,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -606,12 +617,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
          return result.create_thread.status;
      }
  
@@ -116,7 +116,7 @@ index 8af84b06b5c..aaa2cc1022b 100644
  
      if (server_pipe( request_pipe ) == -1)
      {
-@@ -622,7 +628,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -623,7 +629,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      SERVER_START_REQ( new_thread )
      {
          req->process    = wine_server_obj_handle( process );
@@ -125,7 +125,7 @@ index 8af84b06b5c..aaa2cc1022b 100644
          req->suspend    = suspended;
          req->request_fd = request_pipe[0];
          wine_server_add_data( req, objattr, len );
-@@ -684,19 +690,19 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -685,20 +691,20 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
  
@@ -134,7 +134,9 @@ index 8af84b06b5c..aaa2cc1022b 100644
 +    pthread_attr_init( &pthread_attr );
 +    pthread_attr_setstack( &pthread_attr, teb->DeallocationStack,
                           (char *)teb->Tib.StackBase + extra_stack - (char *)teb->DeallocationStack );
+-    pthread_attr_setguardsize( &attr, 0 );
 -    pthread_attr_setscope( &attr, PTHREAD_SCOPE_SYSTEM ); /* force creating a kernel thread */
++    pthread_attr_setguardsize( &pthread_attr, 0 );
 +    pthread_attr_setscope( &pthread_attr, PTHREAD_SCOPE_SYSTEM ); /* force creating a kernel thread */
      interlocked_xchg_add( &nb_threads, 1 );
 -    if (pthread_create( &pthread_id, &attr, (void * (*)(void *))start_thread, info ))
@@ -151,7 +153,7 @@ index 8af84b06b5c..aaa2cc1022b 100644
      pthread_sigmask( SIG_SETMASK, &sigset, NULL );
  
      if (id) id->UniqueThread = ULongToHandle(tid);
-@@ -713,6 +719,124 @@ error:
+@@ -715,6 +721,124 @@ error:
      return status;
  }
  
@@ -277,10 +279,10 @@ index 8af84b06b5c..aaa2cc1022b 100644
  /******************************************************************************
   *              RtlGetNtGlobalFlags   (NTDLL.@)
 diff --git a/include/winternl.h b/include/winternl.h
-index fbcb66ee2af..ba18fdea3a1 100644
+index c6dbc5931b2..d1937b9f06b 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2180,6 +2180,31 @@ typedef enum _SYSDBG_COMMAND {
+@@ -2197,6 +2197,31 @@ typedef enum _SYSDBG_COMMAND {
    SysDbgWriteBusData
  } SYSDBG_COMMAND, *PSYSDBG_COMMAND;
  

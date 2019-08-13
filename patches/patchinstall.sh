@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cf5ccf29a9ae341cebe03634b3c4220c0c59ea53"
+	echo "4c6aa8b2fa1678c39aa5a89d9b26cfc4002e744e"
 }
 
 # Show version information
@@ -2967,14 +2967,12 @@ fi
 # |   *	[#44958] dbgeng: Support IDebugClient7 interface.
 # |
 # | Modified files:
-# |   *	dlls/dbgeng/dbgeng.c, include/dbgeng.h
+# |   *	dlls/dbgeng/dbgeng.c
 # |
 if test "$enable_dbgeng_IDebugClient7" -eq 1; then
-	patch_apply dbgeng-IDebugClient7/0001-include-Add-IDebugClient2-7-interfaces.patch
 	patch_apply dbgeng-IDebugClient7/0002-dbgeng-Support-interfaces-IDebugClient2-4.patch
 	patch_apply dbgeng-IDebugClient7/0003-dbgeng-Support-IDebugClient5-7-interfaces.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDebugClient2-7 interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dbgeng: Support interfaces IDebugClient2-4.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dbgeng: Support IDebugClient5-7 interfaces.", 1 },';
 	) >> "$patchlist"

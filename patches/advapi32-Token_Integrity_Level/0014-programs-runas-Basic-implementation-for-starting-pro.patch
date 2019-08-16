@@ -1,4 +1,4 @@
-From 0616176a3276be4ae49dc86c7d96b11240afca78 Mon Sep 17 00:00:00 2001
+From 5bf0baa79c46ec44dfd5e1340e96ff9289bc37f8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 6 Aug 2017 03:15:34 +0200
 Subject: [PATCH] programs/runas: Basic implementation for starting processes
@@ -7,9 +7,9 @@ Subject: [PATCH] programs/runas: Basic implementation for starting processes
 ---
  configure.ac               |   1 +
  programs/runas/Makefile.in |   8 ++
- programs/runas/runas.c     | 214 +++++++++++++++++++++++++++++++++++++++++++++
- programs/runas/runas.h     |  26 ++++++
- programs/runas/runas.rc    |  39 +++++++++
+ programs/runas/runas.c     | 214 +++++++++++++++++++++++++++++++++++++
+ programs/runas/runas.h     |  26 +++++
+ programs/runas/runas.rc    |  39 +++++++
  5 files changed, 288 insertions(+)
  create mode 100644 programs/runas/Makefile.in
  create mode 100644 programs/runas/runas.c
@@ -17,10 +17,10 @@ Subject: [PATCH] programs/runas: Basic implementation for starting processes
  create mode 100644 programs/runas/runas.rc
 
 diff --git a/configure.ac b/configure.ac
-index b9ef668..404ab7a 100644
+index 499c4f37ca..6f12614af1 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -3879,6 +3879,7 @@ WINE_CONFIG_MAKEFILE(programs/regedit/tests)
+@@ -3891,6 +3891,7 @@ WINE_CONFIG_MAKEFILE(programs/regedit/tests)
  WINE_CONFIG_MAKEFILE(programs/regsvcs)
  WINE_CONFIG_MAKEFILE(programs/regsvr32)
  WINE_CONFIG_MAKEFILE(programs/rpcss)
@@ -30,12 +30,12 @@ index b9ef668..404ab7a 100644
  WINE_CONFIG_MAKEFILE(programs/sc)
 diff --git a/programs/runas/Makefile.in b/programs/runas/Makefile.in
 new file mode 100644
-index 0000000..be9434b
+index 0000000000..33aa00ab03
 --- /dev/null
 +++ b/programs/runas/Makefile.in
 @@ -0,0 +1,8 @@
 +MODULE    = runas.exe
-+APPMODE   = -mconsole -municode
++APPMODE   = -mconsole -municode -mno-cygwin
 +IMPORTS   = advapi32 user32
 +
 +C_SRCS = \
@@ -44,7 +44,7 @@ index 0000000..be9434b
 +RC_SRCS = runas.rc
 diff --git a/programs/runas/runas.c b/programs/runas/runas.c
 new file mode 100644
-index 0000000..8e96aff
+index 0000000000..412755afa0
 --- /dev/null
 +++ b/programs/runas/runas.c
 @@ -0,0 +1,214 @@
@@ -69,7 +69,7 @@ index 0000000..8e96aff
 + */
 +
 +#include <windows.h>
-+#include <wine/unicode.h>
++#include <wchar.h>
 +#include <wine/debug.h>
 +
 +#include "runas.h"
@@ -153,10 +153,10 @@ index 0000000..8e96aff
 +
 +static WCHAR *starts_with(WCHAR *str, const WCHAR *start)
 +{
-+    DWORD start_len = strlenW(start);
-+    if (strlenW(str) < start_len)
++    DWORD start_len = lstrlenW(start);
++    if (lstrlenW(str) < start_len)
 +        return NULL;
-+    if (strncmpW(str, start, start_len))
++    if (wcsncmp(str, start, start_len))
 +        return NULL;
 +    return str + start_len;
 +}
@@ -176,8 +176,8 @@ index 0000000..8e96aff
 +            WCHAR *arg;
 +
 +            if ((arg = starts_with(argv[i], trustlevelW)))
-+                cmd->trustlevel = strtoulW(arg, NULL, 0);
-+            else if (!strcmpW(argv[i], showtrustlevelsW))
++                cmd->trustlevel = wcstoul(arg, NULL, 0);
++            else if (!lstrcmpW(argv[i], showtrustlevelsW))
 +                show_trustlevels();
 +            else
 +                WINE_FIXME("Ignoring parameter %s\n", wine_dbgstr_w(argv[i]));
@@ -264,7 +264,7 @@ index 0000000..8e96aff
 +}
 diff --git a/programs/runas/runas.h b/programs/runas/runas.h
 new file mode 100644
-index 0000000..40599a3
+index 0000000000..40599a3b33
 --- /dev/null
 +++ b/programs/runas/runas.h
 @@ -0,0 +1,26 @@
@@ -296,7 +296,7 @@ index 0000000..40599a3
 +#define STRING_START_ERROR          104
 diff --git a/programs/runas/runas.rc b/programs/runas/runas.rc
 new file mode 100644
-index 0000000..f9297a4
+index 0000000000..f9297a4479
 --- /dev/null
 +++ b/programs/runas/runas.rc
 @@ -0,0 +1,39 @@
@@ -340,5 +340,5 @@ index 0000000..f9297a4
 +    %2!u!: %3\n"
 +}
 -- 
-2.7.4
+2.23.0.rc1
 

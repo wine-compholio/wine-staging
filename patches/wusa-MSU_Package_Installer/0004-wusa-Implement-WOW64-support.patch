@@ -1,17 +1,17 @@
-From 924e4649bcc67c6b61191d6f0653c12c742e374a Mon Sep 17 00:00:00 2001
+From 3469408e1493cc2836c2ec38cf820bc52449c02a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 21 Dec 2015 01:47:59 +0100
-Subject: wusa: Implement WOW64 support.
+Subject: [PATCH 4/7] wusa: Implement WOW64 support.
 
 ---
- programs/wusa/main.c | 62 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ programs/wusa/main.c | 62 +++++++++++++++++++++++++++++++++++++++++++-
  1 file changed, 61 insertions(+), 1 deletion(-)
 
 diff --git a/programs/wusa/main.c b/programs/wusa/main.c
-index 9cd8a2d..36e0013 100644
+index 837729554f..3598c39660 100644
 --- a/programs/wusa/main.c
 +++ b/programs/wusa/main.c
-@@ -66,6 +66,12 @@ struct installer_state
+@@ -65,6 +65,12 @@ struct installer_state
      struct list updates;
  };
  
@@ -24,12 +24,12 @@ index 9cd8a2d..36e0013 100644
  static BOOL strbuf_init(struct strbuf *buf)
  {
      buf->pos = 0;
-@@ -375,6 +381,14 @@ static WCHAR *lookup_expression(struct assembly_entry *assembly, const WCHAR *ke
+@@ -374,6 +380,14 @@ static WCHAR *lookup_expression(struct assembly_entry *assembly, const WCHAR *ke
  
-     if (!strcmpW(key, runtime_system32))
+     if (!lstrcmpW(key, runtime_system32))
      {
 +    #if defined(__x86_64__)
-+        if (!strcmpW(assembly->identity.architecture, x86W))
++        if (!lstrcmpW(assembly->identity.architecture, x86W))
 +        {
 +            GetSystemWow64DirectoryW(path, sizeof(path)/sizeof(path[0]));
 +            return strdupW(path);
@@ -39,7 +39,7 @@ index 9cd8a2d..36e0013 100644
          GetSystemDirectoryW(path, sizeof(path)/sizeof(path[0]));
          return strdupW(path);
      }
-@@ -691,8 +705,13 @@ static BOOL install_registry(struct assembly_entry *assembly, BOOL dryrun)
+@@ -690,8 +704,13 @@ static BOOL install_registry(struct assembly_entry *assembly, BOOL dryrun)
      struct registrykv_entry *registrykv;
      HKEY root, subkey;
      WCHAR *path;
@@ -47,13 +47,13 @@ index 9cd8a2d..36e0013 100644
      BOOL ret = TRUE;
  
 +#if defined(__x86_64__)
-+    if (!strcmpW(assembly->identity.architecture, x86W)) sam |= KEY_WOW64_32KEY;
++    if (!lstrcmpW(assembly->identity.architecture, x86W)) sam |= KEY_WOW64_32KEY;
 +#endif
 +
      LIST_FOR_EACH_ENTRY(registryop, &assembly->registryops, struct registryop_entry, entry)
      {
          if (!(path = split_registry_key(registryop->key, &root)))
-@@ -701,7 +720,7 @@ static BOOL install_registry(struct assembly_entry *assembly, BOOL dryrun)
+@@ -700,7 +719,7 @@ static BOOL install_registry(struct assembly_entry *assembly, BOOL dryrun)
              break;
          }
  
@@ -62,12 +62,12 @@ index 9cd8a2d..36e0013 100644
          {
              WINE_ERR("Failed to open registry key %s\n", debugstr_w(registryop->key));
              ret = FALSE;
-@@ -772,6 +791,14 @@ static BOOL install_assembly(struct list *manifest_list, struct assembly_identit
+@@ -771,6 +790,14 @@ static BOOL install_assembly(struct list *manifest_list, struct assembly_identit
          return FALSE;
      }
  
 +#if defined(__i386__)
-+    if (!strcmpW(assembly->identity.architecture, amd64W))
++    if (!lstrcmpW(assembly->identity.architecture, amd64W))
 +    {
 +        WINE_ERR("Can not install amd64 assembly in 32 bit prefix\n");
 +        return FALSE;
@@ -77,7 +77,7 @@ index 9cd8a2d..36e0013 100644
      assembly->status = ASSEMBLY_STATUS_IN_PROGRESS;
  
      LIST_FOR_EACH_ENTRY(dependency, &assembly->dependencies, struct dependency_entry, entry)
-@@ -1027,6 +1054,37 @@ done:
+@@ -1026,6 +1053,37 @@ done:
      return ret;
  }
  
@@ -115,7 +115,7 @@ index 9cd8a2d..36e0013 100644
  int wmain(int argc, WCHAR *argv[])
  {
      static const WCHAR norestartW[] = {'/','n','o','r','e','s','t','a','r','t',0};
-@@ -1035,6 +1093,8 @@ int wmain(int argc, WCHAR *argv[])
+@@ -1034,6 +1092,8 @@ int wmain(int argc, WCHAR *argv[])
      WCHAR *filename = NULL;
      int i;
  
@@ -125,5 +125,5 @@ index 9cd8a2d..36e0013 100644
      state.quiet = FALSE;
  
 -- 
-2.9.0
+2.23.0.rc1
 

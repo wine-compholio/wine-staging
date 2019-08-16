@@ -1,26 +1,25 @@
-From ad50a50937dc367abb6a0cb08cd88be2b293b75d Mon Sep 17 00:00:00 2001
+From 1fdf0ca43f4530d1303362b3f8b20b0af06588d4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 14 Dec 2015 00:39:54 +0100
-Subject: wusa: Implement basic installation logic.
+Subject: [PATCH 1/7] wusa: Implement basic installation logic.
 
 ---
- programs/wusa/Makefile.in |    6 +-
- programs/wusa/main.c      | 1044 ++++++++++++++++++++++++++++++++++++-
+ programs/wusa/Makefile.in |    4 +-
+ programs/wusa/main.c      | 1043 ++++++++++++++++++++++++++++++++++++-
  programs/wusa/manifest.c  |  704 +++++++++++++++++++++++++
- programs/wusa/wusa.h      |  160 ++++++
- 4 files changed, 1907 insertions(+), 7 deletions(-)
+ programs/wusa/wusa.h      |  159 ++++++
+ 4 files changed, 1904 insertions(+), 6 deletions(-)
  create mode 100644 programs/wusa/manifest.c
  create mode 100644 programs/wusa/wusa.h
 
 diff --git a/programs/wusa/Makefile.in b/programs/wusa/Makefile.in
-index 3042e86bf..67060d7b4 100644
+index 3042e86bf8..bf90273411 100644
 --- a/programs/wusa/Makefile.in
 +++ b/programs/wusa/Makefile.in
 @@ -1,6 +1,8 @@
  MODULE    = wusa.exe
  
--EXTRADLLFLAGS = -mconsole -municode -mno-cygwin
-+EXTRADLLFLAGS = -mconsole -municode
+ EXTRADLLFLAGS = -mconsole -municode -mno-cygwin
 +IMPORTS   = cabinet shlwapi ole32 oleaut32 advapi32
  
  C_SRCS = \
@@ -28,7 +27,7 @@ index 3042e86bf..67060d7b4 100644
 +	main.c \
 +	manifest.c
 diff --git a/programs/wusa/main.c b/programs/wusa/main.c
-index aa7a38fe1..7c1dfef7a 100644
+index aa7a38fe17..0d6e5c345c 100644
 --- a/programs/wusa/main.c
 +++ b/programs/wusa/main.c
 @@ -1,5 +1,7 @@
@@ -39,7 +38,7 @@ index aa7a38fe1..7c1dfef7a 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -16,18 +18,1050 @@
+@@ -16,18 +18,1049 @@
   * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
   */
  
@@ -48,7 +47,6 @@ index aa7a38fe1..7c1dfef7a 100644
 +#include "fdi.h"
 +#include "wusa.h"
  #include "wine/debug.h"
-+#include "wine/unicode.h"
  
  WINE_DEFAULT_DEBUG_CHANNEL(wusa);
  
@@ -113,7 +111,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +    if (!buf->buf) return FALSE;
 +    if (!str) return TRUE;
 +
-+    if (len == ~0U) len = strlenW(str);
++    if (len == ~0U) len = lstrlenW(str);
 +    if (buf->pos + len + 1 > buf->len)
 +    {
 +        new_len = max(buf->pos + len + 1, buf->len * 2);
@@ -135,9 +133,9 @@ index aa7a38fe1..7c1dfef7a 100644
 +
 +static BOOL str_ends_with(const WCHAR *str, const WCHAR *suffix)
 +{
-+    DWORD str_len = strlenW(str), suffix_len = strlenW(suffix);
++    DWORD str_len = lstrlenW(str), suffix_len = lstrlenW(suffix);
 +    if (suffix_len > str_len) return FALSE;
-+    return !strcmpiW(str + str_len - suffix_len, suffix);
++    return !_wcsicmp(str + str_len - suffix_len, suffix);
 +}
 +
 +static WCHAR *path_combine(const WCHAR *path, const WCHAR *filename)
@@ -147,13 +145,13 @@ index aa7a38fe1..7c1dfef7a 100644
 +    DWORD length;
 +
 +    if (!path || !filename) return NULL;
-+    length = strlenW(path) + strlenW(filename) + 2;
++    length = lstrlenW(path) + lstrlenW(filename) + 2;
 +    if (!(result = heap_alloc(length * sizeof(WCHAR)))) return NULL;
 +
-+    strcpyW(result, path);
-+    if (result[0] && result[strlenW(result) - 1] != '\\')
-+        strcatW(result, backslashW);
-+    strcatW(result, filename);
++    lstrcpyW(result, path);
++    if (result[0] && result[lstrlenW(result) - 1] != '\\')
++        lstrcatW(result, backslashW);
++    lstrcatW(result, filename);
 +    return result;
 +}
 +
@@ -215,8 +213,8 @@ index aa7a38fe1..7c1dfef7a 100644
 +    {
 +        do
 +        {
-+            if (!strcmpW(data.cFileName, dotW)) continue;
-+            if (!strcmpW(data.cFileName, dotdotW)) continue;
++            if (!lstrcmpW(data.cFileName, dotW)) continue;
++            if (!lstrcmpW(data.cFileName, dotdotW)) continue;
 +            if (!(full_path = path_combine(path, data.cFileName))) continue;
 +            if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 +                delete_directory(full_path);
@@ -398,12 +396,12 @@ index aa7a38fe1..7c1dfef7a 100644
 +    static const WCHAR runtime_windows[] = {'r','u','n','t','i','m','e','.','w','i','n','d','o','w','s',0};
 +    WCHAR path[MAX_PATH];
 +
-+    if (!strcmpW(key, runtime_system32))
++    if (!lstrcmpW(key, runtime_system32))
 +    {
 +        GetSystemDirectoryW(path, sizeof(path)/sizeof(path[0]));
 +        return strdupW(path);
 +    }
-+    if (!strcmpW(key, runtime_windows))
++    if (!lstrcmpW(key, runtime_windows))
 +    {
 +        GetWindowsDirectoryW(path, sizeof(path)/sizeof(path[0]));
 +        return strdupW(path);
@@ -423,11 +421,11 @@ index aa7a38fe1..7c1dfef7a 100644
 +
 +    if (!expression || !strbuf_init(&buf)) return NULL;
 +
-+    for (pos = expression; (next = strstrW(pos, beginW)); pos = next + 1)
++    for (pos = expression; (next = wcsstr(pos, beginW)); pos = next + 1)
 +    {
 +        strbuf_append(&buf, pos, next - pos);
 +        pos = next + 2;
-+        if (!(next = strstrW(pos, endW)))
++        if (!(next = wcsstr(pos, endW)))
 +        {
 +            strbuf_append(&buf, beginW, 2);
 +            break;
@@ -453,7 +451,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +static WCHAR *get_assembly_source(struct assembly_entry *assembly)
 +{
 +    WCHAR *p, *path = strdupW(assembly->filename);
-+    if (path && (p = strrchrW(path, '.'))) *p = 0;
++    if (path && (p = wcsrchr(path, '.'))) *p = 0;
 +    return path;
 +}
 +
@@ -527,20 +525,20 @@ index aa7a38fe1..7c1dfef7a 100644
 +    DWORD size;
 +    WCHAR *p;
 +
-+    p = strchrW(key, '\\');
++    p = wcschr(key, '\\');
 +    if (!p) return NULL;
 +
 +    size = p - key;
 +
-+    if (strlenW(hkey_classes_rootW) == size && !strncmpW(key, hkey_classes_rootW, size))
++    if (lstrlenW(hkey_classes_rootW) == size && !wcsncmp(key, hkey_classes_rootW, size))
 +        *root = HKEY_CLASSES_ROOT;
-+    else if (strlenW(hkey_current_configW) == size && !strncmpW(key, hkey_current_configW, size))
++    else if (lstrlenW(hkey_current_configW) == size && !wcsncmp(key, hkey_current_configW, size))
 +        *root = HKEY_CURRENT_CONFIG;
-+    else if (strlenW(hkey_current_userW) == size && !strncmpW(key, hkey_current_userW, size))
++    else if (lstrlenW(hkey_current_userW) == size && !wcsncmp(key, hkey_current_userW, size))
 +        *root = HKEY_CURRENT_USER;
-+    else if (strlenW(hkey_local_machineW) == size && !strncmpW(key, hkey_local_machineW, size))
++    else if (lstrlenW(hkey_local_machineW) == size && !wcsncmp(key, hkey_local_machineW, size))
 +        *root = HKEY_LOCAL_MACHINE;
-+    else if (strlenW(hkey_usersW) == size && !strncmpW(key, hkey_usersW, size))
++    else if (lstrlenW(hkey_usersW) == size && !wcsncmp(key, hkey_usersW, size))
 +        *root = HKEY_USERS;
 +    else
 +    {
@@ -560,7 +558,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +    if (registrykv->value && !value)
 +        return FALSE;
 +
-+    value_size = value ? (strlenW(value) + 1) * sizeof(WCHAR) : 0;
++    value_size = value ? (lstrlenW(value) + 1) * sizeof(WCHAR) : 0;
 +    if (!dryrun && RegSetValueExW(key, registrykv->name, 0, type, (void *)value, value_size))
 +    {
 +        WINE_ERR("Failed to set registry key %s\n", debugstr_w(registrykv->name));
@@ -584,7 +582,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +    for (pos = input; pos[0] == '"'; pos++)
 +    {
 +        pos++;
-+        if (!(next = strstrW(pos, quoteW))) goto error;
++        if (!(next = wcsstr(pos, quoteW))) goto error;
 +        strbuf_append(&buf, pos, next - pos);
 +        strbuf_append(&buf, emptyW, sizeof(emptyW)/sizeof(emptyW[0]));
 +
@@ -633,7 +631,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +
 +static BOOL install_registry_dword(struct assembly_entry *assembly, HKEY key, struct registrykv_entry *registrykv, BOOL dryrun)
 +{
-+    DWORD value = registrykv->value_type ? strtoulW(registrykv->value_type, NULL, 16) : 0;
++    DWORD value = registrykv->value_type ? wcstoul(registrykv->value_type, NULL, 16) : 0;
 +    BOOL ret = TRUE;
 +
 +    if (!dryrun && RegSetValueExW(key, registrykv->name, 0, REG_DWORD, (void *)&value, sizeof(value)))
@@ -653,7 +651,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +
 +    *size = 0;
 +    if (!input) return NULL;
-+    length = strlenW(input);
++    length = lstrlenW(input);
 +    if (length & 1) return NULL;
 +    length >>= 1;
 +
@@ -662,7 +660,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +    {
 +        number[0] = input[0];
 +        number[1] = input[1];
-+        *p++ = strtoulW(number, 0, 16);
++        *p++ = wcstoul(number, 0, 16);
 +    }
 +    *size = length;
 +    return output;
@@ -695,15 +693,15 @@ index aa7a38fe1..7c1dfef7a 100644
 +    static const WCHAR reg_dwordW[] = {'R','E','G','_','D','W','O','R','D',0};
 +    static const WCHAR reg_binaryW[] = {'R','E','G','_','B','I','N','A','R','Y',0};
 +
-+    if (!strcmpW(registrykv->value_type, reg_szW))
++    if (!lstrcmpW(registrykv->value_type, reg_szW))
 +        return install_registry_string(assembly, key, registrykv, REG_SZ, dryrun);
-+    if (!strcmpW(registrykv->value_type, reg_expand_szW))
++    if (!lstrcmpW(registrykv->value_type, reg_expand_szW))
 +        return install_registry_string(assembly, key, registrykv, REG_EXPAND_SZ, dryrun);
-+    if (!strcmpW(registrykv->value_type, reg_multi_szW))
++    if (!lstrcmpW(registrykv->value_type, reg_multi_szW))
 +        return install_registry_multisz(assembly, key, registrykv, dryrun);
-+    if (!strcmpW(registrykv->value_type, reg_dwordW))
++    if (!lstrcmpW(registrykv->value_type, reg_dwordW))
 +        return install_registry_dword(assembly, key, registrykv, dryrun);
-+    if (!strcmpW(registrykv->value_type, reg_binaryW))
++    if (!lstrcmpW(registrykv->value_type, reg_binaryW))
 +        return install_registry_binary(assembly, key, registrykv, dryrun);
 +
 +    WINE_FIXME("Unsupported registry value type %s\n", debugstr_w(registrykv->value_type));
@@ -748,7 +746,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +static BOOL compare_assembly_string(const WCHAR *str1, const WCHAR *str2)
 +{
 +    static const WCHAR placeholderW[] = {'*',0};
-+    return !strcmpW(str1, str2) || !strcmpW(str1, placeholderW) || !strcmpW(str2, placeholderW);
++    return !lstrcmpW(str1, str2) || !lstrcmpW(str1, placeholderW) || !lstrcmpW(str2, placeholderW);
 +}
 +
 +static struct assembly_entry *lookup_assembly(struct list *manifest_list, struct assembly_identity *identity)
@@ -757,7 +755,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +
 +    LIST_FOR_EACH_ENTRY(assembly, manifest_list, struct assembly_entry, entry)
 +    {
-+        if (strcmpiW(assembly->identity.name, identity->name)) continue;
++        if (_wcsicmp(assembly->identity.name, identity->name)) continue;
 +        if (!compare_assembly_string(assembly->identity.architecture, identity->architecture)) continue;
 +        if (!compare_assembly_string(assembly->identity.language, identity->language)) continue;
 +        if (!compare_assembly_string(assembly->identity.pubkey_token, identity->pubkey_token)) continue;
@@ -975,7 +973,7 @@ index aa7a38fe1..7c1dfef7a 100644
 +        do
 +        {
 +            if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-+            if (!strcmpiW(data.cFileName, wsusscanW)) continue;
++            if (!_wcsicmp(data.cFileName, wsusscanW)) continue;
 +            if (!(path = path_combine(temp_path, data.cFileName))) continue;
 +            if (!load_assemblies_from_cab(path, state))
 +                WINE_ERR("Failed to load all manifests from %s, ignoring\n", debugstr_w(path));
@@ -1074,9 +1072,9 @@ index aa7a38fe1..7c1dfef7a 100644
 +    {
 +        if (argv[i][0] == '/')
 +        {
-+            if (!strcmpW(argv[i], norestartW))
++            if (!lstrcmpW(argv[i], norestartW))
 +                state.norestart = TRUE;
-+            else if (!strcmpW(argv[i], quietW))
++            else if (!lstrcmpW(argv[i], quietW))
 +                state.quiet = TRUE;
 +            else
 +                WINE_FIXME("Unknown option: %s\n", wine_dbgstr_w(argv[i]));
@@ -1097,7 +1095,7 @@ index aa7a38fe1..7c1dfef7a 100644
  }
 diff --git a/programs/wusa/manifest.c b/programs/wusa/manifest.c
 new file mode 100644
-index 000000000..fc1f65b02
+index 0000000000..d88b5f98a9
 --- /dev/null
 +++ b/programs/wusa/manifest.c
 @@ -0,0 +1,704 @@
@@ -1128,7 +1126,7 @@ index 000000000..fc1f65b02
 +#include "msxml.h"
 +#include "wusa.h"
 +#include "wine/debug.h"
-+#include "wine/unicode.h"
++
 +
 +WINE_DEFAULT_DEBUG_CHANNEL(wusa);
 +
@@ -1278,7 +1276,7 @@ index 000000000..fc1f65b02
 +
 +    if (SUCCEEDED(IXMLDOMElement_get_tagName(root, &bstr)))
 +    {
-+        ret = !strcmpW(bstr, tagname);
++        ret = !lstrcmpW(bstr, tagname);
 +        SysFreeString(bstr);
 +    }
 +
@@ -1401,7 +1399,7 @@ index 000000000..fc1f65b02
 +        WINE_ERR("Failed to get dependency type\n");
 +        return FALSE;
 +    }
-+    if (strcmpW(dependency_type, installW))
++    if (lstrcmpW(dependency_type, installW))
 +    {
 +        WINE_FIXME("Unimplemented dependency type %s\n", debugstr_w(dependency_type));
 +        goto error;
@@ -1427,7 +1425,7 @@ index 000000000..fc1f65b02
 +    struct assembly_entry *assembly = context;
 +    struct dependency_entry *entry;
 +
-+    if (strcmpW(tagname, dependentAssemblyW))
++    if (lstrcmpW(tagname, dependentAssemblyW))
 +    {
 +        WINE_FIXME("Don't know how to handle dependency tag %s\n", debugstr_w(tagname));
 +        return FALSE;
@@ -1459,7 +1457,7 @@ index 000000000..fc1f65b02
 +    struct assembly_entry *assembly = context;
 +    struct dependency_entry *entry;
 +
-+    if (strcmpW(tagname, assemblyIdentityW))
++    if (lstrcmpW(tagname, assemblyIdentityW))
 +    {
 +        WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
 +        return TRUE;
@@ -1491,11 +1489,11 @@ index 000000000..fc1f65b02
 +    static const WCHAR packageW[] = {'p','a','c','k','a','g','e',0};
 +    struct assembly_entry *assembly = context;
 +
-+    if (!strcmpW(tagname, componentW))
++    if (!lstrcmpW(tagname, componentW))
 +        return iter_components(child, assembly);
-+    if (!strcmpW(tagname, packageW))
++    if (!lstrcmpW(tagname, packageW))
 +        return iter_components(child, assembly);
-+    if (!strcmpW(tagname, applicableW))
++    if (!lstrcmpW(tagname, applicableW))
 +        return TRUE;
 +
 +    WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
@@ -1513,9 +1511,9 @@ index 000000000..fc1f65b02
 +    static const WCHAR parentW[] = {'p','a','r','e','n','t',0};
 +    struct assembly_entry *assembly = context;
 +
-+    if (!strcmpW(tagname, updateW))
++    if (!lstrcmpW(tagname, updateW))
 +        return iter_update(child, assembly);
-+    if (!strcmpW(tagname, parentW))
++    if (!lstrcmpW(tagname, parentW))
 +        return TRUE;
 +
 +    WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
@@ -1559,8 +1557,8 @@ index 000000000..fc1f65b02
 +    struct registryop_entry *registryop = context;
 +    struct registrykv_entry *entry;
 +
-+    if (!strcmpW(tagname, securityDescriptorW)) return TRUE;
-+    if (strcmpW(tagname, registryValueW))
++    if (!lstrcmpW(tagname, securityDescriptorW)) return TRUE;
++    if (lstrcmpW(tagname, registryValueW))
 +    {
 +        WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
 +        return TRUE;
@@ -1595,7 +1593,7 @@ index 000000000..fc1f65b02
 +    struct registryop_entry *entry;
 +    WCHAR *keyname;
 +
-+    if (strcmpW(tagname, registryKeyW))
++    if (lstrcmpW(tagname, registryKeyW))
 +    {
 +        WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
 +        return TRUE;
@@ -1641,21 +1639,21 @@ index 000000000..fc1f65b02
 +    static const WCHAR deploymentW[] = {'d','e','p','l','o','y','m','e','n','t',0};
 +    struct assembly_entry *assembly = context;
 +
-+    if (!strcmpW(tagname, assemblyIdentityW) && !assembly->identity.name)
++    if (!lstrcmpW(tagname, assemblyIdentityW) && !assembly->identity.name)
 +        return read_identity(child, &assembly->identity);
-+    if (!strcmpW(tagname, dependencyW))
++    if (!lstrcmpW(tagname, dependencyW))
 +        return iter_dependency(child, assembly);
-+    if (!strcmpW(tagname, packageW))
++    if (!lstrcmpW(tagname, packageW))
 +        return iter_package(child, assembly);
-+    if (!strcmpW(tagname, fileW))
++    if (!lstrcmpW(tagname, fileW))
 +        return read_file(child, assembly);
-+    if (!strcmpW(tagname, registryKeysW))
++    if (!lstrcmpW(tagname, registryKeysW))
 +        return iter_registry_keys(child, assembly);
-+    if (!strcmpW(tagname, trustInfoW))
++    if (!lstrcmpW(tagname, trustInfoW))
 +        return TRUE;
-+    if (!strcmpW(tagname, configurationW))
++    if (!lstrcmpW(tagname, configurationW))
 +        return TRUE;
-+    if (!strcmpW(tagname, deploymentW))
++    if (!lstrcmpW(tagname, deploymentW))
 +        return TRUE;
 +
 +    WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
@@ -1704,8 +1702,8 @@ index 000000000..fc1f65b02
 +    struct dependency_entry *entry;
 +    struct list *update_list = context;
 +
-+    if (!strcmpW(tagname, sourceW)) return TRUE;
-+    if (strcmpW(tagname, assemblyIdentityW))
++    if (!lstrcmpW(tagname, sourceW)) return TRUE;
++    if (lstrcmpW(tagname, assemblyIdentityW))
 +    {
 +        WINE_TRACE("Ignoring unexpected tag %s\n", debugstr_w(tagname));
 +        return TRUE;
@@ -1739,7 +1737,7 @@ index 000000000..fc1f65b02
 +    WCHAR *action;
 +    BOOL ret = TRUE;
 +
-+    if (strcmpW(tagname, packageW))
++    if (lstrcmpW(tagname, packageW))
 +    {
 +        WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
 +        return TRUE;
@@ -1751,7 +1749,7 @@ index 000000000..fc1f65b02
 +        return FALSE;
 +    }
 +
-+    if (!strcmpW(action, installW))
++    if (!lstrcmpW(action, installW))
 +        ret = iter_update_package(child, update_list);
 +    else
 +        WINE_FIXME("action %s not supported\n", debugstr_w(action));
@@ -1770,7 +1768,7 @@ index 000000000..fc1f65b02
 +    static const WCHAR servicingW[] = {'s','e','r','v','i','c','i','n','g',0};
 +    struct list *update_list = context;
 +
-+    if (strcmpW(tagname, servicingW))
++    if (lstrcmpW(tagname, servicingW))
 +    {
 +        WINE_FIXME("Ignoring unexpected tag %s\n", debugstr_w(tagname));
 +        return TRUE;
@@ -1807,10 +1805,10 @@ index 000000000..fc1f65b02
 +}
 diff --git a/programs/wusa/wusa.h b/programs/wusa/wusa.h
 new file mode 100644
-index 000000000..eada6d9b2
+index 0000000000..0b2b616a7c
 --- /dev/null
 +++ b/programs/wusa/wusa.h
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,159 @@
 +/*
 + * Copyright 2015 Michael Müller
 + * Copyright 2015 Sebastian Lackner
@@ -1830,7 +1828,6 @@ index 000000000..eada6d9b2
 + * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 + */
 +
-+#include "wine/unicode.h"
 +#include "wine/list.h"
 +#include <windows.h>
 +
@@ -1953,9 +1950,9 @@ index 000000000..eada6d9b2
 +{
 +    WCHAR *ret;
 +    if (!str) return NULL;
-+    ret = heap_alloc((strlenW(str) + 1) * sizeof(WCHAR));
++    ret = heap_alloc((lstrlenW(str) + 1) * sizeof(WCHAR));
 +    if (ret)
-+        strcpyW(ret, str);
++        lstrcpyW(ret, str);
 +    return ret;
 +}
 +
@@ -1972,5 +1969,5 @@ index 000000000..eada6d9b2
 +    return ret;
 +}
 -- 
-2.21.0
+2.23.0.rc1
 

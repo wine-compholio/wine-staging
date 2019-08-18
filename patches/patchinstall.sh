@@ -101,6 +101,7 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_crypt32_MS_Root_Certs="$1"
+	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d9_Tests="$1"
@@ -433,6 +434,9 @@ patch_enable ()
 			;;
 		crypt32-MS_Root_Certs)
 			enable_crypt32_MS_Root_Certs="$2"
+			;;
+		cryptext-CryptExtOpenCER)
+			enable_cryptext_CryptExtOpenCER="$2"
 			;;
 		d2d1-ID2D1Factory1)
 			enable_d2d1_ID2D1Factory1="$2"
@@ -2053,12 +2057,11 @@ fi
 # |   *	[#47445] Define AT_NO_AUTOMOUNT if needed.
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
-# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c, dlls/ntoskrnl.exe/ntoskrnl.c,
-# | 	dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c,
-# | 	dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c,
-# | 	dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in,
-# | 	programs/wineboot/Makefile.in, programs/wineboot/wineboot.c
+# |   *	configure, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c,
+# | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
+# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c,
+# | 	loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/wineboot/Makefile.in,
+# | 	programs/wineboot/wineboot.c
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
@@ -2066,7 +2069,6 @@ if test "$enable_mailing_list_patches" -eq 1; then
 	patch_apply mailing-list-patches/0003-wineboot-Create-a-root-enumerated-device-object-for-.patch
 	patch_apply mailing-list-patches/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
 	patch_apply mailing-list-patches/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
-	patch_apply mailing-list-patches/0006-cryptext-Implement-CryptExtOpenCER.patch
 	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
 	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
 	patch_apply mailing-list-patches/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
@@ -2079,7 +2081,6 @@ if test "$enable_mailing_list_patches" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "wineboot: Create a root-enumerated device object for winebus.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "cryptext: Implement CryptExtOpenCER.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
@@ -2445,6 +2446,19 @@ if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
 	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset cryptext-CryptExtOpenCER
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/cryptext/Makefile.in, dlls/cryptext/cryptext.spec, dlls/cryptext/cryptext_main.c,
+# | 	dlls/cryptext/tests/Makefile.in, dlls/cryptext/tests/cryptext.c
+# |
+if test "$enable_cryptext_CryptExtOpenCER" -eq 1; then
+	patch_apply cryptext-CryptExtOpenCER/0001-cryptext-Implement-CryptExtOpenCER.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "cryptext: Implement CryptExtOpenCER.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -159,6 +159,7 @@ patch_enable_all ()
 	enable_iphlpapi_System_Ping="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Debugger="$1"
+	enable_kernel32_EnumSystemFirmwareTables="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
@@ -608,6 +609,9 @@ patch_enable ()
 			;;
 		kernel32-Debugger)
 			enable_kernel32_Debugger="$2"
+			;;
+		kernel32-EnumSystemFirmwareTables)
+			enable_kernel32_EnumSystemFirmwareTables="$2"
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
@@ -4295,6 +4299,22 @@ if test "$enable_kernel32_Debugger" -eq 1; then
 	patch_apply kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Always start debugger on WinSta0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernel32-EnumSystemFirmwareTables
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47523] kernel32: Add stub implementation of EnumSystemFirmwareTables.
+# |
+# | Modified files:
+# |   *	dlls/api-ms-win-core-sysinfo-l1-2-0/api-ms-win-core-sysinfo-l1-2-0.spec, dlls/api-ms-win-core-sysinfo-l1-2-1/api-ms-win-
+# | 	core-sysinfo-l1-2-1.spec, dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernelbase/kernelbase.spec
+# |
+if test "$enable_kernel32_EnumSystemFirmwareTables" -eq 1; then
+	patch_apply kernel32-EnumSystemFirmwareTables/0001-kernel32-Add-stub-implementation-of-EnumSystemFirmwa.patch
+	(
+		printf '%s\n' '+    { "Steven Bell", "kernel32: Add stub implementation of EnumSystemFirmwareTables.", 1 },';
 	) >> "$patchlist"
 fi
 

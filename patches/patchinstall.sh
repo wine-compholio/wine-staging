@@ -6508,14 +6508,12 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 	patch_apply uxtheme-GTK_Theming/0004-uxtheme-Reset-FPU-flags-before-calling-GTK3-function.patch
 	patch_apply uxtheme-GTK_Theming/0005-uxtheme-Fix-some-incorrect-error-codes.patch
 	patch_apply uxtheme-GTK_Theming/0006-uxtheme-Dont-build-with-msvcrt.patch
-	patch_apply uxtheme-GTK_Theming/0007-Added-wine-unicode.patch
 	(
 		printf '%s\n' '+    { "Ivan Akulinchev", "uxtheme: Initial implementation of GTK backend.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Correctly render buttons with GTK >= 3.14.0.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uxtheme: Reset FPU flags before calling GTK3 functions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Fix some incorrect error codes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uxtheme: Dont build with msvcrt.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Added wine/unicode.", 1 },';
 	) >> "$patchlist"
 fi
 

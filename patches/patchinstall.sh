@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5ea3a044b83c4cd55a3c647f5e80511a85b9f536"
+	echo "a64b9c93b1eeef151221b5a100547fdae85435f4"
 }
 
 # Show version information
@@ -120,7 +120,6 @@ patch_enable_all ()
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
-	enable_dbgeng_IDebugClient7="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Device_Caps="$1"
 	enable_ddraw_EnumSurfaces="$1"
@@ -159,7 +158,6 @@ patch_enable_all ()
 	enable_iphlpapi_System_Ping="$1"
 	enable_kernel32_CopyFileEx="$1"
 	enable_kernel32_Debugger="$1"
-	enable_kernel32_EnumSystemFirmwareTables="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
@@ -493,9 +491,6 @@ patch_enable ()
 		d3dx9_36-UpdateSkinnedMesh)
 			enable_d3dx9_36_UpdateSkinnedMesh="$2"
 			;;
-		dbgeng-IDebugClient7)
-			enable_dbgeng_IDebugClient7="$2"
-			;;
 		dbghelp-Debug_Symbols)
 			enable_dbghelp_Debug_Symbols="$2"
 			;;
@@ -609,9 +604,6 @@ patch_enable ()
 			;;
 		kernel32-Debugger)
 			enable_kernel32_Debugger="$2"
-			;;
-		kernel32-EnumSystemFirmwareTables)
-			enable_kernel32_EnumSystemFirmwareTables="$2"
 			;;
 		kernel32-FindFirstFile)
 			enable_kernel32_FindFirstFile="$2"
@@ -2979,23 +2971,6 @@ if test "$enable_d3dx9_36_UpdateSkinnedMesh" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dbgeng-IDebugClient7
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44958] dbgeng: Support IDebugClient7 interface.
-# |
-# | Modified files:
-# |   *	dlls/dbgeng/dbgeng.c
-# |
-if test "$enable_dbgeng_IDebugClient7" -eq 1; then
-	patch_apply dbgeng-IDebugClient7/0002-dbgeng-Support-interfaces-IDebugClient2-4.patch
-	patch_apply dbgeng-IDebugClient7/0003-dbgeng-Support-IDebugClient5-7-interfaces.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dbgeng: Support interfaces IDebugClient2-4.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dbgeng: Support IDebugClient5-7 interfaces.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dbghelp-Debug_Symbols
 # |
 # | Modified files:
@@ -4299,22 +4274,6 @@ if test "$enable_kernel32_Debugger" -eq 1; then
 	patch_apply kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Always start debugger on WinSta0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-EnumSystemFirmwareTables
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47523] kernel32: Add stub implementation of EnumSystemFirmwareTables.
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-sysinfo-l1-2-0/api-ms-win-core-sysinfo-l1-2-0.spec, dlls/api-ms-win-core-sysinfo-l1-2-1/api-ms-win-
-# | 	core-sysinfo-l1-2-1.spec, dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec, dlls/kernelbase/kernelbase.spec
-# |
-if test "$enable_kernel32_EnumSystemFirmwareTables" -eq 1; then
-	patch_apply kernel32-EnumSystemFirmwareTables/0001-kernel32-Add-stub-implementation-of-EnumSystemFirmwa.patch
-	(
-		printf '%s\n' '+    { "Steven Bell", "kernel32: Add stub implementation of EnumSystemFirmwareTables.", 1 },';
 	) >> "$patchlist"
 fi
 

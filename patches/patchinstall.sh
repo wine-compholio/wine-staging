@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a64b9c93b1eeef151221b5a100547fdae85435f4"
+	echo "fb5b0c64639c056d55e14011a3b4e6f2d83e7cda"
 }
 
 # Show version information
@@ -303,6 +303,7 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
+	enable_user32_rawinput="$1"
 	enable_user32_recursive_activation="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
@@ -354,7 +355,6 @@ patch_enable_all ()
 	enable_winex11__NET_ACTIVE_WINDOW="$1"
 	enable_winex11_ime_check_thread_data="$1"
 	enable_winex11_key_translation="$1"
-	enable_winex11_mouse_movements="$1"
 	enable_winex11_wglShareLists="$1"
 	enable_winex11_drv_Query_server_position="$1"
 	enable_winex11_drv_mouse_coorrds="$1"
@@ -1040,6 +1040,9 @@ patch_enable ()
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
 			;;
+		user32-rawinput)
+			enable_user32_rawinput="$2"
+			;;
 		user32-recursive-activation)
 			enable_user32_recursive_activation="$2"
 			;;
@@ -1192,9 +1195,6 @@ patch_enable ()
 			;;
 		winex11-key_translation)
 			enable_winex11_key_translation="$2"
-			;;
-		winex11-mouse-movements)
-			enable_winex11_mouse_movements="$2"
 			;;
 		winex11-wglShareLists)
 			enable_winex11_wglShareLists="$2"
@@ -6419,6 +6419,44 @@ if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset user32-rawinput
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42675] - Overwatch - Phantom mouse input / view pulled up to ceiling.
+# |   *	[#45882] - Raw Input should use untransformed mouse values (affects Overwatch, several Source games).
+# |   *	[#47457] - Mouse click-click-hold is treated as double click, causing gun jam in Overwatch.
+# |   *	[#42631] - user32: Add Raw Input support.
+# |
+# | Modified files:
+# |   *	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/rawinput.c, dlls/user32/user32.spec, dlls/winex11.drv/event.c,
+# | 	dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c, include/winuser.h,
+# | 	server/protocol.def, server/queue.c, server/trace.c, tools/make_requests
+# |
+if test "$enable_user32_rawinput" -eq 1; then
+	patch_apply user32-rawinput/0001-user32-Add-support-for-RIDEV_NOLEGACY-flag.patch
+	patch_apply user32-rawinput/0002-server-Move-mouse-raw-input-message-faking-from-user.patch
+	patch_apply user32-rawinput/0003-server-Add-request-for-sending-native-raw-input-mess.patch
+	patch_apply user32-rawinput/0004-user32-Add-helper-for-input-drivers-to-submit-native.patch
+	patch_apply user32-rawinput/0005-server-Don-t-emulate-rawinput-mouse-events-if-native.patch
+	patch_apply user32-rawinput/0006-winex11.drv-Directly-listen-to-master-XInput2-device.patch
+	patch_apply user32-rawinput/0007-winex11.drv-Implement-native-mouse-movement-raw-inpu.patch
+	patch_apply user32-rawinput/0008-winex11.drv-Implement-native-mouse-button-raw-input-.patch
+	patch_apply user32-rawinput/0009-winex11.drv-Don-t-react-to-small-slow-mouse-movement.patch
+	patch_apply user32-rawinput/0010-server-Implement-RIDEV_INPUTSINK-flag.patch
+	(
+		printf '%s\n' '+    { "Derek Lesho", "user32: Add support for RIDEV_NOLEGACY flag.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "server: Move mouse raw-input message faking from user32 to wineserver.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "server: Add request for sending native raw-input messages.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "user32: Add helper for input drivers to submit native rawinput msgs.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "server: Don'\''t emulate rawinput mouse events if native exist.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Directly listen to master XInput2 devices if supported.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "winex11.drv: Implement native mouse-movement raw-input using RawMotion.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "winex11.drv: Implement native mouse-button raw-input using RawButton*.", 1 },';
+		printf '%s\n' '+    { "Jordan Galby", "winex11.drv: Don'\''t react to small slow mouse movements.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "server: Implement RIDEV_INPUTSINK flag.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset user32-recursive-activation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7217,21 +7255,6 @@ if test "$enable_winex11_key_translation" -eq 1; then
 		printf '%s\n' '+    { "Ken Thomases", "winex11: Match keyboard in Unicode.", 1 },';
 		printf '%s\n' '+    { "Philippe Valembois", "winex11: Fix more key translation.", 1 },';
 		printf '%s\n' '+    { "Ondrej Kraus", "winex11.drv: Fix main Russian keyboard layout.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-mouse-movements
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42631] Mouse drift, jump or don't react to small slow movements in Unity-engine games
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h
-# |
-if test "$enable_winex11_mouse_movements" -eq 1; then
-	patch_apply winex11-mouse-movements/0001-winex11-Don-t-react-to-small-slow-mouse-movements.patch
-	(
-		printf '%s\n' '+    { "Jordan Galby", "winex11: Don'\''t react to small slow mouse movements.", 1 },';
 	) >> "$patchlist"
 fi
 

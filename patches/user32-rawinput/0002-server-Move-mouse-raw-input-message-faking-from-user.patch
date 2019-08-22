@@ -1,0 +1,165 @@
+From 8cd2c66e39dee6edb4dda9faef5601785a8eb9eb Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dereklesho52@Gmail.com>
+Date: Tue, 25 Jun 2019 20:47:20 -0400
+Subject: [PATCH 02/10] server: Move mouse raw-input message faking from user32
+ to wineserver.
+
+Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
+---
+ dlls/user32/message.c | 46 +++----------------------------------------
+ server/protocol.def   |  9 +++++----
+ server/queue.c        | 46 +++++++++++++++++++++++++++++++++++++++++--
+ 3 files changed, 52 insertions(+), 49 deletions(-)
+
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index 43ce77c2dd..b6dd7d5932 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -2295,54 +2295,14 @@ static BOOL process_rawinput_message( MSG *msg, const struct hardware_msg_data *
+     rawinput->header.dwType = msg_data->rawinput.type;
+     if (msg_data->rawinput.type == RIM_TYPEMOUSE)
+     {
+-        static const unsigned int button_flags[] =
+-        {
+-            0,                              /* MOUSEEVENTF_MOVE */
+-            RI_MOUSE_LEFT_BUTTON_DOWN,      /* MOUSEEVENTF_LEFTDOWN */
+-            RI_MOUSE_LEFT_BUTTON_UP,        /* MOUSEEVENTF_LEFTUP */
+-            RI_MOUSE_RIGHT_BUTTON_DOWN,     /* MOUSEEVENTF_RIGHTDOWN */
+-            RI_MOUSE_RIGHT_BUTTON_UP,       /* MOUSEEVENTF_RIGHTUP */
+-            RI_MOUSE_MIDDLE_BUTTON_DOWN,    /* MOUSEEVENTF_MIDDLEDOWN */
+-            RI_MOUSE_MIDDLE_BUTTON_UP,      /* MOUSEEVENTF_MIDDLEUP */
+-        };
+-        unsigned int i;
+-
+         rawinput->header.dwSize  = FIELD_OFFSET(RAWINPUT, data) + sizeof(RAWMOUSE);
+         rawinput->header.hDevice = WINE_MOUSE_HANDLE;
+         rawinput->header.wParam  = 0;
+ 
+         rawinput->data.mouse.usFlags           = MOUSE_MOVE_RELATIVE;
+-        rawinput->data.mouse.u.s.usButtonFlags = 0;
+-        rawinput->data.mouse.u.s.usButtonData  = 0;
+-        for (i = 1; i < ARRAY_SIZE(button_flags); ++i)
+-        {
+-            if (msg_data->flags & (1 << i))
+-                rawinput->data.mouse.u.s.usButtonFlags |= button_flags[i];
+-        }
+-        if (msg_data->flags & MOUSEEVENTF_WHEEL)
+-        {
+-            rawinput->data.mouse.u.s.usButtonFlags |= RI_MOUSE_WHEEL;
+-            rawinput->data.mouse.u.s.usButtonData   = msg_data->rawinput.mouse.data;
+-        }
+-        if (msg_data->flags & MOUSEEVENTF_HWHEEL)
+-        {
+-            rawinput->data.mouse.u.s.usButtonFlags |= RI_MOUSE_HORIZONTAL_WHEEL;
+-            rawinput->data.mouse.u.s.usButtonData   = msg_data->rawinput.mouse.data;
+-        }
+-        if (msg_data->flags & MOUSEEVENTF_XDOWN)
+-        {
+-            if (msg_data->rawinput.mouse.data == XBUTTON1)
+-                rawinput->data.mouse.u.s.usButtonFlags |= RI_MOUSE_BUTTON_4_DOWN;
+-            else if (msg_data->rawinput.mouse.data == XBUTTON2)
+-                rawinput->data.mouse.u.s.usButtonFlags |= RI_MOUSE_BUTTON_5_DOWN;
+-        }
+-        if (msg_data->flags & MOUSEEVENTF_XUP)
+-        {
+-            if (msg_data->rawinput.mouse.data == XBUTTON1)
+-                rawinput->data.mouse.u.s.usButtonFlags |= RI_MOUSE_BUTTON_4_UP;
+-            else if (msg_data->rawinput.mouse.data == XBUTTON2)
+-                rawinput->data.mouse.u.s.usButtonFlags |= RI_MOUSE_BUTTON_5_UP;
+-        }
++
++        rawinput->data.mouse.u.s.usButtonFlags = msg_data->rawinput.mouse.button_flags;
++        rawinput->data.mouse.u.s.usButtonData = msg_data->rawinput.mouse.button_data;
+ 
+         rawinput->data.mouse.ulRawButtons       = 0;
+         rawinput->data.mouse.lLastX             = msg_data->rawinput.mouse.x;
+diff --git a/server/protocol.def b/server/protocol.def
+index 8157199f2f..f7e0008b04 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -304,10 +304,11 @@ struct hardware_msg_data
+         } kbd;
+         struct
+         {
+-            int            type;    /* RIM_TYPEMOUSE */
+-            int            x;       /* x coordinate */
+-            int            y;       /* y coordinate */
+-            unsigned int   data;    /* mouse data */
++            int            type;            /* RIM_TYPEMOUSE */
++            int            x;               /* x coordinate */
++            int            y;               /* y coordinate */
++            unsigned short button_flags;    /* mouse button */
++            unsigned short button_data;     /* event details */
+         } mouse;
+     } rawinput;
+ };
+diff --git a/server/queue.c b/server/queue.c
+index 40a566a2b7..b58dfd5213 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1627,6 +1627,16 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
+         WM_MOUSEHWHEEL   /* 0x1000 = MOUSEEVENTF_HWHEEL */
+     };
+ 
++    static const unsigned int raw_button_flags[] =     {
++        0,                            /* 0x0001 = MOUSEEVENTF_MOVE */
++        RI_MOUSE_LEFT_BUTTON_DOWN,    /* 0x0002 = MOUSEEVENTF_LEFTDOWN */
++        RI_MOUSE_LEFT_BUTTON_UP,      /* 0x0004 = MOUSEEVENTF_LEFTUP */
++        RI_MOUSE_RIGHT_BUTTON_DOWN,   /* 0x0008 = MOUSEEVENTF_RIGHTDOWN */
++        RI_MOUSE_RIGHT_BUTTON_UP,     /* 0x0010 = MOUSEEVENTF_RIGHTUP */
++        RI_MOUSE_MIDDLE_BUTTON_DOWN,  /* 0x0020 = MOUSEEVENTF_MIDDLEDOWN */
++        RI_MOUSE_MIDDLE_BUTTON_UP,    /* 0x0040 = MOUSEEVENTF_MIDDLEUP */
++    };
++
+     desktop->cursor.last_change = get_tick_count();
+     flags = input->mouse.flags;
+     time  = input->mouse.time;
+@@ -1664,11 +1674,43 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
+         msg->wparam    = RIM_INPUT;
+         msg->lparam    = 0;
+ 
+-        msg_data->flags               = flags;
++        msg_data->flags               = 0;
+         msg_data->rawinput.type       = RIM_TYPEMOUSE;
+         msg_data->rawinput.mouse.x    = x - desktop->cursor.x;
+         msg_data->rawinput.mouse.y    = y - desktop->cursor.y;
+-        msg_data->rawinput.mouse.data = input->mouse.data;
++        msg_data->rawinput.mouse.button_flags = 0;
++        msg_data->rawinput.mouse.button_data = 0;
++
++        for (i = 1; i < ARRAY_SIZE(raw_button_flags); ++i)
++        {
++            if (flags & (1 << i))
++                msg_data->rawinput.mouse.button_flags |= raw_button_flags[i];
++        }
++
++        if (flags & MOUSEEVENTF_WHEEL)
++        {
++            msg_data->rawinput.mouse.button_flags |= RI_MOUSE_WHEEL;
++            msg_data->rawinput.mouse.button_data   = input->mouse.data;
++        }
++        if (flags & MOUSEEVENTF_HWHEEL)
++        {
++            msg_data->rawinput.mouse.button_flags |= RI_MOUSE_HORIZONTAL_WHEEL;
++            msg_data->rawinput.mouse.button_data   = input->mouse.data;
++        }
++        if (flags & MOUSEEVENTF_XDOWN)
++        {
++            if (input->mouse.data == XBUTTON1)
++                msg_data->rawinput.mouse.button_flags |= RI_MOUSE_BUTTON_4_DOWN;
++            else if (input->mouse.data == XBUTTON2)
++                msg_data->rawinput.mouse.button_flags |= RI_MOUSE_BUTTON_5_DOWN;
++        }
++        if (flags & MOUSEEVENTF_XUP)
++        {
++            if (input->mouse.data == XBUTTON1)
++                msg_data->rawinput.mouse.button_flags |= RI_MOUSE_BUTTON_4_UP;
++            else if (input->mouse.data == XBUTTON2)
++                msg_data->rawinput.mouse.button_flags |= RI_MOUSE_BUTTON_5_UP;
++        }
+ 
+         queue_hardware_message( desktop, msg, 0 );
+     }
+-- 
+2.23.0
+

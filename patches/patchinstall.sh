@@ -232,6 +232,7 @@ patch_enable_all ()
 	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
+	enable_ntoskrnl_exe_IoInvalidateDeviceRelations="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -826,6 +827,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
+			;;
+		ntoskrnl.exe-IoInvalidateDeviceRelations)
+			enable_ntoskrnl_exe_IoInvalidateDeviceRelations="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -2053,33 +2057,18 @@ fi
 # |   *	[#47445] Define AT_NO_AUTOMOUNT if needed.
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c,
-# | 	dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c,
-# | 	dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c, dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c,
-# | 	loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/wineboot/Makefile.in,
-# | 	programs/wineboot/wineboot.c
+# |   *	dlls/ntoskrnl.exe/pnp.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus_sdl.c,
+# | 	dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c
 # |
 if test "$enable_mailing_list_patches" -eq 1; then
-	patch_apply mailing-list-patches/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
-	patch_apply mailing-list-patches/0002-winebus.sys-Implement-AddDevice.patch
-	patch_apply mailing-list-patches/0003-wineboot-Create-a-root-enumerated-device-object-for-.patch
-	patch_apply mailing-list-patches/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
-	patch_apply mailing-list-patches/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
 	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
 	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
-	patch_apply mailing-list-patches/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
 	patch_apply mailing-list-patches/0035-winex11.drv-Ignore-XGrabPointer-induced-warp-events-.patch
 	patch_apply mailing-list-patches/0037-ntoskrnl-Update-the-interface-if-it-is-already-in-th.patch
 	patch_apply mailing-list-patches/0038-winebus-Use-the-SDL-joystick-index-as-device-id-inst.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "wineboot: Create a root-enumerated device object for winebus.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Ignore XGrabPointer-induced warp events as well.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "ntoskrnl: Update the interface if it is already in the device_interfaces tree.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winebus: Use the SDL joystick index as device id instead of instance id.", 1 },';
@@ -5263,6 +5252,34 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl.exe-IoInvalidateDeviceRelations
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33498] Implement framework for installing and running native PnP drivers.
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c,
+# | 	dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c,
+# | 	dlls/winebus.sys/main.c, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/wineboot/Makefile.in,
+# | 	programs/wineboot/wineboot.c
+# |
+if test "$enable_ntoskrnl_exe_IoInvalidateDeviceRelations" -eq 1; then
+	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
+	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0002-winebus.sys-Implement-AddDevice.patch
+	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0003-wineboot-Create-a-root-enumerated-device-object-for-.patch
+	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
+	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
+	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "wineboot: Create a root-enumerated device object for winebus.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
 	) >> "$patchlist"
 fi
 

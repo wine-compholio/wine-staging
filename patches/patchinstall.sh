@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fb5b0c64639c056d55e14011a3b4e6f2d83e7cda"
+	echo "f238e846e701d2039eceb51f2f6e9d936f8c791c"
 }
 
 # Show version information
@@ -5014,14 +5014,12 @@ fi
 # |   *	[#46149] ntdll: Implement RtlIpv4StringToAddress(Ex)A/W
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
 # |
 if test "$enable_ntdll_RtlIpv4StringToAddress" -eq 1; then
-	patch_apply ntdll-RtlIpv4StringToAddress/0001-ntdll-tests-Add-more-tests-for-RtlIpv4StringToAddres.patch
 	patch_apply ntdll-RtlIpv4StringToAddress/0002-ntdll-Implement-RtlIpv4StringToAddress-Ex-A.patch
 	patch_apply ntdll-RtlIpv4StringToAddress/0003-ntdll-Implement-RtlIpv4StringToAddress-Ex-W.patch
 	(
-		printf '%s\n' '+    { "Alex Henrie", "ntdll/tests: Add more tests for RtlIpv4StringToAddress.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)A.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)W.", 1 },';
 	) >> "$patchlist"

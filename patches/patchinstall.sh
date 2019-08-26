@@ -171,7 +171,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_KeyboardLayouts="$1"
-	enable_mailing_list_patches="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -644,9 +643,6 @@ patch_enable ()
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
-			;;
-		mailing-list-patches)
-			enable_mailing_list_patches="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -2027,13 +2023,6 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	enable_advapi32_CreateRestrictedToken=1
 fi
 
-if test "$enable_Compiler_Warnings" -eq 1; then
-	if test "$enable_mailing_list_patches" -gt 1; then
-		abort "Patchset mailing-list-patches disabled, but Compiler_Warnings depends on that."
-	fi
-	enable_mailing_list_patches=1
-fi
-
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -2050,35 +2039,7 @@ if test "$enable_patchlist" -eq 1; then
 fi
 
 
-# Patchset mailing-list-patches
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47411] shell32: Add SHMultiFileProperties stub
-# |   *	[#47445] Define AT_NO_AUTOMOUNT if needed.
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/pnp.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winebus.sys/bus_sdl.c,
-# | 	dlls/winebus.sys/main.c, dlls/winex11.drv/mouse.c
-# |
-if test "$enable_mailing_list_patches" -eq 1; then
-	patch_apply mailing-list-patches/0017-user32-Also-scan-for-mouse-devices-in-GetRawInputDev.patch
-	patch_apply mailing-list-patches/0020-winebus.sys-Report-the-native-product-string-for-som.patch
-	patch_apply mailing-list-patches/0035-winex11.drv-Ignore-XGrabPointer-induced-warp-events-.patch
-	patch_apply mailing-list-patches/0037-ntoskrnl-Update-the-interface-if-it-is-already-in-th.patch
-	patch_apply mailing-list-patches/0038-winebus-Use-the-SDL-joystick-index-as-device-id-inst.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "user32: Also scan for mouse devices in GetRawInputDeviceList().", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winebus.sys: Report the native product string for some Xbox gamepads.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Ignore XGrabPointer-induced warp events as well.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "ntoskrnl: Update the interface if it is already in the device_interfaces tree.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winebus: Use the SDL joystick index as device id instead of instance id.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset Compiler_Warnings
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	mailing-list-patches
 # |
 # | Modified files:
 # |   *	dlls/d2d1/bitmap.c, dlls/d2d1/brush.c, dlls/d2d1/dc_render_target.c, dlls/d2d1/geometry.c,

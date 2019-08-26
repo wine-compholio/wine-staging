@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f238e846e701d2039eceb51f2f6e9d936f8c791c"
+	echo "480bae108c96dfe370feba2680dbefc42ef97571"
 }
 
 # Show version information
@@ -214,8 +214,6 @@ patch_enable_all ()
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
-	enable_ntdll_Stack_Guard_Page="$1"
-	enable_ntdll_Stack_Overflow="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
@@ -372,7 +370,6 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
-	enable_wuauserv_Dummy_Service="$1"
 	enable_wusa_MSU_Package_Installer="$1"
 }
 
@@ -772,12 +769,6 @@ patch_enable ()
 			;;
 		ntdll-Signal_Handler)
 			enable_ntdll_Signal_Handler="$2"
-			;;
-		ntdll-Stack_Guard_Page)
-			enable_ntdll_Stack_Guard_Page="$2"
-			;;
-		ntdll-Stack_Overflow)
-			enable_ntdll_Stack_Overflow="$2"
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
@@ -1246,9 +1237,6 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
-			;;
-		wuauserv-Dummy_Service)
-			enable_wuauserv_Dummy_Service="$2"
 			;;
 		wusa-MSU_Package_Installer)
 			enable_wusa_MSU_Package_Installer="$2"
@@ -5055,30 +5043,6 @@ if test "$enable_ntdll_Signal_Handler" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Stack_Guard_Page
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_Stack_Guard_Page" -eq 1; then
-	patch_apply ntdll-Stack_Guard_Page/0001-ntdll-Fix-a-bug-when-exception-handling-triggers-sta.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix a bug when exception handling triggers stack guard page.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Stack_Overflow
-# |
-# | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_Stack_Overflow" -eq 1; then
-	patch_apply ntdll-Stack_Overflow/0001-ntdll-Trigger-stack-overflow-exception-earlier-on-x8.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Trigger stack overflow exception earlier on x86_64.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Status_Mapping
 # |
 # | Modified files:
@@ -7479,21 +7443,6 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wuauserv-Dummy_Service
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37781] Implement wuauserv dummy service
-# |
-# | Modified files:
-# |   *	configure.ac, loader/wine.inf.in, programs/wuauserv/Makefile.in, programs/wuauserv/main.c
-# |
-if test "$enable_wuauserv_Dummy_Service" -eq 1; then
-	patch_apply wuauserv-Dummy_Service/0001-wuauserv-Add-dummy-service.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wuauserv: Add dummy service.", 1 },';
 	) >> "$patchlist"
 fi
 

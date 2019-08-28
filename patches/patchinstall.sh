@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "480bae108c96dfe370feba2680dbefc42ef97571"
+	echo "e001daf5c1f3455ea126a12d92508e5b5d4c5463"
 }
 
 # Show version information
@@ -333,6 +333,7 @@ patch_enable_all ()
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
+	enable_wined3d_inverted_objects="$1"
 	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1126,6 +1127,9 @@ patch_enable ()
 			;;
 		wined3d-WINED3D_TEXF_ANISOTROPIC)
 			enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$2"
+			;;
+		wined3d-inverted-objects)
+			enable_wined3d_inverted_objects="$2"
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
@@ -6859,6 +6863,21 @@ if test "$enable_wined3d_WINED3D_TEXF_ANISOTROPIC" -eq 1; then
 	patch_apply wined3d-WINED3D_TEXF_ANISOTROPIC/0001-wined3d-Multiple-games-need-WINED3D_TEXF_ANISOTROPIC.patch
 	(
 		printf '%s\n' '+    { "Józef Kucia", "wined3d: Multiple games need WINED3D_TEXF_ANISOTROPIC filter mode.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-inverted-objects
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47636] wined3d: Correct inverted objects.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/adapter_gl.c
+# |
+if test "$enable_wined3d_inverted_objects" -eq 1; then
+	patch_apply wined3d-inverted-objects/0001-wined3d-Stop-objects-being-inverted.patch
+	(
+		printf '%s\n' '+    { "Henri Verbeet", "wined3d: Stop objects being inverted.", 1 },';
 	) >> "$patchlist"
 fi
 

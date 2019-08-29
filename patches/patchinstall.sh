@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "124f48d3114fe86f5feda2ce200d87b97c4009de"
+	echo "e54f1cf9fba1ae8748e8e5c577530138baaf9e3d"
 }
 
 # Show version information
@@ -4041,19 +4041,13 @@ fi
 # |   *	[#46549] httpapi: Fake success from HttpCreateServerSession
 # |
 # | Modified files:
-# |   *	dlls/httpapi/httpapi.spec, dlls/httpapi/httpapi_main.c, dlls/httpapi/tests/httpapi.c, include/http.h
+# |   *	dlls/httpapi/httpapi.spec, dlls/httpapi/httpapi_main.c, include/http.h
 # |
 if test "$enable_httpapi_HttpCreateServerSession" -eq 1; then
-	patch_apply httpapi-HttpCreateServerSession/0001-httpapi-Fake-success-from-HttpCreateServerSession.patch
-	patch_apply httpapi-HttpCreateServerSession/0002-httpapi-Add-CreateUrlGroup-stub.patch
-	patch_apply httpapi-HttpCreateServerSession/0003-httpapi-Add-CloseUrlGroup-stub.patch
 	patch_apply httpapi-HttpCreateServerSession/0004-httpapi-Add-CreateRequestQueue-stub.patch
 	patch_apply httpapi-HttpCreateServerSession/0005-httpapi-Add-SetUrlGroupProperty-stub.patch
 	patch_apply httpapi-HttpCreateServerSession/0006-httpapi-Add-AddUrlToUrlGroup-stub.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "httpapi: Fake success from HttpCreateServerSession.", 1 },';
-		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add CreateUrlGroup stub.", 1 },';
-		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add CloseUrlGroup stub.", 1 },';
 		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add CreateRequestQueue stub.", 1 },';
 		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add SetUrlGroupProperty stub.", 1 },';
 		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add AddUrlToUrlGroup stub.", 1 },';

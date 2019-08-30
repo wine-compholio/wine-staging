@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e54f1cf9fba1ae8748e8e5c577530138baaf9e3d"
+	echo "a4aaf3f3d184c2cdad8c4bf06dc10980744a9d15"
 }
 
 # Show version information
@@ -147,10 +147,8 @@ patch_enable_all ()
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
-	enable_gdi32_MultiMonitor="$1"
 	enable_gdi32_rotation="$1"
 	enable_gdiplus_Performance_Improvements="$1"
-	enable_httpapi_HttpCreateServerSession="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
 	enable_include_winsock="$1"
@@ -569,17 +567,11 @@ patch_enable ()
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
 			;;
-		gdi32-MultiMonitor)
-			enable_gdi32_MultiMonitor="$2"
-			;;
 		gdi32-rotation)
 			enable_gdi32_rotation="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
-			;;
-		httpapi-HttpCreateServerSession)
-			enable_httpapi_HttpCreateServerSession="$2"
 			;;
 		imagehlp-BindImageEx)
 			enable_imagehlp_BindImageEx="$2"
@@ -3982,23 +3974,6 @@ if test "$enable_gdi32_Lazy_Font_Initialization" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset gdi32-MultiMonitor
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#34978] Multiple applications need EnumDisplayDevicesW implementation
-# |   *	[#37709] GetMonitorInfo returns the same name for all monitors
-# |   *	[#41258] Return a more reasonable display DeviceID
-# |
-# | Modified files:
-# |   *	dlls/winemac.drv/display.c
-# |
-if test "$enable_gdi32_MultiMonitor" -eq 1; then
-	patch_apply gdi32-MultiMonitor/0004-winemac-Make-GetMonitorInfo-give-a-different-device-.patch
-	(
-		printf '%s\n' '+    { "Ken Thomases", "winemac: Make GetMonitorInfo() give a different device name (\\\\.\\DISPLAY<n>) to each monitor.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset gdi32-rotation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4032,25 +4007,6 @@ if test "$enable_gdiplus_Performance_Improvements" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Change multiplications by additions in the x/y scaler loops.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Remove ceilf/floorf calls from bilinear scaler.", 2 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Prefer using pre-multiplied ARGB data in the scaler.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset httpapi-HttpCreateServerSession
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46549] httpapi: Fake success from HttpCreateServerSession
-# |
-# | Modified files:
-# |   *	dlls/httpapi/httpapi.spec, dlls/httpapi/httpapi_main.c, include/http.h
-# |
-if test "$enable_httpapi_HttpCreateServerSession" -eq 1; then
-	patch_apply httpapi-HttpCreateServerSession/0004-httpapi-Add-CreateRequestQueue-stub.patch
-	patch_apply httpapi-HttpCreateServerSession/0005-httpapi-Add-SetUrlGroupProperty-stub.patch
-	patch_apply httpapi-HttpCreateServerSession/0006-httpapi-Add-AddUrlToUrlGroup-stub.patch
-	(
-		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add CreateRequestQueue stub.", 1 },';
-		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add SetUrlGroupProperty stub.", 1 },';
-		printf '%s\n' '+    { "Esdras Tarsis", "httpapi: Add AddUrlToUrlGroup stub.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -4909,14 +4909,18 @@ fi
 # |   *	[#46149] ntdll: Implement RtlIpv4StringToAddress(Ex)A/W
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_RtlIpv4StringToAddress" -eq 1; then
+	patch_apply ntdll-RtlIpv4StringToAddress/0001-ntdll-Implement-RtlIpv4StringToAddress-Ex-W.patch
 	patch_apply ntdll-RtlIpv4StringToAddress/0002-ntdll-Implement-RtlIpv4StringToAddress-Ex-A.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0003-ntdll-Implement-RtlIpv4StringToAddress-Ex-W.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0003-ntdll-Add-semi-stub-for-RtlIpv6AddressToString-Ex-A.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0004-ntdll-Implement-RtlIpv6AddressToString-Ex-W.patch
 	(
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)A.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)W.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)A.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "ntdll: Add semi-stub for RtlIpv6AddressToString(Ex)A.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv6AddressToString(Ex)W.", 1 },';
 	) >> "$patchlist"
 fi
 

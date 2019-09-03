@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0c2f5f8b15a4f7bb7008c3efb12b4cd3c774a3a1"
+	echo "363b8809f37b3ea5915ea4240b3d397fd2355e2e"
 }
 
 # Show version information
@@ -169,7 +169,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_KeyboardLayouts="$1"
-	enable_macos_compile="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -632,9 +631,6 @@ patch_enable ()
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
-			;;
-		macos-compile)
-			enable_macos_compile="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4361,18 +4357,6 @@ if test "$enable_loader_KeyboardLayouts" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset macos-compile
-# |
-# | Modified files:
-# |   *	configure, configure.ac, dlls/winemac.drv/cocoa_display.m, include/config.h.in
-# |
-if test "$enable_macos_compile" -eq 1; then
-	patch_apply macos-compile/0002-winemac.drv-Fix-build-with-older-macOS-SDKs.patch
-	(
-		printf '%s\n' '+    { "Zhiyi Zhang", "winemac.drv: Fix build with older macOS SDKs.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset mmsystem.dll16-MIDIHDR_Refcount
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4928,13 +4912,9 @@ fi
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c
 # |
 if test "$enable_ntdll_RtlIpv4StringToAddress" -eq 1; then
-	patch_apply ntdll-RtlIpv4StringToAddress/0001-ntdll-Implement-RtlIpv4StringToAddress-Ex-W.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0002-ntdll-Implement-RtlIpv4StringToAddress-Ex-A.patch
 	patch_apply ntdll-RtlIpv4StringToAddress/0003-ntdll-Add-semi-stub-for-RtlIpv6AddressToString-Ex-A.patch
 	patch_apply ntdll-RtlIpv4StringToAddress/0004-ntdll-Implement-RtlIpv6AddressToString-Ex-W.patch
 	(
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)W.", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv4StringToAddress(Ex)A.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Add semi-stub for RtlIpv6AddressToString(Ex)A.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv6AddressToString(Ex)W.", 1 },';
 	) >> "$patchlist"

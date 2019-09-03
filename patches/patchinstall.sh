@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a4aaf3f3d184c2cdad8c4bf06dc10980744a9d15"
+	echo "0c2f5f8b15a4f7bb7008c3efb12b4cd3c774a3a1"
 }
 
 # Show version information
@@ -4367,10 +4367,8 @@ fi
 # |   *	configure, configure.ac, dlls/winemac.drv/cocoa_display.m, include/config.h.in
 # |
 if test "$enable_macos_compile" -eq 1; then
-	patch_apply macos-compile/0001-configure-Don-t-link-to-libunwind-if-not-necessary.patch
 	patch_apply macos-compile/0002-winemac.drv-Fix-build-with-older-macOS-SDKs.patch
 	(
-		printf '%s\n' '+    { "Alexandre Julliard", "configure: Don'\''t link to libunwind if not necessary.", 1 },';
 		printf '%s\n' '+    { "Zhiyi Zhang", "winemac.drv: Fix build with older macOS SDKs.", 1 },';
 	) >> "$patchlist"
 fi

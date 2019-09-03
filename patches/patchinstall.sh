@@ -169,6 +169,7 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_KeyboardLayouts="$1"
+	enable_macos_compile="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -631,6 +632,9 @@ patch_enable ()
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
+			;;
+		macos-compile)
+			enable_macos_compile="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4354,6 +4358,20 @@ if test "$enable_loader_KeyboardLayouts" -eq 1; then
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Improve GetKeyboardLayoutList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset macos-compile
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/winemac.drv/cocoa_display.m, include/config.h.in
+# |
+if test "$enable_macos_compile" -eq 1; then
+	patch_apply macos-compile/0001-configure-Don-t-link-to-libunwind-if-not-necessary.patch
+	patch_apply macos-compile/0002-winemac.drv-Fix-build-with-older-macOS-SDKs.patch
+	(
+		printf '%s\n' '+    { "Alexandre Julliard", "configure: Don'\''t link to libunwind if not necessary.", 1 },';
+		printf '%s\n' '+    { "Zhiyi Zhang", "winemac.drv: Fix build with older macOS SDKs.", 1 },';
 	) >> "$patchlist"
 fi
 

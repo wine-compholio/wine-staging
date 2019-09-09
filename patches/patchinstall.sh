@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "765815729fc4af2472e60551364e3b29dccfbcff"
+	echo "01b19b63a454aa455928c10c694895fdba901aba"
 }
 
 # Show version information
@@ -3546,7 +3546,7 @@ fi
 # |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
 # |
 # | Modified files:
-# |   *	dlls/kernel32/debugger.c, dlls/ntdll/tests/exception.c
+# |   *	dlls/kernelbase/debug.c, dlls/ntdll/tests/exception.c
 # |
 if test "$enable_ntdll_Exception" -eq 1; then
 	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
@@ -4152,7 +4152,7 @@ fi
 # Patchset kernel32-Debugger
 # |
 # | Modified files:
-# |   *	dlls/kernel32/except.c
+# |   *	dlls/kernelbase/debug.c
 # |
 if test "$enable_kernel32_Debugger" -eq 1; then
 	patch_apply kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch

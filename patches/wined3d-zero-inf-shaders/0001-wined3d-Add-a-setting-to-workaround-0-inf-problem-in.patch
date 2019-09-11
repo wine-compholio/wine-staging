@@ -1,0 +1,180 @@
+From 2c66de2b511d09d4998c5df1ca48487ff8e80142 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <gofmanp@gmail.com>
+Date: Mon, 9 Sep 2019 18:48:43 +0300
+Subject: [PATCH] wined3d: Add a setting to workaround 0 * inf problem in
+ shader models 1-3.
+
+Adds 'multiply_special' config option which works around
+https://bugs.winehq.org/show_bug.cgi?id=34266.
+
+Signed-off-by: Paul Gofman <gofmanp@gmail.com>
+---
+ dlls/wined3d/glsl_shader.c     | 75 +++++++++++++++++++++++++++++-----
+ dlls/wined3d/wined3d_main.c    |  3 ++
+ dlls/wined3d/wined3d_private.h |  1 +
+ 3 files changed, 68 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
+index 99ffbf2634..aff92b6935 100644
+--- a/dlls/wined3d/glsl_shader.c
++++ b/dlls/wined3d/glsl_shader.c
+@@ -2307,6 +2307,19 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
+     if (wined3d_settings.strict_shader_math)
+         shader_addline(buffer, "#pragma optionNV(fastmath off)\n");
+ 
++    if (wined3d_settings.multiply_special)
++    {
++        shader_addline(buffer, "float dot1(float v1, float v2) {return abs(v1) == 0.0 || abs(v2) == 0.0 ? 0.0 : v1 * v2;}\n");
++        shader_addline(buffer, "float dot2(vec2 v1, vec2 v2) {return dot1(v1.x, v2.x) + dot1(v1.y, v2.y);}\n");
++        shader_addline(buffer, "float dot3(vec3 v1, vec3 v2) {return dot2(v1.xy, v2.xy) + dot1(v1.z, v2.z);}\n");
++        shader_addline(buffer, "float dot4(vec4 v1, vec4 v2) {return dot2(v1.xy, v2.xy) + dot2(v1.zw, v2.zw);}\n");
++
++        shader_addline(buffer, "float mul1(float v1, float v2) {return abs(v1) == 0.0 || abs(v2) == 0.0 ? 0.0 : v1 * v2;}\n");
++        shader_addline(buffer, "vec2 mul2(vec2 v1, vec2 v2) {return vec2(mul1(v1.x, v2.x), mul1(v1.y, v2.y));}\n");
++        shader_addline(buffer, "vec3 mul3(vec3 v1, vec3 v2) {return vec3(mul2(v1.xy, v2.xy), mul1(v1.z, v2.z));}\n");
++        shader_addline(buffer, "vec4 mul4(vec4 v1, vec4 v2) {return vec4(mul2(v1.xy, v2.xy), mul2(v1.zw, v2.zw));}\n");
++    }
++
+     prefix = shader_glsl_get_prefix(version->type);
+ 
+     /* Prototype the subroutines */
+@@ -3837,7 +3850,11 @@ static void shader_glsl_binop(const struct wined3d_shader_instruction *ins)
+     write_mask = shader_glsl_append_dst(buffer, ins);
+     shader_glsl_add_src_param(ins, &ins->src[0], write_mask, &src0_param);
+     shader_glsl_add_src_param(ins, &ins->src[1], write_mask, &src1_param);
+-    shader_addline(buffer, "%s %s %s);\n", src0_param.param_str, op, src1_param.param_str);
++    if (wined3d_settings.multiply_special && ins->handler_idx == WINED3DSIH_MUL)
++        shader_addline(buffer, "mul%d(%s, %s));\n", shader_glsl_get_write_mask_size(write_mask),
++                src0_param.param_str, src1_param.param_str);
++    else
++        shader_addline(buffer, "%s %s %s);\n", src0_param.param_str, op, src1_param.param_str);
+ }
+ 
+ static void shader_glsl_relop(const struct wined3d_shader_instruction *ins)
+@@ -4049,26 +4066,45 @@ static void shader_glsl_dot(const struct wined3d_shader_instruction *ins)
+     struct glsl_src_param src0_param;
+     struct glsl_src_param src1_param;
+     DWORD dst_write_mask, src_write_mask;
+-    unsigned int dst_size;
++    unsigned int dst_size, src_size;
+ 
+     dst_write_mask = shader_glsl_append_dst(buffer, ins);
+     dst_size = shader_glsl_get_write_mask_size(dst_write_mask);
+ 
+     /* dp4 works on vec4, dp3 on vec3, etc. */
+     if (ins->handler_idx == WINED3DSIH_DP4)
++    {
+         src_write_mask = WINED3DSP_WRITEMASK_ALL;
++        src_size = 4;
++    }
+     else if (ins->handler_idx == WINED3DSIH_DP3)
++    {
+         src_write_mask = WINED3DSP_WRITEMASK_0 | WINED3DSP_WRITEMASK_1 | WINED3DSP_WRITEMASK_2;
++        src_size = 3;
++    }
+     else
++    {
+         src_write_mask = WINED3DSP_WRITEMASK_0 | WINED3DSP_WRITEMASK_1;
+-
++        src_size = 2;
++    }
+     shader_glsl_add_src_param(ins, &ins->src[0], src_write_mask, &src0_param);
+     shader_glsl_add_src_param(ins, &ins->src[1], src_write_mask, &src1_param);
+ 
+-    if (dst_size > 1) {
+-        shader_addline(buffer, "vec%d(dot(%s, %s)));\n", dst_size, src0_param.param_str, src1_param.param_str);
+-    } else {
+-        shader_addline(buffer, "dot(%s, %s));\n", src0_param.param_str, src1_param.param_str);
++    if (dst_size > 1)
++    {
++        if (wined3d_settings.multiply_special)
++            shader_addline(buffer, "vec%d(dot%d(%s, %s)));\n", dst_size, src_size,
++                    src0_param.param_str, src1_param.param_str);
++        else
++            shader_addline(buffer, "vec%d(dot(%s, %s)));\n", dst_size,
++                    src0_param.param_str, src1_param.param_str);
++    }
++    else
++    {
++        if (wined3d_settings.multiply_special)
++            shader_addline(buffer, "dot%d(%s, %s));\n", src_size, src0_param.param_str, src1_param.param_str);
++        else
++            shader_addline(buffer, "dot(%s, %s));\n", src0_param.param_str, src1_param.param_str);
+     }
+ }
+ 
+@@ -4290,8 +4326,20 @@ static void shader_glsl_nrm(const struct wined3d_shader_instruction *ins)
+                 src_param.param_str, src_param.param_str);
+     shader_glsl_append_dst(buffer, ins);
+ 
+-    shader_addline(buffer, "tmp0.x == 0.0 ? %s : (%s * inversesqrt(tmp0.x)));\n",
+-            src_param.param_str, src_param.param_str);
++    if (wined3d_settings.multiply_special && mask_size == 4)
++    {
++        static const float max_float = FLT_MAX;
++
++        shader_addline(buffer, "tmp0.x == 0.0 ? vec4(vec3(0.0), sign(%s[3]) * ",
++                src_param.param_str);
++        shader_glsl_append_imm_vec(buffer, &max_float, 1, ins->ctx->gl_info);
++        shader_addline(buffer, ") : (%s * inversesqrt(tmp0.x)));\n", src_param.param_str);
++    }
++    else
++    {
++        shader_addline(buffer, "tmp0.x == 0.0 ? %s : (%s * inversesqrt(tmp0.x)));\n",
++                src_param.param_str, src_param.param_str);
++    }
+ }
+ 
+ static void shader_glsl_scalar_op(const struct wined3d_shader_instruction *ins)
+@@ -4663,8 +4711,13 @@ static void shader_glsl_mad(const struct wined3d_shader_instruction *ins)
+     shader_glsl_add_src_param(ins, &ins->src[0], write_mask, &src0_param);
+     shader_glsl_add_src_param(ins, &ins->src[1], write_mask, &src1_param);
+     shader_glsl_add_src_param(ins, &ins->src[2], write_mask, &src2_param);
+-    shader_addline(ins->ctx->buffer, "(%s * %s) + %s);\n",
+-            src0_param.param_str, src1_param.param_str, src2_param.param_str);
++    if (wined3d_settings.multiply_special)
++        shader_addline(ins->ctx->buffer, "mul%d(%s, %s) + %s);\n",
++                shader_glsl_get_write_mask_size(write_mask), src0_param.param_str,
++                src1_param.param_str, src2_param.param_str);
++    else
++        shader_addline(ins->ctx->buffer, "(%s * %s) + %s);\n",
++                src0_param.param_str, src1_param.param_str, src2_param.param_str);
+ }
+ 
+ /* Handles transforming all WINED3DSIO_M?x? opcodes for
+diff --git a/dlls/wined3d/wined3d_main.c b/dlls/wined3d/wined3d_main.c
+index 2c68ae5df4..ea378d90e9 100644
+--- a/dlls/wined3d/wined3d_main.c
++++ b/dlls/wined3d/wined3d_main.c
+@@ -111,6 +111,7 @@ struct wined3d_settings wined3d_settings =
+     ~0u,            /* Don't force a specific sample count by default. */
+     FALSE,          /* Don't range check relative addressing indices in float constants. */
+     FALSE,          /* No strict shader math by default. */
++    0,              /* IEEE 0 * inf result. */
+     ~0U,            /* No VS shader model limit by default. */
+     ~0U,            /* No HS shader model limit by default. */
+     ~0U,            /* No DS shader model limit by default. */
+@@ -367,6 +368,8 @@ static BOOL wined3d_dll_init(HINSTANCE hInstDLL)
+         }
+         if (!get_config_key_dword(hkey, appkey, "strict_shader_math", &wined3d_settings.strict_shader_math))
+             ERR_(winediag)("Setting strict shader math to %#x.\n", wined3d_settings.strict_shader_math);
++        if (!get_config_key_dword(hkey, appkey, "multiply_special", &wined3d_settings.multiply_special))
++            ERR_(winediag)("Setting multiply special to %#x.\n", wined3d_settings.multiply_special);
+         if (!get_config_key_dword(hkey, appkey, "MaxShaderModelVS", &wined3d_settings.max_sm_vs))
+             TRACE("Limiting VS shader model to %u.\n", wined3d_settings.max_sm_vs);
+         if (!get_config_key_dword(hkey, appkey, "MaxShaderModelHS", &wined3d_settings.max_sm_hs))
+diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
+index 543028551e..1282b109a1 100644
+--- a/dlls/wined3d/wined3d_private.h
++++ b/dlls/wined3d/wined3d_private.h
+@@ -425,6 +425,7 @@ struct wined3d_settings
+     unsigned int sample_count;
+     BOOL check_float_constants;
+     unsigned int strict_shader_math;
++    unsigned int multiply_special;
+     unsigned int max_sm_vs;
+     unsigned int max_sm_hs;
+     unsigned int max_sm_ds;
+-- 
+2.21.0
+

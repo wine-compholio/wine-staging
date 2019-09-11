@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1413f577c592cd4aaeb3dba1a8adbe3e04d62d29"
+	echo "6033b3a7fbc29bc911b0173499b288ce7f226a4a"
 }
 
 # Show version information
@@ -333,6 +333,7 @@ patch_enable_all ()
 	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
+	enable_wined3d_zero_inf_shaders="$1"
 	enable_winedbg_Process_Arguments="$1"
 	enable_winedevice_Default_Drivers="$1"
 	enable_winemapi_user_xdg_mail="$1"
@@ -1123,6 +1124,9 @@ patch_enable ()
 			;;
 		wined3d-wined3d_guess_gl_vendor)
 			enable_wined3d_wined3d_guess_gl_vendor="$2"
+			;;
+		wined3d-zero-inf-shaders)
+			enable_wined3d_zero_inf_shaders="$2"
 			;;
 		winedbg-Process_Arguments)
 			enable_winedbg_Process_Arguments="$2"
@@ -6812,6 +6816,21 @@ if test "$enable_wined3d_wined3d_guess_gl_vendor" -eq 1; then
 	patch_apply wined3d-wined3d_guess_gl_vendor/0001-wined3d-Also-check-for-Brian-Paul-to-detect-Mesa-gl_.patch
 	(
 		printf '%s\n' '+    { "Jarkko Korpi", "wined3d: Also check for '\''Brian Paul'\'' to detect Mesa gl_vendor.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-zero-inf-shaders
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#34266] wined3d: Add a setting to workaround 0 * inf problem in shader models 1-3.
+# |
+# | Modified files:
+# |   *	dlls/wined3d/glsl_shader.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h
+# |
+if test "$enable_wined3d_zero_inf_shaders" -eq 1; then
+	patch_apply wined3d-zero-inf-shaders/0001-wined3d-Add-a-setting-to-workaround-0-inf-problem-in.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "wined3d: Add a setting to workaround 0 * inf problem in shader models 1-3.", 1 },';
 	) >> "$patchlist"
 fi
 

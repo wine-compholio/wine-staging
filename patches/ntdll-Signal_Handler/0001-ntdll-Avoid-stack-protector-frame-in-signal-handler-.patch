@@ -1,14 +1,15 @@
-From b27c92f6d5f212307e291eac1b2abd376399366c Mon Sep 17 00:00:00 2001
+From 39d6c2f1add7583ea3305777a6e869d4f1e7b5de Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 20 Aug 2017 17:22:20 +0200
-Subject: ntdll: Avoid stack protector frame in signal handler functions.
+Subject: [PATCH] ntdll: Avoid stack protector frame in signal handler
+ functions.
 
 ---
- dlls/ntdll/signal_i386.c | 31 +++++++++++++++++++------------
- 1 file changed, 19 insertions(+), 12 deletions(-)
+ dlls/ntdll/signal_i386.c | 27 +++++++++++++++++----------
+ 1 file changed, 17 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index c46d50eb271..8a637f23825 100644
+index 7ddc64284e..372fd1e91b 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -96,6 +96,13 @@ typedef struct
@@ -25,7 +26,7 @@ index c46d50eb271..8a637f23825 100644
  /***********************************************************************
   * signal context platform-specific definitions
   */
-@@ -663,7 +670,7 @@ static inline void *get_signal_stack(void)
+@@ -582,7 +589,7 @@ static inline int has_fpux(void)
   *
   * Get the current teb based on the stack pointer.
   */
@@ -34,7 +35,7 @@ index c46d50eb271..8a637f23825 100644
  {
      unsigned long esp;
      __asm__("movl %%esp,%0" : "=g" (esp) );
-@@ -1023,7 +1030,7 @@ __ASM_GLOBAL_FUNC( clear_alignment_flag,
+@@ -820,7 +827,7 @@ __ASM_GLOBAL_FUNC( clear_alignment_flag,
   * Handler initialization when the full context is not needed.
   * Return the stack pointer to use for pushing the exception data.
   */
@@ -43,25 +44,16 @@ index c46d50eb271..8a637f23825 100644
  {
      TEB *teb = get_current_teb();
  
-@@ -2032,7 +2039,7 @@ static EXCEPTION_RECORD *setup_exception_record( ucontext_t *sigcontext, void *s
+@@ -1840,7 +1847,7 @@ static struct stack_layout *setup_exception_record( ucontext_t *sigcontext, void
   * sigcontext so that the return from the signal handler will call
   * the raise function.
   */
--static EXCEPTION_RECORD *setup_exception( ucontext_t *sigcontext, raise_func func )
-+static EXCEPTION_RECORD * SIGNALFUNC setup_exception( ucontext_t *sigcontext, raise_func func )
+-static struct stack_layout *setup_exception( ucontext_t *sigcontext )
++static struct stack_layout * SIGNALFUNC setup_exception( ucontext_t *sigcontext )
  {
      WORD fs, gs;
      void *stack = init_handler( sigcontext, &fs, &gs );
-@@ -2245,7 +2252,7 @@ static void usr2_handler( int signal, siginfo_t *siginfo, void *sigcontext )
-  * Handler for SIGSEGV and related errors. Used only during the initialization
-  * of the process to handle virtual faults.
-  */
--static void segv_handler_early( int signal, siginfo_t *siginfo, void *sigcontext )
-+static void SIGNALFUNC segv_handler_early( int signal, siginfo_t *siginfo, void *sigcontext )
- {
-     WORD fs, gs;
-     ucontext_t *context = sigcontext;
-@@ -2269,7 +2276,7 @@ static void segv_handler_early( int signal, siginfo_t *siginfo, void *sigcontext
+@@ -1964,7 +1971,7 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
   *
   * Handler for SIGSEGV and related errors.
   */
@@ -69,8 +61,8 @@ index c46d50eb271..8a637f23825 100644
 +static void SIGNALFUNC segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
  {
      WORD fs, gs;
-     EXCEPTION_RECORD *rec;
-@@ -2363,7 +2370,7 @@ static void segv_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     struct stack_layout *stack;
+@@ -2083,7 +2090,7 @@ done:
   *
   * Handler for SIGTRAP.
   */
@@ -78,17 +70,17 @@ index c46d50eb271..8a637f23825 100644
 +static void SIGNALFUNC trap_handler( int signal, siginfo_t *siginfo, void *sigcontext )
  {
      ucontext_t *context = sigcontext;
-     EXCEPTION_RECORD *rec = setup_exception( context, raise_trap_exception );
-@@ -2392,7 +2399,7 @@ static void trap_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     struct stack_layout *stack = setup_exception( context );
+@@ -2125,7 +2132,7 @@ static void trap_handler( int signal, siginfo_t *siginfo, void *sigcontext )
   *
   * Handler for SIGFPE.
   */
 -static void fpe_handler( int signal, siginfo_t *siginfo, void *sigcontext )
 +static void SIGNALFUNC fpe_handler( int signal, siginfo_t *siginfo, void *sigcontext )
  {
-     CONTEXT *win_context;
      ucontext_t *context = sigcontext;
-@@ -2441,7 +2448,7 @@ static void fpe_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     struct stack_layout *stack = setup_exception( context );
+@@ -2173,7 +2180,7 @@ static void fpe_handler( int signal, siginfo_t *siginfo, void *sigcontext )
   *
   * FIXME: should not be calling external functions on the signal stack.
   */
@@ -97,16 +89,16 @@ index c46d50eb271..8a637f23825 100644
  {
      WORD fs, gs;
      init_handler( sigcontext, &fs, &gs );
-@@ -2457,7 +2464,7 @@ static void int_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+@@ -2190,7 +2197,7 @@ static void int_handler( int signal, siginfo_t *siginfo, void *sigcontext )
   *
   * Handler for SIGABRT.
   */
 -static void abrt_handler( int signal, siginfo_t *siginfo, void *sigcontext )
 +static void SIGNALFUNC abrt_handler( int signal, siginfo_t *siginfo, void *sigcontext )
  {
-     EXCEPTION_RECORD *rec = setup_exception( sigcontext, raise_generic_exception );
-     rec->ExceptionCode  = EXCEPTION_WINE_ASSERTION;
-@@ -2470,7 +2477,7 @@ static void abrt_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+     struct stack_layout *stack = setup_exception( sigcontext );
+     stack->rec.ExceptionCode  = EXCEPTION_WINE_ASSERTION;
+@@ -2204,7 +2211,7 @@ static void abrt_handler( int signal, siginfo_t *siginfo, void *sigcontext )
   *
   * Handler for SIGQUIT.
   */
@@ -115,7 +107,7 @@ index c46d50eb271..8a637f23825 100644
  {
      WORD fs, gs;
      init_handler( sigcontext, &fs, &gs );
-@@ -2483,7 +2490,7 @@ static void quit_handler( int signal, siginfo_t *siginfo, void *sigcontext )
+@@ -2217,7 +2224,7 @@ static void quit_handler( int signal, siginfo_t *siginfo, void *sigcontext )
   *
   * Handler for SIGUSR1, used to signal a thread that it got suspended.
   */
@@ -125,5 +117,5 @@ index c46d50eb271..8a637f23825 100644
      CONTEXT context;
      WORD fs, gs;
 -- 
-2.14.1
+2.17.1
 

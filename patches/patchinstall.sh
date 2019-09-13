@@ -4924,7 +4924,7 @@ fi
 # Patchset ntdll-RtlIpv4StringToAddress
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#46149] ntdll: Implement RtlIpv4StringToAddress(Ex)A/W
+# |   *	[#46788] ntdll: Implement RtlIpv6AddressToStringA
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c

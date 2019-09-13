@@ -1,45 +1,28 @@
-From ee30dc13a100788219ecc357056f8edf3a2f2113 Mon Sep 17 00:00:00 2001
+From 2873f540b5334e1562b1b2f0f537ee5a27b23592 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 19 Mar 2017 19:08:34 +0100
 Subject: [PATCH] ntdll: Catch windows int 0x2e syscall on i386.
 
 ---
- dlls/ntdll/signal_i386.c | 10 +++++++++-
- include/wine/exception.h |  1 +
- 2 files changed, 10 insertions(+), 1 deletion(-)
+ dlls/ntdll/signal_i386.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 8876790195..7ddc64284e 100644
+index 8d1c59150..ca2c67333 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -1945,6 +1944,15 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
+@@ -1946,6 +1946,11 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
          stack->rec.ExceptionInformation[2] = stack->context.Edx;
          setup_raise_exception( sigcontext, stack );
          return TRUE;
 +    case 0x2e:
-+        stack->context.Eip += 2;
-+        stack->rec.ExceptionCode = EXCEPTION_WINE_SYSCALL;
-+        stack->rec.ExceptionAddress = (void *)stack->context.Eip;
-+        stack->rec.NumberParameters = 2;
-+        stack->rec.ExceptionInformation[0] = stack->context.Eax;
-+        stack->rec.ExceptionInformation[1] = stack->context.Edx;
-+        setup_raise_exception( sigcontext, stack );
++        FIXME("unimplemented syscall handler for %#lx\n", stack->context.Eax);
++        EAX_sig(sigcontext) = STATUS_INVALID_SYSTEM_SERVICE;
++        EIP_sig(sigcontext) += 2;
 +        return TRUE;
      default:
          return FALSE;
      }
-diff --git a/include/wine/exception.h b/include/wine/exception.h
-index 3281130c50..e822573ace 100644
---- a/include/wine/exception.h
-+++ b/include/wine/exception.h
-@@ -315,6 +315,7 @@ static inline EXCEPTION_REGISTRATION_RECORD *__wine_get_frame(void)
- 
- #define EXCEPTION_WINE_STUB       0x80000100  /* stub entry point called */
- #define EXCEPTION_WINE_ASSERTION  0x80000101  /* assertion failed */
-+#define EXCEPTION_WINE_SYSCALL    0x80000103
- 
- #ifdef __cplusplus
- }
 -- 
-2.17.1
+2.23.0
 

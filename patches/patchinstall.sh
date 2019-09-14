@@ -58,7 +58,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 4.15"
+	echo "Wine Staging 4.16"
 	echo "Copyright (C) 2014-2019 the Wine Staging project authors."
 	echo "Copyright (C) 2018-2019 Alistair Leslie-Hughes"
 	echo ""
@@ -4740,7 +4740,7 @@ fi
 # |   *	[#42647] Implement stub handler for int 0x2e
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_i386.c, include/wine/exception.h
+# |   *	dlls/ntdll/signal_i386.c
 # |
 if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	patch_apply ntdll-Interrupt-0x2e/0001-ntdll-Catch-windows-int-0x2e-syscall-on-i386.patch

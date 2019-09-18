@@ -1,4 +1,4 @@
-From 0b9ca95d49019b20fd8088c64217f524a9fe476f Mon Sep 17 00:00:00 2001
+From be53833558c250e83e7a92f466c5d845bea4f0f1 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:26:56 -0500
 Subject: [PATCH] Use NtContinue to continue execution after exceptions.
@@ -14,12 +14,12 @@ unlikely that it has the correct behavior if called by an external caller.
 The __syscall_NtContinue wrapper is used so that it can be hooked by a
 third-party.
 ---
- dlls/ntdll/exception.c   |  9 +++++++--
- dlls/ntdll/signal_i386.c | 10 ++++++++--
- 2 files changed, 15 insertions(+), 4 deletions(-)
+ dlls/ntdll/exception.c   | 9 +++++++--
+ dlls/ntdll/signal_i386.c | 3 ++-
+ 2 files changed, 9 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntdll/exception.c b/dlls/ntdll/exception.c
-index 3b85f1efa04..411d2bf5b8f 100644
+index 3b85f1efa..411d2bf5b 100644
 --- a/dlls/ntdll/exception.c
 +++ b/dlls/ntdll/exception.c
 @@ -671,8 +671,13 @@ PRUNTIME_FUNCTION WINAPI RtlLookupFunctionEntry( ULONG_PTR pc, ULONG_PTR *base,
@@ -39,37 +39,26 @@ index 3b85f1efa04..411d2bf5b8f 100644
  
  /*************************************************************
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 87ffd62c8c5..6be23f850ba 100644
+index 746d77c75..6200721ca 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -2546,19 +2546,25 @@ __ASM_STDCALL_FUNC( RtlUnwind, 16,
-                     __ASM_CFI(".cfi_same_value %ebp\n\t")
-                     "ret $16" )  /* actually never returns */
+@@ -727,6 +727,7 @@ static NTSTATUS call_stack_handlers( EXCEPTION_RECORD *rec, CONTEXT *context )
+     return STATUS_UNHANDLED_EXCEPTION;
+ }
  
 +NTSTATUS WINAPI __syscall_NtContinue( CONTEXT *context, BOOLEAN alert );
  
  /*******************************************************************
-  *		NtRaiseException (NTDLL.@)
-  */
- NTSTATUS WINAPI NtRaiseException( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL first_chance )
- {
-+    NTSTATUS status;
-+
-     if (first_chance)
-     {
--        NTSTATUS status = send_debug_event( rec, TRUE, context );
-+        status = send_debug_event( rec, TRUE, context );
-         if (status == DBG_CONTINUE || status == DBG_EXCEPTION_HANDLED)
-             NtSetContextThread( GetCurrentThread(), context );
+  *		raise_exception
+@@ -791,7 +792,7 @@ static NTSTATUS raise_exception( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL f
+         NtTerminateProcess( NtCurrentProcess(), rec->ExceptionCode );
      }
--    return raise_exception( rec, context, first_chance );
-+    status = raise_exception( rec, context, first_chance );
-+    if (status == STATUS_SUCCESS)
-+        __syscall_NtContinue(context, FALSE);
-+    return status;
+ done:
+-    return NtSetContextThread( GetCurrentThread(), context );
++    return __syscall_NtContinue( context, FALSE );
  }
  
  
 -- 
-2.17.1
+2.23.0
 

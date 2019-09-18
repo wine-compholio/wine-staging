@@ -2678,6 +2678,9 @@ fi
 
 # Patchset d3dx9_36-D3DXDisassembleShader
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46649] Multiple applications need D3DXDisassembleShader() implementation (Tom Clancy's Rainbow Six: Vegas 2, The Void)
+# |
 # | Modified files:
 # |   *	dlls/d3dx9_36/shader.c, dlls/d3dx9_36/tests/shader.c
 # |
@@ -2693,6 +2696,9 @@ if test "$enable_d3dx9_36_D3DXDisassembleShader" -eq 1; then
 fi
 
 # Patchset d3dx9_36-D3DXOptimizeVertices
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47776] Timeshift needs D3DXOptimizeVertices()
 # |
 # | Modified files:
 # |   *	dlls/d3dx9_24/d3dx9_24.spec, dlls/d3dx9_25/d3dx9_25.spec, dlls/d3dx9_26/d3dx9_26.spec, dlls/d3dx9_27/d3dx9_27.spec,
@@ -6534,6 +6540,9 @@ if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
 fi
 
 # Patchset wine.inf-WMP_12
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47779] iCloud refuses to install: "Your computer is missing Media features."
 # |
 # | Modified files:
 # |   *	loader/wine.inf.in

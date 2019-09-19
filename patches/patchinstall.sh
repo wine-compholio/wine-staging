@@ -135,6 +135,7 @@ patch_enable_all ()
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
 	enable_directmanipulation_new_dll="$1"
+	enable_dmime_PChannel_range="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
@@ -531,6 +532,9 @@ patch_enable ()
 			;;
 		directmanipulation-new-dll)
 			enable_directmanipulation_new_dll="$2"
+			;;
+		dmime-PChannel-range)
+			enable_dmime_PChannel_range="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3188,6 +3192,22 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDirectManipulationPrimaryContent interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dmime-PChannel-range
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#17766] Empire Earth crashes on start without native directmusic
+# |   *	[#24740] Trinklet Supreme crashes on startup
+# |
+# | Modified files:
+# |   *	dlls/dmime/performance.c
+# |
+if test "$enable_dmime_PChannel_range" -eq 1; then
+	patch_apply dmime-PChannel-range/0001-dmime-Ensure-Channels-are-in-range-before-assignment.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dmime: Ensure Channels are in range before assignment.", 1 },';
 	) >> "$patchlist"
 fi
 

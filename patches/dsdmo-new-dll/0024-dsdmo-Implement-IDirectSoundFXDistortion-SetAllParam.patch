@@ -1,0 +1,85 @@
+From 538eda25bbc197fbdf0f0da58ca64b5b56b91a8a Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Mon, 9 Sep 2019 13:57:45 +1000
+Subject: [PATCH 24/27] dsdmo: Implement IDirectSoundFXDistortion
+ SetAllParameters.
+
+---
+ dlls/dsdmo/distortion.c     | 19 +++++++++++++++++--
+ dlls/dsound/tests/dsound8.c | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 46 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsdmo/distortion.c b/dlls/dsdmo/distortion.c
+index e6952c3fe1..d5014adce0 100644
+--- a/dlls/dsdmo/distortion.c
++++ b/dlls/dsdmo/distortion.c
+@@ -352,9 +352,24 @@ static ULONG WINAPI distortionfx_Release(IDirectSoundFXDistortion *iface)
+ static HRESULT WINAPI distortionfx_SetAllParameters(IDirectSoundFXDistortion *iface, const DSFXDistortion *distortion)
+ {
+     struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
+-    FIXME("(%p) %p\n", This, distortion);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, distortion);
++
++    if(!distortion)
++        return E_POINTER;
++
++    if( (distortion->fGain < DSFXDISTORTION_GAIN_MIN || distortion->fGain > DSFXDISTORTION_GAIN_MAX) ||
++        (distortion->fEdge < DSFXDISTORTION_EDGE_MIN || distortion->fEdge > DSFXDISTORTION_EDGE_MAX) ||
++        (distortion->fPostEQCenterFrequency < DSFXDISTORTION_POSTEQCENTERFREQUENCY_MIN || distortion->fPostEQCenterFrequency > DSFXDISTORTION_POSTEQCENTERFREQUENCY_MAX) ||
++        (distortion->fPostEQBandwidth < DSFXDISTORTION_POSTEQBANDWIDTH_MIN || distortion->fPostEQBandwidth > DSFXDISTORTION_POSTEQBANDWIDTH_MAX) ||
++        (distortion->fPreLowpassCutoff < DSFXDISTORTION_PRELOWPASSCUTOFF_MIN || distortion->fPreLowpassCutoff > DSFXDISTORTION_PRELOWPASSCUTOFF_MAX) )
++    {
++        return E_INVALIDARG;
++    }
++
++    This->params = *distortion;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI distortionfx_GetAllParameters(IDirectSoundFXDistortion *iface, DSFXDistortion *distortion)
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index bdcf609c8f..2d1e35699a 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1622,6 +1622,35 @@ static void test_distortion_parameters(IDirectSoundBuffer8 *secondary8)
+             ok(params.fPreLowpassCutoff == 3675.0f, "got %f\n", params.fPreLowpassCutoff);
+         }
+ 
++        rc = IDirectSoundFXDistortion_SetAllParameters(distortion, NULL);
++        ok(rc == E_POINTER, "got: %08x\n", rc);
++
++        /* Out of range Min */
++        params.fGain = -61.0f;
++
++        rc = IDirectSoundFXDistortion_SetAllParameters(distortion, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        /* Out of range Max */
++        params.fGain = 1.1f;
++        rc = IDirectSoundFXDistortion_SetAllParameters(distortion, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        params.fGain = -20.0f;
++        rc = IDirectSoundFXDistortion_SetAllParameters(distortion, &params);
++        ok(rc == S_OK, "got: %08x\n", rc);
++
++        rc = IDirectSoundFXDistortion_GetAllParameters(distortion, &params);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
++        if (rc == DS_OK)
++        {
++            ok(params.fGain == -20.0f, "got %f\n", params.fGain);
++            ok(params.fEdge == 15.0f, "got %f\n", params.fEdge);
++            ok(params.fPostEQCenterFrequency == 2400.0f, "got %f\n", params.fPostEQCenterFrequency);
++            ok(params.fPostEQBandwidth == 2400.0f, "got %f\n", params.fPostEQBandwidth);
++            ok(params.fPreLowpassCutoff == 3675.0f, "got %f\n", params.fPreLowpassCutoff);
++        }
++
+         IDirectSoundFXDistortion_Release(distortion);
+     }
+ }
+-- 
+2.17.1
+

@@ -1,0 +1,497 @@
+From b4b51cd0467f08de20a2a808401a3c18f7eefe88 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Sun, 25 Aug 2019 16:51:33 +1000
+Subject: [PATCH 06/27] dsdmo: Add IDirectSoundFXFlanger support
+
+---
+ dlls/dsdmo/Makefile.in       |   1 +
+ dlls/dsdmo/dsdmo_classes.idl |  10 +
+ dlls/dsdmo/dsdmo_private.h   |   1 +
+ dlls/dsdmo/flanger.c         | 397 +++++++++++++++++++++++++++++++++++
+ dlls/dsdmo/main.c            |  14 ++
+ 5 files changed, 423 insertions(+)
+ create mode 100644 dlls/dsdmo/flanger.c
+
+diff --git a/dlls/dsdmo/Makefile.in b/dlls/dsdmo/Makefile.in
+index 2bf8958560..3a54f4631c 100644
+--- a/dlls/dsdmo/Makefile.in
++++ b/dlls/dsdmo/Makefile.in
+@@ -7,6 +7,7 @@ C_SRCS = \
+ 	distortion.c \
+ 	compressor.c \
+ 	echo.c \
++	flanger.c \
+ 	main.c
+ 
+ IDL_SRCS = dsdmo_classes.idl
+diff --git a/dlls/dsdmo/dsdmo_classes.idl b/dlls/dsdmo/dsdmo_classes.idl
+index 8060d4c2af..48d1f96e88 100644
+--- a/dlls/dsdmo/dsdmo_classes.idl
++++ b/dlls/dsdmo/dsdmo_classes.idl
+@@ -56,3 +56,13 @@ coclass DirectSoundCompressorDMO
+ coclass DirectSoundDistortionDMO
+ {
+ }
++
++[
++    uuid(efca3d92-dfd8-4672-a603-7420894bad98),
++    threading(both),
++    progid("Microsoft.DirectSoundFlangerDMO.1"),
++    vi_progid("Microsoft.DirectSoundFlangerDMO")
++]
++coclass DirectSoundFlangerDMO
++{
++}
+diff --git a/dlls/dsdmo/dsdmo_private.h b/dlls/dsdmo/dsdmo_private.h
+index 03186366c6..027fb6e177 100644
+--- a/dlls/dsdmo/dsdmo_private.h
++++ b/dlls/dsdmo/dsdmo_private.h
+@@ -31,5 +31,6 @@ extern HRESULT WINAPI EchoFactory_CreateInstance(IClassFactory *iface, IUnknown
+ extern HRESULT WINAPI ChrousFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ extern HRESULT WINAPI CompressorFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ extern HRESULT WINAPI DistortionFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
++extern HRESULT WINAPI FlangerFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ 
+ #endif
+diff --git a/dlls/dsdmo/flanger.c b/dlls/dsdmo/flanger.c
+new file mode 100644
+index 0000000000..6fbc836dcd
+--- /dev/null
++++ b/dlls/dsdmo/flanger.c
+@@ -0,0 +1,397 @@
++/*
++ * Copyright 2019 Alistair Leslie-Hughes
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++#define COBJMACROS
++
++#include "dsdmo_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(dsdmo);
++
++struct dmo_flangerfx
++{
++    IDirectSoundFXFlanger  IDirectSoundFXFlanger_iface;
++    IMediaObject        IMediaObject_iface;
++    IMediaObjectInPlace IMediaObjectInPlace_iface;
++    LONG ref;
++};
++
++static inline struct dmo_flangerfx *impl_from_IDirectSoundFXFlanger(IDirectSoundFXFlanger *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_flangerfx, IDirectSoundFXFlanger_iface);
++}
++
++static inline struct dmo_flangerfx *impl_from_IMediaObject(IMediaObject *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_flangerfx, IMediaObject_iface);
++}
++
++static inline struct dmo_flangerfx *impl_from_IMediaObjectInPlace(IMediaObjectInPlace *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_flangerfx, IMediaObjectInPlace_iface);
++}
++
++static HRESULT WINAPI flanger_mediaobj_QueryInterface(IMediaObject *iface, REFIID riid, void **obj)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXFlanger_QueryInterface(&This->IDirectSoundFXFlanger_iface, riid, obj);
++}
++
++static ULONG WINAPI flanger_mediaobj_AddRef(IMediaObject *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXFlanger_AddRef(&This->IDirectSoundFXFlanger_iface);
++}
++
++static ULONG WINAPI flanger_mediaobj_Release(IMediaObject *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXFlanger_Release(&This->IDirectSoundFXFlanger_iface);
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetStreamCount(IMediaObject *iface, DWORD *inputs, DWORD *outputs)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %p, %p\n", This, inputs, outputs);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetInputStreamInfo(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetOutputStreamInfo(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetInputType(IMediaObject *iface, DWORD index, DWORD type, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %d, %p\n", This, index, type, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetOutputType(IMediaObject *iface, DWORD index, DWORD type, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %d, %p\n", This, index, type, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_SetInputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *pmt, DWORD flags)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x\n", This, index, pmt, flags);
++    return S_OK;
++}
++
++static HRESULT WINAPI flanger_mediaobj_SetOutputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *pmt, DWORD flags)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x\n", This, index, pmt, flags);
++    return S_OK;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetInputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetOutputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetInputSizeInfo(IMediaObject *iface, DWORD index, DWORD *size, DWORD *ahead, DWORD *alignment)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %p, %p\n", This, index, size, ahead, alignment);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetOutputSizeInfo(IMediaObject *iface, DWORD index, DWORD *size, DWORD *alignment)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %p\n", This, index, size, alignment);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetInputMaxLatency(IMediaObject *iface, DWORD index, REFERENCE_TIME *latency)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, latency);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_SetInputMaxLatency(IMediaObject *iface, DWORD index, REFERENCE_TIME latency)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %s\n", This, index, wine_dbgstr_longlong(latency));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_Flush(IMediaObject *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_Discontinuity(IMediaObject *iface, DWORD index)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d\n", This, index);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_AllocateStreamingResources(IMediaObject *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_FreeStreamingResources(IMediaObject *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_GetInputStatus(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_ProcessInput(IMediaObject *iface, DWORD index, IMediaBuffer *buffer,
++                DWORD flags, REFERENCE_TIME timestamp, REFERENCE_TIME length)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x, %s, %s\n", This, index, buffer, flags, wine_dbgstr_longlong(timestamp), wine_dbgstr_longlong(length));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_ProcessOutput(IMediaObject *iface, DWORD flags, DWORD count,
++                DMO_OUTPUT_DATA_BUFFER *buffers, DWORD *status)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %x, %d, %p, %p\n", This, flags, count, buffers, status);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediaobj_Lock(IMediaObject *iface, LONG lock)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d\n", This, lock);
++    return E_NOTIMPL;
++}
++
++static const IMediaObjectVtbl flanger_mediaobjectVtbl =
++{
++    flanger_mediaobj_QueryInterface,
++    flanger_mediaobj_AddRef,
++    flanger_mediaobj_Release,
++    flanger_mediaobj_GetStreamCount,
++    flanger_mediaobj_GetInputStreamInfo,
++    flanger_mediaobj_GetOutputStreamInfo,
++    flanger_mediaobj_GetInputType,
++    flanger_mediaobj_GetOutputType,
++    flanger_mediaobj_SetInputType,
++    flanger_mediaobj_SetOutputType,
++    flanger_mediaobj_GetInputCurrentType,
++    flanger_mediaobj_GetOutputCurrentType,
++    flanger_mediaobj_GetInputSizeInfo,
++    flanger_mediaobj_GetOutputSizeInfo,
++    flanger_mediaobj_GetInputMaxLatency,
++    flanger_mediaobj_SetInputMaxLatency,
++    flanger_mediaobj_Flush,
++    flanger_mediaobj_Discontinuity,
++    flanger_mediaobj_AllocateStreamingResources,
++    flanger_mediaobj_FreeStreamingResources,
++    flanger_mediaobj_GetInputStatus,
++    flanger_mediaobj_ProcessInput,
++    flanger_mediaobj_ProcessOutput,
++    flanger_mediaobj_Lock
++};
++
++static HRESULT WINAPI flanger_mediainplace_QueryInterface(IMediaObjectInPlace *iface, REFIID riid, void **obj)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXFlanger_QueryInterface(&This->IDirectSoundFXFlanger_iface, riid, obj);
++}
++
++static ULONG flanger_mediainplace_AddRef(IMediaObjectInPlace *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXFlanger_AddRef(&This->IDirectSoundFXFlanger_iface);
++}
++
++static ULONG flanger_mediainplace_Release(IMediaObjectInPlace *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXFlanger_Release(&This->IDirectSoundFXFlanger_iface);
++}
++
++static HRESULT WINAPI flanger_mediainplace_Process(IMediaObjectInPlace *iface, ULONG size, BYTE *data, REFERENCE_TIME start, DWORD flags)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObjectInPlace(iface);
++    static BOOL once = 0;
++    if(!once++)
++        FIXME("%p, %d, %p, %s, %x\n", This, size, data, wine_dbgstr_longlong(start), flags);
++    else
++        TRACE("%p, %d, %p, %s, %x\n", This, size, data, wine_dbgstr_longlong(start), flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediainplace_Clone(IMediaObjectInPlace *iface, IMediaObjectInPlace **object)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObjectInPlace(iface);
++    FIXME("%p, %p\n", This, object);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flanger_mediainplace_GetLatency(IMediaObjectInPlace *iface, REFERENCE_TIME *latency)
++{
++    struct dmo_flangerfx *This = impl_from_IMediaObjectInPlace(iface);
++    FIXME("%p, %p\n", This, latency);
++    return E_NOTIMPL;
++}
++
++static const IMediaObjectInPlaceVtbl flanger_mediainplaceVtbl =
++{
++    flanger_mediainplace_QueryInterface,
++    flanger_mediainplace_AddRef,
++    flanger_mediainplace_Release,
++    flanger_mediainplace_Process,
++    flanger_mediainplace_Clone,
++    flanger_mediainplace_GetLatency
++};
++
++static HRESULT WINAPI flangerfx_QueryInterface(IDirectSoundFXFlanger *iface, REFIID riid, void **ppv)
++{
++    struct dmo_flangerfx *This = impl_from_IDirectSoundFXFlanger(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), ppv);
++
++    if (IsEqualGUID(riid, &IID_IUnknown) ||
++        IsEqualGUID(riid, &IID_IDirectSoundFXFlanger))
++    {
++        *ppv = &This->IDirectSoundFXFlanger_iface;
++    }
++    else if(IsEqualGUID(riid, &IID_IMediaObject))
++    {
++        *ppv = &This->IMediaObject_iface;
++    }
++    else if(IsEqualGUID(riid, &IID_IMediaObjectInPlace))
++    {
++        *ppv = &This->IMediaObjectInPlace_iface;
++    }
++
++    if(!*ppv)
++    {
++        FIXME("(%p)->(%s,%p),not found\n", This, debugstr_guid(riid), ppv);
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown*)*ppv);
++
++    return S_OK;
++}
++
++static ULONG WINAPI flangerfx_AddRef(IDirectSoundFXFlanger *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IDirectSoundFXFlanger(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI flangerfx_Release(IDirectSoundFXFlanger *iface)
++{
++    struct dmo_flangerfx *This = impl_from_IDirectSoundFXFlanger(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    if (!ref)
++    {
++        heap_free(This);
++    }
++    return ref;
++}
++
++static HRESULT WINAPI flangerfx_SetAllParameters(IDirectSoundFXFlanger *iface, const DSFXFlanger *flanger)
++{
++    struct dmo_flangerfx *This = impl_from_IDirectSoundFXFlanger(iface);
++    FIXME("(%p) %p\n", This, flanger);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI flangerfx_GetAllParameters(IDirectSoundFXFlanger *iface, DSFXFlanger *flanger)
++{
++    struct dmo_flangerfx *This = impl_from_IDirectSoundFXFlanger(iface);
++    FIXME("(%p) %p\n", This, flanger);
++
++    return E_NOTIMPL;
++}
++
++static const struct IDirectSoundFXFlangerVtbl flangerfxVtbl =
++{
++    flangerfx_QueryInterface,
++    flangerfx_AddRef,
++    flangerfx_Release,
++    flangerfx_SetAllParameters,
++    flangerfx_GetAllParameters
++};
++
++HRESULT WINAPI FlangerFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv)
++{
++    struct dmo_flangerfx *object;
++    HRESULT ret;
++
++    TRACE("(%p, %s, %p)\n", outer, debugstr_guid(riid), ppv);
++
++    *ppv = NULL;
++
++    object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object));
++    if (!object)
++        return E_OUTOFMEMORY;
++
++    object->IDirectSoundFXFlanger_iface.lpVtbl = &flangerfxVtbl;
++    object->IMediaObject_iface.lpVtbl = &flanger_mediaobjectVtbl;
++    object->IMediaObjectInPlace_iface.lpVtbl = &flanger_mediainplaceVtbl;
++    object->ref = 1;
++
++    ret = flangerfx_QueryInterface(&object->IDirectSoundFXFlanger_iface, riid, ppv);
++    flangerfx_Release(&object->IDirectSoundFXFlanger_iface);
++
++    return ret;
++}
+diff --git a/dlls/dsdmo/main.c b/dlls/dsdmo/main.c
+index ee994350d5..0e185fa1e1 100644
+--- a/dlls/dsdmo/main.c
++++ b/dlls/dsdmo/main.c
+@@ -118,10 +118,19 @@ static const IClassFactoryVtbl DistortionFactoryVtbl = {
+     ClassFactory_LockServer
+ };
+ 
++static const IClassFactoryVtbl FlangerFactoryVtbl = {
++    ClassFactory_QueryInterface,
++    ClassFactory_AddRef,
++    ClassFactory_Release,
++    FlangerFactory_CreateInstance,
++    ClassFactory_LockServer
++};
++
+ static IClassFactory echofx_factory = { &EchoFactoryVtbl };
+ static IClassFactory chorusfx_factory = { &ChrousFactoryVtbl };
+ static IClassFactory compressorfx_factory = { &CompressorFactoryVtbl };
+ static IClassFactory distortionfx_factory = { &DistortionFactoryVtbl };
++static IClassFactory flangerfx_factory = { &FlangerFactoryVtbl };
+ 
+ /***********************************************************************
+  *      DllGetClassObject
+@@ -150,6 +159,11 @@ HRESULT WINAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
+         TRACE("GUID_DSFX_STANDARD_DISTORTION\n");
+         return IClassFactory_QueryInterface(&distortionfx_factory, riid, ppv);
+     }
++    else if(IsEqualGUID(&GUID_DSFX_STANDARD_FLANGER, rclsid))
++    {
++        TRACE("GUID_DSFX_STANDARD_FLANGER\n");
++        return IClassFactory_QueryInterface(&flangerfx_factory, riid, ppv);
++    }
+ 
+     FIXME("%s %s %p\n", debugstr_guid(rclsid), debugstr_guid(riid), ppv);
+     return CLASS_E_CLASSNOTAVAILABLE;
+-- 
+2.17.1
+

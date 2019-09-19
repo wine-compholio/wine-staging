@@ -1,0 +1,85 @@
+From 8e3ea54a9fa46fb1de19990dcf1dc4f458d5622a Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Mon, 9 Sep 2019 14:13:30 +1000
+Subject: [PATCH 25/27] dsdmo: Implement IDirectSoundFXCompressor
+ SetAllParameters.
+
+---
+ dlls/dsdmo/compressor.c     | 19 +++++++++++++++++--
+ dlls/dsound/tests/dsound8.c | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 46 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsdmo/compressor.c b/dlls/dsdmo/compressor.c
+index 36f8c198d0..71005b1fa3 100644
+--- a/dlls/dsdmo/compressor.c
++++ b/dlls/dsdmo/compressor.c
+@@ -352,9 +352,24 @@ static ULONG WINAPI compressorfx_Release(IDirectSoundFXCompressor *iface)
+ static HRESULT WINAPI compressorfx_SetAllParameters(IDirectSoundFXCompressor *iface, const DSFXCompressor *compressor)
+ {
+     struct dmo_compressorfx *This = impl_from_IDirectSoundFXCompressor(iface);
+-    FIXME("(%p) %p\n", This, compressor);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, compressor);
++
++    if(!compressor)
++        return E_POINTER;
++
++    if( (compressor->fGain < DSFXCOMPRESSOR_GAIN_MIN || compressor->fGain > DSFXCOMPRESSOR_GAIN_MAX) ||
++        (compressor->fAttack < DSFXCOMPRESSOR_ATTACK_MIN || compressor->fAttack > DSFXCOMPRESSOR_ATTACK_MAX) ||
++        (compressor->fThreshold < DSFXCOMPRESSOR_THRESHOLD_MIN || compressor->fThreshold > DSFXCOMPRESSOR_THRESHOLD_MAX) ||
++        (compressor->fRatio < DSFXCOMPRESSOR_RATIO_MIN || compressor->fRatio > DSFXCOMPRESSOR_RATIO_MAX) ||
++        (compressor->fPredelay < DSFXCOMPRESSOR_PREDELAY_MIN || compressor->fPredelay > DSFXCOMPRESSOR_PREDELAY_MAX))
++    {
++        return E_INVALIDARG;
++    }
++
++    This->params = *compressor;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI compressorfx_GetAllParameters(IDirectSoundFXCompressor *iface, DSFXCompressor *compressor)
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index 2d1e35699a..779ad1b111 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1677,6 +1677,35 @@ static void test_compressor_parameters(IDirectSoundBuffer8 *secondary8)
+             ok(params.fPredelay == 4.0f, "got %f\n", params.fPredelay);
+         }
+ 
++        rc = IDirectSoundFXCompressor_SetAllParameters(compressor, NULL);
++        ok(rc == E_POINTER, "got: %08x\n", rc);
++
++        /* Out of range Min */
++        params.fGain = -61.0f;
++        rc = IDirectSoundFXCompressor_SetAllParameters(compressor, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        /* Out of range Max */
++        params.fGain = 61.1f;
++        rc = IDirectSoundFXCompressor_SetAllParameters(compressor, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        params.fGain = -21.0f;
++        rc = IDirectSoundFXCompressor_SetAllParameters(compressor, &params);
++        ok(rc == S_OK, "got: %08x\n", rc);
++
++        params.fGain = -21.0f;
++        rc = IDirectSoundFXCompressor_GetAllParameters(compressor, &params);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
++        if (rc == DS_OK)
++        {
++            ok(params.fGain == -21.0f, "got %f\n", params.fGain);
++            ok(params.fAttack == 10.0f, "got %f\n", params.fAttack);
++            ok(params.fThreshold == -20.0f, "got %f\n", params.fThreshold);
++            ok(params.fRatio == 3.0f, "got %f\n", params.fRatio);
++            ok(params.fPredelay == 4.0f, "got %f\n", params.fPredelay);
++        }
++
+         IDirectSoundFXCompressor_Release(compressor);
+     }
+ }
+-- 
+2.17.1
+

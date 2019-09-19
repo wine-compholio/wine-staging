@@ -1,0 +1,80 @@
+From 2ad74643881e4ff5abf75fc140df45ea8cc0d6c8 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Mon, 9 Sep 2019 14:32:24 +1000
+Subject: [PATCH 26/27] dsdmo: Implement IDirectSoundFXParamEq
+ SetAllParameters.
+
+---
+ dlls/dsdmo/parameq.c        | 17 +++++++++++++++--
+ dlls/dsound/tests/dsound8.c | 26 ++++++++++++++++++++++++++
+ 2 files changed, 41 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsdmo/parameq.c b/dlls/dsdmo/parameq.c
+index 5b6a066fd3..b8e2addf9f 100644
+--- a/dlls/dsdmo/parameq.c
++++ b/dlls/dsdmo/parameq.c
+@@ -352,9 +352,22 @@ static ULONG WINAPI parameqfx_Release(IDirectSoundFXParamEq *iface)
+ static HRESULT WINAPI parameqfx_SetAllParameters(IDirectSoundFXParamEq *iface, const DSFXParamEq *param)
+ {
+     struct dmo_parameqfx *This = impl_from_IDirectSoundFXParamEq(iface);
+-    FIXME("(%p) %p\n", This, param);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, param);
++
++    if(!param)
++        return E_POINTER;
++
++    if( (param->fCenter < DSFXPARAMEQ_CENTER_MIN || param->fCenter > DSFXPARAMEQ_CENTER_MAX) ||
++        (param->fBandwidth < DSFXPARAMEQ_BANDWIDTH_MIN || param->fBandwidth > DSFXPARAMEQ_BANDWIDTH_MAX) ||
++        (param->fGain < DSFXPARAMEQ_GAIN_MIN || param->fGain > DSFXPARAMEQ_GAIN_MAX) )
++    {
++        return E_INVALIDARG;
++    }
++
++    This->params = *param;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI parameqfx_GetAllParameters(IDirectSoundFXParamEq *iface, DSFXParamEq *param)
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index 779ad1b111..df1b748db0 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1730,6 +1730,32 @@ static void test_parameq_parameters(IDirectSoundBuffer8 *secondary8)
+             ok(params.fGain == 0.0f, "got %f\n", params.fGain);
+         }
+ 
++        rc = IDirectSoundFXParamEq_SetAllParameters(parameq, NULL);
++        ok(rc == E_POINTER, "got: %08x\n", rc);
++
++        /* Out of range Min */
++        params.fGain = -61.0f;
++        rc = IDirectSoundFXParamEq_SetAllParameters(parameq, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        /* Out of range Max */
++        params.fGain = 61.1f;
++        rc = IDirectSoundFXParamEq_SetAllParameters(parameq, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        params.fGain = -10.0f;
++        rc = IDirectSoundFXParamEq_SetAllParameters(parameq, &params);
++        ok(rc == S_OK, "got: %08x\n", rc);
++
++        rc = IDirectSoundFXParamEq_GetAllParameters(parameq, &params);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
++        if (rc == DS_OK)
++        {
++            ok(params.fCenter == 3675.0f, "got %f\n", params.fCenter);
++            ok(params.fBandwidth == 12.0f, "got %f\n", params.fBandwidth);
++            ok(params.fGain == -10.0f, "got %f\n", params.fGain);
++        }
++
+         IDirectSoundFXParamEq_Release(parameq);
+     }
+ }
+-- 
+2.17.1
+

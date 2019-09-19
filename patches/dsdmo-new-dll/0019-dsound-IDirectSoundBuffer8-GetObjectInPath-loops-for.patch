@@ -1,0 +1,111 @@
+From 1f9415285a79c8e92eae56d883603e03485668b3 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 3 Sep 2019 11:44:55 +1000
+Subject: [PATCH 19/27] dsound: IDirectSoundBuffer8 GetObjectInPath loops for
+ the requested interface
+
+---
+ dlls/dsound/buffer.c        | 19 +++++++++++++++++++
+ dlls/dsound/tests/dsound8.c | 14 +++++++-------
+ 2 files changed, 26 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
+index f600652914..ad0f549f20 100644
+--- a/dlls/dsound/buffer.c
++++ b/dlls/dsound/buffer.c
+@@ -872,6 +872,25 @@ static HRESULT WINAPI IDirectSoundBufferImpl_GetObjectInPath(IDirectSoundBuffer8
+ 	if (!ppObject)
+ 		return E_INVALIDARG;
+ 
++    if(dwIndex == 0 && !IsEqualGUID(rguidObject, &GUID_All_Objects))
++    {
++        int i;
++
++        for(i = 0; i < This->num_filters; i++)
++        {
++            if(IsEqualGUID(rguidObject, &This->filters[i].guid))
++            {
++                if (SUCCEEDED(IMediaObject_QueryInterface(This->filters[i].obj, rguidInterface, ppObject)))
++                    return DS_OK;
++
++                return E_NOINTERFACE;
++            }
++        }
++
++        WARN("control unavailable\n");
++		return DSERR_OBJECTNOTFOUND;
++    }
++
+ 	if (IsEqualGUID(rguidObject, &This->filters[dwIndex].guid) || IsEqualGUID(rguidObject, &GUID_All_Objects)) {
+ 		if (SUCCEEDED(IMediaObject_QueryInterface(This->filters[dwIndex].obj, rguidInterface, ppObject)))
+ 			return DS_OK;
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index 252de27ad4..f03b5ccedb 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1407,7 +1407,7 @@ static void test_gargle_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXGargle *gargle;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_GARGLE, 0, &IID_IDirectSoundFXGargle, (void**)&gargle);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXGargle params;
+@@ -1430,7 +1430,7 @@ static void test_chorus_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXChorus *chorus;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_CHORUS, 0, &IID_IDirectSoundFXChorus,(void**)&chorus);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXChorus params;
+@@ -1458,7 +1458,7 @@ static void test_flanger_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXFlanger *flanger;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_FLANGER, 0, &IID_IDirectSoundFXFlanger,(void**)&flanger);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXFlanger params;
+@@ -1486,7 +1486,7 @@ static void test_distortion_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXDistortion *distortion;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_DISTORTION, 0, &IID_IDirectSoundFXDistortion,(void**)&distortion);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXDistortion params;
+@@ -1512,7 +1512,7 @@ static void test_compressor_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXCompressor *compressor;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_COMPRESSOR, 0, &IID_IDirectSoundFXCompressor,(void**)&compressor);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXCompressor params;
+@@ -1538,7 +1538,7 @@ static void test_parameq_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXParamEq *parameq;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_PARAMEQ, 0, &IID_IDirectSoundFXParamEq,(void**)&parameq);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXParamEq params;
+@@ -1562,7 +1562,7 @@ static void test_reverb_parameters(IDirectSoundBuffer8 *secondary8)
+     IDirectSoundFXI3DL2Reverb *reverb;
+ 
+     rc = IDirectSoundBuffer8_GetObjectInPath(secondary8, &GUID_DSFX_STANDARD_I3DL2REVERB, 0, &IID_IDirectSoundFXI3DL2Reverb, (void**)&reverb);
+-    todo_wine ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
++    ok(rc == DS_OK, "GetObjectInPath failed: %08x\n", rc);
+     if (rc == DS_OK)
+     {
+         DSFXI3DL2Reverb params;
+-- 
+2.17.1
+

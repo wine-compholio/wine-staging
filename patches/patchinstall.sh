@@ -136,6 +136,7 @@ patch_enable_all ()
 	enable_dinput_remap_joystick="$1"
 	enable_directmanipulation_new_dll="$1"
 	enable_dmime_PChannel_range="$1"
+	enable_dsdmo_new_dll="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
@@ -535,6 +536,9 @@ patch_enable ()
 			;;
 		dmime-PChannel-range)
 			enable_dmime_PChannel_range="$2"
+			;;
+		dsdmo-new-dll)
+			enable_dsdmo_new_dll="$2"
 			;;
 		dsound-EAX)
 			enable_dsound_EAX="$2"
@@ -3208,6 +3212,73 @@ if test "$enable_dmime_PChannel_range" -eq 1; then
 	patch_apply dmime-PChannel-range/0001-dmime-Ensure-Channels-are-in-range-before-assignment.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dmime: Ensure Channels are in range before assignment.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset dsdmo-new-dll
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/dsdmo/Makefile.in, dlls/dsdmo/chorus.c, dlls/dsdmo/compressor.c, dlls/dsdmo/distortion.c,
+# | 	dlls/dsdmo/dsdmo.spec, dlls/dsdmo/dsdmo_classes.idl, dlls/dsdmo/dsdmo_private.h, dlls/dsdmo/echo.c,
+# | 	dlls/dsdmo/flanger.c, dlls/dsdmo/gargle.c, dlls/dsdmo/main.c, dlls/dsdmo/parameq.c, dlls/dsdmo/reverb.c,
+# | 	dlls/dsdmo/reverb2.c, dlls/dsound/buffer.c, dlls/dsound/tests/dsound8.c
+# |
+if test "$enable_dsdmo_new_dll" -eq 1; then
+	patch_apply dsdmo-new-dll/0001-dsdmo-Added-dll.patch
+	patch_apply dsdmo-new-dll/0002-dsdmo-Add-IDirectSoundFXEcho-support.patch
+	patch_apply dsdmo-new-dll/0003-dsdmo-Add-IDirectSoundFXChorus-support.patch
+	patch_apply dsdmo-new-dll/0004-dsdmo-Add-IDirectSoundFXCompressor-support.patch
+	patch_apply dsdmo-new-dll/0005-dsdmo-Add-IDirectSoundFXDistortion-support.patch
+	patch_apply dsdmo-new-dll/0006-dsdmo-Add-IDirectSoundFXFlanger-support.patch
+	patch_apply dsdmo-new-dll/0007-dsdmo-Add-IDirectSoundFXGargle-support.patch
+	patch_apply dsdmo-new-dll/0008-dsdmo-Add-IDirectSoundFXParamEq-support.patch
+	patch_apply dsdmo-new-dll/0009-dsdmo-Add-IDirectSoundFXWavesReverb-support.patch
+	patch_apply dsdmo-new-dll/0010-dsdmo-Add-IDirectSoundFXI3DL2Reverb-support.patch
+	patch_apply dsdmo-new-dll/0011-dsdmo-Implement-IDirectSoundFXEcho-GetAllParameters.patch
+	patch_apply dsdmo-new-dll/0012-dsdmo-Implement-IDirectSoundFXGargle-GetAllParameter.patch
+	patch_apply dsdmo-new-dll/0013-dsdmo-Implemnet-IDirectSoundFXChorus-GetAllParameter.patch
+	patch_apply dsdmo-new-dll/0014-dsdmo-Implemnet-IDirectSoundFXFlanger-GetAllParamete.patch
+	patch_apply dsdmo-new-dll/0015-dsdmo-Implemnet-IDirectSoundFXDistortion-GetAllParam.patch
+	patch_apply dsdmo-new-dll/0016-dsdmo-Implemnet-IDirectSoundFXCompressor-GetAllParam.patch
+	patch_apply dsdmo-new-dll/0017-dsdmo-Implemnet-IDirectSoundFXParamEq-GetAllParamete.patch
+	patch_apply dsdmo-new-dll/0018-dsdmo-Implemnet-IDirectSoundFXI3DL2Reverb-GetAllPara.patch
+	patch_apply dsdmo-new-dll/0019-dsound-IDirectSoundBuffer8-GetObjectInPath-loops-for.patch
+	patch_apply dsdmo-new-dll/0020-dsdmo-Implement-IDirectSoundFXEcho-SetAllParameters.patch
+	patch_apply dsdmo-new-dll/0021-dsdmo-Implement-IDirectSoundFXGargle-SetAllParameter.patch
+	patch_apply dsdmo-new-dll/0022-dsdmo-Implement-IDirectSoundFXChorus-SetAllParameter.patch
+	patch_apply dsdmo-new-dll/0023-dsdmo-Implement-IDirectSoundFXFlanger-SetAllParamete.patch
+	patch_apply dsdmo-new-dll/0024-dsdmo-Implement-IDirectSoundFXDistortion-SetAllParam.patch
+	patch_apply dsdmo-new-dll/0025-dsdmo-Implement-IDirectSoundFXCompressor-SetAllParam.patch
+	patch_apply dsdmo-new-dll/0026-dsdmo-Implement-IDirectSoundFXParamEq-SetAllParamete.patch
+	patch_apply dsdmo-new-dll/0027-dsdmo-Implement-IDirectSoundFXI3DL2Reverb-SetAllPara.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Added dll.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXEcho support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXChorus support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXCompressor support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXDistortion support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXFlanger support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXGargle support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXParamEq support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXWavesReverb support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXI3DL2Reverb support.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXEcho GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXGargle GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implemnet IDirectSoundFXChorus GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implemnet IDirectSoundFXFlanger GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implemnet IDirectSoundFXDistortion GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implemnet IDirectSoundFXCompressor GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implemnet IDirectSoundFXParamEq GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implemnet IDirectSoundFXI3DL2Reverb GetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsound: IDirectSoundBuffer8 GetObjectInPath loops for the requested interface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXEcho SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXGargle SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXChorus SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXFlanger SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXDistortion SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXCompressor SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXParamEq SetAllParameters.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Implement IDirectSoundFXI3DL2Reverb SetAllParameters.", 1 },';
 	) >> "$patchlist"
 fi
 

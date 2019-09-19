@@ -1,0 +1,94 @@
+From bc7cbc008eb335bdc1c3d3045a3ada1889f1cd71 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Mon, 9 Sep 2019 14:53:58 +1000
+Subject: [PATCH 27/27] dsdmo: Implement IDirectSoundFXI3DL2Reverb
+ SetAllParameters.
+
+---
+ dlls/dsdmo/reverb2.c        | 24 ++++++++++++++++++++++--
+ dlls/dsound/tests/dsound8.c | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsdmo/reverb2.c b/dlls/dsdmo/reverb2.c
+index 44a6b5f1b4..52d83882ee 100644
+--- a/dlls/dsdmo/reverb2.c
++++ b/dlls/dsdmo/reverb2.c
+@@ -352,9 +352,29 @@ static ULONG WINAPI reverb2_Release(IDirectSoundFXI3DL2Reverb *iface)
+ static HRESULT WINAPI reverb2_SetAllParameters(IDirectSoundFXI3DL2Reverb *iface, const DSFXI3DL2Reverb *reverb)
+ {
+     struct dmo_reverb2fx *This = impl_from_IDirectSoundFXI3DL2Reverb(iface);
+-    FIXME("(%p) %p\n", This, reverb);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, reverb);
++
++    if(!reverb)
++        return E_POINTER;
++
++    if( (reverb->lRoom < DSFX_I3DL2REVERB_ROOM_MIN || reverb->lRoom > DSFX_I3DL2REVERB_ROOM_MAX) ||
++        (reverb->flRoomRolloffFactor < DSFX_I3DL2REVERB_ROOMROLLOFFFACTOR_MIN || reverb->flRoomRolloffFactor > DSFX_I3DL2REVERB_ROOMROLLOFFFACTOR_MAX) ||
++        (reverb->flDecayTime < DSFX_I3DL2REVERB_DECAYTIME_MIN || reverb->flDecayTime > DSFX_I3DL2REVERB_DECAYTIME_MAX) ||
++        (reverb->flDecayHFRatio < DSFX_I3DL2REVERB_DECAYHFRATIO_MIN || reverb->flDecayHFRatio > DSFX_I3DL2REVERB_DECAYHFRATIO_MAX) ||
++        (reverb->lReflections < DSFX_I3DL2REVERB_REFLECTIONS_MIN || reverb->lReflections > DSFX_I3DL2REVERB_REFLECTIONS_MAX) ||
++        (reverb->lReverb < DSFX_I3DL2REVERB_REVERB_MIN || reverb->lReverb > DSFX_I3DL2REVERB_REVERB_MAX) ||
++        (reverb->flReverbDelay < DSFX_I3DL2REVERB_REFLECTIONSDELAY_MIN || reverb->flReverbDelay > DSFX_I3DL2REVERB_REFLECTIONSDELAY_MAX) ||
++        (reverb->flDiffusion < DSFX_I3DL2REVERB_DIFFUSION_MIN || reverb->flDiffusion > DSFX_I3DL2REVERB_DIFFUSION_MAX) ||
++        (reverb->flDensity < DSFX_I3DL2REVERB_DENSITY_MIN || reverb->flDensity > DSFX_I3DL2REVERB_DENSITY_MAX) ||
++        (reverb->flHFReference < DSFX_I3DL2REVERB_HFREFERENCE_MIN || reverb->flHFReference > DSFX_I3DL2REVERB_HFREFERENCE_MAX) )
++    {
++        return E_INVALIDARG;
++    }
++
++    This->params = *reverb;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI reverb2_GetAllParameters(IDirectSoundFXI3DL2Reverb *iface, DSFXI3DL2Reverb *reverb)
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index df1b748db0..88ed4d9d4c 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1787,6 +1787,39 @@ static void test_reverb_parameters(IDirectSoundBuffer8 *secondary8)
+             ok(params.flHFReference == 5000.0f, "got %f\n", params.flHFReference);
+         }
+ 
++        rc = IDirectSoundFXI3DL2Reverb_SetAllParameters(reverb, NULL);
++        ok(rc == E_POINTER, "got: %08x\n", rc);
++
++        /* Out of range Min */
++        params.lRoom = -10001;
++        rc = IDirectSoundFXI3DL2Reverb_SetAllParameters(reverb, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        /* Out of range Max */
++        params.lRoom = 1;
++        rc = IDirectSoundFXI3DL2Reverb_SetAllParameters(reverb, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        params.lRoom = -900;
++        rc = IDirectSoundFXI3DL2Reverb_SetAllParameters(reverb, &params);
++        ok(rc == S_OK, "got: %08x\n", rc);
++
++        rc = IDirectSoundFXI3DL2Reverb_GetAllParameters(reverb, &params);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
++        if (rc == DS_OK)
++        {
++            ok(params.lRoom == -900, "got %d\n", params.lRoom);
++            ok(params.flRoomRolloffFactor == 0.0f, "got %f\n", params.flRoomRolloffFactor);
++            ok(params.flDecayTime == 1.49f, "got %f\n", params.flDecayTime);
++            ok(params.flDecayHFRatio == 0.83f, "got %f\n", params.flDecayHFRatio);
++            ok(params.lReflections == -2602, "got %d\n", params.lReflections);
++            ok(params.lReverb == 200, "got %d\n", params.lReverb);
++            ok(params.flReverbDelay == 0.011f, "got %f\n", params.flReverbDelay);
++            ok(params.flDiffusion == 100.0f, "got %f\n", params.flDiffusion);
++            ok(params.flDensity == 100.0f, "got %f\n", params.flDensity);
++            ok(params.flHFReference == 5000.0f, "got %f\n", params.flHFReference);
++        }
++
+         IDirectSoundFXI3DL2Reverb_Release(reverb);
+     }
+ }
+-- 
+2.17.1
+

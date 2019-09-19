@@ -1,0 +1,495 @@
+From abb55212b7e4ed43526bfc24fa78715f9dafa3e2 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Sat, 24 Aug 2019 18:40:39 +1000
+Subject: [PATCH 04/27] dsdmo: Add IDirectSoundFXCompressor support
+
+---
+ dlls/dsdmo/Makefile.in       |   1 +
+ dlls/dsdmo/compressor.c      | 397 +++++++++++++++++++++++++++++++++++
+ dlls/dsdmo/dsdmo_classes.idl |  10 +
+ dlls/dsdmo/dsdmo_private.h   |   1 +
+ dlls/dsdmo/main.c            |  14 ++
+ 5 files changed, 423 insertions(+)
+ create mode 100644 dlls/dsdmo/compressor.c
+
+diff --git a/dlls/dsdmo/Makefile.in b/dlls/dsdmo/Makefile.in
+index 34d0e89bf1..d0b10ac4f9 100644
+--- a/dlls/dsdmo/Makefile.in
++++ b/dlls/dsdmo/Makefile.in
+@@ -4,6 +4,7 @@ EXTRADLLFLAGS = -mno-cygwin
+ 
+ C_SRCS = \
+ 	chorus.c \
++	compressor.c \
+ 	echo.c \
+ 	main.c
+ 
+diff --git a/dlls/dsdmo/compressor.c b/dlls/dsdmo/compressor.c
+new file mode 100644
+index 0000000000..1cf26c7437
+--- /dev/null
++++ b/dlls/dsdmo/compressor.c
+@@ -0,0 +1,397 @@
++/*
++ * Copyright 2019 Alistair Leslie-Hughes
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++#define COBJMACROS
++
++#include "dsdmo_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(dsdmo);
++
++struct dmo_compressorfx
++{
++    IDirectSoundFXCompressor IDirectSoundFXCompressor_iface;
++    IMediaObject        IMediaObject_iface;
++    IMediaObjectInPlace IMediaObjectInPlace_iface;
++    LONG ref;
++};
++
++static inline struct dmo_compressorfx *impl_from_IDirectSoundFXCompressor(IDirectSoundFXCompressor *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_compressorfx, IDirectSoundFXCompressor_iface);
++}
++
++static inline struct dmo_compressorfx *impl_from_IMediaObject(IMediaObject *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_compressorfx, IMediaObject_iface);
++}
++
++static inline struct dmo_compressorfx *impl_from_IMediaObjectInPlace(IMediaObjectInPlace *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_compressorfx, IMediaObjectInPlace_iface);
++}
++
++static HRESULT WINAPI compressor_mediaobj_QueryInterface(IMediaObject *iface, REFIID riid, void **obj)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXCompressor_QueryInterface(&This->IDirectSoundFXCompressor_iface, riid, obj);
++}
++
++static ULONG WINAPI compressor_mediaobj_AddRef(IMediaObject *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXCompressor_AddRef(&This->IDirectSoundFXCompressor_iface);
++}
++
++static ULONG WINAPI compressor_mediaobj_Release(IMediaObject *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXCompressor_Release(&This->IDirectSoundFXCompressor_iface);
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetStreamCount(IMediaObject *iface, DWORD *inputs, DWORD *outputs)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %p, %p\n", This, inputs, outputs);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetInputStreamInfo(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetOutputStreamInfo(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetInputType(IMediaObject *iface, DWORD index, DWORD type, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %d, %p\n", This, index, type, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetOutputType(IMediaObject *iface, DWORD index, DWORD type, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %d, %p\n", This, index, type, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_SetInputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *pmt, DWORD flags)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x\n", This, index, pmt, flags);
++    return S_OK;
++}
++
++static HRESULT WINAPI compressor_mediaobj_SetOutputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *pmt, DWORD flags)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x\n", This, index, pmt, flags);
++    return S_OK;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetInputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetOutputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetInputSizeInfo(IMediaObject *iface, DWORD index, DWORD *size, DWORD *ahead, DWORD *alignment)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %p, %p\n", This, index, size, ahead, alignment);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetOutputSizeInfo(IMediaObject *iface, DWORD index, DWORD *size, DWORD *alignment)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %p\n", This, index, size, alignment);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetInputMaxLatency(IMediaObject *iface, DWORD index, REFERENCE_TIME *latency)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, latency);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_SetInputMaxLatency(IMediaObject *iface, DWORD index, REFERENCE_TIME latency)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %s\n", This, index,  wine_dbgstr_longlong(latency));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_Flush(IMediaObject *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_Discontinuity(IMediaObject *iface, DWORD index)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d\n", This, index);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_AllocateStreamingResources(IMediaObject *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_FreeStreamingResources(IMediaObject *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_GetInputStatus(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_ProcessInput(IMediaObject *iface, DWORD index, IMediaBuffer *buffer,
++                DWORD flags, REFERENCE_TIME timestamp, REFERENCE_TIME length)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x, %s, %s\n", This, index, buffer, flags, wine_dbgstr_longlong(timestamp), wine_dbgstr_longlong(length));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_ProcessOutput(IMediaObject *iface, DWORD flags, DWORD count,
++                DMO_OUTPUT_DATA_BUFFER *buffers, DWORD *status)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %x, %d, %p, %p\n", This, flags, count, buffers, status);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressor_mediaobj_Lock(IMediaObject *iface, LONG lock)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d\n", This, lock);
++    return E_NOTIMPL;
++}
++
++static const IMediaObjectVtbl compressor_mediaobjectVtbl =
++{
++    compressor_mediaobj_QueryInterface,
++    compressor_mediaobj_AddRef,
++    compressor_mediaobj_Release,
++    compressor_mediaobj_GetStreamCount,
++    compressor_mediaobj_GetInputStreamInfo,
++    compressor_mediaobj_GetOutputStreamInfo,
++    compressor_mediaobj_GetInputType,
++    compressor_mediaobj_GetOutputType,
++    compressor_mediaobj_SetInputType,
++    compressor_mediaobj_SetOutputType,
++    compressor_mediaobj_GetInputCurrentType,
++    compressor_mediaobj_GetOutputCurrentType,
++    compressor_mediaobj_GetInputSizeInfo,
++    compressor_mediaobj_GetOutputSizeInfo,
++    compressor_mediaobj_GetInputMaxLatency,
++    compressor_mediaobj_SetInputMaxLatency,
++    compressor_mediaobj_Flush,
++    compressor_mediaobj_Discontinuity,
++    compressor_mediaobj_AllocateStreamingResources,
++    compressor_mediaobj_FreeStreamingResources,
++    compressor_mediaobj_GetInputStatus,
++    compressor_mediaobj_ProcessInput,
++    compressor_mediaobj_ProcessOutput,
++    compressor_mediaobj_Lock
++};
++
++static HRESULT WINAPI echo_mediainplace_QueryInterface(IMediaObjectInPlace *iface, REFIID riid, void **obj)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXCompressor_QueryInterface(&This->IDirectSoundFXCompressor_iface, riid, obj);
++}
++
++static ULONG WINAPI echo_mediainplace_AddRef(IMediaObjectInPlace *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXCompressor_AddRef(&This->IDirectSoundFXCompressor_iface);
++}
++
++static ULONG WINAPI echo_mediainplace_Release(IMediaObjectInPlace *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXCompressor_Release(&This->IDirectSoundFXCompressor_iface);
++}
++
++static HRESULT WINAPI echo_mediainplace_Process(IMediaObjectInPlace *iface, ULONG size, BYTE *data, REFERENCE_TIME start, DWORD flags)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObjectInPlace(iface);
++    static BOOL once = 0;
++    if(!once++)
++        FIXME("%p, %d, %p, %s, %x\n", This, size, data, wine_dbgstr_longlong(start), flags);
++    else
++        TRACE("%p, %d, %p, %s, %x\n", This, size, data, wine_dbgstr_longlong(start), flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI echo_mediainplace_Clone(IMediaObjectInPlace *iface, IMediaObjectInPlace **object)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObjectInPlace(iface);
++    FIXME("%p, %p\n", This, object);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI echo_mediainplace_GetLatency(IMediaObjectInPlace *iface, REFERENCE_TIME *latency)
++{
++    struct dmo_compressorfx *This = impl_from_IMediaObjectInPlace(iface);
++    FIXME("%p, %p\n", This, latency);
++    return E_NOTIMPL;
++}
++
++static const IMediaObjectInPlaceVtbl compressor_mediainplaceVtbl =
++{
++    echo_mediainplace_QueryInterface,
++    echo_mediainplace_AddRef,
++    echo_mediainplace_Release,
++    echo_mediainplace_Process,
++    echo_mediainplace_Clone,
++    echo_mediainplace_GetLatency
++};
++
++static HRESULT WINAPI compressorfx_QueryInterface(IDirectSoundFXCompressor *iface, REFIID riid, void **ppv)
++{
++    struct dmo_compressorfx *This = impl_from_IDirectSoundFXCompressor(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), ppv);
++
++    if (IsEqualGUID(riid, &IID_IUnknown) ||
++        IsEqualGUID(riid, &IID_IDirectSoundFXCompressor))
++    {
++        *ppv = &This->IDirectSoundFXCompressor_iface;
++    }
++    else if(IsEqualGUID(riid, &IID_IMediaObject))
++    {
++        *ppv = &This->IMediaObject_iface;
++    }
++    else if(IsEqualGUID(riid, &IID_IMediaObjectInPlace))
++    {
++        *ppv = &This->IMediaObjectInPlace_iface;
++    }
++
++    if(!*ppv)
++    {
++        FIXME("(%p)->(%s,%p),not found\n", This, debugstr_guid(riid), ppv);
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown*)*ppv);
++
++    return S_OK;
++}
++
++static ULONG WINAPI compressorfx_AddRef(IDirectSoundFXCompressor *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IDirectSoundFXCompressor(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI compressorfx_Release(IDirectSoundFXCompressor *iface)
++{
++    struct dmo_compressorfx *This = impl_from_IDirectSoundFXCompressor(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    if (!ref)
++    {
++        heap_free(This);
++    }
++    return ref;
++}
++
++static HRESULT WINAPI compressorfx_SetAllParameters(IDirectSoundFXCompressor *iface, const DSFXCompressor *compressor)
++{
++    struct dmo_compressorfx *This = impl_from_IDirectSoundFXCompressor(iface);
++    FIXME("(%p) %p\n", This, compressor);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI compressorfx_GetAllParameters(IDirectSoundFXCompressor *iface, DSFXCompressor *compressor)
++{
++    struct dmo_compressorfx *This = impl_from_IDirectSoundFXCompressor(iface);
++    FIXME("(%p) %p\n", This, compressor);
++
++    return E_NOTIMPL;
++}
++
++static const struct IDirectSoundFXCompressorVtbl echofxVtbl =
++{
++    compressorfx_QueryInterface,
++    compressorfx_AddRef,
++    compressorfx_Release,
++    compressorfx_SetAllParameters,
++    compressorfx_GetAllParameters
++};
++
++HRESULT WINAPI CompressorFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv)
++{
++    struct dmo_compressorfx *object;
++    HRESULT ret;
++
++    TRACE("(%p, %s, %p)\n", outer, debugstr_guid(riid), ppv);
++
++    *ppv = NULL;
++
++    object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object));
++    if (!object)
++        return E_OUTOFMEMORY;
++
++    object->IDirectSoundFXCompressor_iface.lpVtbl = &echofxVtbl;
++    object->IMediaObject_iface.lpVtbl = &compressor_mediaobjectVtbl;
++    object->IMediaObjectInPlace_iface.lpVtbl = &compressor_mediainplaceVtbl;
++    object->ref = 1;
++
++    ret = compressorfx_QueryInterface(&object->IDirectSoundFXCompressor_iface, riid, ppv);
++    compressorfx_Release(&object->IDirectSoundFXCompressor_iface);
++
++    return ret;
++}
+diff --git a/dlls/dsdmo/dsdmo_classes.idl b/dlls/dsdmo/dsdmo_classes.idl
+index ba1a8f6ff4..f7f139de30 100644
+--- a/dlls/dsdmo/dsdmo_classes.idl
++++ b/dlls/dsdmo/dsdmo_classes.idl
+@@ -36,3 +36,13 @@ coclass DirectSoundEchoDMO
+ coclass DirectSoundChorusDMO
+ {
+ }
++
++[
++    uuid(ef011f79-4000-406d-87af-bffb3fc39d57),
++    threading(both),
++    progid("Microsoft.DirectSoundCompressorDMO.1"),
++    vi_progid("Microsoft.DirectSoundCompressorDMO")
++]
++coclass DirectSoundCompressorDMO
++{
++}
+diff --git a/dlls/dsdmo/dsdmo_private.h b/dlls/dsdmo/dsdmo_private.h
+index cbe906e472..96c0c061ee 100644
+--- a/dlls/dsdmo/dsdmo_private.h
++++ b/dlls/dsdmo/dsdmo_private.h
+@@ -29,5 +29,6 @@
+ 
+ extern HRESULT WINAPI EchoFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv)  DECLSPEC_HIDDEN;
+ extern HRESULT WINAPI ChrousFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
++extern HRESULT WINAPI CompressorFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ 
+ #endif
+diff --git a/dlls/dsdmo/main.c b/dlls/dsdmo/main.c
+index 5a89eaff39..13d4af7adc 100644
+--- a/dlls/dsdmo/main.c
++++ b/dlls/dsdmo/main.c
+@@ -102,8 +102,17 @@ static const IClassFactoryVtbl ChrousFactoryVtbl = {
+     ClassFactory_LockServer
+ };
+ 
++static const IClassFactoryVtbl CompressorFactoryVtbl = {
++    ClassFactory_QueryInterface,
++    ClassFactory_AddRef,
++    ClassFactory_Release,
++    CompressorFactory_CreateInstance,
++    ClassFactory_LockServer
++};
++
+ static IClassFactory echofx_factory = { &EchoFactoryVtbl };
+ static IClassFactory chorusfx_factory = { &ChrousFactoryVtbl };
++static IClassFactory compressorfx_factory = { &CompressorFactoryVtbl };
+ 
+ /***********************************************************************
+  *      DllGetClassObject
+@@ -122,6 +131,11 @@ HRESULT WINAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
+         TRACE("GUID_DSFX_STANDARD_CHORUS\n");
+         return IClassFactory_QueryInterface(&chorusfx_factory, riid, ppv);
+     }
++    else if(IsEqualGUID(&GUID_DSFX_STANDARD_COMPRESSOR, rclsid))
++    {
++        TRACE("GUID_DSFX_STANDARD_COMPRESSOR\n");
++        return IClassFactory_QueryInterface(&compressorfx_factory, riid, ppv);
++    }
+ 
+     FIXME("%s %s %p\n", debugstr_guid(rclsid), debugstr_guid(riid), ppv);
+     return CLASS_E_CLASSNOTAVAILABLE;
+-- 
+2.17.1
+

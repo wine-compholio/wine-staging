@@ -1,0 +1,496 @@
+From 8a850e7f6123941ce5d891774faeda1a2c8d0bbc Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Sun, 25 Aug 2019 15:00:07 +1000
+Subject: [PATCH 05/27] dsdmo: Add IDirectSoundFXDistortion support
+
+---
+ dlls/dsdmo/Makefile.in       |   1 +
+ dlls/dsdmo/distortion.c      | 397 +++++++++++++++++++++++++++++++++++
+ dlls/dsdmo/dsdmo_classes.idl |  10 +
+ dlls/dsdmo/dsdmo_private.h   |   1 +
+ dlls/dsdmo/main.c            |  14 ++
+ 5 files changed, 423 insertions(+)
+ create mode 100644 dlls/dsdmo/distortion.c
+
+diff --git a/dlls/dsdmo/Makefile.in b/dlls/dsdmo/Makefile.in
+index d0b10ac4f9..2bf8958560 100644
+--- a/dlls/dsdmo/Makefile.in
++++ b/dlls/dsdmo/Makefile.in
+@@ -4,6 +4,7 @@ EXTRADLLFLAGS = -mno-cygwin
+ 
+ C_SRCS = \
+ 	chorus.c \
++	distortion.c \
+ 	compressor.c \
+ 	echo.c \
+ 	main.c
+diff --git a/dlls/dsdmo/distortion.c b/dlls/dsdmo/distortion.c
+new file mode 100644
+index 0000000000..92e498b6f1
+--- /dev/null
++++ b/dlls/dsdmo/distortion.c
+@@ -0,0 +1,397 @@
++/*
++ * Copyright 2019 Alistair Leslie-Hughes
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++#define COBJMACROS
++
++#include "dsdmo_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(dsdmo);
++
++struct dmo_distortionfx
++{
++    IDirectSoundFXDistortion  IDirectSoundFXDistortion_iface;
++    IMediaObject        IMediaObject_iface;
++    IMediaObjectInPlace IMediaObjectInPlace_iface;
++    LONG ref;
++};
++
++static inline struct dmo_distortionfx *impl_from_IDirectSoundFXDistortion(IDirectSoundFXDistortion *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_distortionfx, IDirectSoundFXDistortion_iface);
++}
++
++static inline struct dmo_distortionfx *impl_from_IMediaObject(IMediaObject *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_distortionfx, IMediaObject_iface);
++}
++
++static inline struct dmo_distortionfx *impl_from_IMediaObjectInPlace(IMediaObjectInPlace *iface)
++{
++    return CONTAINING_RECORD(iface, struct dmo_distortionfx, IMediaObjectInPlace_iface);
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_QueryInterface(IMediaObject *iface, REFIID riid, void **obj)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXDistortion_QueryInterface(&This->IDirectSoundFXDistortion_iface, riid, obj);
++}
++
++static ULONG WINAPI distortionfx_mediaobj_AddRef(IMediaObject *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXDistortion_AddRef(&This->IDirectSoundFXDistortion_iface);
++}
++
++static ULONG WINAPI distortionfx_mediaobj_Release(IMediaObject *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    return IDirectSoundFXDistortion_Release(&This->IDirectSoundFXDistortion_iface);
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetStreamCount(IMediaObject *iface, DWORD *inputs, DWORD *outputs)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %p, %p\n", This, inputs, outputs);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetInputStreamInfo(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetOutputStreamInfo(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetInputType(IMediaObject *iface, DWORD index, DWORD type, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %d, %p\n", This, index, type, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetOutputType(IMediaObject *iface, DWORD index, DWORD type, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %d, %p\n", This, index, type, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_SetInputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *pmt, DWORD flags)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x\n", This, index, pmt, flags);
++    return S_OK;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_SetOutputType(IMediaObject *iface, DWORD index, const DMO_MEDIA_TYPE *pmt, DWORD flags)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x\n", This, index, pmt, flags);
++    return S_OK;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetInputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetOutputCurrentType(IMediaObject *iface, DWORD index, DMO_MEDIA_TYPE *pmt)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, pmt);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetInputSizeInfo(IMediaObject *iface, DWORD index, DWORD *size, DWORD *ahead, DWORD *alignment)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %p, %p\n", This, index, size, ahead, alignment);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetOutputSizeInfo(IMediaObject *iface, DWORD index, DWORD *size, DWORD *alignment)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %p\n", This, index, size, alignment);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetInputMaxLatency(IMediaObject *iface, DWORD index, REFERENCE_TIME *latency)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, latency);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_SetInputMaxLatency(IMediaObject *iface, DWORD index, REFERENCE_TIME latency)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %s\n", This, index, wine_dbgstr_longlong(latency));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_Flush(IMediaObject *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_Discontinuity(IMediaObject *iface, DWORD index)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d\n", This, index);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_AllocateStreamingResources(IMediaObject *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_FreeStreamingResources(IMediaObject *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_GetInputStatus(IMediaObject *iface, DWORD index, DWORD *flags)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p\n", This, index, flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_ProcessInput(IMediaObject *iface, DWORD index, IMediaBuffer *buffer,
++                DWORD flags, REFERENCE_TIME timestamp, REFERENCE_TIME length)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d, %p, %x, %s, %s\n", This, index, buffer, flags, wine_dbgstr_longlong(timestamp), wine_dbgstr_longlong(length));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_ProcessOutput(IMediaObject *iface, DWORD flags, DWORD count,
++                DMO_OUTPUT_DATA_BUFFER *buffers, DWORD *status)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %x, %d, %p, %p\n", This, flags, count, buffers, status);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediaobj_Lock(IMediaObject *iface, LONG lock)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObject(iface);
++    FIXME("%p, %d\n", This, lock);
++    return E_NOTIMPL;
++}
++
++static const IMediaObjectVtbl distortionfx_mediaobjectVtbl =
++{
++    distortionfx_mediaobj_QueryInterface,
++    distortionfx_mediaobj_AddRef,
++    distortionfx_mediaobj_Release,
++    distortionfx_mediaobj_GetStreamCount,
++    distortionfx_mediaobj_GetInputStreamInfo,
++    distortionfx_mediaobj_GetOutputStreamInfo,
++    distortionfx_mediaobj_GetInputType,
++    distortionfx_mediaobj_GetOutputType,
++    distortionfx_mediaobj_SetInputType,
++    distortionfx_mediaobj_SetOutputType,
++    distortionfx_mediaobj_GetInputCurrentType,
++    distortionfx_mediaobj_GetOutputCurrentType,
++    distortionfx_mediaobj_GetInputSizeInfo,
++    distortionfx_mediaobj_GetOutputSizeInfo,
++    distortionfx_mediaobj_GetInputMaxLatency,
++    distortionfx_mediaobj_SetInputMaxLatency,
++    distortionfx_mediaobj_Flush,
++    distortionfx_mediaobj_Discontinuity,
++    distortionfx_mediaobj_AllocateStreamingResources,
++    distortionfx_mediaobj_FreeStreamingResources,
++    distortionfx_mediaobj_GetInputStatus,
++    distortionfx_mediaobj_ProcessInput,
++    distortionfx_mediaobj_ProcessOutput,
++    distortionfx_mediaobj_Lock
++};
++
++static HRESULT WINAPI distortionfx_mediainplace_QueryInterface(IMediaObjectInPlace *iface, REFIID riid, void **obj)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXDistortion_QueryInterface(&This->IDirectSoundFXDistortion_iface, riid, obj);
++}
++
++static ULONG WINAPI distortionfx_mediainplace_AddRef(IMediaObjectInPlace *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXDistortion_AddRef(&This->IDirectSoundFXDistortion_iface);
++}
++
++static ULONG WINAPI distortionfx_mediainplace_Release(IMediaObjectInPlace *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObjectInPlace(iface);
++    return IDirectSoundFXDistortion_Release(&This->IDirectSoundFXDistortion_iface);
++}
++
++static HRESULT WINAPI distortionfx_mediainplace_Process(IMediaObjectInPlace *iface, ULONG size, BYTE *data, REFERENCE_TIME start, DWORD flags)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObjectInPlace(iface);
++    static BOOL once = 0;
++    if(!once++)
++        FIXME("%p, %d, %p, %s, %x\n", This, size, data, wine_dbgstr_longlong(start), flags);
++    else
++        TRACE("%p, %d, %p, %s, %x\n", This, size, data, wine_dbgstr_longlong(start), flags);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediainplace_Clone(IMediaObjectInPlace *iface, IMediaObjectInPlace **object)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObjectInPlace(iface);
++    FIXME("%p, %p\n", This, object);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_mediainplace_GetLatency(IMediaObjectInPlace *iface, REFERENCE_TIME *latency)
++{
++    struct dmo_distortionfx *This = impl_from_IMediaObjectInPlace(iface);
++    FIXME("%p, %p\n", This, latency);
++    return E_NOTIMPL;
++}
++
++static const IMediaObjectInPlaceVtbl distortionfx_mediainplaceVtbl =
++{
++    distortionfx_mediainplace_QueryInterface,
++    distortionfx_mediainplace_AddRef,
++    distortionfx_mediainplace_Release,
++    distortionfx_mediainplace_Process,
++    distortionfx_mediainplace_Clone,
++    distortionfx_mediainplace_GetLatency
++};
++
++static HRESULT WINAPI distortionfx_QueryInterface(IDirectSoundFXDistortion *iface, REFIID riid, void **ppv)
++{
++    struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), ppv);
++
++    if (IsEqualGUID(riid, &IID_IUnknown) ||
++        IsEqualGUID(riid, &IID_IDirectSoundFXDistortion))
++    {
++        *ppv = &This->IDirectSoundFXDistortion_iface;
++    }
++    else if(IsEqualGUID(riid, &IID_IMediaObject))
++    {
++        *ppv = &This->IMediaObject_iface;
++    }
++    else if(IsEqualGUID(riid, &IID_IMediaObjectInPlace))
++    {
++        *ppv = &This->IMediaObjectInPlace_iface;
++    }
++
++    if(!*ppv)
++    {
++        FIXME("(%p)->(%s,%p),not found\n", This, debugstr_guid(riid), ppv);
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown*)*ppv);
++
++    return S_OK;
++}
++
++static ULONG WINAPI distortionfx_AddRef(IDirectSoundFXDistortion *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI distortionfx_Release(IDirectSoundFXDistortion *iface)
++{
++    struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%u\n", This, ref);
++
++    if (!ref)
++    {
++        heap_free(This);
++    }
++    return ref;
++}
++
++static HRESULT WINAPI distortionfx_SetAllParameters(IDirectSoundFXDistortion *iface, const DSFXDistortion *distortion)
++{
++    struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
++    FIXME("(%p) %p\n", This, distortion);
++
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI distortionfx_GetAllParameters(IDirectSoundFXDistortion *iface, DSFXDistortion *distortion)
++{
++    struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
++    FIXME("(%p) %p\n", This, distortion);
++
++    return E_NOTIMPL;
++}
++
++static const struct IDirectSoundFXDistortionVtbl distortionfxVtbl =
++{
++    distortionfx_QueryInterface,
++    distortionfx_AddRef,
++    distortionfx_Release,
++    distortionfx_SetAllParameters,
++    distortionfx_GetAllParameters
++};
++
++HRESULT WINAPI DistortionFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv)
++{
++    struct dmo_distortionfx *object;
++    HRESULT ret;
++
++    TRACE("(%p, %s, %p)\n", outer, debugstr_guid(riid), ppv);
++
++    *ppv = NULL;
++
++    object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object));
++    if (!object)
++        return E_OUTOFMEMORY;
++
++    object->IDirectSoundFXDistortion_iface.lpVtbl = &distortionfxVtbl;
++    object->IMediaObject_iface.lpVtbl = &distortionfx_mediaobjectVtbl;
++    object->IMediaObjectInPlace_iface.lpVtbl = &distortionfx_mediainplaceVtbl;
++    object->ref = 1;
++
++    ret = distortionfx_QueryInterface(&object->IDirectSoundFXDistortion_iface, riid, ppv);
++    distortionfx_Release(&object->IDirectSoundFXDistortion_iface);
++
++    return ret;
++}
+diff --git a/dlls/dsdmo/dsdmo_classes.idl b/dlls/dsdmo/dsdmo_classes.idl
+index f7f139de30..8060d4c2af 100644
+--- a/dlls/dsdmo/dsdmo_classes.idl
++++ b/dlls/dsdmo/dsdmo_classes.idl
+@@ -46,3 +46,13 @@ coclass DirectSoundChorusDMO
+ coclass DirectSoundCompressorDMO
+ {
+ }
++
++[
++    uuid(ef114c90-cd1d-484e-96e5-09cfaf912a21),
++    threading(both),
++    progid("Microsoft.DirectSoundDistortionDMO.1"),
++    vi_progid("Microsoft.DirectSoundDistortionDMO")
++]
++coclass DirectSoundDistortionDMO
++{
++}
+diff --git a/dlls/dsdmo/dsdmo_private.h b/dlls/dsdmo/dsdmo_private.h
+index 96c0c061ee..03186366c6 100644
+--- a/dlls/dsdmo/dsdmo_private.h
++++ b/dlls/dsdmo/dsdmo_private.h
+@@ -30,5 +30,6 @@
+ extern HRESULT WINAPI EchoFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv)  DECLSPEC_HIDDEN;
+ extern HRESULT WINAPI ChrousFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ extern HRESULT WINAPI CompressorFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
++extern HRESULT WINAPI DistortionFactory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ 
+ #endif
+diff --git a/dlls/dsdmo/main.c b/dlls/dsdmo/main.c
+index 13d4af7adc..ee994350d5 100644
+--- a/dlls/dsdmo/main.c
++++ b/dlls/dsdmo/main.c
+@@ -110,9 +110,18 @@ static const IClassFactoryVtbl CompressorFactoryVtbl = {
+     ClassFactory_LockServer
+ };
+ 
++static const IClassFactoryVtbl DistortionFactoryVtbl = {
++    ClassFactory_QueryInterface,
++    ClassFactory_AddRef,
++    ClassFactory_Release,
++    DistortionFactory_CreateInstance,
++    ClassFactory_LockServer
++};
++
+ static IClassFactory echofx_factory = { &EchoFactoryVtbl };
+ static IClassFactory chorusfx_factory = { &ChrousFactoryVtbl };
+ static IClassFactory compressorfx_factory = { &CompressorFactoryVtbl };
++static IClassFactory distortionfx_factory = { &DistortionFactoryVtbl };
+ 
+ /***********************************************************************
+  *      DllGetClassObject
+@@ -136,6 +145,11 @@ HRESULT WINAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
+         TRACE("GUID_DSFX_STANDARD_COMPRESSOR\n");
+         return IClassFactory_QueryInterface(&compressorfx_factory, riid, ppv);
+     }
++    else if(IsEqualGUID(&GUID_DSFX_STANDARD_DISTORTION, rclsid))
++    {
++        TRACE("GUID_DSFX_STANDARD_DISTORTION\n");
++        return IClassFactory_QueryInterface(&distortionfx_factory, riid, ppv);
++    }
+ 
+     FIXME("%s %s %p\n", debugstr_guid(rclsid), debugstr_guid(riid), ppv);
+     return CLASS_E_CLASSNOTAVAILABLE;
+-- 
+2.17.1
+

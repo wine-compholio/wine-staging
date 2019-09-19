@@ -1,0 +1,72 @@
+From 55299a34a5cbf7abdbeeb521ae2267d26f555b4e Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 3 Sep 2019 09:32:02 +1000
+Subject: [PATCH 13/27] dsdmo: Implemnet IDirectSoundFXChorus GetAllParameters
+
+---
+ dlls/dsdmo/chorus.c         | 20 ++++++++++++++++++--
+ dlls/dsound/tests/dsound8.c |  2 +-
+ 2 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/dsdmo/chorus.c b/dlls/dsdmo/chorus.c
+index 6d4076bcba..03195d247d 100644
+--- a/dlls/dsdmo/chorus.c
++++ b/dlls/dsdmo/chorus.c
+@@ -27,6 +27,8 @@ struct dmo_chorusfx
+     IMediaObject         IMediaObject_iface;
+     IMediaObjectInPlace  IMediaObjectInPlace_iface;
+     LONG ref;
++
++    DSFXChorus params;
+ };
+ 
+ static inline struct dmo_chorusfx *impl_from_IDirectSoundFXChorus(IDirectSoundFXChorus *iface)
+@@ -358,9 +360,15 @@ static HRESULT WINAPI chrousfx_SetAllParameters(IDirectSoundFXChorus *iface, con
+ static HRESULT WINAPI chrousfx_GetAllParameters(IDirectSoundFXChorus *iface, DSFXChorus *chorus)
+ {
+     struct dmo_chorusfx *This = impl_from_IDirectSoundFXChorus(iface);
+-    FIXME("(%p) %p\n", This, chorus);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, chorus);
++
++    if(!chorus)
++        return E_INVALIDARG;
++
++    *chorus = This->params;
++
++    return S_OK;
+ }
+ 
+ static const struct IDirectSoundFXChorusVtbl chorusfxVtbl =
+@@ -390,6 +398,14 @@ HRESULT WINAPI ChrousFactory_CreateInstance(IClassFactory *iface, IUnknown *oute
+     object->IMediaObjectInPlace_iface.lpVtbl = &echo_mediainplaceVtbl;
+     object->ref = 1;
+ 
++    object->params.fWetDryMix = 50.0f;
++    object->params.fDepth     = 10.0f;
++    object->params.fFeedback  = 25.0f;
++    object->params.fFrequency =  1.1f;
++    object->params.lWaveform  = DSFXCHORUS_WAVE_SIN;
++    object->params.fDelay     = 16.0f;
++    object->params.lPhase     =  3;
++
+     ret = chrousfx_QueryInterface(&object->IDirectSoundFXChorus_iface, riid, ppv);
+     chrousfx_Release(&object->IDirectSoundFXChorus_iface);
+ 
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index 2b066ef756..17026f81f5 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1436,7 +1436,7 @@ static void test_chorus_parameters(IDirectSoundBuffer8 *secondary8)
+         DSFXChorus params;
+ 
+         rc = IDirectSoundFXChorus_GetAllParameters(chorus, &params);
+-        todo_wine ok(rc == DS_OK, "Failed: %08x\n", rc);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
+         if (rc == DS_OK)
+         {
+             ok(params.fWetDryMix == 50.0f, "got %f\n", params.fWetDryMix);
+-- 
+2.17.1
+

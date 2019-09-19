@@ -1,0 +1,70 @@
+From cc8299d2dea6d96d8460adf855548c58c3497d55 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 3 Sep 2019 09:03:16 +1000
+Subject: [PATCH 11/27] dsdmo: Implement IDirectSoundFXEcho GetAllParameters.
+
+---
+ dlls/dsdmo/echo.c           | 18 ++++++++++++++++--
+ dlls/dsound/tests/dsound8.c |  2 +-
+ 2 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/dsdmo/echo.c b/dlls/dsdmo/echo.c
+index 3e8b0be115..e9add8a019 100644
+--- a/dlls/dsdmo/echo.c
++++ b/dlls/dsdmo/echo.c
+@@ -27,6 +27,8 @@ struct dmo_echofx
+     IMediaObject        IMediaObject_iface;
+     IMediaObjectInPlace IMediaObjectInPlace_iface;
+     LONG ref;
++
++    DSFXEcho params;
+ };
+ 
+ static inline struct dmo_echofx *impl_from_IDirectSoundFXEcho(IDirectSoundFXEcho *iface)
+@@ -358,9 +360,15 @@ static HRESULT WINAPI echofx_SetAllParameters(IDirectSoundFXEcho *iface, const D
+ static HRESULT WINAPI echofx_GetAllParameters(IDirectSoundFXEcho *iface, DSFXEcho *echo)
+ {
+     struct dmo_echofx *This = impl_from_IDirectSoundFXEcho(iface);
+-    FIXME("(%p) %p\n", This, echo);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, echo);
++
++    if(!echo)
++        return E_INVALIDARG;
++
++    *echo = This->params;
++
++    return S_OK;
+ }
+ 
+ static const struct IDirectSoundFXEchoVtbl echofxVtbl =
+@@ -390,6 +398,12 @@ HRESULT WINAPI EchoFactory_CreateInstance(IClassFactory *iface, IUnknown *outer,
+     object->IMediaObjectInPlace_iface.lpVtbl = &echo_mediainplaceVtbl;
+     object->ref = 1;
+ 
++    object->params.fWetDryMix  =  50.0f;
++    object->params.fFeedback   =  50.0f;
++    object->params.fLeftDelay  = 500.0f;
++    object->params.fRightDelay = 500.0f;
++    object->params.lPanDelay   =   0;
++
+     ret = echofx_QueryInterface(&object->IDirectSoundFXEcho_iface, riid, ppv);
+     echofx_Release(&object->IDirectSoundFXEcho_iface);
+ 
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index 6ed32abbcb..244f2f98e8 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1387,7 +1387,7 @@ static void test_echo_parameters(IDirectSoundBuffer8 *secondary8)
+         DSFXEcho params;
+ 
+         rc = IDirectSoundFXEcho_GetAllParameters(echo, &params);
+-        todo_wine ok(rc == DS_OK, "Failed: %08x\n", rc);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
+         if (rc == DS_OK )
+         {
+             ok(params.fWetDryMix == 50.0f, "got %f\n", params.fWetDryMix);
+-- 
+2.17.1
+

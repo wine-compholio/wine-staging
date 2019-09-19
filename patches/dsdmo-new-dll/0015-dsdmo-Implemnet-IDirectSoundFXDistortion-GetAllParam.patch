@@ -1,0 +1,71 @@
+From 307c0c499cc76d14bc73019f8acf1910cfdec99c Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 3 Sep 2019 09:38:33 +1000
+Subject: [PATCH 15/27] dsdmo: Implemnet IDirectSoundFXDistortion
+ GetAllParameters
+
+---
+ dlls/dsdmo/distortion.c     | 18 ++++++++++++++++--
+ dlls/dsound/tests/dsound8.c |  2 +-
+ 2 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/dsdmo/distortion.c b/dlls/dsdmo/distortion.c
+index 92e498b6f1..e6952c3fe1 100644
+--- a/dlls/dsdmo/distortion.c
++++ b/dlls/dsdmo/distortion.c
+@@ -27,6 +27,8 @@ struct dmo_distortionfx
+     IMediaObject        IMediaObject_iface;
+     IMediaObjectInPlace IMediaObjectInPlace_iface;
+     LONG ref;
++
++    DSFXDistortion params;
+ };
+ 
+ static inline struct dmo_distortionfx *impl_from_IDirectSoundFXDistortion(IDirectSoundFXDistortion *iface)
+@@ -358,9 +360,15 @@ static HRESULT WINAPI distortionfx_SetAllParameters(IDirectSoundFXDistortion *if
+ static HRESULT WINAPI distortionfx_GetAllParameters(IDirectSoundFXDistortion *iface, DSFXDistortion *distortion)
+ {
+     struct dmo_distortionfx *This = impl_from_IDirectSoundFXDistortion(iface);
+-    FIXME("(%p) %p\n", This, distortion);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, distortion);
++
++    if(!distortion)
++        return E_INVALIDARG;
++
++    *distortion = This->params;
++
++    return S_OK;
+ }
+ 
+ static const struct IDirectSoundFXDistortionVtbl distortionfxVtbl =
+@@ -390,6 +398,12 @@ HRESULT WINAPI DistortionFactory_CreateInstance(IClassFactory *iface, IUnknown *
+     object->IMediaObjectInPlace_iface.lpVtbl = &distortionfx_mediainplaceVtbl;
+     object->ref = 1;
+ 
++    object->params.fGain                  =  -18.0f;
++    object->params.fEdge                  =   15.0f;
++    object->params.fPostEQCenterFrequency = 2400.0f;
++    object->params.fPostEQBandwidth       = 2400.0f;
++    object->params.fPreLowpassCutoff      = 3675.0f;
++
+     ret = distortionfx_QueryInterface(&object->IDirectSoundFXDistortion_iface, riid, ppv);
+     distortionfx_Release(&object->IDirectSoundFXDistortion_iface);
+ 
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index bd417d03af..b75f097355 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1492,7 +1492,7 @@ static void test_distortion_parameters(IDirectSoundBuffer8 *secondary8)
+         DSFXDistortion params;
+ 
+         rc = IDirectSoundFXDistortion_GetAllParameters(distortion, &params);
+-        todo_wine ok(rc == DS_OK, "Failed: %08x\n", rc);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
+         if (rc == DS_OK)
+         {
+             ok(params.fGain == -18.0f, "got %f\n", params.fGain);
+-- 
+2.17.1
+

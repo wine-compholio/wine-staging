@@ -1,0 +1,89 @@
+From 84ff817f06cbd61346273de9a214b6a513e59ca0 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Mon, 9 Sep 2019 11:48:31 +1000
+Subject: [PATCH 22/27] dsdmo: Implement IDirectSoundFXChorus SetAllParameters.
+
+---
+ dlls/dsdmo/chorus.c         | 22 ++++++++++++++++++++--
+ dlls/dsound/tests/dsound8.c | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 51 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dsdmo/chorus.c b/dlls/dsdmo/chorus.c
+index 03195d247d..979074f2f5 100644
+--- a/dlls/dsdmo/chorus.c
++++ b/dlls/dsdmo/chorus.c
+@@ -352,9 +352,27 @@ static ULONG WINAPI chrousfx_Release(IDirectSoundFXChorus *iface)
+ static HRESULT WINAPI chrousfx_SetAllParameters(IDirectSoundFXChorus *iface, const DSFXChorus *chorus)
+ {
+     struct dmo_chorusfx *This = impl_from_IDirectSoundFXChorus(iface);
+-    FIXME("(%p) %p\n", This, chorus);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, chorus);
++
++    if(!chorus)
++        return E_POINTER;
++
++    /* Out of Range values */
++    if( (chorus->fWetDryMix < DSFXCHORUS_WETDRYMIX_MIN || chorus->fWetDryMix > DSFXCHORUS_WETDRYMIX_MAX) ||
++        (chorus->fDepth < DSFXCHORUS_DEPTH_MIN || chorus->fDepth > DSFXCHORUS_DEPTH_MAX) ||
++        (chorus->fFeedback < DSFXCHORUS_FEEDBACK_MIN || chorus->fFeedback >  DSFXCHORUS_FEEDBACK_MAX) ||
++        (chorus->fFrequency < DSFXCHORUS_FREQUENCY_MIN || chorus->fFrequency > DSFXCHORUS_FREQUENCY_MAX) ||
++        (chorus->lWaveform != DSFXCHORUS_WAVE_SIN && chorus->lWaveform != DSFXCHORUS_WAVE_TRIANGLE ) ||
++        (chorus->fDelay < DSFXCHORUS_DELAY_MIN || chorus->fDelay > DSFXCHORUS_DELAY_MAX) ||
++        (chorus->lPhase < DSFXCHORUS_PHASE_MIN || chorus->lPhase > DSFXCHORUS_PHASE_MAX) )
++    {
++        return E_INVALIDARG;
++    }
++
++    This->params = *chorus;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI chrousfx_GetAllParameters(IDirectSoundFXChorus *iface, DSFXChorus *chorus)
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index c634854532..d68e4a50f8 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1506,6 +1506,37 @@ static void test_chorus_parameters(IDirectSoundBuffer8 *secondary8)
+             ok(params.lPhase == 3, "got %d\n", params.lPhase);
+         }
+ 
++        rc = IDirectSoundFXChorus_SetAllParameters(chorus, NULL);
++        ok(rc == E_POINTER, "got: %08x\n", rc);
++
++        /* Out of range Min */
++        params.fWetDryMix = -1.0f;
++
++        rc = IDirectSoundFXChorus_SetAllParameters(chorus, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        /* Out of range Max */
++        params.fWetDryMix = 101.1f;
++        rc = IDirectSoundFXChorus_SetAllParameters(chorus, &params);
++        ok(rc == E_INVALIDARG, "got: %08x\n", rc);
++
++        params.fWetDryMix = 80.1f;
++        rc = IDirectSoundFXChorus_SetAllParameters(chorus, &params);
++        ok(rc == S_OK, "got: %08x\n", rc);
++
++        rc = IDirectSoundFXChorus_GetAllParameters(chorus, &params);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
++        if (rc == DS_OK)
++        {
++            ok(params.fWetDryMix == 80.1f, "got %f\n", params.fWetDryMix);
++            ok(params.fDepth == 10.0f, "got %f\n", params.fDepth);
++            ok(params.fFeedback == 25.0f, "got %f\n", params.fFeedback);
++            ok(params.fFrequency == 1.1f, "got %f\n", params.fFrequency);
++            ok(params.lWaveform == DSFXCHORUS_WAVE_SIN, "got %d\n", params.lWaveform);
++            ok(params.fDelay == 16.0f, "got %f\n", params.fDelay);
++            ok(params.lPhase == 3, "got %d\n", params.lPhase);
++        }
++
+         IDirectSoundFXChorus_Release(chorus);
+     }
+ }
+-- 
+2.17.1
+

@@ -1,0 +1,72 @@
+From 9e70f31d09979c8a75e203d52e79b8ff406d8b27 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Tue, 3 Sep 2019 09:34:36 +1000
+Subject: [PATCH 14/27] dsdmo: Implemnet IDirectSoundFXFlanger GetAllParameters
+
+---
+ dlls/dsdmo/flanger.c        | 20 ++++++++++++++++++--
+ dlls/dsound/tests/dsound8.c |  2 +-
+ 2 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/dsdmo/flanger.c b/dlls/dsdmo/flanger.c
+index 6fbc836dcd..a647c862fa 100644
+--- a/dlls/dsdmo/flanger.c
++++ b/dlls/dsdmo/flanger.c
+@@ -27,6 +27,8 @@ struct dmo_flangerfx
+     IMediaObject        IMediaObject_iface;
+     IMediaObjectInPlace IMediaObjectInPlace_iface;
+     LONG ref;
++
++    DSFXFlanger params;
+ };
+ 
+ static inline struct dmo_flangerfx *impl_from_IDirectSoundFXFlanger(IDirectSoundFXFlanger *iface)
+@@ -358,9 +360,15 @@ static HRESULT WINAPI flangerfx_SetAllParameters(IDirectSoundFXFlanger *iface, c
+ static HRESULT WINAPI flangerfx_GetAllParameters(IDirectSoundFXFlanger *iface, DSFXFlanger *flanger)
+ {
+     struct dmo_flangerfx *This = impl_from_IDirectSoundFXFlanger(iface);
+-    FIXME("(%p) %p\n", This, flanger);
+ 
+-    return E_NOTIMPL;
++    TRACE("(%p) %p\n", This, flanger);
++
++    if(!flanger)
++        return E_INVALIDARG;
++
++    *flanger = This->params;
++
++    return S_OK;
+ }
+ 
+ static const struct IDirectSoundFXFlangerVtbl flangerfxVtbl =
+@@ -390,6 +398,14 @@ HRESULT WINAPI FlangerFactory_CreateInstance(IClassFactory *iface, IUnknown *out
+     object->IMediaObjectInPlace_iface.lpVtbl = &flanger_mediainplaceVtbl;
+     object->ref = 1;
+ 
++    object->params.fWetDryMix =  50.0f;
++    object->params.fDepth     = 100.0f;
++    object->params.fFeedback  = -50.0f;
++    object->params.fFrequency =   0.25f;
++    object->params.lWaveform = DSFXFLANGER_WAVE_SIN;
++    object->params.fDelay     =   2.0f;
++    object->params.lPhase     =   2;
++
+     ret = flangerfx_QueryInterface(&object->IDirectSoundFXFlanger_iface, riid, ppv);
+     flangerfx_Release(&object->IDirectSoundFXFlanger_iface);
+ 
+diff --git a/dlls/dsound/tests/dsound8.c b/dlls/dsound/tests/dsound8.c
+index 17026f81f5..bd417d03af 100644
+--- a/dlls/dsound/tests/dsound8.c
++++ b/dlls/dsound/tests/dsound8.c
+@@ -1464,7 +1464,7 @@ static void test_flanger_parameters(IDirectSoundBuffer8 *secondary8)
+         DSFXFlanger params;
+ 
+         rc = IDirectSoundFXFlanger_GetAllParameters(flanger, &params);
+-        todo_wine ok(rc == DS_OK, "Failed: %08x\n", rc);
++        ok(rc == DS_OK, "Failed: %08x\n", rc);
+         if (rc == DS_OK)
+         {
+             ok(params.fWetDryMix == 50.0f, "got %f\n", params.fWetDryMix);
+-- 
+2.17.1
+

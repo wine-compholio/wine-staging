@@ -6377,25 +6377,27 @@ fi
 # Patchset uxtheme-GTK_Theming
 # |
 # | Modified files:
-# |   *	aclocal.m4, configure.ac, dlls/uxtheme/Makefile.in, dlls/uxtheme/draw.c, dlls/uxtheme/gtk-button.c, dlls/uxtheme/gtk-
-# | 	combobox.c, dlls/uxtheme/gtk-edit.c, dlls/uxtheme/gtk-header.c, dlls/uxtheme/gtk-listbox.c, dlls/uxtheme/gtk-listview.c,
-# | 	dlls/uxtheme/gtk-menu.c, dlls/uxtheme/gtk-rebar.c, dlls/uxtheme/gtk-status.c, dlls/uxtheme/gtk-tab.c, dlls/uxtheme/gtk-
-# | 	toolbar.c, dlls/uxtheme/gtk-trackbar.c, dlls/uxtheme/gtk-window.c, dlls/uxtheme/gtk.c, dlls/uxtheme/metric.c,
-# | 	dlls/uxtheme/msstyles.c, dlls/uxtheme/property.c, dlls/uxtheme/system.c, dlls/uxtheme/uxthemedll.h,
-# | 	dlls/uxtheme/uxthemegtk.h
+# |   *	configure.ac, dlls/uxtheme/Makefile.in, dlls/uxtheme/buffer.c, dlls/uxtheme/draw.c, dlls/uxtheme/gtk-button.c,
+# | 	dlls/uxtheme/gtk-combobox.c, dlls/uxtheme/gtk-edit.c, dlls/uxtheme/gtk-header.c, dlls/uxtheme/gtk-listbox.c,
+# | 	dlls/uxtheme/gtk-listview.c, dlls/uxtheme/gtk-menu.c, dlls/uxtheme/gtk-rebar.c, dlls/uxtheme/gtk-status.c, dlls/uxtheme
+# | 	/gtk-tab.c, dlls/uxtheme/gtk-toolbar.c, dlls/uxtheme/gtk-trackbar.c, dlls/uxtheme/gtk-window.c, dlls/uxtheme/gtk.c,
+# | 	dlls/uxtheme/main.c, dlls/uxtheme/metric.c, dlls/uxtheme/msstyles.c, dlls/uxtheme/property.c, dlls/uxtheme/stylemap.c,
+# | 	dlls/uxtheme/system.c, dlls/uxtheme/uxini.c, dlls/uxtheme/uxthemedll.h, dlls/uxtheme/uxthemegtk.h, tools/makedep.c
 # |
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
+	patch_apply uxtheme-GTK_Theming/0000-Revert-uxtheme-Build-with-msvcrt.patch
 	patch_apply uxtheme-GTK_Theming/0001-uxtheme-Initial-implementation-of-GTK-backend.patch
+	patch_apply uxtheme-GTK_Theming/0002-makefiles-Only-apply-non-include-path-EXTRAINCL-flag.patch
 	patch_apply uxtheme-GTK_Theming/0003-uxtheme-Correctly-render-buttons-with-GTK-3.14.0.patch
 	patch_apply uxtheme-GTK_Theming/0004-uxtheme-Reset-FPU-flags-before-calling-GTK3-function.patch
 	patch_apply uxtheme-GTK_Theming/0005-uxtheme-Fix-some-incorrect-error-codes.patch
-	patch_apply uxtheme-GTK_Theming/0006-uxtheme-Dont-build-with-msvcrt.patch
 	(
+		printf '%s\n' '+    { "Zebediah Figura", "Revert \"uxtheme: Build with msvcrt.\".", 1 },';
 		printf '%s\n' '+    { "Ivan Akulinchev", "uxtheme: Initial implementation of GTK backend.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "makefiles: Only apply non-include-path EXTRAINCL flags to C sources.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Correctly render buttons with GTK >= 3.14.0.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "uxtheme: Reset FPU flags before calling GTK3 functions.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "uxtheme: Fix some incorrect error codes.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uxtheme: Dont build with msvcrt.", 1 },';
 	) >> "$patchlist"
 fi
 

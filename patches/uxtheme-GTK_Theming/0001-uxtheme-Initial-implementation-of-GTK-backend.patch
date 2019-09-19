@@ -1,7 +1,7 @@
-From 96632f2ae19ee3fa157f58db5cf3f3aaebc52d2e Mon Sep 17 00:00:00 2001
+From 661d9d1f1f04ae904f4420f4a067fc23dae45c6f Mon Sep 17 00:00:00 2001
 From: Ivan Akulinchev <ivan.akulinchev@gmail.com>
 Date: Sat, 9 Feb 2019 15:18:54 -0600
-Subject: [PATCH] uxtheme: Initial implementation of GTK backend.
+Subject: [PATCH 1/2] uxtheme: Initial implementation of GTK backend.
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -19,8 +19,7 @@ Additional changes by Sebastian Lackner <sebastian@fds-team.de>:
  * Fix incorrect class enumaration in OpenThemeData().
  * Avoid unnecessary goto in DrawThemeBackgroundEx().
 ---
- aclocal.m4                  |  20 +
- configure.ac                |  20 +
+ configure.ac                |  16 +
  dlls/uxtheme/Makefile.in    |  15 +
  dlls/uxtheme/draw.c         |  30 ++
  dlls/uxtheme/gtk-button.c   | 516 +++++++++++++++++++
@@ -42,7 +41,7 @@ Additional changes by Sebastian Lackner <sebastian@fds-team.de>:
  dlls/uxtheme/system.c       |  34 +-
  dlls/uxtheme/uxthemedll.h   |  72 +++
  dlls/uxtheme/uxthemegtk.h   | 129 +++++
- 23 files changed, 3785 insertions(+), 1 deletion(-)
+ 22 files changed, 3761 insertions(+), 1 deletion(-)
  create mode 100644 dlls/uxtheme/gtk-button.c
  create mode 100644 dlls/uxtheme/gtk-combobox.c
  create mode 100644 dlls/uxtheme/gtk-edit.c
@@ -59,39 +58,8 @@ Additional changes by Sebastian Lackner <sebastian@fds-team.de>:
  create mode 100644 dlls/uxtheme/gtk.c
  create mode 100644 dlls/uxtheme/uxthemegtk.h
 
-diff --git a/aclocal.m4 b/aclocal.m4
-index ed0c3a8317c..4151fe7f423 100644
---- a/aclocal.m4
-+++ b/aclocal.m4
-@@ -126,6 +126,26 @@ test -z "$ac_libs" || ac_libs=`echo " $ac_libs" | sed 's/ -L\([[^/]]\)/ -L\$(top
- AS_VAR_POPDEF([ac_libs])dnl
- AS_VAR_POPDEF([ac_cflags])])dnl
- 
-+dnl **** Get include path from pkg-config ****
-+dnl
-+dnl Usage: WINE_PACKAGE_INCLUDE_FLAGS(var,pkg-name,[cflags-alternate,[checks]]])
-+dnl
-+AC_DEFUN([WINE_PACKAGE_INCLUDE_FLAGS],
-+[AC_REQUIRE([WINE_PATH_PKG_CONFIG])dnl
-+AS_VAR_PUSHDEF([ac_cflags],[[$1]_CFLAGS])dnl
-+AC_ARG_VAR(ac_cflags, [C compiler flags for $2, overriding pkg-config])dnl
-+AS_VAR_IF([ac_cflags],[],
-+      [AS_VAR_SET_IF([PKG_CONFIG],
-+      [ac_cflags=`$PKG_CONFIG --cflags-only-I [$2] 2>/dev/null`])])
-+m4_ifval([$3],[test "$cross_compiling" = yes || ac_cflags=[$]{ac_cflags:-[$3]}])
-+AS_ECHO(["$as_me:${as_lineno-$LINENO}: $2 cflags: $ac_cflags"]) >&AS_MESSAGE_LOG_FD
-+ac_save_CPPFLAGS=$CPPFLAGS
-+CPPFLAGS="$CPPFLAGS $ac_cflags"
-+$4
-+CPPFLAGS=$ac_save_CPPFLAGS
-+test -z "$ac_cflags" || ac_cflags=`echo " $ac_cflags" | sed 's/ -I\([[^/]]\)/ -I\$(top_builddir)\/\1/g'`
-+AS_VAR_POPDEF([ac_cflags])])dnl
-+
- dnl **** Link C code with an assembly file ****
- dnl
- dnl Usage: WINE_TRY_ASM_LINK(asm-code,includes,function,[action-if-found,[action-if-not-found]])
 diff --git a/configure.ac b/configure.ac
-index d6d51ebfc60..beb160aa389 100644
+index 1c912a30a..c4373aeb2 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -56,6 +56,7 @@ AC_ARG_WITH(gsm,       AS_HELP_STRING([--without-gsm],[do not use libgsm (GSM 06
@@ -102,24 +70,20 @@ index d6d51ebfc60..beb160aa389 100644
  AC_ARG_WITH(hal,       AS_HELP_STRING([--without-hal],[do not use HAL (dynamic device support)]))
  AC_ARG_WITH(inotify,   AS_HELP_STRING([--without-inotify],[do not use inotify (filesystem change notifications)]))
  AC_ARG_WITH(jpeg,      AS_HELP_STRING([--without-jpeg],[do not use JPEG]))
-@@ -1571,6 +1572,25 @@ fi
+@@ -1539,6 +1540,21 @@ fi
  WINE_NOTICE_WITH(cms,[test "$ac_cv_lib_lcms2_cmsOpenProfileFromFile" != "yes"],
                   [liblcms2 ${notice_platform}development files not found, Color Management won't be supported.])
  
 +dnl **** Check for GTK3 ****
 +if test "x$with_gtk3" != "xno";
 +then
-+    WINE_PACKAGE_INCLUDE_FLAGS(GTK3, [gtk+-3.0],,
++    WINE_PACKAGE_FLAGS(GTK3, [gtk+-3.0],,,,
 +        [AC_CHECK_HEADERS([gtk/gtk.h])
 +        if test "$ac_cv_header_gtk_gtk_h" = "yes"
 +        then
 +            WINE_CHECK_SONAME(gobject-2.0,g_object_unref,
 +                [WINE_CHECK_SONAME(cairo,cairo_destroy,
-+                    [WINE_CHECK_SONAME(gtk-3,gtk_style_context_save,
-+                            [AC_DEFINE(HAVE_GTK3, 1, [Define if GTK 3 is installed])])])])
-+            test "x$ac_cv_lib_soname_gtk_3" != "x" || GTK3_CFLAGS=""
-+        else
-+            GTK3_CFLAGS=""
++                    [WINE_CHECK_SONAME(gtk-3,gtk_style_context_save)])],,[$GTK3_LIBS])
 +        fi])
 +fi
 +WINE_NOTICE_WITH(gtk3,[test "x$ac_cv_lib_soname_gtk_3" = x],
@@ -129,16 +93,14 @@ index d6d51ebfc60..beb160aa389 100644
  if test "x$with_freetype" != "xno"
  then
 diff --git a/dlls/uxtheme/Makefile.in b/dlls/uxtheme/Makefile.in
-index 61817ee5468..d0409300230 100644
+index c3fff30ba..e09f891ee 100644
 --- a/dlls/uxtheme/Makefile.in
 +++ b/dlls/uxtheme/Makefile.in
-@@ -2,12 +2,27 @@ MODULE    = uxtheme.dll
+@@ -2,10 +2,25 @@ MODULE    = uxtheme.dll
  IMPORTLIB = uxtheme
  IMPORTS   = user32 gdi32 advapi32
  DELAYIMPORTS = msimg32
 +EXTRAINCL = $(GTK3_CFLAGS)
- 
- EXTRADLLFLAGS = -mno-cygwin
  
  C_SRCS = \
  	buffer.c \
@@ -161,10 +123,10 @@ index 61817ee5468..d0409300230 100644
  	metric.c \
  	msstyles.c \
 diff --git a/dlls/uxtheme/draw.c b/dlls/uxtheme/draw.c
-index 3dcc58205b0..113793fed7e 100644
+index 69c53b9eb..dbcbaab79 100644
 --- a/dlls/uxtheme/draw.c
 +++ b/dlls/uxtheme/draw.c
-@@ -53,6 +53,10 @@ HRESULT WINAPI EnableThemeDialogTexture(HWND hwnd, DWORD dwFlags)
+@@ -55,6 +55,10 @@ HRESULT WINAPI EnableThemeDialogTexture(HWND hwnd, DWORD dwFlags)
      BOOL res;
  
      TRACE("(%p,0x%08x\n", hwnd, dwFlags);
@@ -175,7 +137,7 @@ index 3dcc58205b0..113793fed7e 100644
      res = SetPropW (hwnd, (LPCWSTR)MAKEINTATOM(atDialogThemeEnabled), 
                      UlongToHandle(dwFlags|0x80000000));
          /* 0x80000000 serves as a "flags set" flag */
-@@ -72,6 +76,9 @@ BOOL WINAPI IsThemeDialogTextureEnabled(HWND hwnd)
+@@ -74,6 +78,9 @@ BOOL WINAPI IsThemeDialogTextureEnabled(HWND hwnd)
      DWORD dwDialogTextureFlags;
      TRACE("(%p)\n", hwnd);
  
@@ -185,7 +147,7 @@ index 3dcc58205b0..113793fed7e 100644
      dwDialogTextureFlags = HandleToUlong( GetPropW( hwnd, (LPCWSTR)MAKEINTATOM(atDialogThemeEnabled) ));
      if (dwDialogTextureFlags == 0) 
          /* Means EnableThemeDialogTexture wasn't called for this dialog */
-@@ -1025,6 +1032,9 @@ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -1027,6 +1034,9 @@ HRESULT WINAPI DrawThemeBackgroundEx(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -195,7 +157,7 @@ index 3dcc58205b0..113793fed7e 100644
      GetThemeEnumValue(hTheme, iPartId, iStateId, TMT_BGTYPE, &bgtype);
      if (bgtype == BT_NONE) return S_OK;
  
-@@ -1668,6 +1678,10 @@ HRESULT WINAPI DrawThemeTextEx(HTHEME hTheme, HDC hdc, int iPartId, int iStateId
+@@ -1670,6 +1680,10 @@ HRESULT WINAPI DrawThemeTextEx(HTHEME hTheme, HDC hdc, int iPartId, int iStateId
      if(!hTheme)
          return E_HANDLE;
  
@@ -206,7 +168,7 @@ index 3dcc58205b0..113793fed7e 100644
      if (options->dwFlags & ~DTT_TEXTCOLOR)
          FIXME("unsupported flags 0x%08x\n", options->dwFlags);
      
-@@ -1930,6 +1944,9 @@ HRESULT WINAPI GetThemeBackgroundRegion(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -1932,6 +1946,9 @@ HRESULT WINAPI GetThemeBackgroundRegion(HTHEME hTheme, HDC hdc, int iPartId,
      if(!pRect || !pRegion)
          return E_POINTER;
  
@@ -216,7 +178,7 @@ index 3dcc58205b0..113793fed7e 100644
      GetThemeEnumValue(hTheme, iPartId, iStateId, TMT_BGTYPE, &bgtype);
      if(bgtype == BT_IMAGEFILE) {
          hr = create_image_bg_region(hTheme, iPartId, iStateId, pRect, pRegion);
-@@ -1981,6 +1998,9 @@ HRESULT WINAPI GetThemePartSize(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -1983,6 +2000,9 @@ HRESULT WINAPI GetThemePartSize(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -226,7 +188,7 @@ index 3dcc58205b0..113793fed7e 100644
      GetThemeEnumValue(hTheme, iPartId, iStateId, TMT_BGTYPE, &bgtype);
      if (bgtype == BT_NONE)
          /* do nothing */;
-@@ -2017,6 +2037,10 @@ HRESULT WINAPI GetThemeTextExtent(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -2019,6 +2039,10 @@ HRESULT WINAPI GetThemeTextExtent(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -237,7 +199,7 @@ index 3dcc58205b0..113793fed7e 100644
      if(pBoundingRect)
          rt = *pBoundingRect;
  
-@@ -2054,6 +2078,9 @@ HRESULT WINAPI GetThemeTextMetrics(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -2056,6 +2080,9 @@ HRESULT WINAPI GetThemeTextMetrics(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -247,7 +209,7 @@ index 3dcc58205b0..113793fed7e 100644
      hr = GetThemeFont(hTheme, hdc, iPartId, iStateId, TMT_FONT, &logfont);
      if(SUCCEEDED(hr)) {
          hFont = CreateFontIndirectW(&logfont);
-@@ -2092,6 +2119,9 @@ BOOL WINAPI IsThemeBackgroundPartiallyTransparent(HTHEME hTheme, int iPartId,
+@@ -2094,6 +2121,9 @@ BOOL WINAPI IsThemeBackgroundPartiallyTransparent(HTHEME hTheme, int iPartId,
      if(!hTheme)
          return FALSE;
  
@@ -259,7 +221,7 @@ index 3dcc58205b0..113793fed7e 100644
      if (bgtype != BT_IMAGEFILE) return FALSE;
 diff --git a/dlls/uxtheme/gtk-button.c b/dlls/uxtheme/gtk-button.c
 new file mode 100644
-index 00000000000..f8b3da0dddd
+index 000000000..1e8581c77
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-button.c
 @@ -0,0 +1,516 @@
@@ -285,7 +247,7 @@ index 00000000000..f8b3da0dddd
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -781,7 +743,7 @@ index 00000000000..f8b3da0dddd
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-combobox.c b/dlls/uxtheme/gtk-combobox.c
 new file mode 100644
-index 00000000000..60bcb0e6cb0
+index 000000000..f6cc04055
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-combobox.c
 @@ -0,0 +1,242 @@
@@ -807,7 +769,7 @@ index 00000000000..60bcb0e6cb0
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1029,7 +991,7 @@ index 00000000000..60bcb0e6cb0
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-edit.c b/dlls/uxtheme/gtk-edit.c
 new file mode 100644
-index 00000000000..dee00d7b929
+index 000000000..834a3889c
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-edit.c
 @@ -0,0 +1,211 @@
@@ -1055,7 +1017,7 @@ index 00000000000..dee00d7b929
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1246,7 +1208,7 @@ index 00000000000..dee00d7b929
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-header.c b/dlls/uxtheme/gtk-header.c
 new file mode 100644
-index 00000000000..8a5b235e36c
+index 000000000..c95918db2
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-header.c
 @@ -0,0 +1,128 @@
@@ -1272,7 +1234,7 @@ index 00000000000..8a5b235e36c
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1380,7 +1342,7 @@ index 00000000000..8a5b235e36c
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-listbox.c b/dlls/uxtheme/gtk-listbox.c
 new file mode 100644
-index 00000000000..6e2759259f6
+index 000000000..89b281ded
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-listbox.c
 @@ -0,0 +1,119 @@
@@ -1406,7 +1368,7 @@ index 00000000000..6e2759259f6
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1505,7 +1467,7 @@ index 00000000000..6e2759259f6
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-listview.c b/dlls/uxtheme/gtk-listview.c
 new file mode 100644
-index 00000000000..9b98983f181
+index 000000000..fbc85fdcc
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-listview.c
 @@ -0,0 +1,38 @@
@@ -1531,7 +1493,7 @@ index 00000000000..9b98983f181
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1549,7 +1511,7 @@ index 00000000000..9b98983f181
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-menu.c b/dlls/uxtheme/gtk-menu.c
 new file mode 100644
-index 00000000000..5d00afdff0e
+index 000000000..30357bc85
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-menu.c
 @@ -0,0 +1,189 @@
@@ -1575,7 +1537,7 @@ index 00000000000..5d00afdff0e
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1744,7 +1706,7 @@ index 00000000000..5d00afdff0e
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-rebar.c b/dlls/uxtheme/gtk-rebar.c
 new file mode 100644
-index 00000000000..5d5b5a486c9
+index 000000000..493b05b6f
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-rebar.c
 @@ -0,0 +1,102 @@
@@ -1770,7 +1732,7 @@ index 00000000000..5d5b5a486c9
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -1852,7 +1814,7 @@ index 00000000000..5d5b5a486c9
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-status.c b/dlls/uxtheme/gtk-status.c
 new file mode 100644
-index 00000000000..38f8646e747
+index 000000000..558a8227c
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-status.c
 @@ -0,0 +1,157 @@
@@ -1878,7 +1840,7 @@ index 00000000000..38f8646e747
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -2015,7 +1977,7 @@ index 00000000000..38f8646e747
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-tab.c b/dlls/uxtheme/gtk-tab.c
 new file mode 100644
-index 00000000000..d6417f64326
+index 000000000..845dbec1a
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-tab.c
 @@ -0,0 +1,207 @@
@@ -2041,7 +2003,7 @@ index 00000000000..d6417f64326
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -2228,7 +2190,7 @@ index 00000000000..d6417f64326
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-toolbar.c b/dlls/uxtheme/gtk-toolbar.c
 new file mode 100644
-index 00000000000..b23cf0b4ecb
+index 000000000..231fffe73
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-toolbar.c
 @@ -0,0 +1,171 @@
@@ -2254,7 +2216,7 @@ index 00000000000..b23cf0b4ecb
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -2405,7 +2367,7 @@ index 00000000000..b23cf0b4ecb
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-trackbar.c b/dlls/uxtheme/gtk-trackbar.c
 new file mode 100644
-index 00000000000..a58540e3051
+index 000000000..0bd4c2d1d
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-trackbar.c
 @@ -0,0 +1,188 @@
@@ -2431,7 +2393,7 @@ index 00000000000..a58540e3051
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -2599,7 +2561,7 @@ index 00000000000..a58540e3051
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk-window.c b/dlls/uxtheme/gtk-window.c
 new file mode 100644
-index 00000000000..657cfb03690
+index 000000000..2c4b40074
 --- /dev/null
 +++ b/dlls/uxtheme/gtk-window.c
 @@ -0,0 +1,172 @@
@@ -2625,7 +2587,7 @@ index 00000000000..657cfb03690
 +
 +#include "config.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -2777,7 +2739,7 @@ index 00000000000..657cfb03690
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/gtk.c b/dlls/uxtheme/gtk.c
 new file mode 100644
-index 00000000000..9459b1f5c33
+index 000000000..ddaa96496
 --- /dev/null
 +++ b/dlls/uxtheme/gtk.c
 @@ -0,0 +1,962 @@
@@ -2822,7 +2784,7 @@ index 00000000000..9459b1f5c33
 +
 +#include "uxthemedll.h"
 +
-+#ifdef HAVE_GTK_GTK_H
++#if defined(HAVE_GTK_GTK_H) && defined(SONAME_LIBGTK_3)
 +
 +#include "uxthemegtk.h"
 +
@@ -3744,10 +3706,10 @@ index 00000000000..9459b1f5c33
 +
 +#endif /* HAVE_GTK_GTK_H */
 diff --git a/dlls/uxtheme/metric.c b/dlls/uxtheme/metric.c
-index 2d5a09d0256..77eebc780a1 100644
+index 073422f1c..244187d19 100644
 --- a/dlls/uxtheme/metric.c
 +++ b/dlls/uxtheme/metric.c
-@@ -29,6 +29,7 @@
+@@ -31,6 +31,7 @@
  #include "tmschema.h"
  
  #include "msstyles.h"
@@ -3755,7 +3717,7 @@ index 2d5a09d0256..77eebc780a1 100644
  
  #include "wine/debug.h"
  
-@@ -44,6 +45,10 @@ BOOL WINAPI GetThemeSysBool(HTHEME hTheme, int iBoolID)
+@@ -46,6 +47,10 @@ BOOL WINAPI GetThemeSysBool(HTHEME hTheme, int iBoolID)
      BOOL ret;
  
      TRACE("(%p, %d)\n", hTheme, iBoolID);
@@ -3766,7 +3728,7 @@ index 2d5a09d0256..77eebc780a1 100644
      SetLastError(0);
      if(hTheme) {
          if((tp = MSSTYLES_FindMetric(TMT_BOOL, iBoolID))) {
-@@ -74,6 +79,10 @@ COLORREF WINAPI GetThemeSysColor(HTHEME hTheme, int iColorID)
+@@ -76,6 +81,10 @@ COLORREF WINAPI GetThemeSysColor(HTHEME hTheme, int iColorID)
      PTHEME_PROPERTY tp;
  
      TRACE("(%p, %d)\n", hTheme, iColorID);
@@ -3777,7 +3739,7 @@ index 2d5a09d0256..77eebc780a1 100644
      SetLastError(0);
      if(hTheme) {
          if((tp = MSSTYLES_FindMetric(TMT_COLOR, iColorID))) {
-@@ -106,6 +115,10 @@ HRESULT WINAPI GetThemeSysFont(HTHEME hTheme, int iFontID, LOGFONTW *plf)
+@@ -108,6 +117,10 @@ HRESULT WINAPI GetThemeSysFont(HTHEME hTheme, int iFontID, LOGFONTW *plf)
      PTHEME_PROPERTY tp;
  
      TRACE("(%p, %d)\n", hTheme, iFontID);
@@ -3788,7 +3750,7 @@ index 2d5a09d0256..77eebc780a1 100644
      if(hTheme) {
          if((tp = MSSTYLES_FindMetric(TMT_FONT, iFontID))) {
              HDC hdc = GetDC(NULL);
-@@ -149,6 +162,10 @@ HRESULT WINAPI GetThemeSysInt(HTHEME hTheme, int iIntID, int *piValue)
+@@ -151,6 +164,10 @@ HRESULT WINAPI GetThemeSysInt(HTHEME hTheme, int iIntID, int *piValue)
      TRACE("(%p, %d)\n", hTheme, iIntID);
      if(!hTheme)
          return E_HANDLE;
@@ -3799,7 +3761,7 @@ index 2d5a09d0256..77eebc780a1 100644
      if(iIntID < TMT_FIRSTINT || iIntID > TMT_LASTINT) {
          WARN("Unknown IntID: %d\n", iIntID);
          return STG_E_INVALIDPARAMETER;
-@@ -178,6 +195,9 @@ int WINAPI GetThemeSysSize(HTHEME hTheme, int iSizeID)
+@@ -180,6 +197,9 @@ int WINAPI GetThemeSysSize(HTHEME hTheme, int iSizeID)
      PTHEME_PROPERTY tp;
      int i, id = -1;
  
@@ -3809,7 +3771,7 @@ index 2d5a09d0256..77eebc780a1 100644
      if(hTheme) {
          for(i=0; i<ARRAY_SIZE(metricMap); i+=2) {
              if(metricMap[i] == iSizeID) {
-@@ -213,6 +233,10 @@ HRESULT WINAPI GetThemeSysString(HTHEME hTheme, int iStringID,
+@@ -215,6 +235,10 @@ HRESULT WINAPI GetThemeSysString(HTHEME hTheme, int iStringID,
      TRACE("(%p, %d)\n", hTheme, iStringID);
      if(!hTheme)
          return E_HANDLE;
@@ -3821,10 +3783,10 @@ index 2d5a09d0256..77eebc780a1 100644
          WARN("Unknown StringID: %d\n", iStringID);
          return STG_E_INVALIDPARAMETER;
 diff --git a/dlls/uxtheme/property.c b/dlls/uxtheme/property.c
-index 93a72ab9189..2a56466dfc9 100644
+index 0e077aeec..ada482879 100644
 --- a/dlls/uxtheme/property.c
 +++ b/dlls/uxtheme/property.c
-@@ -29,6 +29,7 @@
+@@ -31,6 +31,7 @@
  #include "tmschema.h"
  
  #include "msstyles.h"
@@ -3832,7 +3794,7 @@ index 93a72ab9189..2a56466dfc9 100644
  
  #include "wine/debug.h"
  
-@@ -46,6 +47,9 @@ HRESULT WINAPI GetThemeBool(HTHEME hTheme, int iPartId, int iStateId,
+@@ -48,6 +49,9 @@ HRESULT WINAPI GetThemeBool(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3842,7 +3804,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_BOOL, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyBool(tp, pfVal);
-@@ -63,6 +67,9 @@ HRESULT WINAPI GetThemeColor(HTHEME hTheme, int iPartId, int iStateId,
+@@ -65,6 +69,9 @@ HRESULT WINAPI GetThemeColor(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3852,7 +3814,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_COLOR, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyColor(tp, pColor);
-@@ -82,6 +89,9 @@ HRESULT WINAPI GetThemeEnumValue(HTHEME hTheme, int iPartId, int iStateId,
+@@ -84,6 +91,9 @@ HRESULT WINAPI GetThemeEnumValue(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3862,7 +3824,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_ENUM, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
  
-@@ -106,6 +116,9 @@ HRESULT WINAPI GetThemeFilename(HTHEME hTheme, int iPartId, int iStateId,
+@@ -108,6 +118,9 @@ HRESULT WINAPI GetThemeFilename(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3872,7 +3834,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_FILENAME, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyString(tp, pszThemeFilename, cchMaxBuffChars);
-@@ -123,6 +136,9 @@ HRESULT WINAPI GetThemeFont(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -125,6 +138,9 @@ HRESULT WINAPI GetThemeFont(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3882,7 +3844,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_FONT, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyFont(tp, hdc, pFont);
-@@ -140,6 +156,9 @@ HRESULT WINAPI GetThemeInt(HTHEME hTheme, int iPartId, int iStateId,
+@@ -142,6 +158,9 @@ HRESULT WINAPI GetThemeInt(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3892,7 +3854,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_INT, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyInt(tp, piVal);
-@@ -157,6 +176,9 @@ HRESULT WINAPI GetThemeIntList(HTHEME hTheme, int iPartId, int iStateId,
+@@ -159,6 +178,9 @@ HRESULT WINAPI GetThemeIntList(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3902,7 +3864,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_INTLIST, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyIntList(tp, pIntList);
-@@ -174,6 +196,9 @@ HRESULT WINAPI GetThemePosition(HTHEME hTheme, int iPartId, int iStateId,
+@@ -176,6 +198,9 @@ HRESULT WINAPI GetThemePosition(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3912,7 +3874,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_POSITION, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyPosition(tp, pPoint);
-@@ -191,6 +216,9 @@ HRESULT WINAPI GetThemeRect(HTHEME hTheme, int iPartId, int iStateId,
+@@ -193,6 +218,9 @@ HRESULT WINAPI GetThemeRect(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3922,7 +3884,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_RECT, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyRect(tp, pRect);
-@@ -208,6 +236,9 @@ HRESULT WINAPI GetThemeString(HTHEME hTheme, int iPartId, int iStateId,
+@@ -210,6 +238,9 @@ HRESULT WINAPI GetThemeString(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3932,7 +3894,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_STRING, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyString(tp, pszBuff, cchMaxBuffChars);
-@@ -227,6 +258,9 @@ HRESULT WINAPI GetThemeMargins(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -229,6 +260,9 @@ HRESULT WINAPI GetThemeMargins(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3942,7 +3904,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, TMT_MARGINS, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      return MSSTYLES_GetPropertyMargins(tp, prc, pMargins);
-@@ -246,6 +280,9 @@ HRESULT WINAPI GetThemeMetric(HTHEME hTheme, HDC hdc, int iPartId,
+@@ -248,6 +282,9 @@ HRESULT WINAPI GetThemeMetric(HTHEME hTheme, HDC hdc, int iPartId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3952,7 +3914,7 @@ index 93a72ab9189..2a56466dfc9 100644
      if(!(tp = MSSTYLES_FindProperty(hTheme, iPartId, iStateId, 0, iPropId)))
          return E_PROP_ID_UNSUPPORTED;
      switch(tp->iPrimitiveType) {
-@@ -286,6 +323,9 @@ HRESULT WINAPI GetThemePropertyOrigin(HTHEME hTheme, int iPartId, int iStateId,
+@@ -288,6 +325,9 @@ HRESULT WINAPI GetThemePropertyOrigin(HTHEME hTheme, int iPartId, int iStateId,
      if(!hTheme)
          return E_HANDLE;
  
@@ -3963,10 +3925,10 @@ index 93a72ab9189..2a56466dfc9 100644
          *pOrigin = PO_NOTFOUND;
          return S_OK;
 diff --git a/dlls/uxtheme/system.c b/dlls/uxtheme/system.c
-index 6e9c0f22369..a5e3ead0986 100644
+index c898ad32e..2f7d40fc0 100644
 --- a/dlls/uxtheme/system.c
 +++ b/dlls/uxtheme/system.c
-@@ -556,6 +556,10 @@ BOOL WINAPI IsAppThemed(void)
+@@ -558,6 +558,10 @@ BOOL WINAPI IsAppThemed(void)
  BOOL WINAPI IsThemeActive(void)
  {
      TRACE("\n");
@@ -3977,7 +3939,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      SetLastError(ERROR_SUCCESS);
      return bThemeActive;
  }
-@@ -585,6 +589,9 @@ HRESULT WINAPI EnableTheming(BOOL fEnable)
+@@ -587,6 +591,9 @@ HRESULT WINAPI EnableTheming(BOOL fEnable)
  
      TRACE("(%d)\n", fEnable);
  
@@ -3987,7 +3949,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      if(fEnable != bThemeActive) {
          if(fEnable) 
              UXTHEME_BackupSystemMetrics();
-@@ -657,7 +664,9 @@ HTHEME WINAPI OpenThemeDataEx(HWND hwnd, LPCWSTR pszClassList, DWORD flags)
+@@ -659,7 +666,9 @@ HTHEME WINAPI OpenThemeDataEx(HWND hwnd, LPCWSTR pszClassList, DWORD flags)
      if(flags)
          FIXME("unhandled flags: %x\n", flags);
  
@@ -3998,7 +3960,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      {
          pszAppName = UXTHEME_GetWindowProperty(hwnd, atSubAppName, szAppBuff, ARRAY_SIZE(szAppBuff));
          /* If SetWindowTheme was used on the window, that overrides the class list passed to this function */
-@@ -668,6 +677,7 @@ HTHEME WINAPI OpenThemeDataEx(HWND hwnd, LPCWSTR pszClassList, DWORD flags)
+@@ -670,6 +679,7 @@ HTHEME WINAPI OpenThemeDataEx(HWND hwnd, LPCWSTR pszClassList, DWORD flags)
          if (pszUseClassList)
              hTheme = MSSTYLES_OpenThemeClass(pszAppName, pszUseClassList);
      }
@@ -4006,7 +3968,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      if(IsWindow(hwnd))
          SetPropW(hwnd, (LPCWSTR)MAKEINTATOM(atWindowTheme), hTheme);
      TRACE(" = %p\n", hTheme);
-@@ -710,6 +720,10 @@ HRESULT WINAPI SetWindowTheme(HWND hwnd, LPCWSTR pszSubAppName,
+@@ -712,6 +722,10 @@ HRESULT WINAPI SetWindowTheme(HWND hwnd, LPCWSTR pszSubAppName,
      HRESULT hr;
      TRACE("(%p,%s,%s)\n", hwnd, debugstr_w(pszSubAppName),
            debugstr_w(pszSubIdList));
@@ -4017,7 +3979,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      hr = UXTHEME_SetWindowProperty(hwnd, atSubAppName, pszSubAppName);
      if(SUCCEEDED(hr))
          hr = UXTHEME_SetWindowProperty(hwnd, atSubIdList, pszSubIdList);
-@@ -735,6 +749,10 @@ HRESULT WINAPI GetCurrentThemeName(LPWSTR pszThemeFileName, int dwMaxNameChars,
+@@ -737,6 +751,10 @@ HRESULT WINAPI GetCurrentThemeName(LPWSTR pszThemeFileName, int dwMaxNameChars,
                                     LPWSTR pszColorBuff, int cchMaxColorChars,
                                     LPWSTR pszSizeBuff, int cchMaxSizeChars)
  {
@@ -4028,7 +3990,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      if(!bThemeActive)
          return E_PROP_ID_UNSUPPORTED;
      if(pszThemeFileName) lstrcpynW(pszThemeFileName, szCurrentTheme, dwMaxNameChars);
-@@ -748,6 +766,8 @@ HRESULT WINAPI GetCurrentThemeName(LPWSTR pszThemeFileName, int dwMaxNameChars,
+@@ -750,6 +768,8 @@ HRESULT WINAPI GetCurrentThemeName(LPWSTR pszThemeFileName, int dwMaxNameChars,
   */
  DWORD WINAPI GetThemeAppProperties(void)
  {
@@ -4037,7 +3999,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      return dwThemeAppProperties;
  }
  
-@@ -757,6 +777,10 @@ DWORD WINAPI GetThemeAppProperties(void)
+@@ -759,6 +779,10 @@ DWORD WINAPI GetThemeAppProperties(void)
  void WINAPI SetThemeAppProperties(DWORD dwFlags)
  {
      TRACE("(0x%08x)\n", dwFlags);
@@ -4048,7 +4010,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      dwThemeAppProperties = dwFlags;
  }
  
-@@ -768,6 +792,10 @@ HRESULT WINAPI CloseThemeData(HTHEME hTheme)
+@@ -770,6 +794,10 @@ HRESULT WINAPI CloseThemeData(HTHEME hTheme)
      TRACE("(%p)\n", hTheme);
      if(!hTheme || hTheme == INVALID_HANDLE_VALUE)
          return E_HANDLE;
@@ -4059,7 +4021,7 @@ index 6e9c0f22369..a5e3ead0986 100644
      return MSSTYLES_CloseThemeClass(hTheme);
  }
  
-@@ -795,6 +823,10 @@ BOOL WINAPI IsThemePartDefined(HTHEME hTheme, int iPartId, int iStateId)
+@@ -797,6 +825,10 @@ BOOL WINAPI IsThemePartDefined(HTHEME hTheme, int iPartId, int iStateId)
          SetLastError(E_HANDLE);
          return FALSE;
      }
@@ -4071,7 +4033,7 @@ index 6e9c0f22369..a5e3ead0986 100644
          return TRUE;
      return FALSE;
 diff --git a/dlls/uxtheme/uxthemedll.h b/dlls/uxtheme/uxthemedll.h
-index fee152c9c34..cdc5958d7c7 100644
+index fee152c9c..cdc5958d7 100644
 --- a/dlls/uxtheme/uxthemedll.h
 +++ b/dlls/uxtheme/uxthemedll.h
 @@ -21,6 +21,14 @@
@@ -4162,7 +4124,7 @@ index fee152c9c34..cdc5958d7c7 100644
  /* "Cheap" binary alpha blending - but possibly faster */
 diff --git a/dlls/uxtheme/uxthemegtk.h b/dlls/uxtheme/uxthemegtk.h
 new file mode 100644
-index 00000000000..87cd0456f8d
+index 000000000..87cd0456f
 --- /dev/null
 +++ b/dlls/uxtheme/uxthemegtk.h
 @@ -0,0 +1,129 @@
@@ -4296,5 +4258,5 @@ index 00000000000..87cd0456f8d
 +
 +#endif /* UXTHEMEGTK_H */
 -- 
-2.20.1
+2.23.0
 

@@ -1642,6 +1642,13 @@ if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	enable_windowscodecs_GIF_Encoder=1
 fi
 
+if test "$enable_uxtheme_GTK_Theming" -eq 1; then
+	if test "$enable_uxtheme_CloseThemeClass" -gt 1; then
+		abort "Patchset uxtheme-CloseThemeClass disabled, but uxtheme-GTK_Theming depends on that."
+	fi
+	enable_uxtheme_CloseThemeClass=1
+fi
+
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	if test "$enable_widl_SLTG_Typelib_Support" -gt 1; then
 		abort "Patchset widl-SLTG_Typelib_Support disabled, but stdole32.tlb-SLTG_Typelib depends on that."
@@ -6375,6 +6382,9 @@ if test "$enable_uxtheme_CloseThemeClass" -eq 1; then
 fi
 
 # Patchset uxtheme-GTK_Theming
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	uxtheme-CloseThemeClass
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/uxtheme/Makefile.in, dlls/uxtheme/buffer.c, dlls/uxtheme/draw.c, dlls/uxtheme/gtk-button.c,

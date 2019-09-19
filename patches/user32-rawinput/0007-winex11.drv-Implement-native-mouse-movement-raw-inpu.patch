@@ -1,4 +1,4 @@
-From 81a576cc51c02c93a20bf874052be30c8de2d950 Mon Sep 17 00:00:00 2001
+From f270475e7fe23001af3f19d918f290783823be63 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dereklesho52@Gmail.com>
 Date: Tue, 25 Jun 2019 22:37:34 -0400
 Subject: [PATCH 07/10] winex11.drv: Implement native mouse-movement raw-input
@@ -12,10 +12,10 @@ Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
  3 files changed, 58 insertions(+), 16 deletions(-)
 
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index 578efa1931..26d5e6a575 100644
+index d55e208490e..1ec077bca74 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
-@@ -288,9 +288,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+@@ -291,9 +291,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
  
  
  /***********************************************************************
@@ -27,7 +27,7 @@ index 578efa1931..26d5e6a575 100644
  {
  #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
      struct x11drv_thread_data *data = x11drv_thread_data();
-@@ -322,7 +322,6 @@ static void enable_xinput2(void)
+@@ -325,7 +325,6 @@ static void enable_xinput2(void)
      mask.deviceid = XIAllMasterDevices;
      memset( mask_bits, 0, sizeof(mask_bits) );
      XISetMask( mask_bits, XI_RawMotion );
@@ -35,7 +35,7 @@ index 578efa1931..26d5e6a575 100644
  
      /* XInput 2.0 has a problematic behavior where master pointer will
       * not send raw events to the root window whenever a grab is active
-@@ -354,15 +353,15 @@ static void enable_xinput2(void)
+@@ -357,15 +356,15 @@ static void enable_xinput2(void)
  }
  
  /***********************************************************************
@@ -54,7 +54,7 @@ index 578efa1931..26d5e6a575 100644
  
      TRACE( "disabling\n" );
      data->xi2_state = xi_disabled;
-@@ -387,6 +386,21 @@ static void disable_xinput2(void)
+@@ -390,6 +389,21 @@ static void disable_xinput2(void)
  #endif
  }
  
@@ -76,8 +76,8 @@ index 578efa1931..26d5e6a575 100644
  
  /***********************************************************************
   *		grab_clipping_window
-@@ -412,9 +426,9 @@ static BOOL grab_clipping_window( const RECT *clip )
-         return TRUE;
+@@ -428,9 +442,9 @@ static BOOL grab_clipping_window( const RECT *clip )
+     }
  
      /* enable XInput2 unless we are already clipping */
 -    if (!data->clip_hwnd) enable_xinput2();
@@ -88,7 +88,7 @@ index 578efa1931..26d5e6a575 100644
      {
          WARN( "XInput2 not supported, refusing to clip to %s\n", wine_dbgstr_rect(clip) );
          DestroyWindow( msg_hwnd );
-@@ -442,7 +456,7 @@ static BOOL grab_clipping_window( const RECT *clip )
+@@ -458,7 +472,7 @@ static BOOL grab_clipping_window( const RECT *clip )
  
      if (!clipping_cursor)
      {
@@ -97,7 +97,7 @@ index 578efa1931..26d5e6a575 100644
          DestroyWindow( msg_hwnd );
          return FALSE;
      }
-@@ -508,7 +522,7 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND new_clip_hwnd )
+@@ -539,7 +553,7 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND prev_clip_hwnd, HWND new_clip_hwnd )
          TRACE( "clip hwnd reset from %p\n", hwnd );
          data->clip_hwnd = 0;
          data->clip_reset = GetTickCount();
@@ -106,7 +106,7 @@ index 578efa1931..26d5e6a575 100644
          DestroyWindow( hwnd );
      }
      else if (hwnd == GetForegroundWindow())  /* request to clip */
-@@ -1743,16 +1757,18 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1831,16 +1845,18 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
  {
      XIRawEvent *event = xev->data;
      const double *values = event->valuators.values;
@@ -127,7 +127,7 @@ index 578efa1931..26d5e6a575 100644
  
      if (xinput2_version_major == 2 && xinput2_version_minor == 0)
      {
-@@ -1784,6 +1800,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1872,6 +1888,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      x_rel = &thread_data->x_rel_valuator;
      y_rel = &thread_data->y_rel_valuator;
  
@@ -135,7 +135,7 @@ index 578efa1931..26d5e6a575 100644
      input.u.mi.mouseData   = 0;
      input.u.mi.dwFlags     = MOUSEEVENTF_MOVE;
      input.u.mi.time        = EVENT_x11_time_to_win32_time( event->time );
-@@ -1791,18 +1808,30 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1879,18 +1896,30 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      input.u.mi.dx          = 0;
      input.u.mi.dy          = 0;
  
@@ -166,7 +166,7 @@ index 578efa1931..26d5e6a575 100644
          }
          if (i == y_rel->number)
          {
-@@ -1810,6 +1839,8 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1898,6 +1927,8 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
              if (y_rel->min < y_rel->max)
                  input.u.mi.dy = val * (virtual_rect.bottom - virtual_rect.top)
                                      / (y_rel->max - y_rel->min);
@@ -175,7 +175,7 @@ index 578efa1931..26d5e6a575 100644
          }
      }
  
-@@ -1819,10 +1850,15 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1907,10 +1938,15 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
          return FALSE;
      }
  
@@ -195,7 +195,7 @@ index 578efa1931..26d5e6a575 100644
  }
  
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 0d3695bdcf..2223629c7b 100644
+index 68ef1881a45..81ad38df918 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -194,6 +194,8 @@ extern BOOL CDECL X11DRV_UnrealizePalette( HPALETTE hpal ) DECLSPEC_HIDDEN;
@@ -207,7 +207,7 @@ index 0d3695bdcf..2223629c7b 100644
  
  extern DWORD copy_image_bits( BITMAPINFO *info, BOOL is_r8g8b8, XImage *image,
                                const struct gdi_image_bits *src_bits, struct gdi_image_bits *dst_bits,
-@@ -335,7 +337,7 @@ struct x11drv_thread_data
+@@ -337,7 +339,7 @@ struct x11drv_thread_data
      HWND     clip_hwnd;            /* message window stored in desktop while clipping is active */
      DWORD    clip_reset;           /* time when clipping was last reset */
      HKL      kbd_layout;           /* active keyboard layout */
@@ -217,10 +217,10 @@ index 0d3695bdcf..2223629c7b 100644
      int      xi2_device_count;
      struct x11drv_valuator_data x_rel_valuator;
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index 21807af3f1..214c101b67 100644
+index 0120ca06a20..cfcf1f19dd1 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
-@@ -611,6 +611,8 @@ void CDECL X11DRV_ThreadDetach(void)
+@@ -616,6 +616,8 @@ void CDECL X11DRV_ThreadDetach(void)
  
      if (data)
      {
@@ -229,7 +229,7 @@ index 21807af3f1..214c101b67 100644
          if (data->xim) XCloseIM( data->xim );
          if (data->font_set) XFreeFontSet( data->display, data->font_set );
          XCloseDisplay( data->display );
-@@ -681,6 +683,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
+@@ -689,6 +691,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
  
      if (use_xim) X11DRV_SetupXIM();
  
@@ -239,5 +239,5 @@ index 21807af3f1..214c101b67 100644
  }
  
 -- 
-2.23.0
+2.17.1
 

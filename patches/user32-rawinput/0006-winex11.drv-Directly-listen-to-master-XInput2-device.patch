@@ -1,4 +1,4 @@
-From b33da9582fa3d8a6bd761abf72542d24a10fb948 Mon Sep 17 00:00:00 2001
+From 6e594b2977c582dad95043512ab2828cc2dee52e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Tue, 23 Jul 2019 14:10:44 +0200
 Subject: [PATCH 06/10] winex11.drv: Directly listen to master XInput2 devices
@@ -21,10 +21,10 @@ Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
  2 files changed, 42 insertions(+), 56 deletions(-)
 
 diff --git a/dlls/winex11.drv/event.c b/dlls/winex11.drv/event.c
-index 5c465aa033..1e64f0d2a3 100644
+index 6b604fc9f15..e1da2b62148 100644
 --- a/dlls/winex11.drv/event.c
 +++ b/dlls/winex11.drv/event.c
-@@ -271,46 +271,6 @@ enum event_merge_action
+@@ -274,46 +274,6 @@ enum event_merge_action
      MERGE_IGNORE    /* ignore the new event, keep the old one */
  };
  
@@ -71,7 +71,7 @@ index 5c465aa033..1e64f0d2a3 100644
  /***********************************************************************
   *           merge_events
   *
-@@ -362,7 +322,7 @@ static enum event_merge_action merge_events( XEvent *prev, XEvent *next )
+@@ -365,7 +325,7 @@ static enum event_merge_action merge_events( XEvent *prev, XEvent *next )
              if (next->xcookie.extension != xinput2_opcode) break;
              if (next->xcookie.evtype != XI_RawMotion) break;
              if (x11drv_thread_data()->warp_serial) break;
@@ -81,10 +81,10 @@ index 5c465aa033..1e64f0d2a3 100644
          }
          break;
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index f737a306a5..578efa1931 100644
+index 3c49762cee4..d55e208490e 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
-@@ -130,6 +130,8 @@ static Cursor create_cursor( HANDLE handle );
+@@ -133,6 +133,8 @@ static Cursor create_cursor( HANDLE handle );
  
  #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
  static BOOL xinput2_available;
@@ -93,7 +93,7 @@ index f737a306a5..578efa1931 100644
  static BOOL broken_rawevents;
  #define MAKE_FUNCPTR(f) static typeof(f) * p##f
  MAKE_FUNCPTR(XIGetClientPointer);
-@@ -301,8 +303,11 @@ static void enable_xinput2(void)
+@@ -304,8 +306,11 @@ static void enable_xinput2(void)
  
      if (data->xi2_state == xi_unknown)
      {
@@ -107,7 +107,7 @@ index f737a306a5..578efa1931 100644
          else
          {
              data->xi2_state = xi_unavailable;
-@@ -314,12 +319,20 @@ static void enable_xinput2(void)
+@@ -317,12 +322,20 @@ static void enable_xinput2(void)
  
      mask.mask     = mask_bits;
      mask.mask_len = sizeof(mask_bits);
@@ -130,7 +130,7 @@ index f737a306a5..578efa1931 100644
      pXISelectEvents( data->display, DefaultRootWindow( data->display ), &mask, 1 );
  
      pointer_info = pXIQueryDevice( data->display, data->xi2_core_pointer, &count );
-@@ -333,7 +346,7 @@ static void enable_xinput2(void)
+@@ -336,7 +349,7 @@ static void enable_xinput2(void)
       * safe to be obtained statically at enable_xinput2() time.
       */
      if (data->xi2_devices) pXIFreeDeviceInfo( data->xi2_devices );
@@ -139,7 +139,7 @@ index f737a306a5..578efa1931 100644
      data->xi2_current_slave = 0;
  
      data->xi2_state = xi_enabled;
-@@ -356,7 +369,13 @@ static void disable_xinput2(void)
+@@ -359,7 +372,13 @@ static void disable_xinput2(void)
  
      mask.mask = NULL;
      mask.mask_len = 0;
@@ -154,7 +154,7 @@ index f737a306a5..578efa1931 100644
  
      pXISelectEvents( data->display, DefaultRootWindow( data->display ), &mask, 1 );
      pXIFreeDeviceInfo( data->xi2_devices );
-@@ -1735,25 +1754,32 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1823,25 +1842,32 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      if (!event->valuators.mask_len) return FALSE;
      if (thread_data->xi2_state != xi_enabled) return FALSE;
  
@@ -197,5 +197,5 @@ index f737a306a5..578efa1931 100644
      x_rel = &thread_data->x_rel_valuator;
      y_rel = &thread_data->y_rel_valuator;
 -- 
-2.23.0
+2.17.1
 

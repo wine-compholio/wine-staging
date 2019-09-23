@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "27da4fa4498c3b6e0e46c72a9cdd13b620726e92"
+	echo "ae8f605ede0054c8e380e809c196f2621d9cf423"
 }
 
 # Show version information
@@ -247,7 +247,6 @@ patch_enable_all ()
 	enable_packager_DllMain="$1"
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
-	enable_quartz_Silence_FIXMEs="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
 	enable_server_Desktop_Refcount="$1"
@@ -869,9 +868,6 @@ patch_enable ()
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
-			;;
-		quartz-Silence_FIXMEs)
-			enable_quartz_Silence_FIXMEs="$2"
 			;;
 		riched20-Class_Tests)
 			enable_riched20_Class_Tests="$2"
@@ -5537,18 +5533,6 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset quartz-Silence_FIXMEs
-# |
-# | Modified files:
-# |   *	dlls/quartz/parser.c
-# |
-if test "$enable_quartz_Silence_FIXMEs" -eq 1; then
-	patch_apply quartz-Silence_FIXMEs/0001-quartz-Don-t-print-FIXME-for-IAMFilterMiscFlags-in-p.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "quartz: Don'\''t print FIXME for IAMFilterMiscFlags in parsers.", 1 },';
 	) >> "$patchlist"
 fi
 

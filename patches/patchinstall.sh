@@ -171,7 +171,6 @@ patch_enable_all ()
 	enable_libs_Debug_Channel="$1"
 	enable_libs_Unicode_Collation="$1"
 	enable_loader_KeyboardLayouts="$1"
-	enable_mfplat_MFGetConfigurationDWORD="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -639,9 +638,6 @@ patch_enable ()
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
-			;;
-		mfplat-MFGetConfigurationDWORD)
-			enable_mfplat_MFGetConfigurationDWORD="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -4464,23 +4460,6 @@ if test "$enable_loader_KeyboardLayouts" -eq 1; then
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Improve GetKeyboardLayoutList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-MFGetConfigurationDWORD
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47757] - mfplat: Add MFGetConfigurationDWORD stub.
-# |
-# | Modified files:
-# |   *	dlls/mfplat/main.c, dlls/mfplat/mfplat.spec
-# |
-if test "$enable_mfplat_MFGetConfigurationDWORD" -eq 1; then
-	patch_apply mfplat-MFGetConfigurationDWORD/0001-mfplat-Add-DestroyPropVariant-stub.patch
-	patch_apply mfplat-MFGetConfigurationDWORD/0002-mfplat-Add-MFGetConfigurationDWORD-stub.patch
-	(
-		printf '%s\n' '+    { "Andrey Gusev", "mfplat: Add DestroyPropVariant stub.", 1 },';
-		printf '%s\n' '+    { "Andrey Gusev", "mfplat: Add MFGetConfigurationDWORD stub.", 1 },';
 	) >> "$patchlist"
 fi
 

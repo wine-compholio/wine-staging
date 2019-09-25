@@ -1,21 +1,47 @@
-From f270475e7fe23001af3f19d918f290783823be63 Mon Sep 17 00:00:00 2001
+From 5ce9048468f363c5f844a35327aecc40d8304c9b Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dereklesho52@Gmail.com>
 Date: Tue, 25 Jun 2019 22:37:34 -0400
-Subject: [PATCH 07/10] winex11.drv: Implement native mouse-movement raw-input
- using RawMotion.
+Subject: [PATCH] winex11.drv: Implement native mouse-movement raw-input using
+ RawMotion.
 
 Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
 ---
- dlls/winex11.drv/mouse.c       | 66 ++++++++++++++++++++++++++--------
- dlls/winex11.drv/x11drv.h      |  4 ++-
- dlls/winex11.drv/x11drv_main.c |  4 +++
- 3 files changed, 58 insertions(+), 16 deletions(-)
+ dlls/winex11.drv/mouse.c       | 102 +++++++++++++++++++++++++++------
+ dlls/winex11.drv/x11drv.h      |   8 ++-
+ dlls/winex11.drv/x11drv_main.c |   6 ++
+ 3 files changed, 97 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index d55e208490e..1ec077bca74 100644
+index 23c7c6fb35b..212511fde84 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
-@@ -291,9 +291,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+@@ -262,6 +262,8 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+ 
+     thread_data->x_rel_valuator.number = -1;
+     thread_data->y_rel_valuator.number = -1;
++    thread_data->x_abs_valuator.number = -1;
++    thread_data->y_abs_valuator.number = -1;
+ 
+     for (i = 0; i < n_valuators; i++)
+     {
+@@ -279,6 +281,16 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+         {
+             valuator_data = &thread_data->y_rel_valuator;
+         }
++        else if (class->label == x11drv_atom( Abs_X ) ||
++                 (!class->label && class->number == 0 && class->mode == XIModeAbsolute))
++        {
++            valuator_data = &thread_data->x_abs_valuator;
++        }
++        else if (class->label == x11drv_atom( Abs_Y ) ||
++                 (!class->label && class->number == 1 && class->mode == XIModeAbsolute))
++        {
++            valuator_data = &thread_data->y_abs_valuator;
++        }
+ 
+         if (valuator_data) {
+             valuator_data->number = class->number;
+@@ -291,9 +303,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
  
  
  /***********************************************************************
@@ -27,15 +53,17 @@ index d55e208490e..1ec077bca74 100644
  {
  #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
      struct x11drv_thread_data *data = x11drv_thread_data();
-@@ -325,7 +325,6 @@ static void enable_xinput2(void)
+@@ -324,8 +336,8 @@ static void enable_xinput2(void)
+     mask.mask_len = sizeof(mask_bits);
      mask.deviceid = XIAllMasterDevices;
      memset( mask_bits, 0, sizeof(mask_bits) );
++    XISetMask( mask_bits, XI_DeviceChanged );
      XISetMask( mask_bits, XI_RawMotion );
 -    XISetMask( mask_bits, XI_ButtonPress );
+     XISetMask( mask_bits, XI_DeviceChanged );
  
      /* XInput 2.0 has a problematic behavior where master pointer will
-      * not send raw events to the root window whenever a grab is active
-@@ -357,15 +356,15 @@ static void enable_xinput2(void)
+@@ -357,15 +369,15 @@ static void enable_xinput2(void)
  }
  
  /***********************************************************************
@@ -54,7 +82,7 @@ index d55e208490e..1ec077bca74 100644
  
      TRACE( "disabling\n" );
      data->xi2_state = xi_disabled;
-@@ -390,6 +389,21 @@ static void disable_xinput2(void)
+@@ -390,6 +402,21 @@ static void disable_xinput2(void)
  #endif
  }
  
@@ -76,7 +104,7 @@ index d55e208490e..1ec077bca74 100644
  
  /***********************************************************************
   *		grab_clipping_window
-@@ -428,9 +442,9 @@ static BOOL grab_clipping_window( const RECT *clip )
+@@ -428,9 +455,9 @@ static BOOL grab_clipping_window( const RECT *clip )
      }
  
      /* enable XInput2 unless we are already clipping */
@@ -88,7 +116,7 @@ index d55e208490e..1ec077bca74 100644
      {
          WARN( "XInput2 not supported, refusing to clip to %s\n", wine_dbgstr_rect(clip) );
          DestroyWindow( msg_hwnd );
-@@ -458,7 +472,7 @@ static BOOL grab_clipping_window( const RECT *clip )
+@@ -458,7 +485,7 @@ static BOOL grab_clipping_window( const RECT *clip )
  
      if (!clipping_cursor)
      {
@@ -97,7 +125,7 @@ index d55e208490e..1ec077bca74 100644
          DestroyWindow( msg_hwnd );
          return FALSE;
      }
-@@ -539,7 +553,7 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND prev_clip_hwnd, HWND new_clip_hwnd )
+@@ -539,7 +566,7 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND prev_clip_hwnd, HWND new_clip_hwnd )
          TRACE( "clip hwnd reset from %p\n", hwnd );
          data->clip_hwnd = 0;
          data->clip_reset = GetTickCount();
@@ -106,7 +134,7 @@ index d55e208490e..1ec077bca74 100644
          DestroyWindow( hwnd );
      }
      else if (hwnd == GetForegroundWindow())  /* request to clip */
-@@ -1831,16 +1845,18 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1801,16 +1828,20 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
  {
      XIRawEvent *event = xev->data;
      const double *values = event->valuators.values;
@@ -116,26 +144,33 @@ index d55e208490e..1ec077bca74 100644
 +    RAWINPUT raw_input;
      int i;
 -    double dx = 0, dy = 0, val;
-+    double dx = 0, dy = 0, raw_dx = 0, raw_dy = 0, val, raw_val;
++    double dx = 0, dy = 0, raw_x = 0, raw_y = 0, val, raw_val;
      struct x11drv_thread_data *thread_data = x11drv_thread_data();
-     struct x11drv_valuator_data *x_rel, *y_rel;
+-    struct x11drv_valuator_data *x_rel, *y_rel;
++    struct x11drv_valuator_data *x_rel, *y_rel, *x_abs, *y_abs;
++
++    if ((thread_data->x_rel_valuator.number < 0 || thread_data->y_rel_valuator.number < 0) &&
++        (thread_data->x_abs_valuator.number < 0 || thread_data->y_abs_valuator.number < 0) return FALSE;
  
-     if (thread_data->x_rel_valuator.number < 0 || thread_data->y_rel_valuator.number < 0) return FALSE;
+-    if (thread_data->x_rel_valuator.number < 0 || thread_data->y_rel_valuator.number < 0) return FALSE;
      if (!event->valuators.mask_len) return FALSE;
 -    if (thread_data->xi2_state != xi_enabled) return FALSE;
 +    if (thread_data->xi2_state < xi_enabled) return FALSE;
  
      if (xinput2_version_major == 2 && xinput2_version_minor == 0)
      {
-@@ -1872,6 +1888,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1841,7 +1872,10 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+ 
      x_rel = &thread_data->x_rel_valuator;
      y_rel = &thread_data->y_rel_valuator;
++    x_abs = &thread_data->x_abs_valuator;
++    y_abs = &thread_data->y_abs_valuator;
  
 +    input.type = INPUT_MOUSE;
      input.u.mi.mouseData   = 0;
      input.u.mi.dwFlags     = MOUSEEVENTF_MOVE;
      input.u.mi.time        = EVENT_x11_time_to_win32_time( event->time );
-@@ -1879,18 +1896,30 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1849,18 +1883,31 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      input.u.mi.dx          = 0;
      input.u.mi.dy          = 0;
  
@@ -150,7 +185,8 @@ index d55e208490e..1ec077bca74 100644
 +
      virtual_rect = get_virtual_screen_rect();
  
-     for (i = 0; i <= max ( x_rel->number, y_rel->number ); i++)
+-    for (i = 0; i <= max ( x_rel->number, y_rel->number ); i++)
++    for (i = 0; i <= max(max(max( x_abs->number, y_abs->number), x_rel->number), y_rel->number); i++)
      {
          if (!XIMaskIsSet( event->valuators.mask, i )) continue;
          val = *values++;
@@ -162,20 +198,32 @@ index d55e208490e..1ec077bca74 100644
                  input.u.mi.dx = val * (virtual_rect.right - virtual_rect.left)
                                      / (x_rel->max - x_rel->min);
 +
-+            raw_input.data.mouse.lLastX = raw_dx = raw_val;
++            raw_input.data.mouse.usFlags = MOUSE_MOVE_RELATIVE;
++            raw_input.data.mouse.lLastX = raw_x = raw_val;
          }
          if (i == y_rel->number)
          {
-@@ -1898,6 +1927,8 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1868,6 +1915,19 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
              if (y_rel->min < y_rel->max)
                  input.u.mi.dy = val * (virtual_rect.bottom - virtual_rect.top)
                                      / (y_rel->max - y_rel->min);
 +
-+            raw_input.data.mouse.lLastY = raw_dy = raw_val;
++            raw_input.data.mouse.usFlags = MOUSE_MOVE_RELATIVE;
++            raw_input.data.mouse.lLastY = raw_y = raw_val;
++        }
++        if (i == x_abs->number)
++        {
++            raw_input.data.mouse.usFlags = MOUSE_MOVE_ABSOLUTE | MOUSE_VIRTUAL_DESKTOP;
++            raw_input.data.mouse.lLastX = raw_x = raw_val * (65536 / (x_abs->max - x_abs->min));
++        }
++        if (i == y_abs->number)
++        {
++            raw_input.data.mouse.usFlags = MOUSE_MOVE_ABSOLUTE | MOUSE_VIRTUAL_DESKTOP;
++            raw_input.data.mouse.lLastY = raw_y = raw_val * (65536 / (y_abs->max - y_abs->min));
          }
      }
  
-@@ -1907,10 +1938,15 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1877,10 +1937,16 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
          return FALSE;
      }
  
@@ -186,7 +234,8 @@ index d55e208490e..1ec077bca74 100644
 +        __wine_send_input( 0, &input );
 +    }
 +
-+    TRACE("raw event %f,%f\n",  raw_dx, raw_dy);
++    TRACE("raw %s event %f,%f\n",
++        raw_input.data.mouse.usFlags ? "absolute" : "relative", raw_x, raw_y);
 +    __wine_send_raw_input( &raw_input );
  
 -    input.type = INPUT_MOUSE;
@@ -195,7 +244,7 @@ index d55e208490e..1ec077bca74 100644
  }
  
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 68ef1881a45..81ad38df918 100644
+index b8cfda43410..d79c78ecbc9 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -194,6 +194,8 @@ extern BOOL CDECL X11DRV_UnrealizePalette( HPALETTE hpal ) DECLSPEC_HIDDEN;
@@ -207,7 +256,7 @@ index 68ef1881a45..81ad38df918 100644
  
  extern DWORD copy_image_bits( BITMAPINFO *info, BOOL is_r8g8b8, XImage *image,
                                const struct gdi_image_bits *src_bits, struct gdi_image_bits *dst_bits,
-@@ -337,7 +339,7 @@ struct x11drv_thread_data
+@@ -336,11 +338,13 @@ struct x11drv_thread_data
      HWND     clip_hwnd;            /* message window stored in desktop while clipping is active */
      DWORD    clip_reset;           /* time when clipping was last reset */
      HKL      kbd_layout;           /* active keyboard layout */
@@ -216,11 +265,35 @@ index 68ef1881a45..81ad38df918 100644
      void    *xi2_devices;          /* list of XInput2 devices (valid when state is enabled) */
      int      xi2_device_count;
      struct x11drv_valuator_data x_rel_valuator;
+     struct x11drv_valuator_data y_rel_valuator;
++    struct x11drv_valuator_data x_abs_valuator;
++    struct x11drv_valuator_data y_abs_valuator;
+     int      xi2_core_pointer;     /* XInput2 core pointer id */
+     int      xi2_current_slave;    /* Current slave driving the Core pointer */
+ };
+@@ -427,6 +431,8 @@ enum x11drv_atoms
+     XATOM_RAW_CAP_HEIGHT,
+     XATOM_Rel_X,
+     XATOM_Rel_Y,
++    XATOM_Abs_X,
++    XATOM_Abs_Y,
+     XATOM_WM_PROTOCOLS,
+     XATOM_WM_DELETE_WINDOW,
+     XATOM_WM_STATE,
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index 0120ca06a20..cfcf1f19dd1 100644
+index 54de5d8a6b0..9f896bddd9a 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
-@@ -616,6 +616,8 @@ void CDECL X11DRV_ThreadDetach(void)
+@@ -120,6 +120,8 @@ static const char * const atom_names[NB_XATOMS - FIRST_XATOM] =
+     "RAW_CAP_HEIGHT",
+     "Rel X",
+     "Rel Y",
++    "Abs X",
++    "Abs Y",
+     "WM_PROTOCOLS",
+     "WM_DELETE_WINDOW",
+     "WM_STATE",
+@@ -611,6 +613,8 @@ void CDECL X11DRV_ThreadDetach(void)
  
      if (data)
      {
@@ -229,7 +302,7 @@ index 0120ca06a20..cfcf1f19dd1 100644
          if (data->xim) XCloseIM( data->xim );
          if (data->font_set) XFreeFontSet( data->display, data->font_set );
          XCloseDisplay( data->display );
-@@ -689,6 +691,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
+@@ -684,6 +688,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
  
      if (use_xim) X11DRV_SetupXIM();
  
@@ -239,5 +312,5 @@ index 0120ca06a20..cfcf1f19dd1 100644
  }
  
 -- 
-2.17.1
+2.23.0
 

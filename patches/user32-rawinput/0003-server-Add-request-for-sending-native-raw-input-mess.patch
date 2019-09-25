@@ -1,22 +1,36 @@
-From 0cd4df0e1c8cb9859933b2131568d6da2bea5a9f Mon Sep 17 00:00:00 2001
+From 2fd717d14d73b529d09aa786346cc2d205f29137 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dereklesho52@Gmail.com>
 Date: Tue, 25 Jun 2019 21:24:12 -0400
-Subject: [PATCH 03/10] server: Add request for sending native raw-input
+Subject: [PATCH 03/11] server: Add request for sending native raw-input
  messages.
 
 Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
 ---
- server/protocol.def | 50 ++++++++++++++++++++++++++++-----------------
- server/queue.c      | 48 +++++++++++++++++++++++++++++++++++++++++++
- server/trace.c      | 21 +++++++++++++++++++
- tools/make_requests |  1 +
- 4 files changed, 101 insertions(+), 19 deletions(-)
+ dlls/user32/message.c |  2 +-
+ server/protocol.def   | 51 +++++++++++++++++++++++++++----------------
+ server/queue.c        | 49 +++++++++++++++++++++++++++++++++++++++++
+ server/trace.c        | 21 ++++++++++++++++++
+ tools/make_requests   |  1 +
+ 5 files changed, 104 insertions(+), 20 deletions(-)
 
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index b6dd7d5932..4c8d485954 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -2299,7 +2299,7 @@ static BOOL process_rawinput_message( MSG *msg, const struct hardware_msg_data *
+         rawinput->header.hDevice = WINE_MOUSE_HANDLE;
+         rawinput->header.wParam  = 0;
+ 
+-        rawinput->data.mouse.usFlags           = MOUSE_MOVE_RELATIVE;
++        rawinput->data.mouse.usFlags            = msg_data->rawinput.mouse.flags;
+ 
+         rawinput->data.mouse.u.s.usButtonFlags = msg_data->rawinput.mouse.button_flags;
+         rawinput->data.mouse.u.s.usButtonData = msg_data->rawinput.mouse.button_data;
 diff --git a/server/protocol.def b/server/protocol.def
-index e7e6b817172..6fe4f3040ba 100644
+index f7e0008b04..009e0b2593 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -298,31 +298,38 @@ struct hw_msg_source
+@@ -286,31 +286,39 @@ struct hw_msg_source
      unsigned int    origin;        /* source origin (IMO_* values) */
  };
  
@@ -33,6 +47,7 @@ index e7e6b817172..6fe4f3040ba 100644
 +    struct
 +    {
 +        int            type;            /* RIM_TYPEMOUSE */
++        unsigned short flags;           /* event flags */
 +        int            x;               /* x coordinate */
 +        int            y;               /* y coordinate */
 +        unsigned short button_flags;    /* mouse button */
@@ -74,7 +89,7 @@ index e7e6b817172..6fe4f3040ba 100644
  };
  
  struct callback_msg_data
-@@ -2361,6 +2368,11 @@ enum message_type
+@@ -2318,6 +2326,11 @@ enum message_type
  #define SEND_HWMSG_INJECTED    0x01
  
  
@@ -87,10 +102,10 @@ index e7e6b817172..6fe4f3040ba 100644
  @REQ(get_message)
      unsigned int    flags;     /* PM_* flags */
 diff --git a/server/queue.c b/server/queue.c
-index 7eecd286fab..edd577bcdc7 100644
+index b58dfd5213..246fcffd23 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -2564,6 +2564,54 @@ DECL_HANDLER(send_hardware_message)
+@@ -2421,6 +2421,55 @@ DECL_HANDLER(send_hardware_message)
      release_object( desktop );
  }
  
@@ -128,6 +143,7 @@ index 7eecd286fab..edd577bcdc7 100644
 +            msg_data->rawinput.mouse.y    = req->input.mouse.y;
 +            msg_data->rawinput.mouse.button_flags = req->input.mouse.button_flags;
 +            msg_data->rawinput.mouse.button_data = req->input.mouse.button_data;
++            msg_data->rawinput.mouse.flags = req->input.mouse.flags;
 +
 +            queue_hardware_message( desktop, msg, 0 );
 +
@@ -146,7 +162,7 @@ index 7eecd286fab..edd577bcdc7 100644
  DECL_HANDLER(post_quit_message)
  {
 diff --git a/server/trace.c b/server/trace.c
-index 9078acd0867..5973bbe36f4 100644
+index 0df649ea29..4fbfee88c8 100644
 --- a/server/trace.c
 +++ b/server/trace.c
 @@ -405,6 +405,27 @@ static void dump_hw_input( const char *prefix, const hw_input_t *input )
@@ -158,9 +174,9 @@ index 9078acd0867..5973bbe36f4 100644
 +    switch (rawinput->type)
 +    {
 +    case RIM_TYPEMOUSE:
-+        fprintf( stderr, "%s{type=MOUSE,x=%d,y=%d,button_flags=%04hx,button_data=%04hx}",
-+                 prefix, rawinput->mouse.x, rawinput->mouse.y, rawinput->mouse.button_flags,
-+                 rawinput->mouse.button_data);
++        fprintf( stderr, "%s{type=MOUSE,flags=%04hx,x=%d,y=%d,button_flags=%04hx,button_data=%04hx}",
++                 prefix, rawinput->mouse.flags, rawinput->mouse.x, rawinput->mouse.y,
++                 rawinput->mouse.button_flags, rawinput->mouse.button_data);
 +        break;
 +    case RIM_TYPEKEYBOARD:
 +        fprintf( stderr, "%s{type=KEYBOARD}\n", prefix);
@@ -178,17 +194,17 @@ index 9078acd0867..5973bbe36f4 100644
  {
      fprintf( stderr, "%s%d.%u", prefix, luid->high_part, luid->low_part );
 diff --git a/tools/make_requests b/tools/make_requests
-index faeabe5852d..8b1f1a263b9 100755
+index faeabe5852..a6f12af041 100755
 --- a/tools/make_requests
 +++ b/tools/make_requests
 @@ -53,6 +53,7 @@ my %formats =
      "ioctl_code_t"  => [  4,   4,  "&dump_ioctl_code" ],
      "client_cpu_t"  => [  4,   4,  "&dump_client_cpu" ],
      "hw_input_t"    => [  32,  8,  "&dump_hw_input" ],
-+    "hw_rawinput_t" => [  16,  8,  "&dump_hw_rawinput" ]
++    "hw_rawinput_t" => [  20,  4,  "&dump_hw_rawinput" ]
  );
  
  my @requests = ();
 -- 
-2.17.1
+2.23.0
 

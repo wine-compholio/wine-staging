@@ -1,31 +1,45 @@
-From cd40a026040d5f981e2dc3051826befa3d5df8f6 Mon Sep 17 00:00:00 2001
+From 8cd3d08315b108d2736356318c6ef74d3a0b1ec8 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dereklesho52@Gmail.com>
 Date: Fri, 26 Jul 2019 17:37:19 -0400
-Subject: [PATCH 08/10] winex11.drv: Implement native mouse-button raw-input
+Subject: [PATCH 08/11] winex11.drv: Implement native mouse-button raw-input
  using RawButton*.
 
 Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
 ---
- dlls/winex11.drv/mouse.c       | 89 ++++++++++++++++++++++++++++++++--
- dlls/winex11.drv/x11drv.h      |  2 +
+ dlls/winex11.drv/mouse.c       | 97 +++++++++++++++++++++++++++++++---
+ dlls/winex11.drv/x11drv.h      |  3 ++
  dlls/winex11.drv/x11drv_main.c |  1 +
- 3 files changed, 87 insertions(+), 5 deletions(-)
+ 3 files changed, 95 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index 1ec077bca74..6e09bebfdb8 100644
+index 472ba77d0a..65b1b500d0 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
-@@ -262,6 +262,7 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
- 
-     thread_data->x_rel_valuator.number = -1;
+@@ -261,12 +261,21 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
      thread_data->y_rel_valuator.number = -1;
+     thread_data->x_abs_valuator.number = -1;
+     thread_data->y_abs_valuator.number = -1;
 +    thread_data->wheel_valuator.number = -1;
++
++    thread_data->xi2_wheel_multiplier = 0;
  
      for (i = 0; i < n_valuators; i++)
      {
-@@ -279,6 +280,11 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+         XIValuatorClassInfo *class = (XIValuatorClassInfo *)valuators[i];
++        XIScrollClassInfo *scroll_class = (XIScrollClassInfo *)valuators[i];
+         struct x11drv_valuator_data *valuator_data = NULL;
+ 
++        if (valuators[i]->type == XIScrollClass)
++        {
++            if (scroll_class->scroll_type == XIScrollTypeVertical)
++                thread_data->xi2_wheel_multiplier = WHEEL_DELTA / scroll_class->increment;
++        }
+         if (valuators[i]->type != XIValuatorClass) continue;
+         if (class->label == x11drv_atom( Rel_X ) ||
+             (!class->label && class->number == 0 && class->mode == XIModeRelative))
+@@ -288,6 +297,11 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
          {
-             valuator_data = &thread_data->y_rel_valuator;
+             valuator_data = &thread_data->y_abs_valuator;
          }
 +        else if (class->label == x11drv_atom( Rel_Vert_Scroll ) ||
 +                 (!class->label && class->number == 3 && class->mode == XIModeRelative))
@@ -35,16 +49,16 @@ index 1ec077bca74..6e09bebfdb8 100644
  
          if (valuator_data) {
              valuator_data->number = class->number;
-@@ -325,6 +331,8 @@ void X11DRV_XInput2_Enable(void)
-     mask.deviceid = XIAllMasterDevices;
-     memset( mask_bits, 0, sizeof(mask_bits) );
+@@ -336,6 +350,8 @@ void X11DRV_XInput2_Enable(void)
+     XISetMask( mask_bits, XI_DeviceChanged );
      XISetMask( mask_bits, XI_RawMotion );
+     XISetMask( mask_bits, XI_DeviceChanged );
 +    XISetMask( mask_bits, XI_RawButtonPress );
 +    XISetMask( mask_bits, XI_RawButtonRelease );
  
      /* XInput 2.0 has a problematic behavior where master pointer will
       * not send raw events to the root window whenever a grab is active
-@@ -383,6 +391,7 @@ void X11DRV_XInput2_Disable(void)
+@@ -393,6 +409,7 @@ void X11DRV_XInput2_Disable(void)
      pXIFreeDeviceInfo( data->xi2_devices );
      data->x_rel_valuator.number = -1;
      data->y_rel_valuator.number = -1;
@@ -52,64 +66,65 @@ index 1ec077bca74..6e09bebfdb8 100644
      data->xi2_devices = NULL;
      data->xi2_core_pointer = 0;
      data->xi2_current_slave = 0;
-@@ -1850,11 +1859,11 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1775,12 +1792,13 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      INPUT input;
      RAWINPUT raw_input;
      int i;
--    double dx = 0, dy = 0, raw_dx = 0, raw_dy = 0, val, raw_val;
-+    double dx = 0, dy = 0, raw_dx = 0, raw_dy = 0, raw_dwheel = 0, val, raw_val;
+-    double dx = 0, dy = 0, raw_x = 0, raw_y = 0, val, raw_val;
++    double dx = 0, dy = 0, raw_x = 0, raw_y = 0, raw_dwheel = 0, val, raw_val;
      struct x11drv_thread_data *thread_data = x11drv_thread_data();
--    struct x11drv_valuator_data *x_rel, *y_rel;
-+    struct x11drv_valuator_data *x_rel, *y_rel, *wheel;
+-    struct x11drv_valuator_data *x_rel, *y_rel, *x_abs, *y_abs;
++    struct x11drv_valuator_data *x_rel, *y_rel, *x_abs, *y_abs, *wheel;
  
--    if (thread_data->x_rel_valuator.number < 0 || thread_data->y_rel_valuator.number < 0) return FALSE;
-+    if (thread_data->x_rel_valuator.number < 0 || thread_data->y_rel_valuator.number < 0 || thread_data->wheel_valuator.number < 0) return FALSE;
+     if ((thread_data->x_rel_valuator.number < 0 || thread_data->y_rel_valuator.number < 0) &&
+-        (thread_data->x_abs_valuator.number < 0 || thread_data->y_abs_valuator.number < 0) return FALSE;
++        (thread_data->x_abs_valuator.number < 0 || thread_data->y_abs_valuator.number < 0) &&
++         thread_data->wheel_valuator.number < 0) return FALSE;
+ 
      if (!event->valuators.mask_len) return FALSE;
      if (thread_data->xi2_state < xi_enabled) return FALSE;
- 
-@@ -1887,6 +1896,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
- 
-     x_rel = &thread_data->x_rel_valuator;
+@@ -1816,6 +1834,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      y_rel = &thread_data->y_rel_valuator;
+     x_abs = &thread_data->x_abs_valuator;
+     y_abs = &thread_data->y_abs_valuator;
 +    wheel = &thread_data->wheel_valuator;
  
      input.type = INPUT_MOUSE;
      input.u.mi.mouseData   = 0;
-@@ -1907,7 +1917,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1836,7 +1855,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
  
      virtual_rect = get_virtual_screen_rect();
  
--    for (i = 0; i <= max ( x_rel->number, y_rel->number ); i++)
-+    for (i = 0; i <= max( wheel->number, max( x_rel->number, y_rel->number ) ); i++)
+-    for (i = 0; i <= max(max(max( x_abs->number, y_abs->number), x_rel->number), y_rel->number); i++)
++    for (i = 0; i <= max(max(max(max(x_abs->number, y_abs->number), x_rel->number), y_rel->number), wheel->number); i++)
      {
          if (!XIMaskIsSet( event->valuators.mask, i )) continue;
          val = *values++;
-@@ -1930,6 +1940,13 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
- 
-             raw_input.data.mouse.lLastY = raw_dy = raw_val;
+@@ -1871,6 +1890,10 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+             raw_input.data.mouse.usFlags = MOUSE_MOVE_ABSOLUTE | MOUSE_VIRTUAL_DESKTOP;
+             raw_input.data.mouse.lLastY = raw_y = raw_val * (65536 / (y_abs->max - y_abs->min));
          }
 +        if (i == wheel->number)
 +        {
-+            /* NOTE: Testing showed a 8x factor between X11 and Windows
-+             * values, but that may be device specific
-+             */
-+            raw_dwheel = raw_val * -8;
++            raw_dwheel = raw_val * thread_data->xi2_wheel_multiplier;
 +        }
      }
  
      if (broken_rawevents && is_old_motion_event( xev->serial ))
-@@ -1944,12 +1961,69 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1885,13 +1908,70 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
          __wine_send_input( 0, &input );
      }
  
--    TRACE("raw event %f,%f\n",  raw_dx, raw_dy);
+-    TRACE("raw %s event %f,%f\n",
+-        raw_input.data.mouse.usFlags ? "absolute" : "relative", raw_x, raw_y);
 +    if (raw_dwheel)
 +    {
 +        raw_input.data.mouse.u.usButtonFlags = RI_MOUSE_WHEEL;
 +        raw_input.data.mouse.u.usButtonData  = raw_dwheel;
 +    }
 +
-+    TRACE("raw event %f,%f + %f\n",  raw_dx, raw_dy, raw_dwheel);
++    TRACE("raw %s event %f,%f + %f\n",
++        raw_input.data.mouse.usFlags ? "absolute" : "relative", raw_x, raw_y, raw_dwheel);
      __wine_send_raw_input( &raw_input );
  
      return TRUE;
@@ -169,7 +184,7 @@ index 1ec077bca74..6e09bebfdb8 100644
  #endif /* HAVE_X11_EXTENSIONS_XINPUT2_H */
  
  
-@@ -2014,6 +2088,11 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
+@@ -1956,6 +2036,11 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
      case XI_RawMotion:
          ret = X11DRV_RawMotion( event );
          break;
@@ -182,37 +197,38 @@ index 1ec077bca74..6e09bebfdb8 100644
      default:
          TRACE( "Unhandled event %#x\n", event->evtype );
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 81ad38df918..7a9b2c8b909 100644
+index 2c59f19815..928f858924 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
-@@ -344,6 +344,7 @@ struct x11drv_thread_data
-     int      xi2_device_count;
-     struct x11drv_valuator_data x_rel_valuator;
+@@ -344,6 +344,8 @@ struct x11drv_thread_data
      struct x11drv_valuator_data y_rel_valuator;
+     struct x11drv_valuator_data x_abs_valuator;
+     struct x11drv_valuator_data y_abs_valuator;
 +    struct x11drv_valuator_data wheel_valuator;
++    double   xi2_wheel_multiplier;
      int      xi2_core_pointer;     /* XInput2 core pointer id */
      int      xi2_current_slave;    /* Current slave driving the Core pointer */
  };
-@@ -431,6 +432,7 @@ enum x11drv_atoms
-     XATOM_RAW_CAP_HEIGHT,
-     XATOM_Rel_X,
+@@ -431,6 +433,7 @@ enum x11drv_atoms
      XATOM_Rel_Y,
+     XATOM_Abs_X,
+     XATOM_Abs_Y,
 +    XATOM_Rel_Vert_Scroll,
      XATOM_WM_PROTOCOLS,
      XATOM_WM_DELETE_WINDOW,
      XATOM_WM_STATE,
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index cfcf1f19dd1..093a5fa785e 100644
+index fb25a45ae2..05a445a9c1 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
-@@ -121,6 +121,7 @@ static const char * const atom_names[NB_XATOMS - FIRST_XATOM] =
-     "RAW_CAP_HEIGHT",
-     "Rel X",
+@@ -122,6 +122,7 @@ static const char * const atom_names[NB_XATOMS - FIRST_XATOM] =
      "Rel Y",
+     "Abs X",
+     "Abs Y",
 +    "Rel Vert Scroll",
      "WM_PROTOCOLS",
      "WM_DELETE_WINDOW",
      "WM_STATE",
 -- 
-2.17.1
+2.23.0
 

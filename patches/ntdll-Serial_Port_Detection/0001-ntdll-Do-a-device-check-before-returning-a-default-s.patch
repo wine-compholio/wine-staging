@@ -1,16 +1,16 @@
-From ebc82ef6a886955f8e2abff6b1b126c8b41b6515 Mon Sep 17 00:00:00 2001
+From 00f64eda25de32736d92318f8f5ed50f301dc687 Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
 Date: Tue, 29 Dec 2015 00:48:02 -0700
-Subject: mountmgr.sys: Do a device check before returning a default serial
- port name.
+Subject: [PATCH] mountmgr.sys: Do a device check before returning a default
+ serial port name.
 
 Fixes https://bugs.winehq.org/show_bug.cgi?id=39793
 ---
- dlls/mountmgr.sys/device.c | 24 ++++++++++++++++++++++++
- 1 file changed, 24 insertions(+)
+ dlls/mountmgr.sys/device.c | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
 
 diff --git a/dlls/mountmgr.sys/device.c b/dlls/mountmgr.sys/device.c
-index ee2599984a6..994e3676176 100644
+index 87609bf3de2..37635e3e6e8 100644
 --- a/dlls/mountmgr.sys/device.c
 +++ b/dlls/mountmgr.sys/device.c
 @@ -25,6 +25,9 @@
@@ -23,10 +23,22 @@ index ee2599984a6..994e3676176 100644
  #include <sys/time.h>
  
  #define NONAMELESSUNION
-@@ -1038,6 +1041,27 @@ static BOOL create_port_device( DRIVER_OBJECT *driver, int n, const char *unix_p
-     if (!unix_path)
-         return FALSE;
+@@ -1102,6 +1105,39 @@ static BOOL create_port_device( DRIVER_OBJECT *driver, int n, const char *unix_p
  
+     sprintfW( dos_name, dos_name_format, n );
+ 
++    /* check for override */
++    size = sizeof(reg_value);
++    if (RegQueryValueExW( wine_ports_key, dos_name, NULL, &type, (BYTE *)reg_value, &size ) == 0 && type == REG_SZ)
++    {
++        if (!reg_value[0] || !WideCharToMultiByte( CP_UNIXCP, WC_ERR_INVALID_CHARS, reg_value, size/sizeof(WCHAR),
++                                                   override_path, sizeof(override_path), NULL, NULL))
++            return FALSE;
++        unix_path = override_path;
++    }
++    if (!unix_path)
++        return FALSE;
++
 +#ifdef linux
 +    /* Serial port device files almost always exist on Linux even if the corresponding serial
 +     * ports don't exist. Do a basic functionality check before advertising a serial port. */
@@ -49,8 +61,8 @@ index ee2599984a6..994e3676176 100644
 +#endif
 +
      /* create DOS device */
-     sprintf( p, "%u", n );
+     unlink( dosdevices_path );
      if (symlink( unix_path, dosdevices_path ) != 0)
 -- 
-2.12.2
+2.23.0
 

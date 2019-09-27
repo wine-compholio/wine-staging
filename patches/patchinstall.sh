@@ -2619,7 +2619,7 @@ fi
 # Patchset d3dx9-32bpp_Alpha_Channel
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/surface.c
+# |   *	dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
 # |
 if test "$enable_d3dx9_32bpp_Alpha_Channel" -eq 1; then
 	patch_apply d3dx9-32bpp_Alpha_Channel/0001-d3dx9-Return-D3DFMT_A8R8G8B8-in-D3DXGetImageInfoFrom.patch

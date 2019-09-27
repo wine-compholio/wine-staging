@@ -2648,7 +2648,7 @@ fi
 # |   *	[#44635] Improve stub for ID3DXEffectImpl_CloneEffect
 # |
 # | Modified files:
-# |   *	dlls/d3dx9_36/effect.c
+# |   *	dlls/d3dx9_36/effect.c, dlls/d3dx9_36/tests/effect.c
 # |
 if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch

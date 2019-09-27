@@ -2510,8 +2510,8 @@ fi
 # |   *	[#44089] Correcly align the mapinfo buffer.
 # |
 # | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c, dlls/wined3d/wined3d.spec,
-# | 	dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
+# |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c,
+# | 	dlls/wined3d/wined3d.spec, dlls/wined3d/wined3d_private.h, include/wine/wined3d.h
 # |
 if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0001-d3d11-Add-stub-deferred-rendering-context.patch

@@ -1,4 +1,4 @@
-From 5c7a094ac9505e402d8590b58066ff38181ccd0d Mon Sep 17 00:00:00 2001
+From 04043842592ec64faf47bbd4f49f8e6ffcfebbc6 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 15:05:12 +0300
 Subject: [PATCH 4/5] wined3d: Support SWVP vertex shader constants limit in
@@ -10,12 +10,12 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  dlls/d3d9/tests/visual.c       |  1 -
  dlls/wined3d/device.c          | 16 ++++++++++++----
  dlls/wined3d/glsl_shader.c     |  2 +-
- dlls/wined3d/stateblock.c      |  6 +++---
+ dlls/wined3d/stateblock.c      | 15 +++++++++++----
  dlls/wined3d/wined3d_private.h |  8 ++++----
- 6 files changed, 20 insertions(+), 18 deletions(-)
+ 6 files changed, 28 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
-index f5c89723cb..6b56073d13 100644
+index 1e8133b0c8..70b6ce01c0 100644
 --- a/dlls/d3d9/tests/device.c
 +++ b/dlls/d3d9/tests/device.c
 @@ -6455,13 +6455,10 @@ static void test_vertex_shader_constant(void)
@@ -49,10 +49,10 @@ index f5c89723cb..6b56073d13 100644
      hr = IDirect3DDevice9_SetVertexShaderConstantF(device, consts_swvp - 1, c, 1);
      ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index 89571a126b..4be22728ae 100644
+index e7076aeed6..2128331ca6 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
-@@ -24708,7 +24708,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24767,7 +24767,6 @@ static void test_mvp_software_vertex_shaders(void)
      hr = IDirect3DDevice9_SetVertexShaderConstantF(device, 0, c_index, 1);
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
      hr = IDirect3DDevice9_SetVertexShaderConstantF(device, (unsigned int)c_index[0], c_color, 1);
@@ -61,10 +61,10 @@ index 89571a126b..4be22728ae 100644
  
      hr = IDirect3DDevice9_BeginScene(device);
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 29c7f09c5e..0056097ecc 100644
+index cd078435c8..ed95996ef3 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -2515,13 +2515,17 @@ HRESULT CDECL wined3d_device_set_vs_consts_f(struct wined3d_device *device,
+@@ -2427,13 +2427,17 @@ HRESULT CDECL wined3d_device_set_vs_consts_f(struct wined3d_device *device,
          unsigned int start_idx, unsigned int count, const struct wined3d_vec4 *constants)
  {
      const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
@@ -84,7 +84,7 @@ index 29c7f09c5e..0056097ecc 100644
          return WINED3DERR_INVALIDCALL;
  
      memcpy(&device->update_stateblock_state->vs_consts_f[start_idx], constants, count * sizeof(*constants));
-@@ -2548,12 +2552,16 @@ HRESULT CDECL wined3d_device_get_vs_consts_f(const struct wined3d_device *device
+@@ -2460,12 +2464,16 @@ HRESULT CDECL wined3d_device_get_vs_consts_f(const struct wined3d_device *device
          unsigned int start_idx, unsigned int count, struct wined3d_vec4 *constants)
  {
      const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
@@ -104,10 +104,10 @@ index 29c7f09c5e..0056097ecc 100644
  
      memcpy(constants, &device->state.vs_consts_f[start_idx], count * sizeof(*constants));
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 78e9070e9e..bdf5e221ca 100644
+index 021b275fbc..cee3621e0d 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -1902,7 +1902,7 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
+@@ -1911,7 +1911,7 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
      if (priv->consts_ubo)
          return;
  
@@ -117,7 +117,7 @@ index 78e9070e9e..bdf5e221ca 100644
          update_heap_entry(heap, i, priv->next_constant_version);
      }
 diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
-index 80e58114c1..05149ad1af 100644
+index 97ef422f5a..986832bb34 100644
 --- a/dlls/wined3d/stateblock.c
 +++ b/dlls/wined3d/stateblock.c
 @@ -312,7 +312,7 @@ void stateblock_init_contained_states(struct wined3d_stateblock *stateblock)
@@ -129,7 +129,26 @@ index 80e58114c1..05149ad1af 100644
      {
          if (stateblock->changed.vs_consts_f[i])
          {
-@@ -1588,7 +1588,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock,
+@@ -1277,10 +1277,17 @@ void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock)
+ HRESULT CDECL wined3d_stateblock_set_vs_consts_f(struct wined3d_stateblock *stateblock,
+         unsigned int start_idx, unsigned int count, const struct wined3d_vec4 *constants)
+ {
++    const struct wined3d_d3d_info *d3d_info = &stateblock->device->adapter->d3d_info;
++    unsigned int constants_count;
++
+     TRACE("stateblock %p, start_idx %u, count %u, constants %p.\n",
+             stateblock, start_idx, count, constants);
+ 
+-    if (!constants || start_idx >= WINED3D_MAX_VS_CONSTS_F || count > WINED3D_MAX_VS_CONSTS_F - start_idx)
++    constants_count = stateblock->device->create_parms.flags
++            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
++            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
++
++    if (!constants || start_idx >= constants_count || count > constants_count - start_idx)
+         return WINED3DERR_INVALIDCALL;
+ 
+     memcpy(&stateblock->stateblock_state.vs_consts_f[start_idx], constants, count * sizeof(*constants));
+@@ -1603,7 +1610,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock,
              stateblock_init_lights(stateblock->stateblock_state.light_state.light_map,
                      device->stateblock_state.light_state.light_map);
              stateblock_savedstates_set_all(&stateblock->changed,
@@ -138,7 +157,7 @@ index 80e58114c1..05149ad1af 100644
              break;
  
          case WINED3D_SBT_PIXEL_STATE:
-@@ -1600,7 +1600,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock,
+@@ -1615,7 +1622,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock,
              stateblock_init_lights(stateblock->stateblock_state.light_state.light_map,
                      device->stateblock_state.light_state.light_map);
              stateblock_savedstates_set_vertex(&stateblock->changed,
@@ -148,10 +167,10 @@ index 80e58114c1..05149ad1af 100644
  
          default:
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index aa3152aee5..ccafddde39 100644
+index 769040ea20..cfda378cc0 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3059,7 +3059,7 @@ struct wined3d_state
+@@ -3162,7 +3162,7 @@ struct wined3d_state
  
      BOOL vs_consts_b[WINED3D_MAX_CONSTS_B];
      struct wined3d_ivec4 vs_consts_i[WINED3D_MAX_CONSTS_I];
@@ -160,7 +179,7 @@ index aa3152aee5..ccafddde39 100644
  
      BOOL ps_consts_b[WINED3D_MAX_CONSTS_B];
      struct wined3d_ivec4 ps_consts_i[WINED3D_MAX_CONSTS_I];
-@@ -3115,7 +3115,7 @@ struct wined3d_stateblock_state
+@@ -3218,7 +3218,7 @@ struct wined3d_stateblock_state
      int base_vertex_index;
  
      struct wined3d_shader *vs;
@@ -169,7 +188,7 @@ index aa3152aee5..ccafddde39 100644
      struct wined3d_ivec4 vs_consts_i[WINED3D_MAX_CONSTS_I];
      BOOL vs_consts_b[WINED3D_MAX_CONSTS_B];
  
-@@ -3728,7 +3728,7 @@ struct wined3d_saved_states
+@@ -3915,7 +3915,7 @@ struct wined3d_saved_states
      BOOL ps_consts_f[WINED3D_MAX_PS_CONSTS_F];
      WORD vertexShaderConstantsB;                /* WINED3D_MAX_CONSTS_B, 16 */
      WORD vertexShaderConstantsI;                /* WINED3D_MAX_CONSTS_I, 16 */
@@ -178,7 +197,7 @@ index aa3152aee5..ccafddde39 100644
      DWORD textures : 20;                        /* WINED3D_MAX_COMBINED_SAMPLERS, 20 */
      DWORD indices : 1;
      DWORD material : 1;
-@@ -3765,7 +3765,7 @@ struct wined3d_stateblock
+@@ -3952,7 +3952,7 @@ struct wined3d_stateblock
      unsigned int              num_contained_vs_consts_i;
      DWORD                     contained_vs_consts_b[WINED3D_MAX_CONSTS_B];
      unsigned int              num_contained_vs_consts_b;

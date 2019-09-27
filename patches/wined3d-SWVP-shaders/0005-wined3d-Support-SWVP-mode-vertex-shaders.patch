@@ -1,7 +1,7 @@
-From 84e017b65146dad4a4d945118a583aa1f86abc37 Mon Sep 17 00:00:00 2001
+From 6f3d474a66928b4ceb1656db0823de8d47f9aa78 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 15:23:33 +0300
-Subject: [PATCH] wined3d: Support SWVP mode vertex shaders.
+Subject: [PATCH 5/5] wined3d: Support SWVP mode vertex shaders.
 
 Signed-off-by: Paul Gofman <gofmanp@gmail.com>
 ---
@@ -15,7 +15,7 @@ Signed-off-by: Paul Gofman <gofmanp@gmail.com>
  7 files changed, 104 insertions(+), 49 deletions(-)
 
 diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
-index 206bc273350..5679d496f51 100644
+index 70b6ce01c0..05ba25f077 100644
 --- a/dlls/d3d9/tests/device.c
 +++ b/dlls/d3d9/tests/device.c
 @@ -6943,15 +6943,11 @@ float4 main(const float4 color : COLOR) : SV_TARGET
@@ -60,10 +60,10 @@ index 206bc273350..5679d496f51 100644
  cleanup:
      refcount = IDirect3DDevice9_Release(device);
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index df1c373d04a..b090b173ec9 100644
+index 2128331ca6..e5298ee3d1 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
-@@ -24637,7 +24637,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24693,7 +24693,6 @@ static void test_mvp_software_vertex_shaders(void)
      hr = IDirect3DDevice9_CreateVertexShader(device, reladdr_shader_code, &reladdr_shader);
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
      hr = IDirect3DDevice9_CreateVertexShader(device, pure_sw_shader_code, &pure_sw_shader);
@@ -71,7 +71,7 @@ index df1c373d04a..b090b173ec9 100644
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
      hr = IDirect3DDevice9_CreateVertexDeclaration(device, decl_elements, &vertex_declaration);
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
-@@ -24675,7 +24674,7 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24731,7 +24730,7 @@ static void test_mvp_software_vertex_shaders(void)
  
      expected_color = 0x00ff0000; /* Color from vertex data and not from the shader. */
      color = getPixelColor(device, 5, 5);
@@ -80,7 +80,7 @@ index df1c373d04a..b090b173ec9 100644
              expected_color, color);
  
      hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
-@@ -24694,7 +24693,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24750,7 +24749,6 @@ static void test_mvp_software_vertex_shaders(void)
  
      expected_color = 0x00ffffff;
      color = getPixelColor(device, 5, 5);
@@ -88,7 +88,7 @@ index df1c373d04a..b090b173ec9 100644
      ok(color == expected_color, "Expected color 0x%08x, got 0x%08x (sw shader in sw mode).\n",
              expected_color, color);
  
-@@ -24744,7 +24742,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24800,7 +24798,6 @@ static void test_mvp_software_vertex_shaders(void)
  
      expected_color = 0x0000ffff; /* c[256] is c_color for SW shader. */
      color = getPixelColor(device, 5, 5);
@@ -97,10 +97,10 @@ index df1c373d04a..b090b173ec9 100644
              expected_color, color);
  
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index d2c4d256ea6..88233de0a6a 100644
+index ed95996ef3..98aaddd589 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4529,6 +4529,14 @@ void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *
+@@ -4506,6 +4506,14 @@ void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *
          warned = TRUE;
      }
  
@@ -116,7 +116,7 @@ index d2c4d256ea6..88233de0a6a 100644
  }
  
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index b1a3c6bfcef..dbbe47dcab0 100644
+index cee3621e0d..3d0e69b807 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -140,7 +140,9 @@ struct shader_glsl_priv
@@ -139,7 +139,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      GLint uniform_i_locations[WINED3D_MAX_CONSTS_I];
      GLint uniform_b_locations[WINED3D_MAX_CONSTS_B];
      GLint pos_fixup_location;
-@@ -1185,7 +1187,7 @@ static void bind_and_orphan_consts_ubo(const struct wined3d_gl_info *gl_info, st
+@@ -1193,7 +1195,7 @@ static void bind_and_orphan_consts_ubo(const struct wined3d_gl_info *gl_info, st
  {
      GL_EXTCALL(glBindBuffer(GL_UNIFORM_BUFFER, priv->ubo_vs_c));
      checkGLcall("glBindBuffer");
@@ -148,7 +148,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
              NULL, GL_STREAM_DRAW));
      checkGLcall("glBufferData");
  }
-@@ -1193,14 +1195,16 @@ static void bind_and_orphan_consts_ubo(const struct wined3d_gl_info *gl_info, st
+@@ -1201,14 +1203,16 @@ static void bind_and_orphan_consts_ubo(const struct wined3d_gl_info *gl_info, st
  /* Context activation is done by the caller. */
  static void shader_glsl_load_constants_f(const struct wined3d_shader *shader, const struct wined3d_gl_info *gl_info,
          const struct wined3d_vec4 *constants, const GLint *constant_locations, const struct constant_heap *heap,
@@ -166,7 +166,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
          unsigned max_const_used;
  
          if (priv->ubo_vs_c == -1)
-@@ -1210,22 +1214,32 @@ static void shader_glsl_load_constants_f(const struct wined3d_shader *shader, co
+@@ -1218,22 +1222,32 @@ static void shader_glsl_load_constants_f(const struct wined3d_shader *shader, co
          }
  
          bind_and_orphan_consts_ubo(gl_info, priv);
@@ -205,7 +205,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
          checkGLcall("glBufferSubData");
          return;
      }
-@@ -1593,7 +1607,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1601,7 +1615,7 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
                  GL_EXTCALL(glGenBuffers(1, &priv->ubo_vs_c));
                  GL_EXTCALL(glBindBuffer(GL_UNIFORM_BUFFER, priv->ubo_vs_c));
                  checkGLcall("glBindBuffer (UBO)");
@@ -214,7 +214,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
                          NULL, GL_STREAM_DRAW));
                  checkGLcall("glBufferData");
              }
-@@ -1605,7 +1619,8 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1613,7 +1627,8 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
  
      if (update_mask & WINED3D_SHADER_CONST_VS_F)
          shader_glsl_load_constants_f(vshader, gl_info, state->vs_consts_f,
@@ -224,7 +224,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
  
      if (update_mask & WINED3D_SHADER_CONST_VS_I)
          shader_glsl_load_constants_i(vshader, gl_info, state->vs_consts_i,
-@@ -1758,7 +1773,8 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
+@@ -1766,7 +1781,8 @@ static void shader_glsl_load_constants(void *shader_priv, struct wined3d_context
  
      if (update_mask & WINED3D_SHADER_CONST_PS_F)
          shader_glsl_load_constants_f(pshader, gl_info, state->ps_consts_f,
@@ -234,7 +234,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
  
      if (update_mask & WINED3D_SHADER_CONST_PS_I)
          shader_glsl_load_constants_i(pshader, gl_info, state->ps_consts_i,
-@@ -1903,7 +1919,7 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
+@@ -1911,7 +1927,7 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
      if (priv->consts_ubo)
          return;
  
@@ -243,7 +243,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      {
          update_heap_entry(heap, i, priv->next_constant_version);
      }
-@@ -2249,7 +2265,7 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
+@@ -2265,7 +2281,7 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
          shader_addline(buffer,"layout(std140) uniform vs_c_ubo\n"
                  "{ \n"
                  "    vec4 %s_c[%u];\n"
@@ -252,7 +252,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      }
      else if (shader->limits->constant_float > 0)
      {
-@@ -9956,12 +9972,13 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
+@@ -9961,12 +9977,13 @@ static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *
      }
      else if (!priv->consts_ubo)
      {
@@ -268,7 +268,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      }
  
      for (i = 0; i < WINED3D_MAX_CONSTS_I; ++i)
-@@ -10280,6 +10297,10 @@ static void set_glsl_shader_program(const struct wined3d_context_gl *context_gl,
+@@ -10284,6 +10301,10 @@ static void set_glsl_shader_program(const struct wined3d_context_gl *context_gl,
          vs_list = &ffp_shader->linked_programs;
      }
  
@@ -279,7 +279,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      hshader = state->shader[WINED3D_SHADER_TYPE_HULL];
      if (!(context_gl->c.shader_update_mask & (1u << WINED3D_SHADER_TYPE_HULL)) && ctx_data->glsl_program)
          hs_id = ctx_data->glsl_program->hs.id;
-@@ -11036,7 +11057,7 @@ static void constant_heap_free(struct constant_heap *heap)
+@@ -11041,7 +11062,7 @@ static void constant_heap_free(struct constant_heap *heap)
  static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct wined3d_vertex_pipe_ops *vertex_pipe,
          const struct wined3d_fragment_pipe_ops *fragment_pipe)
  {
@@ -288,7 +288,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      const struct wined3d_gl_info *gl_info = &device->adapter->gl_info;
      struct fragment_caps fragment_caps;
      void *vertex_priv, *fragment_priv;
-@@ -11047,6 +11068,18 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -11052,6 +11073,18 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
  
      priv->consts_ubo = (device->adapter->d3d_info.wined3d_creation_flags & WINED3D_LEGACY_SHADER_CONSTANTS)
              && gl_info->supported[ARB_UNIFORM_BUFFER_OBJECT];
@@ -307,7 +307,7 @@ index b1a3c6bfcef..dbbe47dcab0 100644
      string_buffer_list_init(&priv->string_buffers);
  
      if (!(vertex_priv = vertex_pipe->vp_alloc(&glsl_shader_backend, priv)))
-@@ -11076,7 +11109,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -11081,7 +11114,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
          goto fail;
      }
  
@@ -317,10 +317,10 @@ index b1a3c6bfcef..dbbe47dcab0 100644
          ERR("Failed to initialize vertex shader constant heap\n");
          goto fail;
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 8477f3de5d1..777e1c548e9 100644
+index bf8e1c204f..59d5a451cf 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
-@@ -589,7 +589,7 @@ static void shader_delete_constant_list(struct list *clist)
+@@ -592,7 +592,7 @@ static void shader_delete_constant_list(struct list *clist)
      list_init(clist);
  }
  
@@ -329,7 +329,7 @@ index 8477f3de5d1..777e1c548e9 100644
  {
      static const struct limits_entry
      {
-@@ -612,6 +612,19 @@ static void shader_set_limits(struct wined3d_shader *shader)
+@@ -615,6 +615,19 @@ static void shader_set_limits(struct wined3d_shader *shader)
          {WINED3D_SHADER_VERSION(4, 1), WINED3D_SHADER_VERSION(5, 0), {16,  0,   0,  0, 32,  0}},
          {0}
      },
@@ -349,7 +349,7 @@ index 8477f3de5d1..777e1c548e9 100644
      hs_limits[] =
      {
          /* min_version, max_version, sampler, constant_int, constant_float, constant_bool, packed_output, packet_input */
-@@ -656,7 +669,7 @@ static void shader_set_limits(struct wined3d_shader *shader)
+@@ -659,7 +672,7 @@ static void shader_set_limits(struct wined3d_shader *shader)
              FIXME("Unexpected shader type %u found.\n", shader->reg_maps.shader_version.type);
              /* Fall-through. */
          case WINED3D_SHADER_TYPE_VERTEX:
@@ -358,7 +358,7 @@ index 8477f3de5d1..777e1c548e9 100644
              break;
          case WINED3D_SHADER_TYPE_HULL:
              limits_array = hs_limits;
-@@ -1024,7 +1037,7 @@ static HRESULT shader_scan_output_signature(struct wined3d_shader *shader)
+@@ -1027,7 +1040,7 @@ static HRESULT shader_scan_output_signature(struct wined3d_shader *shader)
  }
  
  /* Note that this does not count the loop register as an address register. */
@@ -367,7 +367,7 @@ index 8477f3de5d1..777e1c548e9 100644
  {
      struct wined3d_shader_signature_element input_signature_elements[max(MAX_ATTRIBS, MAX_REG_INPUT)];
      struct wined3d_shader_signature_element output_signature_elements[MAX_REG_OUTPUT];
-@@ -1050,7 +1063,7 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, DWORD co
+@@ -1053,7 +1066,7 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, DWORD co
      prev_ins = current_ins = ptr;
      reg_maps->shader_version = shader_version;
  
@@ -376,7 +376,7 @@ index 8477f3de5d1..777e1c548e9 100644
  
      if (!(reg_maps->constf = heap_calloc(((min(shader->limits->constant_float, constf_size) + 31) / 32),
              sizeof(*reg_maps->constf))))
-@@ -3322,7 +3335,7 @@ static unsigned int shader_max_version_from_feature_level(enum wined3d_feature_l
+@@ -3325,7 +3338,7 @@ static unsigned int shader_max_version_from_feature_level(enum wined3d_feature_l
  }
  
  static HRESULT shader_set_function(struct wined3d_shader *shader, struct wined3d_device *device,
@@ -385,7 +385,7 @@ index 8477f3de5d1..777e1c548e9 100644
  {
      const struct wined3d_d3d_info *d3d_info = &shader->device->adapter->d3d_info;
      struct wined3d_shader_reg_maps *reg_maps = &shader->reg_maps;
-@@ -3347,7 +3360,7 @@ static HRESULT shader_set_function(struct wined3d_shader *shader, struct wined3d
+@@ -3350,7 +3363,7 @@ static HRESULT shader_set_function(struct wined3d_shader *shader, struct wined3d
          shader_trace_init(fe, shader->frontend_data);
  
      /* Second pass: figure out which registers are used, what the semantics are, etc. */
@@ -394,7 +394,7 @@ index 8477f3de5d1..777e1c548e9 100644
          return hr;
  
      if (version->type != type)
-@@ -3687,14 +3700,19 @@ static HRESULT vertex_shader_init(struct wined3d_shader *shader, struct wined3d_
+@@ -3689,14 +3702,19 @@ static HRESULT vertex_shader_init(struct wined3d_shader *shader, struct wined3d_
          const struct wined3d_shader_desc *desc, void *parent, const struct wined3d_parent_ops *parent_ops)
  {
      struct wined3d_shader_reg_maps *reg_maps = &shader->reg_maps;
@@ -415,7 +415,7 @@ index 8477f3de5d1..777e1c548e9 100644
      {
          shader_cleanup(shader);
          return hr;
-@@ -3798,7 +3816,7 @@ static HRESULT geometry_shader_init_stream_output(struct wined3d_shader *shader,
+@@ -3800,7 +3818,7 @@ static HRESULT geometry_shader_init_stream_output(struct wined3d_shader *shader,
      {
          shader->reg_maps.shader_version = shader_version;
          shader->reg_maps.shader_version.type = WINED3D_SHADER_TYPE_GEOMETRY;
@@ -424,7 +424,7 @@ index 8477f3de5d1..777e1c548e9 100644
          if (FAILED(hr = shader_scan_output_signature(shader)))
              return hr;
      }
-@@ -3851,7 +3869,7 @@ static HRESULT geometry_shader_init(struct wined3d_shader *shader, struct wined3
+@@ -3853,7 +3871,7 @@ static HRESULT geometry_shader_init(struct wined3d_shader *shader, struct wined3
          goto fail;
  
      if (shader->function
@@ -433,7 +433,7 @@ index 8477f3de5d1..777e1c548e9 100644
          goto fail;
  
      return WINED3D_OK;
-@@ -4188,7 +4206,7 @@ static HRESULT pixel_shader_init(struct wined3d_shader *shader, struct wined3d_d
+@@ -4183,7 +4201,7 @@ static HRESULT pixel_shader_init(struct wined3d_shader *shader, struct wined3d_d
          return hr;
  
      if (FAILED(hr = shader_set_function(shader, device,
@@ -442,7 +442,7 @@ index 8477f3de5d1..777e1c548e9 100644
      {
          shader_cleanup(shader);
          return hr;
-@@ -4280,7 +4298,7 @@ HRESULT CDECL wined3d_shader_create_cs(struct wined3d_device *device, const stru
+@@ -4275,7 +4293,7 @@ HRESULT CDECL wined3d_shader_create_cs(struct wined3d_device *device, const stru
          return hr;
      }
  
@@ -451,7 +451,7 @@ index 8477f3de5d1..777e1c548e9 100644
      {
          shader_cleanup(object);
          heap_free(object);
-@@ -4314,7 +4332,7 @@ HRESULT CDECL wined3d_shader_create_ds(struct wined3d_device *device, const stru
+@@ -4309,7 +4327,7 @@ HRESULT CDECL wined3d_shader_create_ds(struct wined3d_device *device, const stru
          return hr;
      }
  
@@ -460,7 +460,7 @@ index 8477f3de5d1..777e1c548e9 100644
      {
          shader_cleanup(object);
          heap_free(object);
-@@ -4376,7 +4394,7 @@ HRESULT CDECL wined3d_shader_create_hs(struct wined3d_device *device, const stru
+@@ -4371,7 +4389,7 @@ HRESULT CDECL wined3d_shader_create_hs(struct wined3d_device *device, const stru
          return hr;
      }
  
@@ -470,7 +470,7 @@ index 8477f3de5d1..777e1c548e9 100644
          shader_cleanup(object);
          heap_free(object);
 diff --git a/dlls/wined3d/shader_sm1.c b/dlls/wined3d/shader_sm1.c
-index 0c6bb933174..1051307e88c 100644
+index 0c6bb93317..1051307e88 100644
 --- a/dlls/wined3d/shader_sm1.c
 +++ b/dlls/wined3d/shader_sm1.c
 @@ -543,7 +543,7 @@ static void *shader_sm1_init(const DWORD *byte_code, size_t byte_code_size,
@@ -483,10 +483,10 @@ index 0c6bb933174..1051307e88c 100644
          WARN("Invalid shader version %u.%u (%#x).\n", major, minor, *byte_code);
          return NULL;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 5568297bcf6..aba465c05e6 100644
+index cfda378cc0..bc9e8a2aa4 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -4609,6 +4609,13 @@ static inline BOOL shader_constant_is_local(const struct wined3d_shader *shader,
+@@ -4860,6 +4860,13 @@ static inline BOOL shader_constant_is_local(const struct wined3d_shader *shader,
      return FALSE;
  }
  
@@ -501,5 +501,5 @@ index 5568297bcf6..aba465c05e6 100644
  void get_modelview_matrix(const struct wined3d_context *context, const struct wined3d_state *state,
          unsigned int index, struct wined3d_matrix *mat) DECLSPEC_HIDDEN;
 -- 
-2.17.1
+2.21.0
 

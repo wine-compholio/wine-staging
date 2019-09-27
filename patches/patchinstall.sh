@@ -321,7 +321,6 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_wined3d_DXTn="$1"
 	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_SWVP_shaders="$1"
@@ -1089,9 +1088,6 @@ patch_enable ()
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
 			;;
-		wined3d-DXTn)
-			enable_wined3d_DXTn="$2"
-			;;
 		wined3d-Dual_Source_Blending)
 			enable_wined3d_Dual_Source_Blending="$2"
 			;;
@@ -1618,13 +1614,6 @@ if test "$enable_wined3d_Indexed_Vertex_Blending" -eq 1; then
 		abort "Patchset wined3d-SWVP-shaders disabled, but wined3d-Indexed_Vertex_Blending depends on that."
 	fi
 	enable_wined3d_SWVP_shaders=1
-fi
-
-if test "$enable_wined3d_DXTn" -eq 1; then
-	if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -gt 1; then
-		abort "Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM disabled, but wined3d-DXTn depends on that."
-	fi
-	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM=1
 fi
 
 if test "$enable_wineboot_ProxySettings" -eq 1; then
@@ -6706,42 +6695,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44888] Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
-	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
-	(
-		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-DXTn
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	wined3d-WINED3DFMT_B8G8R8X8_UNORM
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25486] Lego Stunt Rally requires DXTn software de/encoding support
-# |   *	[#29586] Tumblebugs 2 requires DXTn software encoding support
-# |   *	[#17913] Port Royale doesn't display ocean correctly
-# |
-# | Modified files:
-# |   *	dlls/wined3d/Makefile.in, dlls/wined3d/dxtn.c, dlls/wined3d/dxtn.h, dlls/wined3d/surface.c, dlls/wined3d/wined3d.spec,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_DXTn" -eq 1; then
-	patch_apply wined3d-DXTn/0001-wined3d-add-DXTn-support.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "wined3d: Add DXTn support.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-Dual_Source_Blending
 # |
 # | Modified files:
@@ -6834,6 +6787,21 @@ if test "$enable_wined3d_UAV_Counters" -eq 1; then
 	patch_apply wined3d-UAV_Counters/0001-wined3d-Remaining-UAV-counter-changes.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Remaining UAV counter changes.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wined3d-WINED3DFMT_B8G8R8X8_UNORM
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44888] Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion
+# |
+# | Modified files:
+# |   *	dlls/wined3d/surface.c
+# |
+if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
+	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
+	(
+		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
 	) >> "$patchlist"
 fi
 

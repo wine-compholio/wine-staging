@@ -1,8 +1,8 @@
-From 5ce9048468f363c5f844a35327aecc40d8304c9b Mon Sep 17 00:00:00 2001
+From c91c52063e8c06bc8e8788309ecb7dca70bc6b9a Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dereklesho52@Gmail.com>
 Date: Tue, 25 Jun 2019 22:37:34 -0400
-Subject: [PATCH] winex11.drv: Implement native mouse-movement raw-input using
- RawMotion.
+Subject: [PATCH 07/11] winex11.drv: Implement native mouse-movement raw-input
+ using RawMotion.
 
 Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
 ---
@@ -12,7 +12,7 @@ Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
  3 files changed, 97 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index 23c7c6fb35b..212511fde84 100644
+index 23c7c6fb35..212511fde8 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
 @@ -262,6 +262,8 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
@@ -244,7 +244,7 @@ index 23c7c6fb35b..212511fde84 100644
  }
  
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index b8cfda43410..d79c78ecbc9 100644
+index 135faa8989..e9d9514ee2 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -194,6 +194,8 @@ extern BOOL CDECL X11DRV_UnrealizePalette( HPALETTE hpal ) DECLSPEC_HIDDEN;
@@ -256,7 +256,7 @@ index b8cfda43410..d79c78ecbc9 100644
  
  extern DWORD copy_image_bits( BITMAPINFO *info, BOOL is_r8g8b8, XImage *image,
                                const struct gdi_image_bits *src_bits, struct gdi_image_bits *dst_bits,
-@@ -336,11 +338,13 @@ struct x11drv_thread_data
+@@ -335,11 +337,13 @@ struct x11drv_thread_data
      HWND     clip_hwnd;            /* message window stored in desktop while clipping is active */
      DWORD    clip_reset;           /* time when clipping was last reset */
      HKL      kbd_layout;           /* active keyboard layout */
@@ -271,7 +271,7 @@ index b8cfda43410..d79c78ecbc9 100644
      int      xi2_core_pointer;     /* XInput2 core pointer id */
      int      xi2_current_slave;    /* Current slave driving the Core pointer */
  };
-@@ -427,6 +431,8 @@ enum x11drv_atoms
+@@ -426,6 +430,8 @@ enum x11drv_atoms
      XATOM_RAW_CAP_HEIGHT,
      XATOM_Rel_X,
      XATOM_Rel_Y,
@@ -281,7 +281,7 @@ index b8cfda43410..d79c78ecbc9 100644
      XATOM_WM_DELETE_WINDOW,
      XATOM_WM_STATE,
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index 54de5d8a6b0..9f896bddd9a 100644
+index 21807af3f1..fb25a45ae2 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
 @@ -120,6 +120,8 @@ static const char * const atom_names[NB_XATOMS - FIRST_XATOM] =
@@ -302,7 +302,7 @@ index 54de5d8a6b0..9f896bddd9a 100644
          if (data->xim) XCloseIM( data->xim );
          if (data->font_set) XFreeFontSet( data->display, data->font_set );
          XCloseDisplay( data->display );
-@@ -684,6 +688,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
+@@ -681,6 +685,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
  
      if (use_xim) X11DRV_SetupXIM();
  

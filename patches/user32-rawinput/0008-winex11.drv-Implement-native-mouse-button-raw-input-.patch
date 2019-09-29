@@ -1,4 +1,4 @@
-From 8cd3d08315b108d2736356318c6ef74d3a0b1ec8 Mon Sep 17 00:00:00 2001
+From f55c05132e87dd3e9436c68920ad512bdcfb8df8 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dereklesho52@Gmail.com>
 Date: Fri, 26 Jul 2019 17:37:19 -0400
 Subject: [PATCH 08/11] winex11.drv: Implement native mouse-button raw-input
@@ -12,10 +12,10 @@ Signed-off-by: Derek Lesho <dereklesho52@Gmail.com>
  3 files changed, 95 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index 472ba77d0a..65b1b500d0 100644
+index 212511fde8..1d9833b5c9 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
-@@ -261,12 +261,21 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+@@ -264,12 +264,21 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
      thread_data->y_rel_valuator.number = -1;
      thread_data->x_abs_valuator.number = -1;
      thread_data->y_abs_valuator.number = -1;
@@ -32,12 +32,12 @@ index 472ba77d0a..65b1b500d0 100644
 +        if (valuators[i]->type == XIScrollClass)
 +        {
 +            if (scroll_class->scroll_type == XIScrollTypeVertical)
-+                thread_data->xi2_wheel_multiplier = WHEEL_DELTA / scroll_class->increment;
++                thread_data->xi2_wheel_multiplier = -WHEEL_DELTA / scroll_class->increment;
 +        }
          if (valuators[i]->type != XIValuatorClass) continue;
          if (class->label == x11drv_atom( Rel_X ) ||
              (!class->label && class->number == 0 && class->mode == XIModeRelative))
-@@ -288,6 +297,11 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+@@ -291,6 +300,11 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
          {
              valuator_data = &thread_data->y_abs_valuator;
          }
@@ -49,7 +49,7 @@ index 472ba77d0a..65b1b500d0 100644
  
          if (valuator_data) {
              valuator_data->number = class->number;
-@@ -336,6 +350,8 @@ void X11DRV_XInput2_Enable(void)
+@@ -339,6 +353,8 @@ void X11DRV_XInput2_Enable(void)
      XISetMask( mask_bits, XI_DeviceChanged );
      XISetMask( mask_bits, XI_RawMotion );
      XISetMask( mask_bits, XI_DeviceChanged );
@@ -58,7 +58,7 @@ index 472ba77d0a..65b1b500d0 100644
  
      /* XInput 2.0 has a problematic behavior where master pointer will
       * not send raw events to the root window whenever a grab is active
-@@ -393,6 +409,7 @@ void X11DRV_XInput2_Disable(void)
+@@ -396,6 +412,7 @@ void X11DRV_XInput2_Disable(void)
      pXIFreeDeviceInfo( data->xi2_devices );
      data->x_rel_valuator.number = -1;
      data->y_rel_valuator.number = -1;
@@ -66,7 +66,7 @@ index 472ba77d0a..65b1b500d0 100644
      data->xi2_devices = NULL;
      data->xi2_core_pointer = 0;
      data->xi2_current_slave = 0;
-@@ -1775,12 +1792,13 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1833,12 +1850,13 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      INPUT input;
      RAWINPUT raw_input;
      int i;
@@ -83,7 +83,7 @@ index 472ba77d0a..65b1b500d0 100644
  
      if (!event->valuators.mask_len) return FALSE;
      if (thread_data->xi2_state < xi_enabled) return FALSE;
-@@ -1816,6 +1834,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1874,6 +1892,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      y_rel = &thread_data->y_rel_valuator;
      x_abs = &thread_data->x_abs_valuator;
      y_abs = &thread_data->y_abs_valuator;
@@ -91,7 +91,7 @@ index 472ba77d0a..65b1b500d0 100644
  
      input.type = INPUT_MOUSE;
      input.u.mi.mouseData   = 0;
-@@ -1836,7 +1855,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1894,7 +1913,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
  
      virtual_rect = get_virtual_screen_rect();
  
@@ -100,7 +100,7 @@ index 472ba77d0a..65b1b500d0 100644
      {
          if (!XIMaskIsSet( event->valuators.mask, i )) continue;
          val = *values++;
-@@ -1871,6 +1890,10 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1929,6 +1948,10 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
              raw_input.data.mouse.usFlags = MOUSE_MOVE_ABSOLUTE | MOUSE_VIRTUAL_DESKTOP;
              raw_input.data.mouse.lLastY = raw_y = raw_val * (65536 / (y_abs->max - y_abs->min));
          }
@@ -111,7 +111,7 @@ index 472ba77d0a..65b1b500d0 100644
      }
  
      if (broken_rawevents && is_old_motion_event( xev->serial ))
-@@ -1885,13 +1908,70 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1943,13 +1966,70 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
          __wine_send_input( 0, &input );
      }
  
@@ -184,7 +184,7 @@ index 472ba77d0a..65b1b500d0 100644
  #endif /* HAVE_X11_EXTENSIONS_XINPUT2_H */
  
  
-@@ -1956,6 +2036,11 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
+@@ -2014,6 +2094,11 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
      case XI_RawMotion:
          ret = X11DRV_RawMotion( event );
          break;
@@ -197,7 +197,7 @@ index 472ba77d0a..65b1b500d0 100644
      default:
          TRACE( "Unhandled event %#x\n", event->evtype );
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 2c59f19815..928f858924 100644
+index e9d9514ee2..599ed48154 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -344,6 +344,8 @@ struct x11drv_thread_data
@@ -209,7 +209,7 @@ index 2c59f19815..928f858924 100644
      int      xi2_core_pointer;     /* XInput2 core pointer id */
      int      xi2_current_slave;    /* Current slave driving the Core pointer */
  };
-@@ -431,6 +433,7 @@ enum x11drv_atoms
+@@ -432,6 +434,7 @@ enum x11drv_atoms
      XATOM_Rel_Y,
      XATOM_Abs_X,
      XATOM_Abs_Y,

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "65fba0987310e635f27468a5b4a448794b5871e5"
+	echo "ceabad19b8f51308afb999c394584d212ef8b469"
 }
 
 # Show version information
@@ -6883,6 +6883,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34266] wined3d: Add a setting to workaround 0 * inf problem in shader models 1-3.
+# |   *	[#45375] Halo Online: Weird black display problems.
 # |
 # | Modified files:
 # |   *	dlls/wined3d/glsl_shader.c, dlls/wined3d/wined3d_main.c, dlls/wined3d/wined3d_private.h

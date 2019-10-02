@@ -1,32 +1,42 @@
-From c9e0926469230f97d3cee6bc22b7d27099f1d555 Mon Sep 17 00:00:00 2001
+From c887ee94a053fbec2f9e97d749539be97f614b08 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 30 May 2015 02:23:15 +0200
 Subject: [PATCH] ntdll: Add support for hiding wine version information from
  applications.
 
 ---
- dlls/ntdll/loader.c     | 96 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/loader.c     | 98 ++++++++++++++++++++++++++++++++++++++++-
  dlls/ntdll/ntdll_misc.h |  5 +++
- 2 files changed, 100 insertions(+), 1 deletion(-)
+ 2 files changed, 102 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 7588d5a..8073434 100644
+index 9c82d31447b..2e57e2115d3 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -68,9 +68,12 @@ typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
+@@ -68,17 +68,22 @@ typedef void  (CALLBACK *LDRENUMPROC)(LDR_MODULE *, void *, BOOLEAN *);
  const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
                              's','y','s','t','e','m','3','2','\\',0};
  
++
+ /* system search path */
+ static const WCHAR system_path[] =
+     {'C',':','\\','w','i','n','d','o','w','s','\\','s','y','s','t','e','m','3','2',';',
+      'C',':','\\','w','i','n','d','o','w','s','\\','s','y','s','t','e','m',';',
+      'C',':','\\','w','i','n','d','o','w','s',';',0};
+ 
 +#define IS_OPTION_TRUE(ch) ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
++
 +
  static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
  static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
  static int free_lib_count;   /* recursion depth of LdrUnloadDll calls */
+ static ULONG path_safe_mode;  /* path mode set by RtlSetSearchPathMode */
+ static UNICODE_STRING dll_directory;  /* extra path for LdrSetDllDirectory */
 +static BOOL hide_wine_exports = FALSE;  /* try to hide ntdll wine exports from applications */
  
  struct ldr_notification
  {
-@@ -1602,6 +1605,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+@@ -1695,6 +1700,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
  }
  
  
@@ -123,7 +133,7 @@ index 7588d5a..8073434 100644
  /******************************************************************
   *		LdrGetProcedureAddress  (NTDLL.@)
   */
-@@ -1622,7 +1715,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+@@ -1715,7 +1810,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
          LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
          void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
                            : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
@@ -132,7 +142,7 @@ index 7588d5a..8073434 100644
          {
              *address = proc;
              ret = STATUS_SUCCESS;
-@@ -3576,6 +3669,7 @@ void __wine_process_init(void)
+@@ -4040,6 +4135,7 @@ void __wine_process_init(void)
      NtCurrentTeb()->Peb->LoaderLock = &loader_section;
      update_user_process_params( &wm->ldr.FullDllName );
      version_init( wm->ldr.FullDllName.Buffer );
@@ -141,10 +151,10 @@ index 7588d5a..8073434 100644
  
      LdrQueryImageFileExecutionOptions( &wm->ldr.FullDllName, globalflagW, REG_DWORD,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index c21ec79..0dba878 100644
+index a1115305343..e7bf510c28e 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -260,6 +260,11 @@ extern SYSTEM_CPU_INFORMATION cpu_info DECLSPEC_HIDDEN;
+@@ -269,6 +269,11 @@ extern SYSTEM_CPU_INFORMATION cpu_info DECLSPEC_HIDDEN;
  NTSTATUS WINAPI RtlHashUnicodeString(PCUNICODE_STRING,BOOLEAN,ULONG,ULONG*);
  void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
  
@@ -157,5 +167,5 @@ index c21ec79..0dba878 100644
  extern BOOL read_process_time(int unix_pid, int unix_tid, unsigned long clk_tck,
                                LARGE_INTEGER *kernel, LARGE_INTEGER *user) DECLSPEC_HIDDEN;
 -- 
-1.9.1
+2.23.0
 

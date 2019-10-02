@@ -1,19 +1,19 @@
-From f8bce6f4c951b6d5b1b3473b272a3fe20df0aa39 Mon Sep 17 00:00:00 2001
+From 9761db5bf17b98a9ae7f47fc5cf3e4eb98911af1 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 13 Mar 2019 16:02:05 -0600
-Subject: kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse
- points.
+Subject: [PATCH] kernel32: Implement CreateSymbolicLink[A|W] with ntdll
+ reparse points.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  dlls/kernel32/path.c           | 124 +++++++++++++++++++++++++++++++--
- dlls/kernel32/tests/path.c     |  94 +++++++++++++++++++++++++
+ dlls/kernel32/tests/path.c     |  96 +++++++++++++++++++++++++
  dlls/msvcp120/tests/msvcp120.c |  75 +++++++++-----------
  dlls/msvcp140/tests/msvcp140.c |  63 +++++++----------
- 4 files changed, 275 insertions(+), 81 deletions(-)
+ 4 files changed, 277 insertions(+), 81 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 227473f71a..fd69cdede4 100644
+index 31da8fed4f5..2e57a3b38c9 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
 @@ -34,6 +34,8 @@
@@ -25,7 +25,7 @@ index 227473f71a..fd69cdede4 100644
  
  #include "kernel_private.h"
  #include "wine/unicode.h"
-@@ -2087,8 +2089,106 @@ WCHAR * CDECL wine_get_dos_file_name( LPCSTR str )
+@@ -1260,8 +1262,106 @@ WCHAR * CDECL wine_get_dos_file_name( LPCSTR str )
   */
  BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
  {
@@ -134,7 +134,7 @@ index 227473f71a..fd69cdede4 100644
  }
  
  /*************************************************************************
-@@ -2096,8 +2196,24 @@ BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
+@@ -1269,8 +1369,24 @@ BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
   */
  BOOLEAN WINAPI CreateSymbolicLinkA(LPCSTR link, LPCSTR target, DWORD flags)
  {
@@ -162,10 +162,10 @@ index 227473f71a..fd69cdede4 100644
  
  /*************************************************************************
 diff --git a/dlls/kernel32/tests/path.c b/dlls/kernel32/tests/path.c
-index f15cc09ee5..346591990f 100644
+index 876ca743bc1..976993c9221 100644
 --- a/dlls/kernel32/tests/path.c
 +++ b/dlls/kernel32/tests/path.c
-@@ -81,6 +81,9 @@ static void   (WINAPI *pReleaseActCtx)(HANDLE);
+@@ -87,6 +87,9 @@ static void   (WINAPI *pReleaseActCtx)(HANDLE);
  static BOOL (WINAPI *pCheckNameLegalDOS8Dot3W)(const WCHAR *, char *, DWORD, BOOL *, BOOL *);
  static BOOL (WINAPI *pCheckNameLegalDOS8Dot3A)(const char *, char *, DWORD, BOOL *, BOOL *);
  
@@ -175,16 +175,21 @@ index f15cc09ee5..346591990f 100644
  /* a structure to deal with wine todos somewhat cleanly */
  typedef struct {
    DWORD shortlen;
-@@ -2202,6 +2205,7 @@ static void init_pointers(void)
+@@ -2209,9 +2212,12 @@ static void init_pointers(void)
      MAKEFUNC(ReleaseActCtx);
      MAKEFUNC(CheckNameLegalDOS8Dot3W);
      MAKEFUNC(CheckNameLegalDOS8Dot3A);
 +    MAKEFUNC(CreateSymbolicLinkW);
++
+     mod = GetModuleHandleA("ntdll.dll");
+     MAKEFUNC(RtlGetSearchPath);
+     MAKEFUNC(RtlReleasePath);
++
  #undef MAKEFUNC
  }
  
-@@ -2458,6 +2462,95 @@ static void test_SetSearchPathMode(void)
-     RemoveDirectoryA( dir );
+@@ -2549,6 +2555,95 @@ static void test_RtlGetSearchPath(void)
+     SetEnvironmentVariableW( pathW, old_path );
  }
  
 +static void test_CreateSymbolicLink(void)
@@ -279,17 +284,17 @@ index f15cc09ee5..346591990f 100644
  START_TEST(path)
  {
      CHAR origdir[MAX_PATH],curdir[MAX_PATH], curDrive, otherDrive;
-@@ -2492,4 +2585,5 @@ START_TEST(path)
-     test_GetFullPathNameW();
+@@ -2584,4 +2679,5 @@ START_TEST(path)
      test_CheckNameLegalDOS8Dot3();
      test_SetSearchPathMode();
+     test_RtlGetSearchPath();
 +    test_CreateSymbolicLink();
  }
 diff --git a/dlls/msvcp120/tests/msvcp120.c b/dlls/msvcp120/tests/msvcp120.c
-index c416a1020b..e0c97ebcaa 100644
+index 8f7b75aab4b..77d8c377549 100644
 --- a/dlls/msvcp120/tests/msvcp120.c
 +++ b/dlls/msvcp120/tests/msvcp120.c
-@@ -1636,15 +1636,14 @@ static void test_tr2_sys__Stat(void)
+@@ -1622,15 +1622,14 @@ static void test_tr2_sys__Stat(void)
          char const *path;
          enum file_type ret;
          int err_code;
@@ -312,7 +317,7 @@ index c416a1020b..e0c97ebcaa 100644
      };
      WCHAR testW[] = {'t','r','2','_','t','e','s','t','_','d','i','r',0};
      WCHAR testW2[] = {'t','r','2','_','t','e','s','t','_','d','i','r','/','f','1',0};
-@@ -1689,16 +1688,14 @@ static void test_tr2_sys__Stat(void)
+@@ -1675,16 +1674,14 @@ static void test_tr2_sys__Stat(void)
      for(i=0; i<ARRAY_SIZE(tests); i++) {
          err_code = 0xdeadbeef;
          val = p_tr2_sys__Stat(tests[i].path, &err_code);
@@ -331,7 +336,7 @@ index c416a1020b..e0c97ebcaa 100644
          ok(tests[i].err_code == err_code, "tr2_sys__Lstat(): test %d err_code expect: %d, got %d\n",
                  i+1, tests[i].err_code, err_code);
      }
-@@ -1713,8 +1710,8 @@ static void test_tr2_sys__Stat(void)
+@@ -1699,8 +1696,8 @@ static void test_tr2_sys__Stat(void)
      ok(ERROR_SUCCESS == err_code, "tr2_sys__Lstat_wchar(): err_code expect ERROR_SUCCESS, got %d\n", err_code);
  
      if(ret) {
@@ -342,7 +347,7 @@ index c416a1020b..e0c97ebcaa 100644
      }
      ok(DeleteFileA("tr2_test_dir/f1"), "expect tr2_test_dir/f1 to exist\n");
      ok(RemoveDirectoryA("tr2_test_dir"), "expect tr2_test_dir to exist\n");
-@@ -1944,16 +1941,15 @@ static void test_tr2_sys__Symlink(void)
+@@ -1930,16 +1927,15 @@ static void test_tr2_sys__Symlink(void)
          char const *existing_path;
          char const *new_path;
          int last_error;
@@ -367,7 +372,7 @@ index c416a1020b..e0c97ebcaa 100644
      };
  
      ret = p_tr2_sys__Make_dir("tr2_test_dir");
-@@ -1978,18 +1974,17 @@ static void test_tr2_sys__Symlink(void)
+@@ -1964,18 +1960,17 @@ static void test_tr2_sys__Symlink(void)
          }
  
          ok(errno == 0xdeadbeef, "tr2_sys__Symlink(): test %d errno expect 0xdeadbeef, got %d\n", i+1, errno);
@@ -392,7 +397,7 @@ index c416a1020b..e0c97ebcaa 100644
      ret = p_tr2_sys__Remove_dir("tr2_test_dir");
      ok(ret == 1, "tr2_sys__Remove_dir(): expect 1 got %d\n", ret);
  }
-@@ -2003,15 +1998,14 @@ static void test_tr2_sys__Unlink(void)
+@@ -1989,15 +1984,14 @@ static void test_tr2_sys__Unlink(void)
      struct {
          char const *path;
          int last_error;
@@ -415,7 +420,7 @@ index c416a1020b..e0c97ebcaa 100644
      };
  
      GetCurrentDirectoryA(MAX_PATH, current_path);
-@@ -2040,9 +2034,8 @@ static void test_tr2_sys__Unlink(void)
+@@ -2026,9 +2020,8 @@ static void test_tr2_sys__Unlink(void)
      for(i=0; i<ARRAY_SIZE(tests); i++) {
          errno = 0xdeadbeef;
          ret = p_tr2_sys__Unlink(tests[i].path);
@@ -428,7 +433,7 @@ index c416a1020b..e0c97ebcaa 100644
      }
  
 diff --git a/dlls/msvcp140/tests/msvcp140.c b/dlls/msvcp140/tests/msvcp140.c
-index 04406240e0..46b2b8595d 100644
+index 04406240e0f..46b2b8595dd 100644
 --- a/dlls/msvcp140/tests/msvcp140.c
 +++ b/dlls/msvcp140/tests/msvcp140.c
 @@ -802,16 +802,15 @@ static void test_Stat(void)
@@ -538,5 +543,5 @@ index 04406240e0..46b2b8595d 100644
      }
  
 -- 
-2.17.1
+2.23.0
 

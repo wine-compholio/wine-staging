@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b360cd67e8f7f8c01f09457bacb032fd4a248d0a"
+	echo "5e8eb5f4c54c3a6d3c92fd414372da2fbd5bd91a"
 }
 
 # Show version information
@@ -117,7 +117,6 @@ patch_enable_all ()
 	enable_d3dx9_36_DrawText="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
-	enable_d3dx9_36_Texture_Align="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Device_Caps="$1"
@@ -474,9 +473,6 @@ patch_enable ()
 			;;
 		d3dx9_36-Optimize_Inplace)
 			enable_d3dx9_36_Optimize_Inplace="$2"
-			;;
-		d3dx9_36-Texture_Align)
-			enable_d3dx9_36_Texture_Align="$2"
 			;;
 		d3dx9_36-UpdateSkinnedMesh)
 			enable_d3dx9_36_UpdateSkinnedMesh="$2"
@@ -2802,18 +2798,6 @@ if test "$enable_d3dx9_36_Optimize_Inplace" -eq 1; then
 	patch_apply d3dx9_36-Optimize_Inplace/0001-d3dx9_36-No-need-to-fail-if-we-don-t-support-vertice.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: No need to fail if we don'\''t support vertices reordering in D3DXMESHOPT_ATTRSORT.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-Texture_Align
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/tests/texture.c, dlls/d3dx9_36/texture.c
-# |
-if test "$enable_d3dx9_36_Texture_Align" -eq 1; then
-	patch_apply d3dx9_36-Texture_Align/0001-d3dx9_36-Align-texture-dimensions-to-block-size-for-.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Align texture dimensions to block size for compressed textures in D3DXCheckTextureRequirements.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,36 +1,37 @@
-From 04ccb4bc45d41ab247076f3d83329236a1c30125 Mon Sep 17 00:00:00 2001
+From 495a42ea564348e860c036803c89ce3650dd0a27 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 3 Jan 2015 20:55:43 -0700
-Subject: kernel32: Consider the working directory first when launching
+Subject: [PATCH] kernel32: Consider the working directory first when launching
  executables with CreateProcess.
 
 ---
- dlls/kernel32/process.c | 10 +++++++++-
- 1 file changed, 9 insertions(+), 1 deletion(-)
+ dlls/kernel32/process.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index 98ea09b..a5433d7 100644
+index 0a2192b246..ed78c0a01b 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -441,9 +441,17 @@ static HANDLE open_exe_file( const WCHAR *name, BOOL *is_64bit )
+@@ -439,6 +439,7 @@ static HANDLE open_exe_file( const WCHAR *name, BOOL *is_64bit )
   */
  static BOOL find_exe_file( const WCHAR *name, WCHAR *buffer, int buflen, HANDLE *handle )
  {
 +    WCHAR cur_dir[MAX_PATH];
-+
-     TRACE("looking for %s\n", debugstr_w(name) );
+     WCHAR *load_path;
+     BOOL ret;
  
--    if (!SearchPathW( NULL, name, exeW, buflen, buffer, NULL ) &&
-+    /* The working directory takes precedence over other locations for CreateProcess unless the
-+     * 'NoDefaultCurrentDirectoryInExePath' environment variable is set (and the executable name
-+     * does not contain a backslash). */
-+    if ((NeedCurrentDirectoryForExePathW( name ) && GetCurrentDirectoryW( MAX_PATH, cur_dir) &&
-+         !SearchPathW( cur_dir, name, exeW, buflen, buffer, NULL )) &&
-+        /* not found in the working directory, try the system search path */
-+        !SearchPathW( NULL, name, exeW, buflen, buffer, NULL ) &&
-         /* no builtin found, try native without extension in case it is a Unix app */
-         !SearchPathW( NULL, name, NULL, buflen, buffer, NULL )) return FALSE;
+@@ -446,7 +447,10 @@ static BOOL find_exe_file( const WCHAR *name, WCHAR *buffer, int buflen, HANDLE
  
+     TRACE("looking for %s in %s\n", debugstr_w(name), debugstr_w(load_path) );
+ 
+-    ret = (SearchPathW( load_path, name, exeW, buflen, buffer, NULL ) ||
++    ret = (NeedCurrentDirectoryForExePathW( name ) && GetCurrentDirectoryW( MAX_PATH, cur_dir) &&
++           SearchPathW( cur_dir, name, exeW, buflen, buffer, NULL )) ||
++           /* not found in the working directory, try the system search path */
++           (SearchPathW( load_path, name, exeW, buflen, buffer, NULL ) ||
+            /* no builtin found, try native without extension in case it is a Unix app */
+            SearchPathW( load_path, name, NULL, buflen, buffer, NULL ));
+     RtlReleasePath( load_path );
 -- 
-2.7.4
+2.21.0
 

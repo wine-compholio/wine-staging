@@ -1,4 +1,4 @@
-From 9761db5bf17b98a9ae7f47fc5cf3e4eb98911af1 Mon Sep 17 00:00:00 2001
+From 647e8f79cc877f9baaf9cf29f7d6d9999c3960c9 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 13 Mar 2019 16:02:05 -0600
 Subject: [PATCH] kernel32: Implement CreateSymbolicLink[A|W] with ntdll
@@ -13,7 +13,7 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  4 files changed, 277 insertions(+), 81 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 31da8fed4f5..2e57a3b38c9 100644
+index 31da8fed4f..2e57a3b38c 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
 @@ -34,6 +34,8 @@
@@ -162,10 +162,10 @@ index 31da8fed4f5..2e57a3b38c9 100644
  
  /*************************************************************************
 diff --git a/dlls/kernel32/tests/path.c b/dlls/kernel32/tests/path.c
-index 876ca743bc1..976993c9221 100644
+index 71577793b0..11b5ea35f0 100644
 --- a/dlls/kernel32/tests/path.c
 +++ b/dlls/kernel32/tests/path.c
-@@ -87,6 +87,9 @@ static void   (WINAPI *pReleaseActCtx)(HANDLE);
+@@ -92,6 +92,9 @@ static void   (WINAPI *pReleaseActCtx)(HANDLE);
  static BOOL (WINAPI *pCheckNameLegalDOS8Dot3W)(const WCHAR *, char *, DWORD, BOOL *, BOOL *);
  static BOOL (WINAPI *pCheckNameLegalDOS8Dot3A)(const char *, char *, DWORD, BOOL *, BOOL *);
  
@@ -175,20 +175,22 @@ index 876ca743bc1..976993c9221 100644
  /* a structure to deal with wine todos somewhat cleanly */
  typedef struct {
    DWORD shortlen;
-@@ -2209,9 +2212,12 @@ static void init_pointers(void)
+@@ -2217,11 +2220,14 @@ static void init_pointers(void)
      MAKEFUNC(ReleaseActCtx);
      MAKEFUNC(CheckNameLegalDOS8Dot3W);
      MAKEFUNC(CheckNameLegalDOS8Dot3A);
 +    MAKEFUNC(CreateSymbolicLinkW);
 +
      mod = GetModuleHandleA("ntdll.dll");
+     MAKEFUNC(LdrGetDllPath);
+     MAKEFUNC(RtlGetExePath);
      MAKEFUNC(RtlGetSearchPath);
      MAKEFUNC(RtlReleasePath);
 +
  #undef MAKEFUNC
  }
  
-@@ -2549,6 +2555,95 @@ static void test_RtlGetSearchPath(void)
+@@ -2744,6 +2750,95 @@ static void test_LdrGetDllPath(void)
      SetEnvironmentVariableW( pathW, old_path );
  }
  
@@ -284,14 +286,14 @@ index 876ca743bc1..976993c9221 100644
  START_TEST(path)
  {
      CHAR origdir[MAX_PATH],curdir[MAX_PATH], curDrive, otherDrive;
-@@ -2584,4 +2679,5 @@ START_TEST(path)
-     test_CheckNameLegalDOS8Dot3();
-     test_SetSearchPathMode();
+@@ -2781,4 +2876,5 @@ START_TEST(path)
      test_RtlGetSearchPath();
+     test_RtlGetExePath();
+     test_LdrGetDllPath();
 +    test_CreateSymbolicLink();
  }
 diff --git a/dlls/msvcp120/tests/msvcp120.c b/dlls/msvcp120/tests/msvcp120.c
-index 8f7b75aab4b..77d8c377549 100644
+index 8f7b75aab4..77d8c37754 100644
 --- a/dlls/msvcp120/tests/msvcp120.c
 +++ b/dlls/msvcp120/tests/msvcp120.c
 @@ -1622,15 +1622,14 @@ static void test_tr2_sys__Stat(void)
@@ -433,7 +435,7 @@ index 8f7b75aab4b..77d8c377549 100644
      }
  
 diff --git a/dlls/msvcp140/tests/msvcp140.c b/dlls/msvcp140/tests/msvcp140.c
-index 04406240e0f..46b2b8595dd 100644
+index 04406240e0..46b2b8595d 100644
 --- a/dlls/msvcp140/tests/msvcp140.c
 +++ b/dlls/msvcp140/tests/msvcp140.c
 @@ -802,16 +802,15 @@ static void test_Stat(void)
@@ -543,5 +545,5 @@ index 04406240e0f..46b2b8595dd 100644
      }
  
 -- 
-2.23.0
+2.21.0
 

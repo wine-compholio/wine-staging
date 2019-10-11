@@ -1,21 +1,29 @@
-From 920014b62ddd2218477e3d82f45c4515742f9e28 Mon Sep 17 00:00:00 2001
+From 2d063452209d8b531a2b13ded0ea9b0eac8925fa Mon Sep 17 00:00:00 2001
 From: Jetro Jormalainen <jje-wine@jv.jetro.fi>
 Date: Tue, 30 Apr 2019 09:20:54 +1000
 Subject: [PATCH 2/3] dinput: Allow empty Joystick mappings.
 
 ---
- dlls/dinput/device.c        | 82 +++++++++++++++++++++++++++++++++++++--------
- dlls/dinput/joystick.c      |  2 ++
- dlls/dinput/keyboard.c      |  2 ++
- dlls/dinput/mouse.c         |  2 ++
- dlls/dinput8/tests/device.c | 50 +++++++++++++++++++++++++++
- 5 files changed, 124 insertions(+), 14 deletions(-)
+ dlls/dinput/device.c        | 82 ++++++++++++++++++++++++++++++-------
+ dlls/dinput/joystick.c      |  4 +-
+ dlls/dinput/keyboard.c      |  2 +
+ dlls/dinput/mouse.c         |  2 +
+ dlls/dinput8/tests/device.c | 50 ++++++++++++++++++++++
+ 5 files changed, 125 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
-index 2150db7..a7cfe36 100644
+index d1bf934a82..6107ab2653 100644
 --- a/dlls/dinput/device.c
 +++ b/dlls/dinput/device.c
-@@ -643,12 +643,30 @@ static DWORD semantic_to_obj_id(IDirectInputDeviceImpl* This, DWORD dwSemantic)
+@@ -30,6 +30,7 @@
+ #include <string.h>
+ #include "wine/debug.h"
+ #include "wine/unicode.h"
++#include "wine/heap.h"
+ #include "windef.h"
+ #include "winbase.h"
+ #include "winreg.h"
+@@ -643,12 +644,29 @@ static DWORD semantic_to_obj_id(IDirectInputDeviceImpl* This, DWORD dwSemantic)
      return type | (0x0000ff00 & (obj_instance << 8));
  }
  
@@ -27,14 +35,13 @@ index 2150db7..a7cfe36 100644
 +        'M','a','p','p','i','n','g','s','\\','%','s','\\','%','s','\\','%','s','\0'};
 +    WCHAR *keyname;
 +
-+    keyname = HeapAlloc(GetProcessHeap(), 0,
-+        sizeof(WCHAR) * (lstrlenW(subkey) + strlenW(username) + strlenW(device) + strlenW(guid)));
++    keyname = heap_alloc(sizeof(WCHAR) * (lstrlenW(subkey) + strlenW(username) + strlenW(device) + strlenW(guid)));
 +    sprintfW(keyname, subkey, username, device, guid);
 +
 +    /* Remove old key mappings so there will be no overlapping mappings */
 +    RegDeleteKeyW(HKEY_CURRENT_USER, keyname);
 +
-+    HeapFree(GetProcessHeap(), 0, keyname);
++    heap_free(keyname);
 +}
 +
  /*
@@ -97,12 +104,12 @@ index 2150db7..a7cfe36 100644
 -            lpdiaf->rgoAction[i].dwHow = DIAH_DEFAULT;
 -            mapped += 1;
 +            lpdiaf->rgoAction[i].dwHow = DIAH_USERCONFIG;
-         }
++        }
 +        else
 +        {
 +            memset(&lpdiaf->rgoAction[i].guidInstance, 0, sizeof(GUID));
 +            lpdiaf->rgoAction[i].dwHow = DIAH_UNMAPPED;
-+        }
+         }
 +
      }
  
@@ -187,10 +194,19 @@ index 2150db7..a7cfe36 100644
      This->num_actions = num_actions;
  
 diff --git a/dlls/dinput/joystick.c b/dlls/dinput/joystick.c
-index b146712..267f932 100644
+index 8341e0313a..d9f9c59be0 100644
 --- a/dlls/dinput/joystick.c
 +++ b/dlls/dinput/joystick.c
-@@ -907,6 +907,8 @@ HRESULT WINAPI JoystickAGenericImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
+@@ -847,7 +847,7 @@ HRESULT WINAPI JoystickWGenericImpl_BuildActionMap(LPDIRECTINPUTDEVICE8W iface,
+         else
+             lstrcpynW(username, lpszUserName, MAX_PATH);
+ 
+-        load_success = load_mapping_settings((IDirectInputDeviceImpl *) This, lpdiaf, username);
++        load_success = load_mapping_settings(&This->base, lpdiaf, username);
+         heap_free(username);
+     }
+ 
+@@ -957,6 +957,8 @@ HRESULT WINAPI JoystickAGenericImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
  
      hr = JoystickWGenericImpl_SetActionMap(&This->base.IDirectInputDevice8W_iface, &diafW, lpszUserNameW, dwFlags);
  
@@ -200,10 +216,10 @@ index b146712..267f932 100644
      HeapFree(GetProcessHeap(), 0, lpszUserNameW);
  
 diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
-index 42c0759..5c5aa14 100644
+index b5e665933e..0747f5d8c8 100644
 --- a/dlls/dinput/keyboard.c
 +++ b/dlls/dinput/keyboard.c
-@@ -693,6 +693,8 @@ static HRESULT WINAPI SysKeyboardAImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
+@@ -690,6 +690,8 @@ static HRESULT WINAPI SysKeyboardAImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
  
      hr = SysKeyboardWImpl_SetActionMap(&This->base.IDirectInputDevice8W_iface, &diafW, lpszUserNameW, dwFlags);
  
@@ -213,10 +229,10 @@ index 42c0759..5c5aa14 100644
      HeapFree(GetProcessHeap(), 0, lpszUserNameW);
  
 diff --git a/dlls/dinput/mouse.c b/dlls/dinput/mouse.c
-index f3ec8e4..0adba03 100644
+index 52a766b2a1..796f1fa297 100644
 --- a/dlls/dinput/mouse.c
 +++ b/dlls/dinput/mouse.c
-@@ -863,6 +863,8 @@ static HRESULT WINAPI SysMouseAImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
+@@ -862,6 +862,8 @@ static HRESULT WINAPI SysMouseAImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
  
      hr = SysMouseWImpl_SetActionMap(&This->base.IDirectInputDevice8W_iface, &diafW, lpszUserNameW, dwFlags);
  
@@ -226,7 +242,7 @@ index f3ec8e4..0adba03 100644
      HeapFree(GetProcessHeap(), 0, lpszUserNameW);
  
 diff --git a/dlls/dinput8/tests/device.c b/dlls/dinput8/tests/device.c
-index 1bfb34a..46a1e4a 100644
+index f3e7b54235..bec2a6b863 100644
 --- a/dlls/dinput8/tests/device.c
 +++ b/dlls/dinput8/tests/device.c
 @@ -38,6 +38,8 @@ struct enum_data {
@@ -301,5 +317,5 @@ index 1bfb34a..46a1e4a 100644
      IDirectInput_Release(pDI);
  }
 -- 
-1.9.1
+2.17.1
 

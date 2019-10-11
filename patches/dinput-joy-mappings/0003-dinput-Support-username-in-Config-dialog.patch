@@ -1,20 +1,34 @@
-From af785463a8e9fc8ff47ead4143151e9831cbbddf Mon Sep 17 00:00:00 2001
+From 5fb416432e892bed7c216f57f7caf6e6503ca96c Mon Sep 17 00:00:00 2001
 From: Jetro Jormalainen <jje-wine@jv.jetro.fi>
 Date: Tue, 30 Apr 2019 09:21:24 +1000
-Subject: [PATCH] dinput: Support username in Config dialog.
+Subject: [PATCH 3/3] dinput: Support username in Config dialog.
 
 ---
- dlls/dinput/config.c         | 183 ++++++++++++++++++++++++++++++-------------
+ dlls/dinput/config.c         | 187 ++++++++++++++++++++++++-----------
  dlls/dinput/device.c         |   2 +-
  dlls/dinput/device_private.h |   1 +
- dlls/dinput/dinput_main.c    |  27 +++++++
- 4 files changed, 156 insertions(+), 57 deletions(-)
+ dlls/dinput/dinput_main.c    |  27 +++++
+ 4 files changed, 160 insertions(+), 57 deletions(-)
 
 diff --git a/dlls/dinput/config.c b/dlls/dinput/config.c
-index bf44898..cd2c4b9 100644
+index bf44898589..c7a33d2da0 100644
 --- a/dlls/dinput/config.c
 +++ b/dlls/dinput/config.c
-@@ -29,6 +29,9 @@ typedef struct {
+@@ -18,17 +18,23 @@
+ 
+ #define NONAMELESSUNION
+ 
++
+ #include "wine/unicode.h"
+ #include "objbase.h"
+ #include "dinput_private.h"
+ #include "device_private.h"
+ #include "resource.h"
+ 
++#include "wine/heap.h"
++
+ typedef struct {
+     int nobjects;
      IDirectInputDevice8W *lpdid;
      DIDEVICEINSTANCEW ddi;
      DIDEVICEOBJECTINSTANCEW ddo[256];
@@ -24,7 +38,7 @@ index bf44898..cd2c4b9 100644
  } DeviceData;
  
  typedef struct {
-@@ -38,10 +41,11 @@ typedef struct {
+@@ -38,10 +44,11 @@ typedef struct {
  
  typedef struct {
      IDirectInput8W *lpDI;
@@ -37,7 +51,7 @@ index bf44898..cd2c4b9 100644
  } ConfigureDevicesData;
  
  /*
-@@ -57,27 +61,42 @@ static BOOL CALLBACK collect_objects(LPCDIDEVICEOBJECTINSTANCEW lpddo, LPVOID pv
+@@ -57,27 +64,42 @@ static BOOL CALLBACK collect_objects(LPCDIDEVICEOBJECTINSTANCEW lpddo, LPVOID pv
      return DIENUM_CONTINUE;
  }
  
@@ -71,15 +85,15 @@ index bf44898..cd2c4b9 100644
      IDirectInputDevice_EnumObjects(lpdid, collect_objects, (LPVOID) device, DIDFT_ALL);
  
 -    data->ndevices++;
-+    device->user_afs = HeapAlloc(GetProcessHeap(), 0, sizeof(*device->user_afs)*data->nusernames);
-+    memset(device->user_afs, 0, sizeof(*device->user_afs)*data->nusernames);
++    device->user_afs = heap_alloc(sizeof(*device->user_afs) * data->nusernames);
++    memset(device->user_afs, 0, sizeof(*device->user_afs) * data->nusernames);
 +    for (i = 0; i < data->nusernames; i++)
 +    {
 +        DIACTIONFORMATW *user_af = &device->user_afs[i];
 +        user_af->dwNumActions = data->original_lpdiaf->dwNumActions;
 +        user_af->guidActionMap = data->original_lpdiaf->guidActionMap;
-+        user_af->rgoAction = HeapAlloc(GetProcessHeap(), 0, sizeof(DIACTIONW)*data->original_lpdiaf->dwNumActions);
-+        memset(user_af->rgoAction, 0, sizeof(DIACTIONW)*data->original_lpdiaf->dwNumActions);
++        user_af->rgoAction = heap_alloc(sizeof(DIACTIONW) * data->original_lpdiaf->dwNumActions);
++        memset(user_af->rgoAction, 0, sizeof(DIACTIONW) * data->original_lpdiaf->dwNumActions);
 +        for (j = 0; j < user_af->dwNumActions; j++)
 +        {
 +            user_af->rgoAction[j].dwSemantic = data->original_lpdiaf->rgoAction[j].dwSemantic;
@@ -92,7 +106,7 @@ index bf44898..cd2c4b9 100644
      return DIENUM_CONTINUE;
  }
  
-@@ -170,10 +189,18 @@ static DeviceData* get_cur_device(HWND dialog)
+@@ -170,10 +192,18 @@ static DeviceData* get_cur_device(HWND dialog)
      return &data->devices_data.devices[sel];
  }
  
@@ -113,7 +127,7 @@ index bf44898..cd2c4b9 100644
  }
  
  static int dialog_display_only(HWND dialog)
-@@ -182,40 +209,36 @@ static int dialog_display_only(HWND dialog)
+@@ -182,40 +212,36 @@ static int dialog_display_only(HWND dialog)
      return data->display_only;
  }
  
@@ -155,8 +169,8 @@ index bf44898..cd2c4b9 100644
 +    {
          IDirectInputDevice8_Release(devices_data->devices[i].lpdid);
 +        for (j=0; j < data->nusernames; j++)
-+            HeapFree(GetProcessHeap(), 0, devices_data->devices[i].user_afs[j].rgoAction);
-+        HeapFree(GetProcessHeap(), 0, devices_data->devices[i].user_afs);
++            heap_free(devices_data->devices[i].user_afs[j].rgoAction);
++        heap_free(devices_data->devices[i].user_afs);
 +    }
  
      HeapFree(GetProcessHeap(), 0, devices_data->devices);
@@ -167,7 +181,7 @@ index bf44898..cd2c4b9 100644
  }
  
  static void fill_device_object_list(HWND dialog)
-@@ -231,6 +254,7 @@ static void fill_device_object_list(HWND dialog)
+@@ -231,6 +257,7 @@ static void fill_device_object_list(HWND dialog)
      /* Add each object */
      for (i=0; i < device->nobjects; i++)
      {
@@ -175,7 +189,7 @@ index bf44898..cd2c4b9 100644
          int action = -1;
  
          item.mask = LVIF_TEXT | LVIF_PARAM;
-@@ -241,12 +265,20 @@ static void fill_device_object_list(HWND dialog)
+@@ -241,12 +268,20 @@ static void fill_device_object_list(HWND dialog)
  
          /* Add the item */
          SendDlgItemMessageW(dialog, IDC_DEVICEOBJECTSLIST, LVM_INSERTITEMW, 0, (LPARAM) &item);
@@ -198,7 +212,7 @@ index bf44898..cd2c4b9 100644
              {
                  action = j;
                  break;
-@@ -260,7 +292,7 @@ static void fill_device_object_list(HWND dialog)
+@@ -260,7 +295,7 @@ static void fill_device_object_list(HWND dialog)
  static void show_suitable_actions(HWND dialog)
  {
      DeviceData *device = get_cur_device(dialog);
@@ -207,7 +221,7 @@ index bf44898..cd2c4b9 100644
      int i, added = 0;
      int obj = lv_get_cur_item(dialog);
  
-@@ -329,24 +361,35 @@ static void assign_action(HWND dialog)
+@@ -329,24 +364,35 @@ static void assign_action(HWND dialog)
      lv_set_action(dialog, obj, action, lpdiaf);
  }
  
@@ -255,7 +269,7 @@ index bf44898..cd2c4b9 100644
  }
  
  static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM wParam, LPARAM lParam)
-@@ -358,21 +401,16 @@ static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM w
+@@ -358,21 +404,16 @@ static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM w
              ConfigureDevicesData *data = (ConfigureDevicesData*) lParam;
  
              /* Initialize action format and enumerate devices */
@@ -279,7 +293,7 @@ index bf44898..cd2c4b9 100644
              fill_device_object_list(dialog);
  
              ShowCursor(TRUE);
-@@ -414,6 +452,7 @@ static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM w
+@@ -414,6 +455,7 @@ static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM w
                      break;
  
                  case IDC_CONTROLLERCOMBO:
@@ -287,7 +301,7 @@ index bf44898..cd2c4b9 100644
  
                      switch (HIWORD(wParam))
                      {
-@@ -424,12 +463,12 @@ static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM w
+@@ -424,12 +466,12 @@ static INT_PTR CALLBACK ConfigureDevicesDlgProc(HWND dialog, UINT uMsg, WPARAM w
                      break;
  
                  case IDOK:
@@ -301,13 +315,13 @@ index bf44898..cd2c4b9 100644
                      EndDialog(dialog, 0);
                      destroy_data(dialog);
                      break;
-@@ -452,15 +491,47 @@ HRESULT _configure_devices(IDirectInput8W *iface,
+@@ -452,15 +494,48 @@ HRESULT _configure_devices(IDirectInput8W *iface,
                             LPVOID pvRefData
  )
  {
 +    int i;
-+    DWORD default_username_size = MAX_PATH;
-+    WCHAR *default_username = 0;
++    DWORD size;
++    WCHAR *username = NULL;
      ConfigureDevicesData data;
      data.lpDI = iface;
 -    data.lpdiaf = lpdiCDParams->lprgFormats;
@@ -317,16 +331,17 @@ index bf44898..cd2c4b9 100644
 +    if (lpdiCDParams->lptszUserNames == NULL)
 +    {
 +        /* Get default user name */
-+        default_username = HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR)*MAX_PATH);
++        GetUserNameW(NULL, &size);
++        username = heap_alloc(size * sizeof(WCHAR) );
++        GetUserNameW(username, &size);
 +        data.nusernames = 1;
-+        data.usernames = HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR *));
-+        data.usernames[0] = default_username;
-+        GetUserNameW(default_username, &default_username_size);
++        data.usernames = heap_alloc(sizeof(WCHAR *));
++        data.usernames[0] = username;
 +    }
 +    else
 +    {
 +        WCHAR *p = lpdiCDParams->lptszUserNames;
-+        data.usernames = HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR *)*data.nusernames);
++        data.usernames = heap_alloc(sizeof(WCHAR *) * data.nusernames);
 +        for (i = 0; i < data.nusernames; i++)
 +        {
 +            if (*p)
@@ -345,13 +360,13 @@ index bf44898..cd2c4b9 100644
      DialogBoxParamW(DINPUT_instance, (const WCHAR *)MAKEINTRESOURCE(IDD_CONFIGUREDEVICES),
              lpdiCDParams->hwnd, ConfigureDevicesDlgProc, (LPARAM)&data);
  
-+    HeapFree(GetProcessHeap(), 0, default_username);
-+    HeapFree(GetProcessHeap(), 0, data.usernames);
++    heap_free(username);
++    heap_free(data.usernames);
 +
      return DI_OK;
  }
 diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
-index b441743..0c94326 100644
+index 6107ab2653..30483fe691 100644
 --- a/dlls/dinput/device.c
 +++ b/dlls/dinput/device.c
 @@ -692,7 +692,7 @@ static HKEY get_mapping_key(const WCHAR *device, const WCHAR *username, const WC
@@ -364,10 +379,10 @@ index b441743..0c94326 100644
      WCHAR *guid_str = NULL;
      DIDEVICEINSTANCEW didev;
 diff --git a/dlls/dinput/device_private.h b/dlls/dinput/device_private.h
-index af8d99d..36b71f7 100644
+index ea794d7396..114e3971ed 100644
 --- a/dlls/dinput/device_private.h
 +++ b/dlls/dinput/device_private.h
-@@ -123,6 +123,7 @@ extern const char *_dump_dinput_GUID(const GUID *guid)  DECLSPEC_HIDDEN;
+@@ -125,6 +125,7 @@ extern const char *_dump_dinput_GUID(const GUID *guid)  DECLSPEC_HIDDEN;
  
  extern LPDIOBJECTDATAFORMAT dataformat_to_odf_by_type(LPCDIDATAFORMAT df, int n, DWORD type)   DECLSPEC_HIDDEN;
  
@@ -376,10 +391,10 @@ index af8d99d..36b71f7 100644
  
  extern HRESULT _build_action_map(LPDIRECTINPUTDEVICE8W iface, LPDIACTIONFORMATW lpdiaf, LPCWSTR lpszUserName, DWORD dwFlags, DWORD devMask, LPCDIDATAFORMAT df)  DECLSPEC_HIDDEN;
 diff --git a/dlls/dinput/dinput_main.c b/dlls/dinput/dinput_main.c
-index 198c6a8..ee319f0 100644
+index 0855cb41cd..6eb7c64c0e 100644
 --- a/dlls/dinput/dinput_main.c
 +++ b/dlls/dinput/dinput_main.c
-@@ -1251,9 +1251,34 @@ static HRESULT WINAPI IDirectInput8AImpl_ConfigureDevices(
+@@ -1253,9 +1253,34 @@ static HRESULT WINAPI IDirectInput8AImpl_ConfigureDevices(
  
      /* Copy parameters */
      diCDParamsW.dwSize = sizeof(DICONFIGUREDEVICESPARAMSW);
@@ -414,15 +429,15 @@ index 198c6a8..ee319f0 100644
  
      diafW.rgoAction = HeapAlloc(GetProcessHeap(), 0, sizeof(DIACTIONW)*lpdiCDParams->lprgFormats->dwNumActions);
      _copy_diactionformatAtoW(&diafW, lpdiCDParams->lprgFormats);
-@@ -1281,6 +1306,8 @@ static HRESULT WINAPI IDirectInput8AImpl_ConfigureDevices(
+@@ -1283,6 +1308,8 @@ static HRESULT WINAPI IDirectInput8AImpl_ConfigureDevices(
  
      HeapFree(GetProcessHeap(), 0, diafW.rgoAction);
  
-+    HeapFree(GetProcessHeap(), 0, (void*) diCDParamsW.lptszUserNames);
++    heap_free((void*) diCDParamsW.lptszUserNames);
 +
      return hr;
  }
  
 -- 
-1.9.1
+2.17.1
 

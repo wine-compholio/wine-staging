@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "89d9bcb1f19a03ffafa9a93a5f32049b4bfdaa00"
+	echo "71e96bd3b757a2b058b6a769c341d81f82329d79"
 }
 
 # Show version information
@@ -2970,10 +2970,12 @@ if test "$enable_dinput_joy_mappings" -eq 1; then
 	patch_apply dinput-joy-mappings/0001-dinput-Load-users-Joystick-mappings.patch
 	patch_apply dinput-joy-mappings/0002-dinput-Allow-empty-Joystick-mappings.patch
 	patch_apply dinput-joy-mappings/0003-dinput-Support-username-in-Config-dialog.patch
+	patch_apply dinput-joy-mappings/0004-dinput-Dont-allow-Fixed-actions-to-be-changed.patch
 	(
 		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Load users Joystick mappings.", 1 },';
 		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Allow empty Joystick mappings.", 1 },';
 		printf '%s\n' '+    { "Jetro Jormalainen", "dinput: Support username in Config dialog.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Dont allow Fixed actions to be changed.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -289,6 +289,7 @@ patch_enable_all ()
 	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Implement_CascadeWindows="$1"
+	enable_user32_InternalGetWindowIcon="$1"
 	enable_user32_LR_LOADFROMFILE="$1"
 	enable_user32_ListBox_Size="$1"
 	enable_user32_LoadKeyboardLayoutEx="$1"
@@ -989,6 +990,9 @@ patch_enable ()
 			;;
 		user32-Implement-CascadeWindows)
 			enable_user32_Implement_CascadeWindows="$2"
+			;;
+		user32-InternalGetWindowIcon)
+			enable_user32_InternalGetWindowIcon="$2"
 			;;
 		user32-LR_LOADFROMFILE)
 			enable_user32_LR_LOADFROMFILE="$2"
@@ -6162,6 +6166,21 @@ if test "$enable_user32_Implement_CascadeWindows" -eq 1; then
 	(
 		printf '%s\n' '+    { "katahiromz", "user32: Implement CascadeWindows.", 1 },';
 		printf '%s\n' '+    { "Hirofumi Katayama", "user32: Implement TileWindows.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-InternalGetWindowIcon
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47915] user32: AddInternalGetWindowIcon stub.
+# |
+# | Modified files:
+# |   *	dlls/user32/user32.spec, dlls/user32/win.c
+# |
+if test "$enable_user32_InternalGetWindowIcon" -eq 1; then
+	patch_apply user32-InternalGetWindowIcon/0001-user32-AddInternalGetWindowIcon-stub.patch
+	(
+		printf '%s\n' '+    { "David Torok", "user32: AddInternalGetWindowIcon stub.", 1 },';
 	) >> "$patchlist"
 fi
 

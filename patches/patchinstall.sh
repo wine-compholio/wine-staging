@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8c74027ba60a360f24cf232ee233e71262d8f1ff"
+	echo "98c2c9a9c98d174851fa7a87db79599dd7d8af89"
 }
 
 # Show version information
@@ -5416,14 +5416,10 @@ if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 	patch_apply quartz-MediaSeeking_Positions/0001-strmbase-Fix-MediaSeekingPassThru_GetPositions-retur.patch
 	patch_apply quartz-MediaSeeking_Positions/0002-quartz-Include-the-stream-position-in-addition-to-th.patch
 	patch_apply quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
-	patch_apply quartz-MediaSeeking_Positions/0004-quartz-Implement-MediaSeeking_GetStopPosition-on-top.patch
-	patch_apply quartz-MediaSeeking_Positions/0005-quartz-Remove-unused-cache-of-MediaSeeking-stop-posi.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "strmbase: Fix MediaSeekingPassThru_GetPositions return when the pins are unconnected.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetStopPosition on top of MediaSeeking_GetPositions.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Remove unused cache of MediaSeeking stop position.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 7d5594cc0b3760843d7d566e642e175a9e542a08 Mon Sep 17 00:00:00 2001
+From 169d29bc138015c6d54cc71c817bad9ff25ba7f3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 3 Apr 2017 05:30:27 +0200
 Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
@@ -10,7 +10,7 @@ Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
  3 files changed, 145 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index bdcb3448ab7..8e9e780bb50 100644
+index d48c422e432..1d246ec7a71 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
 @@ -30,6 +30,7 @@
@@ -21,7 +21,7 @@ index bdcb3448ab7..8e9e780bb50 100644
  #include "wine/test.h"
  #include "delayloadhandler.h"
  
-@@ -3993,6 +3994,79 @@ static void test_dll_file( const char *name )
+@@ -4039,6 +4040,79 @@ static void test_dll_file( const char *name )
  #undef OK_FIELD
  }
  
@@ -101,10 +101,10 @@ index bdcb3448ab7..8e9e780bb50 100644
  START_TEST(loader)
  {
      int argc;
-@@ -4061,10 +4135,12 @@ START_TEST(loader)
-     test_import_resolution();
+@@ -4110,10 +4184,12 @@ START_TEST(loader)
      test_ExitProcess();
      test_InMemoryOrderModuleList();
+     test_wow64_redirection();
 +    test_HashLinks();
      test_dll_file( "ntdll.dll" );
      test_dll_file( "kernel32.dll" );
@@ -115,10 +115,10 @@ index bdcb3448ab7..8e9e780bb50 100644
      test_Loader();
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 8fe2038b346..5a3036e1246 100644
+index 432369e40a8..b00d9ce13bb 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -96,6 +96,9 @@ static const char * const reason_names[] =
+@@ -119,6 +119,9 @@ static const char * const reason_names[] =
  
  static const WCHAR dllW[] = {'.','d','l','l',0};
  
@@ -128,7 +128,7 @@ index 8fe2038b346..5a3036e1246 100644
  /* internal representation of 32bit modules. per process. */
  typedef struct _wine_modref
  {
-@@ -429,6 +432,52 @@ static void call_ldr_notifications( ULONG reason, LDR_MODULE *module )
+@@ -461,6 +464,52 @@ static void call_ldr_notifications( ULONG reason, LDR_MODULE *module )
      }
  }
  
@@ -181,7 +181,7 @@ index 8fe2038b346..5a3036e1246 100644
  /*************************************************************************
   *		get_modref
   *
-@@ -1176,7 +1225,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
+@@ -1208,7 +1257,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
                     &wm->ldr.InLoadOrderModuleList);
      InsertTailList(&NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList,
                     &wm->ldr.InMemoryOrderModuleList);
@@ -194,7 +194,7 @@ index 8fe2038b346..5a3036e1246 100644
  
      if (!(nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_NX_COMPAT))
      {
-@@ -1921,6 +1975,7 @@ static void load_builtin_callback( void *module, const char *filename )
+@@ -1953,6 +2007,7 @@ static void load_builtin_callback( void *module, const char *filename )
              /* the module has only be inserted in the load & memory order lists */
              RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
              RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
@@ -202,7 +202,7 @@ index 8fe2038b346..5a3036e1246 100644
              /* FIXME: free the modref */
              builtin_load_info->status = STATUS_DLL_NOT_FOUND;
              return;
-@@ -2288,6 +2343,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, const UNICODE_STRING *nt_nam
+@@ -2476,6 +2531,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, const UNICODE_STRING *nt_nam
              /* the module has only be inserted in the load & memory order lists */
              RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
              RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
@@ -210,7 +210,7 @@ index 8fe2038b346..5a3036e1246 100644
  
              /* FIXME: there are several more dangling references
               * left. Including dlls loaded by this dll before the
-@@ -3451,6 +3507,7 @@ static void free_modref( WINE_MODREF *wm )
+@@ -3650,6 +3706,7 @@ static void free_modref( WINE_MODREF *wm )
  {
      RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
      RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
@@ -218,7 +218,7 @@ index 8fe2038b346..5a3036e1246 100644
      if (wm->ldr.InInitializationOrderModuleList.Flink)
          RemoveEntryList(&wm->ldr.InInitializationOrderModuleList);
  
-@@ -3937,6 +3994,7 @@ void __wine_process_init(void)
+@@ -4376,6 +4433,7 @@ void __wine_process_init(void)
      UNICODE_STRING nt_name;
      void * (CDECL *init_func)(void);
      INITIAL_TEB stack;
@@ -226,7 +226,7 @@ index 8fe2038b346..5a3036e1246 100644
  
      thread_init();
  
-@@ -3946,6 +4004,10 @@ void __wine_process_init(void)
+@@ -4385,6 +4443,10 @@ void __wine_process_init(void)
  
      load_global_options();
  
@@ -237,7 +237,7 @@ index 8fe2038b346..5a3036e1246 100644
      /* setup the load callback and create ntdll modref */
      wine_dll_set_callback( load_builtin_callback );
  
-@@ -4000,6 +4062,9 @@ void __wine_process_init(void)
+@@ -4439,6 +4501,9 @@ void __wine_process_init(void)
      RemoveEntryList( &wm->ldr.InMemoryOrderModuleList );
      InsertHeadList( &NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList, &wm->ldr.InMemoryOrderModuleList );
  
@@ -248,10 +248,10 @@ index 8fe2038b346..5a3036e1246 100644
      {
          ERR( "Main exe initialization for %s failed, status %x\n",
 diff --git a/include/winternl.h b/include/winternl.h
-index 4cd531a4613..0d5e0e9bd8a 100644
+index df1418477ad..2d7c86c389c 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2225,8 +2225,8 @@ typedef struct _LDR_MODULE
+@@ -2242,8 +2242,8 @@ typedef struct _LDR_MODULE
      ULONG               Flags;
      SHORT               LoadCount;
      SHORT               TlsIndex;
@@ -261,7 +261,7 @@ index 4cd531a4613..0d5e0e9bd8a 100644
      ULONG               TimeDateStamp;
      HANDLE              ActivationContext;
      PVOID               PatchInformation;
-@@ -2236,6 +2236,9 @@ typedef struct _LDR_MODULE
+@@ -2253,6 +2253,9 @@ typedef struct _LDR_MODULE
      PVOID               ContextInformation;
      ULONG_PTR           OriginalBase;
      LARGE_INTEGER       LoadTime;

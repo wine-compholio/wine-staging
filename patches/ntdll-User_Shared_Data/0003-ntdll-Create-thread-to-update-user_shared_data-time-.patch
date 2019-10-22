@@ -1,21 +1,21 @@
-From f3483229e702bed0791a35666237e8583f5d47b0 Mon Sep 17 00:00:00 2001
+From daa8c43bfa8584ef006f324f8009759bd4ce6d70 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
  when necessary.
 
 ---
- dlls/ntdll/loader.c     | 31 ++++++++++++++++++++++
- dlls/ntdll/ntdll_misc.h |  3 +++
- dlls/ntdll/thread.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++-----
- dlls/ntdll/virtual.c    | 17 ++++++++++++
- 4 files changed, 114 insertions(+), 7 deletions(-)
+ dlls/ntdll/loader.c     | 31 ++++++++++++++++++
+ dlls/ntdll/ntdll_misc.h |  3 ++
+ dlls/ntdll/thread.c     | 71 ++++++++++++++++++++++++++++++++++++-----
+ dlls/ntdll/virtual.c    | 17 ++++++++++
+ 4 files changed, 114 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 8073434..0546478 100644
+index 9cb5ed420bf..39e122d9933 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3340,6 +3340,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+@@ -3815,6 +3815,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
  }
  
  
@@ -52,7 +52,7 @@ index 8073434..0546478 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -3669,6 +3699,7 @@ void __wine_process_init(void)
+@@ -4387,6 +4417,7 @@ void __wine_process_init(void)
      NtCurrentTeb()->Peb->LoaderLock = &loader_section;
      update_user_process_params( &wm->ldr.FullDllName );
      version_init( wm->ldr.FullDllName.Buffer );
@@ -61,10 +61,10 @@ index 8073434..0546478 100644
      virtual_set_large_address_space();
  
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 0dba878..47abfba 100644
+index c7b821cbf30..6d6cccab6b5 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -194,6 +194,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+@@ -197,6 +197,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_fill_image_information( const pe_image_info_t *pe_info,
                                              SECTION_IMAGE_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -75,10 +75,10 @@ index 0dba878..47abfba 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 0a11cfe..1c09344 100644
+index 90d49f2d92e..14f355cebb5 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -44,6 +44,7 @@
+@@ -47,6 +47,7 @@
  #include "wine/library.h"
  #include "wine/server.h"
  #include "wine/debug.h"
@@ -86,7 +86,7 @@ index 0a11cfe..1c09344 100644
  #include "ntdll_misc.h"
  #include "ddk/wdm.h"
  #include "wine/exception.h"
-@@ -54,7 +55,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+@@ -57,7 +58,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
  #define PTHREAD_STACK_MIN 16384
  #endif
  
@@ -97,7 +97,7 @@ index 0a11cfe..1c09344 100644
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
-@@ -263,7 +266,7 @@ void thread_init(void)
+@@ -227,7 +230,7 @@ void thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -106,16 +106,17 @@ index 0a11cfe..1c09344 100644
      memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
  
      /* allocate and initialize the PEB */
-@@ -355,18 +358,71 @@ void thread_init(void)
+@@ -315,17 +318,69 @@ void thread_init(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
+-    LARGE_INTEGER now;
 +    static int spinlock;
 +    ULARGE_INTEGER interrupt;
-     LARGE_INTEGER now;
-+    
++     LARGE_INTEGER now;
++
 +    while (interlocked_cmpxchg( &spinlock, 1, 0 ) != 0);
-+    
++
      NtQuerySystemTime( &now );
 -    user_shared_data->SystemTime.LowPart = now.u.LowPart;
 -    user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
@@ -137,11 +138,10 @@ index 0a11cfe..1c09344 100644
 +    user_shared_data->u.TickCount.High1Time  = interrupt.HighPart;
 +    user_shared_data->TickCountLowDeprecated = interrupt.LowPart;
      user_shared_data->TickCountMultiplier = 1 << 24;
-+    
++
 +    spinlock = 0;
      return (BYTE *)user_shared_data;
  }
- 
  
 +static void *user_shared_data_thread(void *arg)
 +{
@@ -179,15 +179,14 @@ index 0a11cfe..1c09344 100644
 +    pthread_attr_destroy(&attr);
 +}
 +
-+
- /***********************************************************************
-  *           free_thread_data
-  */
+ BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi)
+ {
+     BOOL ret = FALSE;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index da40aab..de63460 100644
+index d15b49f6fdf..186d7335bfc 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2013,6 +2013,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2088,6 +2088,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
  {
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
      void *page = ROUND_ADDR( addr, page_mask );
@@ -195,7 +194,7 @@ index da40aab..de63460 100644
      sigset_t sigset;
      BYTE vprot;
  
-@@ -2038,7 +2039,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2113,7 +2114,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
                  ret = STATUS_SUCCESS;
          }
      }
@@ -220,5 +219,5 @@ index da40aab..de63460 100644
  }
  
 -- 
-1.9.1
+2.23.0
 

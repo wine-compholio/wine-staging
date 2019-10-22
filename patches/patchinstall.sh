@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "98c2c9a9c98d174851fa7a87db79599dd7d8af89"
+	echo "d82f06c07556408e9584d2a1f8b275df39c93d74"
 }
 
 # Show version information
@@ -2243,14 +2243,11 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/api-ms-win-core-winrt-error-l1-1-0/api-ms-win-core-winrt-error-l1-1-0.spec, dlls/api-ms-win-core-winrt-error-l1-1-1
-# | 	/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/combase/combase.spec, dlls/combase/roapi.c, include/Makefile.in,
-# | 	include/restrictederrorinfo.idl
+# | 	/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/combase/combase.spec, dlls/combase/roapi.c
 # |
 if test "$enable_combase_GetRestrictedErrorInfo" -eq 1; then
-	patch_apply combase-GetRestrictedErrorInfo/0001-include-Add-restrictederrorinfo.idl.patch
 	patch_apply combase-GetRestrictedErrorInfo/0002-combase-Add-GetRestrictedErrorInfo-and-RoOriginateLa.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "include: Add restrictederrorinfo.idl.", 1 },';
 		printf '%s\n' '+    { "Louis Lenders", "combase: Add GetRestrictedErrorInfo and RoOriginateLanguageException stubs.", 1 },';
 	) >> "$patchlist"
 fi
@@ -5410,16 +5407,12 @@ fi
 # Patchset quartz-MediaSeeking_Positions
 # |
 # | Modified files:
-# |   *	dlls/quartz/filtergraph.c, dlls/strmbase/pospass.c
+# |   *	dlls/strmbase/pospass.c
 # |
 if test "$enable_quartz_MediaSeeking_Positions" -eq 1; then
 	patch_apply quartz-MediaSeeking_Positions/0001-strmbase-Fix-MediaSeekingPassThru_GetPositions-retur.patch
-	patch_apply quartz-MediaSeeking_Positions/0002-quartz-Include-the-stream-position-in-addition-to-th.patch
-	patch_apply quartz-MediaSeeking_Positions/0003-quartz-Implement-MediaSeeking_GetCurrentPosition-on-.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "strmbase: Fix MediaSeekingPassThru_GetPositions return when the pins are unconnected.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Include the stream position in addition to the reference clock offset in the time returned by MediaSeeking_GetPositions.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "quartz: Implement MediaSeeking_GetCurrentPosition on top of MediaSeeking_GetPositions.", 1 },';
 	) >> "$patchlist"
 fi
 

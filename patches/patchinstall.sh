@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "237d5636271a1a78b02a0eb7feaab7dfb9dfed57"
+	echo "5b62f89baa82daecd430897de0bb5cab32c5fc5e"
 }
 
 # Show version information
@@ -100,7 +100,6 @@ patch_enable_all ()
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
-	enable_crypt32_MS_Root_Certs="$1"
 	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
@@ -423,9 +422,6 @@ patch_enable ()
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
-			;;
-		crypt32-MS_Root_Certs)
-			enable_crypt32_MS_Root_Certs="$2"
 			;;
 		cryptext-CryptExtOpenCER)
 			enable_cryptext_CryptExtOpenCER="$2"
@@ -2342,18 +2338,6 @@ if test "$enable_crypt32_CMS_Certificates" -eq 1; then
 	patch_apply crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
 	(
 		printf '%s\n' '+    { "Charles Davis", "crypt32: Skip unknown item when decoding a CMS certificate.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset crypt32-MS_Root_Certs
-# |
-# | Modified files:
-# |   *	dlls/crypt32/rootstore.c
-# |
-if test "$enable_crypt32_MS_Root_Certs" -eq 1; then
-	patch_apply crypt32-MS_Root_Certs/0001-crypt32-Add-MS-root-CA-2010-2011.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "crypt32: Add MS root CA 2010.", 1 },';
 	) >> "$patchlist"
 fi
 

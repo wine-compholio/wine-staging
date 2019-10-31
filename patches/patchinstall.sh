@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "931408698859360e56cd85d532b142e789a6c274"
+	echo "ccec532879ec14b2e79da08288152a69221ec4d1"
 }
 
 # Show version information
@@ -281,7 +281,6 @@ patch_enable_all ()
 	enable_shlwapi_UrlCombine="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
-	enable_uianimation_stubs="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawMenuItem="$1"
@@ -966,9 +965,6 @@ patch_enable ()
 			;;
 		stdole32.tlb-SLTG_Typelib)
 			enable_stdole32_tlb_SLTG_Typelib="$2"
-			;;
-		uianimation-stubs)
-			enable_uianimation_stubs="$2"
 			;;
 		user32-DM_SETDEFID)
 			enable_user32_DM_SETDEFID="$2"
@@ -6030,25 +6026,6 @@ if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	patch_apply stdole32.tlb-SLTG_Typelib/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "stdole32.tlb: Compile typelib with --oldtlb.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset uianimation-stubs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41369] Add UIAnimation and stubs interfaces
-# |
-# | Modified files:
-# |   *	dlls/uianimation/Makefile.in, dlls/uianimation/main.c
-# |
-if test "$enable_uianimation_stubs" -eq 1; then
-	patch_apply uianimation-stubs/0002-uianimation-Add-stub-dll.patch
-	patch_apply uianimation-stubs/0003-uianimation-Implement-IUIAnimationManager-CreateStor.patch
-	patch_apply uianimation-stubs/0004-uianimation-Implement-IUIAnimationManager-CreateAnim.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "uianimation: Add stub dll.", 1 },';
-		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateStoryboard.", 1 },';
-		printf '%s\n' '+    { "Louis Lenders", "uianimation: Implement IUIAnimationManager CreateAnimationVariable.", 1 },';
 	) >> "$patchlist"
 fi
 

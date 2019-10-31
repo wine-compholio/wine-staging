@@ -179,6 +179,7 @@ patch_enable_all ()
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"
+	enable_ntdll_BitmaskAllocAreaSearch="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CriticalSection="$1"
 	enable_ntdll_DOS_Attributes="$1"
@@ -659,6 +660,9 @@ patch_enable ()
 			;;
 		ntdll-ApiSetMap)
 			enable_ntdll_ApiSetMap="$2"
+			;;
+		ntdll-BitmaskAllocAreaSearch)
+			enable_ntdll_BitmaskAllocAreaSearch="$2"
 			;;
 		ntdll-Builtin_Prot)
 			enable_ntdll_Builtin_Prot="$2"
@@ -4518,6 +4522,21 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	patch_apply ntdll-ApiSetMap/0001-ntdll-Add-dummy-apiset-to-PEB.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add dummy apiset to PEB.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-BitmaskAllocAreaSearch
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47974] X Rebirth: NtVirtualAlloc() does not find available memory with nonzero bitmask
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_BitmaskAllocAreaSearch" -eq 1; then
+	patch_apply ntdll-BitmaskAllocAreaSearch/0001-ntdll-Fix-free-area-search-outside-of-reserved-area-.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix free area search outside of reserved area in map_view() for non-zero bitmask.", 1 },';
 	) >> "$patchlist"
 fi
 

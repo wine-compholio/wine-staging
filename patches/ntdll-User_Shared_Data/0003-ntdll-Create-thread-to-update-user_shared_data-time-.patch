@@ -1,4 +1,4 @@
-From daa8c43bfa8584ef006f324f8009759bd4ce6d70 Mon Sep 17 00:00:00 2001
+From c554bd89905e60fb42459dc021b5502fe57944e3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
@@ -12,10 +12,10 @@ Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
  4 files changed, 114 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 9cb5ed420bf..39e122d9933 100644
+index e1fa510647d..6a6900ec434 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3815,6 +3815,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+@@ -3820,6 +3820,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
  }
  
  
@@ -52,19 +52,19 @@ index 9cb5ed420bf..39e122d9933 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -4387,6 +4417,7 @@ void __wine_process_init(void)
+@@ -4391,6 +4421,7 @@ void __wine_process_init(void)
+ 
      NtCurrentTeb()->Peb->LoaderLock = &loader_section;
-     update_user_process_params( &wm->ldr.FullDllName );
      version_init( wm->ldr.FullDllName.Buffer );
 +    user_shared_data_init();
      hidden_exports_init( wm->ldr.FullDllName.Buffer );
      virtual_set_large_address_space();
  
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index c7b821cbf30..6d6cccab6b5 100644
+index 010a195f0d2..17a6f1af468 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -197,6 +197,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+@@ -196,6 +196,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_fill_image_information( const pe_image_info_t *pe_info,
                                              SECTION_IMAGE_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -75,7 +75,7 @@ index c7b821cbf30..6d6cccab6b5 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 90d49f2d92e..14f355cebb5 100644
+index e8c99ae090d..1fbe0afae63 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -47,6 +47,7 @@
@@ -97,7 +97,7 @@ index 90d49f2d92e..14f355cebb5 100644
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
-@@ -227,7 +230,7 @@ void thread_init(void)
+@@ -291,7 +294,7 @@ void thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -106,7 +106,7 @@ index 90d49f2d92e..14f355cebb5 100644
      memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
  
      /* allocate and initialize the PEB */
-@@ -315,17 +318,69 @@ void thread_init(void)
+@@ -379,17 +382,69 @@ void thread_init(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
@@ -183,10 +183,10 @@ index 90d49f2d92e..14f355cebb5 100644
  {
      BOOL ret = FALSE;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index d15b49f6fdf..186d7335bfc 100644
+index 68249de902e..54eb6c7ffe8 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2088,6 +2088,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2102,6 +2102,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
  {
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
      void *page = ROUND_ADDR( addr, page_mask );
@@ -194,7 +194,7 @@ index d15b49f6fdf..186d7335bfc 100644
      sigset_t sigset;
      BYTE vprot;
  
-@@ -2113,7 +2114,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2127,7 +2128,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
                  ret = STATUS_SUCCESS;
          }
      }
@@ -219,5 +219,5 @@ index d15b49f6fdf..186d7335bfc 100644
  }
  
 -- 
-2.23.0
+2.17.1
 

@@ -1,7 +1,7 @@
-From be53833558c250e83e7a92f466c5d845bea4f0f1 Mon Sep 17 00:00:00 2001
+From 1bcb3f9cab95745b01de529ae9b861c667be1394 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:26:56 -0500
-Subject: [PATCH] Use NtContinue to continue execution after exceptions.
+Subject: [PATCH] ntdll: Use NtContinue to continue execution after exceptions.
 
 NtContinue is exported by ntdll and some programs expect it to be used to
 restore the thread context after an exception handler returns
@@ -14,15 +14,15 @@ unlikely that it has the correct behavior if called by an external caller.
 The __syscall_NtContinue wrapper is used so that it can be hooked by a
 third-party.
 ---
- dlls/ntdll/exception.c   | 9 +++++++--
+ dlls/ntdll/exception.c   | 5 +++--
  dlls/ntdll/signal_i386.c | 3 ++-
- 2 files changed, 9 insertions(+), 3 deletions(-)
+ 2 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntdll/exception.c b/dlls/ntdll/exception.c
-index 3b85f1efa..411d2bf5b 100644
+index 3b85f1efa0..bc972254f1 100644
 --- a/dlls/ntdll/exception.c
 +++ b/dlls/ntdll/exception.c
-@@ -671,8 +671,13 @@ PRUNTIME_FUNCTION WINAPI RtlLookupFunctionEntry( ULONG_PTR pc, ULONG_PTR *base,
+@@ -671,8 +671,9 @@ PRUNTIME_FUNCTION WINAPI RtlLookupFunctionEntry( ULONG_PTR pc, ULONG_PTR *base,
   */
  NTSTATUS WINAPI NtContinue( CONTEXT *context, BOOLEAN alert )
  {
@@ -30,19 +30,15 @@ index 3b85f1efa..411d2bf5b 100644
 -    return STATUS_NOT_IMPLEMENTED;
 +    TRACE( "(%p, %d) stub!\n", context, alert );
 +
-+    /* NtSetContextThread will not have the intended behavior for a partial context. */
-+    if ((context->ContextFlags & CONTEXT_FULL) != CONTEXT_FULL)
-+        return STATUS_NOT_IMPLEMENTED;
-+
 +    return NtSetContextThread( GetCurrentThread(), context );
  }
  
  /*************************************************************
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 746d77c75..6200721ca 100644
+index e551646301..8fc885ed49 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -727,6 +727,7 @@ static NTSTATUS call_stack_handlers( EXCEPTION_RECORD *rec, CONTEXT *context )
+@@ -730,6 +730,7 @@ static NTSTATUS call_stack_handlers( EXCEPTION_RECORD *rec, CONTEXT *context )
      return STATUS_UNHANDLED_EXCEPTION;
  }
  
@@ -50,7 +46,7 @@ index 746d77c75..6200721ca 100644
  
  /*******************************************************************
   *		raise_exception
-@@ -791,7 +792,7 @@ static NTSTATUS raise_exception( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL f
+@@ -794,7 +795,7 @@ static NTSTATUS raise_exception( EXCEPTION_RECORD *rec, CONTEXT *context, BOOL f
          NtTerminateProcess( NtCurrentProcess(), rec->ExceptionCode );
      }
  done:

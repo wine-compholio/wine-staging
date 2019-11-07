@@ -1,4 +1,4 @@
-From 1b4774a6a67f8ff97838bf330b809d2a8aabf00e Mon Sep 17 00:00:00 2001
+From 82a2149f0e1f9ead8997e8fd52c7f4ad4e1f118e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -9,14 +9,14 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  dlls/ntdll/thread.c          |  10 ++
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
- tools/winebuild/spec32.c     | 230 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 247 insertions(+), 8 deletions(-)
+ tools/winebuild/spec32.c     | 283 ++++++++++++++++++++++++++++++++++-
+ 6 files changed, 300 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index b4abbc0f59a..32b050850d2 100644
+index 78fed489e9..47309b53ed 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1532,7 +1532,7 @@ static void test_filenames(void)
+@@ -1536,7 +1536,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -25,7 +25,7 @@ index b4abbc0f59a..32b050850d2 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1574,8 +1574,13 @@ static void test_FakeDLL(void)
+@@ -1578,8 +1578,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -40,7 +40,7 @@ index b4abbc0f59a..32b050850d2 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index fbb2daff904..1579a94af2c 100644
+index c372f65b34..e48529d73a 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -355,6 +355,7 @@ static inline void set_sigcontext( const CONTEXT *context, ucontext_t *sigcontex
@@ -51,7 +51,7 @@ index fbb2daff904..1579a94af2c 100644
  
  /***********************************************************************
   * Definitions for Win32 unwind tables
-@@ -3118,6 +3119,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -3133,6 +3134,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
      {
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
@@ -60,10 +60,10 @@ index fbb2daff904..1579a94af2c 100644
      return status;
  }
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index f7c696cdb3e..6552c486824 100644
+index 1fbe0afae6..4645b73795 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -60,6 +60,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
+@@ -63,6 +63,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
  struct _KUSER_SHARED_DATA *user_shared_data = &user_shared_data_internal;
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
@@ -72,7 +72,7 @@ index f7c696cdb3e..6552c486824 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -297,6 +299,14 @@ void thread_init(void)
+@@ -327,6 +329,14 @@ void thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
@@ -88,7 +88,7 @@ index f7c696cdb3e..6552c486824 100644
       * Starting with Vista, the first user to log on has session id 1.
       * Session id 0 is for processes that don't interact with the user (like services).
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
-index b6cac2ab92c..682d18f8da6 100644
+index a2eee7aa9d..dbfa5ba603 100644
 --- a/libs/wine/loader.c
 +++ b/libs/wine/loader.c
 @@ -467,7 +467,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
@@ -104,10 +104,10 @@ index b6cac2ab92c..682d18f8da6 100644
      sec++;
  
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index f440881a0ec..6e1a613ae45 100644
+index 004b6aea7a..40946409c5 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
-@@ -543,7 +543,7 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
+@@ -545,7 +545,7 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
  
  static int needs_syscall( ORDDEF *odp, DLLSPEC *spec )
  {
@@ -117,7 +117,7 @@ index f440881a0ec..6e1a613ae45 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 800cb230231..880a99c1e9a 100644
+index 800cb23023..66e5b88f41 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -372,11 +372,11 @@ static void output_relay_debug( DLLSPEC *spec )
@@ -134,7 +134,7 @@ index 800cb230231..880a99c1e9a 100644
  {
      const unsigned int page_size = get_page_size();
      int i;
-@@ -485,6 +485,102 @@ static void output_syscall_thunks( DLLSPEC *spec )
+@@ -485,6 +485,155 @@ static void output_syscall_thunks( DLLSPEC *spec )
      output_function_size( "__wine_syscall_dispatcher" );
  }
  
@@ -198,7 +198,8 @@ index 800cb230231..880a99c1e9a 100644
 +            output( "\t.byte 0x65,0xff,0x14,0x25\n" );                      /* call qword ptr gs:[0x100] */
 +            output( "\t.long 0x100\n");
 +        }
-+        output( "\t.byte 0xc3\n" );                                         /* ret */
++        /* No need to have a RET here, as we will adjust the return address
++         * later (see below). */
 +        output_cfi( ".cfi_endproc" );
 +        output_function_size( name );
 +    }
@@ -215,20 +216,72 @@ index 800cb230231..880a99c1e9a 100644
 +        output ("\t%s %s\n", get_asm_ptr_keyword(), asm_name(odp->impl_name) );
 +    }
 +
++    output( "\n/* syscall argument stack size table */\n\n" );
++    output( "\t.data\n" );
++    output( "%s\n", asm_globl("__wine_syscall_stack_size") );
++    for (i = 0; i < spec->nb_syscalls; i++)
++    {
++        ORDDEF *odp = spec->syscalls[i];
++        output( "\t.byte %d\n", max(get_args_size(odp), 32) - 32 );
++    }
++
 +    output( "\n/* syscall dispatcher */\n\n" );
 +    output( "\t.text\n" );
 +    output( "\t.align %d\n", get_alignment(16) );
 +    output( "\t%s\n", func_declaration("__wine_syscall_dispatcher") );
 +    output( "%s\n", asm_globl("__wine_syscall_dispatcher") );
++
++    /* prologue */
 +    output_cfi( ".cfi_startproc" );
-+    output( "\tadd $8, %%rsp\n" );
-+    output_cfi( ".cfi_adjust_cfa_offset -8" );
++    output( "\tpushq %%rbp\n" );
++    output_cfi( ".cfi_adjust_cfa_offset 8" );
++    output_cfi( ".cfi_rel_offset %%rbp,0" );
++    output( "\tmovq %%rsp,%%rbp\n" );
++    output_cfi( ".cfi_def_cfa_register %%rbp" );
++    output( "\tpushq %%rsi\n" );
++    output_cfi( ".cfi_rel_offset %%rsi,-8" );
++    output( "\tpushq %%rdi\n" );
++    output_cfi( ".cfi_rel_offset %%rdi,-16" );
++
++    /* Legends of Runeterra hooks the first system call return instruction, and
++     * depends on us returning to it. Adjust the return address accordingly. */
++    if (target_platform == PLATFORM_APPLE)
++        output( "\tsubq $0xb,0x8(%%rbp)\n" );
++    else
++        output( "\tsubq $0xc,0x8(%%rbp)\n" );
++
++    /* copy over any arguments on the stack */
++    output( "\tleaq 0x38(%%rbp),%%rsi\n" );
 +    if (UsePIC)
 +    {
-+        output( "\tleaq (%%rip), %%r10\n" );
-+        output( "1:\tjmpq *(%s-1b)(%%r10,%%rax,%d)\n", asm_name("__wine_syscall_table"), get_ptr_size() );
++        output( "\tleaq (%%rip), %%r11\n" );
++        output( "1:\tmovzbq (%s-1b)(%%r11,%%rax,1),%%rcx\n", asm_name("__wine_syscall_stack_size") );
 +    }
-+    else output( "\tjmpq *%s(,%%rax,%d)\n", asm_name("__wine_syscall_table"), get_ptr_size() );
++    else
++        output( "\tmovzbq %s(%%rax),%%rcx\n", asm_name("__wine_syscall_stack_size") );
++    output( "\tsubq %%rcx,%%rsp\n" );
++    output( "\tshrq $3,%%rcx\n" );
++    output( "\tmovq %%rsp,%%rdi\n" );
++    output( "\trep; movsq\n" );
++
++    /* call the function */
++    output( "\tmovq %%r10,%%rcx\n" );
++    output( "\tsubq $0x20,%%rsp\n" );
++    if (UsePIC)
++        output( "\tcallq *(%s-1b)(%%r11,%%rax,%d)\n", asm_name("__wine_syscall_table"), get_ptr_size() );
++    else
++        output( "\tcallq *%s(,%%rax,%d)\n", asm_name("__wine_syscall_table"), get_ptr_size() );
++    output( "\tleaq -0x10(%%rbp),%%rsp\n" );
++
++    /* epilogue */
++    output( "\tpopq %%rdi\n" );
++    output_cfi( ".cfi_same_value %%rdi" );
++    output( "\tpopq %%rsi\n" );
++    output_cfi( ".cfi_same_value %%rsi" );
++    output_cfi( ".cfi_def_cfa_register %%rsp" );
++    output( "\tpopq %%rbp\n" );
++    output_cfi( ".cfi_adjust_cfa_offset -8" );
++    output_cfi( ".cfi_same_value %%rbp" );
 +    output( "\tret\n" );
 +    output_cfi( ".cfi_endproc" );
 +    output_function_size( "__wine_syscall_dispatcher" );
@@ -237,7 +290,7 @@ index 800cb230231..880a99c1e9a 100644
  /*******************************************************************
   *         output_exports
   *
-@@ -883,7 +979,10 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -883,7 +1032,10 @@ void output_spec32_file( DLLSPEC *spec )
      open_output_file();
      output_standard_file_header();
      output_module( spec );
@@ -249,7 +302,7 @@ index 800cb230231..880a99c1e9a 100644
      output_stubs( spec );
      output_exports( spec );
      output_imports( spec );
-@@ -896,7 +995,7 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -896,7 +1048,7 @@ void output_spec32_file( DLLSPEC *spec )
  
  static int needs_stub_exports( DLLSPEC *spec )
  {
@@ -258,7 +311,7 @@ index 800cb230231..880a99c1e9a 100644
          return 0;
      if (!(spec->characteristics & IMAGE_FILE_DLL))
          return 0;
-@@ -906,7 +1005,7 @@ static int needs_stub_exports( DLLSPEC *spec )
+@@ -906,7 +1058,7 @@ static int needs_stub_exports( DLLSPEC *spec )
  }
  
  
@@ -267,7 +320,7 @@ index 800cb230231..880a99c1e9a 100644
  {
      int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
      size_t rva, thunk;
-@@ -1064,6 +1163,122 @@ static void create_stub_exports_text( DLLSPEC *spec )
+@@ -1064,6 +1216,122 @@ static void create_stub_exports_text( DLLSPEC *spec )
  }
  
  
@@ -390,7 +443,7 @@ index 800cb230231..880a99c1e9a 100644
  static void create_stub_exports_data( DLLSPEC *spec )
  {
      int i;
-@@ -1263,7 +1478,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -1263,7 +1531,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
      if (needs_stub_exports( spec ))
      {
          put_label( "text_start" );
@@ -403,5 +456,5 @@ index 800cb230231..880a99c1e9a 100644
      }
      else
 -- 
-2.17.1
+2.23.0
 

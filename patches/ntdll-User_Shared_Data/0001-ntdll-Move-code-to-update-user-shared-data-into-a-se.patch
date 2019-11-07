@@ -1,4 +1,4 @@
-From 74b51edf67a0b31bf8e3341a403b11387ad5801d Mon Sep 17 00:00:00 2001
+From 3e1f96926c05104663b171fe2a4bad2b2a0679e5 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 26 Nov 2014 10:46:09 +0100
 Subject: [PATCH] ntdll: Move code to update user shared data into a separate
@@ -6,14 +6,14 @@ Subject: [PATCH] ntdll: Move code to update user shared data into a separate
 
 ---
  dlls/ntdll/ntdll.spec |  3 +++
- dlls/ntdll/thread.c   | 24 ++++++++++++++++++------
- 2 files changed, 21 insertions(+), 6 deletions(-)
+ dlls/ntdll/thread.c   | 24 ++++++++++++++++++++----
+ 2 files changed, 23 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index f0ac1d77b00..4003a36c8be 100644
+index a42b4fc2482..8dd58138718 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1574,3 +1574,6 @@
+@@ -1571,3 +1571,6 @@
  # Filesystem
  @ cdecl wine_nt_to_unix_file_name(ptr ptr long long)
  @ cdecl wine_unix_to_nt_file_name(ptr ptr)
@@ -21,20 +21,20 @@ index f0ac1d77b00..4003a36c8be 100644
 +# User shared data
 +@ cdecl __wine_user_shared_data()
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 863b337024c..90d49f2d92e 100644
+index d010c018102..b5b11e3671e 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -211,7 +211,6 @@ void thread_init(void)
+@@ -274,7 +274,6 @@ TEB *thread_init(void)
+     TEB *teb;
      void *addr;
-     BOOL suspend;
-     SIZE_T size, info_size;
+     SIZE_T size;
 -    LARGE_INTEGER now;
      NTSTATUS status;
      struct ntdll_thread_data *thread_data;
  
-@@ -300,7 +299,23 @@ void thread_init(void)
-     init_directories();
-     init_user_process_params( info_size );
+@@ -349,7 +348,25 @@ TEB *thread_init(void)
+     debug_init();
+     set_process_name( __wine_main_argc, __wine_main_argv );
  
 -    /* initialize time values in user_shared_data */
 +	/* initialize user_shared_data */
@@ -42,6 +42,8 @@ index 863b337024c..90d49f2d92e 100644
 +    fill_cpu_info();
 +
 +    NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
++
++    return teb;
 +}
 +
 +
@@ -57,18 +59,17 @@ index 863b337024c..90d49f2d92e 100644
      NtQuerySystemTime( &now );
      user_shared_data->SystemTime.LowPart = now.u.LowPart;
      user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
-@@ -308,10 +323,7 @@ void thread_init(void)
+@@ -357,9 +374,8 @@ TEB *thread_init(void)
      user_shared_data->u.TickCount.High2Time = user_shared_data->u.TickCount.High1Time;
      user_shared_data->TickCountLowDeprecated = user_shared_data->u.TickCount.LowPart;
      user_shared_data->TickCountMultiplier = 1 << 24;
--
 -    fill_cpu_info();
--
--    NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
+ 
+-    return teb;
 +    return (BYTE *)user_shared_data;
  }
  
  BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi)
 -- 
-2.23.0
+2.17.1
 

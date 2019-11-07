@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7f469b689a2dccc0863952cd73e592df391dc607"
+	echo "88d30985ddd534e8bafed531e619846bc8d10839"
 }
 
 # Show version information
@@ -227,7 +227,6 @@ patch_enable_all ()
 	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntoskrnl_Stubs="$1"
-	enable_ntoskrnl_exe_IoInvalidateDeviceRelations="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -803,9 +802,6 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
-			;;
-		ntoskrnl.exe-IoInvalidateDeviceRelations)
-			enable_ntoskrnl_exe_IoInvalidateDeviceRelations="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -3095,13 +3091,12 @@ fi
 # Patchset dsdmo-new-dll
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/dsdmo/Makefile.in, dlls/dsdmo/chorus.c, dlls/dsdmo/compressor.c, dlls/dsdmo/distortion.c,
-# | 	dlls/dsdmo/dsdmo.spec, dlls/dsdmo/dsdmo_classes.idl, dlls/dsdmo/dsdmo_private.h, dlls/dsdmo/echo.c,
-# | 	dlls/dsdmo/flanger.c, dlls/dsdmo/gargle.c, dlls/dsdmo/main.c, dlls/dsdmo/parameq.c, dlls/dsdmo/reverb.c,
-# | 	dlls/dsdmo/reverb2.c, dlls/dsound/buffer.c, dlls/dsound/tests/dsound8.c
+# |   *	dlls/dsdmo/Makefile.in, dlls/dsdmo/chorus.c, dlls/dsdmo/compressor.c, dlls/dsdmo/distortion.c,
+# | 	dlls/dsdmo/dsdmo_classes.idl, dlls/dsdmo/dsdmo_private.h, dlls/dsdmo/echo.c, dlls/dsdmo/flanger.c, dlls/dsdmo/gargle.c,
+# | 	dlls/dsdmo/main.c, dlls/dsdmo/parameq.c, dlls/dsdmo/reverb.c, dlls/dsdmo/reverb2.c, dlls/dsound/buffer.c,
+# | 	dlls/dsound/tests/dsound8.c
 # |
 if test "$enable_dsdmo_new_dll" -eq 1; then
-	patch_apply dsdmo-new-dll/0001-dsdmo-Added-dll.patch
 	patch_apply dsdmo-new-dll/0002-dsdmo-Add-IDirectSoundFXEcho-support.patch
 	patch_apply dsdmo-new-dll/0003-dsdmo-Add-IDirectSoundFXChorus-support.patch
 	patch_apply dsdmo-new-dll/0004-dsdmo-Add-IDirectSoundFXCompressor-support.patch
@@ -3129,7 +3124,6 @@ if test "$enable_dsdmo_new_dll" -eq 1; then
 	patch_apply dsdmo-new-dll/0026-dsdmo-Implement-IDirectSoundFXParamEq-SetAllParamete.patch
 	patch_apply dsdmo-new-dll/0027-dsdmo-Implement-IDirectSoundFXI3DL2Reverb-SetAllPara.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Added dll.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXEcho support.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXChorus support.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dsdmo: Add IDirectSoundFXCompressor support.", 1 },';
@@ -4857,14 +4851,14 @@ fi
 # |   *	[#45572] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtContinue)
 # |
 # | Modified files:
-# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c
+# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c
 # |
 if test "$enable_ntdll_NtContinue" -eq 1; then
 	patch_apply ntdll-NtContinue/0001-ntdll-Add-stub-for-NtContinue.patch
 	patch_apply ntdll-NtContinue/0002-Use-NtContinue-to-continue-execution-after-exception.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for NtContinue.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "Use NtContinue to continue execution after exceptions.", 1 },';
+		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Use NtContinue to continue execution after exceptions.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5139,34 +5133,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl.exe-IoInvalidateDeviceRelations
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33498] Implement framework for installing and running native PnP drivers.
-# |
-# | Modified files:
-# |   *	configure, configure.ac, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl_private.h, dlls/ntoskrnl.exe/pnp.c,
-# | 	dlls/winebus.sys/bus.h, dlls/winebus.sys/bus_iohid.c, dlls/winebus.sys/bus_sdl.c, dlls/winebus.sys/bus_udev.c,
-# | 	dlls/winebus.sys/main.c, loader/Makefile.in, loader/wine.inf.in, loader/winebus.inf.in, programs/wineboot/Makefile.in,
-# | 	programs/wineboot/wineboot.c
-# |
-if test "$enable_ntoskrnl_exe_IoInvalidateDeviceRelations" -eq 1; then
-	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0001-winebus.inf-Add-new-INF-file-and-copy-it-to-the-INF-.patch
-	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0002-winebus.sys-Implement-AddDevice.patch
-	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0003-wineboot-Create-a-root-enumerated-device-object-for-.patch
-	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0004-winebus.sys-Initialize-and-teardown-the-HID-backends.patch
-	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0005-ntoskrnl.exe-IoInvalidateDeviceRelations-receives-th.patch
-	patch_apply ntoskrnl.exe-IoInvalidateDeviceRelations/0028-wine.inf-Remove-registration-for-the-winebus-service.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "winebus.inf: Add new INF file and copy it to the INF directory.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Implement AddDevice().", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "wineboot: Create a root-enumerated device object for winebus.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "winebus.sys: Initialize and teardown the HID backends while the bus FDO is still extant.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntoskrnl.exe: IoInvalidateDeviceRelations() receives the parent PDO.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "wine.inf: Remove registration for the winebus service.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,16 +1,16 @@
-From 7bc6d780c8449926854c8f69f501fc60722a379f Mon Sep 17 00:00:00 2001
+From 3704033a2a378975d9c4073af426e0540f493a3b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 30 May 2015 02:23:15 +0200
 Subject: [PATCH] ntdll: Add support for hiding wine version information from
  applications.
 
 ---
- dlls/ntdll/loader.c     | 99 ++++++++++++++++++++++++++++++++++++++++-
- dlls/ntdll/ntdll_misc.h |  5 +++
- 2 files changed, 103 insertions(+), 1 deletion(-)
+ dlls/ntdll/loader.c     | 102 +++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/ntdll_misc.h |   5 ++
+ 2 files changed, 106 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index bc4579b6ace..e1fa510647d 100644
+index fbe4d30af0b..22ba88a72ae 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -70,6 +70,7 @@ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
@@ -40,7 +40,7 @@ index bc4579b6ace..e1fa510647d 100644
  struct ldr_notification
  {
      struct list                    entry;
-@@ -1709,6 +1715,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+@@ -1710,6 +1716,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
  }
  
  
@@ -137,7 +137,7 @@ index bc4579b6ace..e1fa510647d 100644
  /******************************************************************
   *		LdrGetProcedureAddress  (NTDLL.@)
   */
-@@ -1729,7 +1825,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+@@ -1730,7 +1826,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
          LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
          void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
                            : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
@@ -146,16 +146,19 @@ index bc4579b6ace..e1fa510647d 100644
          {
              *address = proc;
              ret = STATUS_SUCCESS;
-@@ -4295,6 +4391,7 @@ void __wine_process_init(void)
+@@ -4331,6 +4427,10 @@ void __wine_process_init(void)
+         NtTerminateProcess( GetCurrentProcess(), STATUS_INVALID_IMAGE_FORMAT );
+     }
  
-     NtCurrentTeb()->Peb->LoaderLock = &loader_section;
-     version_init( wm->ldr.FullDllName.Buffer );
++    NtCurrentTeb()->Peb->LoaderLock = &loader_section;
++
 +    hidden_exports_init( wm->ldr.FullDllName.Buffer );
++
      virtual_set_large_address_space();
  
      LdrQueryImageFileExecutionOptions( &wm->ldr.FullDllName, globalflagW, REG_DWORD,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 976b8715680..010a195f0d2 100644
+index 7ceb3132a7c..ac51c78cff7 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -269,6 +269,11 @@ extern SYSTEM_CPU_INFORMATION cpu_info DECLSPEC_HIDDEN;

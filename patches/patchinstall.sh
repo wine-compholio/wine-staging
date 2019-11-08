@@ -1579,6 +1579,13 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	enable_server_Desktop_Refcount=1
 fi
 
+if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
+	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
+		abort "Patchset advapi32-Token_Integrity_Level disabled, but wow64cpu-Wow64Transition depends on that."
+	fi
+	enable_advapi32_Token_Integrity_Level=1
+fi
+
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	if test "$enable_winex11__NET_ACTIVE_WINDOW" -gt 1; then
 		abort "Patchset winex11-_NET_ACTIVE_WINDOW disabled, but winex11-WM_WINDOWPOSCHANGING depends on that."
@@ -1914,9 +1921,13 @@ if test "$enable_ntdll_User_Shared_Data" -eq 1; then
 fi
 
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
+		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
 	if test "$enable_ntdll_ThreadTime" -gt 1; then
 		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
 	fi
+	enable_advapi32_Token_Integrity_Level=1
 	enable_ntdll_ThreadTime=1
 fi
 
@@ -3425,7 +3436,7 @@ fi
 # Patchset ntdll-Hide_Wine_Exports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38656] Add support for hiding wine version information from applications
@@ -3443,7 +3454,7 @@ fi
 # Patchset ntdll-User_Shared_Data
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29168] Update user shared data at realtime
@@ -3468,7 +3479,8 @@ fi
 # Patchset winebuild-Fake_Dlls
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
@@ -3514,7 +3526,8 @@ fi
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
@@ -3709,16 +3722,16 @@ fi
 # |
 # | Modified files:
 # |   *	README.esync, configure.ac, dlls/kernel32/tests/sync.c, dlls/ntdll/Makefile.in, dlls/ntdll/critsection.c,
-# | 	dlls/ntdll/esync.c, dlls/ntdll/esync.h, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/om.c,
-# | 	dlls/ntdll/server.c, dlls/ntdll/sync.c, dlls/ntdll/thread.c, dlls/rpcrt4/rpc_server.c, dlls/user32/hook.c,
-# | 	dlls/wineandroid.drv/window.c, dlls/winemac.drv/macdrv_main.c, dlls/winex11.drv/x11drv_main.c, server/Makefile.in,
-# | 	server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c, server/console.c,
-# | 	server/debugger.c, server/device.c, server/directory.c, server/esync.c, server/esync.h, server/event.c, server/fd.c,
-# | 	server/file.c, server/file.h, server/handle.c, server/hook.c, server/mailslot.c, server/main.c, server/mapping.c,
-# | 	server/mutex.c, server/named_pipe.c, server/object.h, server/process.c, server/process.h, server/protocol.def,
-# | 	server/queue.c, server/registry.c, server/request.c, server/semaphore.c, server/serial.c, server/signal.c,
-# | 	server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/thread.h, server/timer.c, server/token.c,
-# | 	server/winstation.c
+# | 	dlls/ntdll/esync.c, dlls/ntdll/esync.h, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h,
+# | 	dlls/ntdll/om.c, dlls/ntdll/server.c, dlls/ntdll/sync.c, dlls/ntdll/thread.c, dlls/rpcrt4/rpc_server.c,
+# | 	dlls/user32/hook.c, dlls/wineandroid.drv/window.c, dlls/winemac.drv/macdrv_main.c, dlls/winex11.drv/x11drv_main.c,
+# | 	server/Makefile.in, server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c,
+# | 	server/console.c, server/debugger.c, server/device.c, server/directory.c, server/esync.c, server/esync.h,
+# | 	server/event.c, server/fd.c, server/file.c, server/file.h, server/handle.c, server/hook.c, server/mailslot.c,
+# | 	server/main.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.h, server/process.c,
+# | 	server/process.h, server/protocol.def, server/queue.c, server/registry.c, server/request.c, server/semaphore.c,
+# | 	server/serial.c, server/signal.c, server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/thread.h,
+# | 	server/timer.c, server/token.c, server/winstation.c
 # |
 if test "$enable_eventfd_synchronization" -eq 1; then
 	patch_apply eventfd_synchronization/0001-configure-Check-for-sys-eventfd.h-ppoll-and-shm_open.patch
@@ -4533,7 +4546,8 @@ fi
 # Patchset ntdll-Builtin_Prot
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44650] Fix holes in ELF mappings
@@ -4844,7 +4858,8 @@ fi
 # Patchset ntdll-NtContinue
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31910] Add stub for NtContinue
@@ -4962,7 +4977,8 @@ fi
 # Patchset ntdll-WRITECOPY
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
@@ -4989,7 +5005,8 @@ fi
 # Patchset ntdll-Signal_Handler
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, ntdll-WRITECOPY
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data, ntdll-WRITECOPY
 # |
 # | Modified files:
 # |   *	dlls/ntdll/signal_i386.c
@@ -7222,6 +7239,9 @@ if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
 fi
 
 # Patchset wow64cpu-Wow64Transition
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)

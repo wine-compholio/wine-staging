@@ -1,4 +1,4 @@
-From 7103ff251691b420248ff8ddb80d544f06cc8b3a Mon Sep 17 00:00:00 2001
+From ac0e8624e1fc33859e2ea753da05728ac82f8a1b Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Mon, 11 Jun 2018 13:10:36 -0500
 Subject: [PATCH] ntdll: Use shared memory segments to store semaphore and
@@ -12,11 +12,12 @@ since now we don't have to allocate separate structures.
 ---
  dlls/ntdll/esync.c  | 349 +++++++++++++++++++-------------------------
  dlls/ntdll/esync.h  |   1 +
- dlls/ntdll/thread.c |   4 +
- 3 files changed, 155 insertions(+), 199 deletions(-)
+ dlls/ntdll/loader.c |   3 +
+ dlls/ntdll/thread.c |   1 +
+ 4 files changed, 155 insertions(+), 199 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index c1d8882d817..e8ee1cbc9ff 100644
+index c1d8882d8..e8ee1cbc9 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -32,6 +32,7 @@
@@ -658,7 +659,7 @@ index c1d8882d817..e8ee1cbc9ff 100644
                      }
                  }
 diff --git a/dlls/ntdll/esync.h b/dlls/ntdll/esync.h
-index f79b9a06c90..88f491e5ab4 100644
+index f79b9a06c..88f491e5a 100644
 --- a/dlls/ntdll/esync.h
 +++ b/dlls/ntdll/esync.h
 @@ -19,6 +19,7 @@
@@ -669,8 +670,22 @@ index f79b9a06c90..88f491e5ab4 100644
  extern NTSTATUS esync_close( HANDLE handle ) DECLSPEC_HIDDEN;
  
  extern NTSTATUS esync_create_semaphore(HANDLE *handle, ACCESS_MASK access,
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 9972d680e..2f66065e3 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -4407,6 +4407,9 @@ void __wine_process_init(void)
+     init_directories();
+     init_user_process_params( info_size );
+ 
++    if (do_esync())
++        esync_init();
++
+     NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
+ 
+     /* retrieve current umask */
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index e59cd2a5073..18f73b4911c 100644
+index f699d01d6..c86e02424 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -51,6 +51,7 @@
@@ -681,16 +696,6 @@ index e59cd2a5073..18f73b4911c 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(thread);
  
-@@ -366,6 +367,9 @@ TEB *thread_init(void)
-     __wine_user_shared_data();
-     fill_cpu_info();
- 
-+    if (do_esync())
-+        esync_init();
-+
-     NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
- 
-     return teb;
 -- 
-2.17.1
+2.23.0
 

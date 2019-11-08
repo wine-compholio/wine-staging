@@ -1,4 +1,4 @@
-From a0f37e4e406de37860045aaf5e36fc811cda8ce6 Mon Sep 17 00:00:00 2001
+From 163347374f655dc94b2c864d599051e2d13aea70 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
@@ -12,7 +12,7 @@ Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
  4 files changed, 113 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index b4f0397f574..fc44dcfe3e5 100644
+index 1c20ae7ef..5efcc3c9d 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3824,6 +3824,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
@@ -52,19 +52,19 @@ index b4f0397f574..fc44dcfe3e5 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -4429,6 +4459,7 @@ void __wine_process_init(void)
+@@ -4399,6 +4429,7 @@ void __wine_process_init(void)
+         NtTerminateProcess( GetCurrentProcess(), STATUS_INVALID_IMAGE_FORMAT );
+     }
  
-     NtCurrentTeb()->Peb->LoaderLock = &loader_section;
-
 +    user_shared_data_init();
      hidden_exports_init( wm->ldr.FullDllName.Buffer );
  
      virtual_set_large_address_space();
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index ac51c78cff7..47d85d5e35a 100644
+index 687d460ec..f49d7b65f 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -196,6 +196,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+@@ -193,6 +193,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_fill_image_information( const pe_image_info_t *pe_info,
                                              SECTION_IMAGE_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -75,7 +75,7 @@ index ac51c78cff7..47d85d5e35a 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 9ca81f89ecb..bf97cbfa8e1 100644
+index b5b11e367..889500d04 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -47,6 +47,7 @@
@@ -97,7 +97,7 @@ index 9ca81f89ecb..bf97cbfa8e1 100644
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
-@@ -292,7 +295,7 @@ TEB *thread_init(void)
+@@ -290,7 +293,7 @@ TEB *thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -183,7 +183,7 @@ index 9ca81f89ecb..bf97cbfa8e1 100644
  {
      BOOL ret = FALSE;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 68249de902e..54eb6c7ffe8 100644
+index 68249de90..54eb6c7ff 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -2102,6 +2102,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
@@ -219,5 +219,5 @@ index 68249de902e..54eb6c7ffe8 100644
  }
  
 -- 
-2.17.1
+2.23.0
 

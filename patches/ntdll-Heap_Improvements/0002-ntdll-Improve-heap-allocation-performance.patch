@@ -1,4 +1,4 @@
-From 6c2c2f49eddd7133f6854845f54349ea2511250b Mon Sep 17 00:00:00 2001
+From d7997c1fffbf407f08fc18464c2fe3f17a3038a4 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 22 Jul 2017 07:21:45 +0200
 Subject: [PATCH] ntdll: Improve heap allocation performance. (v2)
@@ -9,12 +9,12 @@ Subject: [PATCH] ntdll: Improve heap allocation performance. (v2)
  2 files changed, 234 insertions(+), 96 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index ad4f0e05a..f8a1c8de4 100644
+index 0ce3cb5c573..2fa1c7d4223 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2745,6 +2745,15 @@ then
-     AC_DEFINE(HAVE___BUILTIN_CLZ, 1, [Define to 1 if you have the `__builtin_clz' built-in function.])
- fi
+@@ -2790,6 +2790,15 @@ AC_CHECK_FUNCS(\
+ )
+ LIBS="$ac_save_LIBS"
  
 +dnl Check for __builtin_ctzl
 +AC_CACHE_CHECK([for __builtin_ctzl], ac_cv_have___builtin_ctzl,
@@ -29,7 +29,7 @@ index ad4f0e05a..f8a1c8de4 100644
  AC_CACHE_CHECK([for __builtin_popcount], ac_cv_have___builtin_popcount,
                 AC_LINK_IFELSE([AC_LANG_PROGRAM(,[[return __builtin_popcount(1)]])],
 diff --git a/dlls/ntdll/heap.c b/dlls/ntdll/heap.c
-index 3eaeea2d1..4b694ed7e 100644
+index db5c039bb76..f51dc63f371 100644
 --- a/dlls/ntdll/heap.c
 +++ b/dlls/ntdll/heap.c
 @@ -3,6 +3,7 @@
@@ -325,7 +325,7 @@ index 3eaeea2d1..4b694ed7e 100644
  }
  
  
-@@ -881,6 +948,15 @@ static BOOL validate_large_arena( HEAP *heap, const ARENA_LARGE *arena, BOOL qui
+@@ -880,6 +947,15 @@ static BOOL validate_large_arena( HEAP *heap, const ARENA_LARGE *arena, BOOL qui
  }
  
  
@@ -341,7 +341,7 @@ index 3eaeea2d1..4b694ed7e 100644
  /***********************************************************************
   *           HEAP_CreateSubHeap
   */
-@@ -888,7 +964,6 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -887,7 +963,6 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
                                      SIZE_T commitSize, SIZE_T totalSize )
  {
      SUBHEAP *subheap;
@@ -349,7 +349,7 @@ index 3eaeea2d1..4b694ed7e 100644
      unsigned int i;
  
      if (!address)
-@@ -949,17 +1024,21 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -948,17 +1023,21 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
          subheap->headerSize = ROUND_SIZE( sizeof(HEAP) );
          list_add_head( &heap->subheap_list, &subheap->entry );
  
@@ -381,7 +381,7 @@ index 3eaeea2d1..4b694ed7e 100644
  
          /* Initialize critical section */
  
-@@ -1002,6 +1081,34 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -1001,6 +1080,34 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
  }
  
  
@@ -416,7 +416,7 @@ index 3eaeea2d1..4b694ed7e 100644
  /***********************************************************************
   *           HEAP_FindFreeBlock
   *
-@@ -1011,26 +1118,39 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -1010,26 +1117,39 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
  static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
                                         SUBHEAP **ppSubHeap )
  {
@@ -468,7 +468,7 @@ index 3eaeea2d1..4b694ed7e 100644
      }
  
      /* If no block was found, attempt to grow the heap */
-@@ -1076,13 +1196,10 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
+@@ -1075,13 +1195,10 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
   */
  static BOOL HEAP_IsValidArenaPtr( const HEAP *heap, const ARENA_FREE *ptr )
  {
@@ -482,7 +482,7 @@ index 3eaeea2d1..4b694ed7e 100644
      return FALSE;
  }
  
-@@ -1094,7 +1211,7 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
+@@ -1093,7 +1210,7 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
  {
      DWORD flags = subheap->heap->flags;
      SIZE_T size;
@@ -491,7 +491,7 @@ index 3eaeea2d1..4b694ed7e 100644
      char *heapEnd = (char *)subheap->base + subheap->size;
  
      /* Check for unaligned pointers */
-@@ -1111,7 +1228,8 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
+@@ -1110,7 +1227,8 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
          return FALSE;
      }
      /* Check size flags */
@@ -501,7 +501,7 @@ index 3eaeea2d1..4b694ed7e 100644
          (pArena->size & ARENA_FLAG_PREV_FREE))
      {
          ERR("Heap %p: bad flags %08x for free arena %p\n",
-@@ -1125,34 +1243,45 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
+@@ -1124,34 +1242,45 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
          ERR("Heap %p: bad size %08lx for free arena %p\n", subheap->heap, size, pArena );
          return FALSE;
      }
@@ -556,5 +556,5 @@ index 3eaeea2d1..4b694ed7e 100644
              subheap->heap, prev, pArena );
          return FALSE;
 -- 
-2.21.0
+2.24.0.rc1
 

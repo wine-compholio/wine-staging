@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "070cfc358c8ed67ba08a49ae78c20205ab4e2d00"
+	echo "34ed1e37da1e1c1cfd641f1f16b0e00030cbb357"
 }
 
 # Show version information
@@ -232,7 +232,6 @@ patch_enable_all ()
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
 	enable_ole32_HGLOBALStream="$1"
-	enable_ole32_STGPROP="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
@@ -817,9 +816,6 @@ patch_enable ()
 			;;
 		ole32-HGLOBALStream)
 			enable_ole32_HGLOBALStream="$2"
-			;;
-		ole32-STGPROP)
-			enable_ole32_STGPROP="$2"
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
@@ -5213,23 +5209,6 @@ if test "$enable_ole32_HGLOBALStream" -eq 1; then
 		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Allow moving a being reallocated block of memory managed by HGLOBAL based IStream.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Read.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ole32: Improve thread-safety of HGLOBALStreamImpl_Write.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ole32-STGPROP
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42046] Multiple fixes for ole32 property storage
-# |
-# | Modified files:
-# |   *	dlls/ole32/enumx.c, dlls/ole32/enumx.h, dlls/ole32/stg_prop.c
-# |
-if test "$enable_ole32_STGPROP" -eq 1; then
-	patch_apply ole32-STGPROP/0001-ole32-Correctly-parse-unicode-property-storage-dicti.patch
-	patch_apply ole32-STGPROP/0003-ole32-Implement-returning-a-name-in-IEnumSTATPROPSTG.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ole32: Correctly parse unicode property storage dictionaries.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ole32: Implement returning a name in IEnumSTATPROPSTG.", 1 },';
 	) >> "$patchlist"
 fi
 

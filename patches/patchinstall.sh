@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "34ed1e37da1e1c1cfd641f1f16b0e00030cbb357"
+	echo "292b728908563952f56b0585d072f3d7a08e93b2"
 }
 
 # Show version information
@@ -158,7 +158,6 @@ patch_enable_all ()
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
-	enable_kernel32_NeedCurrentDirectoryForExePath="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
@@ -594,9 +593,6 @@ patch_enable ()
 			;;
 		kernel32-K32GetPerformanceInfo)
 			enable_kernel32_K32GetPerformanceInfo="$2"
-			;;
-		kernel32-NeedCurrentDirectoryForExePath)
-			enable_kernel32_NeedCurrentDirectoryForExePath="$2"
 			;;
 		kernel32-PE_Loader_Fixes)
 			enable_kernel32_PE_Loader_Fixes="$2"
@@ -2141,7 +2137,7 @@ fi
 # |   *	[#39262] Run explorer.exe as unevaluated process
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernel32/process.c,
+# |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernelbase/process.c,
 # | 	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c,
 # | 	dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
 # | 	programs/runas/runas.rc, server/process.c, server/process.h, server/protocol.def, server/request.c, server/security.h,
@@ -4193,21 +4189,6 @@ if test "$enable_kernel32_Job_Tests" -eq 1; then
 	patch_apply kernel32-Job_Tests/0001-kernel32-tests-Add-tests-for-job-object-accounting.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "kernel32/tests: Add tests for job object accounting.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-NeedCurrentDirectoryForExePath
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23934] CreateProcess does not prioritize the working directory over the system search path
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c
-# |
-if test "$enable_kernel32_NeedCurrentDirectoryForExePath" -eq 1; then
-	patch_apply kernel32-NeedCurrentDirectoryForExePath/0003-kernel32-Consider-the-working-directory-first-when-l.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Consider the working directory first when launching executables with CreateProcess.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6574,7 +6555,7 @@ fi
 # Patchset wined3d-Accounting
 # |
 # | Modified files:
-# |   *	dlls/d3d9/tests/device.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_gl.h
+# |   *	dlls/wined3d/adapter_gl.c, dlls/wined3d/device.c, dlls/wined3d/wined3d_gl.h
 # |
 if test "$enable_wined3d_Accounting" -eq 1; then
 	patch_apply wined3d-Accounting/0001-wined3d-Use-real-values-for-memory-accounting-on-NVI.patch

@@ -1,26 +1,42 @@
-From 31df1334957af47dd6e3049ad10c63a0e2210005 Mon Sep 17 00:00:00 2001
+From 8ba5167f0ade2bd789e0a1b97263cfe5daad98d7 Mon Sep 17 00:00:00 2001
 From: "Olivier F. R. Dierick" <o.dierick@piezo-forte.be>
 Date: Tue, 19 Apr 2016 07:25:39 +0200
 Subject: [PATCH] kernel32: Implement SetProcessDEPPolicy().
 
 ---
- dlls/kernel32/process.c | 34 +++++++++++++++++++++++++++++++---
- 1 file changed, 31 insertions(+), 3 deletions(-)
+ dlls/kernel32/process.c | 36 +++++++++++++++++++++++++++++++++---
+ 1 file changed, 33 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
-index b9c277aac..1255732eb 100644
+index f68193c93..ae894c29d 100644
 --- a/dlls/kernel32/process.c
 +++ b/dlls/kernel32/process.c
-@@ -104,6 +104,8 @@ static WCHAR winevdm[] = {'C',':','\\','w','i','n','d','o','w','s',
+@@ -70,6 +70,8 @@ typedef struct
+     DWORD dwReserved;
+ } LOADPARMS32;
  
- static const char * const cpu_names[] = { "x86", "x86_64", "PowerPC", "ARM", "ARM64" };
++static BOOL is_wow64;
++
+ HMODULE kernel32_handle = 0;
+ SYSTEM_BASIC_INFORMATION system_info = { 0 };
+ 
+@@ -85,6 +87,7 @@ const WCHAR DIR_System[] = {'C',':','\\','w','i','n','d','o','w','s',
+ #define PDB32_FILE_APIS_OEM 0x0040  /* File APIs are OEM */
+ #define PDB32_WIN32S_PROC   0x8000  /* Win32s process */
  
 +static DEP_SYSTEM_POLICY_TYPE system_DEP_policy = OptIn;
-+
- /* return values for get_binary_info */
- enum binary_type
- {
-@@ -2595,9 +2597,35 @@ DEP_SYSTEM_POLICY_TYPE WINAPI GetSystemDEPPolicy(void)
+ 
+ /***********************************************************************
+  *              set_library_argv
+@@ -211,6 +214,7 @@ void * CDECL __wine_kernel_init(void)
+     setbuf(stdout,NULL);
+     setbuf(stderr,NULL);
+     kernel32_handle = GetModuleHandleW(kernel32W);
++    IsWow64Process( GetCurrentProcess(), &is_wow64 );
+     RtlSetUnhandledExceptionFilter( UnhandledExceptionFilter );
+ 
+     LOCALE_Init();
+@@ -917,9 +921,35 @@ DEP_SYSTEM_POLICY_TYPE WINAPI GetSystemDEPPolicy(void)
   */
  BOOL WINAPI SetProcessDEPPolicy(DWORD newDEP)
  {

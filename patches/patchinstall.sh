@@ -103,6 +103,7 @@ patch_enable_all ()
 	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
+	enable_d3d9_Direct3DShaderValidatorCreate9="$1"
 	enable_d3d9_Tests="$1"
 	enable_d3dx9_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
@@ -428,6 +429,9 @@ patch_enable ()
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
+			;;
+		d3d9-Direct3DShaderValidatorCreate9)
+			enable_d3d9_Direct3DShaderValidatorCreate9="$2"
 			;;
 		d3d9-Tests)
 			enable_d3d9_Tests="$2"
@@ -2566,6 +2570,21 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Steve Melenchuk", "d3d11: Allow NULL pointer for initial count in d3d11_deferred_context_CSSetUnorderedAccessViews.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Correctly align map info buffer.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "d3d11/tests: Add a basic test for drawing with deferred context.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3d9-Direct3DShaderValidatorCreate9
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46735] The Sims 2 demo needs Direct3DShaderValidatorCreate9() implementation
+# |
+# | Modified files:
+# |   *	dlls/d3d9/d3d9_main.c
+# |
+if test "$enable_d3d9_Direct3DShaderValidatorCreate9" -eq 1; then
+	patch_apply d3d9-Direct3DShaderValidatorCreate9/0001-d3d9-Return-a-stub-interface-from-Direct3DShaderVali.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "d3d9: Return a stub interface from Direct3DShaderValidatorCreate9().", 1 },';
 	) >> "$patchlist"
 fi
 

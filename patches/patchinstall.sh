@@ -163,6 +163,7 @@ patch_enable_all ()
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
+	enable_kernelbase_ReOpenFile="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
@@ -610,6 +611,9 @@ patch_enable ()
 			;;
 		kernel32-SetProcessDEPPolicy)
 			enable_kernel32_SetProcessDEPPolicy="$2"
+			;;
+		kernelbase-ReOpenFile)
+			enable_kernelbase_ReOpenFile="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -4289,6 +4293,21 @@ if test "$enable_kernel32_SetProcessDEPPolicy" -eq 1; then
 		printf '%s\n' '+    { "Olivier F. R. Dierick", "kernel32: Implement SetProcessDEPPolicy().", 1 },';
 		printf '%s\n' '+    { "Olivier F. R. Dierick", "kernel32: Implement GetSystemDEPPolicy().", 1 },';
 		printf '%s\n' '+    { "Olivier F. R. Dierick", "kernel32: Make system DEP policy affect GetProcessDEPPolicy().", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset kernelbase-ReOpenFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47668] kernelbase: Improve stub for ReOpenFile and add small test
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/file.c, dlls/kernelbase/file.c
+# |
+if test "$enable_kernelbase_ReOpenFile" -eq 1; then
+	patch_apply kernelbase-ReOpenFile/0001-kernelbase-Improve-stub-for-ReOpenFile-and-add-small.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "kernelbase: Improve stub for ReOpenFile and add small test.", 1 },';
 	) >> "$patchlist"
 fi
 

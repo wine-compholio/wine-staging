@@ -1,0 +1,144 @@
+From e42bb02d6f8feecac8b6c57a84ac90003ca99e79 Mon Sep 17 00:00:00 2001
+From: Louis Lenders <xerox.xerox2000x@gmail.com>
+Date: Fri, 4 Oct 2019 23:10:29 +0200
+Subject: [PATCH] kernelbase: Improve stub for ReOpenFile and add small test
+
+Wine-bug: bug https://bugs.winehq.org/show_bug.cgi?id=47668
+
+Signed-off-by: Louis Lenders <xerox.xerox2000x@gmail.com>
+---
+ dlls/kernel32/tests/file.c | 47 ++++++++++++++++++++++++++++++++++++++
+ dlls/kernelbase/file.c     | 31 +++++++++++++++++++++++--
+ 2 files changed, 76 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
+index 5bd168276f..67e56e0950 100644
+--- a/dlls/kernel32/tests/file.c
++++ b/dlls/kernel32/tests/file.c
+@@ -59,6 +59,7 @@ static BOOL (WINAPI *pRtlDosPathNameToNtPathName_U)(LPCWSTR, PUNICODE_STRING, PW
+ static NTSTATUS (WINAPI *pRtlAnsiStringToUnicodeString)(PUNICODE_STRING, PCANSI_STRING, BOOLEAN);
+ static BOOL (WINAPI *pSetFileInformationByHandle)(HANDLE, FILE_INFO_BY_HANDLE_CLASS, void*, DWORD);
+ static BOOL (WINAPI *pGetQueuedCompletionStatusEx)(HANDLE, OVERLAPPED_ENTRY*, ULONG, ULONG*, DWORD, BOOL);
++static HANDLE (WINAPI *pReOpenFile)(HANDLE, DWORD, DWORD, DWORD);
+ static void (WINAPI *pRtlInitAnsiString)(PANSI_STRING,PCSZ);
+ static void (WINAPI *pRtlFreeUnicodeString)(PUNICODE_STRING);
+ static BOOL (WINAPI *pSetFileCompletionNotificationModes)(HANDLE, UCHAR);
+@@ -111,6 +112,7 @@ static void InitFunctionPointers(void)
+     pGetFinalPathNameByHandleW = (void *) GetProcAddress(hkernel32, "GetFinalPathNameByHandleW");
+     pSetFileInformationByHandle = (void *) GetProcAddress(hkernel32, "SetFileInformationByHandle");
+     pGetQueuedCompletionStatusEx = (void *) GetProcAddress(hkernel32, "GetQueuedCompletionStatusEx");
++    pReOpenFile = (void *) GetProcAddress(hkernel32, "ReOpenFile");
+     pSetFileCompletionNotificationModes = (void *)GetProcAddress(hkernel32, "SetFileCompletionNotificationModes");
+     pFindFirstStreamW = (void *)GetProcAddress(hkernel32, "FindFirstStreamW");
+ }
+@@ -4410,6 +4412,50 @@ static void test_SetFileValidData(void)
+     DeleteFileA(filename);
+ }
+ 
++static void test_ReOpenFile(void)
++{
++    static WCHAR prefix[] = {'R','e','O','p','e','n','F','i','l','e','\0'};
++    WCHAR temp_path[MAX_PATH], test_path[MAX_PATH];
++    HANDLE file, h;
++    DWORD count;
++    UINT ret;
++
++    if (!pReOpenFile)
++    {
++        win_skip("ReOpenFile is missing\n");
++        return;
++    }
++
++    /* Test calling with invalid handle */
++    SetLastError(0xcafecafe);
++    h = pReOpenFile(0xfafa, GENERIC_WRITE, FILE_SHARE_WRITE, FILE_FLAG_DELETE_ON_CLOSE);
++    ok(h == INVALID_HANDLE_VALUE, "Expected INVALID_HANDLE_VALUE, got %u\n", h);
++    ok(GetLastError() == ERROR_INVALID_HANDLE, "Expected ERROR_INVALID_HANDLE, got %u\n", GetLastError());
++
++    count = GetTempPathW(MAX_PATH, temp_path);
++    ok(count, "Failed to get temp path, error %u\n", GetLastError());
++    ret = GetTempFileNameW(temp_path, prefix, 0, test_path);
++    ok(ret != 0, "GetTempFileNameW error %u\n", GetLastError());
++
++    file = CreateFileW(test_path, GENERIC_WRITE, FILE_SHARE_WRITE, NULL,
++                       CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
++    ok(file != INVALID_HANDLE_VALUE, "CreateFileW error %u\n", GetLastError());
++    trace("Created file %s\n", wine_dbgstr_w(test_path));
++
++    SetLastError(0xcafecafe);
++    h = pReOpenFile(file, GENERIC_WRITE, FILE_SHARE_WRITE, FILE_ATTRIBUTE_NORMAL);
++    ok(h == INVALID_HANDLE_VALUE, "ReOpenFile returned unexpected handle %u\n",h);
++    ok(GetLastError() == ERROR_INVALID_PARAMETER, "Expected ERROR_INVALID_PARAMETER, got %u\n", GetLastError());
++
++    /* Logos Bible calls ReOpenFile with flags being 0, what Flags/Attributes is that?????? */
++    SetLastError(0xcafecafe);
++    h = pReOpenFile(file, GENERIC_WRITE, FILE_SHARE_WRITE, 0);
++    ok(h != INVALID_HANDLE_VALUE, "ReOpenFile returned unexpected INVALID_HANDLE_VALUE\n");
++    ok(GetLastError() == ERROR_SUCCESS, "Expected ERROR_SUCCESS, got %u\n", GetLastError());
++
++    CloseHandle(file);
++}
++
+ static void test_WriteFileGather(void)
+ {
+     char temp_path[MAX_PATH], filename[MAX_PATH];
+@@ -5469,6 +5515,7 @@ START_TEST(file)
+     test_RemoveDirectory();
+     test_ReplaceFileA();
+     test_ReplaceFileW();
++    test_ReOpenFile();
+     test_GetFileInformationByHandleEx();
+     test_OpenFileById();
+     test_SetFileValidData();
+diff --git a/dlls/kernelbase/file.c b/dlls/kernelbase/file.c
+index aa2ebfcc69..5139913b8b 100644
+--- a/dlls/kernelbase/file.c
++++ b/dlls/kernelbase/file.c
+@@ -43,6 +43,8 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(file);
+ 
++extern DWORD WINAPI GetFinalPathNameByHandleW(HANDLE,LPWSTR,DWORD,DWORD);
++
+ const WCHAR windows_dir[] = {'C',':','\\','w','i','n','d','o','w','s',0};
+ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\','s','y','s','t','e','m','3','2',0};
+ 
+@@ -2127,8 +2129,33 @@ HANDLE WINAPI DECLSPEC_HOTPATCH OpenFileById( HANDLE handle, LPFILE_ID_DESCRIPTO
+  */
+ HANDLE WINAPI /* DECLSPEC_HOTPATCH */ ReOpenFile( HANDLE handle, DWORD access, DWORD sharing, DWORD flags )
+ {
+-    FIXME( "(%p, %d, %d, %d): stub\n", handle, access, sharing, flags );
+-    return INVALID_HANDLE_VALUE;
++    WCHAR name[MAX_PATH];
++    DWORD size = MAX_PATH;
++    HANDLE h;
++    DWORD  ret;
++    DWORD mask = 0xFFFFF;
++
++    FIXME("(%p, %d, %d, %d): mostly stub\n", handle, access, sharing, flags);
++
++    if(flags & mask) /* FILE_ATTRIBUTE_* flags are invalid */
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return INVALID_HANDLE_VALUE;
++    }
++
++    ret = GetFinalPathNameByHandleW(handle, name, size, VOLUME_NAME_DOS);
++
++    if(ret)
++        TRACE("Trying to reopen file %s\n", debugstr_w(name));
++    else
++    {
++        SetLastError(ERROR_INVALID_HANDLE);
++        return INVALID_HANDLE_VALUE;
++    }
++
++    h = CreateFileW(name, access, sharing, NULL, OPEN_EXISTING, flags, NULL);
++
++    return h;
+ }
+ 
+ 
+-- 
+2.17.1
+

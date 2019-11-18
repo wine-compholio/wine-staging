@@ -1,4 +1,4 @@
-From 647e8f79cc877f9baaf9cf29f7d6d9999c3960c9 Mon Sep 17 00:00:00 2001
+From 8af2ae9864c4a94b2db9a12283fe5ddee6cb26c8 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 13 Mar 2019 16:02:05 -0600
 Subject: [PATCH] kernel32: Implement CreateSymbolicLink[A|W] with ntdll
@@ -13,7 +13,7 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  4 files changed, 277 insertions(+), 81 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 31da8fed4f..2e57a3b38c 100644
+index a369ca90120..0b7202ef961 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
 @@ -34,6 +34,8 @@
@@ -25,7 +25,7 @@ index 31da8fed4f..2e57a3b38c 100644
  
  #include "kernel_private.h"
  #include "wine/unicode.h"
-@@ -1260,8 +1262,106 @@ WCHAR * CDECL wine_get_dos_file_name( LPCSTR str )
+@@ -924,8 +926,106 @@ WCHAR * CDECL wine_get_dos_file_name( LPCSTR str )
   */
  BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
  {
@@ -134,7 +134,7 @@ index 31da8fed4f..2e57a3b38c 100644
  }
  
  /*************************************************************************
-@@ -1269,8 +1369,24 @@ BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
+@@ -933,8 +1033,24 @@ BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
   */
  BOOLEAN WINAPI CreateSymbolicLinkA(LPCSTR link, LPCSTR target, DWORD flags)
  {
@@ -162,7 +162,7 @@ index 31da8fed4f..2e57a3b38c 100644
  
  /*************************************************************************
 diff --git a/dlls/kernel32/tests/path.c b/dlls/kernel32/tests/path.c
-index 71577793b0..11b5ea35f0 100644
+index 71577793b0b..11b5ea35f0a 100644
 --- a/dlls/kernel32/tests/path.c
 +++ b/dlls/kernel32/tests/path.c
 @@ -92,6 +92,9 @@ static void   (WINAPI *pReleaseActCtx)(HANDLE);
@@ -293,10 +293,10 @@ index 71577793b0..11b5ea35f0 100644
 +    test_CreateSymbolicLink();
  }
 diff --git a/dlls/msvcp120/tests/msvcp120.c b/dlls/msvcp120/tests/msvcp120.c
-index 8f7b75aab4..77d8c37754 100644
+index d484cdd7ed7..7aca5703ab9 100644
 --- a/dlls/msvcp120/tests/msvcp120.c
 +++ b/dlls/msvcp120/tests/msvcp120.c
-@@ -1622,15 +1622,14 @@ static void test_tr2_sys__Stat(void)
+@@ -1625,15 +1625,14 @@ static void test_tr2_sys__Stat(void)
          char const *path;
          enum file_type ret;
          int err_code;
@@ -319,7 +319,7 @@ index 8f7b75aab4..77d8c37754 100644
      };
      WCHAR testW[] = {'t','r','2','_','t','e','s','t','_','d','i','r',0};
      WCHAR testW2[] = {'t','r','2','_','t','e','s','t','_','d','i','r','/','f','1',0};
-@@ -1675,16 +1674,14 @@ static void test_tr2_sys__Stat(void)
+@@ -1678,16 +1677,14 @@ static void test_tr2_sys__Stat(void)
      for(i=0; i<ARRAY_SIZE(tests); i++) {
          err_code = 0xdeadbeef;
          val = p_tr2_sys__Stat(tests[i].path, &err_code);
@@ -338,7 +338,7 @@ index 8f7b75aab4..77d8c37754 100644
          ok(tests[i].err_code == err_code, "tr2_sys__Lstat(): test %d err_code expect: %d, got %d\n",
                  i+1, tests[i].err_code, err_code);
      }
-@@ -1699,8 +1696,8 @@ static void test_tr2_sys__Stat(void)
+@@ -1702,8 +1699,8 @@ static void test_tr2_sys__Stat(void)
      ok(ERROR_SUCCESS == err_code, "tr2_sys__Lstat_wchar(): err_code expect ERROR_SUCCESS, got %d\n", err_code);
  
      if(ret) {
@@ -349,7 +349,7 @@ index 8f7b75aab4..77d8c37754 100644
      }
      ok(DeleteFileA("tr2_test_dir/f1"), "expect tr2_test_dir/f1 to exist\n");
      ok(RemoveDirectoryA("tr2_test_dir"), "expect tr2_test_dir to exist\n");
-@@ -1930,16 +1927,15 @@ static void test_tr2_sys__Symlink(void)
+@@ -1933,16 +1930,15 @@ static void test_tr2_sys__Symlink(void)
          char const *existing_path;
          char const *new_path;
          int last_error;
@@ -374,7 +374,7 @@ index 8f7b75aab4..77d8c37754 100644
      };
  
      ret = p_tr2_sys__Make_dir("tr2_test_dir");
-@@ -1964,18 +1960,17 @@ static void test_tr2_sys__Symlink(void)
+@@ -1967,18 +1963,17 @@ static void test_tr2_sys__Symlink(void)
          }
  
          ok(errno == 0xdeadbeef, "tr2_sys__Symlink(): test %d errno expect 0xdeadbeef, got %d\n", i+1, errno);
@@ -399,7 +399,7 @@ index 8f7b75aab4..77d8c37754 100644
      ret = p_tr2_sys__Remove_dir("tr2_test_dir");
      ok(ret == 1, "tr2_sys__Remove_dir(): expect 1 got %d\n", ret);
  }
-@@ -1989,15 +1984,14 @@ static void test_tr2_sys__Unlink(void)
+@@ -1992,15 +1987,14 @@ static void test_tr2_sys__Unlink(void)
      struct {
          char const *path;
          int last_error;
@@ -422,7 +422,7 @@ index 8f7b75aab4..77d8c37754 100644
      };
  
      GetCurrentDirectoryA(MAX_PATH, current_path);
-@@ -2026,9 +2020,8 @@ static void test_tr2_sys__Unlink(void)
+@@ -2029,9 +2023,8 @@ static void test_tr2_sys__Unlink(void)
      for(i=0; i<ARRAY_SIZE(tests); i++) {
          errno = 0xdeadbeef;
          ret = p_tr2_sys__Unlink(tests[i].path);
@@ -435,10 +435,10 @@ index 8f7b75aab4..77d8c37754 100644
      }
  
 diff --git a/dlls/msvcp140/tests/msvcp140.c b/dlls/msvcp140/tests/msvcp140.c
-index 04406240e0..46b2b8595d 100644
+index 751b1beed86..382f5732c29 100644
 --- a/dlls/msvcp140/tests/msvcp140.c
 +++ b/dlls/msvcp140/tests/msvcp140.c
-@@ -802,16 +802,15 @@ static void test_Stat(void)
+@@ -803,16 +803,15 @@ static void test_Stat(void)
          WCHAR const *path;
          enum file_type ret;
          int perms;
@@ -463,7 +463,7 @@ index 04406240e0..46b2b8595d 100644
      };
  
      GetCurrentDirectoryW(MAX_PATH, origin_path);
-@@ -866,26 +865,20 @@ static void test_Stat(void)
+@@ -867,26 +866,20 @@ static void test_Stat(void)
      for(i=0; i<ARRAY_SIZE(tests); i++) {
          perms = 0xdeadbeef;
          val = p_Stat(tests[i].path, &perms);
@@ -498,8 +498,8 @@ index 04406240e0..46b2b8595d 100644
      }
  
      GetSystemDirectoryW(sys_path, MAX_PATH);
-@@ -895,8 +888,8 @@ static void test_Stat(void)
-     ok(0777 == perms, "_Stat(): perms expect: 0777, got 0%o\n", perms);
+@@ -898,8 +891,8 @@ static void test_Stat(void)
+     ok(perms == expected_perms, "_Stat(): perms expect: 0%o, got 0%o\n", expected_perms, perms);
  
      if(ret) {
 -        todo_wine ok(DeleteFileW(test_f1_linkW), "expect wine_test_dir/f1_link to exist\n");
@@ -509,7 +509,7 @@ index 04406240e0..46b2b8595d 100644
      }
      ok(DeleteFileW(test_f1W), "expect wine_test_dir/f1 to exist\n");
      SetFileAttributesW(test_f2W, FILE_ATTRIBUTE_NORMAL);
-@@ -1041,15 +1034,14 @@ static void test_Unlink(void)
+@@ -1044,15 +1037,14 @@ static void test_Unlink(void)
      struct {
          WCHAR const *path;
          int last_error;
@@ -532,7 +532,7 @@ index 04406240e0..46b2b8595d 100644
      };
  
      GetCurrentDirectoryW(MAX_PATH, current_path);
-@@ -1078,9 +1070,8 @@ static void test_Unlink(void)
+@@ -1081,9 +1073,8 @@ static void test_Unlink(void)
      for(i=0; i<ARRAY_SIZE(tests); i++) {
          errno = 0xdeadbeef;
          ret = p_Unlink(tests[i].path);
@@ -545,5 +545,5 @@ index 04406240e0..46b2b8595d 100644
      }
  
 -- 
-2.21.0
+2.17.1
 

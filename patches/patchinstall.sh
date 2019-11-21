@@ -218,6 +218,7 @@ patch_enable_all ()
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
+	enable_ntdll_ThreadHideFromDebugger="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
@@ -775,6 +776,9 @@ patch_enable ()
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
+			;;
+		ntdll-ThreadHideFromDebugger)
+			enable_ntdll_ThreadHideFromDebugger="$2"
 			;;
 		ntdll-ThreadTime)
 			enable_ntdll_ThreadTime="$2"
@@ -5095,6 +5099,21 @@ if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t call LdrQueryProcessModuleInformation in NtQuerySystemInformation(SystemModuleInformation).", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Return ntdll.dll as the first entry for SystemModuleInformation.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Add stub for NtQuerySystemInformation(SystemModuleInformationEx).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ThreadHideFromDebugger
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48138] League of Legends 9.23: Crash after champ select
+# |
+# | Modified files:
+# |   *	dlls/ntdll/thread.c
+# |
+if test "$enable_ntdll_ThreadHideFromDebugger" -eq 1; then
+	patch_apply ntdll-ThreadHideFromDebugger/0001-ntdll-Stub-NtQueryInformationThread-ThreadHideFromDe.patch
+	(
+		printf '%s\n' '+    { "David Torok", "ntdll: Stub NtQueryInformationThread(ThreadHideFromDebugger).", 1 },';
 	) >> "$patchlist"
 fi
 

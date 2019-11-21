@@ -228,6 +228,7 @@ patch_enable_all ()
 	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
+	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
@@ -806,6 +807,9 @@ patch_enable ()
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
+			;;
+		ntdll-x86_64_SegDs)
+			enable_ntdll_x86_64_SegDs="$2"
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
@@ -5170,6 +5174,21 @@ if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	patch_apply ntdll-set_full_cpu_context/0001-ntdll-Add-back-SS-segment-prefixes-in-set_full_cpu_c.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add back SS segment prefixes in set_full_cpu_context.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-x86_64_SegDs
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47970] Legends of Runeterra crashes at launch
+# |
+# | Modified files:
+# |   *	dlls/ntdll/signal_x86_64.c
+# |
+if test "$enable_ntdll_x86_64_SegDs" -eq 1; then
+	patch_apply ntdll-x86_64_SegDs/0001-ntdll-Report-SegDs-to-be-identical-to-SegSs-on-x86_6.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Report SegDs to be identical to SegSs on x86_64.", 1 },';
 	) >> "$patchlist"
 fi
 

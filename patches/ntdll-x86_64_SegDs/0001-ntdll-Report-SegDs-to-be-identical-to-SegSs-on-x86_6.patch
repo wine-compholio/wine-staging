@@ -1,0 +1,45 @@
+From 1178a02719088e81b2e5b35074b4559f60d8a5b1 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Thu, 21 Nov 2019 10:44:42 -0600
+Subject: [PATCH] ntdll: Report SegDs to be identical to SegSs on x86_64.
+
+Based on a patch by David Torok.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=47970
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/ntdll/signal_x86_64.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index c372f65b34b..a1797811da3 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -1699,11 +1699,6 @@ static void save_context( CONTEXT *context, const ucontext_t *sigcontext )
+     context->SegFs  = FS_sig(sigcontext);
+     context->SegGs  = GS_sig(sigcontext);
+     context->EFlags = EFL_sig(sigcontext);
+-#ifdef DS_sig
+-    context->SegDs  = DS_sig(sigcontext);
+-#else
+-    __asm__("movw %%ds,%0" : "=m" (context->SegDs));
+-#endif
+ #ifdef ES_sig
+     context->SegEs  = ES_sig(sigcontext);
+ #else
+@@ -1714,6 +1709,12 @@ static void save_context( CONTEXT *context, const ucontext_t *sigcontext )
+ #else
+     __asm__("movw %%ss,%0" : "=m" (context->SegSs));
+ #endif
++   /* Legends of Runeterra depends on having SegDs == SegSs in an exception
++    * handler. Testing shows that Windows returns fixed values from
++    * RtlCaptureContext() and NtGetContextThread() for at least %ds and %es,
++    * regardless of their actual values, and never sets them in
++    * NtSetContextThread(). */
++    context->SegDs  = context->SegSs;
+     context->Dr0    = amd64_thread_data()->dr0;
+     context->Dr1    = amd64_thread_data()->dr1;
+     context->Dr2    = amd64_thread_data()->dr2;
+-- 
+2.23.0
+

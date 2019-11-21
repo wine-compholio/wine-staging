@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "a9c4b309f6af82b624604bd0df898ad88d59ab5a"
+	echo "aa3d01e65019fb2f135f74cf26cfa1661ca09325"
 }
 
 # Show version information
@@ -308,7 +308,6 @@ patch_enable_all ()
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
 	enable_wine_inf_Dummy_CA_Certificate="$1"
 	enable_wine_inf_Performance="$1"
-	enable_wine_inf_ProfileList_UserSID="$1"
 	enable_wineboot_DriveSerial="$1"
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_ProxySettings="$1"
@@ -1046,9 +1045,6 @@ patch_enable ()
 			;;
 		wine.inf-Performance)
 			enable_wine_inf_Performance="$2"
-			;;
-		wine.inf-ProfileList_UserSID)
-			enable_wine_inf_ProfileList_UserSID="$2"
 			;;
 		wineboot-DriveSerial)
 			enable_wineboot_DriveSerial="$2"
@@ -6480,24 +6476,6 @@ if test "$enable_wine_inf_Performance" -eq 1; then
 		printf '%s\n' '+    { "Daniel Jelinski", "wine.inf: Add registry keys for Windows Performance Library.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "wine.inf: Add '\''Counters'\'' to the perflib key as an alias for '\''Counter'\''.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Add test for perflib registry key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wine.inf-ProfileList_UserSID
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#15670] Add a ProfileList\<UserSID> registry subkey
-# |   *	[#42249] Add a ProfileImagePath key with users profile directory
-# |
-# | Modified files:
-# |   *	loader/wine.inf.in
-# |
-if test "$enable_wine_inf_ProfileList_UserSID" -eq 1; then
-	patch_apply wine.inf-ProfileList_UserSID/0001-wine.inf-Add-a-ProfileList-UserSID-registry-subkey.patch
-	patch_apply wine.inf-ProfileList_UserSID/0002-wine.inf-Add-ProfileImagePath-with-the-user-s-profil.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wine.inf: Add a ProfileList\\<UserSID> registry subkey.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "wine.inf: Add \"ProfileImagePath\" with the user'\''s profile directory under ProfileList key.", 1 },';
 	) >> "$patchlist"
 fi
 

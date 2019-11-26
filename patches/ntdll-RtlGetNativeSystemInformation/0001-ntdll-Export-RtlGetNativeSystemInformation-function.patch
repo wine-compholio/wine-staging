@@ -1,0 +1,62 @@
+From e0d94123b434f62e83bce3b4cfee2aef5ba0a9b9 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <gofmanp@gmail.com>
+Date: Wed, 13 Nov 2019 11:01:13 +0300
+Subject: [PATCH] ntdll: Export RtlGetNativeSystemInformation() function.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=40334
+---
+ dlls/ntdll/ntdll.spec   |  2 +-
+ dlls/ntdll/tests/info.c | 10 ++++++++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 93ebd31d57..3bb7f2e1f6 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -699,7 +699,7 @@
+ # Yes, Microsoft really misspelled this one!
+ # @ stub RtlGetLengthWithoutTrailingPathSeperators
+ @ stdcall RtlGetLongestNtPathLength()
+-# @ stub RtlGetNativeSystemInformation
++@ stdcall -private RtlGetNativeSystemInformation(long ptr long ptr) NtQuerySystemInformation
+ # @ stub RtlGetNextRange
+ @ stdcall RtlGetNtGlobalFlags()
+ @ stdcall RtlGetNtProductType(ptr)
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index f19cb27439..7aae03cbc5 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -24,6 +24,7 @@
+ 
+ static NTSTATUS (WINAPI * pRtlDowncaseUnicodeString)(UNICODE_STRING *, const UNICODE_STRING *, BOOLEAN);
+ static NTSTATUS (WINAPI * pNtQuerySystemInformation)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
++static NTSTATUS (WINAPI * pRtlGetNativeSystemInformation)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+ static NTSTATUS (WINAPI * pNtQuerySystemInformationEx)(SYSTEM_INFORMATION_CLASS, void*, ULONG, void*, ULONG, ULONG*);
+ static NTSTATUS (WINAPI * pNtPowerInformation)(POWER_INFORMATION_LEVEL, PVOID, ULONG, PVOID, ULONG);
+ static NTSTATUS (WINAPI * pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
+@@ -77,6 +78,7 @@ static BOOL InitFunctionPtrs(void)
+ 
+     NTDLL_GET_PROC(RtlDowncaseUnicodeString);
+     NTDLL_GET_PROC(NtQuerySystemInformation);
++    NTDLL_GET_PROC(RtlGetNativeSystemInformation);
+     NTDLL_GET_PROC(NtPowerInformation);
+     NTDLL_GET_PROC(NtQueryInformationProcess);
+     NTDLL_GET_PROC(NtQueryInformationThread);
+@@ -155,6 +157,14 @@ static void test_query_basic(void)
+     /* Check if we have some return values */
+     trace("Number of Processors : %d\n", sbi.NumberOfProcessors);
+     ok( sbi.NumberOfProcessors > 0, "Expected more than 0 processors, got %d\n", sbi.NumberOfProcessors);
++
++    memset(&sbi, 0, sizeof(sbi));
++    status = pRtlGetNativeSystemInformation(SystemBasicInformation, &sbi, sizeof(sbi), &ReturnLength);
++    ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status);
++    ok( sizeof(sbi) == ReturnLength, "Inconsistent length %d\n", ReturnLength);
++
++    trace("Number of Processors : %d\n", sbi.NumberOfProcessors);
++    ok( sbi.NumberOfProcessors > 0, "Expected more than 0 processors, got %d\n", sbi.NumberOfProcessors);
+ }
+ 
+ static void test_query_cpu(void)
+-- 
+2.23.0
+

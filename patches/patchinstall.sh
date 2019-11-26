@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "190fb605c34ac1365076dff0a6560ddb42ca1ef2"
+	echo "ddec23013e39b563a3a50c0fe42c2ae8b518d538"
 }
 
 # Show version information
@@ -161,7 +161,6 @@ patch_enable_all ()
 	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
-	enable_kernel32_SCSI_Sysfs="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
 	enable_kernelbase_ReOpenFile="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
@@ -606,9 +605,6 @@ patch_enable ()
 			;;
 		kernel32-Processor_Group)
 			enable_kernel32_Processor_Group="$2"
-			;;
-		kernel32-SCSI_Sysfs)
-			enable_kernel32_SCSI_Sysfs="$2"
 			;;
 		kernel32-SetProcessDEPPolicy)
 			enable_kernel32_SetProcessDEPPolicy="$2"
@@ -4261,23 +4257,6 @@ if test "$enable_kernel32_Processor_Group" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement some processor group functions.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for SetThreadIdealProcessorEx.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-SCSI_Sysfs
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31592] Use sysfs to populate SCSI registry keys
-# |
-# | Modified files:
-# |   *	dlls/kernel32/oldconfig.c
-# |
-if test "$enable_kernel32_SCSI_Sysfs" -eq 1; then
-	patch_apply kernel32-SCSI_Sysfs/0001-kernel32-Convert-scsi-device-type-in-SCSI_getprocent.patch
-	patch_apply kernel32-SCSI_Sysfs/0002-kernel32-Add-support-for-reading-scsi-devices-from-s.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Convert scsi device type in SCSI_getprocentry.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for reading scsi devices from sysfs.", 1 },';
 	) >> "$patchlist"
 fi
 

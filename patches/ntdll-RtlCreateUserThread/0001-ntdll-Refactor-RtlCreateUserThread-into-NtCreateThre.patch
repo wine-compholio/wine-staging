@@ -1,4 +1,4 @@
-From d5665101d6779856aedd2f354021a303a2be21d9 Mon Sep 17 00:00:00 2001
+From 24ba9bf89a735ea3b9d7b775eb271b25d1d43ab3 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:22:59 -0500
 Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
@@ -8,14 +8,14 @@ reported version), and expects it to be called whenever a thread is created.
 ---
  dlls/ntdll/ntdll.spec |   2 +-
  dlls/ntdll/thread.c   | 194 ++++++++++++++++++++++++++++++++++--------
- include/winternl.h    |  25 ++++++
- 3 files changed, 185 insertions(+), 36 deletions(-)
+ include/winternl.h    |  27 ++++++
+ 3 files changed, 187 insertions(+), 36 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 5d60528b71d..164effb78f3 100644
+index 95ef2d5b744..b87e19cbf50 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -175,7 +175,7 @@
+@@ -182,7 +182,7 @@
  @ stdcall NtCreateSection(ptr long ptr ptr long long long)
  @ stdcall NtCreateSemaphore(ptr long ptr long long)
  @ stdcall NtCreateSymbolicLinkObject(ptr long ptr ptr)
@@ -25,10 +25,10 @@ index 5d60528b71d..164effb78f3 100644
  @ stdcall NtCreateTimer(ptr long ptr long)
  @ stub NtCreateToken
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 6552c486824..db291369c08 100644
+index 72c1d14a79a..45a943f5d21 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -543,34 +543,18 @@ static void start_thread( struct startup_info *info )
+@@ -594,34 +594,18 @@ static void start_thread( struct startup_info *info )
  /***********************************************************************
   *              NtCreateThreadEx   (NTDLL.@)
   */
@@ -68,7 +68,7 @@ index 6552c486824..db291369c08 100644
      HANDLE handle = 0, actctx = 0;
      TEB *teb = NULL;
      DWORD tid = 0;
-@@ -581,6 +565,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -632,6 +616,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      struct object_attributes *objattr = NULL;
      INITIAL_TEB stack;
  
@@ -102,7 +102,7 @@ index 6552c486824..db291369c08 100644
      if (process != NtCurrentProcess())
      {
          apc_call_t call;
-@@ -606,12 +617,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -657,12 +668,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
          return result.create_thread.status;
      }
  
@@ -116,7 +116,7 @@ index 6552c486824..db291369c08 100644
  
      if (server_pipe( request_pipe ) == -1)
      {
-@@ -623,7 +629,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -674,7 +680,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      SERVER_START_REQ( new_thread )
      {
          req->process    = wine_server_obj_handle( process );
@@ -125,7 +125,7 @@ index 6552c486824..db291369c08 100644
          req->suspend    = suspended;
          req->request_fd = request_pipe[0];
          wine_server_add_data( req, objattr, len );
-@@ -685,20 +691,20 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -736,20 +742,20 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
  
@@ -153,7 +153,7 @@ index 6552c486824..db291369c08 100644
      pthread_sigmask( SIG_SETMASK, &sigset, NULL );
  
      if (id) id->UniqueThread = ULongToHandle(tid);
-@@ -715,6 +721,124 @@ error:
+@@ -766,6 +772,124 @@ error:
      return status;
  }
  
@@ -279,12 +279,12 @@ index 6552c486824..db291369c08 100644
  /******************************************************************************
   *              RtlGetNtGlobalFlags   (NTDLL.@)
 diff --git a/include/winternl.h b/include/winternl.h
-index c6dbc5931b2..d1937b9f06b 100644
+index 3ace4fcf25e..b6674d75dd9 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2197,6 +2197,31 @@ typedef enum _SYSDBG_COMMAND {
-   SysDbgWriteBusData
- } SYSDBG_COMMAND, *PSYSDBG_COMMAND;
+@@ -2228,6 +2228,33 @@ typedef struct _NLSTABLEINFO
+     USHORT     *LowerCaseTable;
+ } NLSTABLEINFO, *PNLSTABLEINFO;
  
 +#define PS_ATTRIBUTE_THREAD  0x00010000
 +#define PS_ATTRIBUTE_INPUT   0x00020000
@@ -311,9 +311,11 @@ index c6dbc5931b2..d1937b9f06b 100644
 +    PS_ATTRIBUTE Attributes[1];
 +} PS_ATTRIBUTE_LIST, *PPS_ATTRIBUTE_LIST;
 +
- 
++
++
  /*************************************************************************
   * Loader structures
+  *
 -- 
-2.17.1
+2.24.0
 

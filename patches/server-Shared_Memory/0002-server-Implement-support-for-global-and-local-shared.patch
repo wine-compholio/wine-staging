@@ -1,4 +1,4 @@
-From 02dbd85ade50972fe25bec623ce24d6e65c868ea Mon Sep 17 00:00:00 2001
+From 8e7431126f55f1cfaed86fca2b3a3fea6a3bc1ad Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Mar 2015 01:22:34 +0100
 Subject: [PATCH] server: Implement support for global and local shared memory
@@ -20,10 +20,10 @@ Subject: [PATCH] server: Implement support for global and local shared memory
  12 files changed, 215 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 7bbe23d969b..3146f3c150b 100644
+index 25051b58fba..10243926bd1 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -116,6 +116,7 @@ extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct o
+@@ -119,6 +119,7 @@ extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct o
  extern NTSTATUS validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr ) DECLSPEC_HIDDEN;
  extern int wait_select_reply( void *cookie ) DECLSPEC_HIDDEN;
  extern BOOL invoke_apc( const apc_call_t *call, apc_result_t *result, sigset_t *user_sigset ) DECLSPEC_HIDDEN;
@@ -114,10 +114,10 @@ index cce51683356..72a8ddb1803 100644
      ntdll_get_thread_data()->wow64_redir = is_wow64;
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 61b1cce4fe1..89f4e190e75 100644
+index 9c4e84ad313..1eb658ec051 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -478,6 +478,7 @@ void exit_thread( int status )
+@@ -529,6 +529,7 @@ void exit_thread( int status )
  void WINAPI RtlExitUserThread( ULONG status )
  {
      static void *prev_teb;
@@ -125,7 +125,7 @@ index 61b1cce4fe1..89f4e190e75 100644
      sigset_t sigset;
      TEB *teb;
  
-@@ -502,6 +503,9 @@ void WINAPI RtlExitUserThread( ULONG status )
+@@ -553,6 +554,9 @@ void WINAPI RtlExitUserThread( ULONG status )
      LdrShutdownThread();
      RtlFreeThreadActivationContextStack();
  
@@ -158,7 +158,7 @@ index ac5dcc6f8bc..5a845f424c2 100644
  /* macros for server requests */
  
 diff --git a/include/winternl.h b/include/winternl.h
-index fed48eb3638..4c0021555c3 100644
+index b6674d75dd9..e6bc13cbc05 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -401,7 +401,7 @@ typedef struct _TEB
@@ -240,7 +240,7 @@ index ee8cadde5da..313039a3082 100644
      return 0;
  }
 diff --git a/server/mapping.c b/server/mapping.c
-index 0728fdc14fc..7b12d2fb1fa 100644
+index 6990a1913d7..3d794bfaaf9 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -29,8 +29,32 @@
@@ -341,7 +341,7 @@ index 0728fdc14fc..7b12d2fb1fa 100644
  static int create_temp_file( file_pos_t size )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index d803976ed94..f9370fbabb4 100644
+index 4e1f1f8ad5f..623871dd6dc 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -69,6 +69,15 @@ struct request_max_size
@@ -360,7 +360,7 @@ index d803976ed94..f9370fbabb4 100644
  
  /* debug event data */
  typedef union
-@@ -1318,6 +1327,12 @@ enum server_fd_type
+@@ -1321,6 +1330,12 @@ enum server_fd_type
  @END
  
  
@@ -374,44 +374,45 @@ index d803976ed94..f9370fbabb4 100644
  @REQ(flush)
      async_data_t   async;       /* async I/O parameters */
 diff --git a/server/thread.c b/server/thread.c
-index 24ce76717ae..982fd76008b 100644
+index f8962221d9a..75679e90faf 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -202,6 +202,8 @@ static inline void init_thread_structure( struct thread *thread )
-     thread->desktop_users   = 0;
-     thread->token           = NULL;
+@@ -204,6 +204,8 @@ static inline void init_thread_structure( struct thread *thread )
+     thread->desc            = NULL;
+     thread->desc_len        = 0;
      thread->exit_poll       = NULL;
 +    thread->shm_fd          = -1;
 +    thread->shm             = NULL;
  
      thread->creation_time = current_time;
      thread->exit_time     = 0;
-@@ -337,6 +339,8 @@ static void cleanup_thread( struct thread *thread )
+@@ -339,7 +341,10 @@ static void cleanup_thread( struct thread *thread )
              thread->inflight[i].client = thread->inflight[i].server = -1;
          }
      }
++
+     free( thread->desc );
 +    release_shared_memory( thread->shm_fd, thread->shm, sizeof(*thread->shm) );
 +
      thread->req_data = NULL;
      thread->reply_data = NULL;
      thread->request_fd = NULL;
-@@ -345,6 +349,9 @@ static void cleanup_thread( struct thread *thread )
-     thread->context = NULL;
-     thread->suspend_context = NULL;
+@@ -350,6 +355,8 @@ static void cleanup_thread( struct thread *thread )
      thread->desktop = 0;
+     thread->desc = NULL;
+     thread->desc_len = 0;
 +    thread->shm_fd = -1;
 +    thread->shm = NULL;
-+
  }
  
  /* destroy a thread when its refcount is 0 */
 diff --git a/server/thread.h b/server/thread.h
-index 0085204c92e..382b10b5b01 100644
+index 880419c5924..2037f775370 100644
 --- a/server/thread.h
 +++ b/server/thread.h
-@@ -89,6 +89,8 @@ struct thread
-     struct token          *token;         /* security token associated with this thread */
-     struct list            kernel_object; /* list of kernel object pointers */
+@@ -91,6 +91,8 @@ struct thread
+     data_size_t            desc_len;      /* thread description length in bytes */
+     WCHAR                 *desc;          /* thread description string */
      struct timeout_user   *exit_poll;     /* poll if the thread/process has exited already */
 +    int                    shm_fd;        /* file descriptor for thread local shared memory */
 +    shmlocal_t            *shm;           /* thread local shared memory pointer */
@@ -419,5 +420,5 @@ index 0085204c92e..382b10b5b01 100644
  
  struct thread_snapshot
 -- 
-2.17.1
+2.24.0
 

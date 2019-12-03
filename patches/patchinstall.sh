@@ -367,6 +367,7 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
+	enable_wusa_MSU_Package_Installer="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1224,6 +1225,9 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
+			;;
+		wusa-MSU_Package_Installer)
+			enable_wusa_MSU_Package_Installer="$2"
 			;;
 		*)
 			return 1
@@ -7413,6 +7417,18 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wusa-MSU_Package_Installer
+# |
+# | Modified files:
+# |   *	programs/wusa/main.c, programs/wusa/manifest.c, programs/wusa/wusa.h
+# |
+if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
+	patch_apply wusa-MSU_Package_Installer/0005-wusa-Add-workaround-to-be-compatible-with-Vista-pack.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2935bab96569dcd734a8e855ec9a20ae27c18973"
+	echo "5536df1ee1042c6cf20a7d96c43520003a547092"
 }
 
 # Show version information
@@ -367,7 +367,6 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
-	enable_wusa_MSU_Package_Installer="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1225,9 +1224,6 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
-			;;
-		wusa-MSU_Package_Installer)
-			enable_wusa_MSU_Package_Installer="$2"
 			;;
 		*)
 			return 1
@@ -7417,33 +7413,6 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wusa-MSU_Package_Installer
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26757] Initial implementation of wusa.exe (MSU package installer)
-# |
-# | Modified files:
-# |   *	programs/wusa/Makefile.in, programs/wusa/main.c, programs/wusa/manifest.c, programs/wusa/wusa.h
-# |
-if test "$enable_wusa_MSU_Package_Installer" -eq 1; then
-	patch_apply wusa-MSU_Package_Installer/0001-wusa-Implement-basic-installation-logic.patch
-	patch_apply wusa-MSU_Package_Installer/0002-wusa-Ignore-systemProtection-subkey-of-registry-key.patch
-	patch_apply wusa-MSU_Package_Installer/0003-wusa-Treat-empty-update-list-as-error.patch
-	patch_apply wusa-MSU_Package_Installer/0004-wusa-Implement-WOW64-support.patch
-	patch_apply wusa-MSU_Package_Installer/0005-wusa-Add-workaround-to-be-compatible-with-Vista-pack.patch
-	patch_apply wusa-MSU_Package_Installer/0006-wusa-Improve-tracing-of-installation-process.patch
-	patch_apply wusa-MSU_Package_Installer/0007-wusa-Print-warning-when-encountering-msdelta-compres.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wusa: Implement basic installation logic.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wusa: Ignore systemProtection subkey of registry key.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wusa: Treat empty update list as error.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wusa: Implement WOW64 support.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Add workaround to be compatible with Vista packages.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wusa: Improve tracing of installation process.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wusa: Print warning when encountering msdelta compressed files.", 1 },';
 	) >> "$patchlist"
 fi
 

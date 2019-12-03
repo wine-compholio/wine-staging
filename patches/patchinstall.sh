@@ -2389,9 +2389,9 @@ fi
 # |   *	dlls/d2d1/d2d1_private.h, dlls/d2d1/factory.c, dlls/d2d1/geometry.c
 # |
 if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
-	patch_apply d2d1-ID2D1Factory1/0003-d2d1-Use-ID2D1Factory1-in-d2d_geometry.patch
+	patch_apply d2d1-ID2D1Factory1/0001-d2d1-Use-ID2D1Factory2-in-d2d_geometry.patch
 	(
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory1 in d2d_geometry.", 1 },';
+		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory2 in d2d_geometry.", 1 },';
 	) >> "$patchlist"
 fi
 

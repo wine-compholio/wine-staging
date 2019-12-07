@@ -1,4 +1,4 @@
-From 701a77256d55032b60e454279013984844dffd78 Mon Sep 17 00:00:00 2001
+From 881e39d338d1b8faed36440376460d498262c532 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Jan 2017 16:54:42 +0100
 Subject: [PATCH] wined3d: Add wined3d_resource_map_info function.
@@ -13,10 +13,10 @@ Subject: [PATCH] wined3d: Add wined3d_resource_map_info function.
  6 files changed, 70 insertions(+)
 
 diff --git a/dlls/wined3d/buffer.c b/dlls/wined3d/buffer.c
-index 18a0d72117..a6117942ef 100644
+index 89dab8ebfdd..5ef9a48eeb7 100644
 --- a/dlls/wined3d/buffer.c
 +++ b/dlls/wined3d/buffer.c
-@@ -1104,6 +1104,24 @@ static HRESULT buffer_resource_sub_resource_map(struct wined3d_resource *resourc
+@@ -1121,6 +1121,24 @@ static HRESULT buffer_resource_sub_resource_map(struct wined3d_resource *resourc
      return WINED3D_OK;
  }
  
@@ -41,16 +41,16 @@ index 18a0d72117..a6117942ef 100644
  static HRESULT buffer_resource_sub_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
  {
      struct wined3d_buffer *buffer = buffer_from_resource(resource);
-@@ -1262,6 +1280,7 @@ static const struct wined3d_resource_ops buffer_resource_ops =
+@@ -1279,6 +1297,7 @@ static const struct wined3d_resource_ops buffer_resource_ops =
      buffer_resource_preload,
-     buffer_unload,
+     buffer_resource_unload,
      buffer_resource_sub_resource_map,
 +    buffer_resource_sub_resource_map_info,
      buffer_resource_sub_resource_unmap,
  };
  
 diff --git a/dlls/wined3d/resource.c b/dlls/wined3d/resource.c
-index bba940f42c..ff31c004b0 100644
+index bba940f42cb..ff31c004b06 100644
 --- a/dlls/wined3d/resource.c
 +++ b/dlls/wined3d/resource.c
 @@ -383,6 +383,14 @@ HRESULT CDECL wined3d_resource_map(struct wined3d_resource *resource, unsigned i
@@ -69,10 +69,10 @@ index bba940f42c..ff31c004b0 100644
  {
      TRACE("resource %p, sub_resource_idx %u.\n", resource, sub_resource_idx);
 diff --git a/dlls/wined3d/texture.c b/dlls/wined3d/texture.c
-index ff25f64043..37054833c5 100644
+index 7c9c8298519..73e79ff25b5 100644
 --- a/dlls/wined3d/texture.c
 +++ b/dlls/wined3d/texture.c
-@@ -3024,6 +3024,36 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
+@@ -3155,6 +3155,36 @@ static HRESULT texture_resource_sub_resource_map(struct wined3d_resource *resour
      return WINED3D_OK;
  }
  
@@ -109,19 +109,19 @@ index ff25f64043..37054833c5 100644
  static HRESULT texture_resource_sub_resource_unmap(struct wined3d_resource *resource, unsigned int sub_resource_idx)
  {
      struct wined3d_texture_sub_resource *sub_resource;
-@@ -3076,6 +3106,7 @@ static const struct wined3d_resource_ops texture_resource_ops =
+@@ -3207,6 +3237,7 @@ static const struct wined3d_resource_ops texture_resource_ops =
      texture_resource_preload,
-     wined3d_texture_gl_unload,
+     texture_resource_unload,
      texture_resource_sub_resource_map,
 +    texture_resource_sub_resource_map_info,
      texture_resource_sub_resource_unmap,
  };
  
 diff --git a/dlls/wined3d/wined3d.spec b/dlls/wined3d/wined3d.spec
-index edd4a70d97..742126c4d2 100644
+index e03c57055b7..f68f8199f7e 100644
 --- a/dlls/wined3d/wined3d.spec
 +++ b/dlls/wined3d/wined3d.spec
-@@ -216,6 +216,7 @@
+@@ -218,6 +218,7 @@
  @ cdecl wined3d_resource_get_parent(ptr)
  @ cdecl wined3d_resource_get_priority(ptr)
  @ cdecl wined3d_resource_map(ptr long ptr ptr long)
@@ -130,10 +130,10 @@ index edd4a70d97..742126c4d2 100644
  @ cdecl wined3d_resource_set_parent(ptr ptr)
  @ cdecl wined3d_resource_set_priority(ptr long)
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 5ce23f85f6..740e535217 100644
+index 8f9ad1ce856..c7f75d1983c 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3414,6 +3414,8 @@ struct wined3d_resource_ops
+@@ -3368,6 +3368,8 @@ struct wined3d_resource_ops
      void (*resource_unload)(struct wined3d_resource *resource);
      HRESULT (*resource_sub_resource_map)(struct wined3d_resource *resource, unsigned int sub_resource_idx,
              struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags);
@@ -143,10 +143,10 @@ index 5ce23f85f6..740e535217 100644
  };
  
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 3e46c23c14..c60597bb4c 100644
+index bafab04d3d3..ea50fb7c8d4 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -1833,6 +1833,13 @@ struct wined3d_map_desc
+@@ -1851,6 +1851,13 @@ struct wined3d_map_desc
      void *data;
  };
  
@@ -160,7 +160,7 @@ index 3e46c23c14..c60597bb4c 100644
  struct wined3d_sub_resource_data
  {
      const void *data;
-@@ -2600,6 +2607,8 @@ void * __cdecl wined3d_resource_get_parent(const struct wined3d_resource *resour
+@@ -2663,6 +2670,8 @@ void * __cdecl wined3d_resource_get_parent(const struct wined3d_resource *resour
  DWORD __cdecl wined3d_resource_get_priority(const struct wined3d_resource *resource);
  HRESULT __cdecl wined3d_resource_map(struct wined3d_resource *resource, unsigned int sub_resource_idx,
          struct wined3d_map_desc *map_desc, const struct wined3d_box *box, DWORD flags);
@@ -170,5 +170,5 @@ index 3e46c23c14..c60597bb4c 100644
  void __cdecl wined3d_resource_set_parent(struct wined3d_resource *resource, void *parent);
  DWORD __cdecl wined3d_resource_set_priority(struct wined3d_resource *resource, DWORD priority);
 -- 
-2.23.0
+2.24.0
 

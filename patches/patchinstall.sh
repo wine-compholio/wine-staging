@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f870aa4988fa8e980919c144682da72865364ff0"
+	echo "626162f7db979360d231698ab1288cda97940bb9"
 }
 
 # Show version information
@@ -2317,7 +2317,7 @@ fi
 if test "$enable_comctrl_rebar_capture" -eq 1; then
 	patch_apply comctrl-rebar-capture/0001-comctl32-Fixed-rebar-behaviour-when-there-s-capture-.patch
 	(
-		printf '%s\n' '+    { "Andrew Shadura", "comctl32: Fixed rebar behaviour when there'\''s capture and no drag.", 1 },';
+		printf '%s\n' '+    { "Andrej Shadura", "comctl32: Fixed rebar behaviour when there'\''s capture and no drag.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6750,14 +6750,12 @@ fi
 # Patchset wined3d-Silence_FIXMEs
 # |
 # | Modified files:
-# |   *	dlls/wined3d/surface.c, dlls/wined3d/texture.c
+# |   *	dlls/wined3d/surface.c
 # |
 if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
-	patch_apply wined3d-Silence_FIXMEs/0006-wined3d-Silence-extremely-noisy-FIXME-in-wined3d_tex.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Silence extremely noisy FIXME in wined3d_texture_add_dirty_region.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "626162f7db979360d231698ab1288cda97940bb9"
+	echo "5f0b5d350566a46f0f999e4cff7ad9e280fcfa05"
 }
 
 # Show version information
@@ -4211,7 +4211,7 @@ fi
 # |   *	[#22635] Strip invalid characters from mask in FindFirstFileExW
 # |
 # | Modified files:
-# |   *	dlls/kernel32/file.c, dlls/kernel32/tests/file.c
+# |   *	dlls/kernel32/tests/file.c, dlls/kernelbase/file.c
 # |
 if test "$enable_kernel32_FindFirstFile" -eq 1; then
 	patch_apply kernel32-FindFirstFile/0001-kernel32-Strip-invalid-characters-from-mask-in-FindF.patch

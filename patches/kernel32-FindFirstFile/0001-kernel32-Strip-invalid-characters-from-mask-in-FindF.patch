@@ -1,17 +1,18 @@
-From 8a1bbc2907aee4de18948be8d3c4a8ad04ddd544 Mon Sep 17 00:00:00 2001
+From 339d3f797f4ba20feac9c887dc79734cd15a2c10 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 6 Feb 2016 18:31:25 +0100
-Subject: kernel32: Strip invalid characters from mask in FindFirstFileExW.
+Subject: [PATCH] kernel32: Strip invalid characters from mask in
+ FindFirstFileExW.
 
 ---
- dlls/kernel32/file.c | 27 +++++++++++++++++++++++----
- 1 file changed, 23 insertions(+), 4 deletions(-)
+ dlls/kernelbase/file.c | 26 ++++++++++++++++++++++----
+ 1 file changed, 22 insertions(+), 4 deletions(-)
 
-diff --git a/dlls/kernel32/file.c b/dlls/kernel32/file.c
-index cc7ead1..f078a9c 100644
---- a/dlls/kernel32/file.c
-+++ b/dlls/kernel32/file.c
-@@ -1942,6 +1942,7 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+diff --git a/dlls/kernelbase/file.c b/dlls/kernelbase/file.c
+index 89c5f85cb20..542531e895c 100644
+--- a/dlls/kernelbase/file.c
++++ b/dlls/kernelbase/file.c
+@@ -795,6 +795,7 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
      WCHAR *mask;
      BOOL has_wildcard = FALSE;
      FIND_FIRST_INFO *info = NULL;
@@ -19,7 +20,7 @@ index cc7ead1..f078a9c 100644
      UNICODE_STRING nt_name;
      OBJECT_ATTRIBUTES attr;
      IO_STATUS_BLOCK io;
-@@ -1973,6 +1974,8 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+@@ -826,6 +827,8 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
          return INVALID_HANDLE_VALUE;
      }
  
@@ -28,36 +29,35 @@ index cc7ead1..f078a9c 100644
      if (!mask && (device = RtlIsDosDeviceName_U( filename )))
      {
          static const WCHAR dotW[] = {'.',0};
-@@ -2007,8 +2010,27 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+@@ -860,8 +863,26 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
      }
      else
      {
 +        static const WCHAR invalidW[] = { '<', '>', '\"', 0 };
-+        static const WCHAR wildcardW[] = { '*', 0 };
-+        DWORD mask_len = strlenW( mask );
++        DWORD mask_len = lstrlenW( mask );
 +
 +        /* strip invalid characters from mask */
-+        while (mask_len && strchrW( invalidW, mask[mask_len - 1] ))
++        while (mask_len && wcschr( invalidW, mask[mask_len - 1] ))
 +            mask_len--;
 +
 +        if (!mask_len)
 +        {
 +            has_wildcard = TRUE;
-+            RtlInitUnicodeString( &mask_str, wildcardW );
++            RtlInitUnicodeString( &mask_str, L"*?" );
 +        }
 +        else
 +        {
-+            has_wildcard = strpbrkW( mask, wildcardsW ) != NULL;
++            has_wildcard = wcspbrk( mask, L"*?" ) != NULL;
 +            RtlInitUnicodeString( &mask_str, mask );
 +            mask_str.Length = mask_len * sizeof(WCHAR);
 +        }
 +
          nt_name.Length = (mask - nt_name.Buffer) * sizeof(WCHAR);
--        has_wildcard = strpbrkW( mask, wildcardsW ) != NULL;
+-        has_wildcard = wcspbrk( mask, L"*?" ) != NULL;
          size = has_wildcard ? 8192 : max_entry_size;
      }
  
-@@ -2070,9 +2092,6 @@ HANDLE WINAPI FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_LEVELS level,
+@@ -922,9 +943,6 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
      }
      else
      {
@@ -68,5 +68,5 @@ index cc7ead1..f078a9c 100644
                                         FileBothDirectoryInformation, FALSE, &mask_str, TRUE );
          if (status)
 -- 
-2.8.0
+2.17.1
 

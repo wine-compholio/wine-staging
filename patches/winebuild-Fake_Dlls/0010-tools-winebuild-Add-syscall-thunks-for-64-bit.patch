@@ -1,4 +1,4 @@
-From 3715c18f27d8019e6692196fc3d9e98106c9041f Mon Sep 17 00:00:00 2001
+From f570930840bae4c83ec53acd52b5d45daa266898 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -9,8 +9,8 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  dlls/ntdll/thread.c          |  10 ++
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
- tools/winebuild/spec32.c     | 284 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 301 insertions(+), 8 deletions(-)
+ tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
+ 6 files changed, 302 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 78fed489e9..47309b53ed 100644
@@ -60,7 +60,7 @@ index c372f65b34..e48529d73a 100644
      return status;
  }
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 1fbe0afae6..4645b73795 100644
+index ca01e0df8c..b939724704 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -63,6 +63,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
@@ -72,7 +72,7 @@ index 1fbe0afae6..4645b73795 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -327,6 +329,14 @@ void thread_init(void)
+@@ -326,6 +328,14 @@ TEB *thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
@@ -88,7 +88,7 @@ index 1fbe0afae6..4645b73795 100644
       * Starting with Vista, the first user to log on has session id 1.
       * Session id 0 is for processes that don't interact with the user (like services).
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
-index a2eee7aa9d..dbfa5ba603 100644
+index b6cac2ab92..682d18f8da 100644
 --- a/libs/wine/loader.c
 +++ b/libs/wine/loader.c
 @@ -467,7 +467,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
@@ -117,7 +117,7 @@ index 004b6aea7a..40946409c5 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 800cb23023..6988320fd0 100644
+index 800cb23023..04e3d77042 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -372,11 +372,11 @@ static void output_relay_debug( DLLSPEC *spec )
@@ -134,7 +134,7 @@ index 800cb23023..6988320fd0 100644
  {
      const unsigned int page_size = get_page_size();
      int i;
-@@ -485,6 +485,156 @@ static void output_syscall_thunks( DLLSPEC *spec )
+@@ -485,6 +485,157 @@ static void output_syscall_thunks( DLLSPEC *spec )
      output_function_size( "__wine_syscall_dispatcher" );
  }
  
@@ -243,6 +243,7 @@ index 800cb23023..6988320fd0 100644
 +    output_cfi( ".cfi_rel_offset %%rsi,-8" );
 +    output( "\tpushq %%rdi\n" );
 +    output_cfi( ".cfi_rel_offset %%rdi,-16" );
++    output( "\tand $~0xf,%%rsp\n\t" ); /* ensure stack alignment. */
 +
 +    /* Legends of Runeterra hooks the first system call return instruction, and
 +     * depends on us returning to it. Adjust the return address accordingly. */
@@ -291,7 +292,7 @@ index 800cb23023..6988320fd0 100644
  /*******************************************************************
   *         output_exports
   *
-@@ -883,7 +1033,10 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -883,7 +1034,10 @@ void output_spec32_file( DLLSPEC *spec )
      open_output_file();
      output_standard_file_header();
      output_module( spec );
@@ -303,7 +304,7 @@ index 800cb23023..6988320fd0 100644
      output_stubs( spec );
      output_exports( spec );
      output_imports( spec );
-@@ -896,7 +1049,7 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -896,7 +1050,7 @@ void output_spec32_file( DLLSPEC *spec )
  
  static int needs_stub_exports( DLLSPEC *spec )
  {
@@ -312,7 +313,7 @@ index 800cb23023..6988320fd0 100644
          return 0;
      if (!(spec->characteristics & IMAGE_FILE_DLL))
          return 0;
-@@ -906,7 +1059,7 @@ static int needs_stub_exports( DLLSPEC *spec )
+@@ -906,7 +1060,7 @@ static int needs_stub_exports( DLLSPEC *spec )
  }
  
  
@@ -321,7 +322,7 @@ index 800cb23023..6988320fd0 100644
  {
      int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
      size_t rva, thunk;
-@@ -1064,6 +1217,122 @@ static void create_stub_exports_text( DLLSPEC *spec )
+@@ -1064,6 +1218,122 @@ static void create_stub_exports_text( DLLSPEC *spec )
  }
  
  
@@ -444,7 +445,7 @@ index 800cb23023..6988320fd0 100644
  static void create_stub_exports_data( DLLSPEC *spec )
  {
      int i;
-@@ -1263,7 +1532,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -1263,7 +1533,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
      if (needs_stub_exports( spec ))
      {
          put_label( "text_start" );

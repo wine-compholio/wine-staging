@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "750d382f54e494771128c6b331122be2bc747484"
+	echo "ce7e10868a1279573acc5be5a9659d254e936b27"
 }
 
 # Show version information
@@ -4293,15 +4293,15 @@ fi
 # Patchset kernelbase-ReOpenFile
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#47668] kernelbase: Improve stub for ReOpenFile and add small test
+# |   *	[#47668] Logos 8 (.NET/WPF 4.7.2 application) fails to download resources (needs ReOpenFile implementation)
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/file.c, dlls/kernelbase/file.c
 # |
 if test "$enable_kernelbase_ReOpenFile" -eq 1; then
-	patch_apply kernelbase-ReOpenFile/0001-kernelbase-Improve-stub-for-ReOpenFile-and-add-small.patch
+	patch_apply kernelbase-ReOpenFile/0001-kernelbase-Implement-ReOpenFile.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "kernelbase: Improve stub for ReOpenFile and add small test.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "kernelbase: Implement ReOpenFile().", 1 },';
 	) >> "$patchlist"
 fi
 

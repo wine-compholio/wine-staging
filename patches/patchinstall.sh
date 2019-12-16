@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ce7e10868a1279573acc5be5a9659d254e936b27"
+	echo "6e986bbd810890339569f82aca39273e41427f24"
 }
 
 # Show version information
@@ -231,6 +231,7 @@ patch_enable_all ()
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
+	enable_ntoskrnl_safedisc_2="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -816,6 +817,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
+			;;
+		ntoskrnl-safedisc-2)
+			enable_ntoskrnl_safedisc_2="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -5228,6 +5232,28 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl-safedisc-2
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#30155] Improve support for SafeDisc v2.05.030
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/tests/ntoskrnl.c, server/device.c, server/fd.c,
+# | 	server/protocol.def
+# |
+if test "$enable_ntoskrnl_safedisc_2" -eq 1; then
+	patch_apply ntoskrnl-safedisc-2/0001-ntoskrnl.exe-Return-driver-dispatch-result-to-caller.patch
+	patch_apply ntoskrnl-safedisc-2/0002-ntoskrnl.exe-Always-copy-the-buffer-for-non-METHOD_B.patch
+	patch_apply ntoskrnl-safedisc-2/0003-server-Delay-completing-a-synchronous-IRP.patch
+	patch_apply ntoskrnl-safedisc-2/0004-server-Return-the-driver-s-Information-from-ioctl.patch
+	(
+		printf '%s\n' '+    { "Chip Davis", "ntoskrnl.exe: Return driver dispatch result to caller.", 1 },';
+		printf '%s\n' '+    { "Chip Davis", "ntoskrnl.exe: Always copy the buffer for non-METHOD_BUFFERED ioctls.", 1 },';
+		printf '%s\n' '+    { "Chip Davis", "server: Delay completing a synchronous IRP.", 1 },';
+		printf '%s\n' '+    { "Chip Davis", "server: Return the driver'\''s '\''Information'\'' from ioctl.", 1 },';
 	) >> "$patchlist"
 fi
 

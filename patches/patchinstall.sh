@@ -86,6 +86,7 @@ patch_enable_all ()
 	enable_Compiler_Warnings="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
+	enable_activeds_ADsOpenObject="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_advapi32_LsaLookupSids="$1"
@@ -383,6 +384,9 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
+			;;
+		activeds-ADsOpenObject)
+			enable_activeds_ADsOpenObject="$2"
 			;;
 		advapi32-CreateRestrictedToken)
 			enable_advapi32_CreateRestrictedToken="$2"
@@ -2112,6 +2116,31 @@ if test "$enable_Staging" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset activeds-ADsOpenObject
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#40649] activeds: Implement ADsOpenObject.
+# |
+# | Modified files:
+# |   *	dlls/activeds/Makefile.in, dlls/activeds/activeds_main.c, dlls/adsldp/Makefile.in, dlls/adsldp/adsldp.c,
+# | 	dlls/adsldp/adsldp.idl, dlls/adsldp/adsldp.rgs, dlls/adsldp/rsrc.rc, dlls/adsldp/tests/Makefile.in,
+# | 	dlls/adsldp/tests/ldap.c, dlls/adsldp/tests/sysinfo.c, include/adserr.h, include/iads.idl
+# |
+if test "$enable_activeds_ADsOpenObject" -eq 1; then
+	patch_apply activeds-ADsOpenObject/0001-include-Add-adserr.h.patch
+	patch_apply activeds-ADsOpenObject/0002-activeds-Implement-ADsOpenObject.patch
+	patch_apply activeds-ADsOpenObject/0003-adsldp-Add-LDAPNamespace-stubs.patch
+	patch_apply activeds-ADsOpenObject/0004-adsldp-Add-IADsOpenDSObject-stubs.patch
+	patch_apply activeds-ADsOpenObject/0005-adsldp-tests-Add-some-tests-for-LDAPNamespace.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Add adserr.h.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "activeds: Implement ADsOpenObject.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp: Add LDAPNamespace stubs.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp: Add IADsOpenDSObject stubs.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp/tests: Add some tests for LDAPNamespace.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,161 @@
+From c12e335b0df736fe2a2f2447d0d751de7cc21d37 Mon Sep 17 00:00:00 2001
+From: Dmitry Timoshkov <dmitry@baikal.ru>
+Date: Fri, 15 Nov 2019 17:37:11 +0800
+Subject: [PATCH 2/5] activeds: Implement ADsOpenObject.
+Content-Type: text/plain; charset=UTF-8
+To: wine-devel@winehq.org
+
+Signed-off-by: Dmitry Timoshkov <dmitry@baikal.ru>
+---
+ dlls/activeds/Makefile.in     |  1 +
+ dlls/activeds/activeds_main.c | 80 +++++++++++++++++++++++++++++++++--
+ include/iads.idl              | 14 ++++++
+ 3 files changed, 91 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/activeds/Makefile.in b/dlls/activeds/Makefile.in
+index 20578a93bc..54f86d661e 100644
+--- a/dlls/activeds/Makefile.in
++++ b/dlls/activeds/Makefile.in
+@@ -1,5 +1,6 @@
+ MODULE    = activeds.dll
+ IMPORTLIB = activeds
++IMPORTS   = advapi32 ole32 oleaut32
+ 
+ EXTRADLLFLAGS = -mno-cygwin
+ 
+diff --git a/dlls/activeds/activeds_main.c b/dlls/activeds/activeds_main.c
+index 69c5c447dc..8ff587e332 100644
+--- a/dlls/activeds/activeds_main.c
++++ b/dlls/activeds/activeds_main.c
+@@ -2,6 +2,7 @@
+  * Implementation of the Active Directory Service Interface
+  *
+  * Copyright 2005 Detlef Riekenberg
++ * Copyright 2019 Dmitry Timoshkov
+  *
+  * This file contains only stubs to get the printui.dll up and running
+  * activeds.dll is much much more than this
+@@ -30,8 +31,10 @@
+ #include "winuser.h"
+ 
+ #include "objbase.h"
++#include "initguid.h"
+ #include "iads.h"
+ #include "adshlp.h"
++#include "adserr.h"
+ 
+ #include "wine/debug.h"
+ 
+@@ -112,11 +115,80 @@ HRESULT WINAPI ADsBuildVarArrayInt(LPDWORD lpdwObjectTypes, DWORD dwObjectTypes,
+ /*****************************************************
+  * ADsOpenObject     [ACTIVEDS.9]
+  */
+-HRESULT WINAPI ADsOpenObject(LPCWSTR lpszPathName, LPCWSTR lpszUserName, LPCWSTR lpszPassword, DWORD dwReserved, REFIID riid, VOID** ppObject)
++HRESULT WINAPI ADsOpenObject(LPCWSTR path, LPCWSTR user, LPCWSTR password, DWORD reserved, REFIID riid, void **obj)
+ {
+-    FIXME("(%s,%s,%u,%s,%p)!stub\n", debugstr_w(lpszPathName),
+-          debugstr_w(lpszUserName), dwReserved, debugstr_guid(riid), ppObject);
+-    return E_NOTIMPL;
++    HRESULT hr;
++    HKEY hkey, hprov;
++    WCHAR provider[MAX_PATH], progid[MAX_PATH];
++    DWORD idx = 0;
++
++    TRACE("(%s,%s,%u,%s,%p)\n", debugstr_w(path), debugstr_w(user), reserved, debugstr_guid(riid), obj);
++
++    if (!path || !riid || !obj)
++        return E_INVALIDARG;
++
++    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\ADs\\Providers", 0, KEY_READ, &hkey))
++        return E_ADS_BAD_PATHNAME;
++
++    hr = E_ADS_BAD_PATHNAME;
++
++    for (;;)
++    {
++        if (RegEnumKeyW(hkey, idx++, provider, ARRAY_SIZE(provider)))
++            break;
++
++        TRACE("provider %s\n", debugstr_w(provider));
++
++        if (!wcsnicmp(path, provider, wcslen(provider)) && path[wcslen(provider)] == ':')
++        {
++            LONG size;
++
++            if (RegOpenKeyExW(hkey, provider, 0, KEY_READ, &hprov))
++                break;
++
++            size = ARRAY_SIZE(progid);
++            if (!RegQueryValueW(hprov, NULL, progid, &size))
++            {
++                CLSID clsid;
++
++                if (CLSIDFromProgID(progid, &clsid) == S_OK)
++                {
++                    IADsOpenDSObject *adsopen;
++                    IDispatch *disp;
++
++                    TRACE("ns %s => clsid %s\n", debugstr_w(progid), wine_dbgstr_guid(&clsid));
++                    if (CoCreateInstance(&clsid, 0, CLSCTX_INPROC_SERVER, &IID_IADsOpenDSObject, (void **)&adsopen) == S_OK)
++                    {
++                        BSTR bpath, buser, bpassword;
++
++                        bpath = SysAllocString(path);
++                        buser = SysAllocString(user);
++                        bpassword = SysAllocString(password);
++
++                        hr = IADsOpenDSObject_OpenDSObject(adsopen, bpath, buser, bpassword, reserved, &disp);
++                        if (hr == S_OK)
++                        {
++                            hr = IDispatch_QueryInterface(disp, riid, obj);
++                            IDispatch_Release(disp);
++                        }
++
++                        SysFreeString(bpath);
++                        SysFreeString(buser);
++                        SysFreeString(bpassword);
++
++                        IADsOpenDSObject_Release(adsopen);
++                    }
++                }
++            }
++
++            RegCloseKey(hprov);
++            break;
++        }
++    }
++
++    RegCloseKey(hkey);
++
++    return hr;
+ }
+ 
+ /*****************************************************
+diff --git a/include/iads.idl b/include/iads.idl
+index 6931b6f734..add52571c7 100644
+--- a/include/iads.idl
++++ b/include/iads.idl
+@@ -794,6 +794,20 @@ interface IDirectorySearch : IUnknown
+     HRESULT CloseSearchHandle([in] ADS_SEARCH_HANDLE hSearchResult);
+ }
+ 
++/*****************************************************************************
++ *    IID_IADsOpenDSObject interface
++ */
++[
++    odl,
++    uuid(ddf2891e-0f9c-11d0-8ad4-00c04fd8d503),
++    dual,
++    oleautomation
++]
++interface IADsOpenDSObject : IDispatch
++{
++    HRESULT OpenDSObject([in] BSTR path, [in] BSTR user, [in] BSTR password, [in] long reserved, [out,retval] IDispatch **obj);
++}
++
+ /*****************************************************************************
+  *    IADsADSystemInfo interface
+  */
+-- 
+2.20.1
+

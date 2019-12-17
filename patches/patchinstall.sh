@@ -302,6 +302,7 @@ patch_enable_all ()
 	enable_user32_ShowWindow="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_user32_recursive_activation="$1"
+	enable_user32_window_activation="$1"
 	enable_uxtheme_CloseThemeClass="$1"
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
@@ -1031,6 +1032,9 @@ patch_enable ()
 		user32-recursive-activation)
 			enable_user32_recursive_activation="$2"
 			;;
+		user32-window-activation)
+			enable_user32_window_activation="$2"
+			;;
 		uxtheme-CloseThemeClass)
 			enable_uxtheme_CloseThemeClass="$2"
 			;;
@@ -1646,6 +1650,13 @@ if test "$enable_uxtheme_GTK_Theming" -eq 1; then
 		abort "Patchset uxtheme-CloseThemeClass disabled, but uxtheme-GTK_Theming depends on that."
 	fi
 	enable_uxtheme_CloseThemeClass=1
+fi
+
+if test "$enable_user32_window_activation" -eq 1; then
+	if test "$enable_user32_recursive_activation" -gt 1; then
+		abort "Patchset user32-recursive-activation disabled, but user32-window-activation depends on that."
+	fi
+	enable_user32_recursive_activation=1
 fi
 
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
@@ -6383,6 +6394,24 @@ if test "$enable_user32_recursive_activation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "user32/focus: Prevent a recursive loop with the activation messages.", 1 },';
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "user32/tests: Test a recursive activation loop on WM_ACTIVATE.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-window-activation
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	user32-recursive-activation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47507] Send a WM_ACTIVATE message after restoring a minimized window.
+# |
+# | Modified files:
+# |   *	dlls/user32/tests/msg.c, dlls/user32/winpos.c
+# |
+if test "$enable_user32_window_activation" -eq 1; then
+	patch_apply user32-window-activation/0001-user32-Send-a-WM_ACTIVATE-message-after-restoring-a-.patch
+	(
+		printf '%s\n' '+    { "Zhiyi Zhang", "user32: Send a WM_ACTIVATE message after restoring a minimized window.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -5300,19 +5300,16 @@ fi
 # |   *	[#30155] Improve support for SafeDisc v2.05.030
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/tests/ntoskrnl.c, server/device.c, server/fd.c,
-# | 	server/protocol.def
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/tests/ntoskrnl.c, server/device.c
 # |
 if test "$enable_ntoskrnl_safedisc_2" -eq 1; then
 	patch_apply ntoskrnl-safedisc-2/0001-ntoskrnl.exe-Return-driver-dispatch-result-to-caller.patch
 	patch_apply ntoskrnl-safedisc-2/0002-ntoskrnl.exe-Always-copy-the-buffer-for-non-METHOD_B.patch
 	patch_apply ntoskrnl-safedisc-2/0003-server-Delay-completing-a-synchronous-IRP.patch
-	patch_apply ntoskrnl-safedisc-2/0004-server-Return-the-driver-s-Information-from-ioctl.patch
 	(
 		printf '%s\n' '+    { "Chip Davis", "ntoskrnl.exe: Return driver dispatch result to caller.", 1 },';
 		printf '%s\n' '+    { "Chip Davis", "ntoskrnl.exe: Always copy the buffer for non-METHOD_BUFFERED ioctls.", 1 },';
 		printf '%s\n' '+    { "Chip Davis", "server: Delay completing a synchronous IRP.", 1 },';
-		printf '%s\n' '+    { "Chip Davis", "server: Return the driver'\''s '\''Information'\'' from ioctl.", 1 },';
 	) >> "$patchlist"
 fi
 

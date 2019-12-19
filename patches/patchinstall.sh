@@ -3166,14 +3166,19 @@ fi
 # | This patchset fixes the following Wine bugs:
 # |   *	[#17766] Empire Earth crashes on start without native directmusic
 # |   *	[#24740] Trinklet Supreme crashes on startup
+# |   *	[#31562] Stop crash when using lithtech game engine.
 # |
 # | Modified files:
-# |   *	dlls/dmime/performance.c
+# |   *	dlls/dmime/performance.c, dlls/dmime/tests/performance.c
 # |
 if test "$enable_dmime_PChannel_range" -eq 1; then
-	patch_apply dmime-PChannel-range/0001-dmime-Ensure-Channels-are-in-range-before-assignment.patch
+	patch_apply dmime-PChannel-range/0001-dmime-Use-a-rbtree-to-store-the-PChannels-of-a-perfo.patch
+	patch_apply dmime-PChannel-range/0002-dmime-tests-Add-PChannel-tests.patch
+	patch_apply dmime-PChannel-range/0003-dmime-Implement-IDirectMusicPerformance8_PChannelInf.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dmime: Ensure Channels are in range before assignment.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dmime: Use a rbtree to store the PChannels of a performance.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dmime/tests: Add PChannel tests.", 1 },';
+		printf '%s\n' '+    { "Michael Stefaniuc", "dmime: Implement IDirectMusicPerformance8_PChannelInfo().", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fa66c1b3011a32036b42c436320212aa3b30ae3f"
+	echo "6dd84c53b55ecfa2e2735a914cb126fa0c4b23a5"
 }
 
 # Show version information
@@ -3172,12 +3172,8 @@ fi
 # |   *	dlls/dmime/performance.c, dlls/dmime/tests/performance.c
 # |
 if test "$enable_dmime_PChannel_range" -eq 1; then
-	patch_apply dmime-PChannel-range/0001-dmime-Use-a-rbtree-to-store-the-PChannels-of-a-perfo.patch
-	patch_apply dmime-PChannel-range/0002-dmime-tests-Add-PChannel-tests.patch
 	patch_apply dmime-PChannel-range/0003-dmime-Implement-IDirectMusicPerformance8_PChannelInf.patch
 	(
-		printf '%s\n' '+    { "Michael Stefaniuc", "dmime: Use a rbtree to store the PChannels of a performance.", 1 },';
-		printf '%s\n' '+    { "Michael Stefaniuc", "dmime/tests: Add PChannel tests.", 1 },';
 		printf '%s\n' '+    { "Michael Stefaniuc", "dmime: Implement IDirectMusicPerformance8_PChannelInfo().", 1 },';
 	) >> "$patchlist"
 fi

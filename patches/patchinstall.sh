@@ -3142,6 +3142,8 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 	patch_apply directmanipulation-new-dll/0013-directmanipulation-Fake-success-from-IDirectManipula.patch
 	patch_apply directmanipulation-new-dll/0014-include-Add-IDirectManipulationPrimaryContent-interf.patch
 	patch_apply directmanipulation-new-dll/0015-directmanipulation-Implement-IDirectManipulationView.patch
+	patch_apply directmanipulation-new-dll/0016-directmanipulation-Support-IDirectManipulationConten.patch
+	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
@@ -3158,6 +3160,8 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDirectManipulationPrimaryContent interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support IDirectManipulationContent in IDirectManipulationPrimaryContent interface.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success in some functions.", 1 },';
 	) >> "$patchlist"
 fi
 

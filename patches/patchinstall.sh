@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6dd84c53b55ecfa2e2735a914cb126fa0c4b23a5"
+	echo "6e986bbd810890339569f82aca39273e41427f24"
 }
 
 # Show version information
@@ -4141,6 +4141,9 @@ if test "$enable_gdi32_rotation" -eq 1; then
 fi
 
 # Patchset gdiplus-GdipCreateBitmapFromHBITMAP
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48338] Unknown application paints GIF images incorrectly.
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c

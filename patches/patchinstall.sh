@@ -6650,12 +6650,10 @@ fi
 if test "$enable_user32_rawinput_mouse_experimental" -eq 1; then
 	patch_apply user32-rawinput-mouse-experimental/0001-winex11.drv-Add-support-for-absolute-RawMotion-event.patch
 	patch_apply user32-rawinput-mouse-experimental/0002-winex11.drv-Send-relative-RawMotion-events-unprocess.patch
-	patch_apply user32-rawinput-mouse-experimental/0003-winex11.drv-Implement-relative-wheel-input-from-RawM.patch
-	patch_apply user32-rawinput-mouse-experimental/0004-winex11.drv-Accumulate-mouse-movement-to-avoid-round.patch
+	patch_apply user32-rawinput-mouse-experimental/0003-winex11.drv-Accumulate-mouse-movement-to-avoid-round.patch
 	(
 		printf '%s\n' '+    { "Derek Lesho", "winex11.drv: Add support for absolute RawMotion events.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Send relative RawMotion events unprocessed.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winex11.drv: Implement relative wheel input from RawMotion events.", 1 },';
 		printf '%s\n' '+    { "Jordan Galby", "winex11.drv: Accumulate mouse movement to avoid rounding losses.", 1 },';
 	) >> "$patchlist"
 fi

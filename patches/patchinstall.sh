@@ -149,6 +149,7 @@ patch_enable_all ()
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_rotation="$1"
+	enable_gdiplus_GdipCreateBitmapFromHBITMAP="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
@@ -574,6 +575,9 @@ patch_enable ()
 			;;
 		gdi32-rotation)
 			enable_gdi32_rotation="$2"
+			;;
+		gdiplus-GdipCreateBitmapFromHBITMAP)
+			enable_gdiplus_GdipCreateBitmapFromHBITMAP="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -4078,6 +4082,22 @@ if test "$enable_gdi32_rotation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated Arc, ArcTo, Chord and Pie drawing problem.", 1 },';
 		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated ellipse.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-GdipCreateBitmapFromHBITMAP
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c
+# |
+if test "$enable_gdiplus_GdipCreateBitmapFromHBITMAP" -eq 1; then
+	patch_apply gdiplus-GdipCreateBitmapFromHBITMAP/0001-gdiplus-GdipCreateBitmapFromHBITMAP-should-use-palet.patch
+	patch_apply gdiplus-GdipCreateBitmapFromHBITMAP/0002-gdiplus-Reimplement-GdipCreateBitmapFromGdiDib-by-us.patch
+	patch_apply gdiplus-GdipCreateBitmapFromHBITMAP/0003-gdiplus-tests-Add-more-tests-for-GdipCreateBitmapFro.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: GdipCreateBitmapFromHBITMAP should use palette from the GDI bitmap.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Reimplement GdipCreateBitmapFromGdiDib by using GdipCreateBitmapFromHBITMAP.", 1 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add more tests for GdipCreateBitmapFromHBITMAP and palette images.", 1 },';
 	) >> "$patchlist"
 fi
 

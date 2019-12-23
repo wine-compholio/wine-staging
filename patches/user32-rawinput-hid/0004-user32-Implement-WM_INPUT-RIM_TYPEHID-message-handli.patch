@@ -1,0 +1,138 @@
+From bbb38b3c009d47aced1ba746549fdc51e34cbaf4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 12 Sep 2019 14:48:23 +0200
+Subject: [PATCH 4/5] user32: Implement WM_INPUT/RIM_TYPEHID message handling.
+
+---
+ dlls/user32/message.c      | 19 ++++++++++++++++++-
+ dlls/user32/rawinput.c     | 37 +++++++++++++++++++++++++++++++++++++
+ dlls/user32/user_private.h |  2 ++
+ 3 files changed, 57 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index 55bbe409c9e..ae081cd6eb1 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -2285,10 +2285,17 @@ static BOOL process_rawinput_message( MSG *msg, const struct hardware_msg_data *
+ {
+     struct user_thread_info *thread_info = get_user_thread_info();
+     RAWINPUT *rawinput = thread_info->rawinput;
++    SIZE_T data_len = 0;
++
++    if (msg_data->rawinput.type == RIM_TYPEHID)
++    {
++        data_len = msg_data->rawinput.hid.length;
++        rawinput = thread_info->rawinput = HeapReAlloc( GetProcessHeap(), 0, rawinput, sizeof(*rawinput) + data_len );
++    }
+ 
+     if (!rawinput)
+     {
+-        thread_info->rawinput = HeapAlloc( GetProcessHeap(), 0, sizeof(*rawinput) );
++        thread_info->rawinput = HeapAlloc( GetProcessHeap(), 0, sizeof(*rawinput) + data_len );
+         if (!(rawinput = thread_info->rawinput)) return FALSE;
+     }
+ 
+@@ -2383,6 +2390,16 @@ static BOOL process_rawinput_message( MSG *msg, const struct hardware_msg_data *
+         rawinput->data.keyboard.Message          = msg_data->rawinput.kbd.message;
+         rawinput->data.keyboard.ExtraInformation = msg_data->info;
+     }
++    else if (msg_data->rawinput.type == RIM_TYPEHID)
++    {
++        rawinput->header.dwSize  = FIELD_OFFSET(RAWINPUT, data.hid.bRawData) + data_len;
++        rawinput->header.hDevice = rawinput_handle_from_device_handle(wine_server_ptr_handle(msg_data->rawinput.hid.device));
++        rawinput->header.wParam  = 0;
++
++        rawinput->data.hid.dwSizeHid = data_len;
++        rawinput->data.hid.dwCount = 1;
++        memcpy(rawinput->data.hid.bRawData, msg_data + 1, data_len);
++    }
+     else
+     {
+         FIXME("Unhandled rawinput type %#x.\n", msg_data->rawinput.type);
+diff --git a/dlls/user32/rawinput.c b/dlls/user32/rawinput.c
+index 8cf9f8ebf62..72ae91cfcb5 100644
+--- a/dlls/user32/rawinput.c
++++ b/dlls/user32/rawinput.c
+@@ -43,6 +43,7 @@ struct hid_device
+ {
+     WCHAR *path;
+     HANDLE file;
++    HANDLE handle;
+     RID_DEVICE_INFO_HID info;
+     PHIDP_PREPARSED_DATA data;
+ };
+@@ -59,6 +60,8 @@ static CRITICAL_SECTION_DEBUG hid_devices_cs_debug =
+ };
+ static CRITICAL_SECTION hid_devices_cs = { &hid_devices_cs_debug, -1, 0, 0, 0, 0 };
+ 
++extern DWORD WINAPI GetFinalPathNameByHandleW(HANDLE file, LPWSTR path, DWORD charcount, DWORD flags);
++
+ static BOOL array_reserve(void **elements, unsigned int *capacity, unsigned int count, unsigned int size)
+ {
+     unsigned int new_capacity, max_capacity;
+@@ -138,10 +141,43 @@ static struct hid_device *add_device(HDEVINFO set, SP_DEVICE_INTERFACE_DATA *ifa
+     device = &hid_devices[hid_devices_count++];
+     device->path = path;
+     device->file = file;
++    device->handle = INVALID_HANDLE_VALUE;
+ 
+     return device;
+ }
+ 
++HANDLE rawinput_handle_from_device_handle(HANDLE device)
++{
++    WCHAR buffer[sizeof(OBJECT_NAME_INFORMATION) + MAX_PATH + 1];
++    OBJECT_NAME_INFORMATION *info = (OBJECT_NAME_INFORMATION*)&buffer;
++    ULONG dummy;
++    unsigned int i;
++
++    for (i = 0; i < hid_devices_count; ++i)
++    {
++        if (hid_devices[i].handle == device)
++            return &hid_devices[i];
++    }
++
++    if (NtQueryObject( device, ObjectNameInformation, &buffer, sizeof(buffer) - sizeof(WCHAR), &dummy ) || !info->Name.Buffer)
++        return NULL;
++
++    /* replace \??\ with \\?\ to match hid_devices paths */
++    if (info->Name.Length > 1 && info->Name.Buffer[0] == '\\' && info->Name.Buffer[1] == '?')
++        info->Name.Buffer[1] = '\\';
++
++    for (i = 0; i < hid_devices_count; ++i)
++    {
++        if (strcmpW(hid_devices[i].path, info->Name.Buffer) == 0)
++        {
++            hid_devices[i].handle = device;
++            return &hid_devices[i];
++        }
++    }
++
++    return NULL;
++}
++
+ static void find_hid_devices(void)
+ {
+     static ULONGLONG last_check;
+@@ -415,6 +451,7 @@ UINT WINAPI GetRawInputDeviceInfoW(HANDLE device, UINT command, void *data, UINT
+             device, command, data, data_size);
+ 
+     if (!data_size) return ~0U;
++    if (!device) return ~0U;
+ 
+     /* each case below must set:
+      *     *data_size: length (meaning defined by command) of data we want to copy
+diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
+index e8f6abb6813..0c3d52fca5b 100644
+--- a/dlls/user32/user_private.h
++++ b/dlls/user32/user_private.h
+@@ -378,4 +378,6 @@ static inline WCHAR *heap_strdupW(const WCHAR *src)
+     return dst;
+ }
+ 
++extern HANDLE rawinput_handle_from_device_handle(HANDLE device);
++
+ #endif /* __WINE_USER_PRIVATE_H */
+-- 
+2.24.1
+

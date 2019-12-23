@@ -1,0 +1,224 @@
+From ef0b82046445fe430ab85bb8069f3e4536b11f7a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 19 Dec 2019 22:34:44 +0100
+Subject: [PATCH 08/12] winex11.drv: Keep track of pointer and device button
+ mappings.
+
+We are going to receive raw button events and we will need to apply the
+correct button mappings ourselves.
+
+Original patch by Andrew Eikum <aeikum@codeweavers.com>.
+---
+ dlls/winex11.drv/keyboard.c    | 23 ++++++---
+ dlls/winex11.drv/mouse.c       | 89 +++++++++++++++++++++++++++++++++-
+ dlls/winex11.drv/x11drv.h      |  1 +
+ dlls/winex11.drv/x11drv_main.c |  1 +
+ 4 files changed, 106 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/winex11.drv/keyboard.c b/dlls/winex11.drv/keyboard.c
+index 7856b04c8f5..3f5d76be57b 100644
+--- a/dlls/winex11.drv/keyboard.c
++++ b/dlls/winex11.drv/keyboard.c
+@@ -2010,13 +2010,24 @@ BOOL X11DRV_MappingNotify( HWND dummy, XEvent *event )
+ {
+     HWND hwnd;
+ 
+-    XRefreshKeyboardMapping(&event->xmapping);
+-    X11DRV_InitKeyboard( event->xmapping.display );
++    switch (event->xmapping.request)
++    {
++    case MappingModifier:
++    case MappingKeyboard:
++        XRefreshKeyboardMapping( &event->xmapping );
++        X11DRV_InitKeyboard( event->xmapping.display );
++
++        hwnd = GetFocus();
++        if (!hwnd) hwnd = GetActiveWindow();
++        PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST,
++                     0 /*FIXME*/, (LPARAM)X11DRV_GetKeyboardLayout(0));
++        break;
++
++    case MappingPointer:
++        X11DRV_InitMouse( event->xmapping.display );
++        break;
++    }
+ 
+-    hwnd = GetFocus();
+-    if (!hwnd) hwnd = GetActiveWindow();
+-    PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST,
+-                 0 /*FIXME*/, (LPARAM)X11DRV_GetKeyboardLayout(0));
+     return TRUE;
+ }
+ 
+diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
+index 105db08a78a..19ed2a29287 100644
+--- a/dlls/winex11.drv/mouse.c
++++ b/dlls/winex11.drv/mouse.c
+@@ -25,6 +25,9 @@
+ #include <X11/Xlib.h>
+ #include <X11/cursorfont.h>
+ #include <stdarg.h>
++#ifdef HAVE_X11_EXTENSIONS_XINPUT_H
++#include <X11/extensions/XInput.h>
++#endif
+ #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
+ #include <X11/extensions/XInput2.h>
+ #endif
+@@ -143,6 +146,14 @@ MAKE_FUNCPTR(XISelectEvents);
+ #undef MAKE_FUNCPTR
+ #endif
+ 
++#ifdef HAVE_X11_EXTENSIONS_XINPUT_H
++#define MAKE_FUNCPTR(f) static typeof(f) * p##f
++MAKE_FUNCPTR(XOpenDevice);
++MAKE_FUNCPTR(XCloseDevice);
++MAKE_FUNCPTR(XGetDeviceButtonMapping);
++#undef MAKE_FUNCPTR
++#endif
++
+ /***********************************************************************
+  *		X11DRV_Xcursor_Init
+  *
+@@ -249,6 +260,70 @@ void sync_window_cursor( Window window )
+     set_window_cursor( window, cursor );
+ }
+ 
++struct mouse_button_mapping
++{
++    int deviceid;
++    unsigned int button_count;
++    unsigned char buttons[256];
++};
++
++static struct mouse_button_mapping *pointer_mapping;
++static struct mouse_button_mapping *device_mapping;
++
++static void update_pointer_mapping( Display *display )
++{
++    struct mouse_button_mapping *tmp;
++
++    if (!(tmp = HeapAlloc( GetProcessHeap(), 0, sizeof(*tmp) )))
++    {
++        WARN("Unable to allocate device mapping.\n");
++        return;
++    }
++
++    tmp->button_count = ARRAY_SIZE( tmp->buttons );
++    tmp->button_count = XGetPointerMapping( display, tmp->buttons, tmp->button_count );
++
++    tmp = InterlockedExchangePointer( (void**)&pointer_mapping, tmp );
++
++    HeapFree( GetProcessHeap(), 0, tmp );
++}
++
++static void update_device_mapping( Display *display, int deviceid )
++{
++#ifdef HAVE_X11_EXTENSIONS_XINPUT_H
++    struct mouse_button_mapping *tmp;
++    XDevice *device;
++
++    if (!(device = pXOpenDevice( display, deviceid )))
++    {
++        WARN( "Unable to open cursor device %d\n", deviceid );
++        return;
++    }
++
++    if (!(tmp = HeapAlloc( GetProcessHeap(), 0, sizeof(*tmp) )))
++    {
++        WARN( "Unable to allocate device mapping.\n" );
++        pXCloseDevice( display, device );
++        return;
++    }
++
++    tmp->deviceid = deviceid;
++    tmp->button_count = ARRAY_SIZE( tmp->buttons );
++    tmp->button_count = pXGetDeviceButtonMapping( display, device, tmp->buttons, tmp->button_count );
++
++    tmp = InterlockedExchangePointer( (void**)&device_mapping, tmp );
++
++    HeapFree( GetProcessHeap(), 0, tmp );
++
++    pXCloseDevice( display, device );
++#endif
++}
++
++void X11DRV_InitMouse( Display *display )
++{
++    update_pointer_mapping( display );
++}
++
+ #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
+ /***********************************************************************
+  *              update_relative_valuators
+@@ -1792,6 +1867,8 @@ static BOOL X11DRV_DeviceChanged( XGenericEventCookie *xev )
+     if (event->reason != XISlaveSwitch) return FALSE;
+ 
+     update_relative_valuators( event->classes, event->num_classes );
++    update_device_mapping( event->display, event->sourceid );
++
+     return TRUE;
+ }
+ 
+@@ -1861,13 +1938,12 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+ 
+ #endif /* HAVE_X11_EXTENSIONS_XINPUT2_H */
+ 
+-
+ /***********************************************************************
+  *              X11DRV_XInput2_Init
+  */
+ void X11DRV_XInput2_Init(void)
+ {
+-#if defined(SONAME_LIBXI) && defined(HAVE_X11_EXTENSIONS_XINPUT2_H)
++#if defined(SONAME_LIBXI)
+     int event, error;
+     void *libxi_handle = wine_dlopen( SONAME_LIBXI, RTLD_NOW, NULL, 0 );
+ 
+@@ -1883,11 +1959,20 @@ void X11DRV_XInput2_Init(void)
+         return; \
+     }
+ 
++#ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
+     LOAD_FUNCPTR(XIGetClientPointer);
+     LOAD_FUNCPTR(XIFreeDeviceInfo);
+     LOAD_FUNCPTR(XIQueryDevice);
+     LOAD_FUNCPTR(XIQueryVersion);
+     LOAD_FUNCPTR(XISelectEvents);
++#endif
++
++#ifdef HAVE_X11_EXTENSIONS_XINPUT_H
++    LOAD_FUNCPTR(XOpenDevice);
++    LOAD_FUNCPTR(XCloseDevice);
++    LOAD_FUNCPTR(XGetDeviceButtonMapping);
++#endif
++
+ #undef LOAD_FUNCPTR
+ 
+     xinput2_available = XQueryExtension( gdi_display, "XInputExtension", &xinput2_opcode, &event, &error );
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 432dd5909ca..7145fec74e7 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -632,6 +632,7 @@ extern void retry_grab_clipping_window(void) DECLSPEC_HIDDEN;
+ extern BOOL clip_fullscreen_window( HWND hwnd, BOOL reset ) DECLSPEC_HIDDEN;
+ extern void move_resize_window( HWND hwnd, int dir ) DECLSPEC_HIDDEN;
+ extern void X11DRV_InitKeyboard( Display *display ) DECLSPEC_HIDDEN;
++extern void X11DRV_InitMouse( Display *display ) DECLSPEC_HIDDEN;
+ extern DWORD CDECL X11DRV_MsgWaitForMultipleObjectsEx( DWORD count, const HANDLE *handles, DWORD timeout,
+                                                        DWORD mask, DWORD flags ) DECLSPEC_HIDDEN;
+ 
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index 11e4ee29155..ff9185a523c 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -623,6 +623,7 @@ static BOOL process_attach(void)
+     if (use_xkb) use_xkb = XkbUseExtension( gdi_display, NULL, NULL );
+ #endif
+     X11DRV_InitKeyboard( gdi_display );
++    X11DRV_InitMouse( gdi_display );
+     if (use_xim) use_xim = X11DRV_InitXIM( input_style );
+ 
+     X11DRV_DisplayDevices_Init(FALSE);
+-- 
+2.24.1
+

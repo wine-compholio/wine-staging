@@ -1,0 +1,119 @@
+From 18e2112beb69c8499cdd90b133348ec52502dc6d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 21 Aug 2019 16:37:57 +0200
+Subject: [PATCH] winex11.drv: Listen to RawKey* events in the desktop thread.
+
+This adds keyboard input support while Wine windows are in background,
+so the events can be translated to raw input messages as on Windows,
+which are required to keep dinput8 keyboard state up-to-date when
+Alt+Tab is used to switch to a non-Wine window.
+---
+ dlls/winex11.drv/keyboard.c | 40 ++++++++++++++++++++++++++++++++++++-
+ dlls/winex11.drv/mouse.c    |  6 ++++++
+ dlls/winex11.drv/x11drv.h   |  1 +
+ 3 files changed, 46 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/keyboard.c b/dlls/winex11.drv/keyboard.c
+index 37c96c926f4..4d113d8c184 100644
+--- a/dlls/winex11.drv/keyboard.c
++++ b/dlls/winex11.drv/keyboard.c
+@@ -33,6 +33,9 @@
+ #ifdef HAVE_X11_XKBLIB_H
+ #include <X11/XKBlib.h>
+ #endif
++#ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
++#include <X11/extensions/XInput2.h>
++#endif
+ 
+ #include <ctype.h>
+ #include <stdarg.h>
+@@ -1148,7 +1151,7 @@ static void X11DRV_send_keyboard_input( HWND hwnd, WORD vkey, WORD scan, DWORD f
+     input.u.ki.time        = time;
+     input.u.ki.dwExtraInfo = 0;
+ 
+-    __wine_send_input( hwnd, &input, SEND_HWMSG_RAWINPUT|SEND_HWMSG_WINDOW );
++    __wine_send_input( hwnd, &input, SEND_HWMSG_WINDOW );
+ }
+ 
+ 
+@@ -1417,6 +1420,41 @@ BOOL X11DRV_KeyEvent( HWND hwnd, XEvent *xev )
+     return TRUE;
+ }
+ 
++#ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
++/***********************************************************************
++ *           X11DRV_KeyEvent
++ *
++ * Handle a raw XInput2 key event for background windows
++ */
++BOOL X11DRV_RawKeyEvent( XGenericEventCookie *cookie )
++{
++    XIRawEvent *event = cookie->data;
++    DWORD flags;
++    WORD vkey, scan;
++    INPUT input;
++
++    vkey = keyc2vkey[event->detail];
++    scan = keyc2scan[event->detail];
++
++    flags = 0;
++    if ( event->evtype == XI_RawKeyRelease ) flags |= KEYEVENTF_KEYUP;
++    if ( vkey & 0x100 ) flags |= KEYEVENTF_EXTENDEDKEY;
++
++    TRACE_(key)( "vkey=%04x scan=%04x flags=%04x\n", vkey, scan, flags );
++
++    input.type             = INPUT_KEYBOARD;
++    input.u.ki.wVk         = vkey & 0xff;
++    input.u.ki.wScan       = scan & 0xff;
++    input.u.ki.dwFlags     = flags;
++    input.u.ki.time        = EVENT_x11_time_to_win32_time(event->time);
++    input.u.ki.dwExtraInfo = 0;
++
++    __wine_send_input( 0, &input, SEND_HWMSG_RAWINPUT );
++
++    return TRUE;
++}
++#endif
++
+ /**********************************************************************
+  *		X11DRV_KEYBOARD_DetectLayout
+  *
+diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
+index bc23b9cbba1..2e9b39fcff7 100644
+--- a/dlls/winex11.drv/mouse.c
++++ b/dlls/winex11.drv/mouse.c
+@@ -406,6 +406,8 @@ void X11DRV_XInput2_Enable(void)
+     {
+         XISetMask( mask_bits, XI_RawButtonPress );
+         XISetMask( mask_bits, XI_RawButtonRelease );
++        XISetMask( mask_bits, XI_RawKeyPress );
++        XISetMask( mask_bits, XI_RawKeyRelease );
+         data->xi2_rawinput_only = TRUE;
+     }
+     else
+@@ -2038,6 +2040,10 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
+     case XI_RawButtonRelease:
+         ret = X11DRV_RawButtonEvent( event );
+         break;
++    case XI_RawKeyPress:
++    case XI_RawKeyRelease:
++        ret = X11DRV_RawKeyEvent( event );
++        break;
+ 
+     default:
+         TRACE( "Unhandled event %#x\n", event->evtype );
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index c843cd74ace..f89538a1755 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -518,6 +518,7 @@ extern BOOL X11DRV_ButtonRelease( HWND hwnd, XEvent *event ) DECLSPEC_HIDDEN;
+ extern BOOL X11DRV_MotionNotify( HWND hwnd, XEvent *event ) DECLSPEC_HIDDEN;
+ extern BOOL X11DRV_EnterNotify( HWND hwnd, XEvent *event ) DECLSPEC_HIDDEN;
+ extern BOOL X11DRV_KeyEvent( HWND hwnd, XEvent *event ) DECLSPEC_HIDDEN;
++extern BOOL X11DRV_RawKeyEvent( XGenericEventCookie *cookie ) DECLSPEC_HIDDEN;
+ extern BOOL X11DRV_KeymapNotify( HWND hwnd, XEvent *event ) DECLSPEC_HIDDEN;
+ extern BOOL X11DRV_DestroyNotify( HWND hwnd, XEvent *event ) DECLSPEC_HIDDEN;
+ extern BOOL X11DRV_SelectionRequest( HWND hWnd, XEvent *event ) DECLSPEC_HIDDEN;
+-- 
+2.24.0
+

@@ -1,0 +1,262 @@
+From d0347613c7149144d4339109b641901537c4c326 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 11 Nov 2019 18:35:18 +0100
+Subject: [PATCH 3/5] server: Add HID input message type to
+ send_hardware_message request.
+
+---
+ dlls/user32/message.c |  4 +++-
+ server/protocol.def   | 26 +++++++++++++++++++---
+ server/queue.c        | 50 ++++++++++++++++++++++++++++++++++++++-----
+ server/trace.c        | 10 ++++++---
+ 4 files changed, 78 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/user32/message.c b/dlls/user32/message.c
+index cc25d2f6c2f..55bbe409c9e 100644
+--- a/dlls/user32/message.c
++++ b/dlls/user32/message.c
+@@ -3354,10 +3354,10 @@ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
+     {
+         req->win        = wine_server_user_handle( hwnd );
+         req->flags      = flags;
+-        req->input.type = input->type;
+         switch (input->type)
+         {
+         case INPUT_MOUSE:
++            req->input.type        = HW_INPUT_MOUSE;
+             req->input.mouse.x     = input->u.mi.dx;
+             req->input.mouse.y     = input->u.mi.dy;
+             req->input.mouse.data  = input->u.mi.mouseData;
+@@ -3366,6 +3366,7 @@ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
+             req->input.mouse.info  = input->u.mi.dwExtraInfo;
+             break;
+         case INPUT_KEYBOARD:
++            req->input.type      = HW_INPUT_KEYBOARD;
+             req->input.kbd.vkey  = input->u.ki.wVk;
+             req->input.kbd.scan  = input->u.ki.wScan;
+             req->input.kbd.flags = input->u.ki.dwFlags;
+@@ -3373,6 +3374,7 @@ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
+             req->input.kbd.info  = input->u.ki.dwExtraInfo;
+             break;
+         case INPUT_HARDWARE:
++            req->input.type      = HW_INPUT_HARDWARE;
+             req->input.hw.msg    = input->u.hi.uMsg;
+             req->input.hw.lparam = MAKELONG( input->u.hi.wParamL, input->u.hi.wParamH );
+             break;
+diff --git a/server/protocol.def b/server/protocol.def
+index d37dceba40c..85cc2ac6937 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -321,6 +321,13 @@ struct hardware_msg_data
+             int            y;       /* y coordinate */
+             unsigned int   data;    /* mouse data */
+         } mouse;
++        struct
++        {
++            int            type;    /* RIM_TYPEHID */
++            obj_handle_t   device;
++            unsigned int   length;  /* HID report length */
++            /* followed by length bytes of HID report data  */
++        } hid;
+     } rawinput;
+ };
+ 
+@@ -344,7 +351,7 @@ typedef union
+     int type;
+     struct
+     {
+-        int            type;    /* INPUT_KEYBOARD */
++        int            type;    /* HW_INPUT_KEYBOARD */
+         unsigned short vkey;    /* virtual key code */
+         unsigned short scan;    /* scan code */
+         unsigned int   flags;   /* event flags */
+@@ -353,7 +360,7 @@ typedef union
+     } kbd;
+     struct
+     {
+-        int            type;    /* INPUT_MOUSE */
++        int            type;    /* HW_INPUT_MOUSE */
+         int            x;       /* coordinates */
+         int            y;
+         unsigned int   data;    /* mouse data */
+@@ -363,11 +370,23 @@ typedef union
+     } mouse;
+     struct
+     {
+-        int            type;    /* INPUT_HARDWARE */
++        int            type;    /* HW_INPUT_HARDWARE */
+         unsigned int   msg;     /* message code */
+         lparam_t       lparam;  /* message param */
+     } hw;
++    struct
++    {
++        int            type;    /* HW_INPUT_HID */
++        obj_handle_t   device;
++        unsigned char  usage_page;
++        unsigned char  usage;
++        unsigned int   length;
++    } hid;
+ } hw_input_t;
++#define HW_INPUT_MOUSE    0
++#define HW_INPUT_KEYBOARD 1
++#define HW_INPUT_HARDWARE 2
++#define HW_INPUT_HID      3
+ 
+ typedef union
+ {
+@@ -2361,6 +2380,7 @@ enum message_type
+     user_handle_t   win;       /* window handle */
+     hw_input_t      input;     /* input data */
+     unsigned int    flags;     /* flags (see below) */
++    VARARG(data,bytes);        /* hid report data */
+ @REPLY
+     int             wait;      /* do we need to wait for a reply? */
+     int             prev_x;    /* previous cursor position */
+diff --git a/server/queue.c b/server/queue.c
+index feff00e2b9f..85aa896c7bd 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1698,7 +1698,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+     struct msg_queue *queue;
+     struct message *msg;
+     timeout_t timeout = 2000 * -10000;  /* FIXME: load from registry */
+-    int id = (input->type == INPUT_MOUSE) ? WH_MOUSE_LL : WH_KEYBOARD_LL;
++    int id = (input->type == HW_INPUT_MOUSE) ? WH_MOUSE_LL : WH_KEYBOARD_LL;
+ 
+     if (!(hook_thread = get_first_global_hook( id ))) return 0;
+     if (!(queue = hook_thread->queue)) return 0;
+@@ -1716,7 +1716,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+     msg->data_size = hardware_msg->data_size;
+     msg->result    = NULL;
+ 
+-    if (input->type == INPUT_KEYBOARD)
++    if (input->type == HW_INPUT_KEYBOARD)
+     {
+         unsigned short vkey = input->kbd.vkey;
+         if (input->kbd.flags & KEYEVENTF_UNICODE) vkey = VK_PACKET;
+@@ -1742,6 +1742,8 @@ struct rawinput_message
+     struct desktop           *desktop;
+     struct hw_msg_source      source;
+     unsigned int              time;
++    unsigned char             usage_page;
++    unsigned char             usage;
+     struct hardware_msg_data  data;
+     const void               *extra;
+     data_size_t               extra_len;
+@@ -1750,6 +1752,7 @@ struct rawinput_message
+ static int queue_rawinput_message( struct process* process, void* user )
+ {
+     const struct rawinput_message* raw_msg = user;
++    const struct rawinput_device_entry *entry;
+     const struct rawinput_device *device = NULL;
+     struct desktop *desktop = NULL;
+     struct thread *thread = NULL, *foreground = NULL;
+@@ -1760,6 +1763,8 @@ static int queue_rawinput_message( struct process* process, void* user )
+         device = process->rawinput_mouse;
+     else if (raw_msg->data.rawinput.type == RIM_TYPEKEYBOARD)
+         device = process->rawinput_kbd;
++    else if ((entry = find_rawinput_device( process, raw_msg->usage_page, raw_msg->usage )))
++        device = &entry->device;
+ 
+     if (!device)
+         goto done;
+@@ -2067,6 +2072,38 @@ static void queue_custom_hardware_message( struct desktop *desktop, user_handle_
+     queue_hardware_message( desktop, msg, 1 );
+ }
+ 
++/* queue a hardware message for an hid event */
++static void queue_hid_message( struct desktop *desktop, user_handle_t win, const hw_input_t *input,
++                               unsigned int origin, struct msg_queue *sender, unsigned int req_flags,
++                               const void *report, data_size_t report_len )
++{
++    struct hw_msg_source source = { IMDT_UNAVAILABLE, origin };
++    struct hardware_msg_data *msg_data;
++    struct rawinput_message raw_msg;
++
++    if (!(req_flags & SEND_HWMSG_RAWINPUT))
++        return;
++
++    raw_msg.desktop    = NULL; /* send to all desktops */
++    raw_msg.source     = source;
++    raw_msg.time       = get_tick_count();
++    raw_msg.usage_page = input->hid.usage_page;
++    raw_msg.usage      = input->hid.usage;
++    raw_msg.extra      = report;
++    raw_msg.extra_len  = report_len;
++
++    msg_data = &raw_msg.data;
++    msg_data->flags               = 0;
++    msg_data->rawinput.type       = RIM_TYPEHID;
++    msg_data->rawinput.hid.device = input->hid.device;
++    msg_data->rawinput.hid.length = report_len;
++
++    if (req_flags == SEND_HWMSG_RAWINPUT)
++        enum_processes( queue_rawinput_message, &raw_msg );
++    else
++        queue_rawinput_message( current->process, &raw_msg );
++}
++
+ /* check message filter for a hardware message */
+ static int check_hw_message_filter( user_handle_t win, unsigned int msg_code,
+                                     user_handle_t filter_win, unsigned int first, unsigned int last )
+@@ -2577,15 +2614,18 @@ DECL_HANDLER(send_hardware_message)
+ 
+     switch (req->input.type)
+     {
+-    case INPUT_MOUSE:
++    case HW_INPUT_MOUSE:
+         reply->wait = queue_mouse_message( desktop, req->win, &req->input, origin, sender, req->flags );
+         break;
+-    case INPUT_KEYBOARD:
++    case HW_INPUT_KEYBOARD:
+         reply->wait = queue_keyboard_message( desktop, req->win, &req->input, origin, sender, req->flags );
+         break;
+-    case INPUT_HARDWARE:
++    case HW_INPUT_HARDWARE:
+         queue_custom_hardware_message( desktop, req->win, origin, &req->input );
+         break;
++    case HW_INPUT_HID:
++        queue_hid_message( desktop, req->win, &req->input, origin, sender, req->flags, get_req_data(), get_req_data_size() );
++        break;
+     default:
+         set_error( STATUS_INVALID_PARAMETER );
+     }
+diff --git a/server/trace.c b/server/trace.c
+index 18b56c729e4..c39c56087c1 100644
+--- a/server/trace.c
++++ b/server/trace.c
+@@ -381,24 +381,28 @@ static void dump_hw_input( const char *prefix, const hw_input_t *input )
+ {
+     switch (input->type)
+     {
+-    case INPUT_MOUSE:
++    case HW_INPUT_MOUSE:
+         fprintf( stderr, "%s{type=MOUSE,x=%d,y=%d,data=%08x,flags=%08x,time=%u",
+                  prefix, input->mouse.x, input->mouse.y, input->mouse.data, input->mouse.flags,
+                  input->mouse.time );
+         dump_uint64( ",info=", &input->mouse.info );
+         fputc( '}', stderr );
+         break;
+-    case INPUT_KEYBOARD:
++    case HW_INPUT_KEYBOARD:
+         fprintf( stderr, "%s{type=KEYBOARD,vkey=%04hx,scan=%04hx,flags=%08x,time=%u",
+                  prefix, input->kbd.vkey, input->kbd.scan, input->kbd.flags, input->kbd.time );
+         dump_uint64( ",info=", &input->kbd.info );
+         fputc( '}', stderr );
+         break;
+-    case INPUT_HARDWARE:
++    case HW_INPUT_HARDWARE:
+         fprintf( stderr, "%s{type=HARDWARE,msg=%04x", prefix, input->hw.msg );
+         dump_uint64( ",lparam=", &input->hw.lparam );
+         fputc( '}', stderr );
+         break;
++    case HW_INPUT_HID:
++        fprintf( stderr, "%s{type=HID,device=%04x,usage_page=%02x,usage=%02x,length=%04x}",
++                 prefix, input->hid.device, input->hid.usage_page, input->hid.usage, input->hid.length );
++        break;
+     default:
+         fprintf( stderr, "%s{type=%04x}", prefix, input->type );
+         break;
+-- 
+2.24.1
+

@@ -1,0 +1,53 @@
+From 694ff514bfce59c2590668e3e812d501b713acdb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 12 Sep 2019 14:14:08 +0200
+Subject: [PATCH 1/5] server: Add process argument to find_rawinput_device.
+
+We need to be able to iterate all registered rawinput devices for
+foreign processes, not only the current one.
+---
+ server/queue.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/server/queue.c b/server/queue.c
+index f5dc06100d1..3ed7e82a906 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1576,11 +1576,11 @@ static user_handle_t find_hardware_message_window( struct desktop *desktop, stru
+     return win;
+ }
+ 
+-static struct rawinput_device_entry *find_rawinput_device( unsigned short usage_page, unsigned short usage )
++static struct rawinput_device_entry *find_rawinput_device( struct process *process, unsigned short usage_page, unsigned short usage )
+ {
+     struct rawinput_device_entry *e;
+ 
+-    LIST_FOR_EACH_ENTRY( e, &current->process->rawinput_devices, struct rawinput_device_entry, entry )
++    LIST_FOR_EACH_ENTRY( e, &process->rawinput_devices, struct rawinput_device_entry, entry )
+     {
+         if (e->device.usage_page != usage_page || e->device.usage != usage) continue;
+         return e;
+@@ -1593,7 +1593,7 @@ static void update_rawinput_device(const struct rawinput_device *device)
+ {
+     struct rawinput_device_entry *e;
+ 
+-    if (!(e = find_rawinput_device( device->usage_page, device->usage )))
++    if (!(e = find_rawinput_device( current->process, device->usage_page, device->usage )))
+     {
+         if (!(e = mem_alloc( sizeof(*e) ))) return;
+         list_add_tail( &current->process->rawinput_devices, &e->entry );
+@@ -3375,9 +3375,9 @@ DECL_HANDLER(update_rawinput_devices)
+         update_rawinput_device(&devices[i]);
+     }
+ 
+-    e = find_rawinput_device( 1, 2 );
++    e = find_rawinput_device( current->process, 1, 2 );
+     current->process->rawinput_mouse = e ? &e->device : NULL;
+-    e = find_rawinput_device( 1, 6 );
++    e = find_rawinput_device( current->process, 1, 6 );
+     current->process->rawinput_kbd   = e ? &e->device : NULL;
+ }
+ 
+-- 
+2.24.1
+

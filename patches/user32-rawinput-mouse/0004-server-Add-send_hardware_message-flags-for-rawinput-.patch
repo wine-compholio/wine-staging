@@ -1,0 +1,128 @@
+From 430580824e975bbda41884affd3e5fbf104ac6fe Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 26 Aug 2019 14:37:20 +0200
+Subject: [PATCH 04/12] server: Add send_hardware_message flags for rawinput
+ translation.
+
+---
+ dlls/user32/input.c |  6 +++---
+ server/protocol.def |  2 ++
+ server/queue.c      | 20 ++++++++++++++------
+ 3 files changed, 19 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/user32/input.c b/dlls/user32/input.c
+index 340d20e58f9..7d947a98d0f 100644
+--- a/dlls/user32/input.c
++++ b/dlls/user32/input.c
+@@ -124,7 +124,7 @@ BOOL set_capture_window( HWND hwnd, UINT gui_flags, HWND *prev_ret )
+  */
+ BOOL CDECL __wine_send_input( HWND hwnd, const INPUT *input )
+ {
+-    NTSTATUS status = send_hardware_message( hwnd, input, 0 );
++    NTSTATUS status = send_hardware_message( hwnd, input, SEND_HWMSG_RAWINPUT|SEND_HWMSG_WINDOW );
+     if (status) SetLastError( RtlNtStatusToDosError(status) );
+     return !status;
+ }
+@@ -192,9 +192,9 @@ UINT WINAPI SendInput( UINT count, LPINPUT inputs, int size )
+             /* we need to update the coordinates to what the server expects */
+             INPUT input = inputs[i];
+             update_mouse_coords( &input );
+-            status = send_hardware_message( 0, &input, SEND_HWMSG_INJECTED );
++            status = send_hardware_message( 0, &input, SEND_HWMSG_INJECTED|SEND_HWMSG_RAWINPUT|SEND_HWMSG_WINDOW );
+         }
+-        else status = send_hardware_message( 0, &inputs[i], SEND_HWMSG_INJECTED );
++        else status = send_hardware_message( 0, &inputs[i], SEND_HWMSG_INJECTED|SEND_HWMSG_RAWINPUT|SEND_HWMSG_WINDOW );
+ 
+         if (status)
+         {
+diff --git a/server/protocol.def b/server/protocol.def
+index ae3702b150f..9f9f9197134 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -2370,6 +2370,8 @@ enum message_type
+     VARARG(keystate,bytes);    /* global state array for all the keys */
+ @END
+ #define SEND_HWMSG_INJECTED    0x01
++#define SEND_HWMSG_RAWINPUT    0x02
++#define SEND_HWMSG_WINDOW      0x04
+ 
+ 
+ /* Get a message from the current queue */
+diff --git a/server/queue.c b/server/queue.c
+index af65b5f6b4c..9528453b190 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1736,7 +1736,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+ 
+ /* queue a hardware message for a mouse event */
+ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, const hw_input_t *input,
+-                                unsigned int origin, struct msg_queue *sender )
++                                unsigned int origin, struct msg_queue *sender, unsigned int req_flags )
+ {
+     const struct rawinput_device *device;
+     struct hardware_msg_data *msg_data;
+@@ -1789,7 +1789,8 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
+         y = desktop->cursor.y;
+     }
+ 
+-    if ((device = current->process->rawinput_mouse))
++    if ((device = current->process->rawinput_mouse) &&
++        (req_flags & SEND_HWMSG_RAWINPUT))
+     {
+         if (!(msg = alloc_hardware_message( input->mouse.info, source, time ))) return 0;
+         msg_data = msg->data;
+@@ -1808,6 +1809,9 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
+         queue_hardware_message( desktop, msg, 0 );
+     }
+ 
++    if (!(req_flags & SEND_HWMSG_WINDOW))
++        return 0;
++
+     for (i = 0; i < ARRAY_SIZE( messages ); i++)
+     {
+         if (!messages[i]) continue;
+@@ -1839,7 +1843,7 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
+ 
+ /* queue a hardware message for a keyboard event */
+ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, const hw_input_t *input,
+-                                   unsigned int origin, struct msg_queue *sender )
++                                   unsigned int origin, struct msg_queue *sender, unsigned int req_flags )
+ {
+     struct hw_msg_source source = { IMDT_KEYBOARD, origin };
+     const struct rawinput_device *device;
+@@ -1915,7 +1919,8 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
+         break;
+     }
+ 
+-    if ((device = current->process->rawinput_kbd))
++    if ((device = current->process->rawinput_kbd) &&
++        (req_flags & SEND_HWMSG_RAWINPUT))
+     {
+         if (!(msg = alloc_hardware_message( input->kbd.info, source, time ))) return 0;
+         msg_data = msg->data;
+@@ -1933,6 +1938,9 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
+         queue_hardware_message( desktop, msg, 0 );
+     }
+ 
++    if (!(req_flags & SEND_HWMSG_WINDOW))
++        return 0;
++
+     if (!(msg = alloc_hardware_message( input->kbd.info, source, time ))) return 0;
+     msg_data = msg->data;
+ 
+@@ -2494,10 +2502,10 @@ DECL_HANDLER(send_hardware_message)
+     switch (req->input.type)
+     {
+     case INPUT_MOUSE:
+-        reply->wait = queue_mouse_message( desktop, req->win, &req->input, origin, sender );
++        reply->wait = queue_mouse_message( desktop, req->win, &req->input, origin, sender, req->flags );
+         break;
+     case INPUT_KEYBOARD:
+-        reply->wait = queue_keyboard_message( desktop, req->win, &req->input, origin, sender );
++        reply->wait = queue_keyboard_message( desktop, req->win, &req->input, origin, sender, req->flags );
+         break;
+     case INPUT_HARDWARE:
+         queue_custom_hardware_message( desktop, req->win, origin, &req->input );
+-- 
+2.24.1
+

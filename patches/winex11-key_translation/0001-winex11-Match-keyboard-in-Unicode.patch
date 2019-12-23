@@ -1,17 +1,17 @@
-From 335a6ec241f64bf4ceffc39170cfd3ab88001cb8 Mon Sep 17 00:00:00 2001
+From 614fe3af1cabb038c779700fa18dc4992747a164 Mon Sep 17 00:00:00 2001
 From: Ken Thomases <ken@codeweavers.com>
 Date: Tue, 11 Dec 2018 08:30:41 +1100
-Subject: [PATCH 1/2] winex11: Match keyboard in Unicode
+Subject: [PATCH] winex11: Match keyboard in Unicode
 
 ---
  dlls/winex11.drv/keyboard.c | 163 ++++++++++++++++++++++--------------
  1 file changed, 98 insertions(+), 65 deletions(-)
 
 diff --git a/dlls/winex11.drv/keyboard.c b/dlls/winex11.drv/keyboard.c
-index b9b8293e4d8..3f13a7331cc 100644
+index 4d113d8c184..b16d913a4a2 100644
 --- a/dlls/winex11.drv/keyboard.c
 +++ b/dlls/winex11.drv/keyboard.c
-@@ -37,6 +37,7 @@
+@@ -40,6 +40,7 @@
  #include <ctype.h>
  #include <stdarg.h>
  #include <string.h>
@@ -19,7 +19,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  
  #define NONAMELESSUNION
  
-@@ -76,7 +77,7 @@ static CRITICAL_SECTION_DEBUG critsect_debug =
+@@ -79,7 +80,7 @@ static CRITICAL_SECTION_DEBUG critsect_debug =
  };
  static CRITICAL_SECTION kbd_section = { &critsect_debug, -1, 0, 0, 0, 0 };
  
@@ -28,9 +28,9 @@ index b9b8293e4d8..3f13a7331cc 100644
  
  /* Keyboard translation tables */
  #define MAIN_LEN 49
-@@ -1452,6 +1453,36 @@ BOOL X11DRV_KeyEvent( HWND hwnd, XEvent *xev )
-     return TRUE;
+@@ -1455,6 +1456,36 @@ BOOL X11DRV_RawKeyEvent( XGenericEventCookie *cookie )
  }
+ #endif
  
 +static WCHAR translate_keysym( Display *display, KeySym keysym )
 +{
@@ -65,7 +65,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  /**********************************************************************
   *		X11DRV_KEYBOARD_DetectLayout
   *
-@@ -1468,8 +1499,8 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
+@@ -1471,8 +1502,8 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
    KeySym keysym = 0;
    const char (*lkey)[MAIN_LEN][4];
    unsigned max_seq = 0;
@@ -76,7 +76,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  
    syms = keysyms_per_keycode;
    if (syms > 4) {
-@@ -1482,35 +1513,25 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
+@@ -1485,35 +1516,25 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
        /* get data for keycode from X server */
        for (i = 0; i < syms; i++) {
          if (!(keysym = keycode_to_keysym (display, keyc, i))) continue;
@@ -120,7 +120,7 @@ index b9b8293e4d8..3f13a7331cc 100644
      for (keyc = min_keycode; keyc <= max_keycode; keyc++) {
        if (ckey[keyc][0]) {
  	/* search for a match in layout table */
-@@ -1519,10 +1540,13 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
+@@ -1522,10 +1543,13 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
  	/* the table, it's okay that the X server has "3#£", for example) */
  	/* however, the score will be higher for longer matches */
  	for (key = 0; key < MAIN_LEN; key++) {
@@ -137,7 +137,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  	      ok = -1;
  	  }
  	  if (ok > 0) {
-@@ -1537,11 +1561,7 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
+@@ -1540,11 +1564,7 @@ X11DRV_KEYBOARD_DetectLayout( Display *display )
  	  if (key > pkey) seq++;
  	  pkey = key;
  	} else {
@@ -150,7 +150,7 @@ index b9b8293e4d8..3f13a7331cc 100644
            mismatch++;
            score -= syms;
  	}
-@@ -1648,9 +1668,11 @@ void X11DRV_InitKeyboard( Display *display )
+@@ -1651,9 +1671,11 @@ void X11DRV_InitKeyboard( Display *display )
      XKeyEvent e2;
      WORD scan, vkey;
      int keyc, i, keyn, syms;
@@ -163,7 +163,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  
      /* Ranges of OEM, function key, and character virtual key codes.
       * Don't include those handled specially in X11DRV_ToUnicodeEx and
-@@ -1707,7 +1729,11 @@ void X11DRV_InitKeyboard( Display *display )
+@@ -1710,7 +1732,11 @@ void X11DRV_InitKeyboard( Display *display )
      /* Detect the keyboard layout */
      X11DRV_KEYBOARD_DetectLayout( display );
      lkey = main_key_tab[kbd_layout].key;
@@ -175,7 +175,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  
      /* Now build two conversion arrays :
       * keycode -> vkey + scancode + extended
-@@ -1748,26 +1774,14 @@ void X11DRV_InitKeyboard( Display *display )
+@@ -1751,26 +1777,14 @@ void X11DRV_InitKeyboard( Display *display )
  	      int maxlen=0,maxval=-1,ok;
  	      for (i=0; i<syms; i++) {
  		keysym = keycode_to_keysym(display, keyc, i);
@@ -207,7 +207,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  		if (!ok) i--; /* we overshot */
  		if (ok||(i>maxlen)) {
  		  maxlen=i; maxval=keyn;
-@@ -2369,7 +2383,7 @@ INT CDECL X11DRV_GetKeyNameText(LONG lParam, LPWSTR lpBuffer, INT nSize)
+@@ -2388,7 +2402,7 @@ INT CDECL X11DRV_GetKeyNameText(LONG lParam, LPWSTR lpBuffer, INT nSize)
  /***********************************************************************
   *		X11DRV_KEYBOARD_MapDeadKeysym
   */
@@ -216,7 +216,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  {
  	switch (keysym)
  	    {
-@@ -2379,65 +2393,84 @@ static char KEYBOARD_MapDeadKeysym(KeySym keysym)
+@@ -2398,65 +2412,84 @@ static char KEYBOARD_MapDeadKeysym(KeySym keysym)
  #endif
  	    case 0x1000FE7E : /* Xfree's XK_Dtilde */
  		return '~';	/* '? */
@@ -316,7 +316,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  */
  	    }
  	TRACE("no character for dead keysym 0x%08lx\n",keysym);
-@@ -2622,7 +2655,7 @@ INT CDECL X11DRV_ToUnicodeEx(UINT virtKey, UINT scanCode, const BYTE *lpKeyState
+@@ -2641,7 +2674,7 @@ INT CDECL X11DRV_ToUnicodeEx(UINT virtKey, UINT scanCode, const BYTE *lpKeyState
  
      if (ret == 0)
      {
@@ -325,7 +325,7 @@ index b9b8293e4d8..3f13a7331cc 100644
  
  #ifdef XK_EuroSign
          /* An ugly hack for EuroSign: X can't translate it to a character
-@@ -2646,7 +2679,7 @@ INT CDECL X11DRV_ToUnicodeEx(UINT virtKey, UINT scanCode, const BYTE *lpKeyState
+@@ -2665,7 +2698,7 @@ INT CDECL X11DRV_ToUnicodeEx(UINT virtKey, UINT scanCode, const BYTE *lpKeyState
  	dead_char = KEYBOARD_MapDeadKeysym(keysym);
  	if (dead_char)
          {
@@ -335,5 +335,5 @@ index b9b8293e4d8..3f13a7331cc 100644
              goto found;
          }
 -- 
-2.19.2
+2.24.0
 

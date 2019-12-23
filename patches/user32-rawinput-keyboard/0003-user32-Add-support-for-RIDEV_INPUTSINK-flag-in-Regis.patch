@@ -1,0 +1,95 @@
+From 31d4d9619c14a37522b99917deae40273f6e3654 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sat, 7 Sep 2019 09:41:59 +0200
+Subject: [PATCH 3/4] user32: Add support for RIDEV_INPUTSINK flag in
+ RegisterRawInputDevices.
+
+This flag allows applications to receive rawinput messages while in
+background. They have to specify a target hwnd in which queue to receive
+them and the messages will carry a RIM_INPUTSINK wparam in this case.
+---
+ dlls/user32/rawinput.c    | 9 ++++++++-
+ dlls/user32/tests/input.c | 2 --
+ server/queue.c            | 9 ++++++---
+ 3 files changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/user32/rawinput.c b/dlls/user32/rawinput.c
+index 72ae91cfcb5..5a238928b24 100644
+--- a/dlls/user32/rawinput.c
++++ b/dlls/user32/rawinput.c
+@@ -304,6 +304,13 @@ BOOL WINAPI DECLSPEC_HOTPATCH RegisterRawInputDevices(RAWINPUTDEVICE *devices, U
+ 
+     for (i = 0; i < device_count; ++i)
+     {
++        if ((devices[i].dwFlags & RIDEV_INPUTSINK) &&
++            (devices[i].hwndTarget == NULL))
++        {
++            SetLastError(ERROR_INVALID_PARAMETER);
++            return FALSE;
++        }
++
+         if ((devices[i].dwFlags & RIDEV_REMOVE) &&
+             (devices[i].hwndTarget != NULL))
+         {
+@@ -319,7 +326,7 @@ BOOL WINAPI DECLSPEC_HOTPATCH RegisterRawInputDevices(RAWINPUTDEVICE *devices, U
+         TRACE("device %u: page %#x, usage %#x, flags %#x, target %p.\n",
+                 i, devices[i].usUsagePage, devices[i].usUsage,
+                 devices[i].dwFlags, devices[i].hwndTarget);
+-        if (devices[i].dwFlags & ~(RIDEV_REMOVE|RIDEV_NOLEGACY))
++        if (devices[i].dwFlags & ~(RIDEV_REMOVE|RIDEV_NOLEGACY|RIDEV_INPUTSINK))
+             FIXME("Unhandled flags %#x for device %u.\n", devices[i].dwFlags, i);
+ 
+         d[i].usage_page = devices[i].usUsagePage;
+diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
+index a1f983f1960..68d6731551a 100644
+--- a/dlls/user32/tests/input.c
++++ b/dlls/user32/tests/input.c
+@@ -1812,9 +1812,7 @@ static void test_RegisterRawInputDevices(void)
+ 
+     SetLastError(0xdeadbeef);
+     res = RegisterRawInputDevices(raw_devices, ARRAY_SIZE(raw_devices), sizeof(RAWINPUTDEVICE));
+-    todo_wine
+     ok(res == FALSE, "RegisterRawInputDevices failed\n");
+-    todo_wine
+     ok(GetLastError() == ERROR_INVALID_PARAMETER, "RegisterRawInputDevices returned %08x\n", GetLastError());
+ 
+     raw_devices[0].hwndTarget = hwnd;
+diff --git a/server/queue.c b/server/queue.c
+index 85aa896c7bd..145b9c110b1 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -1758,6 +1758,7 @@ static int queue_rawinput_message( struct process* process, void* user )
+     struct thread *thread = NULL, *foreground = NULL;
+     struct message *msg;
+     struct hardware_msg_data *msg_data;
++    int wparam = RIM_INPUT;
+ 
+     if (raw_msg->data.rawinput.type == RIM_TYPEMOUSE)
+         device = process->rawinput_mouse;
+@@ -1777,10 +1778,12 @@ static int queue_rawinput_message( struct process* process, void* user )
+         process != thread->process)
+         goto done;
+ 
+-    /* FIXME: Implement RIDEV_INPUTSINK */
+     if (!(foreground = get_window_thread( desktop->foreground_input->active )) ||
+         thread->process != foreground->process)
+-        goto done;
++    {
++        if (!(device->flags & RIDEV_INPUTSINK)) goto done;
++        wparam = RIM_INPUTSINK;
++    }
+ 
+     if (!(msg = alloc_hardware_message( raw_msg->data.info, raw_msg->source, raw_msg->time, raw_msg->extra_len )))
+         goto done;
+@@ -1788,7 +1791,7 @@ static int queue_rawinput_message( struct process* process, void* user )
+ 
+     msg->win    = device->target;
+     msg->msg    = WM_INPUT;
+-    msg->wparam = RIM_INPUT;
++    msg->wparam = wparam;
+     msg->lparam = 0;
+ 
+     memcpy( msg_data, &raw_msg->data, sizeof(*msg_data) );
+-- 
+2.24.1
+

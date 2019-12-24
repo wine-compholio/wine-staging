@@ -6,15 +6,14 @@ features, which have not been integrated into the development branch yet. The
 idea of Wine Staging is to provide experimental features faster to end users and
 to give developers the possibility to discuss and improve their patches before
 they are integrated into the main branch. More information about Wine Staging
-can also be found on our website [wine-staging.com](http://wine-staging.com).
+can also be found [on the WineHQ wiki](https://wiki.winehq.org/Wine-Staging).
 
 Installation
 ------------
 
 Ready-to-use packages for Wine Staging are available for a variety of Linux
-distributions and for Mac OS X. Just follow the
-[installation instructions](https://wine-staging.com/installation.html)
-for your operating system.
+distributions and for Mac OS X. Just follow the [installation
+instructions](https://wiki.winehq.org/Download) for your operating system.
 
 On most distributions the `wine-staging` package is installed to
 `/opt/wine-staging`, such that multiple Wine versions can be installed in
@@ -78,5 +77,6 @@ in our [Wiki](https://wiki.winehq.org/Wine-Staging).
 Contributing
 ------------
 
-Please see CONTRIBUTING.md for more information about contributing to Wine
-Staging.
+For information on contributing to Wine-Staging, please see
+<https://wiki.winehq.org/Wine-Staging_Contributing>. Note that GitHub pull
+requests are strongly dispreferred, especially for patches.

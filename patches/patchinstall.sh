@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6dd84c53b55ecfa2e2735a914cb126fa0c4b23a5"
+	echo "fa97cbdf14883fb301dcc0a5264369f8ed184182"
 }
 
 # Show version information
@@ -182,7 +182,6 @@ patch_enable_all ()
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"
-	enable_ntdll_BitmaskAllocAreaSearch="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CriticalSection="$1"
 	enable_ntdll_DOS_Attributes="$1"
@@ -679,9 +678,6 @@ patch_enable ()
 			;;
 		ntdll-ApiSetMap)
 			enable_ntdll_ApiSetMap="$2"
-			;;
-		ntdll-BitmaskAllocAreaSearch)
-			enable_ntdll_BitmaskAllocAreaSearch="$2"
 			;;
 		ntdll-Builtin_Prot)
 			enable_ntdll_Builtin_Prot="$2"
@@ -1862,13 +1858,6 @@ if test "$enable_ntdll_HashLinks" -eq 1; then
 		abort "Patchset ntdll-LDR_MODULE disabled, but ntdll-HashLinks depends on that."
 	fi
 	enable_ntdll_LDR_MODULE=1
-fi
-
-if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
-	if test "$enable_ntdll_BitmaskAllocAreaSearch" -gt 1; then
-		abort "Patchset ntdll-BitmaskAllocAreaSearch disabled, but ntdll-ForceBottomUpAlloc depends on that."
-	fi
-	enable_ntdll_BitmaskAllocAreaSearch=1
 fi
 
 if test "$enable_ntdll_DOS_Attributes" -eq 1; then
@@ -4687,21 +4676,6 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-BitmaskAllocAreaSearch
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47974] X Rebirth: NtVirtualAlloc() does not find available memory with nonzero bitmask
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c
-# |
-if test "$enable_ntdll_BitmaskAllocAreaSearch" -eq 1; then
-	patch_apply ntdll-BitmaskAllocAreaSearch/0001-ntdll-Fix-free-area-search-outside-of-reserved-area-.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix free area search outside of reserved area in map_view() for non-zero bitmask.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Builtin_Prot
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -4843,9 +4817,6 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 fi
 
 # Patchset ntdll-ForceBottomUpAlloc
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-BitmaskAllocAreaSearch
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#48175] AION (64 bit) - crashes in crysystem.dll.CryFree() due to high memory pointers allocated

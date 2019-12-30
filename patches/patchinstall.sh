@@ -217,6 +217,7 @@ patch_enable_all ()
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Signal_Handler="$1"
 	enable_ntdll_Status_Mapping="$1"
+	enable_ntdll_Syscall_Emulation="$1"
 	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
@@ -783,6 +784,9 @@ patch_enable ()
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
+			;;
+		ntdll-Syscall_Emulation)
+			enable_ntdll_Syscall_Emulation="$2"
 			;;
 		ntdll-SystemExtendedProcessInformation)
 			enable_ntdll_SystemExtendedProcessInformation="$2"
@@ -1802,6 +1806,13 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 		abort "Patchset nvapi-Stub_DLL disabled, but nvcuvid-CUDA_Video_Support depends on that."
 	fi
 	enable_nvapi_Stub_DLL=1
+fi
+
+if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
+	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
+		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-Syscall_Emulation depends on that."
+	fi
+	enable_winebuild_Fake_Dlls=1
 fi
 
 if test "$enable_ntdll_Signal_Handler" -eq 1; then
@@ -5192,6 +5203,25 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Syscall_Emulation
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime, ntdll-Hide_Wine_Exports,
+# | 	ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48291] Detroit: Become Human crashes on launch
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/signal_x86_64.c, tools/winebuild/spec32.c
+# |
+if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
+	patch_apply ntdll-Syscall_Emulation/0001-ntdll-Support-x86_64-syscall-emulation.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Support x86_64 syscall emulation.", 1 },';
 	) >> "$patchlist"
 fi
 

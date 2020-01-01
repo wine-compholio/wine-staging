@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fa97cbdf14883fb301dcc0a5264369f8ed184182"
+	echo "5034d109e033fbe820829ae43adba0cc30bf9b99"
 }
 
 # Show version information
@@ -4507,7 +4507,7 @@ fi
 # |   *	[#32490] Graphical issues in Inquisitor
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/locale.c, libs/port/collation.c
+# |   *	dlls/kernel32/tests/locale.c, dlls/kernelbase/collation.c, libs/port/collation.c
 # |
 if test "$enable_libs_Unicode_Collation" -eq 1; then
 	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5034d109e033fbe820829ae43adba0cc30bf9b99"
+	echo "3b1c3e57fcac4e23c0f9b376a483c4949ee7739f"
 }
 
 # Show version information
@@ -97,6 +97,7 @@ patch_enable_all ()
 	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_alpha_bitmaps="$1"
+	enable_comctl32_version_6="$1"
 	enable_comctrl_rebar_capture="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
@@ -424,6 +425,9 @@ patch_enable ()
 			;;
 		comctl32-alpha-bitmaps)
 			enable_comctl32_alpha_bitmaps="$2"
+			;;
+		comctl32-version_6)
+			enable_comctl32_version_6="$2"
 			;;
 		comctrl-rebar-capture)
 			enable_comctrl_rebar_capture="$2"
@@ -2413,6 +2417,18 @@ if test "$enable_comctl32_alpha_bitmaps" -eq 1; then
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Switch to using a structure for extra storage.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Paint 32-bpp bitmaps with an alpha channel using GdiAlphaBlend.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset comctl32-version_6
+# |
+# | Modified files:
+# |   *	dlls/comctl32/comctl32.h, dlls/comctl32/comctl32.rc, include/commctrl.h
+# |
+if test "$enable_comctl32_version_6" -eq 1; then
+	patch_apply comctl32-version_6/0001-comctl32-Bump-version-to-6.0.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Bump version to 6.0.", 1 },';
 	) >> "$patchlist"
 fi
 

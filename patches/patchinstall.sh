@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0747fd29d8f429a3421207b52eabe11cfcdf877d"
+	echo "37dec9f144501fb93e173214578b759122ac999a"
 }
 
 # Show version information
@@ -2201,7 +2201,7 @@ fi
 # | Modified files:
 # |   *	dlls/activeds/Makefile.in, dlls/activeds/activeds_main.c, dlls/adsldp/Makefile.in, dlls/adsldp/adsldp.c,
 # | 	dlls/adsldp/adsldp.idl, dlls/adsldp/adsldp.rgs, dlls/adsldp/rsrc.rc, dlls/adsldp/tests/Makefile.in,
-# | 	dlls/adsldp/tests/ldap.c, dlls/adsldp/tests/sysinfo.c, include/adserr.h, include/iads.idl
+# | 	dlls/adsldp/tests/ldap.c, dlls/adsldp/tests/sysinfo.c, include/Makefile.in, include/adserr.h, include/iads.idl
 # |
 if test "$enable_activeds_ADsOpenObject" -eq 1; then
 	patch_apply activeds-ADsOpenObject/0001-include-Add-adserr.h.patch

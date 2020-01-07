@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "37dec9f144501fb93e173214578b759122ac999a"
+	echo "6b839a0f85236aac2cc794d5d586f1ba371866b1"
 }
 
 # Show version information
@@ -94,7 +94,6 @@ patch_enable_all ()
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
 	enable_cmd_launch_association="$1"
-	enable_combase_GetRestrictedErrorInfo="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_alpha_bitmaps="$1"
 	enable_comctl32_version_6="$1"
@@ -416,9 +415,6 @@ patch_enable ()
 			;;
 		cmd-launch-association)
 			enable_cmd_launch_association="$2"
-			;;
-		combase-GetRestrictedErrorInfo)
-			enable_combase_GetRestrictedErrorInfo="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -2369,22 +2365,6 @@ if test "$enable_cmd_launch_association" -eq 1; then
 	(
 		printf '%s\n' '+    { "Jason Edmeades", "cmd: Support for launching programs based on file association.", 1 },';
 		printf '%s\n' '+    { "Jason Edmeades", "cmd: Ftype failed to clear file associations.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset combase-GetRestrictedErrorInfo
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46972] combase: Add GetRestrictedErrorInfo/RoOriginateLanguageException stubs.
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-winrt-error-l1-1-0/api-ms-win-core-winrt-error-l1-1-0.spec, dlls/api-ms-win-core-winrt-error-l1-1-1
-# | 	/api-ms-win-core-winrt-error-l1-1-1.spec, dlls/combase/combase.spec, dlls/combase/roapi.c
-# |
-if test "$enable_combase_GetRestrictedErrorInfo" -eq 1; then
-	patch_apply combase-GetRestrictedErrorInfo/0002-combase-Add-GetRestrictedErrorInfo-and-RoOriginateLa.patch
-	(
-		printf '%s\n' '+    { "Louis Lenders", "combase: Add GetRestrictedErrorInfo and RoOriginateLanguageException stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

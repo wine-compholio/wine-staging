@@ -4841,8 +4841,10 @@ fi
 # |   *	dlls/ntdll/virtual.c
 # |
 if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
-	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Stop-search-on-mmap-error-in-try_map_free_area.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0002-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
 	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Stop search on mmap() error in try_map_free_area().", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "ntdll: Force bottom up allocation order for 64 bit arch unless top down is requested.", 1 },';
 	) >> "$patchlist"
 fi

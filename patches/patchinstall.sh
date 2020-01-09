@@ -6609,11 +6609,13 @@ if test "$enable_user32_rawinput_nolegacy" -eq 1; then
 	patch_apply user32-rawinput-nolegacy/0002-user32-Add-support-for-RIDEV_NOLEGACY-flag-in-Regist.patch
 	patch_apply user32-rawinput-nolegacy/0003-dinput-Set-RIDEV_INPUTSINK-flag-only-when-DISCL_BACK.patch
 	patch_apply user32-rawinput-nolegacy/0004-dinput-Set-correct-rawinput-flags-for-DISCL_EXCLUSIV.patch
+	patch_apply user32-rawinput-nolegacy/0005-server-Update-desktop-cursor-pos-even-if-RIDEV_NOLEG.patch
 	(
 		printf '%s\n' '+    { "Rémi Bernon", "dinput8/tests: Add test for DISCL_EXCLUSIVE flag interaction with rawinput.", 1 },';
 		printf '%s\n' '+    { "Derek Lesho", "user32: Add support for RIDEV_NOLEGACY flag in RegisterRawInputDevices.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "dinput: Set RIDEV_INPUTSINK flag only when DISCL_BACKGROUND is requested.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "dinput: Set correct rawinput flags for DISCL_EXCLUSIVE.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Update desktop cursor pos even if RIDEV_NOLEGACY flag is set.", 1 },';
 	) >> "$patchlist"
 fi
 

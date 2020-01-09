@@ -1,46 +1,46 @@
-From 13f2b7fafd8ac5a28bf69828998e094ae29c64d4 Mon Sep 17 00:00:00 2001
+From 3ee769ef72de483a2d4af47a50d17c78a8e1a322 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 30 Mar 2015 12:50:21 +0200
 Subject: [PATCH] server: Temporarily store the full security descriptor for
  file objects.
 
 ---
- dlls/advapi32/tests/security.c | 16 +++-----
+ dlls/advapi32/tests/security.c | 16 +++----
  server/change.c                |  8 +++-
- server/file.c                  | 88 ++++++++++++++++++++++++++++--------------
+ server/file.c                  | 88 +++++++++++++++++++++++-----------
  server/file.h                  |  3 +-
  4 files changed, 74 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 9ad5881..4c44f44 100644
+index 88e7ca9e878..1b11f95ada3 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3701,7 +3701,6 @@ static void test_CreateDirectoryA(void)
+@@ -3702,7 +3702,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
-     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     bret = GetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
 -    todo_wine
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -3777,7 +3776,6 @@ static void test_CreateDirectoryA(void)
+@@ -3713,7 +3712,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
-     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     bret = GetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
 -    todo_wine
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -3923,7 +3921,6 @@ static void test_CreateDirectoryA(void)
+@@ -3836,7 +3834,6 @@ static void test_CreateDirectoryA(void)
      ok(error == ERROR_SUCCESS, "GetNamedSecurityInfo failed with error %d\n", error);
-     bret = pGetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
+     bret = GetAclInformation(pDacl, &acl_size, sizeof(acl_size), AclSizeInformation);
      ok(bret, "GetAclInformation failed\n");
 -    todo_wine
      ok(acl_size.AceCount == 0, "GetAclInformation returned unexpected entry count (%d != 0).\n",
                                 acl_size.AceCount);
      LocalFree(pSD);
-@@ -4954,23 +4951,22 @@ static void test_GetSecurityInfo(void)
-         bret = pGetAce(pDacl, 0, (VOID **)&ace);
+@@ -4942,23 +4939,22 @@ static void test_GetSecurityInfo(void)
+         bret = GetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
 -        todo_wine ok(bret, "Current User ACE (%s) != Current User SID (%s).\n",
@@ -55,7 +55,7 @@ index 9ad5881..4c44f44 100644
      }
      if (acl_size.AceCount > 1)
      {
-         bret = pGetAce(pDacl, 1, (VOID **)&ace);
+         bret = GetAce(pDacl, 1, (VOID **)&ace);
          ok(bret, "Failed to get Administators Group ACE.\n");
          bret = EqualSid(&ace->SidStart, admin_sid);
 -        todo_wine ok(bret, "Administators Group ACE (%s) != Administators Group SID (%s).\n", debugstr_sid(&ace->SidStart), debugstr_sid(admin_sid));
@@ -70,7 +70,7 @@ index 9ad5881..4c44f44 100644
      LocalFree(pSD);
      CloseHandle(obj);
 diff --git a/server/change.c b/server/change.c
-index 0496e40..0690227 100644
+index 77c9ff8bc2d..dd45aa9667e 100644
 --- a/server/change.c
 +++ b/server/change.c
 @@ -1077,7 +1077,8 @@ static int dir_add_to_existing_notify( struct dir *dir )
@@ -96,7 +96,7 @@ index 0496e40..0690227 100644
  
      return &dir->obj;
 diff --git a/server/file.c b/server/file.c
-index f3d4717..babb935 100644
+index 1ca9fc81fe6..4373e6eacd4 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -178,7 +178,8 @@ struct file *create_file_for_fd_obj( struct fd *fd, unsigned int access, unsigne
@@ -228,7 +228,7 @@ index f3d4717..babb935 100644
  }
  
  static struct object *file_lookup_name( struct object *obj, struct unicode_str *name, unsigned int attr )
-@@ -752,7 +779,10 @@ DECL_HANDLER(create_file)
+@@ -753,7 +780,10 @@ DECL_HANDLER(create_file)
      if ((file = create_file( root_fd, name, name_len, req->access, req->sharing,
                               req->create, req->options, req->attrs, sd )))
      {
@@ -241,7 +241,7 @@ index f3d4717..babb935 100644
      }
      if (root_fd) release_object( root_fd );
 diff --git a/server/file.h b/server/file.h
-index d1a80c1..2bea255 100644
+index 5d938f5ed57..abac370d680 100644
 --- a/server/file.h
 +++ b/server/file.h
 @@ -183,7 +183,8 @@ extern int          shmglobal_fd;
@@ -255,5 +255,5 @@ index d1a80c1..2bea255 100644
  
  /* completion */
 -- 
-1.9.1
+2.17.1
 

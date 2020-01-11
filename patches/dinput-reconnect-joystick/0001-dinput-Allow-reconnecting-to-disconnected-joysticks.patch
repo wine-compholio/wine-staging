@@ -1,18 +1,18 @@
-From 47a1e3618a1629a6f7cca1b84f761eaab3627f75 Mon Sep 17 00:00:00 2001
+From dd42a25720d9d711137e84a449319fc197b2639f Mon Sep 17 00:00:00 2001
 From: Andrew Church <achurch@achurch.org>
 Date: Mon, 25 Feb 2019 11:23:12 +1100
 Subject: [PATCH] dinput: Allow reconnecting to disconnected joysticks
 
 Wine-bug: https://bugs.winehq.org/show_bug.cgi?id=34297
 ---
- dlls/dinput/joystick_linuxinput.c | 148 +++++++++++++++++++++++++++++---------
+ dlls/dinput/joystick_linuxinput.c | 148 +++++++++++++++++++++++-------
  1 file changed, 113 insertions(+), 35 deletions(-)
 
 diff --git a/dlls/dinput/joystick_linuxinput.c b/dlls/dinput/joystick_linuxinput.c
-index ace4641..233dd25 100644
+index 98283a1eedd..439e7d84bd4 100644
 --- a/dlls/dinput/joystick_linuxinput.c
 +++ b/dlls/dinput/joystick_linuxinput.c
-@@ -83,6 +83,13 @@ struct wine_input_absinfo {
+@@ -84,6 +84,13 @@ struct wine_input_absinfo {
      LONG flat;
  };
  
@@ -26,7 +26,7 @@ index ace4641..233dd25 100644
  /* implemented in effect_linuxinput.c */
  HRESULT linuxinput_create_effect(int* fd, REFGUID rguid, struct list *parent_list_entry, LPDIRECTINPUTEFFECT* peff);
  HRESULT linuxinput_get_info_A(int fd, REFGUID rguid, LPDIEFFECTINFOA info);
-@@ -122,6 +129,7 @@ struct JoystickImpl
+@@ -123,6 +130,7 @@ struct JoystickImpl
  
  	/* joystick private */
  	int				joyfd;
@@ -34,15 +34,15 @@ index ace4641..233dd25 100644
  
  	int                             dev_axes_to_di[ABS_MAX];
          POINTL                          povs[4];
-@@ -466,6 +474,7 @@ static JoystickImpl *alloc_device(REFGUID rguid, IDirectInputImpl *dinput, unsig
-     newDevice->generic.base.dinput = dinput;
+@@ -477,6 +485,7 @@ static JoystickImpl *alloc_device(REFGUID rguid, IDirectInputImpl *dinput, unsig
+                 newDevice->generic.base.queue_len * sizeof(DIDEVICEOBJECTDATA));
      newDevice->generic.joy_polldev = joy_polldev;
      newDevice->joyfd       = -1;
 +    newDevice->joyfd_state = WINE_FD_STATE_CLOSED;
      newDevice->joydev      = &joydevs[index];
      newDevice->generic.name        = newDevice->joydev->name;
      list_init(&newDevice->ff_effects);
-@@ -669,38 +678,15 @@ static HRESULT joydev_create_device(IDirectInputImpl *dinput, REFGUID rguid, REF
+@@ -684,38 +693,15 @@ static HRESULT joydev_create_device(IDirectInputImpl *dinput, REFGUID rguid, REF
      return DIERR_DEVICENOTREG;
  }
  
@@ -85,7 +85,7 @@ index ace4641..233dd25 100644
          }
          else
          {
-@@ -715,18 +701,53 @@ static HRESULT WINAPI JoystickWImpl_Acquire(LPDIRECTINPUTDEVICE8W iface)
+@@ -730,18 +716,53 @@ static HRESULT WINAPI JoystickWImpl_Acquire(LPDIRECTINPUTDEVICE8W iface)
          event.type = EV_FF;
          event.code = FF_GAIN;
          event.value = This->ff_gain;
@@ -141,7 +141,7 @@ index ace4641..233dd25 100644
      return DI_OK;
  }
  
-@@ -764,6 +785,7 @@ static HRESULT WINAPI JoystickWImpl_Unacquire(LPDIRECTINPUTDEVICE8W iface)
+@@ -779,6 +800,7 @@ static HRESULT WINAPI JoystickWImpl_Unacquire(LPDIRECTINPUTDEVICE8W iface)
  
        close(This->joyfd);
        This->joyfd = -1;
@@ -149,7 +149,7 @@ index ace4641..233dd25 100644
      }
      return res;
  }
-@@ -808,23 +830,79 @@ static void joy_polldev(LPDIRECTINPUTDEVICE8A iface)
+@@ -823,23 +845,79 @@ static void joy_polldev(LPDIRECTINPUTDEVICE8A iface)
      struct input_event ie;
      JoystickImpl *This = impl_from_IDirectInputDevice8A(iface);
  
@@ -236,5 +236,5 @@ index ace4641..233dd25 100644
  	TRACE("input_event: type %d, code %d, value %d\n",ie.type,ie.code,ie.value);
  	switch (ie.type) {
 -- 
-1.9.1
+2.24.1
 

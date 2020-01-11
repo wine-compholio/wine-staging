@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4f0212c4fd35ac4b03a082cab27e629130ac1b13"
+	echo "c84fa0a2661f2235fac6f3427201fbb3fd8c8028"
 }
 
 # Show version information
@@ -128,6 +128,7 @@ patch_enable_all ()
 	enable_ddraw_Texture_Wrong_Caps="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
+	enable_dinput_DIPROP_BUFFERSIZE="$1"
 	enable_dinput_SetActionMap_genre="$1"
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_joy_mappings="$1"
@@ -517,6 +518,9 @@ patch_enable ()
 			;;
 		ddraw-version-check)
 			enable_ddraw_version_check="$2"
+			;;
+		dinput-DIPROP_BUFFERSIZE)
+			enable_dinput_DIPROP_BUFFERSIZE="$2"
 			;;
 		dinput-SetActionMap-genre)
 			enable_dinput_SetActionMap_genre="$2"
@@ -2049,6 +2053,13 @@ if test "$enable_dsound_EAX" -eq 1; then
 	enable_dsound_Fast_Mixer=1
 fi
 
+if test "$enable_dinput_reconnect_joystick" -eq 1; then
+	if test "$enable_dinput_DIPROP_BUFFERSIZE" -gt 1; then
+		abort "Patchset dinput-DIPROP_BUFFERSIZE disabled, but dinput-reconnect-joystick depends on that."
+	fi
+	enable_dinput_DIPROP_BUFFERSIZE=1
+fi
+
 if test "$enable_dinput_SetActionMap_genre" -eq 1; then
 	if test "$enable_dinput_joy_mappings" -gt 1; then
 		abort "Patchset dinput-joy-mappings disabled, but dinput-SetActionMap-genre depends on that."
@@ -3089,6 +3100,22 @@ if test "$enable_ddraw_version_check" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset dinput-DIPROP_BUFFERSIZE
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45732] Far Cry 5 Cannot Steer Land Vehicles
+# |
+# | Modified files:
+# |   *	dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
+# | 	dlls/dinput/joystick_osx.c, dlls/dinput/keyboard.c, dlls/dinput/mouse.c, dlls/dinput/tests/device.c
+# |
+if test "$enable_dinput_DIPROP_BUFFERSIZE" -eq 1; then
+	patch_apply dinput-DIPROP_BUFFERSIZE/0001-dinput-Support-default-DIPROP_BUFFERSIZE-buffer-size.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Support default DIPROP_BUFFERSIZE buffer size.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset dinput-joy-mappings
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3147,6 +3174,9 @@ if test "$enable_dinput_axis_recalc" -eq 1; then
 fi
 
 # Patchset dinput-reconnect-joystick
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	dinput-DIPROP_BUFFERSIZE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34297] dinput: Allow reconnecting to disconnected joysticks

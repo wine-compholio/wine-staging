@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c84fa0a2661f2235fac6f3427201fbb3fd8c8028"
+	echo "287dabd9b6887e94cabfa2a5f9bfe822522095e5"
 }
 
 # Show version information
@@ -128,7 +128,6 @@ patch_enable_all ()
 	enable_ddraw_Texture_Wrong_Caps="$1"
 	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
-	enable_dinput_DIPROP_BUFFERSIZE="$1"
 	enable_dinput_SetActionMap_genre="$1"
 	enable_dinput_axis_recalc="$1"
 	enable_dinput_joy_mappings="$1"
@@ -271,7 +270,6 @@ patch_enable_all ()
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
-	enable_setupapi_SetupPromptForDisk="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
@@ -519,9 +517,6 @@ patch_enable ()
 			;;
 		ddraw-version-check)
 			enable_ddraw_version_check="$2"
-			;;
-		dinput-DIPROP_BUFFERSIZE)
-			enable_dinput_DIPROP_BUFFERSIZE="$2"
 			;;
 		dinput-SetActionMap-genre)
 			enable_dinput_SetActionMap_genre="$2"
@@ -948,9 +943,6 @@ patch_enable ()
 			;;
 		setupapi-SP_COPY_IN_USE_NEEDS_REBOOT)
 			enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$2"
-			;;
-		setupapi-SetupPromptForDisk)
-			enable_setupapi_SetupPromptForDisk="$2"
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
@@ -2057,13 +2049,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 	enable_dsound_Fast_Mixer=1
 fi
 
-if test "$enable_dinput_reconnect_joystick" -eq 1; then
-	if test "$enable_dinput_DIPROP_BUFFERSIZE" -gt 1; then
-		abort "Patchset dinput-DIPROP_BUFFERSIZE disabled, but dinput-reconnect-joystick depends on that."
-	fi
-	enable_dinput_DIPROP_BUFFERSIZE=1
-fi
-
 if test "$enable_dinput_SetActionMap_genre" -eq 1; then
 	if test "$enable_dinput_joy_mappings" -gt 1; then
 		abort "Patchset dinput-joy-mappings disabled, but dinput-SetActionMap-genre depends on that."
@@ -3104,22 +3089,6 @@ if test "$enable_ddraw_version_check" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset dinput-DIPROP_BUFFERSIZE
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45732] Far Cry 5 Cannot Steer Land Vehicles
-# |
-# | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput/joystick_linux.c, dlls/dinput/joystick_linuxinput.c,
-# | 	dlls/dinput/joystick_osx.c, dlls/dinput/keyboard.c, dlls/dinput/mouse.c, dlls/dinput/tests/device.c
-# |
-if test "$enable_dinput_DIPROP_BUFFERSIZE" -eq 1; then
-	patch_apply dinput-DIPROP_BUFFERSIZE/0001-dinput-Support-default-DIPROP_BUFFERSIZE-buffer-size.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "dinput: Support default DIPROP_BUFFERSIZE buffer size.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset dinput-joy-mappings
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3178,9 +3147,6 @@ if test "$enable_dinput_axis_recalc" -eq 1; then
 fi
 
 # Patchset dinput-reconnect-joystick
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	dinput-DIPROP_BUFFERSIZE
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#34297] dinput: Allow reconnecting to disconnected joysticks
@@ -5954,25 +5920,6 @@ if test "$enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT" -eq 1; then
 	patch_apply setupapi-SP_COPY_IN_USE_NEEDS_REBOOT/0001-setupapi-Implement-SP_COPY_IN_USE_NEEDS_REBOOT.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SP_COPY_IN_USE_NEEDS_REBOOT.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-SetupPromptForDisk
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#20465] Wine ignores IDF_CHECKFIRST flag in SetupPromptForDisk
-# |
-# | Modified files:
-# |   *	dlls/setupapi/dialog.c, dlls/setupapi/tests/Makefile.in, dlls/setupapi/tests/dialog.c
-# |
-if test "$enable_setupapi_SetupPromptForDisk" -eq 1; then
-	patch_apply setupapi-SetupPromptForDisk/0001-setupapi-Add-support-for-IDF_CHECKFIRST-flag-in-Setu.patch
-	patch_apply setupapi-SetupPromptForDisk/0002-setupapi-tests-Add-test-for-IDF_CHECKFIRST-and-Setup.patch
-	patch_apply setupapi-SetupPromptForDisk/0003-setupapi-tests-Determine-path-to-system32-directory-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Add support for IDF_CHECKFIRST flag in SetupPromptForDiskW.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "setupapi/tests: Add test for IDF_CHECKFIRST and SetupPromptForDiskA/W.", 1 },';
-		printf '%s\n' '+    { "Hermes Belusca-Maito", "setupapi/tests: Determine path to system32 directory at runtime.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -305,7 +305,6 @@ patch_enable_all ()
 	enable_user32_ShowWindow="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_user32_rawinput_hid="$1"
-	enable_user32_rawinput_keyboard="$1"
 	enable_user32_rawinput_mouse="$1"
 	enable_user32_rawinput_mouse_experimental="$1"
 	enable_user32_rawinput_nolegacy="$1"
@@ -1049,9 +1048,6 @@ patch_enable ()
 		user32-rawinput-hid)
 			enable_user32_rawinput_hid="$2"
 			;;
-		user32-rawinput-keyboard)
-			enable_user32_rawinput_keyboard="$2"
-			;;
 		user32-rawinput-mouse)
 			enable_user32_rawinput_mouse="$2"
 			;;
@@ -1689,13 +1685,6 @@ if test "$enable_user32_rawinput_mouse_experimental" -eq 1; then
 		abort "Patchset user32-rawinput-nolegacy disabled, but user32-rawinput-mouse-experimental depends on that."
 	fi
 	enable_user32_rawinput_nolegacy=1
-fi
-
-if test "$enable_user32_rawinput_keyboard" -eq 1; then
-	if test "$enable_user32_rawinput_hid" -gt 1; then
-		abort "Patchset user32-rawinput-hid disabled, but user32-rawinput-keyboard depends on that."
-	fi
-	enable_user32_rawinput_hid=1
 fi
 
 if test "$enable_user32_rawinput_hid" -eq 1; then
@@ -6639,29 +6628,6 @@ if test "$enable_user32_rawinput_hid" -eq 1; then
 		printf '%s\n' '+    { "Rémi Bernon", "server: Add HID input message type to send_hardware_message request.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "user32: Implement WM_INPUT/RIM_TYPEHID message handling.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "hidclass.sys: Send input message to server when HID report is received.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-rawinput-keyboard
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, user32-rawinput-hid
-# |
-# | Modified files:
-# |   *	dlls/dinput/device.c, dlls/dinput/device_private.h, dlls/dinput/keyboard.c, dlls/dinput/mouse.c,
-# | 	dlls/dinput8/tests/device.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/winex11.drv/keyboard.c,
-# | 	dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h, server/queue.c
-# |
-if test "$enable_user32_rawinput_keyboard" -eq 1; then
-	patch_apply user32-rawinput-keyboard/0001-dinput-Add-DIERR_INPUTLOST-error-code-support-for-DI.patch
-	patch_apply user32-rawinput-keyboard/0002-dinput8-Use-raw-input-interface-for-dinput8-keyboard.patch
-	patch_apply user32-rawinput-keyboard/0003-user32-Add-support-for-RIDEV_INPUTSINK-flag-in-Regis.patch
-	patch_apply user32-rawinput-keyboard/0004-winex11.drv-Listen-to-RawKey-events-in-the-desktop-t.patch
-	(
-		printf '%s\n' '+    { "Rémi Bernon", "dinput: Add DIERR_INPUTLOST error code support for DISCL_FOREGROUND cooperative level.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Use raw input interface for dinput8 keyboard device.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32: Add support for RIDEV_INPUTSINK flag in RegisterRawInputDevices.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Listen to RawKey* events in the desktop thread.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -150,6 +150,7 @@ patch_enable_all ()
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_rotation="$1"
+	enable_gdiplus_FontFamily_RefCount="$1"
 	enable_gdiplus_GdipCreateBitmapFromHBITMAP="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_imagehlp_BindImageEx="$1"
@@ -582,6 +583,9 @@ patch_enable ()
 			;;
 		gdi32-rotation)
 			enable_gdi32_rotation="$2"
+			;;
+		gdiplus-FontFamily-RefCount)
+			enable_gdiplus_FontFamily_RefCount="$2"
 			;;
 		gdiplus-GdipCreateBitmapFromHBITMAP)
 			enable_gdiplus_GdipCreateBitmapFromHBITMAP="$2"
@@ -1453,7 +1457,7 @@ fi
 # subdirectory of a git tree, which has the effect that no patches
 # are applied, but the exitcode is zero. To avoid broken builds we
 # will workaround this issue or abort.
-test ! -d ".git" && git rev-parse --git-dir >/dev/null 2>&1
+test ! -e ".git" && git rev-parse --git-dir >/dev/null 2>&1
 workaround_git_bug="$?"
 
 # Apply the patches using gitapply.sh, a small wrapper around 'patch'
@@ -4147,6 +4151,21 @@ if test "$enable_gdi32_rotation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated Arc, ArcTo, Chord and Pie drawing problem.", 1 },';
 		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated ellipse.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset gdiplus-FontFamily-RefCount
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48489] gdiplus: Reference cound the GpFontFamily object.
+# |
+# | Modified files:
+# |   *	dlls/gdiplus/font.c, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/tests/font.c
+# |
+if test "$enable_gdiplus_FontFamily_RefCount" -eq 1; then
+	patch_apply gdiplus-FontFamily-RefCount/0001-gdiplus-Use-refcounting-for-GpFontFamily-instead-of-.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Use refcounting for GpFontFamily instead of cloning.", 1 },';
 	) >> "$patchlist"
 fi
 

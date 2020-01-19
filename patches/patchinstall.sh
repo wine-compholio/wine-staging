@@ -52,13 +52,13 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "287dabd9b6887e94cabfa2a5f9bfe822522095e5"
+	echo "02f3a133b64ed1f979309e1399738eaa2e204651"
 }
 
 # Show version information
 version()
 {
-	echo "Wine Staging 5.0-rc5"
+	echo "Wine Staging 5.0-rc6"
 	echo "Copyright (C) 2014-2019 the Wine Staging project authors."
 	echo "Copyright (C) 2018-2020 Alistair Leslie-Hughes"
 	echo ""
@@ -2363,7 +2363,7 @@ fi
 # |   *	[#38941] Preserve custom colors between subitems for listview control
 # |
 # | Modified files:
-# |   *	dlls/comctl32/listview.c, dlls/comctl32/tests/listview.c
+# |   *	dlls/comctl32/listview.c
 # |
 if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	patch_apply comctl32-Listview_DrawItem/0001-comctl32-Preserve-custom-colors-between-subitems.patch

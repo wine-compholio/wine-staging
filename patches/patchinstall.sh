@@ -4864,14 +4864,24 @@ fi
 # | 	44-bit user-mode VA limitation from Windows < 8.1)
 # |
 # | Modified files:
-# |   *	dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/virtual.c, include/wine/library.h, libs/wine/mmap.c, libs/wine/wine.map
 # |
 if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
 	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Stop-search-on-mmap-error-in-try_map_free_area.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0002-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0002-ntdll-Use-MAP_FIXED_NOREPLACE-flag-in-try_map_free_a.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0003-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0004-ntdll-Increase-step-after-failed-map-attempt-in-try_.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0005-libs-wine-Add-functions-for-managing-free-area-list.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0006-ntdll-Use-free-area-list-for-virtual-memory-allocati.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0007-ntdll-Permanently-exclude-natively-mapped-areas-from.patch
 	(
 		printf '%s\n' '+    { "Paul Gofman", "ntdll: Stop search on mmap() error in try_map_free_area().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use MAP_FIXED_NOREPLACE flag in try_map_free_area() if available.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "ntdll: Force bottom up allocation order for 64 bit arch unless top down is requested.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Increase step after failed map attempt in try_map_free_area().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "libs/wine: Add functions for managing free area list.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use free area list for virtual memory allocation.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Permanently exclude natively mapped areas from free areas list.", 1 },';
 	) >> "$patchlist"
 fi
 

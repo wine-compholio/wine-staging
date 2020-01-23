@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "84f2ce5139bb840ee2cf381d039d3787a0cdf2b6"
+	echo "c55e8822ae3bbb8b1d3ab9b363214e4ad2f478d9"
 }
 
 # Show version information
@@ -155,7 +155,6 @@ patch_enable_all ()
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
-	enable_include_LdrData="$1"
 	enable_include_winsock="$1"
 	enable_inseng_Implementation="$1"
 	enable_iphlpapi_System_Ping="$1"
@@ -598,9 +597,6 @@ patch_enable ()
 			;;
 		imm32-message_on_focus)
 			enable_imm32_message_on_focus="$2"
-			;;
-		include-LdrData)
-			enable_include_LdrData="$2"
 			;;
 		include-winsock)
 			enable_include_winsock="$2"
@@ -3178,42 +3174,33 @@ fi
 # | Modified files:
 # |   *	configure, configure.ac, dlls/directmanipulation/Makefile.in, dlls/directmanipulation/directmanip.idl,
 # | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/directmanipulation.spec,
-# | 	dlls/directmanipulation/tests/Makefile.in, dlls/directmanipulation/tests/manipulation.c, dlls/uuid/uuid.c,
-# | 	include/Makefile.in, include/directmanipulation.idl
+# | 	dlls/directmanipulation/tests/Makefile.in, dlls/directmanipulation/tests/manipulation.c, dlls/uuid/uuid.c
 # |
 if test "$enable_directmanipulation_new_dll" -eq 1; then
-	patch_apply directmanipulation-new-dll/0001-include-Add-directmanipulation.idl.patch
 	patch_apply directmanipulation-new-dll/0002-directmanipulation-New-dll.patch
 	patch_apply directmanipulation-new-dll/0003-uuid-Add-directmanipulation.h.patch
 	patch_apply directmanipulation-new-dll/0004-directmanipulation-Create-DirectManipulationManager-.patch
-	patch_apply directmanipulation-new-dll/0005-include-Add-DCompManipulationCompositor-coclass-and-.patch
 	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
 	patch_apply directmanipulation-new-dll/0007-directmanipulation-Supprot-IDirectManipulationFrameI.patch
 	patch_apply directmanipulation-new-dll/0008-directmanipulation-Implement-IDirectManipulationMana.patch
 	patch_apply directmanipulation-new-dll/0009-directmanipulation-Implement-IDirectManipulationComp.patch
-	patch_apply directmanipulation-new-dll/0010-include-Add-IDirectManipulationViewport2-interface.patch
 	patch_apply directmanipulation-new-dll/0011-directmanipulation-Implement-IDirectManipulationMana.patch
 	patch_apply directmanipulation-new-dll/0012-directmanipulation-tests-Initial-tests.patch
 	patch_apply directmanipulation-new-dll/0013-directmanipulation-Fake-success-from-IDirectManipula.patch
-	patch_apply directmanipulation-new-dll/0014-include-Add-IDirectManipulationPrimaryContent-interf.patch
 	patch_apply directmanipulation-new-dll/0015-directmanipulation-Implement-IDirectManipulationView.patch
 	patch_apply directmanipulation-new-dll/0016-directmanipulation-Support-IDirectManipulationConten.patch
 	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add directmanipulation.idl.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uuid: Add directmanipulation.h.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Create DirectManipulationManager/DirectManipulationSharedManager objects.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add DCompManipulationCompositor coclass and supporting interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Supprot IDirectManipulationFrameInfoProvider interface in IDirectManipulationCompositor.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 GetUpdateManager.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationCompositor SetUpdateManager.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDirectManipulationViewport2 interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 CreateViewport.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation/tests: Initial tests.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add IDirectManipulationPrimaryContent interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support IDirectManipulationContent in IDirectManipulationPrimaryContent interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success in some functions.", 1 },';
@@ -4233,21 +4220,6 @@ if test "$enable_imm32_message_on_focus" -eq 1; then
 	patch_apply imm32-message_on_focus/0001-imm32-Only-generate-WM_IME_SETCONTEXT-message-if-win.patch
 	(
 		printf '%s\n' '+    { "Gijs Vermeulen", "imm32: Only generate '\''WM_IME_SETCONTEXT'\'' message if window has focus.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset include-LdrData
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48289] Grand Theft Auto 5 crashes after loading.
-# |
-# | Modified files:
-# |   *	include/winternl.h
-# |
-if test "$enable_include_LdrData" -eq 1; then
-	patch_apply include-LdrData/0001-include-winternl.h-Add-Vista-PEB_LDR_DATA-structure-.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "include/winternl.h: Add Vista+ PEB_LDR_DATA structure fields.", 1 },';
 	) >> "$patchlist"
 fi
 

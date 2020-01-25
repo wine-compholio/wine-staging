@@ -1,4 +1,4 @@
-From dd729aeb54a82d85c8172a3043f55d463166aec6 Mon Sep 17 00:00:00 2001
+From e88e1bb791cf3cb2a7318b3a88662d01ec3d1bef Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 9 Sep 2019 18:48:43 +0300
 Subject: [PATCH] wined3d: Add a setting to workaround 0 * inf problem in
@@ -9,16 +9,16 @@ https://bugs.winehq.org/show_bug.cgi?id=34266.
 
 Signed-off-by: Paul Gofman <gofmanp@gmail.com>
 ---
- dlls/wined3d/glsl_shader.c     | 155 ++++++++++++++++++++++++++++-----
+ dlls/wined3d/glsl_shader.c     | 156 ++++++++++++++++++++++++++++-----
  dlls/wined3d/wined3d_main.c    |   3 +
  dlls/wined3d/wined3d_private.h |   1 +
- 3 files changed, 135 insertions(+), 24 deletions(-)
+ 3 files changed, 136 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 05de1d7932..cd3afa1b9f 100644
+index 25e9772325..e577c98ad2 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -2298,6 +2298,19 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
+@@ -2179,6 +2179,19 @@ static void shader_generate_glsl_declarations(const struct wined3d_context_gl *c
      if (wined3d_settings.strict_shader_math)
          shader_addline(buffer, "#pragma optionNV(fastmath off)\n");
  
@@ -38,7 +38,7 @@ index 05de1d7932..cd3afa1b9f 100644
      prefix = shader_glsl_get_prefix(version->type);
  
      /* Prototype the subroutines */
-@@ -3829,7 +3842,12 @@ static void shader_glsl_binop(const struct wined3d_shader_instruction *ins)
+@@ -3699,7 +3712,12 @@ static void shader_glsl_binop(const struct wined3d_shader_instruction *ins)
      write_mask = shader_glsl_append_dst(buffer, ins);
      shader_glsl_add_src_param(ins, &ins->src[0], write_mask, &src0_param);
      shader_glsl_add_src_param(ins, &ins->src[1], write_mask, &src1_param);
@@ -52,7 +52,7 @@ index 05de1d7932..cd3afa1b9f 100644
  }
  
  static void shader_glsl_relop(const struct wined3d_shader_instruction *ins)
-@@ -4041,26 +4059,45 @@ static void shader_glsl_dot(const struct wined3d_shader_instruction *ins)
+@@ -3912,26 +3930,45 @@ static void shader_glsl_dot(const struct wined3d_shader_instruction *ins)
      struct glsl_src_param src0_param;
      struct glsl_src_param src1_param;
      DWORD dst_write_mask, src_write_mask;
@@ -104,10 +104,11 @@ index 05de1d7932..cd3afa1b9f 100644
      }
  }
  
-@@ -4096,10 +4133,14 @@ static void shader_glsl_cut(const struct wined3d_shader_instruction *ins)
+@@ -3967,10 +4004,15 @@ static void shader_glsl_cut(const struct wined3d_shader_instruction *ins)
  static void shader_glsl_pow(const struct wined3d_shader_instruction *ins)
  {
      struct wined3d_string_buffer *buffer = ins->ctx->buffer;
++    const struct shader_glsl_ctx_priv *priv = ins->ctx->backend_data;
 +    static const float max_float = FLT_MAX;
      struct glsl_src_param src0_param;
      struct glsl_src_param src1_param;
@@ -119,7 +120,7 @@ index 05de1d7932..cd3afa1b9f 100644
  
      dst_write_mask = shader_glsl_append_dst(buffer, ins);
      dst_size = shader_glsl_get_write_mask_size(dst_write_mask);
-@@ -4109,13 +4150,33 @@ static void shader_glsl_pow(const struct wined3d_shader_instruction *ins)
+@@ -3980,13 +4022,33 @@ static void shader_glsl_pow(const struct wined3d_shader_instruction *ins)
  
      if (dst_size > 1)
      {
@@ -129,7 +130,7 @@ index 05de1d7932..cd3afa1b9f 100644
 +        {
 +            shader_addline(buffer, "vec%u(%s == 0.0 ? 1.0 : min(pow(abs(%s), %s), ",
 +                    dst_size, src1_param.param_str, src0_param.param_str, src1_param.param_str);
-+            shader_glsl_append_imm_vec(buffer, &max_float, 1, ins->ctx->gl_info);
++            shader_glsl_append_imm_vec(buffer, &max_float, 1, priv->gl_info);
 +            shader_addline(buffer, "));\n");
 +        }
 +        else
@@ -146,7 +147,7 @@ index 05de1d7932..cd3afa1b9f 100644
 +        {
 +            shader_addline(buffer, "%s == 0.0 ? 1.0 : min(pow(abs(%s), %s), ",
 +                    src1_param.param_str, src0_param.param_str, src1_param.param_str);
-+            shader_glsl_append_imm_vec(buffer, &max_float, 1, ins->ctx->gl_info);
++            shader_glsl_append_imm_vec(buffer, &max_float, 1, priv->gl_info);
 +            shader_addline(buffer, "));\n");
 +        }
 +        else
@@ -157,7 +158,7 @@ index 05de1d7932..cd3afa1b9f 100644
      }
  }
  
-@@ -4290,11 +4351,15 @@ static void shader_glsl_scalar_op(const struct wined3d_shader_instruction *ins)
+@@ -4161,11 +4223,15 @@ static void shader_glsl_scalar_op(const struct wined3d_shader_instruction *ins)
  {
      DWORD shader_version = WINED3D_SHADER_VERSION(ins->ctx->reg_maps->shader_version.major,
              ins->ctx->reg_maps->shader_version.minor);
@@ -174,7 +175,7 @@ index 05de1d7932..cd3afa1b9f 100644
  
      dst_write_mask = shader_glsl_append_dst(buffer, ins);
      dst_size = shader_glsl_get_write_mask_size(dst_write_mask);
-@@ -4304,41 +4369,78 @@ static void shader_glsl_scalar_op(const struct wined3d_shader_instruction *ins)
+@@ -4175,41 +4241,78 @@ static void shader_glsl_scalar_op(const struct wined3d_shader_instruction *ins)
  
      shader_glsl_add_src_param(ins, &ins->src[0], dst_write_mask, &src0_param);
  
@@ -198,7 +199,7 @@ index 05de1d7932..cd3afa1b9f 100644
 +            {
 +                prefix = "max(log2(abs(";
 +                string_buffer_sprintf(suffix, ")), ");
-+                shader_glsl_append_imm_vec(suffix, &min_float, 1, ins->ctx->gl_info);
++                shader_glsl_append_imm_vec(suffix, &min_float, 1, priv->gl_info);
 +                shader_addline(suffix, ")");
 +            }
 +            else
@@ -215,9 +216,9 @@ index 05de1d7932..cd3afa1b9f 100644
 +            {
 +                prefix = "clamp(1.0 / ";
 +                string_buffer_sprintf(suffix, ", ");
-+                shader_glsl_append_imm_vec(suffix, &min_float, 1, ins->ctx->gl_info);
++                shader_glsl_append_imm_vec(suffix, &min_float, 1, priv->gl_info);
 +                shader_addline(suffix, ", ");
-+                shader_glsl_append_imm_vec(suffix, &max_float, 1, ins->ctx->gl_info);
++                shader_glsl_append_imm_vec(suffix, &max_float, 1, priv->gl_info);
 +                shader_addline(suffix, ")");
 +            }
 +            else
@@ -234,7 +235,7 @@ index 05de1d7932..cd3afa1b9f 100644
 +            {
 +                prefix = "min(inversesqrt(abs(";
 +                string_buffer_sprintf(suffix, ")), ");
-+                shader_glsl_append_imm_vec(suffix, &max_float, 1, ins->ctx->gl_info);
++                shader_glsl_append_imm_vec(suffix, &max_float, 1, priv->gl_info);
 +                shader_addline(suffix, ")");
 +            }
 +            else
@@ -263,7 +264,7 @@ index 05de1d7932..cd3afa1b9f 100644
  }
  
  /** Process the WINED3DSIO_EXPP instruction in GLSL:
-@@ -4655,8 +4757,13 @@ static void shader_glsl_mad(const struct wined3d_shader_instruction *ins)
+@@ -4526,8 +4629,13 @@ static void shader_glsl_mad(const struct wined3d_shader_instruction *ins)
      shader_glsl_add_src_param(ins, &ins->src[0], write_mask, &src0_param);
      shader_glsl_add_src_param(ins, &ins->src[1], write_mask, &src1_param);
      shader_glsl_add_src_param(ins, &ins->src[2], write_mask, &src2_param);
@@ -301,10 +302,10 @@ index 5d60a44ef6..e9efbbf08a 100644
              TRACE("Limiting VS shader model to %u.\n", wined3d_settings.max_sm_vs);
          if (!get_config_key_dword(hkey, appkey, "MaxShaderModelHS", &wined3d_settings.max_sm_hs))
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 5ec24e3823..ac6bb2da3b 100644
+index 5beaa927d7..3b10d80821 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -427,6 +427,7 @@ struct wined3d_settings
+@@ -420,6 +420,7 @@ struct wined3d_settings
      unsigned int sample_count;
      BOOL check_float_constants;
      unsigned int strict_shader_math;
@@ -313,5 +314,5 @@ index 5ec24e3823..ac6bb2da3b 100644
      unsigned int max_sm_hs;
      unsigned int max_sm_ds;
 -- 
-2.21.0
+2.24.1
 

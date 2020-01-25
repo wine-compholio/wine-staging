@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c55e8822ae3bbb8b1d3ab9b363214e4ad2f478d9"
+	echo "9a9a1821a34d10bb3e96ce1e42a8d046133f0958"
 }
 
 # Show version information
@@ -3453,7 +3453,7 @@ fi
 # |   *	configure.ac, dlls/dxva2/Makefile.in, dlls/dxva2/backend.idl, dlls/dxva2/devicemanager.c, dlls/dxva2/dxva2_private.h,
 # | 	dlls/dxva2/genericdecoder.c, dlls/dxva2/main.c, dlls/dxva2/softwareprocessor.c, dlls/dxva2/tests/Makefile.in,
 # | 	dlls/dxva2/tests/dxva2.c, dlls/dxva2/vaapi-h264.c, dlls/dxva2/vaapi-mpeg2.c, dlls/dxva2/vaapi.c,
-# | 	dlls/dxva2/videoservices.c, include/dxva2api.idl
+# | 	dlls/dxva2/videoservices.c
 # |
 if test "$enable_dxva2_Video_Decoder" -eq 1; then
 	patch_apply dxva2-Video_Decoder/0001-dxva2-Implement-semi-stub-for-Direct3DDeviceManager9.patch

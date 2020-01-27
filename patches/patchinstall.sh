@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9a9a1821a34d10bb3e96ce1e42a8d046133f0958"
+	echo "cf6546fb3b914dc1d87b23d6920526b7487cfd6d"
 }
 
 # Show version information
@@ -150,7 +150,6 @@ patch_enable_all ()
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_rotation="$1"
 	enable_gdiplus_FontFamily_RefCount="$1"
-	enable_gdiplus_GdipCreateBitmapFromHBITMAP="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
@@ -579,9 +578,6 @@ patch_enable ()
 			;;
 		gdiplus-FontFamily-RefCount)
 			enable_gdiplus_FontFamily_RefCount="$2"
-			;;
-		gdiplus-GdipCreateBitmapFromHBITMAP)
-			enable_gdiplus_GdipCreateBitmapFromHBITMAP="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -4134,25 +4130,6 @@ if test "$enable_gdiplus_FontFamily_RefCount" -eq 1; then
 	patch_apply gdiplus-FontFamily-RefCount/0001-gdiplus-Use-refcounting-for-GpFontFamily-instead-of-.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Use refcounting for GpFontFamily instead of cloning.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdiplus-GdipCreateBitmapFromHBITMAP
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48338] Unknown application paints GIF images incorrectly.
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c
-# |
-if test "$enable_gdiplus_GdipCreateBitmapFromHBITMAP" -eq 1; then
-	patch_apply gdiplus-GdipCreateBitmapFromHBITMAP/0001-gdiplus-GdipCreateBitmapFromHBITMAP-should-use-palet.patch
-	patch_apply gdiplus-GdipCreateBitmapFromHBITMAP/0002-gdiplus-Reimplement-GdipCreateBitmapFromGdiDib-by-us.patch
-	patch_apply gdiplus-GdipCreateBitmapFromHBITMAP/0003-gdiplus-tests-Add-more-tests-for-GdipCreateBitmapFro.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: GdipCreateBitmapFromHBITMAP should use palette from the GDI bitmap.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Reimplement GdipCreateBitmapFromGdiDib by using GdipCreateBitmapFromHBITMAP.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add more tests for GdipCreateBitmapFromHBITMAP and palette images.", 1 },';
 	) >> "$patchlist"
 fi
 

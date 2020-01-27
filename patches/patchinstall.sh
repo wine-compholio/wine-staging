@@ -287,7 +287,6 @@ patch_enable_all ()
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_user32_DM_SETDEFID="$1"
 	enable_user32_Dialog_Paint_Event="$1"
-	enable_user32_DrawMenuItem="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_FlashWindowEx="$1"
 	enable_user32_GetSystemMetrics="$1"
@@ -991,9 +990,6 @@ patch_enable ()
 			;;
 		user32-Dialog_Paint_Event)
 			enable_user32_Dialog_Paint_Event="$2"
-			;;
-		user32-DrawMenuItem)
-			enable_user32_DrawMenuItem="$2"
 			;;
 		user32-DrawTextExW)
 			enable_user32_DrawTextExW="$2"
@@ -6257,21 +6253,6 @@ if test "$enable_user32_Dialog_Paint_Event" -eq 1; then
 	patch_apply user32-Dialog_Paint_Event/0001-user32-Call-UpdateWindow-during-DIALOG_CreateIndirec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "user32: Call UpdateWindow() during DIALOG_CreateIndirect.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-DrawMenuItem
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40704] Add a check if the menu text is a valid string in MENU_DrawMenuItem
-# |
-# | Modified files:
-# |   *	dlls/user32/menu.c
-# |
-if test "$enable_user32_DrawMenuItem" -eq 1; then
-	patch_apply user32-DrawMenuItem/0001-user32-Add-a-check-if-the-menu-text-is-a-valid-strin.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "user32: Add a check if the menu text is a valid string.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -102,7 +102,6 @@ patch_enable_all ()
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_cryptext_CryptExtOpenCER="$1"
-	enable_d2d1_ID2D1Factory1="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d9_Direct3DShaderValidatorCreate9="$1"
 	enable_d3d9_Tests="$1"
@@ -437,9 +436,6 @@ patch_enable ()
 			;;
 		cryptext-CryptExtOpenCER)
 			enable_cryptext_CryptExtOpenCER="$2"
-			;;
-		d2d1-ID2D1Factory1)
-			enable_d2d1_ID2D1Factory1="$2"
 			;;
 		d3d11-Deferred_Context)
 			enable_d3d11_Deferred_Context="$2"
@@ -2471,21 +2467,6 @@ if test "$enable_cryptext_CryptExtOpenCER" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d2d1-ID2D1Factory1
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44052] - Add ID2D1Bitmap1/ID2D1Factory1 support
-# |
-# | Modified files:
-# |   *	dlls/d2d1/d2d1_private.h, dlls/d2d1/factory.c, dlls/d2d1/geometry.c
-# |
-if test "$enable_d2d1_ID2D1Factory1" -eq 1; then
-	patch_apply d2d1-ID2D1Factory1/0001-d2d1-Use-ID2D1Factory2-in-d2d_geometry.patch
-	(
-		printf '%s\n' '+    { "Lucian Poston", "d2d1: Use ID2D1Factory2 in d2d_geometry.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset nvcuda-CUDA_Support
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3221,6 +3202,11 @@ if test "$enable_dmime_PChannel_range" -eq 1; then
 fi
 
 # Patchset dsdmo-new-dll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35478] - Multiple applications and games need dsdmo.dll (DirectSound Effects)
+# |   *	[#10603] - IDirectSoundBufferImpl_SetFX needed for sound effects in several games.
+# |   *	[#34708] - Silent Hill 4: The Room crashes after first videoscene when trying to go to the door.
 # |
 # | Modified files:
 # |   *	dlls/dsdmo/Makefile.in, dlls/dsdmo/chorus.c, dlls/dsdmo/compressor.c, dlls/dsdmo/distortion.c,

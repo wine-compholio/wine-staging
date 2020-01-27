@@ -2885,6 +2885,9 @@ fi
 
 # Patchset d3dx9_36-Optimize_Inplace
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48529] Avencast fails to launch
+# |
 # | Modified files:
 # |   *	dlls/d3dx9_36/mesh.c
 # |
@@ -3039,7 +3042,7 @@ fi
 # |   *	ddraw-Device_Caps
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#19153] https://bugs.winehq.org/show_bug.cgi?id=19153
+# |   *	[#19153] Resident Evil 1 fails to start (needs IDirect3D3::EnumDevices() to return a device named "RGB Emulation")
 # |
 # | Modified files:
 # |   *	dlls/ddraw/ddraw.c
@@ -3355,10 +3358,6 @@ fi
 
 # Patchset dwmapi-DwmGetTransportAttributes
 # |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31350] T-Online Mediencenter Assistent (.NET 3.5 WPF app) installer fails ('dwmapi.dll' stubs insufficient in
-# | 	Vista/Win7 mode)
-# |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c
 # |
@@ -3475,7 +3474,10 @@ fi
 # Patchset ntdll-Junction_Points
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#12401] Support for Junction Points
+# |   *	[#12401] NET Framework 2.0, 3.0, 4.0 installers and other apps that make use of GAC API for managed assembly
+# | 	installation on NTFS filesystems need reparse point/junction API support
+# | 	(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
+# |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/msvcp120/tests/msvcp120.c,
@@ -3605,6 +3607,7 @@ fi
 # | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
 # |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
 # |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
+# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
 # |
 # | Modified files:
 # |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
@@ -4359,7 +4362,6 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#42125] Various PE loader fixes for 8k demos
-# |   *	[#38176] Optical Circuit 4K demo crashes on startup
 # |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/kernel32/tests/loader.c, dlls/ntdll/virtual.c, server/mapping.c
@@ -5148,8 +5150,8 @@ fi
 # | 	ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#29384] Voobly expects correct handling of WRITECOPY memory protection
-# |   *	[#35561] MSYS2 expects correct handling of WRITECOPY memory protection
+# |   *	[#29384] Multiple applications expect correct handling of WRITECOPY memory protection (Voobly fails to launch Age of
+# | 	Empires II, MSYS2)
 # |
 # | Modified files:
 # |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c,
@@ -7414,6 +7416,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#30984] Improve key translation.
+# |   *	[#45605] Letter keys doesn't work in DirectX aplications
 # |
 # | Modified files:
 # |   *	dlls/winex11.drv/keyboard.c

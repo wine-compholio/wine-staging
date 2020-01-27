@@ -96,8 +96,8 @@ patch_enable_all ()
 	enable_cmd_launch_association="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_alpha_bitmaps="$1"
+	enable_comctl32_rebar_capture="$1"
 	enable_comctl32_version_6="$1"
-	enable_comctrl_rebar_capture="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
 	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
@@ -418,11 +418,11 @@ patch_enable ()
 		comctl32-alpha-bitmaps)
 			enable_comctl32_alpha_bitmaps="$2"
 			;;
+		comctl32-rebar-capture)
+			enable_comctl32_rebar_capture="$2"
+			;;
 		comctl32-version_6)
 			enable_comctl32_version_6="$2"
-			;;
-		comctrl-rebar-capture)
-			enable_comctrl_rebar_capture="$2"
 			;;
 		comdlg32-lpstrFileTitle)
 			enable_comdlg32_lpstrFileTitle="$2"
@@ -2377,6 +2377,21 @@ if test "$enable_comctl32_alpha_bitmaps" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset comctl32-rebar-capture
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#14750] comctl32: Fixed rebar behaviour when there's capture and no drag.
+# |
+# | Modified files:
+# |   *	dlls/comctl32/rebar.c
+# |
+if test "$enable_comctl32_rebar_capture" -eq 1; then
+	patch_apply comctl32-rebar-capture/0001-comctl32-Fixed-rebar-behaviour-when-there-s-capture-.patch
+	(
+		printf '%s\n' '+    { "Andrej Shadura", "comctl32: Fixed rebar behaviour when there'\''s capture and no drag.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset comctl32-version_6
 # |
 # | Modified files:
@@ -2386,21 +2401,6 @@ if test "$enable_comctl32_version_6" -eq 1; then
 	patch_apply comctl32-version_6/0001-comctl32-Bump-version-to-6.0.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Bump version to 6.0.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset comctrl-rebar-capture
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14750] comctl32: Fixed rebar behaviour when there's capture and no drag.
-# |
-# | Modified files:
-# |   *	dlls/comctl32/rebar.c
-# |
-if test "$enable_comctrl_rebar_capture" -eq 1; then
-	patch_apply comctrl-rebar-capture/0001-comctl32-Fixed-rebar-behaviour-when-there-s-capture-.patch
-	(
-		printf '%s\n' '+    { "Andrej Shadura", "comctl32: Fixed rebar behaviour when there'\''s capture and no drag.", 1 },';
 	) >> "$patchlist"
 fi
 

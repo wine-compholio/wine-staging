@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "cf6546fb3b914dc1d87b23d6920526b7487cfd6d"
+	echo "4588f10f8d3895624a8a2087f2e5c3c1b51e576f"
 }
 
 # Show version information
@@ -164,11 +164,9 @@ patch_enable_all ()
 	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
-	enable_kernelbase_ReOpenFile="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_libs_Debug_Channel="$1"
-	enable_libs_Unicode_Collation="$1"
 	enable_loader_KeyboardLayouts="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -621,9 +619,6 @@ patch_enable ()
 		kernel32-SetProcessDEPPolicy)
 			enable_kernel32_SetProcessDEPPolicy="$2"
 			;;
-		kernelbase-ReOpenFile)
-			enable_kernelbase_ReOpenFile="$2"
-			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
 			;;
@@ -632,9 +627,6 @@ patch_enable ()
 			;;
 		libs-Debug_Channel)
 			enable_libs_Debug_Channel="$2"
-			;;
-		libs-Unicode_Collation)
-			enable_libs_Unicode_Collation="$2"
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
@@ -4390,21 +4382,6 @@ if test "$enable_kernel32_SetProcessDEPPolicy" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernelbase-ReOpenFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47668] Logos 8 (.NET/WPF 4.7.2 application) fails to download resources (needs ReOpenFile implementation)
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/file.c, dlls/kernelbase/file.c
-# |
-if test "$enable_kernelbase_ReOpenFile" -eq 1; then
-	patch_apply kernelbase-ReOpenFile/0001-kernelbase-Implement-ReOpenFile.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "kernelbase: Implement ReOpenFile().", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset krnl386.exe16-GDT_LDT_Emulation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4444,22 +4421,6 @@ if test "$enable_libs_Debug_Channel" -eq 1; then
 	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "libwine: Add process specific debug channels.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset libs-Unicode_Collation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#10767] Fix comparison of punctuation characters in lstrcmp
-# |   *	[#32490] Graphical issues in Inquisitor
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/locale.c, dlls/kernelbase/collation.c, libs/port/collation.c
-# |
-if test "$enable_libs_Unicode_Collation" -eq 1; then
-	patch_apply libs-Unicode_Collation/0001-libs-Fix-most-problems-with-CompareString.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "libs: Fix most problems with CompareString.", 1 },';
 	) >> "$patchlist"
 fi
 

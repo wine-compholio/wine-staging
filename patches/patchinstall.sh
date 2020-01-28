@@ -5039,12 +5039,18 @@ fi
 # |   *	[#46788] ntdll: Implement RtlIpv6AddressToStringA
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c
+# |   *	dlls/iphlpapi/iphlpapi_main.c, dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, include/ip2string.h
 # |
 if test "$enable_ntdll_RtlIpv4StringToAddress" -eq 1; then
-	patch_apply ntdll-RtlIpv4StringToAddress/0003-ntdll-Add-semi-stub-for-RtlIpv6AddressToString-Ex-A.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0004-ntdll-Implement-RtlIpv6AddressToString-Ex-W.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0001-ntdll-Implement-RtlIpv6StringToAddress-Ex-AW.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0002-include-Add-RtlIpv6StringToAddress-Ex-AW.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0003-iphlpapi-Implement-ParseNetworkString-for-IPv6-addre.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0004-ntdll-Add-semi-stub-for-RtlIpv6AddressToString-Ex-A.patch
+	patch_apply ntdll-RtlIpv4StringToAddress/0005-ntdll-Implement-RtlIpv6AddressToString-Ex-W.patch
 	(
+		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv6StringToAddress(Ex)[AW].", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "include: Add RtlIpv6StringToAddress(Ex)[AW].", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "iphlpapi: Implement ParseNetworkString for IPv6 addresses and services.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Add semi-stub for RtlIpv6AddressToString(Ex)A.", 1 },';
 		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv6AddressToString(Ex)W.", 1 },';
 	) >> "$patchlist"

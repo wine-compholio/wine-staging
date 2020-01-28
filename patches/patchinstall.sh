@@ -2225,13 +2225,9 @@ fi
 # |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c
 # |
 if test "$enable_advapi32_LsaLookupSids" -eq 1; then
-	patch_apply advapi32-LsaLookupSids/0002-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
-	patch_apply advapi32-LsaLookupSids/0003-advapi32-Prepend-a-hidden-LSA_TRUST_INFORMATION-in-L.patch
 	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
 	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
 	(
-		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupSids to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
-		printf '%s\n' '+    { "Qian Hong", "advapi32: Prepend a hidden LSA_TRUST_INFORMATION in LsaLookupNames2 to avoid crash when Domains[-1] incorrectly accessed by application.", 2 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
 	) >> "$patchlist"

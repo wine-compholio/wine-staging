@@ -327,7 +327,6 @@ patch_enable_all ()
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
-	enable_wined3d_UAV_Counters="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
 	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
@@ -1106,9 +1105,6 @@ patch_enable ()
 			;;
 		wined3d-Silence_FIXMEs)
 			enable_wined3d_Silence_FIXMEs="$2"
-			;;
-		wined3d-UAV_Counters)
-			enable_wined3d_UAV_Counters="$2"
 			;;
 		wined3d-WINED3DFMT_B8G8R8X8_UNORM)
 			enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$2"
@@ -6970,18 +6966,6 @@ if test "$enable_wined3d_Silence_FIXMEs" -eq 1; then
 	patch_apply wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "wined3d: Print FIXME only once in surface_cpu_blt.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-UAV_Counters
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/wined3d/cs.c, dlls/wined3d/device.c
-# |
-if test "$enable_wined3d_UAV_Counters" -eq 1; then
-	patch_apply wined3d-UAV_Counters/0001-wined3d-Remaining-UAV-counter-changes.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "wined3d: Remaining UAV counter changes.", 1 },';
 	) >> "$patchlist"
 fi
 

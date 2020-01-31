@@ -2941,6 +2941,9 @@ fi
 
 # Patchset ddraw-IDirect3DTexture2_Load
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48537] Prezzie Hunt fails to launch
+# |
 # | Modified files:
 # |   *	dlls/ddraw/surface.c, dlls/ddraw/tests/d3d.c, dlls/ddraw/tests/ddraw2.c
 # |
@@ -3588,6 +3591,7 @@ fi
 # |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
 # |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
 # |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
+# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
 # |
 # | Modified files:
 # |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
@@ -5004,6 +5008,10 @@ fi
 
 # Patchset ntdll-ProcessQuotaLimits
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44812] Multiple applications need NtQueryInformationProcess 'ProcessQuotaLimits' class support (MSYS2, ProcessHacker
+# | 	2.x)
+# |
 # | Modified files:
 # |   *	dlls/ntdll/process.c
 # |
@@ -6211,6 +6219,9 @@ fi
 
 # Patchset user32-FlashWindowEx
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#43124] FlashWindowEx: WM_NCACTIVATE behavior is incorrect
+# |
 # | Modified files:
 # |   *	dlls/user32/tests/win.c, dlls/user32/win.c
 # |
@@ -6436,7 +6447,9 @@ fi
 # |   *	winex11.drv-mouse-coorrds
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#42631] - user32: Add Raw Input support.
+# |   *	[#42631] Mouse drift, jump or don't react to small slow movements in Unity-engine games and Fallout 4 (partly fixed in
+# | 	Unity games, have walkaround in Fallout4 )
+# |   *	[#42675] Overwatch: Phantom mouse input / view pulled up to ceiling
 # |
 # | Modified files:
 # |   *	dlls/dinput/device_private.h, dlls/dinput/dinput_main.c, dlls/dinput/mouse.c, dlls/dinput8/tests/device.c,
@@ -6731,6 +6744,7 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33661] Add performance library registry keys needed by MS SQL Server Management Studio Express 2008 R2
+# |   *	[#33037] Visual Studio 6 can't be installed with WinVer >= Win2K (missing HKEY_PERFORMANCE_DATA 230, process object)
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/registry.c, loader/wine.inf.in

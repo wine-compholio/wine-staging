@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1bb953c6766c9cc4372ca23a7c5b7de101324218"
+	echo "bdf8d94e2a40f82c618ba5587cc82382c5230ac0"
 }
 
 # Show version information
@@ -89,7 +89,6 @@ patch_enable_all ()
 	enable_activeds_ADsOpenObject="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
-	enable_advapi32_LsaLookupSids="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
@@ -149,7 +148,6 @@ patch_enable_all ()
 	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_rotation="$1"
-	enable_gdiplus_FontFamily_RefCount="$1"
 	enable_gdiplus_Performance_Improvements="$1"
 	enable_imagehlp_BindImageEx="$1"
 	enable_imm32_message_on_focus="$1"
@@ -392,9 +390,6 @@ patch_enable ()
 		advapi32-LsaLookupPrivilegeName)
 			enable_advapi32_LsaLookupPrivilegeName="$2"
 			;;
-		advapi32-LsaLookupSids)
-			enable_advapi32_LsaLookupSids="$2"
-			;;
 		advapi32-Token_Integrity_Level)
 			enable_advapi32_Token_Integrity_Level="$2"
 			;;
@@ -571,9 +566,6 @@ patch_enable ()
 			;;
 		gdi32-rotation)
 			enable_gdi32_rotation="$2"
-			;;
-		gdiplus-FontFamily-RefCount)
-			enable_gdiplus_FontFamily_RefCount="$2"
 			;;
 		gdiplus-Performance-Improvements)
 			enable_gdiplus_Performance_Improvements="$2"
@@ -2200,20 +2192,6 @@ if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-LsaLookupSids
-# |
-# | Modified files:
-# |   *	dlls/advapi32/lsa.c, dlls/advapi32/security.c, dlls/advapi32/tests/security.c
-# |
-if test "$enable_advapi32_LsaLookupSids" -eq 1; then
-	patch_apply advapi32-LsaLookupSids/0004-advapi32-Fallback-to-Sid-string-when-LookupAccountSi.patch
-	patch_apply advapi32-LsaLookupSids/0007-advapi32-Fix-name-and-use-of-DOMAIN_GROUP_RID_USERS.patch
-	(
-		printf '%s\n' '+    { "Qian Hong", "advapi32: Fallback to Sid string when LookupAccountSid fails.", 1 },';
-		printf '%s\n' '+    { "Qian Hong", "advapi32: Fix name and use of DOMAIN_GROUP_RID_USERS.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4099,21 +4077,6 @@ if test "$enable_gdi32_rotation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated Arc, ArcTo, Chord and Pie drawing problem.", 1 },';
 		printf '%s\n' '+    { "Daniel Wendt", "gdi32: Fix for rotated ellipse.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset gdiplus-FontFamily-RefCount
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48489] gdiplus: Reference cound the GpFontFamily object.
-# |
-# | Modified files:
-# |   *	dlls/gdiplus/font.c, dlls/gdiplus/gdiplus_private.h, dlls/gdiplus/tests/font.c
-# |
-if test "$enable_gdiplus_FontFamily_RefCount" -eq 1; then
-	patch_apply gdiplus-FontFamily-RefCount/0001-gdiplus-Use-refcounting-for-GpFontFamily-instead-of-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Use refcounting for GpFontFamily instead of cloning.", 1 },';
 	) >> "$patchlist"
 fi
 

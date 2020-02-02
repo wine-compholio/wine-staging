@@ -103,7 +103,6 @@ patch_enable_all ()
 	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3d9_Direct3DShaderValidatorCreate9="$1"
-	enable_d3d9_Tests="$1"
 	enable_d3dx9_32bpp_Alpha_Channel="$1"
 	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
@@ -431,9 +430,6 @@ patch_enable ()
 			;;
 		d3d9-Direct3DShaderValidatorCreate9)
 			enable_d3d9_Direct3DShaderValidatorCreate9="$2"
-			;;
-		d3d9-Tests)
-			enable_d3d9_Tests="$2"
 			;;
 		d3dx9-32bpp_Alpha_Channel)
 			enable_d3dx9_32bpp_Alpha_Channel="$2"
@@ -2630,20 +2626,6 @@ if test "$enable_d3d9_Direct3DShaderValidatorCreate9" -eq 1; then
 	patch_apply d3d9-Direct3DShaderValidatorCreate9/0001-d3d9-Return-a-stub-interface-from-Direct3DShaderVali.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "d3d9: Return a stub interface from Direct3DShaderValidatorCreate9().", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3d9-Tests
-# |
-# | Modified files:
-# |   *	dlls/d3d9/tests/device.c, dlls/d3d9/tests/visual.c
-# |
-if test "$enable_d3d9_Tests" -eq 1; then
-	patch_apply d3d9-Tests/0001-d3d9-tests-Avoid-test-failures-on-specific-Nvidia-graphic-.patch
-	patch_apply d3d9-Tests/0002-d3d9-tests-Avoid-crash-when-surface-and-texture-crea.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "d3d9/tests: Avoid test failures on specific Nvidia graphic cards.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "d3d9/tests: Avoid crash when surface and texture creation fails.", 1 },';
 	) >> "$patchlist"
 fi
 

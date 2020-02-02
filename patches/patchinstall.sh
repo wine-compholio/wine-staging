@@ -2649,6 +2649,9 @@ fi
 
 # Patchset d3dx9-32bpp_Alpha_Channel
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48563] Runaway: A Twist of Fate renders its cursor incorrectly
+# |
 # | Modified files:
 # |   *	dlls/d3dx9_36/surface.c, dlls/d3dx9_36/tests/surface.c
 # |

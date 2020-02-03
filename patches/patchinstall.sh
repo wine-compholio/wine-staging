@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bdf8d94e2a40f82c618ba5587cc82382c5230ac0"
+	echo "87875e12bcdca659e578849fa62585b1b5316a50"
 }
 
 # Show version information
@@ -135,7 +135,6 @@ patch_enable_all ()
 	enable_dsdmo_new_dll="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
-	enable_dsound_SRW="$1"
 	enable_dwmapi_DwmGetTransportAttributes="$1"
 	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
@@ -526,9 +525,6 @@ patch_enable ()
 			;;
 		dsound-Fast_Mixer)
 			enable_dsound_Fast_Mixer="$2"
-			;;
-		dsound-SRW)
-			enable_dsound_SRW="$2"
 			;;
 		dwmapi-DwmGetTransportAttributes)
 			enable_dwmapi_DwmGetTransportAttributes="$2"
@@ -3280,21 +3276,6 @@ if test "$enable_dsound_EAX" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "dsound: Allow disabling of EAX support in the registry.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_ListenerProperties.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "dsound: Add stub support for DSPROPSETID_EAX20_BufferProperties.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dsound-SRW
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48408] dsound: Use an SRW lock for buffer_list_lock.
-# |
-# | Modified files:
-# |   *	dlls/dsound/buffer.c, dlls/dsound/dsound.c, dlls/dsound/dsound_private.h, dlls/dsound/mixer.c, dlls/dsound/primary.c
-# |
-if test "$enable_dsound_SRW" -eq 1; then
-	patch_apply dsound-SRW/0001-dsound-Use-an-SRW-lock-for-buffer_list_lock.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "dsound: Use an SRW lock for buffer_list_lock.", 1 },';
 	) >> "$patchlist"
 fi
 

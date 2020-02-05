@@ -1,13 +1,13 @@
-From 816aa308b6a808839760e69679f38498cdd0f4df Mon Sep 17 00:00:00 2001
+From 18fd7a7718f017b798f40de032ea60730d6f4bfa Mon Sep 17 00:00:00 2001
 From: Alex Henrie <alexhenrie24@gmail.com>
-Date: Mon, 27 Jan 2020 23:08:43 -0700
+Date: Sat, 1 Feb 2020 12:38:21 -0700
 Subject: [PATCH 1/5] ntdll: Implement RtlIpv6StringToAddress(Ex)[AW]
 
 Signed-off-by: Alex Henrie <alexhenrie24@gmail.com>
 ---
  dlls/ntdll/ntdll.spec |   6 +-
- dlls/ntdll/rtl.c      | 245 +++++++++++++++++++++++++++++++++++++-----
- 2 files changed, 222 insertions(+), 29 deletions(-)
+ dlls/ntdll/rtl.c      | 259 +++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 236 insertions(+), 29 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
 index fe36235bda..bcd9950a76 100644
@@ -28,7 +28,7 @@ index fe36235bda..bcd9950a76 100644
  @ stdcall RtlIsCriticalSectionLocked(ptr)
  @ stdcall RtlIsCriticalSectionLockedByThread(ptr)
 diff --git a/dlls/ntdll/rtl.c b/dlls/ntdll/rtl.c
-index 15ff037fef..12c0ed430d 100644
+index 15ff037fef..69f2f52743 100644
 --- a/dlls/ntdll/rtl.c
 +++ b/dlls/ntdll/rtl.c
 @@ -98,6 +98,21 @@ static const DWORD CRC_table[256] =
@@ -127,7 +127,7 @@ index 15ff037fef..12c0ed430d 100644
              goto error;
          if (!fields[0] || fields[0] > 0xFFFF || *str)
              goto error;
-@@ -1074,13 +1084,196 @@ NTSTATUS WINAPI RtlIpv4StringToAddressA(const char *str, BOOLEAN strict, const c
+@@ -1074,13 +1084,210 @@ NTSTATUS WINAPI RtlIpv4StringToAddressA(const char *str, BOOLEAN strict, const c
      return ret;
  }
  
@@ -155,25 +155,39 @@ index 15ff037fef..12c0ed430d 100644
 +    if (str[0] == ':')
 +    {
 +        if (str[1] != ':') goto error;
++        str++;
 +        /* Windows bug: a double colon at the beginning is treated as 4 bytes of zeros instead of 2 */
 +        address->u.Word[0] = 0;
-+        address->u.Word[1] = 0;
-+        n_bytes += 4;
-+        str++;
++        n_bytes = 2;
 +    }
 +
 +    for (;;)
 +    {
++        if (!n_ipv4_bytes && *str == ':')
++        {
++            /* double colon */
++            if (gap != -1) goto error;
++            str++;
++            if (is_hex(*str))
++            {
++                gap = -2; /* set the gap after the next component is successfully parsed */
++            }
++            else
++            {
++                gap = n_bytes;
++                break;
++            }
++        }
 +        component_len = strspnW(str, hex_digits);
 +        delimiter = str[component_len];
-+        if (terminator && delimiter != ':' && delimiter != '.') *terminator = str + component_len;
 +        if (!n_ipv4_bytes && str[0] == '0' && (str[1] == 'x' || str[1] == 'X') && is_hex(str[2]))
 +        {
 +            /* IPv4 address as single hex value */
 +            if (n_bytes > 12) goto error;
 +            component_terminator = str + 2;
 +            if (!parse_ip_component(&component_terminator, 16, TRUE, &ip_component)) goto error;
-+            if (terminator) *terminator = str + 1; /* Windows bug: terminator is off by 1 */
++            if (terminator) *terminator = str + 1; /* Windows bug: terminator is off by one */
++            if (gap == -2) gap = n_bytes;
 +            if (gap == -1 && *component_terminator == ':') return STATUS_INVALID_PARAMETER;
 +            address->u.Byte[n_bytes++] = (ip_component & 0xFF000000) >> 24;
 +            address->u.Byte[n_bytes++] = (ip_component & 0x00FF0000) >> 16;
@@ -183,40 +197,40 @@ index 15ff037fef..12c0ed430d 100644
 +            ipv4_in_hex = TRUE;
 +            goto fill_gap;
 +        }
-+        if (!n_ipv4_bytes && delimiter == '.' && n_bytes <= 12) n_ipv4_bytes = 1;
++        if (!n_ipv4_bytes && delimiter == '.' && n_bytes <= 12)
++        {
++            component_terminator = str;
++            if (parse_ip_component(&component_terminator, 10, TRUE, &ip_component))
++                if (*component_terminator == delimiter)
++                    n_ipv4_bytes = 1;
++        }
 +        if (n_ipv4_bytes)
 +        {
 +            /* dotted IPv4 address */
-+            if (!parse_ip_component(&str, 0, TRUE, &ip_component)) goto error;
-+            if (ip_component > 255) return STATUS_INVALID_PARAMETER;
++            if (!parse_ip_component(&str, 10, TRUE, &ip_component) || *str != delimiter) goto error;
 +            if (delimiter != '.' && (n_ipv4_bytes < 4 || (n_bytes < 15 && gap == -1))) goto error;
++            if (delimiter != '.' && terminator) *terminator = str;
++            if (ip_component > 255) return STATUS_INVALID_PARAMETER;
++            if (gap == -2) gap = n_bytes;
 +            address->u.Byte[n_bytes] = ip_component;
 +            n_bytes++;
 +            if (n_ipv4_bytes == 4) break;
 +            n_ipv4_bytes++;
++            if (delimiter != '.') break;
 +        }
 +        else
 +        {
-+            /* IPv6 */
-+            if (*str == ':')
-+            {
-+                gap = n_bytes;
-+                if (!is_hex(str[1]))
-+                {
-+                    str++;
-+                    break;
-+                }
-+            }
-+            else
-+            {
-+                if (!parse_ip_component(&str, 16, TRUE, &ip_component)) goto error;
-+                if (component_len > 4) return STATUS_INVALID_PARAMETER;
-+                if (delimiter != ':' && n_bytes < 14 && gap == -1) goto error;
-+                address->u.Word[n_bytes/2] = htons(ip_component);
-+                n_bytes += 2;
-+            }
++            /* pure IPv6 */
++            if (!parse_ip_component(&str, 16, TRUE, &ip_component)) goto error;
++            if (delimiter != ':' && n_bytes < 14 && gap == -1) goto error;
++            if (delimiter != ':' && terminator) *terminator = str;
++            if (component_len > 4) return STATUS_INVALID_PARAMETER;
++            if (gap == -2) gap = n_bytes;
++            address->u.Word[n_bytes/2] = htons(ip_component);
++            n_bytes += 2;
++            if (delimiter != ':') break;
 +        }
-+        if (n_bytes == 16 || *str != delimiter || (delimiter != ':' && delimiter != '.')) break;
++        if (n_bytes == 16 || (n_bytes == 14 && gap != -1)) break;
 +        if (gap != -1 && str[0] == ':' && str[1] == ':') break;
 +        str++;
 +    }
@@ -327,5 +341,5 @@ index 15ff037fef..12c0ed430d 100644
  
  /***********************************************************************
 -- 
-2.24.1
+2.25.0
 

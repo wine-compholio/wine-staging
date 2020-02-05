@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "87875e12bcdca659e578849fa62585b1b5316a50"
+	echo "9642f35922b79cebacdc774eb54619e389ccd531"
 }
 
 # Show version information
@@ -220,7 +220,6 @@ patch_enable_all ()
 	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_User_shared_data_fields="$1"
 	enable_ntdll_WRITECOPY="$1"
-	enable_ntdll_Wait_User_APC="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_ext4_case_folder="$1"
@@ -779,9 +778,6 @@ patch_enable ()
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
-			;;
-		ntdll-Wait_User_APC)
-			enable_ntdll_Wait_User_APC="$2"
 			;;
 		ntdll-Zero_mod_name)
 			enable_ntdll_Zero_mod_name="$2"
@@ -1900,9 +1896,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
 	fi
-	if test "$enable_ntdll_Wait_User_APC" -gt 1; then
-		abort "Patchset ntdll-Wait_User_APC disabled, but server-Shared_Memory depends on that."
-	fi
 	if test "$enable_server_Key_State" -gt 1; then
 		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
 	fi
@@ -1913,7 +1906,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
 	fi
 	enable_ntdll_Threading=1
-	enable_ntdll_Wait_User_APC=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
@@ -3636,21 +3628,6 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Wait_User_APC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#14697] Do not allow interruption of system APC in server_select
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_Wait_User_APC" -eq 1; then
-	patch_apply ntdll-Wait_User_APC/0001-ntdll-Block-signals-while-executing-system-APCs.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Block signals while executing system APCs.", 2 },';
-	) >> "$patchlist"
-fi
-
 # Patchset server-Key_State
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3699,7 +3676,7 @@ fi
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread
+# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
@@ -3751,8 +3728,8 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-
-# | 	Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-
+# | 	Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -5516,9 +5493,8 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-
-# | 	Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup,
-# | 	eventfd_synchronization
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-
+# | 	Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -5606,7 +5582,7 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, ntdll-Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory
+# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -7425,9 +7401,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-
-# | 	Wait_User_APC, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup,
-# | 	eventfd_synchronization, server-Desktop_Refcount
+# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-
+# | 	Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization,
+# | 	server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

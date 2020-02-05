@@ -1,4 +1,4 @@
-From 71e4fd5717018ba31e37382a0d5eb67cd4b6d5d0 Mon Sep 17 00:00:00 2001
+From d91c1cf1b74e811f3c07dac6261e59de412bc5a8 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: ntdll: Add support for junction point creation.
@@ -18,10 +18,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index ef7af7021a..6453cf2697 100644
+index e06743c2e..cc77413d2 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2119,6 +2119,8 @@ AC_CHECK_FUNCS(\
+@@ -2152,6 +2152,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -31,7 +31,7 @@ index ef7af7021a..6453cf2697 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 1cbaa1b293..693caecffa 100644
+index 26acc066c..ab2f5743c 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -21,6 +21,7 @@
@@ -50,7 +50,7 @@ index 1cbaa1b293..693caecffa 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
-@@ -1639,6 +1641,104 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
+@@ -1640,6 +1642,104 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
  }
  
  
@@ -155,7 +155,7 @@ index 1cbaa1b293..693caecffa 100644
  /**************************************************************************
   *              NtFsControlFile                 [NTDLL.@]
   *              ZwFsControlFile                 [NTDLL.@]
-@@ -1723,6 +1823,24 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -1724,6 +1824,24 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
          io->Information = 0;
          status = STATUS_SUCCESS;
          break;
@@ -181,7 +181,7 @@ index 1cbaa1b293..693caecffa 100644
          return server_ioctl_file( handle, event, apc, apc_context, io, code,
                                    in_buffer, in_size, out_buffer, out_size );
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 8e54dbb541..322dadefe3 100644
+index 539ce44e0..12dea7aea 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -192,7 +192,7 @@ index 8e54dbb541..322dadefe3 100644
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -4831,6 +4832,105 @@ static void test_file_readonly_access(void)
+@@ -4900,6 +4901,105 @@ static void test_file_readonly_access(void)
      DeleteFileW(path);
  }
  
@@ -298,17 +298,17 @@ index 8e54dbb541..322dadefe3 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -4900,4 +5000,5 @@ START_TEST(file)
+@@ -4970,4 +5070,5 @@ START_TEST(file)
      test_query_attribute_information_file();
      test_ioctl();
      test_flush_buffers_file();
 +    test_reparse_points();
  }
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 979695f552..2a1382e811 100644
+index a91372eb4..f6dd100dd 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
-@@ -482,6 +482,7 @@ SOURCES = \
+@@ -494,6 +494,7 @@ SOURCES = \
  	ntddvdeo.h \
  	ntdef.h \
  	ntdsapi.h \
@@ -318,7 +318,7 @@ index 979695f552..2a1382e811 100644
  	ntsecapi.h \
 diff --git a/include/ntifs.h b/include/ntifs.h
 new file mode 100644
-index 0000000000..21d42e1732
+index 000000000..21d42e173
 --- /dev/null
 +++ b/include/ntifs.h
 @@ -0,0 +1,42 @@
@@ -365,10 +365,10 @@ index 0000000000..21d42e1732
 +
 +#endif /* __WINE_NTIFS_H */
 diff --git a/include/wine/port.h b/include/wine/port.h
-index d23e2b033f..26c5890ddb 100644
+index feb055865..a7ddd4a05 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -317,6 +317,15 @@ double rint(double x);
+@@ -329,6 +329,15 @@ double rint(double x);
  float rintf(float x);
  #endif
  
@@ -385,20 +385,20 @@ index d23e2b033f..26c5890ddb 100644
  int statvfs( const char *path, struct statvfs *buf );
  #endif
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index a2e96d1500..db27249ac1 100644
+index 74b6dcfb6..33445fa76 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
-@@ -97,6 +97,7 @@ C_SRCS = \
+@@ -92,6 +92,7 @@ C_SRCS = \
  	pread.c \
  	pwrite.c \
  	readlink.c \
 +	renameat2.c \
  	rint.c \
- 	sortkey.c \
  	spawn.c \
+ 	statvfs.c \
 diff --git a/libs/port/renameat2.c b/libs/port/renameat2.c
 new file mode 100644
-index 0000000000..f46f407ec7
+index 000000000..f46f407ec
 --- /dev/null
 +++ b/libs/port/renameat2.c
 @@ -0,0 +1,55 @@
@@ -458,5 +458,5 @@ index 0000000000..f46f407ec7
 +}
 +#endif /* HAVE_RENAMEAT2 */
 -- 
-2.17.1
+2.25.0
 

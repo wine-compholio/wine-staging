@@ -72,6 +72,7 @@ def main():
         for d in deps:
             if d not in patchlist:
                 print 'Error: unknown or disabled dependency %s of %s.' %(d,p)
+                sys.exit(1)
 
     # Now try to apply each patch
     for p in sorted(patchlist.keys()):

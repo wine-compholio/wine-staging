@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9642f35922b79cebacdc774eb54619e389ccd531"
+	echo "f909d18baf1d97831c55a1d47610427ac2084ca3"
 }
 
 # Show version information
@@ -193,7 +193,6 @@ patch_enable_all ()
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_Manifest_Range="$1"
-	enable_ntdll_MemoryWorkingSetExInformation="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
 	enable_ntdll_NtDevicePath="$1"
@@ -697,9 +696,6 @@ patch_enable ()
 			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
-			;;
-		ntdll-MemoryWorkingSetExInformation)
-			enable_ntdll_MemoryWorkingSetExInformation="$2"
 			;;
 		ntdll-NtAccessCheck)
 			enable_ntdll_NtAccessCheck="$2"
@@ -1762,27 +1758,6 @@ if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 	enable_winebuild_Fake_Dlls=1
 fi
 
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
-	fi
-	enable_ntdll_Junction_Points=1
-fi
-
-if test "$enable_ntdll_NtContinue" -eq 1; then
-	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
-		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
-	fi
-	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_ntdll_MemoryWorkingSetExInformation" -eq 1; then
-	if test "$enable_ntdll_NtQueryVirtualMemory" -gt 1; then
-		abort "Patchset ntdll-NtQueryVirtualMemory disabled, but ntdll-MemoryWorkingSetExInformation depends on that."
-	fi
-	enable_ntdll_NtQueryVirtualMemory=1
-fi
-
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	if test "$enable_ntdll_NtDevicePath" -gt 1; then
 		abort "Patchset ntdll-NtDevicePath disabled, but ntdll-NtQueryVirtualMemory depends on that."
@@ -1790,11 +1765,25 @@ if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
 	enable_ntdll_NtDevicePath=1
 fi
 
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
+	fi
+	enable_ntdll_Junction_Points=1
+fi
+
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
+fi
+
+if test "$enable_ntdll_NtContinue" -eq 1; then
+	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
+		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
+	fi
+	enable_winebuild_Fake_Dlls=1
 fi
 
 if test "$enable_ntdll_HashLinks" -eq 1; then
@@ -4738,90 +4727,6 @@ if test "$enable_ntdll_Manifest_Range" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Pipe_SpecialCharacters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#28995] Allow special characters in pipe names
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
-# |
-if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
-	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtDevicePath
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Pipe_SpecialCharacters
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#37487] Resolve \\SystemRoot\\ prefix when opening files
-# |
-# | Modified files:
-# |   *	dlls/ntdll/directory.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_NtDevicePath" -eq 1; then
-	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtQueryVirtualMemory
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Pipe_SpecialCharacters, ntdll-NtDevicePath
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
-# |   *	[#27248] Implement K32GetMappedFileName
-# |
-# | Modified files:
-# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
-# | 	dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
-# |
-if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	patch_apply ntdll-NtQueryVirtualMemory/0002-ntdll-Split-logic-for-MemoryBasicInformation-into-a-.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0004-ntdll-tests-Add-tests-for-NtQueryVirtualMemory-Memor.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0005-ntdll-tests-Add-test-to-ensure-section-name-is-full-.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Split logic for MemoryBasicInformation into a separate function.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add test to ensure section name is full path.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-MemoryWorkingSetExInformation
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Pipe_SpecialCharacters, ntdll-NtDevicePath, ntdll-NtQueryVirtualMemory
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45667] League of Legends 8.15+ fails due to missing implementation of
-# | 	NtQueryVirtualMemory(MemoryWorkingSetExInformation)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c, include/winternl.h
-# |
-if test "$enable_ntdll_MemoryWorkingSetExInformation" -eq 1; then
-	patch_apply ntdll-MemoryWorkingSetExInformation/0002-ntdll-Stub-for-MemoryWorkingSetExInformation.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Stub for MemoryWorkingSetExInformation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtAccessCheck
 # |
 # | Modified files:
@@ -4856,6 +4761,39 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Pipe_SpecialCharacters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#28995] Allow special characters in pipe names
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
+# |
+if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
+	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Allow special characters in pipe names.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtDevicePath
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Pipe_SpecialCharacters
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#37487] Resolve \\SystemRoot\\ prefix when opening files
+# |
+# | Modified files:
+# |   *	dlls/ntdll/directory.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_NtDevicePath" -eq 1; then
+	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-NtQueryEaFile
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -4880,6 +4818,36 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryVirtualMemory
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Pipe_SpecialCharacters, ntdll-NtDevicePath
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
+# |   *	[#27248] Implement K32GetMappedFileName
+# |
+# | Modified files:
+# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
+# | 	dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
+# |
+if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
+	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0004-ntdll-tests-Add-tests-for-NtQueryVirtualMemory-Memor.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0005-ntdll-tests-Add-test-to-ensure-section-name-is-full-.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
+	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add test to ensure section name is full path.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
+		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 	) >> "$patchlist"
 fi
 

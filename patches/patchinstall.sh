@@ -1559,6 +1559,13 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	enable_server_Desktop_Refcount=1
 fi
 
+if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
+	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
+		abort "Patchset advapi32-Token_Integrity_Level disabled, but wow64cpu-Wow64Transition depends on that."
+	fi
+	enable_advapi32_Token_Integrity_Level=1
+fi
+
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	if test "$enable_winex11__NET_ACTIVE_WINDOW" -gt 1; then
 		abort "Patchset winex11-_NET_ACTIVE_WINDOW disabled, but winex11-WM_WINDOWPOSCHANGING depends on that."
@@ -1731,20 +1738,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 		abort "Patchset ntdll-User_Shared_Data disabled, but ntdll-WRITECOPY depends on that."
 	fi
 	enable_ntdll_User_Shared_Data=1
-fi
-
-if test "$enable_ntdll_User_shared_data_fields" -eq 1; then
-	if test "$enable_wow64cpu_Wow64Transition" -gt 1; then
-		abort "Patchset wow64cpu-Wow64Transition disabled, but ntdll-User_shared_data_fields depends on that."
-	fi
-	enable_wow64cpu_Wow64Transition=1
-fi
-
-if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
-	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
-		abort "Patchset advapi32-Token_Integrity_Level disabled, but wow64cpu-Wow64Transition depends on that."
-	fi
-	enable_advapi32_Token_Integrity_Level=1
 fi
 
 if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
@@ -5026,38 +5019,14 @@ if test "$enable_ntdll_ThreadHideFromDebugger" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wow64cpu-Wow64Transition
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)
-# |
-# | Modified files:
-# |   *	configure, configure.ac, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/wow64cpu/Makefile.in,
-# | 	dlls/wow64cpu/wow64cpu.spec, dlls/wow64cpu/wow64cpu_main.c
-# |
-if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
-	patch_apply wow64cpu-Wow64Transition/0001-wow64cpu-Add-stub-dll.patch
-	patch_apply wow64cpu-Wow64Transition/0002-ntdll-Add-a-stub-implementation-of-Wow64Transition.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "wow64cpu: Add stub dll.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add a stub implementation of Wow64Transition.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-User_shared_data_fields
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, wow64cpu-Wow64Transition
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#48386] Some CPU features are not reported for Intel CPU (Detroit: Become Human is affected)
 # |   *	[#48387] User shared data area should have NumberOfPhysicalPages field filled in (used by Detroit: Become Human)
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/nt.c
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/virtual.c, dlls/ntdll/thread.c
 # |
 if test "$enable_ntdll_User_shared_data_fields" -eq 1; then
 	patch_apply ntdll-User_shared_data_fields/0001-ntdll-Fill-NumberOfPhysicalPages-field-in-user-share.patch
@@ -7306,6 +7275,27 @@ if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
 	patch_apply wintrust-WTHelperGetProvCertFromChain/0001-wintrust-Add-parameter-check-in-WTHelperGetProvCertF.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wintrust: Add parameter check in WTHelperGetProvCertFromChain.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wow64cpu-Wow64Transition
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/wow64cpu/Makefile.in,
+# | 	dlls/wow64cpu/wow64cpu.spec, dlls/wow64cpu/wow64cpu_main.c
+# |
+if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
+	patch_apply wow64cpu-Wow64Transition/0001-wow64cpu-Add-stub-dll.patch
+	patch_apply wow64cpu-Wow64Transition/0002-ntdll-Add-a-stub-implementation-of-Wow64Transition.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "wow64cpu: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add a stub implementation of Wow64Transition.", 1 },';
 	) >> "$patchlist"
 fi
 

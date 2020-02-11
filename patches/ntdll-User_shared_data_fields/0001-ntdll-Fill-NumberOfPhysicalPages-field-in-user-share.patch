@@ -1,35 +1,75 @@
-From 43fa5b9a922859b4bf4698c2336de125ae9b5c94 Mon Sep 17 00:00:00 2001
+From e4b6be33cb122d796f1009761b8f53b4c3e46774 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
-Date: Mon, 30 Dec 2019 13:33:46 +0300
+Date: Tue, 11 Feb 2020 15:17:55 +0300
 Subject: [PATCH] ntdll: Fill NumberOfPhysicalPages field in user shared data
  area.
 
 ---
- dlls/ntdll/loader.c | 4 ++++
- 1 file changed, 4 insertions(+)
+ dlls/ntdll/tests/virtual.c | 16 ++++++++++++++++
+ dlls/ntdll/thread.c        |  4 ++++
+ 2 files changed, 20 insertions(+)
 
-diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index f2f86ea5a8..5db716089c 100644
---- a/dlls/ntdll/loader.c
-+++ b/dlls/ntdll/loader.c
-@@ -4453,6 +4453,7 @@ void __wine_process_init(void)
-     RTL_USER_PROCESS_PARAMETERS *params;
-     ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION runlevel;
-     WINE_MODREF *wm, *wow64cpu_wm;
+diff --git a/dlls/ntdll/tests/virtual.c b/dlls/ntdll/tests/virtual.c
+index 31eb66c143..20dfeb9830 100644
+--- a/dlls/ntdll/tests/virtual.c
++++ b/dlls/ntdll/tests/virtual.c
+@@ -25,6 +25,7 @@
+ #include "windef.h"
+ #include "winternl.h"
+ #include "wine/test.h"
++#include "ddk/wdm.h"
+ 
+ static unsigned int page_size;
+ 
+@@ -513,6 +514,20 @@ static void test_NtMapViewOfSection(void)
+     CloseHandle(process);
+ }
+ 
++static void test_user_shared_data(void)
++{
++    const KSHARED_USER_DATA *user_shared_data = (void *)0x7ffe0000;
 +    SYSTEM_BASIC_INFORMATION sbi;
-     NTSTATUS status;
-     ANSI_STRING func_name;
-     UNICODE_STRING nt_name;
-@@ -4571,6 +4572,9 @@ void __wine_process_init(void)
-         elevate_process();  /* FIXME: the process exists with a wrong token for a short time */
-     }
++    NTSTATUS status;
++
++    memset(&sbi, 0, sizeof(sbi));
++    status = NtQuerySystemInformation(SystemBasicInformation, &sbi, sizeof(sbi), NULL);
++    ok(status == STATUS_SUCCESS, "Unexpected status %#x.\n", status);
++    ok(sbi.MmNumberOfPhysicalPages && sbi.MmNumberOfPhysicalPages == user_shared_data->NumberOfPhysicalPages,
++            "Unexpected number of physical pages %#x, NtQuerySystemInformation() reported %#x.\n",
++            user_shared_data->NumberOfPhysicalPages, sbi.MmNumberOfPhysicalPages);
++}
++
+ START_TEST(virtual)
+ {
+     SYSTEM_BASIC_INFORMATION sbi;
+@@ -546,4 +561,5 @@ START_TEST(virtual)
+     test_NtAllocateVirtualMemory();
+     test_RtlCreateUserStack();
+     test_NtMapViewOfSection();
++    test_user_shared_data();
+ }
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 35187ba470..cd1fdb4fe8 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -277,6 +277,7 @@ static void set_process_name( int argc, char *argv[] )
+  */
+ TEB *thread_init(void)
+ {
++    SYSTEM_BASIC_INFORMATION sbi;
+     TEB *teb;
+     void *addr;
+     SIZE_T size;
+@@ -370,6 +371,9 @@ TEB *thread_init(void)
+     __wine_user_shared_data();
+     fill_cpu_info();
  
 +    virtual_get_system_info(&sbi);
 +    user_shared_data->NumberOfPhysicalPages = sbi.MmNumberOfPhysicalPages;
 +
-     /* the main exe needs to be the first in the load order list */
-     RemoveEntryList( &wm->ldr.InLoadOrderModuleList );
-     InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderModuleList );
+     return teb;
+ }
+ 
 -- 
 2.24.1
 

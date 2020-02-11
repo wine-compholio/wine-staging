@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0df9cce29d0d32d3f1f13c4ec4eabc81675a17ed"
+	echo "d1373e8aae1b15b96e847488e4b6617789f8fb62"
 }
 
 # Show version information
@@ -94,7 +94,6 @@ patch_enable_all ()
 	enable_atl_AtlAxDialogBox="$1"
 	enable_cmd_launch_association="$1"
 	enable_comctl32_Listview_DrawItem="$1"
-	enable_comctl32_alpha_bitmaps="$1"
 	enable_comctl32_rebar_capture="$1"
 	enable_comctl32_version_6="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
@@ -103,9 +102,7 @@ patch_enable_all ()
 	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3dx9_32bpp_Alpha_Channel="$1"
-	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
-	enable_d3dx9_36_D3DXCreateKeyframedAnimationSet="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
 	enable_d3dx9_36_D3DXOptimizeVertices="$1"
 	enable_d3dx9_36_D3DXSHProjectCubeMap="$1"
@@ -399,9 +396,6 @@ patch_enable ()
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
 			;;
-		comctl32-alpha-bitmaps)
-			enable_comctl32_alpha_bitmaps="$2"
-			;;
 		comctl32-rebar-capture)
 			enable_comctl32_rebar_capture="$2"
 			;;
@@ -426,14 +420,8 @@ patch_enable ()
 		d3dx9-32bpp_Alpha_Channel)
 			enable_d3dx9_32bpp_Alpha_Channel="$2"
 			;;
-		d3dx9_36-BumpLuminance)
-			enable_d3dx9_36_BumpLuminance="$2"
-			;;
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
-			;;
-		d3dx9_36-D3DXCreateKeyframedAnimationSet)
-			enable_d3dx9_36_D3DXCreateKeyframedAnimationSet="$2"
 			;;
 		d3dx9_36-D3DXDisassembleShader)
 			enable_d3dx9_36_D3DXDisassembleShader="$2"
@@ -2265,23 +2253,6 @@ if test "$enable_comctl32_Listview_DrawItem" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset comctl32-alpha-bitmaps
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47018] Paint 32-bpp bitmaps with an alpha channel using GdiAlphaBlend
-# |
-# | Modified files:
-# |   *	dlls/comctl32/static.c
-# |
-if test "$enable_comctl32_alpha_bitmaps" -eq 1; then
-	patch_apply comctl32-alpha-bitmaps/0001-comctl32-Switch-to-using-a-structure-for-extra-stora.patch
-	patch_apply comctl32-alpha-bitmaps/0002-comctl32-Paint-32-bpp-bitmaps-with-an-alpha-channel-.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Switch to using a structure for extra storage.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "comctl32: Paint 32-bpp bitmaps with an alpha channel using GdiAlphaBlend.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset comctl32-rebar-capture
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2584,20 +2555,6 @@ if test "$enable_d3dx9_32bpp_Alpha_Channel" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset d3dx9_36-BumpLuminance
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/surface.c, dlls/d3dx9_36/util.c
-# |
-if test "$enable_d3dx9_36_BumpLuminance" -eq 1; then
-	patch_apply d3dx9_36-BumpLuminance/0001-d3dx9_36-Recognize-bump-luminance-X8L8V8U8-when-load.patch
-	patch_apply d3dx9_36-BumpLuminance/0002-d3dx9_36-Add-format-description-for-X8L8V8U8-for-for.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Recognize bump luminance X8L8V8U8 when loading dds file.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add format description for X8L8V8U8 for format conversions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset d3dx9_36-CloneEffect
 # |
 # | This patchset fixes the following Wine bugs:
@@ -2610,21 +2567,6 @@ if test "$enable_d3dx9_36_CloneEffect" -eq 1; then
 	patch_apply d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "d3dx9_36: Improve stub for ID3DXEffectImpl_CloneEffect.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-D3DXCreateKeyframedAnimationSet
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45481] d3dx9_36: Implement D3DXCreateKeyframedAnimationSet
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/animation.c, dlls/d3dx9_36/tests/mesh.c
-# |
-if test "$enable_d3dx9_36_D3DXCreateKeyframedAnimationSet" -eq 1; then
-	patch_apply d3dx9_36-D3DXCreateKeyframedAnimationSet/0001-d3dx9_36-Implement-D3DXCreateKeyframedAnimationSet.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Implement D3DXCreateKeyframedAnimationSet.", 1 },';
 	) >> "$patchlist"
 fi
 

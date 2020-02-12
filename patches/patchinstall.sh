@@ -102,6 +102,7 @@ patch_enable_all ()
 	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d3d11_Deferred_Context="$1"
 	enable_d3dx9_32bpp_Alpha_Channel="$1"
+	enable_d3dx9_36_BumpLuminance="$1"
 	enable_d3dx9_36_CloneEffect="$1"
 	enable_d3dx9_36_D3DXDisassembleShader="$1"
 	enable_d3dx9_36_D3DXOptimizeVertices="$1"
@@ -419,6 +420,9 @@ patch_enable ()
 			;;
 		d3dx9-32bpp_Alpha_Channel)
 			enable_d3dx9_32bpp_Alpha_Channel="$2"
+			;;
+		d3dx9_36-BumpLuminance)
+			enable_d3dx9_36_BumpLuminance="$2"
 			;;
 		d3dx9_36-CloneEffect)
 			enable_d3dx9_36_CloneEffect="$2"
@@ -2552,6 +2556,18 @@ if test "$enable_d3dx9_32bpp_Alpha_Channel" -eq 1; then
 	patch_apply d3dx9-32bpp_Alpha_Channel/0001-d3dx9-Return-D3DFMT_A8R8G8B8-in-D3DXGetImageInfoFrom.patch
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9: Return D3DFMT_A8R8G8B8 in D3DXGetImageInfoFromFileInMemory for 32 bpp BMP with alpha.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset d3dx9_36-BumpLuminance
+# |
+# | Modified files:
+# |   *	dlls/d3dx9_36/util.c
+# |
+if test "$enable_d3dx9_36_BumpLuminance" -eq 1; then
+	patch_apply d3dx9_36-BumpLuminance/0002-d3dx9_36-Add-format-description-for-X8L8V8U8-for-for.patch
+	(
+		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add format description for X8L8V8U8 for format conversions.", 1 },';
 	) >> "$patchlist"
 fi
 

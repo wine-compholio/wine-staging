@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d1373e8aae1b15b96e847488e4b6617789f8fb62"
+	echo "3d57cc2863f2f9a5ace40d29317b3ff4357fd119"
 }
 
 # Show version information
@@ -2087,19 +2087,14 @@ fi
 # |   *	[#40649] activeds: Implement ADsOpenObject.
 # |
 # | Modified files:
-# |   *	dlls/activeds/Makefile.in, dlls/activeds/activeds_main.c, dlls/adsldp/Makefile.in, dlls/adsldp/adsldp.c,
-# | 	dlls/adsldp/adsldp.idl, dlls/adsldp/adsldp.rgs, dlls/adsldp/rsrc.rc, dlls/adsldp/tests/Makefile.in,
-# | 	dlls/adsldp/tests/ldap.c, dlls/adsldp/tests/sysinfo.c, include/Makefile.in, include/adserr.h, include/iads.idl
+# |   *	dlls/adsldp/Makefile.in, dlls/adsldp/adsldp.c, dlls/adsldp/adsldp.idl, dlls/adsldp/adsldp.rgs, dlls/adsldp/rsrc.rc,
+# | 	dlls/adsldp/tests/Makefile.in, dlls/adsldp/tests/ldap.c, dlls/adsldp/tests/sysinfo.c
 # |
 if test "$enable_activeds_ADsOpenObject" -eq 1; then
-	patch_apply activeds-ADsOpenObject/0001-include-Add-adserr.h.patch
-	patch_apply activeds-ADsOpenObject/0002-activeds-Implement-ADsOpenObject.patch
 	patch_apply activeds-ADsOpenObject/0003-adsldp-Add-LDAPNamespace-stubs.patch
 	patch_apply activeds-ADsOpenObject/0004-adsldp-Add-IADsOpenDSObject-stubs.patch
 	patch_apply activeds-ADsOpenObject/0005-adsldp-tests-Add-some-tests-for-LDAPNamespace.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "include: Add adserr.h.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "activeds: Implement ADsOpenObject.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp: Add LDAPNamespace stubs.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp: Add IADsOpenDSObject stubs.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp/tests: Add some tests for LDAPNamespace.", 1 },';

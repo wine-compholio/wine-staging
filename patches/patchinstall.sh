@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3d57cc2863f2f9a5ace40d29317b3ff4357fd119"
+	echo "7332de64a5a204cc285bdc1f8768d3217103b7dd"
 }
 
 # Show version information
@@ -86,7 +86,6 @@ patch_enable_all ()
 	enable_Compiler_Warnings="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_activeds_ADsOpenObject="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_advapi32_Token_Integrity_Level="$1"
@@ -254,7 +253,6 @@ patch_enable_all ()
 	enable_server_device_manager_destroy="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
-	enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
 	enable_shell32_ACE_Viewer="$1"
 	enable_shell32_Context_Menu="$1"
@@ -372,9 +370,6 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
-			;;
-		activeds-ADsOpenObject)
-			enable_activeds_ADsOpenObject="$2"
 			;;
 		advapi32-CreateRestrictedToken)
 			enable_advapi32_CreateRestrictedToken="$2"
@@ -876,9 +871,6 @@ patch_enable ()
 			;;
 		setupapi-SPFILENOTIFY_FILEINCABINET)
 			enable_setupapi_SPFILENOTIFY_FILEINCABINET="$2"
-			;;
-		setupapi-SP_COPY_IN_USE_NEEDS_REBOOT)
-			enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT="$2"
 			;;
 		shdocvw-ParseURLFromOutsideSource_Tests)
 			enable_shdocvw_ParseURLFromOutsideSource_Tests="$2"
@@ -2078,26 +2070,6 @@ if test "$enable_Staging" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset activeds-ADsOpenObject
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40649] activeds: Implement ADsOpenObject.
-# |
-# | Modified files:
-# |   *	dlls/adsldp/Makefile.in, dlls/adsldp/adsldp.c, dlls/adsldp/adsldp.idl, dlls/adsldp/adsldp.rgs, dlls/adsldp/rsrc.rc,
-# | 	dlls/adsldp/tests/Makefile.in, dlls/adsldp/tests/ldap.c, dlls/adsldp/tests/sysinfo.c
-# |
-if test "$enable_activeds_ADsOpenObject" -eq 1; then
-	patch_apply activeds-ADsOpenObject/0003-adsldp-Add-LDAPNamespace-stubs.patch
-	patch_apply activeds-ADsOpenObject/0004-adsldp-Add-IADsOpenDSObject-stubs.patch
-	patch_apply activeds-ADsOpenObject/0005-adsldp-tests-Add-some-tests-for-LDAPNamespace.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp: Add LDAPNamespace stubs.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp: Add IADsOpenDSObject stubs.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "adsldp/tests: Add some tests for LDAPNamespace.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5552,21 +5524,6 @@ if test "$enable_setupapi_SPFILENOTIFY_FILEINCABINET" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "setupapi: Fix CabinetName passed to SPFILENOTIFY_CABINETINFO handler.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "setupapi/tests: Add tests for cabinet name passed to SPFILENOTIFY_FILEEXTRACTED.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "setupapi: Fix parameters of SPFILENOTIFY_FILEINCABINET handler.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset setupapi-SP_COPY_IN_USE_NEEDS_REBOOT
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36059] Implement support for SP_COPY_IN_USE_NEEDS_REBOOT in do_file_copyW
-# |
-# | Modified files:
-# |   *	dlls/setupapi/queue.c
-# |
-if test "$enable_setupapi_SP_COPY_IN_USE_NEEDS_REBOOT" -eq 1; then
-	patch_apply setupapi-SP_COPY_IN_USE_NEEDS_REBOOT/0001-setupapi-Implement-SP_COPY_IN_USE_NEEDS_REBOOT.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "setupapi: Implement SP_COPY_IN_USE_NEEDS_REBOOT.", 1 },';
 	) >> "$patchlist"
 fi
 

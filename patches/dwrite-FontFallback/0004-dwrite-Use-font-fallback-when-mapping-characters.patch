@@ -1,20 +1,20 @@
-From add69d1d24330592891222674844dccf104d6d73 Mon Sep 17 00:00:00 2001
+From 593683720fbef744c46cdc9051eb9703d4279819 Mon Sep 17 00:00:00 2001
 From: Lucian Poston <lucianposton@pm.me>
 Date: Mon, 21 May 2018 18:13:00 -0700
-Subject: [PATCH 4/6] dwrite: Use font fallback when mapping characters
+Subject: [PATCH] dwrite: Use font fallback when mapping characters
 
 Signed-off-by: Lucian Poston <lucianposton@pm.me>
 ---
- dlls/dwrite/analyzer.c     | 77 +++++++++++++++++++++++-------
+ dlls/dwrite/analyzer.c     | 77 +++++++++++++++++++++++++++++---------
  dlls/dwrite/layout.c       |  6 +++
- dlls/dwrite/tests/layout.c | 97 +++++++++++++-------------------------
- 3 files changed, 98 insertions(+), 82 deletions(-)
+ dlls/dwrite/tests/layout.c | 70 +++++++++-------------------------
+ 3 files changed, 83 insertions(+), 70 deletions(-)
 
 diff --git a/dlls/dwrite/analyzer.c b/dlls/dwrite/analyzer.c
-index 8d553c6d56..21da783fe6 100644
+index a418081d491..06a3934d229 100644
 --- a/dlls/dwrite/analyzer.c
 +++ b/dlls/dwrite/analyzer.c
-@@ -2078,6 +2078,7 @@ static HRESULT fallback_get_fallback_font(struct dwrite_fontfallback *fallback,
+@@ -2053,6 +2053,7 @@ static HRESULT fallback_get_fallback_font(struct dwrite_fontfallback *fallback,
          IDWriteFont **mapped_font)
  {
      const struct fallback_mapping *mapping;
@@ -22,7 +22,7 @@ index 8d553c6d56..21da783fe6 100644
      HRESULT hr;
      UINT32 i;
  
-@@ -2089,9 +2090,15 @@ static HRESULT fallback_get_fallback_font(struct dwrite_fontfallback *fallback,
+@@ -2064,9 +2065,15 @@ static HRESULT fallback_get_fallback_font(struct dwrite_fontfallback *fallback,
          return E_FAIL;
      }
  
@@ -39,7 +39,7 @@ index 8d553c6d56..21da783fe6 100644
                  weight, style, stretch, mapped_font);
          if (hr == S_OK) {
              TRACE("Created fallback font using family %s.\n", debugstr_w(mapping->families[i]));
-@@ -2148,32 +2155,66 @@ static HRESULT WINAPI fontfallback_MapCharacters(IDWriteFontFallback *iface, IDW
+@@ -2123,32 +2130,66 @@ static HRESULT WINAPI fontfallback_MapCharacters(IDWriteFontFallback1 *iface, ID
  
      if (basefamily && *basefamily) {
          hr = create_matching_font(basecollection, basefamily, weight, style, stretch, ret_font);
@@ -124,10 +124,10 @@ index 8d553c6d56..21da783fe6 100644
      heap_free(buff);
      return hr;
 diff --git a/dlls/dwrite/layout.c b/dlls/dwrite/layout.c
-index 65e0a57678..df3f3beabb 100644
+index 76ea23ba66b..da1261f3dc8 100644
 --- a/dlls/dwrite/layout.c
 +++ b/dlls/dwrite/layout.c
-@@ -878,6 +878,12 @@ static HRESULT layout_resolve_fonts(struct dwrite_textlayout *layout)
+@@ -882,6 +882,12 @@ static HRESULT layout_resolve_fonts(struct dwrite_textlayout *layout)
                  goto fatal;
              }
  
@@ -141,10 +141,10 @@ index 65e0a57678..df3f3beabb 100644
              IDWriteFont_Release(font);
              if (FAILED(hr)) {
 diff --git a/dlls/dwrite/tests/layout.c b/dlls/dwrite/tests/layout.c
-index c8f3f5a00f..430bb1f0eb 100644
+index 68a6413b2e8..65bbaa71d93 100644
 --- a/dlls/dwrite/tests/layout.c
 +++ b/dlls/dwrite/tests/layout.c
-@@ -3310,35 +3310,23 @@ todo_wine
+@@ -3302,35 +3302,23 @@ todo_wine
  
      count = 0;
      hr = IDWriteTextLayout_GetClusterMetrics(layout, clusters, 4, &count);
@@ -180,7 +180,7 @@ index c8f3f5a00f..430bb1f0eb 100644
      ok(metrics.lineCount == 1, "got %u\n", metrics.lineCount);
  
      IDWriteTextLayout_Release(layout);
-@@ -4637,16 +4625,13 @@ static void test_MapCharacters(void)
+@@ -4624,12 +4612,9 @@ static void test_MapCharacters(void)
      font = NULL;
      hr = IDWriteFontFallback_MapCharacters(fallback, &analysissource, 0, 1, NULL, NULL, DWRITE_FONT_WEIGHT_NORMAL,
          DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, &mappedlength, &font, &scale);
@@ -191,16 +191,9 @@ index c8f3f5a00f..430bb1f0eb 100644
      ok(scale == 1.0f, "got %f\n", scale);
 -todo_wine
      ok(font != NULL, "got %p\n", font);
--if (font) {
--    IDWriteFont_Release(font);
--}
-+    if (font) {
-+        IDWriteFont_Release(font);
-+    }
-     /* same latin text, full length */
-     g_source = strW;
-     mappedlength = 0;
-@@ -4654,16 +4639,13 @@ if (font) {
+ if (font) {
+     IDWriteFont_Release(font);
+@@ -4641,16 +4626,13 @@ if (font) {
      font = NULL;
      hr = IDWriteFontFallback_MapCharacters(fallback, &analysissource, 0, 3, NULL, NULL, DWRITE_FONT_WEIGHT_NORMAL,
          DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, &mappedlength, &font, &scale);
@@ -220,7 +213,7 @@ index c8f3f5a00f..430bb1f0eb 100644
      /* string 'a\x3058b' */
      g_source = str2W;
      mappedlength = 0;
-@@ -4671,38 +4653,32 @@ if (font) {
+@@ -4658,38 +4640,32 @@ if (font) {
      font = NULL;
      hr = IDWriteFontFallback_MapCharacters(fallback, &analysissource, 0, 3, NULL, NULL, DWRITE_FONT_WEIGHT_NORMAL,
          DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, &mappedlength, &font, &scale);
@@ -270,7 +263,7 @@ index c8f3f5a00f..430bb1f0eb 100644
      /* Try with explicit collection, Tahoma will be forced. */
      /* 1. Latin part */
      g_source = str2W;
-@@ -4725,7 +4701,10 @@ if (font) {
+@@ -4712,7 +4688,10 @@ if (font) {
      IDWriteLocalizedStrings_Release(strings);
      IDWriteFont_Release(font);
  
@@ -282,37 +275,15 @@ index c8f3f5a00f..430bb1f0eb 100644
      g_source = str2W;
      mappedlength = 0;
      scale = 0.0f;
-@@ -4735,17 +4714,19 @@ if (font) {
+@@ -4722,7 +4701,6 @@ if (font) {
      ok(hr == S_OK, "got 0x%08x\n", hr);
      ok(mappedlength == 1, "got %u\n", mappedlength);
      ok(scale == 1.0f, "got %f\n", scale);
 -    ok(font != NULL, "got %p\n", font);
  
--    exists = FALSE;
--    hr = IDWriteFont_GetInformationalStrings(font, DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, &strings, &exists);
--    ok(hr == S_OK && exists, "got 0x%08x, exists %d\n", hr, exists);
--    hr = IDWriteLocalizedStrings_GetString(strings, 0, buffW, ARRAY_SIZE(buffW));
--    ok(hr == S_OK, "got 0x%08x\n", hr);
--todo_wine
--    ok(lstrcmpW(buffW, tahomaW), "%s\n", wine_dbgstr_w(buffW));
--    IDWriteLocalizedStrings_Release(strings);
--    IDWriteFont_Release(font);
-+    if (!font) {
-+        skip("Missing system font for Japanese.\n");
-+    } else {
-+        exists = FALSE;
-+        hr = IDWriteFont_GetInformationalStrings(font, DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, &strings, &exists);
-+        ok(hr == S_OK && exists, "got 0x%08x, exists %d\n", hr, exists);
-+        hr = IDWriteLocalizedStrings_GetString(strings, 0, buffW, ARRAY_SIZE(buffW));
-+        ok(hr == S_OK, "got 0x%08x\n", hr);
-+        ok(lstrcmpW(buffW, tahomaW), "%s\n", wine_dbgstr_w(buffW));
-+        IDWriteLocalizedStrings_Release(strings);
-+        IDWriteFont_Release(font);
-+    }
- 
-     IDWriteFontFallback_Release(fallback);
-     IDWriteFactory2_Release(factory2);
-@@ -5708,34 +5689,22 @@ static void test_GetMetrics_with_custom_fontcollection(void)
+     exists = FALSE;
+     hr = IDWriteFont_GetInformationalStrings(font, DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, &strings, &exists);
+@@ -5916,34 +5894,22 @@ static void test_GetMetrics_with_custom_fontcollection(void)
      ok(hr == S_OK, "got 0x%08x\n", hr);
      count = 9999;
      hr = IDWriteTextLayout_GetClusterMetrics(layout, clusters, 4, &count);
@@ -348,5 +319,5 @@ index c8f3f5a00f..430bb1f0eb 100644
      IDWriteTextLayout_Release(layout);
  
 -- 
-2.18.0
+2.17.1
 

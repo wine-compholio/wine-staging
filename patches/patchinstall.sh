@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7332de64a5a204cc285bdc1f8768d3217103b7dd"
+	echo "85bd94f8705115ac0c35eac6ff7e2f3e59be924e"
 }
 
 # Show version information
@@ -127,7 +127,6 @@ patch_enable_all ()
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
 	enable_directmanipulation_new_dll="$1"
-	enable_dmime_PChannel_range="$1"
 	enable_dsdmo_new_dll="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -493,9 +492,6 @@ patch_enable ()
 			;;
 		directmanipulation-new-dll)
 			enable_directmanipulation_new_dll="$2"
-			;;
-		dmime-PChannel-range)
-			enable_dmime_PChannel_range="$2"
 			;;
 		dsdmo-new-dll)
 			enable_dsdmo_new_dll="$2"
@@ -2987,23 +2983,6 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support IDirectManipulationContent in IDirectManipulationPrimaryContent interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success in some functions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dmime-PChannel-range
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#17766] Empire Earth crashes on start without native directmusic
-# |   *	[#24740] Trinklet Supreme crashes on startup
-# |   *	[#31562] Stop crash when using lithtech game engine.
-# |
-# | Modified files:
-# |   *	dlls/dmime/performance.c, dlls/dmime/tests/performance.c
-# |
-if test "$enable_dmime_PChannel_range" -eq 1; then
-	patch_apply dmime-PChannel-range/0003-dmime-Implement-IDirectMusicPerformance8_PChannelInf.patch
-	(
-		printf '%s\n' '+    { "Michael Stefaniuc", "dmime: Implement IDirectMusicPerformance8_PChannelInfo().", 1 },';
 	) >> "$patchlist"
 fi
 

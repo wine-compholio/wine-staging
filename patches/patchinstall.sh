@@ -3703,6 +3703,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	patch_apply eventfd_synchronization/0086-ntdll-Check-the-APC-fd-first.patch
 	patch_apply eventfd_synchronization/0087-ntdll-esync-Lock-accessing-the-shm_addrs-array.patch
 	patch_apply eventfd_synchronization/0088-ntdll-Get-rid-of-the-per-event-spinlock-for-auto-res.patch
+	patch_apply eventfd_synchronization/0089-ntdll-server-Abandon-esync-mutexes-on-thread-exit.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "configure: Check for sys/eventfd.h, ppoll(), and shm_open().", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "server: Create server objects for eventfd-based synchronization objects.", 1 },';
@@ -3792,6 +3793,7 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Check the APC fd first.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll/esync: Lock accessing the shm_addrs array.", 1 },';
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Get rid of the per-event spinlock for auto-reset events.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll, server: Abandon esync mutexes on thread exit.", 1 },';
 	) >> "$patchlist"
 fi
 

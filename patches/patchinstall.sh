@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "85bd94f8705115ac0c35eac6ff7e2f3e59be924e"
+	echo "be2b0b1cec5843f0145f376316d6c28507559910"
 }
 
 # Show version information
@@ -212,7 +212,6 @@ patch_enable_all ()
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_User_Shared_Data="$1"
-	enable_ntdll_User_shared_data_fields="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
@@ -747,9 +746,6 @@ patch_enable ()
 			;;
 		ntdll-User_Shared_Data)
 			enable_ntdll_User_Shared_Data="$2"
-			;;
-		ntdll-User_shared_data_fields)
-			enable_ntdll_User_shared_data_fields="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -4922,24 +4918,6 @@ if test "$enable_ntdll_ThreadHideFromDebugger" -eq 1; then
 	patch_apply ntdll-ThreadHideFromDebugger/0001-ntdll-Stub-NtQueryInformationThread-ThreadHideFromDe.patch
 	(
 		printf '%s\n' '+    { "David Torok", "ntdll: Stub NtQueryInformationThread(ThreadHideFromDebugger).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-User_shared_data_fields
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48386] Some CPU features are not reported for Intel CPU (Detroit: Become Human is affected)
-# |   *	[#48387] User shared data area should have NumberOfPhysicalPages field filled in (used by Detroit: Become Human)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/tests/virtual.c, dlls/ntdll/thread.c
-# |
-if test "$enable_ntdll_User_shared_data_fields" -eq 1; then
-	patch_apply ntdll-User_shared_data_fields/0001-ntdll-Fill-NumberOfPhysicalPages-field-in-user-share.patch
-	patch_apply ntdll-User_shared_data_fields/0002-ntdll-Detect-more-processor-features-on-Intel-CPU.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fill NumberOfPhysicalPages field in user shared data area.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Detect more processor features on Intel CPU.", 1 },';
 	) >> "$patchlist"
 fi
 

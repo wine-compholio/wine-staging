@@ -1,4 +1,4 @@
-From 08fecb796ebe242402b94e46d20e4798f1983cff Mon Sep 17 00:00:00 2001
+From aefe1725320bd3053c7c51020b92cc9dfc22c7b4 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 26 Nov 2014 10:46:09 +0100
 Subject: [PATCH] ntdll: Move code to update user shared data into a separate
@@ -6,14 +6,14 @@ Subject: [PATCH] ntdll: Move code to update user shared data into a separate
 
 ---
  dlls/ntdll/ntdll.spec |  3 +++
- dlls/ntdll/thread.c   | 22 ++++++++++++++++++----
- 2 files changed, 21 insertions(+), 4 deletions(-)
+ dlls/ntdll/thread.c   | 28 +++++++++++++++++++++-------
+ 2 files changed, 24 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 5057e2b07..8ed2a4100 100644
+index f6cfe4067..933c8e798 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1575,3 +1575,6 @@
+@@ -1583,3 +1583,6 @@
  # Filesystem
  @ cdecl wine_nt_to_unix_file_name(ptr ptr long long)
  @ cdecl wine_unix_to_nt_file_name(ptr ptr)
@@ -21,10 +21,10 @@ index 5057e2b07..8ed2a4100 100644
 +# User shared data
 +@ cdecl __wine_user_shared_data()
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index d010c0181..01b58ebea 100644
+index 843df8905..a02f609e2 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -274,7 +274,6 @@ TEB *thread_init(void)
+@@ -275,7 +275,6 @@ TEB *thread_init(void)
      TEB *teb;
      void *addr;
      SIZE_T size;
@@ -32,7 +32,7 @@ index d010c0181..01b58ebea 100644
      NTSTATUS status;
      struct ntdll_thread_data *thread_data;
  
-@@ -349,7 +348,23 @@ TEB *thread_init(void)
+@@ -350,7 +349,26 @@ TEB *thread_init(void)
      debug_init();
      set_process_name( __wine_main_argc, __wine_main_argv );
  
@@ -40,6 +40,9 @@ index d010c0181..01b58ebea 100644
 +	/* initialize user_shared_data */
 +    __wine_user_shared_data();
 +    fill_cpu_info();
++
++    virtual_get_system_info( &sbi );
++    user_shared_data->NumberOfPhysicalPages = sbi.MmNumberOfPhysicalPages;
 +
 +    return teb;
 +}
@@ -57,17 +60,20 @@ index d010c0181..01b58ebea 100644
      NtQuerySystemTime( &now );
      user_shared_data->SystemTime.LowPart = now.u.LowPart;
      user_shared_data->SystemTime.High1Time = user_shared_data->SystemTime.High2Time = now.u.HighPart;
-@@ -357,9 +372,8 @@ TEB *thread_init(void)
+@@ -358,12 +376,8 @@ TEB *thread_init(void)
      user_shared_data->u.TickCount.High2Time = user_shared_data->u.TickCount.High1Time;
      user_shared_data->TickCountLowDeprecated = user_shared_data->u.TickCount.LowPart;
      user_shared_data->TickCountMultiplier = 1 << 24;
 -    fill_cpu_info();
  
+-    virtual_get_system_info( &sbi );
+-    user_shared_data->NumberOfPhysicalPages = sbi.MmNumberOfPhysicalPages;
+-
 -    return teb;
 +    return (BYTE *)user_shared_data;
  }
  
  BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi)
 -- 
-2.23.0
+2.25.0
 

@@ -1,4 +1,4 @@
-From 935b985d2e4fab7402030c71ff1a6ba0abdd9874 Mon Sep 17 00:00:00 2001
+From 95a95d09125707b24f8728c545c7f5b706bafe1c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 22 Feb 2015 01:25:20 +0100
 Subject: [PATCH] dxva2: Initial implementation of MPEG2 decoder using vaapi
@@ -22,10 +22,10 @@ Subject: [PATCH] dxva2: Initial implementation of MPEG2 decoder using vaapi
  create mode 100644 dlls/dxva2/vaapi.c
 
 diff --git a/configure.ac b/configure.ac
-index 58e5211e9bc..53aea6188ca 100644
+index 39cef46e7..bb89c7ee0 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -110,6 +110,8 @@ AC_ARG_WITH(xslt,      AS_HELP_STRING([--without-xslt],[do not use XSLT]))
+@@ -111,6 +111,8 @@ AC_ARG_WITH(xslt,      AS_HELP_STRING([--without-xslt],[do not use XSLT]))
  AC_ARG_WITH(xxf86vm,   AS_HELP_STRING([--without-xxf86vm],[do not use XFree video mode extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_xf86vmode_h=no; ac_cv_header_X11_extensions_xf86vmproto_h=no; fi])
  AC_ARG_WITH(zlib,      AS_HELP_STRING([--without-zlib],[do not use Zlib (data compression)]))
@@ -34,7 +34,7 @@ index 58e5211e9bc..53aea6188ca 100644
  
  AC_ARG_WITH(wine-tools,AS_HELP_STRING([--with-wine-tools=DIR],[use Wine tools from directory DIR]))
  AC_ARG_WITH(wine64,    AS_HELP_STRING([--with-wine64=DIR],[use the 64-bit Wine in DIR for a Wow64 build]))
-@@ -1292,6 +1294,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
+@@ -1296,6 +1298,20 @@ This probably prevents linking to OpenGL. Try deleting the file and restarting c
      WINE_WARNING_WITH(opengl,[test -n "$opengl_msg"],[$opengl_msg
  OpenGL and Direct3D won't be supported.])
  
@@ -56,7 +56,7 @@ index 58e5211e9bc..53aea6188ca 100644
  else
      X_CFLAGS=""
 diff --git a/dlls/dxva2/Makefile.in b/dlls/dxva2/Makefile.in
-index e4c90b5231e..b42cfae525e 100644
+index e4c90b523..b42cfae52 100644
 --- a/dlls/dxva2/Makefile.in
 +++ b/dlls/dxva2/Makefile.in
 @@ -1,10 +1,16 @@
@@ -81,7 +81,7 @@ index e4c90b5231e..b42cfae525e 100644
 +	videoservices.c
 diff --git a/dlls/dxva2/backend.idl b/dlls/dxva2/backend.idl
 new file mode 100644
-index 00000000000..8d488351ff2
+index 000000000..8d488351f
 --- /dev/null
 +++ b/dlls/dxva2/backend.idl
 @@ -0,0 +1,96 @@
@@ -182,7 +182,7 @@ index 00000000000..8d488351ff2
 +        [out] IWineVideoDecoder **decoder);
 +}
 diff --git a/dlls/dxva2/dxva2_private.h b/dlls/dxva2/dxva2_private.h
-index f0068b68891..f51863739b0 100644
+index f0068b688..f51863739 100644
 --- a/dlls/dxva2/dxva2_private.h
 +++ b/dlls/dxva2/dxva2_private.h
 @@ -1,5 +1,5 @@
@@ -317,7 +317,7 @@ index f0068b68891..f51863739b0 100644
 +#endif /* HAVE_VAAPI */
 diff --git a/dlls/dxva2/genericdecoder.c b/dlls/dxva2/genericdecoder.c
 new file mode 100644
-index 00000000000..3903d6b0b46
+index 000000000..3903d6b0b
 --- /dev/null
 +++ b/dlls/dxva2/genericdecoder.c
 @@ -0,0 +1,432 @@
@@ -754,7 +754,7 @@ index 00000000000..3903d6b0b46
 +    return S_OK;
 +}
 diff --git a/dlls/dxva2/main.c b/dlls/dxva2/main.c
-index 0382b5fb00a..3006f175b7f 100644
+index 0382b5fb0..3006f175b 100644
 --- a/dlls/dxva2/main.c
 +++ b/dlls/dxva2/main.c
 @@ -32,6 +32,8 @@
@@ -848,7 +848,7 @@ index 0382b5fb00a..3006f175b7f 100644
  
      return TRUE;
 diff --git a/dlls/dxva2/tests/dxva2.c b/dlls/dxva2/tests/dxva2.c
-index dcbb990ee5c..c28be4d8e3c 100644
+index dcbb990ee..c28be4d8e 100644
 --- a/dlls/dxva2/tests/dxva2.c
 +++ b/dlls/dxva2/tests/dxva2.c
 @@ -1,7 +1,7 @@
@@ -929,7 +929,7 @@ index dcbb990ee5c..c28be4d8e3c 100644
      IDirectXVideoDecoderService_Release(service);
 diff --git a/dlls/dxva2/vaapi-mpeg2.c b/dlls/dxva2/vaapi-mpeg2.c
 new file mode 100644
-index 00000000000..7b7f61db755
+index 000000000..7b7f61db7
 --- /dev/null
 +++ b/dlls/dxva2/vaapi-mpeg2.c
 @@ -0,0 +1,753 @@
@@ -1688,7 +1688,7 @@ index 00000000000..7b7f61db755
 +#endif /* HAVE_VAAPI */
 diff --git a/dlls/dxva2/vaapi.c b/dlls/dxva2/vaapi.c
 new file mode 100644
-index 00000000000..80e63bf38d9
+index 000000000..e2a64065e
 --- /dev/null
 +++ b/dlls/dxva2/vaapi.c
 @@ -0,0 +1,767 @@
@@ -2306,9 +2306,9 @@ index 00000000000..80e63bf38d9
 +        return E_OUTOFMEMORY;
 +
 +    /* TODO: Query decoder instead of using hardcoded values */
-+    memcpy(&config->guidConfigBitstreamEncryption, &DXVA_NoEncrypt, sizeof(GUID));
-+    memcpy(&config->guidConfigMBcontrolEncryption, &DXVA_NoEncrypt, sizeof(GUID));
-+    memcpy(&config->guidConfigResidDiffEncryption, &DXVA_NoEncrypt, sizeof(GUID));
++    memcpy(&config->guidConfigBitstreamEncryption, &DXVA2_NoEncrypt, sizeof(GUID));
++    memcpy(&config->guidConfigMBcontrolEncryption, &DXVA2_NoEncrypt, sizeof(GUID));
++    memcpy(&config->guidConfigResidDiffEncryption, &DXVA2_NoEncrypt, sizeof(GUID));
 +
 +    config->ConfigBitstreamRaw             = 1;
 +    config->ConfigMBcontrolRasterOrder     = is_h264_codec(guid) ? 0 : 1;
@@ -2460,7 +2460,7 @@ index 00000000000..80e63bf38d9
 +
 +#endif /* HAVE_VAAPI */
 diff --git a/dlls/dxva2/videoservices.c b/dlls/dxva2/videoservices.c
-index 46e431a7f29..84222dce558 100644
+index 11cba1441..84222dce5 100644
 --- a/dlls/dxva2/videoservices.c
 +++ b/dlls/dxva2/videoservices.c
 @@ -1,5 +1,5 @@
@@ -2540,9 +2540,9 @@ index 46e431a7f29..84222dce558 100644
 -
 -    /* TODO: Query decoder instead of using hardcoded values */
 -
--    memcpy(&config->guidConfigBitstreamEncryption, &DXVA_NoEncrypt, sizeof(GUID));
--    memcpy(&config->guidConfigMBcontrolEncryption, &DXVA_NoEncrypt, sizeof(GUID));
--    memcpy(&config->guidConfigResidDiffEncryption, &DXVA_NoEncrypt, sizeof(GUID));
+-    memcpy(&config->guidConfigBitstreamEncryption, &DXVA2_NoEncrypt, sizeof(GUID));
+-    memcpy(&config->guidConfigMBcontrolEncryption, &DXVA2_NoEncrypt, sizeof(GUID));
+-    memcpy(&config->guidConfigResidDiffEncryption, &DXVA2_NoEncrypt, sizeof(GUID));
 -
 -    config->ConfigBitstreamRaw             = 1;
 -    config->ConfigMBcontrolRasterOrder     = is_h264_codec(guid) ? 0 : 1;
@@ -2637,5 +2637,5 @@ index 46e431a7f29..84222dce558 100644
          return E_NOINTERFACE;
      }
 -- 
-2.20.1
+2.25.0
 

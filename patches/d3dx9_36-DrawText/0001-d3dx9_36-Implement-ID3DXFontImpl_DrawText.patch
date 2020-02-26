@@ -1,4 +1,4 @@
-From b1655e88c9c7b4b87ae87d06261ce3db4fac1432 Mon Sep 17 00:00:00 2001
+From 4693069d7c35e2c186943b2394ab4a657253c5e1 Mon Sep 17 00:00:00 2001
 From: Christian Costa <titan.costa@gmail.com>
 Date: Sun, 26 May 2013 19:42:08 +0200
 Subject: [PATCH] d3dx9_36: Implement ID3DXFontImpl_DrawText.
@@ -17,14 +17,14 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 * Replace code to convert text from ascii to widechar
 * Strip terminating NULL chars before drawing text
 ---
- dlls/d3dx9_36/font.c | 229 ++++++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 210 insertions(+), 19 deletions(-)
+ dlls/d3dx9_36/font.c | 214 +++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 195 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/d3dx9_36/font.c b/dlls/d3dx9_36/font.c
-index 5522dea..916ce4c 100644
+index cb09af22f57..89a60c9baf1 100644
 --- a/dlls/d3dx9_36/font.c
 +++ b/dlls/d3dx9_36/font.c
-@@ -35,8 +35,29 @@ struct d3dx_font
+@@ -32,6 +32,12 @@ struct d3dx_font
  
      HDC hdc;
      HFONT hfont;
@@ -36,25 +36,8 @@ index 5522dea..916ce4c 100644
 +    BYTE *bits;
  };
  
-+/* Returns the smallest power of 2 which is greater than or equal to num */
-+static UINT make_pow2(UINT num)
-+{
-+    UINT result = 1;
-+
-+    /* In the unlikely event somebody passes a large value, make sure we don't enter an infinite loop */
-+    if (num >= 0x80000000)
-+        return 0x80000000;
-+
-+    while (result < num)
-+        result <<= 1;
-+
-+    return result;
-+}
-+
  static inline struct d3dx_font *impl_from_ID3DXFont(ID3DXFont *iface)
- {
-     return CONTAINING_RECORD(iface, struct d3dx_font, ID3DXFont_iface);
-@@ -63,19 +84,27 @@ static HRESULT WINAPI ID3DXFontImpl_QueryInterface(ID3DXFont *iface, REFIID riid
+@@ -60,19 +66,27 @@ static HRESULT WINAPI ID3DXFontImpl_QueryInterface(ID3DXFont *iface, REFIID riid
  static ULONG WINAPI ID3DXFontImpl_AddRef(ID3DXFont *iface)
  {
      struct d3dx_font *This = impl_from_ID3DXFont(iface);
@@ -85,7 +68,7 @@ index 5522dea..916ce4c 100644
          DeleteObject(This->hfont);
          DeleteDC(This->hdc);
          IDirect3DDevice9_Release(This->device);
-@@ -178,17 +207,170 @@ static HRESULT WINAPI ID3DXFontImpl_PreloadTextW(ID3DXFont *iface, const WCHAR *
+@@ -175,17 +189,170 @@ static HRESULT WINAPI ID3DXFontImpl_PreloadTextW(ID3DXFont *iface, const WCHAR *
  static INT WINAPI ID3DXFontImpl_DrawTextA(ID3DXFont *iface, ID3DXSprite *sprite,
          const char *string, INT count, RECT *rect, DWORD format, D3DCOLOR color)
  {
@@ -260,17 +243,17 @@ index 5522dea..916ce4c 100644
  }
  
  static HRESULT WINAPI ID3DXFontImpl_OnLostDevice(ID3DXFont *iface)
-@@ -302,46 +484,55 @@ HRESULT WINAPI D3DXCreateFontIndirectW(IDirect3DDevice9 *device, const D3DXFONT_
+@@ -298,46 +465,55 @@ HRESULT WINAPI D3DXCreateFontIndirectW(IDirect3DDevice9 *device, const D3DXFONT_
  
      TRACE("(%p, %p, %p)\n", device, desc, font);
  
 -    if( !device || !desc || !font ) return D3DERR_INVALIDCALL;
 +    if (!device || !desc || !font) return D3DERR_INVALIDCALL;
-+
-+    TRACE("desc: %d %d %d %d %d %d %d %d %d %s\n", desc->Height, desc->Width, desc->Weight, desc->MipLevels, desc->Italic,
-+            desc->CharSet, desc->OutputPrecision, desc->Quality, desc->PitchAndFamily, debugstr_w(desc->FaceName));
  
 -    /* the device MUST support D3DFMT_A8R8G8B8 */
++    TRACE("desc: %d %d %d %d %d %d %d %d %d %s\n", desc->Height, desc->Width, desc->Weight, desc->MipLevels, desc->Italic,
++            desc->CharSet, desc->OutputPrecision, desc->Quality, desc->PitchAndFamily, debugstr_w(desc->FaceName));
++
 +    /* The device MUST support D3DFMT_A8R8G8B8 */
      IDirect3DDevice9_GetDirect3D(device, &d3d);
      IDirect3DDevice9_GetCreationParameters(device, &cpars);
@@ -329,5 +312,5 @@ index 5522dea..916ce4c 100644
      return D3D_OK;
  }
 -- 
-1.9.1
+2.25.0
 

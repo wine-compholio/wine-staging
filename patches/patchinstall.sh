@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0e7392040c910403e3418b4670e4cc30037025ed"
+	echo "0f51b732e4eae54b13232e025d00f277d75f564b"
 }
 
 # Show version information
@@ -91,6 +91,7 @@ patch_enable_all ()
 	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
+	enable_bcrypt_ECDHSecretAgreement="$1"
 	enable_cmd_launch_association="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_rebar_capture="$1"
@@ -383,6 +384,9 @@ patch_enable ()
 			;;
 		atl-AtlAxDialogBox)
 			enable_atl_AtlAxDialogBox="$2"
+			;;
+		bcrypt-ECDHSecretAgreement)
+			enable_bcrypt_ECDHSecretAgreement="$2"
 			;;
 		cmd-launch-association)
 			enable_cmd_launch_association="$2"
@@ -2180,6 +2184,25 @@ if test "$enable_atl_AtlAxDialogBox" -eq 1; then
 	patch_apply atl-AtlAxDialogBox/0001-atl-Implement-AtlAxDialogBox-A-W.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "atl: Implement AtlAxDialogBox[A,W].", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset bcrypt-ECDHSecretAgreement
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47699] Multiple games fail to connect to online services (missing BCryptSecretAgreement / BCryptDeriveKey
+# | 	implementation)
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/gcrypt.c,
+# | 	dlls/bcrypt/gnutls.c, dlls/bcrypt/tests/bcrypt.c
+# |
+if test "$enable_bcrypt_ECDHSecretAgreement" -eq 1; then
+	patch_apply bcrypt-ECDHSecretAgreement/0001-bcrypt-Implement-BCryptSecretAgreement-with-libgcryp.patch
+	patch_apply bcrypt-ECDHSecretAgreement/0002-bcrypt-Implement-BCRYPT_KDF_HASH.patch
+	(
+		printf '%s\n' '+    { "Derek Lesho", "bcrypt: Implement BCryptSecretAgreement with libgcrypt.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "bcrypt: Implement BCRYPT_KDF_HASH.", 1 },';
 	) >> "$patchlist"
 fi
 

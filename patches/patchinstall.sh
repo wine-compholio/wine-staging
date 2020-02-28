@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0f51b732e4eae54b13232e025d00f277d75f564b"
+	echo "c6b852e3c37247a01547d8ab9d1630684f9c5aaa"
 }
 
 # Show version information
@@ -109,7 +109,6 @@ patch_enable_all ()
 	enable_d3dx9_36_D3DXSHProjectCubeMap="$1"
 	enable_d3dx9_36_D3DXStubs="$1"
 	enable_d3dx9_36_DDS="$1"
-	enable_d3dx9_36_DrawText="$1"
 	enable_d3dx9_36_Filter_Warnings="$1"
 	enable_d3dx9_36_Optimize_Inplace="$1"
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
@@ -438,9 +437,6 @@ patch_enable ()
 			;;
 		d3dx9_36-DDS)
 			enable_d3dx9_36_DDS="$2"
-			;;
-		d3dx9_36-DrawText)
-			enable_d3dx9_36_DrawText="$2"
 			;;
 		d3dx9_36-Filter_Warnings)
 			enable_d3dx9_36_Filter_Warnings="$2"
@@ -2195,7 +2191,7 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/bcrypt/Makefile.in, dlls/bcrypt/bcrypt_internal.h, dlls/bcrypt/bcrypt_main.c, dlls/bcrypt/gcrypt.c,
-# | 	dlls/bcrypt/gnutls.c, dlls/bcrypt/tests/bcrypt.c
+# | 	dlls/bcrypt/gnutls.c, dlls/bcrypt/macos.c, dlls/bcrypt/tests/bcrypt.c
 # |
 if test "$enable_bcrypt_ECDHSecretAgreement" -eq 1; then
 	patch_apply bcrypt-ECDHSecretAgreement/0001-bcrypt-Implement-BCryptSecretAgreement-with-libgcryp.patch
@@ -2663,27 +2659,6 @@ if test "$enable_d3dx9_36_DDS" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add support for FOURCC surface to save_dds_surface_to_memory.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Improve D3DXSaveTextureToFile to save simple texture to dds file.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset d3dx9_36-DrawText
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#24754] Support for ID3DXFont::DrawTextA/W
-# |
-# | Modified files:
-# |   *	dlls/d3dx9_36/font.c
-# |
-if test "$enable_d3dx9_36_DrawText" -eq 1; then
-	patch_apply d3dx9_36-DrawText/0001-d3dx9_36-Implement-ID3DXFontImpl_DrawText.patch
-	patch_apply d3dx9_36-DrawText/0002-d3dx9_36-Fix-horizontal-centering-in-ID3DXFont_DrawT.patch
-	patch_apply d3dx9_36-DrawText/0003-d3dx9_36-Support-NULL-terminated-strings-in-ID3DXFon.patch
-	patch_apply d3dx9_36-DrawText/0004-d3dx9_36-ID3DXFont_DrawText-calc_rect-can-be-null.patch
-	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Implement ID3DXFontImpl_DrawText.", 1 },';
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Fix horizontal centering in ID3DXFont_DrawText.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: Support NULL terminated strings in ID3DXFont_DrawText.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3dx9_36: ID3DXFont_DrawText calc_rect can be null.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -355,6 +355,7 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
+	enable_xactengine_initial="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1176,6 +1177,9 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
+			;;
+		xactengine-initial)
+			enable_xactengine_initial="$2"
 			;;
 		*)
 			return 1
@@ -7281,6 +7285,62 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xactengine-initial
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31476] Support Bully Scholarship Edition xactengine3_1.dll.
+# |   *	[#38615] DSA: Drakensang Demo fails on IXACTEngine::Initialize
+# |   *	[#41030] Pac-Man Museum requires xactengine3_7
+# |   *	[#41045] Captain Morgane requires xactengine3_4
+# |   *	[#48684] BlazBlue: Calamity Trigger requires for xactengine 3.3 interface.
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/xactengine3_0/Makefile.in, dlls/xactengine3_0/xactengine3_0.spec, dlls/xactengine3_1/Makefile.in,
+# | 	dlls/xactengine3_1/xactengine3_1.spec, dlls/xactengine3_2/Makefile.in, dlls/xactengine3_2/xactengine3_2.spec,
+# | 	dlls/xactengine3_3/Makefile.in, dlls/xactengine3_3/xactengine3_3.spec, dlls/xactengine3_4/Makefile.in,
+# | 	dlls/xactengine3_4/xactengine3_4.spec, dlls/xactengine3_5/Makefile.in, dlls/xactengine3_5/xactengine3_5.spec,
+# | 	dlls/xactengine3_6/Makefile.in, dlls/xactengine3_6/xactengine3_6.spec, dlls/xactengine3_7/Makefile.in,
+# | 	dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/tests/Makefile.in,
+# | 	dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc, dlls/xaudio2_7/tests/xact.c,
+# | 	dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c, dlls/xaudio2_7/xaudio_dll.c,
+# | 	include/Makefile.in, include/xact3.idl, include/xact3wb.h
+# |
+if test "$enable_xactengine_initial" -eq 1; then
+	patch_apply xactengine-initial/0001-include-Add-xact3.idl.patch
+	patch_apply xactengine-initial/0002-xaudio2-Add-support-for-xactengine3.patch
+	patch_apply xactengine-initial/0003-xaudio2_7-Support-older-XACT3Engine-interfaces.patch
+	patch_apply xactengine-initial/0004-xaudio2_7-IXACT3Engine-Initialize-return-valid-error.patch
+	patch_apply xactengine-initial/0005-xaudio2_7-IXACT3Engine-CreateSoundBank-return-correc.patch
+	patch_apply xactengine-initial/0006-xaudio2_7-Always-return-S_OK-in-IXACT34Cue-Destroy.patch
+	patch_apply xactengine-initial/0007-xaudio2_7-Dont-cast-interface-pointers.patch
+	patch_apply xactengine-initial/0008-include-Add-XACTNOTIFICATIONTYPE_-values.patch
+	patch_apply xactengine-initial/0009-xaudio2_7-unwrap-structure-based-of-it-s-type.patch
+	patch_apply xactengine-initial/0010-xaudio2_7-Correct-callback-to-windows-function.patch
+	patch_apply xactengine-initial/0011-xaudio2_7-Initial-IXACT3Engine-tests.patch
+	patch_apply xactengine-initial/0012-xaudio2_7-Trace-FAudio-version-being-used.patch
+	patch_apply xactengine-initial/0013-xaudio2_7-Trace-FAudio-version-being-used.patch
+	patch_apply xactengine-initial/0014-include-Add-XACTENGINE_-error-codes.patch
+	patch_apply xactengine-initial/0015-include-Add-XACT-defines.patch
+	patch_apply xactengine-initial/0016-xaudio2_7-tests-Add-more-tests.patch
+	(
+		printf '%s\n' '+    { "Ethan Lee", "include: Add xact3.idl.", 1 },';
+		printf '%s\n' '+    { "Ethan Lee", "xaudio2: Add support for xactengine3.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Support older XACT3Engine interfaces.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: IXACT3Engine Initialize return valid error code.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: IXACT3Engine CreateSoundBank return correct HRESULT values.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Always return S_OK in IXACT34Cue Destroy.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Dont cast interface pointers.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACTNOTIFICATIONTYPE_* values.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Unwrap structure based of it'\''s type.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Correct callback to windows function.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Initial IXACT3Engine tests.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Trace FAudio version being used.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACTENGINE_* error codes.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACT defines.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7/tests: Add more tests.", 1 },';
 	) >> "$patchlist"
 fi
 

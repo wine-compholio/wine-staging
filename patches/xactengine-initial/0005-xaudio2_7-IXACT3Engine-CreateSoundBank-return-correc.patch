@@ -1,0 +1,93 @@
+From 2335980b1a1e36ce475a99b08498747021b5284c Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Wed, 8 Jan 2020 10:39:02 +1100
+Subject: [PATCH] xaudio2_7: IXACT3Engine CreateSoundBank return correct
+ HRESULT values.
+
+---
+ dlls/xaudio2_7/xact_dll.c | 28 ++++++++++++++++------------
+ 1 file changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/xaudio2_7/xact_dll.c b/dlls/xaudio2_7/xact_dll.c
+index 1f580519d4..9cec216002 100644
+--- a/dlls/xaudio2_7/xact_dll.c
++++ b/dlls/xaudio2_7/xact_dll.c
+@@ -1005,21 +1005,23 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateSoundBank(IXACT3Engine *iface,
+     XACT3EngineImpl *This = impl_from_IXACT3Engine(iface);
+     XACT3SoundBankImpl *sb;
+     FACTSoundBank *fsb;
+-    HRESULT hr;
++    UINT ret;
+ 
+     TRACE("(%p)->(%p, %u, 0x%x, 0x%x, %p)\n", This, pvBuffer, dwSize, dwFlags,
+             dwAllocAttributes, ppSoundBank);
+ 
+-    hr = FACTAudioEngine_CreateSoundBank(This->fact_engine, pvBuffer, dwSize,
++    ret = FACTAudioEngine_CreateSoundBank(This->fact_engine, pvBuffer, dwSize,
+             dwFlags, dwAllocAttributes, &fsb);
+-    if(FAILED(hr))
+-        return hr;
++    if (ret != 0) {
++        ERR("Failed to CreateInMemoryWaveBank: %d\n", ret);
++        return E_FAIL;
++    }
+ 
+     sb = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*sb));
+     if (!sb){
+         FACTSoundBank_Destroy(fsb);
+         ERR("Failed to allocate XACT3SoundBankImpl!");
+-        return hr;
++        return E_OUTOFMEMORY;
+     }
+ 
+     sb->IXACT3SoundBank_iface.lpVtbl = &XACT3SoundBank_Vtbl;
+@@ -1028,7 +1030,7 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateSoundBank(IXACT3Engine *iface,
+ 
+     TRACE("Created SoundBank: %p\n", sb);
+ 
+-    return hr;
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI IXACT3EngineImpl_CreateInMemoryWaveBank(IXACT3Engine *iface,
+@@ -1038,21 +1040,23 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateInMemoryWaveBank(IXACT3Engine *ifac
+     XACT3EngineImpl *This = impl_from_IXACT3Engine(iface);
+     XACT3WaveBankImpl *wb;
+     FACTWaveBank *fwb;
+-    HRESULT hr;
++    UINT ret;
+ 
+     TRACE("(%p)->(%p, %u, 0x%x, 0x%x, %p)\n", This, pvBuffer, dwSize, dwFlags,
+             dwAllocAttributes, ppWaveBank);
+ 
+-    hr = FACTAudioEngine_CreateInMemoryWaveBank(This->fact_engine, pvBuffer,
++    ret = FACTAudioEngine_CreateInMemoryWaveBank(This->fact_engine, pvBuffer,
+             dwSize, dwFlags, dwAllocAttributes, &fwb);
+-    if(FAILED(hr))
+-        return hr;
++    if (ret != 0) {
++        ERR("Failed to CreateInMemoryWaveBank: %d\n", ret);
++        return E_FAIL;
++    }
+ 
+     wb = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*wb));
+     if (!wb){
+         FACTWaveBank_Destroy(fwb);
+         ERR("Failed to allocate XACT3WaveBankImpl!");
+-        return hr;
++        return E_OUTOFMEMORY;
+     }
+ 
+     wb->IXACT3WaveBank_iface.lpVtbl = &XACT3WaveBank_Vtbl;
+@@ -1061,7 +1065,7 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateInMemoryWaveBank(IXACT3Engine *ifac
+ 
+     TRACE("Created in-memory WaveBank: %p\n", wb);
+ 
+-    return hr;
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI IXACT3EngineImpl_CreateStreamingWaveBank(IXACT3Engine *iface,
+-- 
+2.25.1
+

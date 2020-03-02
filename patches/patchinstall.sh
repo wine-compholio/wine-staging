@@ -217,6 +217,7 @@ patch_enable_all ()
 	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
+	enable_ntdll_unaligned_futex="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -763,6 +764,9 @@ patch_enable ()
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
+			;;
+		ntdll-unaligned-futex)
+			enable_ntdll_unaligned_futex="$2"
 			;;
 		ntdll-x86_64_SegDs)
 			enable_ntdll_x86_64_SegDs="$2"
@@ -5011,6 +5015,25 @@ if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-unaligned-futex
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48389] Detroit: Become Human has poor performance (use of unaligned futexes for condition variables on Linux)
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/sync.c
+# |
+if test "$enable_ntdll_unaligned_futex" -eq 1; then
+	patch_apply ntdll-unaligned-futex/0001-ntdll-Handle-unaligned-condition-variables-when-usin.patch
+	patch_apply ntdll-unaligned-futex/0002-ntdll-Handle-unaligned-SRW-locks-when-using-keyed-ev.patch
+	patch_apply ntdll-unaligned-futex/0003-ntdll-Handle-unaligned-SRW-locks-when-using-futexes.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Handle unaligned condition variables when using futexes.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Handle unaligned SRW locks when using keyed events.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Handle unaligned SRW locks when using futexes.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-x86_64_SegDs
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7306,7 +7329,7 @@ fi
 # | 	dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/tests/Makefile.in,
 # | 	dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc, dlls/xaudio2_7/tests/xact.c,
 # | 	dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c, dlls/xaudio2_7/xaudio_dll.c,
-# | 	include/Makefile.in, include/xact3.idl, include/xact3wb.h
+# | 	include/Makefile.in, include/config.h.in, include/xact3.idl, include/xact3wb.h
 # |
 if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0001-include-Add-xact3.idl.patch

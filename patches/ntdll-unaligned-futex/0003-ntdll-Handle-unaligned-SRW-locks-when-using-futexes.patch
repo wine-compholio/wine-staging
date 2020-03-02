@@ -1,0 +1,666 @@
+From afff343503663273568f6343504d2226defae90c Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Mon, 30 Dec 2019 17:17:49 -0600
+Subject: [PATCH 3/3] ntdll: Handle unaligned SRW locks when using futexes.
+
+---
+ dlls/kernel32/tests/sync.c | 174 ++++++++++++++++++++-----------------
+ dlls/ntdll/sync.c          |  74 ++++++++++------
+ 2 files changed, 141 insertions(+), 107 deletions(-)
+
+diff --git a/dlls/kernel32/tests/sync.c b/dlls/kernel32/tests/sync.c
+index fb93dfdc53..494858dc37 100644
+--- a/dlls/kernel32/tests/sync.c
++++ b/dlls/kernel32/tests/sync.c
+@@ -2320,7 +2320,7 @@ static void test_condvars_base(RTL_CONDITION_VARIABLE *cv)
+ }
+ 
+ static LONG srwlock_seq = 0;
+-static SRWLOCK srwlock_base;
++static SRWLOCK aligned_srwlock;
+ static struct
+ {
+     LONG wrong_execution_order;
+@@ -2333,6 +2333,14 @@ static struct
+     LONG trylock_shared;
+ } srwlock_base_errors;
+ 
++#include "pshpack1.h"
++struct
++{
++    char c;
++    SRWLOCK lock;
++} unaligned_srwlock;
++#include "poppack.h"
++
+ /* Sequence of acquire/release to check boundary conditions:
+  *  0: init
+  *
+@@ -2404,49 +2412,51 @@ static struct
+  * 31: end
+  */
+ 
+-static DWORD WINAPI srwlock_base_thread1(LPVOID x)
++static DWORD WINAPI srwlock_base_thread1(void *arg)
+ {
++    SRWLOCK *lock = arg;
++
+     /* seq 2 */
+     while (srwlock_seq < 2) Sleep(1);
+     Sleep(100);
+     if (InterlockedIncrement(&srwlock_seq) != 3)
+         InterlockedIncrement(&srwlock_base_errors.samethread_excl_excl);
+-    pReleaseSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
+ 
+     /* seq 4 */
+     while (srwlock_seq < 4) Sleep(1);
+     Sleep(100);
+     if (InterlockedIncrement(&srwlock_seq) != 5)
+         InterlockedIncrement(&srwlock_base_errors.samethread_excl_shared);
+-    pReleaseSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
+ 
+     /* seq 6 */
+     while (srwlock_seq < 6) Sleep(1);
+     Sleep(100);
+     if (InterlockedIncrement(&srwlock_seq) != 7)
+         InterlockedIncrement(&srwlock_base_errors.samethread_shared_excl);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
+ 
+     /* seq 8 */
+     while (srwlock_seq < 8) Sleep(1);
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 9)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+     Sleep(100);
+     if (InterlockedIncrement(&srwlock_seq) != 10)
+         InterlockedIncrement(&srwlock_base_errors.multithread_excl_excl);
+-    pReleaseSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
+ 
+     /* seq 11 */
+     while (srwlock_seq < 11) Sleep(1);
+-    pAcquireSRWLockShared(&srwlock_base);
++    pAcquireSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 12)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 13 */
+     while (srwlock_seq < 13) Sleep(1);
+-    pReleaseSRWLockShared(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
++    pAcquireSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 14)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+@@ -2455,7 +2465,7 @@ static DWORD WINAPI srwlock_base_thread1(LPVOID x)
+     Sleep(50); /* ensure that both the exclusive and shared access thread are queued */
+     if (InterlockedIncrement(&srwlock_seq) != 17)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
+ 
+     /* skip over remaining tests if TryAcquireSRWLock* is not available */
+     if (!pTryAcquireSRWLockExclusive)
+@@ -2463,125 +2473,127 @@ static DWORD WINAPI srwlock_base_thread1(LPVOID x)
+ 
+     /* seq 19 */
+     while (srwlock_seq < 19) Sleep(1);
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
++    if (pTryAcquireSRWLockExclusive(lock))
+     {
+-        if (pTryAcquireSRWLockShared(&srwlock_base))
++        if (pTryAcquireSRWLockShared(lock))
+             InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-        if (pTryAcquireSRWLockExclusive(&srwlock_base))
++        if (pTryAcquireSRWLockExclusive(lock))
+             InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+-        pReleaseSRWLockExclusive(&srwlock_base);
++        pReleaseSRWLockExclusive(lock);
+     }
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+ 
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
++    if (pTryAcquireSRWLockShared(lock))
+     {
+-        if (pTryAcquireSRWLockShared(&srwlock_base))
+-            pReleaseSRWLockShared(&srwlock_base);
++        if (pTryAcquireSRWLockShared(lock))
++            pReleaseSRWLockShared(lock);
+         else
+             InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-        if (pTryAcquireSRWLockExclusive(&srwlock_base))
++        if (pTryAcquireSRWLockExclusive(lock))
+             InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+-        pReleaseSRWLockShared(&srwlock_base);
++        pReleaseSRWLockShared(lock);
+     }
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+ 
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 20)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 21 */
+     while (srwlock_seq < 21) Sleep(1);
+-    pReleaseSRWLockExclusive(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
++    pAcquireSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 22)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 23 */
+     while (srwlock_seq < 23) Sleep(1);
+-    pReleaseSRWLockShared(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
++    pAcquireSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 24)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 25 */
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (srwlock_seq != 25)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+-    pReleaseSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
+ 
+-    pAcquireSRWLockShared(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
++    pAcquireSRWLockShared(lock);
++    pAcquireSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 26)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 27 */
+     while (srwlock_seq < 27) Sleep(1);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 28)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 29 */
+     while (srwlock_seq < 29) Sleep(1);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 30)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     return 0;
+ }
+ 
+-static DWORD WINAPI srwlock_base_thread2(LPVOID x)
++static DWORD WINAPI srwlock_base_thread2(void *arg)
+ {
++    SRWLOCK *lock = arg;
++
+     /* seq 1 */
+     while (srwlock_seq < 1) Sleep(1);
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 2)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 3 */
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (srwlock_seq != 3)
+         InterlockedIncrement(&srwlock_base_errors.samethread_excl_excl);
+-    pReleaseSRWLockExclusive(&srwlock_base);
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
++    pAcquireSRWLockExclusive(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 4)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 5 */
+-    pAcquireSRWLockShared(&srwlock_base);
++    pAcquireSRWLockShared(lock);
+     if (srwlock_seq != 5)
+         InterlockedIncrement(&srwlock_base_errors.samethread_excl_shared);
+-    pReleaseSRWLockShared(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
++    pAcquireSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 6)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 7 */
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (srwlock_seq != 7)
+         InterlockedIncrement(&srwlock_base_errors.samethread_shared_excl);
+-    pReleaseSRWLockExclusive(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
+-    pAcquireSRWLockShared(&srwlock_base);
+-    pReleaseSRWLockShared(&srwlock_base);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
++    pAcquireSRWLockShared(lock);
++    pAcquireSRWLockShared(lock);
++    pReleaseSRWLockShared(lock);
++    pReleaseSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 8)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 9, 10 */
+     while (srwlock_seq < 9) Sleep(1);
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (srwlock_seq != 10)
+         InterlockedIncrement(&srwlock_base_errors.multithread_excl_excl);
+-    pReleaseSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 11)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 12 */
+     while (srwlock_seq < 12) Sleep(1);
+-    pAcquireSRWLockShared(&srwlock_base);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pAcquireSRWLockShared(lock);
++    pReleaseSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 13)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+@@ -2591,12 +2603,12 @@ static DWORD WINAPI srwlock_base_thread2(LPVOID x)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 17 */
+-    pAcquireSRWLockExclusive(&srwlock_base);
++    pAcquireSRWLockExclusive(lock);
+     if (srwlock_seq != 17)
+         InterlockedIncrement(&srwlock_base_errors.excl_not_preferred);
+     if (InterlockedIncrement(&srwlock_seq) != 18)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+-    pReleaseSRWLockExclusive(&srwlock_base);
++    pReleaseSRWLockExclusive(lock);
+ 
+     /* skip over remaining tests if TryAcquireSRWLock* is not available */
+     if (!pTryAcquireSRWLockExclusive)
+@@ -2604,20 +2616,20 @@ static DWORD WINAPI srwlock_base_thread2(LPVOID x)
+ 
+     /* seq 20 */
+     while (srwlock_seq < 20) Sleep(1);
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
++    if (pTryAcquireSRWLockShared(lock))
+         InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
++    if (pTryAcquireSRWLockExclusive(lock))
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+     if (InterlockedIncrement(&srwlock_seq) != 21)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 22 */
+     while (srwlock_seq < 22) Sleep(1);
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
+-        pReleaseSRWLockShared(&srwlock_base);
++    if (pTryAcquireSRWLockShared(lock))
++        pReleaseSRWLockShared(lock);
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
++    if (pTryAcquireSRWLockExclusive(lock))
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+     if (InterlockedIncrement(&srwlock_seq) != 23)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+@@ -2625,47 +2637,47 @@ static DWORD WINAPI srwlock_base_thread2(LPVOID x)
+     /* seq 24 */
+     while (srwlock_seq < 24) Sleep(1);
+     Sleep(50); /* ensure that exclusive access request is queued */
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
++    if (pTryAcquireSRWLockShared(lock))
+     {
+-        pReleaseSRWLockShared(&srwlock_base);
++        pReleaseSRWLockShared(lock);
+         InterlockedIncrement(&srwlock_base_errors.excl_not_preferred);
+     }
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
++    if (pTryAcquireSRWLockExclusive(lock))
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+     if (InterlockedIncrement(&srwlock_seq) != 25)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
+ 
+     /* seq 26 */
+     while (srwlock_seq < 26) Sleep(1);
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
+-        pReleaseSRWLockShared(&srwlock_base);
++    if (pTryAcquireSRWLockShared(lock))
++        pReleaseSRWLockShared(lock);
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
++    if (pTryAcquireSRWLockExclusive(lock))
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+     if (InterlockedIncrement(&srwlock_seq) != 27)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 28 */
+     while (srwlock_seq < 28) Sleep(1);
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
+-        pReleaseSRWLockShared(&srwlock_base);
++    if (pTryAcquireSRWLockShared(lock))
++        pReleaseSRWLockShared(lock);
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
++    if (pTryAcquireSRWLockExclusive(lock))
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+     if (InterlockedIncrement(&srwlock_seq) != 29)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 30 */
+     while (srwlock_seq < 30) Sleep(1);
+-    if (pTryAcquireSRWLockShared(&srwlock_base))
+-        pReleaseSRWLockShared(&srwlock_base);
++    if (pTryAcquireSRWLockShared(lock))
++        pReleaseSRWLockShared(lock);
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_shared);
+-    if (pTryAcquireSRWLockExclusive(&srwlock_base))
+-        pReleaseSRWLockExclusive(&srwlock_base);
++    if (pTryAcquireSRWLockExclusive(lock))
++        pReleaseSRWLockExclusive(lock);
+     else
+         InterlockedIncrement(&srwlock_base_errors.trylock_excl);
+     if (InterlockedIncrement(&srwlock_seq) != 31)
+@@ -2674,8 +2686,10 @@ static DWORD WINAPI srwlock_base_thread2(LPVOID x)
+     return 0;
+ }
+ 
+-static DWORD WINAPI srwlock_base_thread3(LPVOID x)
++static DWORD WINAPI srwlock_base_thread3(void *arg)
+ {
++    SRWLOCK *lock = arg;
++
+     /* seq 15 */
+     while (srwlock_seq < 15) Sleep(1);
+     Sleep(50); /* some delay, so that thread2 can try to acquire a second exclusive lock */
+@@ -2683,10 +2697,10 @@ static DWORD WINAPI srwlock_base_thread3(LPVOID x)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+     /* seq 18 */
+-    pAcquireSRWLockShared(&srwlock_base);
++    pAcquireSRWLockShared(lock);
+     if (srwlock_seq != 18)
+         InterlockedIncrement(&srwlock_base_errors.excl_not_preferred);
+-    pReleaseSRWLockShared(&srwlock_base);
++    pReleaseSRWLockShared(lock);
+     if (InterlockedIncrement(&srwlock_seq) != 19)
+         InterlockedIncrement(&srwlock_base_errors.wrong_execution_order);
+ 
+@@ -2702,7 +2716,7 @@ static DWORD WINAPI srwlock_base_thread3(LPVOID x)
+     return 0;
+ }
+ 
+-static void test_srwlock_base(void)
++static void test_srwlock_base(SRWLOCK *lock)
+ {
+     HANDLE h1, h2, h3;
+     DWORD dummy;
+@@ -2714,12 +2728,13 @@ static void test_srwlock_base(void)
+         return;
+     }
+ 
+-    pInitializeSRWLock(&srwlock_base);
++    pInitializeSRWLock(lock);
+     memset(&srwlock_base_errors, 0, sizeof(srwlock_base_errors));
++    srwlock_seq = 0;
+ 
+-    h1 = CreateThread(NULL, 0, srwlock_base_thread1, NULL, 0, &dummy);
+-    h2 = CreateThread(NULL, 0, srwlock_base_thread2, NULL, 0, &dummy);
+-    h3 = CreateThread(NULL, 0, srwlock_base_thread3, NULL, 0, &dummy);
++    h1 = CreateThread(NULL, 0, srwlock_base_thread1, lock, 0, &dummy);
++    h2 = CreateThread(NULL, 0, srwlock_base_thread2, lock, 0, &dummy);
++    h3 = CreateThread(NULL, 0, srwlock_base_thread3, lock, 0, &dummy);
+ 
+     srwlock_seq = 1; /* go */
+     while (srwlock_seq < 31)
+@@ -3199,7 +3214,8 @@ START_TEST(sync)
+     test_condvars_base(&aligned_cv);
+     test_condvars_base(&unaligned_cv.cv);
+     test_condvars_consumer_producer();
+-    test_srwlock_base();
++    test_srwlock_base(&aligned_srwlock);
++    test_srwlock_base(&unaligned_srwlock.lock);
+     test_srwlock_example();
+     test_alertable_wait();
+     test_apc_deadlock();
+diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
+index 5b0f5b903c..4ec51558ca 100644
+--- a/dlls/ntdll/sync.c
++++ b/dlls/ntdll/sync.c
+@@ -1755,14 +1755,17 @@ DWORD WINAPI RtlRunOnceExecuteOnce( RTL_RUN_ONCE *once, PRTL_RUN_ONCE_INIT_FN fu
+ 
+ static NTSTATUS fast_try_acquire_srw_exclusive( RTL_SRWLOCK *lock )
+ {
+-    int old, new;
++    int old, new, *futex;
+     NTSTATUS ret;
+ 
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
++    if (!(futex = get_futex( &lock->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
+     do
+     {
+-        old = *(int *)lock;
++        old = *futex;
+ 
+         if (!(old & SRWLOCK_FUTEX_EXCLUSIVE_LOCK_BIT)
+                 && !(old & SRWLOCK_FUTEX_SHARED_OWNERS_MASK))
+@@ -1776,31 +1779,34 @@ static NTSTATUS fast_try_acquire_srw_exclusive( RTL_SRWLOCK *lock )
+             new = old;
+             ret = STATUS_TIMEOUT;
+         }
+-    } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++    } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+     return ret;
+ }
+ 
+ static NTSTATUS fast_acquire_srw_exclusive( RTL_SRWLOCK *lock )
+ {
+-    int old, new;
++    int old, new, *futex;
+     BOOLEAN wait;
+ 
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
++    if (!(futex = get_futex( &lock->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
+     /* Atomically increment the exclusive waiter count. */
+     do
+     {
+-        old = *(int *)lock;
++        old = *futex;
+         new = old + SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_INC;
+         assert(new & SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_MASK);
+-    } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++    } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+     for (;;)
+     {
+         do
+         {
+-            old = *(int *)lock;
++            old = *futex;
+ 
+             if (!(old & SRWLOCK_FUTEX_EXCLUSIVE_LOCK_BIT)
+                     && !(old & SRWLOCK_FUTEX_SHARED_OWNERS_MASK))
+@@ -1816,12 +1822,12 @@ static NTSTATUS fast_acquire_srw_exclusive( RTL_SRWLOCK *lock )
+                 new = old;
+                 wait = TRUE;
+             }
+-        } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++        } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+         if (!wait)
+             return STATUS_SUCCESS;
+ 
+-        futex_wait_bitset( (int *)lock, new, NULL, SRWLOCK_FUTEX_BITSET_EXCLUSIVE );
++        futex_wait_bitset( futex, new, NULL, SRWLOCK_FUTEX_BITSET_EXCLUSIVE );
+     }
+ 
+     return STATUS_SUCCESS;
+@@ -1829,14 +1835,17 @@ static NTSTATUS fast_acquire_srw_exclusive( RTL_SRWLOCK *lock )
+ 
+ static NTSTATUS fast_try_acquire_srw_shared( RTL_SRWLOCK *lock )
+ {
+-    int new, old;
++    int new, old, *futex;
+     NTSTATUS ret;
+ 
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
++    if (!(futex = get_futex( &lock->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
+     do
+     {
+-        old = *(int *)lock;
++        old = *futex;
+ 
+         if (!(old & SRWLOCK_FUTEX_EXCLUSIVE_LOCK_BIT)
+                 && !(old & SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_MASK))
+@@ -1852,23 +1861,26 @@ static NTSTATUS fast_try_acquire_srw_shared( RTL_SRWLOCK *lock )
+             new = old;
+             ret = STATUS_TIMEOUT;
+         }
+-    } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++    } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+     return ret;
+ }
+ 
+ static NTSTATUS fast_acquire_srw_shared( RTL_SRWLOCK *lock )
+ {
+-    int old, new;
++    int old, new, *futex;
+     BOOLEAN wait;
+ 
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
++    if (!(futex = get_futex( &lock->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
+     for (;;)
+     {
+         do
+         {
+-            old = *(int *)lock;
++            old = *futex;
+ 
+             if (!(old & SRWLOCK_FUTEX_EXCLUSIVE_LOCK_BIT)
+                     && !(old & SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_MASK))
+@@ -1884,12 +1896,12 @@ static NTSTATUS fast_acquire_srw_shared( RTL_SRWLOCK *lock )
+                 new = old | SRWLOCK_FUTEX_SHARED_WAITERS_BIT;
+                 wait = TRUE;
+             }
+-        } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++        } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+         if (!wait)
+             return STATUS_SUCCESS;
+ 
+-        futex_wait_bitset( (int *)lock, new, NULL, SRWLOCK_FUTEX_BITSET_SHARED );
++        futex_wait_bitset( futex, new, NULL, SRWLOCK_FUTEX_BITSET_SHARED );
+     }
+ 
+     return STATUS_SUCCESS;
+@@ -1897,17 +1909,20 @@ static NTSTATUS fast_acquire_srw_shared( RTL_SRWLOCK *lock )
+ 
+ static NTSTATUS fast_release_srw_exclusive( RTL_SRWLOCK *lock )
+ {
+-    int old, new;
++    int old, new, *futex;
+ 
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
++    if (!(futex = get_futex( &lock->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
+     do
+     {
+-        old = *(int *)lock;
++        old = *futex;
+ 
+         if (!(old & SRWLOCK_FUTEX_EXCLUSIVE_LOCK_BIT))
+         {
+-            ERR("Lock %p is not owned exclusive! (%#x)\n", lock, *(int *)lock);
++            ERR("Lock %p is not owned exclusive! (%#x)\n", lock, *futex);
+             return STATUS_RESOURCE_NOT_OWNED;
+         }
+ 
+@@ -1915,43 +1930,46 @@ static NTSTATUS fast_release_srw_exclusive( RTL_SRWLOCK *lock )
+ 
+         if (!(new & SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_MASK))
+             new &= ~SRWLOCK_FUTEX_SHARED_WAITERS_BIT;
+-    } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++    } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+     if (new & SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_MASK)
+-        futex_wake_bitset( (int *)lock, 1, SRWLOCK_FUTEX_BITSET_EXCLUSIVE );
++        futex_wake_bitset( futex, 1, SRWLOCK_FUTEX_BITSET_EXCLUSIVE );
+     else if (old & SRWLOCK_FUTEX_SHARED_WAITERS_BIT)
+-        futex_wake_bitset( (int *)lock, INT_MAX, SRWLOCK_FUTEX_BITSET_SHARED );
++        futex_wake_bitset( futex, INT_MAX, SRWLOCK_FUTEX_BITSET_SHARED );
+ 
+     return STATUS_SUCCESS;
+ }
+ 
+ static NTSTATUS fast_release_srw_shared( RTL_SRWLOCK *lock )
+ {
+-    int old, new;
++    int old, new, *futex;
+ 
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
++    if (!(futex = get_futex( &lock->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
+     do
+     {
+-        old = *(int *)lock;
++        old = *futex;
+ 
+         if (old & SRWLOCK_FUTEX_EXCLUSIVE_LOCK_BIT)
+         {
+-            ERR("Lock %p is owned exclusive! (%#x)\n", lock, *(int *)lock);
++            ERR("Lock %p is owned exclusive! (%#x)\n", lock, *futex);
+             return STATUS_RESOURCE_NOT_OWNED;
+         }
+         else if (!(old & SRWLOCK_FUTEX_SHARED_OWNERS_MASK))
+         {
+-            ERR("Lock %p is not owned shared! (%#x)\n", lock, *(int *)lock);
++            ERR("Lock %p is not owned shared! (%#x)\n", lock, *futex);
+             return STATUS_RESOURCE_NOT_OWNED;
+         }
+ 
+         new = old - SRWLOCK_FUTEX_SHARED_OWNERS_INC;
+-    } while (interlocked_cmpxchg( (int *)lock, new, old ) != old);
++    } while (interlocked_cmpxchg( futex, new, old ) != old);
+ 
+     /* Optimization: only bother waking if there are actually exclusive waiters. */
+     if (!(new & SRWLOCK_FUTEX_SHARED_OWNERS_MASK) && (new & SRWLOCK_FUTEX_EXCLUSIVE_WAITERS_MASK))
+-        futex_wake_bitset( (int *)lock, 1, SRWLOCK_FUTEX_BITSET_EXCLUSIVE );
++        futex_wake_bitset( futex, 1, SRWLOCK_FUTEX_BITSET_EXCLUSIVE );
+ 
+     return STATUS_SUCCESS;
+ }
+-- 
+2.24.1
+

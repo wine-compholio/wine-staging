@@ -1,0 +1,437 @@
+From f48aef32395dee75fff9430fd788262fde5f1e8d Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Mon, 30 Dec 2019 17:17:47 -0600
+Subject: [PATCH 1/3] ntdll: Handle unaligned condition variables when using
+ futexes.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=48389
+---
+ dlls/kernel32/tests/sync.c |  76 ++++++++++++++++-----------
+ dlls/ntdll/sync.c          | 105 ++++++++++++++++++++++++++++++-------
+ 2 files changed, 132 insertions(+), 49 deletions(-)
+
+diff --git a/dlls/kernel32/tests/sync.c b/dlls/kernel32/tests/sync.c
+index 9e32312e4d..fb93dfdc53 100644
+--- a/dlls/kernel32/tests/sync.c
++++ b/dlls/kernel32/tests/sync.c
+@@ -2094,10 +2094,18 @@ static void test_condvars_consumer_producer(void)
+ 
+ /* Sample test for some sequence of events happening, sequenced using "condvar_seq" */
+ static DWORD condvar_seq = 0;
+-static CONDITION_VARIABLE condvar_base = CONDITION_VARIABLE_INIT;
++static CONDITION_VARIABLE aligned_cv;
+ static CRITICAL_SECTION condvar_crit;
+ static SRWLOCK condvar_srwlock;
+ 
++#include "pshpack1.h"
++static struct
++{
++    char c;
++    CONDITION_VARIABLE cv;
++} unaligned_cv;
++#include "poppack.h"
++
+ /* Sequence of wake/sleep to check boundary conditions:
+  * 0: init
+  * 1: producer emits a WakeConditionVariable without consumer waiting.
+@@ -2117,28 +2125,31 @@ static SRWLOCK condvar_srwlock;
+  * 12: producer (shared) wakes up consumer (shared)
+  * 13: end
+  */
+-static DWORD WINAPI condvar_base_producer(LPVOID x) {
++static DWORD WINAPI condvar_base_producer(void *arg)
++{
++    CONDITION_VARIABLE *cv = arg;
++
+     while (condvar_seq < 1) Sleep(1);
+ 
+-    pWakeConditionVariable (&condvar_base);
++    pWakeConditionVariable(cv);
+     condvar_seq = 2;
+ 
+     while (condvar_seq < 3) Sleep(1);
+-    pWakeAllConditionVariable (&condvar_base);
++    pWakeAllConditionVariable(cv);
+     condvar_seq = 4;
+ 
+     while (condvar_seq < 5) Sleep(1);
+     EnterCriticalSection (&condvar_crit);
+-    pWakeConditionVariable (&condvar_base);
++    pWakeConditionVariable(cv);
+     LeaveCriticalSection (&condvar_crit);
+     while (condvar_seq < 6) Sleep(1);
+     EnterCriticalSection (&condvar_crit);
+-    pWakeAllConditionVariable (&condvar_base);
++    pWakeAllConditionVariable(cv);
+     LeaveCriticalSection (&condvar_crit);
+ 
+     while (condvar_seq < 8) Sleep(1);
+     EnterCriticalSection (&condvar_crit);
+-    pWakeConditionVariable (&condvar_base);
++    pWakeConditionVariable(cv);
+     Sleep(50);
+     LeaveCriticalSection (&condvar_crit);
+ 
+@@ -2148,36 +2159,38 @@ static DWORD WINAPI condvar_base_producer(LPVOID x) {
+ 
+     while (condvar_seq < 9) Sleep(1);
+     pAcquireSRWLockExclusive(&condvar_srwlock);
+-    pWakeConditionVariable(&condvar_base);
++    pWakeConditionVariable(cv);
+     pReleaseSRWLockExclusive(&condvar_srwlock);
+ 
+     while (condvar_seq < 10) Sleep(1);
+     pAcquireSRWLockExclusive(&condvar_srwlock);
+-    pWakeConditionVariable(&condvar_base);
++    pWakeConditionVariable(cv);
+     pReleaseSRWLockExclusive(&condvar_srwlock);
+ 
+     while (condvar_seq < 11) Sleep(1);
+     pAcquireSRWLockShared(&condvar_srwlock);
+-    pWakeConditionVariable(&condvar_base);
++    pWakeConditionVariable(cv);
+     pReleaseSRWLockShared(&condvar_srwlock);
+ 
+     while (condvar_seq < 12) Sleep(1);
+     Sleep(50); /* ensure that consumer waits for cond variable */
+     pAcquireSRWLockShared(&condvar_srwlock);
+-    pWakeConditionVariable(&condvar_base);
++    pWakeConditionVariable(cv);
+     pReleaseSRWLockShared(&condvar_srwlock);
+ 
+     return 0;
+ }
+ 
+-static DWORD WINAPI condvar_base_consumer(LPVOID x) {
++static DWORD WINAPI condvar_base_consumer(void *arg)
++{
++    CONDITION_VARIABLE *cv = arg;
+     BOOL ret;
+ 
+     while (condvar_seq < 2) Sleep(1);
+ 
+     /* wake was emitted, but we were not sleeping */
+     EnterCriticalSection (&condvar_crit);
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 10);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 10);
+     LeaveCriticalSection (&condvar_crit);
+     ok (!ret, "SleepConditionVariableCS should return FALSE on out of band wake\n");
+     ok (GetLastError() == ERROR_TIMEOUT, "SleepConditionVariableCS should return ERROR_TIMEOUT on out of band wake, not %d\n", GetLastError());
+@@ -2187,33 +2200,33 @@ static DWORD WINAPI condvar_base_consumer(LPVOID x) {
+ 
+     /* wake all was emitted, but we were not sleeping */
+     EnterCriticalSection (&condvar_crit);
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 10);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 10);
+     LeaveCriticalSection (&condvar_crit);
+     ok (!ret, "SleepConditionVariableCS should return FALSE on out of band wake\n");
+     ok (GetLastError() == ERROR_TIMEOUT, "SleepConditionVariableCS should return ERROR_TIMEOUT on out of band wake, not %d\n", GetLastError());
+ 
+     EnterCriticalSection (&condvar_crit);
+     condvar_seq = 5;
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 200);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 200);
+     LeaveCriticalSection (&condvar_crit);
+     ok (ret, "SleepConditionVariableCS should return TRUE on good wake\n");
+ 
+     EnterCriticalSection (&condvar_crit);
+     condvar_seq = 6;
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 200);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 200);
+     LeaveCriticalSection (&condvar_crit);
+     ok (ret, "SleepConditionVariableCS should return TRUE on good wakeall\n");
+     condvar_seq = 7;
+ 
+     EnterCriticalSection (&condvar_crit);
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 10);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 10);
+     LeaveCriticalSection (&condvar_crit);
+     ok (!ret, "SleepConditionVariableCS should return FALSE on out of band wake\n");
+     ok (GetLastError() == ERROR_TIMEOUT, "SleepConditionVariableCS should return ERROR_TIMEOUT on out of band wake, not %d\n", GetLastError());
+ 
+     EnterCriticalSection (&condvar_crit);
+     condvar_seq = 8;
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 20);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 20);
+     LeaveCriticalSection (&condvar_crit);
+     ok (ret, "SleepConditionVariableCS should still return TRUE on crit unlock delay\n");
+ 
+@@ -2227,25 +2240,25 @@ static DWORD WINAPI condvar_base_consumer(LPVOID x) {
+ 
+     pAcquireSRWLockExclusive(&condvar_srwlock);
+     condvar_seq = 9;
+-    ret = pSleepConditionVariableSRW(&condvar_base, &condvar_srwlock, 200, 0);
++    ret = pSleepConditionVariableSRW(cv, &condvar_srwlock, 200, 0);
+     pReleaseSRWLockExclusive(&condvar_srwlock);
+     ok (ret, "pSleepConditionVariableSRW should return TRUE on good wake\n");
+ 
+     pAcquireSRWLockShared(&condvar_srwlock);
+     condvar_seq = 10;
+-    ret = pSleepConditionVariableSRW(&condvar_base, &condvar_srwlock, 200, CONDITION_VARIABLE_LOCKMODE_SHARED);
++    ret = pSleepConditionVariableSRW(cv, &condvar_srwlock, 200, CONDITION_VARIABLE_LOCKMODE_SHARED);
+     pReleaseSRWLockShared(&condvar_srwlock);
+     ok (ret, "pSleepConditionVariableSRW should return TRUE on good wake\n");
+ 
+     pAcquireSRWLockExclusive(&condvar_srwlock);
+     condvar_seq = 11;
+-    ret = pSleepConditionVariableSRW(&condvar_base, &condvar_srwlock, 200, 0);
++    ret = pSleepConditionVariableSRW(cv, &condvar_srwlock, 200, 0);
+     pReleaseSRWLockExclusive(&condvar_srwlock);
+     ok (ret, "pSleepConditionVariableSRW should return TRUE on good wake\n");
+ 
+     pAcquireSRWLockShared(&condvar_srwlock);
+     condvar_seq = 12;
+-    ret = pSleepConditionVariableSRW(&condvar_base, &condvar_srwlock, 200, CONDITION_VARIABLE_LOCKMODE_SHARED);
++    ret = pSleepConditionVariableSRW(cv, &condvar_srwlock, 200, CONDITION_VARIABLE_LOCKMODE_SHARED);
+     pReleaseSRWLockShared(&condvar_srwlock);
+     ok (ret, "pSleepConditionVariableSRW should return TRUE on good wake\n");
+ 
+@@ -2253,12 +2266,12 @@ static DWORD WINAPI condvar_base_consumer(LPVOID x) {
+     return 0;
+ }
+ 
+-static void test_condvars_base(void) {
++static void test_condvars_base(RTL_CONDITION_VARIABLE *cv)
++{
+     HANDLE hp, hc;
+     DWORD dummy;
+     BOOL ret;
+ 
+-
+     if (!pInitializeConditionVariable) {
+         /* function is not yet in XP, only in newer Windows */
+         win_skip("no condition variable support.\n");
+@@ -2271,7 +2284,7 @@ static void test_condvars_base(void) {
+         pInitializeSRWLock(&condvar_srwlock);
+ 
+     EnterCriticalSection (&condvar_crit);
+-    ret = pSleepConditionVariableCS(&condvar_base, &condvar_crit, 10);
++    ret = pSleepConditionVariableCS(cv, &condvar_crit, 10);
+     LeaveCriticalSection (&condvar_crit);
+ 
+     ok (!ret, "SleepConditionVariableCS should return FALSE on untriggered condvar\n");
+@@ -2280,23 +2293,23 @@ static void test_condvars_base(void) {
+     if (pInitializeSRWLock)
+     {
+         pAcquireSRWLockExclusive(&condvar_srwlock);
+-        ret = pSleepConditionVariableSRW(&condvar_base, &condvar_srwlock, 10, 0);
++        ret = pSleepConditionVariableSRW(cv, &condvar_srwlock, 10, 0);
+         pReleaseSRWLockExclusive(&condvar_srwlock);
+ 
+         ok(!ret, "SleepConditionVariableSRW should return FALSE on untriggered condvar\n");
+         ok(GetLastError() == ERROR_TIMEOUT, "SleepConditionVariableSRW should return ERROR_TIMEOUT on untriggered condvar, not %d\n", GetLastError());
+ 
+         pAcquireSRWLockShared(&condvar_srwlock);
+-        ret = pSleepConditionVariableSRW(&condvar_base, &condvar_srwlock, 10, CONDITION_VARIABLE_LOCKMODE_SHARED);
++        ret = pSleepConditionVariableSRW(cv, &condvar_srwlock, 10, CONDITION_VARIABLE_LOCKMODE_SHARED);
+         pReleaseSRWLockShared(&condvar_srwlock);
+ 
+         ok(!ret, "SleepConditionVariableSRW should return FALSE on untriggered condvar\n");
+         ok(GetLastError() == ERROR_TIMEOUT, "SleepConditionVariableSRW should return ERROR_TIMEOUT on untriggered condvar, not %d\n", GetLastError());
+     }
+ 
+-
+-    hp = CreateThread(NULL, 0, condvar_base_producer, NULL, 0, &dummy);
+-    hc = CreateThread(NULL, 0, condvar_base_consumer, NULL, 0, &dummy);
++    condvar_seq = 0;
++    hp = CreateThread(NULL, 0, condvar_base_producer, cv, 0, &dummy);
++    hc = CreateThread(NULL, 0, condvar_base_consumer, cv, 0, &dummy);
+ 
+     condvar_seq = 1; /* go */
+ 
+@@ -3183,7 +3196,8 @@ START_TEST(sync)
+     test_WaitForSingleObject();
+     test_WaitForMultipleObjects();
+     test_initonce();
+-    test_condvars_base();
++    test_condvars_base(&aligned_cv);
++    test_condvars_base(&unaligned_cv.cv);
+     test_condvars_consumer_producer();
+     test_srwlock_base();
+     test_srwlock_example();
+diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
+index ac6c85c556..ac324ebbbe 100644
+--- a/dlls/ntdll/sync.c
++++ b/dlls/ntdll/sync.c
+@@ -117,6 +117,16 @@ static inline int use_futexes(void)
+     return supported;
+ }
+ 
++static int *get_futex(void **ptr)
++{
++    if (sizeof(void *) == 8)
++        return (int *)((((ULONG_PTR)ptr) + 3) & ~3);
++    else if (!(((ULONG_PTR)ptr) & 3))
++        return (int *)ptr;
++    else
++        return NULL;
++}
++
+ static void timespec_from_timeout( struct timespec *timespec, const LARGE_INTEGER *timeout )
+ {
+     LARGE_INTEGER now;
+@@ -2236,32 +2246,83 @@ BOOLEAN WINAPI RtlTryAcquireSRWLockShared( RTL_SRWLOCK *lock )
+ }
+ 
+ #ifdef __linux__
+-static NTSTATUS fast_wait_cv( RTL_CONDITION_VARIABLE *variable, int val, const LARGE_INTEGER *timeout )
++static NTSTATUS fast_wait_cv( int *futex, int val, const LARGE_INTEGER *timeout )
+ {
+     struct timespec timespec;
+     int ret;
+ 
+-    if (!use_futexes())
+-        return STATUS_NOT_IMPLEMENTED;
+-
+     if (timeout && timeout->QuadPart != TIMEOUT_INFINITE)
+     {
+         timespec_from_timeout( &timespec, timeout );
+-        ret = futex_wait( (int *)&variable->Ptr, val, &timespec );
++        ret = futex_wait( futex, val, &timespec );
+     }
+     else
+-        ret = futex_wait( (int *)&variable->Ptr, val, NULL );
++        ret = futex_wait( futex, val, NULL );
+ 
+     if (ret == -1 && errno == ETIMEDOUT)
+         return STATUS_TIMEOUT;
+     return STATUS_WAIT_0;
+ }
+ 
++static NTSTATUS fast_sleep_cs_cv( RTL_CONDITION_VARIABLE *variable,
++        RTL_CRITICAL_SECTION *cs, const LARGE_INTEGER *timeout )
++{
++    NTSTATUS status;
++    int val, *futex;
++
++    if (!use_futexes())
++        return STATUS_NOT_IMPLEMENTED;
++
++    if (!(futex = get_futex( &variable->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
++    val = *futex;
++
++    RtlLeaveCriticalSection( cs );
++    status = fast_wait_cv( futex, val, timeout );
++    RtlEnterCriticalSection( cs );
++    return status;
++}
++
++static NTSTATUS fast_sleep_srw_cv( RTL_CONDITION_VARIABLE *variable,
++        RTL_SRWLOCK *lock, const LARGE_INTEGER *timeout, ULONG flags )
++{
++    NTSTATUS status;
++    int val, *futex;
++
++    if (!use_futexes())
++        return STATUS_NOT_IMPLEMENTED;
++
++    if (!(futex = get_futex( &variable->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
++    val = *futex;
++
++    if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
++        RtlReleaseSRWLockShared( lock );
++    else
++        RtlReleaseSRWLockExclusive( lock );
++
++    status = fast_wait_cv( futex, val, timeout );
++
++    if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
++        RtlAcquireSRWLockShared( lock );
++    else
++        RtlAcquireSRWLockExclusive( lock );
++    return status;
++}
++
+ static NTSTATUS fast_wake_cv( RTL_CONDITION_VARIABLE *variable, int count )
+ {
++    int *futex;
++
+     if (!use_futexes()) return STATUS_NOT_IMPLEMENTED;
+ 
+-    futex_wake( (int *)&variable->Ptr, count );
++    if (!(futex = get_futex( &variable->Ptr )))
++        return STATUS_NOT_IMPLEMENTED;
++
++    interlocked_xchg_add( futex, 1 );
++    futex_wake( futex, count );
+     return STATUS_SUCCESS;
+ }
+ #else
+@@ -2309,9 +2370,11 @@ void WINAPI RtlInitializeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+  */
+ void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+ {
+-    interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+     if (fast_wake_cv( variable, 1 ) == STATUS_NOT_IMPLEMENTED)
++    {
++        interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+         RtlWakeAddressSingle( variable );
++    }
+ }
+ 
+ /***********************************************************************
+@@ -2321,9 +2384,11 @@ void WINAPI RtlWakeConditionVariable( RTL_CONDITION_VARIABLE *variable )
+  */
+ void WINAPI RtlWakeAllConditionVariable( RTL_CONDITION_VARIABLE *variable )
+ {
+-    interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+     if (fast_wake_cv( variable, INT_MAX ) == STATUS_NOT_IMPLEMENTED)
++    {
++        interlocked_xchg_add( (int *)&variable->Ptr, 1 );
+         RtlWakeAddressAll( variable );
++    }
+ }
+ 
+ /***********************************************************************
+@@ -2345,15 +2410,15 @@ NTSTATUS WINAPI RtlSleepConditionVariableCS( RTL_CONDITION_VARIABLE *variable, R
+                                              const LARGE_INTEGER *timeout )
+ {
+     NTSTATUS status;
+-    int val = *(int *)&variable->Ptr;
+-
+-    RtlLeaveCriticalSection( crit );
++    int val;
+ 
+-    if ((status = fast_wait_cv( variable, val, timeout )) == STATUS_NOT_IMPLEMENTED)
+-        status = RtlWaitOnAddress( &variable->Ptr, &val, sizeof(int), timeout );
++    if ((status = fast_sleep_cs_cv( variable, crit, timeout )) != STATUS_NOT_IMPLEMENTED)
++        return status;
+ 
++    val = *(int *)&variable->Ptr;
++    RtlLeaveCriticalSection( crit );
++    status = RtlWaitOnAddress( &variable->Ptr, &val, sizeof(int), timeout );
+     RtlEnterCriticalSection( crit );
+-
+     return status;
+ }
+ 
+@@ -2380,15 +2445,19 @@ NTSTATUS WINAPI RtlSleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable,
+                                               const LARGE_INTEGER *timeout, ULONG flags )
+ {
+     NTSTATUS status;
+-    int val = *(int *)&variable->Ptr;
++    int val;
++
++    if ((status = fast_sleep_srw_cv( variable, lock, timeout, flags )) != STATUS_NOT_IMPLEMENTED)
++        return status;
++
++    val = *(int *)&variable->Ptr;
+ 
+     if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
+         RtlReleaseSRWLockShared( lock );
+     else
+         RtlReleaseSRWLockExclusive( lock );
+ 
+-    if ((status = fast_wait_cv( variable, val, timeout )) == STATUS_NOT_IMPLEMENTED)
+-        status = RtlWaitOnAddress( &variable->Ptr, &val, sizeof(int), timeout );
++    status = RtlWaitOnAddress( &variable->Ptr, &val, sizeof(int), timeout );
+ 
+     if (flags & RTL_CONDITION_VARIABLE_LOCKMODE_SHARED)
+         RtlAcquireSRWLockShared( lock );
+-- 
+2.24.1
+

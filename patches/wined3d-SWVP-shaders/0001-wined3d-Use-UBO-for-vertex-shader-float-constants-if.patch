@@ -1,4 +1,4 @@
-From c7e3f11716a564888a88de2d50fac3b201ca22f2 Mon Sep 17 00:00:00 2001
+From be44f12b3c77f763a5eac9bb63d00cd71b4798fa Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 13:17:01 +0300
 Subject: [PATCH] wined3d: Use UBO for vertex shader float constants if
@@ -16,36 +16,36 @@ Subject: [PATCH] wined3d: Use UBO for vertex shader float constants if
  8 files changed, 148 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/d3d8/directx.c b/dlls/d3d8/directx.c
-index d1f8872d12..fb3804f5e8 100644
+index 0f283b55354..a69f7d8542b 100644
 --- a/dlls/d3d8/directx.c
 +++ b/dlls/d3d8/directx.c
-@@ -417,7 +417,7 @@ BOOL d3d8_init(struct d3d8 *d3d8)
+@@ -413,7 +413,7 @@ BOOL d3d8_init(struct d3d8 *d3d8)
      DWORD flags = WINED3D_LEGACY_DEPTH_BIAS | WINED3D_VIDMEM_ACCOUNTING
              | WINED3D_HANDLE_RESTORE | WINED3D_PIXEL_CENTER_INTEGER
              | WINED3D_LEGACY_UNBOUND_RESOURCE_COLOR | WINED3D_NO_PRIMITIVE_RESTART
 -            | WINED3D_LEGACY_CUBEMAP_FILTERING;
 +            | WINED3D_LEGACY_CUBEMAP_FILTERING | WINED3D_LEGACY_SHADER_CONSTANTS;
+     unsigned int adapter_idx, output_idx, adapter_count, output_count = 0;
+     struct wined3d_adapter *wined3d_adapter;
  
-     d3d8->IDirect3D8_iface.lpVtbl = &d3d8_vtbl;
-     d3d8->refcount = 1;
 diff --git a/dlls/d3d9/directx.c b/dlls/d3d9/directx.c
-index b552c3b910..04ff3fe5b6 100644
+index 3e9fabf758b..924c2d2e8c5 100644
 --- a/dlls/d3d9/directx.c
 +++ b/dlls/d3d9/directx.c
-@@ -593,7 +593,7 @@ BOOL d3d9_init(struct d3d9 *d3d9, BOOL extended)
+@@ -589,7 +589,7 @@ BOOL d3d9_init(struct d3d9 *d3d9, BOOL extended)
      DWORD flags = WINED3D_PRESENT_CONVERSION | WINED3D_HANDLE_RESTORE | WINED3D_PIXEL_CENTER_INTEGER
              | WINED3D_SRGB_READ_WRITE_CONTROL | WINED3D_LEGACY_UNBOUND_RESOURCE_COLOR
              | WINED3D_NO_PRIMITIVE_RESTART | WINED3D_LEGACY_CUBEMAP_FILTERING
 -            | WINED3D_NORMALIZED_DEPTH_BIAS;
 +            | WINED3D_NORMALIZED_DEPTH_BIAS | WINED3D_LEGACY_SHADER_CONSTANTS;
+     unsigned int adapter_idx, output_idx, adapter_count, output_count = 0;
+     struct wined3d_adapter *wined3d_adapter;
  
-     if (!extended)
-         flags |= WINED3D_VIDMEM_ACCOUNTING;
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index a59edf4e36..eeec0e43bd 100644
+index 5e7ff6e2fae..0df82acc125 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -3127,6 +3127,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info)
+@@ -3145,6 +3145,9 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info)
              gl_info->limits.uniform_blocks[WINED3D_SHADER_TYPE_VERTEX] = min(gl_max, WINED3D_MAX_CBS);
              TRACE("Max vertex uniform blocks: %u (%d).\n",
                      gl_info->limits.uniform_blocks[WINED3D_SHADER_TYPE_VERTEX], gl_max);
@@ -56,7 +56,7 @@ index a59edf4e36..eeec0e43bd 100644
      }
      if (gl_info->supported[ARB_TESSELLATION_SHADER])
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 4a2fbce553..e306694533 100644
+index d48c35c9ce2..4b751cba161 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -138,6 +138,10 @@ struct shader_glsl_priv
@@ -257,7 +257,7 @@ index 4a2fbce553..e306694533 100644
      }
  
      /* Always declare the full set of constants, the compiler can remove the
-@@ -9890,17 +9980,36 @@ static struct glsl_ffp_fragment_shader *shader_glsl_find_ffp_fragment_shader(str
+@@ -9904,17 +9994,36 @@ static struct glsl_ffp_fragment_shader *shader_glsl_find_ffp_fragment_shader(str
  
  
  static void shader_glsl_init_vs_uniform_locations(const struct wined3d_gl_info *gl_info,
@@ -299,7 +299,7 @@ index 4a2fbce553..e306694533 100644
  
      for (i = 0; i < WINED3D_MAX_CONSTS_I; ++i)
      {
-@@ -10975,6 +11084,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -10989,6 +11098,7 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
          const struct wined3d_fragment_pipe_ops *fragment_pipe)
  {
      SIZE_T stack_size = wined3d_log2i(max(WINED3D_MAX_VS_CONSTS_F, WINED3D_MAX_PS_CONSTS_F)) + 1;
@@ -307,7 +307,7 @@ index 4a2fbce553..e306694533 100644
      struct fragment_caps fragment_caps;
      void *vertex_priv, *fragment_priv;
      struct shader_glsl_priv *priv;
-@@ -10982,6 +11092,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -10996,6 +11106,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
      if (!(priv = heap_alloc_zero(sizeof(*priv))))
          return E_OUTOFMEMORY;
  
@@ -316,7 +316,7 @@ index 4a2fbce553..e306694533 100644
      string_buffer_list_init(&priv->string_buffers);
  
      if (!(vertex_priv = vertex_pipe->vp_alloc(&glsl_shader_backend, priv)))
-@@ -11036,6 +11148,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
+@@ -11050,6 +11162,8 @@ static HRESULT shader_glsl_alloc(struct wined3d_device *device, const struct win
      device->fragment_priv = fragment_priv;
      device->shader_priv = priv;
  
@@ -325,7 +325,7 @@ index 4a2fbce553..e306694533 100644
      return WINED3D_OK;
  
  fail:
-@@ -11063,6 +11177,13 @@ static void shader_glsl_free(struct wined3d_device *device, struct wined3d_conte
+@@ -11077,6 +11191,13 @@ static void shader_glsl_free(struct wined3d_device *device, struct wined3d_conte
      priv->fragment_pipe->free_private(device, context);
      priv->vertex_pipe->vp_free(device, context);
  
@@ -340,7 +340,7 @@ index 4a2fbce553..e306694533 100644
      device->shader_priv = NULL;
  }
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index 757631a73e..a869b31a2c 100644
+index 7ebd8c0226a..23e21158d44 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
 @@ -767,6 +767,8 @@ static BOOL shader_record_register_usage(struct wined3d_shader *shader, struct w
@@ -353,10 +353,10 @@ index 757631a73e..a869b31a2c 100644
                  }
              }
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index a4d88e1bfc..9de64777b1 100644
+index 715d497d076..1a9a06d4c88 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
-@@ -4391,6 +4391,11 @@ static void state_cb(struct wined3d_context *context, const struct wined3d_state
+@@ -4401,6 +4401,11 @@ static void state_cb(struct wined3d_context *context, const struct wined3d_state
      unsigned int i, base, count;
  
      TRACE("context %p, state %p, state_id %#x.\n", context, state, state_id);
@@ -369,10 +369,10 @@ index a4d88e1bfc..9de64777b1 100644
      if (STATE_IS_GRAPHICS_CONSTANT_BUFFER(state_id))
          shader_type = state_id - STATE_GRAPHICS_CONSTANT_BUFFER(0);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 932f35d14e..e6a93d0f6d 100644
+index 665c9a73982..481d5798c7d 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -1069,6 +1069,7 @@ struct wined3d_shader_reg_maps
+@@ -1070,6 +1070,7 @@ struct wined3d_shader_reg_maps
      struct wined3d_shader_tgsm *tgsm;
      SIZE_T tgsm_capacity;
      unsigned int tgsm_count;
@@ -380,7 +380,7 @@ index 932f35d14e..e6a93d0f6d 100644
  };
  
  /* Keeps track of details for TEX_M#x# instructions which need to maintain
-@@ -2742,6 +2743,7 @@ struct wined3d_gl_limits
+@@ -2746,6 +2747,7 @@ struct wined3d_gl_limits
      UINT glsl_varyings;
      UINT glsl_vs_float_constants;
      UINT glsl_ps_float_constants;
@@ -389,10 +389,10 @@ index 932f35d14e..e6a93d0f6d 100644
      UINT arb_vs_float_constants;
      UINT arb_vs_native_constants;
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 908a1c9266..fd766fa6b3 100644
+index 875bb6dfe40..581ed7b76fd 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -1338,6 +1338,7 @@ enum wined3d_shader_type
+@@ -1340,6 +1340,7 @@ enum wined3d_shader_type
  #define WINED3D_NO_PRIMITIVE_RESTART                            0x00000800
  #define WINED3D_LEGACY_CUBEMAP_FILTERING                        0x00001000
  #define WINED3D_NORMALIZED_DEPTH_BIAS                           0x00002000
@@ -401,5 +401,5 @@ index 908a1c9266..fd766fa6b3 100644
  #define WINED3D_RESZ_CODE                                       0x7fa05000
  
 -- 
-2.24.1
+2.25.1
 

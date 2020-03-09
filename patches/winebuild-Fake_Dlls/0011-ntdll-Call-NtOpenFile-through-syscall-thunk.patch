@@ -1,4 +1,4 @@
-From cdfe27833233e77ad87e1552e3c550e99776bc90 Mon Sep 17 00:00:00 2001
+From e3f71059e2f8a7ef08becb3a3bc2cd7cc3ed2d61 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Fri, 3 Jan 2020 17:39:08 +0300
 Subject: [PATCH] ntdll: Call NtOpenFile through syscall thunk.
@@ -15,10 +15,10 @@ Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=48410
  7 files changed, 17 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/actctx.c b/dlls/ntdll/actctx.c
-index 9e7782c1ee..59e9671f9a 100644
+index c5134198285..0c6cda1cfaa 100644
 --- a/dlls/ntdll/actctx.c
 +++ b/dlls/ntdll/actctx.c
-@@ -2860,7 +2860,7 @@ static NTSTATUS open_nt_file( HANDLE *handle, UNICODE_STRING *name )
+@@ -2890,7 +2890,7 @@ static NTSTATUS open_nt_file( HANDLE *handle, UNICODE_STRING *name )
      attr.ObjectName = name;
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
@@ -26,8 +26,8 @@ index 9e7782c1ee..59e9671f9a 100644
 +    return __syscall_NtOpenFile( handle, GENERIC_READ | SYNCHRONIZE, &attr, &io, FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_ALERT );
  }
  
- static NTSTATUS get_module_filename( HMODULE module, UNICODE_STRING *str, unsigned int extra_len )
-@@ -3200,7 +3200,7 @@ static NTSTATUS lookup_winsxs(struct actctx_loader* acl, struct assembly_identit
+ static NTSTATUS get_manifest_in_module( struct actctx_loader* acl, struct assembly_identity* ai,
+@@ -3207,7 +3207,7 @@ static NTSTATUS lookup_winsxs(struct actctx_loader* acl, struct assembly_identit
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
  
@@ -37,10 +37,10 @@ index 9e7782c1ee..59e9671f9a 100644
      {
          sxs_ai = *ai;
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 2d96dd0537..9e61892a6b 100644
+index 95af2dde240..ba50aa1b807 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -3026,7 +3026,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
+@@ -3012,7 +3012,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
          attr.SecurityDescriptor = NULL;
          attr.SecurityQualityOfService = NULL;
  
@@ -50,7 +50,7 @@ index 2d96dd0537..9e61892a6b 100644
          RtlFreeUnicodeString( &dirW );
          if (status != STATUS_SUCCESS) goto done;
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index a59f970cd8..037e13e0fb 100644
+index 7e8fd20e9d7..8fcd53b26ba 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -2375,7 +2375,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
@@ -63,10 +63,10 @@ index a59f970cd8..037e13e0fb 100644
                                FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE )))
      {
 diff --git a/dlls/ntdll/locale.c b/dlls/ntdll/locale.c
-index b3717b3316..b1b749b475 100644
+index 8833cfa712c..9ce92007500 100644
 --- a/dlls/ntdll/locale.c
 +++ b/dlls/ntdll/locale.c
-@@ -249,7 +249,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
+@@ -642,7 +642,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
          return STATUS_NO_MEMORY;
      valueW.Length = sprintfW( valueW.Buffer, pathfmtW, system_dir, name ) * sizeof(WCHAR);
      InitializeObjectAttributes( &attr, &valueW, 0, 0, NULL );
@@ -75,7 +75,7 @@ index b3717b3316..b1b749b475 100644
      if (!status) TRACE( "found %s\n", debugstr_w( valueW.Buffer ));
      RtlFreeUnicodeString( &valueW );
      if (status != STATUS_OBJECT_NAME_NOT_FOUND) return status;
-@@ -274,7 +274,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
+@@ -666,7 +666,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
          strcatW( valueW.Buffer, name );
          valueW.Length = strlenW(valueW.Buffer) * sizeof(WCHAR);
          InitializeObjectAttributes( &attr, &valueW, 0, 0, NULL );
@@ -85,10 +85,10 @@ index b3717b3316..b1b749b475 100644
      }
      RtlFreeUnicodeString( &valueW );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index a825366992..7a16803df1 100644
+index 94e8bf54576..0d8a603c859 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -290,4 +290,13 @@ extern BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi) DECLSPEC_
+@@ -289,4 +289,13 @@ extern BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi) DECLSPEC_
  /* string functions */
  int __cdecl NTDLL_tolower( int c );
  int __cdecl _stricmp( LPCSTR str1, LPCSTR str2 );
@@ -103,10 +103,10 @@ index a825366992..7a16803df1 100644
 +
  #endif
 diff --git a/dlls/ntdll/path.c b/dlls/ntdll/path.c
-index 11483fabba..e23bb01978 100644
+index 610646be85b..e37c8957e24 100644
 --- a/dlls/ntdll/path.c
 +++ b/dlls/ntdll/path.c
-@@ -1025,7 +1025,7 @@ NTSTATUS WINAPI RtlSetCurrentDirectory_U(const UNICODE_STRING* dir)
+@@ -1021,7 +1021,7 @@ NTSTATUS WINAPI RtlSetCurrentDirectory_U(const UNICODE_STRING* dir)
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
  
@@ -116,7 +116,7 @@ index 11483fabba..e23bb01978 100644
      if (nts != STATUS_SUCCESS) goto out;
  
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index 2965981c48..d480246452 100644
+index a1c688745a7..83d610010b3 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
 @@ -1396,7 +1396,7 @@ static NTSTATUS get_pe_file_info( UNICODE_STRING *path, ULONG attributes,
@@ -129,5 +129,5 @@ index 2965981c48..d480246452 100644
      {
          BOOL is_64bit;
 -- 
-2.24.1
+2.17.1
 

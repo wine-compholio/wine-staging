@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "26ffc40bfb42b7c05ce9513bf479e31eb85294b1"
+	echo "d731208602393877709d3bb0bdeb28c80f9719b0"
 }
 
 # Show version information
@@ -315,7 +315,6 @@ patch_enable_all ()
 	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
-	enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$1"
 	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_unset_flip_gdi="$1"
@@ -1057,9 +1056,6 @@ patch_enable ()
 			;;
 		wined3d-WINED3DFMT_B8G8R8X8_UNORM)
 			enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$2"
-			;;
-		wined3d-WINED3D_RS_COLORWRITEENABLE)
-			enable_wined3d_WINED3D_RS_COLORWRITEENABLE="$2"
 			;;
 		wined3d-WINED3D_TEXF_ANISOTROPIC)
 			enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$2"
@@ -6674,20 +6670,6 @@ if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
 	(
 		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-WINED3D_RS_COLORWRITEENABLE
-# |
-# | Modified files:
-# |   *	dlls/d3d11/device.c, dlls/d3d11/state.c, dlls/wined3d/context.c, dlls/wined3d/device.c, dlls/wined3d/state.c,
-# | 	dlls/wined3d/stateblock.c, dlls/wined3d/surface.c, dlls/wined3d/utils.c, dlls/wined3d/wined3d_private.h,
-# | 	include/wine/wined3d.h
-# |
-if test "$enable_wined3d_WINED3D_RS_COLORWRITEENABLE" -eq 1; then
-	patch_apply wined3d-WINED3D_RS_COLORWRITEENABLE/0001-wined3d-Implement-all-8-d3d11-color-write-masks.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement all 8 d3d11 color write masks.", 1 },';
 	) >> "$patchlist"
 fi
 

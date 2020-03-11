@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "d731208602393877709d3bb0bdeb28c80f9719b0"
+	echo "4dfd5f22f4032efdc283adf861d82e43c3b08d42"
 }
 
 # Show version information
@@ -198,7 +198,6 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
-	enable_ntdll_RtlGetNativeSystemInformation="$1"
 	enable_ntdll_RtlIpv4StringToAddress="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
@@ -705,9 +704,6 @@ patch_enable ()
 			;;
 		ntdll-RtlCreateUserThread)
 			enable_ntdll_RtlCreateUserThread="$2"
-			;;
-		ntdll-RtlGetNativeSystemInformation)
-			enable_ntdll_RtlGetNativeSystemInformation="$2"
 			;;
 		ntdll-RtlIpv4StringToAddress)
 			enable_ntdll_RtlIpv4StringToAddress="$2"
@@ -4756,21 +4752,6 @@ if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlGetNativeSystemInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40334] AION - Wine /Unhandled exception: page fault on read access to 0x00000000 in 64-bit code (0x0000000000000000)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/tests/info.c
-# |
-if test "$enable_ntdll_RtlGetNativeSystemInformation" -eq 1; then
-	patch_apply ntdll-RtlGetNativeSystemInformation/0001-ntdll-Export-RtlGetNativeSystemInformation-function.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Export RtlGetNativeSystemInformation() function.", 1 },';
 	) >> "$patchlist"
 fi
 

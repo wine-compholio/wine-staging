@@ -1,4 +1,4 @@
-From cd8cb8bb9d05340eb8c055e6684f421789c5657e Mon Sep 17 00:00:00 2001
+From a6c569b3ed10be719a75d5a63c377220749733c5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 18 Aug 2017 23:51:59 +0200
 Subject: [PATCH] wined3d: Implement dual source blending.
@@ -27,10 +27,10 @@ index 58544f9d6e8..1d98ee499ed 100644
  
      ID3D11BlendState_Release(blend_state);
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index c8924505e18..5e7ff6e2fae 100644
+index 8a6f7f07959..6ee3e91cd68 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -2991,6 +2991,12 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info)
+@@ -2993,6 +2993,12 @@ static void wined3d_adapter_init_limits(struct wined3d_gl_info *gl_info)
          gl_info->limits.buffers = min(MAX_RENDER_TARGET_VIEWS, gl_max);
          TRACE("Max draw buffers: %u.\n", gl_max);
      }
@@ -43,7 +43,7 @@ index c8924505e18..5e7ff6e2fae 100644
      if (gl_info->supported[ARB_MULTITEXTURE])
      {
          if (gl_info->supported[WINED3D_GL_LEGACY_CONTEXT])
-@@ -5120,6 +5126,7 @@ static void wined3d_adapter_gl_init_d3d_info(struct wined3d_adapter_gl *adapter_
+@@ -5122,6 +5128,7 @@ static void wined3d_adapter_gl_init_d3d_info(struct wined3d_adapter_gl *adapter_
      struct fragment_caps fragment_caps;
      struct shader_caps shader_caps;
      GLfloat f[2];
@@ -51,7 +51,7 @@ index c8924505e18..5e7ff6e2fae 100644
  
      adapter_gl->a.shader_backend->shader_get_caps(&adapter_gl->a, &shader_caps);
      adapter_gl->a.vertex_pipe->vp_get_caps(&adapter_gl->a, &vertex_caps);
-@@ -5140,6 +5147,10 @@ static void wined3d_adapter_gl_init_d3d_info(struct wined3d_adapter_gl *adapter_
+@@ -5142,6 +5149,10 @@ static void wined3d_adapter_gl_init_d3d_info(struct wined3d_adapter_gl *adapter_
      d3d_info->limits.ffp_vertex_blend_matrices = vertex_caps.max_vertex_blend_matrices;
      d3d_info->limits.active_light_count = vertex_caps.max_active_lights;
  
@@ -157,7 +157,7 @@ index 13e55cff8aa..e308acccb74 100644
  
  static HRESULT pixel_shader_init(struct wined3d_shader *shader, struct wined3d_device *device,
 diff --git a/dlls/wined3d/state.c b/dlls/wined3d/state.c
-index aa85193bdd7..32c7c946165 100644
+index 19f47f834e4..54075caefa3 100644
 --- a/dlls/wined3d/state.c
 +++ b/dlls/wined3d/state.c
 @@ -532,12 +532,14 @@ static void state_blend(struct wined3d_context *context, const struct wined3d_st
@@ -196,11 +196,11 @@ index aa85193bdd7..32c7c946165 100644
      checkGLcall("glEnable(GL_BLEND)");
  
 +    rt_format = state->fb->render_targets[0]->format;
-     gl_blend_from_d3d(&src_blend, &dst_blend, b->desc.src,
-             state->render_states[WINED3D_RS_DESTBLEND], rt_format);
+     gl_blend_from_d3d(&src_blend, &dst_blend, b->desc.src, b->desc.dst, rt_format);
  
+     blendop(state, gl_info);
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 20af49e5546..ca7dec19947 100644
+index 127e4c76212..d7113d6cac2 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -205,6 +205,7 @@ struct wined3d_d3d_info
@@ -211,7 +211,7 @@ index 20af49e5546..ca7dec19947 100644
      uint32_t wined3d_creation_flags;
      uint32_t xyzrhw : 1;
      uint32_t emulated_flatshading : 1;
-@@ -1393,7 +1394,8 @@ struct ps_compile_args
+@@ -1394,7 +1395,8 @@ struct ps_compile_args
      DWORD alpha_test_func : 3;
      DWORD render_offscreen : 1;
      DWORD rt_alpha_swizzle : 8; /* MAX_RENDER_TARGET_VIEWS, 8 */
@@ -221,7 +221,7 @@ index 20af49e5546..ca7dec19947 100644
  };
  
  enum fog_src_type
-@@ -1970,7 +1972,8 @@ struct wined3d_context
+@@ -1971,7 +1973,8 @@ struct wined3d_context
      DWORD destroyed : 1;
      DWORD destroy_delayed : 1;
      DWORD clip_distance_mask : 8; /* WINED3D_MAX_CLIP_DISTANCES, 8 */
@@ -231,7 +231,7 @@ index 20af49e5546..ca7dec19947 100644
  
      DWORD constant_update_mask;
      DWORD numbered_array_mask;
-@@ -2718,6 +2721,7 @@ struct wined3d_fbo_ops
+@@ -2719,6 +2722,7 @@ struct wined3d_fbo_ops
  struct wined3d_gl_limits
  {
      UINT buffers;
@@ -239,7 +239,7 @@ index 20af49e5546..ca7dec19947 100644
      UINT lights;
      UINT textures;
      UINT texture_coords;
-@@ -3230,6 +3234,22 @@ struct wined3d_state
+@@ -3231,6 +3235,22 @@ struct wined3d_state
      struct wined3d_rasterizer_state *rasterizer_state;
  };
  
@@ -263,5 +263,5 @@ index 20af49e5546..ca7dec19947 100644
  {
      GLuint tex_1d;
 -- 
-2.25.1
+2.17.1
 

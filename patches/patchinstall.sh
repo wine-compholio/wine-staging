@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4dfd5f22f4032efdc283adf861d82e43c3b08d42"
+	echo "c3165b4c96a021a96dc6dd8a0b8e1030682dd6e5"
 }
 
 # Show version information
@@ -314,7 +314,6 @@ patch_enable_all ()
 	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
-	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -1052,9 +1051,6 @@ patch_enable ()
 			;;
 		wined3d-WINED3DFMT_B8G8R8X8_UNORM)
 			enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$2"
-			;;
-		wined3d-WINED3D_TEXF_ANISOTROPIC)
-			enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$2"
 			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
@@ -6651,21 +6647,6 @@ if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
 	patch_apply wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
 	(
 		printf '%s\n' '+    { "Stanislav Zhukov", "wined3d: Implement WINED3DFMT_B8G8R8X8_UNORM to WINED3DFMT_L8_UNORM conversion.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-WINED3D_TEXF_ANISOTROPIC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41929] wined3d: Multiple games need WINED3D_TEXF_ANISOTROPIC filter mode
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_WINED3D_TEXF_ANISOTROPIC" -eq 1; then
-	patch_apply wined3d-WINED3D_TEXF_ANISOTROPIC/0001-wined3d-Multiple-games-need-WINED3D_TEXF_ANISOTROPIC.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Multiple games need WINED3D_TEXF_ANISOTROPIC filter mode.", 1 },';
 	) >> "$patchlist"
 fi
 

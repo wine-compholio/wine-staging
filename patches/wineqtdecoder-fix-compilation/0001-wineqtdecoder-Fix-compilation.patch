@@ -1,0 +1,78 @@
+From 2b7f78363d8ad03c0c566ec452abc69bcac347d1 Mon Sep 17 00:00:00 2001
+From: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
+Date: Sat, 14 Mar 2020 10:52:14 +1100
+Subject: [PATCH] wineqtdecoder: Fix compilation.
+
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+ dlls/wineqtdecoder/qtvdecoder.c | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/wineqtdecoder/qtvdecoder.c b/dlls/wineqtdecoder/qtvdecoder.c
+index eaaf30acdb..41b29786cc 100644
+--- a/dlls/wineqtdecoder/qtvdecoder.c
++++ b/dlls/wineqtdecoder/qtvdecoder.c
+@@ -128,8 +128,6 @@
+ #include "qtprivate.h"
+ #include "wineqtdecoder_classes.h"
+ 
+-extern CLSID CLSID_QTVDecoder;
+-
+ WINE_DEFAULT_DEBUG_CHANNEL(qtdecoder);
+ 
+ typedef struct QTVDecoderImpl
+@@ -137,6 +135,8 @@ typedef struct QTVDecoderImpl
+     struct strmbase_filter filter;
+     CRITICAL_SECTION stream_cs;
+ 
++    AM_MEDIA_TYPE mt;
++
+     struct strmbase_source source;
+     IUnknown *seeking;
+ 
+@@ -266,7 +266,7 @@ error:
+     This->decodeHR = hr;
+ }
+ 
+-static HRESULT WINAPI video_decoder_Receive(struct strmbase_sink *iface, IMediaSample *pSample)
++static HRESULT WINAPI video_decoder_sink_Receive(struct strmbase_sink *iface, IMediaSample *pSample)
+ {
+     QTVDecoderImpl *This = impl_from_strmbase_filter(iface->pin.filter);
+     HRESULT hr;
+@@ -504,7 +504,7 @@ static HRESULT video_decoder_source_get_media_type(struct strmbase_pin *iface,
+     return S_OK;
+ }
+ 
+-static HRESULT WINAPI video_decoder_DecideBufferSize(struct strmbase_source *iface,
++static HRESULT WINAPI video_decoder_source_DecideBufferSize(struct strmbase_source *iface,
+         IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *ppropInputRequest)
+ {
+     QTVDecoderImpl *This = impl_from_strmbase_filter(iface->pin.filter);
+@@ -590,7 +590,7 @@ static HRESULT video_decoder_init_stream(struct strmbase_filter *iface)
+ 
+ static HRESULT video_decoder_cleanup_stream(struct strmbase_filter *iface)
+ {
+-    QTVDecoderImpl* This = impl_from_TransformFilter(pTransformFilter);
++    QTVDecoderImpl* This = impl_from_strmbase_filter(iface);
+ 
+     if (This->decompressionSession)
+         ICMDecompressionSessionRelease(This->decompressionSession);
+@@ -611,6 +611,7 @@ HRESULT video_decoder_create(IUnknown *outer, IUnknown **out)
+ {
+     QTVDecoderImpl *object;
+     HRESULT hr;
++    ISeekingPassThru *passthrough;
+ 
+     if (!(object = calloc(1, sizeof(*object))))
+         return E_OUTOFMEMORY;
+@@ -640,6 +641,6 @@ HRESULT video_decoder_create(IUnknown *outer, IUnknown **out)
+     ISeekingPassThru_Release(passthrough);
+ 
+     TRACE("Created video decoder %p.\n", object);
+-    *out = &object->tf.filter.IUnknown_inner;
++    *out = &object->filter.IUnknown_inner;
+     return S_OK;
+ }
+-- 
+2.25.1
+

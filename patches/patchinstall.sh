@@ -325,6 +325,7 @@ patch_enable_all ()
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
+	enable_wineqtdecoder_fix_compilation="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
@@ -1085,6 +1086,9 @@ patch_enable ()
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
+			;;
+		wineqtdecoder-fix-compilation)
+			enable_wineqtdecoder_fix_compilation="$2"
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
@@ -6845,6 +6849,18 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Account for PA devices that fall way behind.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Fix local buffer offset wrapping.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t fake being one period behind in GetPosition.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset wineqtdecoder-fix-compilation
+# |
+# | Modified files:
+# |   *	dlls/wineqtdecoder/qtvdecoder.c
+# |
+if test "$enable_wineqtdecoder_fix_compilation" -eq 1; then
+	patch_apply wineqtdecoder-fix-compilation/0001-wineqtdecoder-Fix-compilation.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wineqtdecoder: Fix compilation.", 1 },';
 	) >> "$patchlist"
 fi
 

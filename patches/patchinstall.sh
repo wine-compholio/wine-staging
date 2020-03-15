@@ -323,6 +323,7 @@ patch_enable_all ()
 	enable_winedevice_Default_Drivers="$1"
 	enable_winemapi_user_xdg_mail="$1"
 	enable_winemenubuilder_Desktop_Icon_Path="$1"
+	enable_winemenubuilder_integration="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_wineqtdecoder_fix_compilation="$1"
@@ -1080,6 +1081,9 @@ patch_enable ()
 			;;
 		winemenubuilder-Desktop_Icon_Path)
 			enable_winemenubuilder_Desktop_Icon_Path="$2"
+			;;
+		winemenubuilder-integration)
+			enable_winemenubuilder_integration="$2"
 			;;
 		wineps.drv-PostScript_Fixes)
 			enable_wineps_drv_PostScript_Fixes="$2"
@@ -6797,6 +6801,24 @@ if test "$enable_winemenubuilder_Desktop_Icon_Path" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset winemenubuilder-integration
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41275] Winemenubuilder should respect existing defaults for filetype associations
+# |   *	[#22904] Register URL protocol handlers under Linux
+# |
+# | Modified files:
+# |   *	dlls/mshtml/mshtml.inf, loader/wine.inf.in, programs/winemenubuilder/winemenubuilder.c
+# |
+if test "$enable_winemenubuilder_integration" -eq 1; then
+	patch_apply winemenubuilder-integration/0001-winemenubuilder-Blacklist-desktop-integration-for-ce.patch
+	patch_apply winemenubuilder-integration/0002-winemenubuilder-Create-.desktop-files-for-programs-t.patch
+	(
+		printf '%s\n' '+    { "Alex Henrie", "winemenubuilder: Blacklist desktop integration for certain associations.", 1 },';
+		printf '%s\n' '+    { "Alex Henrie", "winemenubuilder: Create .desktop files for programs that open URIs.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset wineps.drv-PostScript_Fixes
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7284,15 +7306,15 @@ fi
 # |   *	[#48684] BlazBlue: Calamity Trigger requires for xactengine 3.3 interface.
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/xactengine3_0/Makefile.in, dlls/xactengine3_0/xactengine3_0.spec, dlls/xactengine3_1/Makefile.in,
-# | 	dlls/xactengine3_1/xactengine3_1.spec, dlls/xactengine3_2/Makefile.in, dlls/xactengine3_2/xactengine3_2.spec,
-# | 	dlls/xactengine3_3/Makefile.in, dlls/xactengine3_3/xactengine3_3.spec, dlls/xactengine3_4/Makefile.in,
-# | 	dlls/xactengine3_4/xactengine3_4.spec, dlls/xactengine3_5/Makefile.in, dlls/xactengine3_5/xactengine3_5.spec,
-# | 	dlls/xactengine3_6/Makefile.in, dlls/xactengine3_6/xactengine3_6.spec, dlls/xactengine3_7/Makefile.in,
-# | 	dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in, dlls/xaudio2_7/tests/Makefile.in,
-# | 	dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc, dlls/xaudio2_7/tests/xact.c,
-# | 	dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c, dlls/xaudio2_7/xaudio_dll.c,
-# | 	include/Makefile.in, include/config.h.in, include/xact3.idl, include/xact3wb.h
+# |   *	configure.ac, dlls/x3daudio1_7/Makefile.in, dlls/xactengine3_0/Makefile.in, dlls/xactengine3_0/xactengine3_0.spec,
+# | 	dlls/xactengine3_1/Makefile.in, dlls/xactengine3_1/xactengine3_1.spec, dlls/xactengine3_2/Makefile.in,
+# | 	dlls/xactengine3_2/xactengine3_2.spec, dlls/xactengine3_3/Makefile.in, dlls/xactengine3_3/xactengine3_3.spec,
+# | 	dlls/xactengine3_4/Makefile.in, dlls/xactengine3_4/xactengine3_4.spec, dlls/xactengine3_5/Makefile.in,
+# | 	dlls/xactengine3_5/xactengine3_5.spec, dlls/xactengine3_6/Makefile.in, dlls/xactengine3_6/xactengine3_6.spec,
+# | 	dlls/xactengine3_7/Makefile.in, dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in,
+# | 	dlls/xaudio2_7/tests/Makefile.in, dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc,
+# | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c,
+# | 	dlls/xaudio2_7/xaudio_dll.c, include/Makefile.in, include/config.h.in, include/xact3.idl, include/xact3wb.h
 # |
 if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0001-include-Add-xact3.idl.patch

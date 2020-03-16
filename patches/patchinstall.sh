@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4c61c8dce09307ecfe0beea307213bd1fb6a69db"
+	echo "c2ee20c95bea55069d32cfa69a95ae3e4486a02b"
 }
 
 # Show version information
@@ -314,7 +314,6 @@ patch_enable_all ()
 	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
 	enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$1"
-	enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$1"
 	enable_wined3d_mesa_texture_download="$1"
 	enable_wined3d_unset_flip_gdi="$1"
 	enable_wined3d_wined3d_guess_gl_vendor="$1"
@@ -326,7 +325,6 @@ patch_enable_all ()
 	enable_winemenubuilder_integration="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
-	enable_wineqtdecoder_fix_compilation="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
@@ -1055,9 +1053,6 @@ patch_enable ()
 		wined3d-WINED3DFMT_B8G8R8X8_UNORM)
 			enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM="$2"
 			;;
-		wined3d-WINED3D_TEXF_ANISOTROPIC)
-			enable_wined3d_WINED3D_TEXF_ANISOTROPIC="$2"
-			;;
 		wined3d-mesa_texture_download)
 			enable_wined3d_mesa_texture_download="$2"
 			;;
@@ -1090,9 +1085,6 @@ patch_enable ()
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
-			;;
-		wineqtdecoder-fix-compilation)
-			enable_wineqtdecoder_fix_compilation="$2"
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
@@ -6662,21 +6654,6 @@ if test "$enable_wined3d_WINED3DFMT_B8G8R8X8_UNORM" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset wined3d-WINED3D_TEXF_ANISOTROPIC
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#41929] wined3d: Multiple games need WINED3D_TEXF_ANISOTROPIC filter mode
-# |
-# | Modified files:
-# |   *	dlls/wined3d/surface.c
-# |
-if test "$enable_wined3d_WINED3D_TEXF_ANISOTROPIC" -eq 1; then
-	patch_apply wined3d-WINED3D_TEXF_ANISOTROPIC/0001-wined3d-Multiple-games-need-WINED3D_TEXF_ANISOTROPIC.patch
-	(
-		printf '%s\n' '+    { "Józef Kucia", "wined3d: Multiple games need WINED3D_TEXF_ANISOTROPIC filter mode.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset wined3d-mesa_texture_download
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6871,18 +6848,6 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Account for PA devices that fall way behind.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Fix local buffer offset wrapping.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t fake being one period behind in GetPosition.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wineqtdecoder-fix-compilation
-# |
-# | Modified files:
-# |   *	dlls/wineqtdecoder/qtvdecoder.c
-# |
-if test "$enable_wineqtdecoder_fix_compilation" -eq 1; then
-	patch_apply wineqtdecoder-fix-compilation/0001-wineqtdecoder-Fix-compilation.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "wineqtdecoder: Fix compilation.", 1 },';
 	) >> "$patchlist"
 fi
 

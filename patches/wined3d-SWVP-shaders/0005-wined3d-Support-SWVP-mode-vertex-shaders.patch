@@ -1,4 +1,4 @@
-From 8e28a42c30774c48cbc5bc4c627357c4d26ed4cd Mon Sep 17 00:00:00 2001
+From ee17d52379ab1bf8ed5c19ce3658a1996d19808b Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 15:23:33 +0300
 Subject: [PATCH] wined3d: Support SWVP mode vertex shaders.
@@ -14,7 +14,7 @@ Subject: [PATCH] wined3d: Support SWVP mode vertex shaders.
  7 files changed, 104 insertions(+), 49 deletions(-)
 
 diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
-index b60468e013..6e031be27f 100644
+index 09446d0be6..7d62fd5823 100644
 --- a/dlls/d3d9/tests/device.c
 +++ b/dlls/d3d9/tests/device.c
 @@ -6901,15 +6901,11 @@ float4 main(const float4 color : COLOR) : SV_TARGET
@@ -59,10 +59,10 @@ index b60468e013..6e031be27f 100644
  cleanup:
      refcount = IDirect3DDevice9_Release(device);
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index 2d6e1fa688..793b3f0c23 100644
+index 0ae4eb7a34..0463df7a56 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
-@@ -24810,7 +24810,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24803,7 +24803,6 @@ static void test_mvp_software_vertex_shaders(void)
      hr = IDirect3DDevice9_CreateVertexShader(device, reladdr_shader_code, &reladdr_shader);
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
      hr = IDirect3DDevice9_CreateVertexShader(device, pure_sw_shader_code, &pure_sw_shader);
@@ -70,7 +70,7 @@ index 2d6e1fa688..793b3f0c23 100644
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
      hr = IDirect3DDevice9_CreateVertexDeclaration(device, decl_elements, &vertex_declaration);
      ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
-@@ -24848,7 +24847,7 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24841,7 +24840,7 @@ static void test_mvp_software_vertex_shaders(void)
  
      expected_color = 0x00ff0000; /* Color from vertex data and not from the shader. */
      color = getPixelColor(device, 5, 5);
@@ -79,7 +79,7 @@ index 2d6e1fa688..793b3f0c23 100644
              expected_color, color);
  
      hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
-@@ -24867,7 +24866,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24860,7 +24859,6 @@ static void test_mvp_software_vertex_shaders(void)
  
      expected_color = 0x00ffffff;
      color = getPixelColor(device, 5, 5);
@@ -87,7 +87,7 @@ index 2d6e1fa688..793b3f0c23 100644
      ok(color == expected_color, "Expected color 0x%08x, got 0x%08x (sw shader in sw mode).\n",
              expected_color, color);
  
-@@ -24917,7 +24915,6 @@ static void test_mvp_software_vertex_shaders(void)
+@@ -24910,7 +24908,6 @@ static void test_mvp_software_vertex_shaders(void)
  
      expected_color = 0x0000ffff; /* c[256] is c_color for SW shader. */
      color = getPixelColor(device, 5, 5);
@@ -96,10 +96,10 @@ index 2d6e1fa688..793b3f0c23 100644
              expected_color, color);
  
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 3aa3d13314..4a9b9a7781 100644
+index 1db974f118..844d2f60ec 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -4524,6 +4524,14 @@ void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *
+@@ -4256,6 +4256,14 @@ void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *
          warned = TRUE;
      }
  
@@ -115,7 +115,7 @@ index 3aa3d13314..4a9b9a7781 100644
  }
  
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index a88f92cc03..4b151baf97 100644
+index a88f92cc03..3ae361024e 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -140,7 +140,9 @@ struct shader_glsl_priv
@@ -219,7 +219,7 @@ index a88f92cc03..4b151baf97 100644
          shader_glsl_load_constants_f(vshader, gl_info, state->vs_consts_f,
 -                prog->vs.uniform_f_locations, &priv->vconst_heap, priv->stack, constant_version, priv);
 +                prog->vs.uniform_f_locations, &priv->vconst_heap, priv->stack,
-+                constant_version, priv, device_is_swvp(context->device));
++                constant_version, priv, wined3d_device_is_swvp_mode(context->device));
  
      if (update_mask & WINED3D_SHADER_CONST_VS_I)
          shader_glsl_load_constants_i(vshader, gl_info, state->vs_consts_i,
@@ -272,7 +272,7 @@ index a88f92cc03..4b151baf97 100644
      }
  
 +    if (vshader && vshader->reg_maps.constant_float_count > WINED3D_MAX_VS_CONSTS_F
-+            && !device_is_swvp(context_gl->c.device))
++            && !wined3d_device_is_swvp_mode(context_gl->c.device))
 +        FIXME("Applying context with SW shader in HW mode.\n");
 +
      hshader = state->shader[WINED3D_SHADER_TYPE_HULL];
@@ -316,7 +316,7 @@ index a88f92cc03..4b151baf97 100644
          ERR("Failed to initialize vertex shader constant heap\n");
          goto fail;
 diff --git a/dlls/wined3d/shader.c b/dlls/wined3d/shader.c
-index a869b31a2c..b2145750d6 100644
+index f29b49b902..294b65260e 100644
 --- a/dlls/wined3d/shader.c
 +++ b/dlls/wined3d/shader.c
 @@ -592,7 +592,7 @@ static void shader_delete_constant_list(struct list *clist)
@@ -482,23 +482,23 @@ index 0c6bb93317..1051307e88 100644
          WARN("Invalid shader version %u.%u (%#x).\n", major, minor, *byte_code);
          return NULL;
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index d07ac1ab0b..81dfb45ec5 100644
+index eef5d4fec2..cdfce0bea4 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -4864,6 +4864,13 @@ static inline BOOL shader_constant_is_local(const struct wined3d_shader *shader,
-     return FALSE;
- }
+@@ -3354,6 +3354,13 @@ HRESULT wined3d_device_set_implicit_swapchain(struct wined3d_device *device,
+         struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
+ void wined3d_device_uninit_3d(struct wined3d_device *device) DECLSPEC_HIDDEN;
  
-+static inline BOOL device_is_swvp(const struct wined3d_device *device)
++static inline BOOL wined3d_device_is_swvp_mode(const struct wined3d_device *device)
 +{
 +    return (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
 +            || ((device->create_parms.flags & WINED3DCREATE_MIXED_VERTEXPROCESSING)
 +            && device->softwareVertexProcessing);
 +}
 +
- void get_identity_matrix(struct wined3d_matrix *mat) DECLSPEC_HIDDEN;
- void get_modelview_matrix(const struct wined3d_context *context, const struct wined3d_state *state,
-         unsigned int index, struct wined3d_matrix *mat) DECLSPEC_HIDDEN;
+ static inline unsigned int wined3d_device_get_vs_uniform_count(const struct wined3d_device *device)
+ {
+     const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
 -- 
-2.24.1
+2.25.1
 

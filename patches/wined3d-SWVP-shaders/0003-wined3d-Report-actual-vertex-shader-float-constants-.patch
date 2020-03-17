@@ -1,22 +1,22 @@
-From 284768caa7c7a7c2e46d3ec90226d57cddd6dfd7 Mon Sep 17 00:00:00 2001
+From de420388d95e30644947be15c42bfa51349f48f9 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 14:47:28 +0300
 Subject: [PATCH] wined3d: Report actual vertex shader float constants limit
  for SWVP device.
 
 ---
- dlls/wined3d/adapter_gl.c      |  3 ++-
- dlls/wined3d/device.c          | 13 ++++++++++++-
- dlls/wined3d/glsl_shader.c     |  5 ++++-
- dlls/wined3d/wined3d_private.h |  1 +
- include/wine/wined3d.h         |  1 +
- 5 files changed, 20 insertions(+), 3 deletions(-)
+ dlls/wined3d/adapter_gl.c      | 3 ++-
+ dlls/wined3d/device.c          | 9 ++++++++-
+ dlls/wined3d/glsl_shader.c     | 5 ++++-
+ dlls/wined3d/wined3d_private.h | 1 +
+ include/wine/wined3d.h         | 1 +
+ 5 files changed, 16 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
-index aca36a2377a..38fb0712547 100644
+index 078a874e1c..f1cb7d9659 100644
 --- a/dlls/wined3d/adapter_gl.c
 +++ b/dlls/wined3d/adapter_gl.c
-@@ -5159,7 +5159,8 @@ static void wined3d_adapter_gl_init_d3d_info(struct wined3d_adapter_gl *adapter_
+@@ -5140,7 +5140,8 @@ static void wined3d_adapter_gl_init_d3d_info(struct wined3d_adapter_gl *adapter_
      d3d_info->limits.gs_version = shader_caps.gs_version;
      d3d_info->limits.ps_version = shader_caps.ps_version;
      d3d_info->limits.cs_version = shader_caps.cs_version;
@@ -27,36 +27,32 @@ index aca36a2377a..38fb0712547 100644
      d3d_info->limits.varying_count = shader_caps.varying_count;
      d3d_info->limits.ffp_textures = fragment_caps.MaxSimultaneousTextures;
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index 2cb5300e37e..a93c473d8da 100644
+index 42d645d201..b2db48ecf0 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3819,9 +3819,20 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
+@@ -3796,9 +3796,16 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
  
  HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device, struct wined3d_caps *caps)
  {
-+    const struct wined3d_adapter *adapter = device->wined3d->adapters[device->adapter->ordinal];
-+    struct wined3d_vertex_caps vertex_caps;
 +    HRESULT hr;
 +
      TRACE("device %p, caps %p.\n", device, caps);
  
 -    return wined3d_get_device_caps(device->adapter, device->create_parms.device_type, caps);
-+    hr = wined3d_get_device_caps(device->adapter, device->create_parms.device_type, caps);
-+    if (FAILED(hr))
++    if (FAILED(hr = wined3d_get_device_caps(device->adapter, device->create_parms.device_type, caps)))
 +        return hr;
 +
-+    adapter->vertex_pipe->vp_get_caps(adapter, &vertex_caps);
 +    if (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
-+        caps->MaxVertexShaderConst = adapter->d3d_info.limits.vs_uniform_count_swvp;
++        caps->MaxVertexShaderConst = device->adapter->d3d_info.limits.vs_uniform_count_swvp;
 +    return hr;
  }
  
  HRESULT CDECL wined3d_device_get_display_mode(const struct wined3d_device *device, UINT swapchain_idx,
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 4b751cba161..412b12184f1 100644
+index e306694533..4f7cc772be 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
-@@ -11275,7 +11275,10 @@ static void shader_glsl_get_caps(const struct wined3d_adapter *adapter, struct s
+@@ -11261,7 +11261,10 @@ static void shader_glsl_get_caps(const struct wined3d_adapter *adapter, struct s
      caps->vs_version = gl_info->supported[ARB_VERTEX_SHADER] ? caps->vs_version : 0;
      caps->ps_version = gl_info->supported[ARB_FRAGMENT_SHADER] ? caps->ps_version : 0;
  
@@ -69,7 +65,7 @@ index 4b751cba161..412b12184f1 100644
      caps->varying_count = gl_info->limits.glsl_varyings;
  
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 2a371d021aa..4a7f843a108 100644
+index b09811b845..51b5cc4ac7 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
 @@ -173,6 +173,7 @@ struct wined3d_d3d_limits
@@ -81,10 +77,10 @@ index 2a371d021aa..4a7f843a108 100644
      unsigned int varying_count;
      unsigned int ffp_textures;
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index 95292faca5c..cdefb46e969 100644
+index 1199408ec6..3606c4e245 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -1604,6 +1604,7 @@ enum wined3d_shader_type
+@@ -1602,6 +1602,7 @@ enum wined3d_shader_type
  #define WINED3D_MAX_CONSTS_B                                    16
  #define WINED3D_MAX_CONSTS_I                                    16
  #define WINED3D_MAX_VS_CONSTS_F                                 256

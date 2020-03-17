@@ -1,4 +1,4 @@
-From d4dd6612e5d2ad13deb9b9e543ef73a5fd6c083f Mon Sep 17 00:00:00 2001
+From c08f3b5637a9d43e29b7d72cb61068f270d82133 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Feb 2019 15:05:12 +0300
 Subject: [PATCH] wined3d: Support SWVP vertex shader constants limit in state
@@ -7,15 +7,15 @@ Subject: [PATCH] wined3d: Support SWVP vertex shader constants limit in state
 ---
  dlls/d3d9/tests/device.c       |  5 -----
  dlls/d3d9/tests/visual.c       |  1 -
- dlls/wined3d/device.c          |  9 +++++++--
+ dlls/wined3d/device.c          |  6 ++++--
  dlls/wined3d/glsl_shader.c     |  2 +-
- dlls/wined3d/stateblock.c      | 30 ++++++++++++++++++++++--------
- dlls/wined3d/wined3d_private.h |  4 ++--
+ dlls/wined3d/stateblock.c      | 23 ++++++++++++++---------
+ dlls/wined3d/wined3d_private.h | 13 +++++++++++--
  include/wine/wined3d.h         |  2 +-
- 7 files changed, 33 insertions(+), 20 deletions(-)
+ 7 files changed, 31 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/d3d9/tests/device.c b/dlls/d3d9/tests/device.c
-index d00a26b942c..09446d0be62 100644
+index d00a26b942..09446d0be6 100644
 --- a/dlls/d3d9/tests/device.c
 +++ b/dlls/d3d9/tests/device.c
 @@ -6413,13 +6413,10 @@ static void test_vertex_shader_constant(void)
@@ -49,7 +49,7 @@ index d00a26b942c..09446d0be62 100644
      hr = IDirect3DDevice9_SetVertexShaderConstantF(device, consts_swvp - 1, c, 1);
      ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
 diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
-index 9ceb758c605..0ae4eb7a347 100644
+index 9ceb758c60..0ae4eb7a34 100644
 --- a/dlls/d3d9/tests/visual.c
 +++ b/dlls/d3d9/tests/visual.c
 @@ -24877,7 +24877,6 @@ static void test_mvp_software_vertex_shaders(void)
@@ -61,14 +61,10 @@ index 9ceb758c605..0ae4eb7a347 100644
  
      hr = IDirect3DDevice9_BeginScene(device);
 diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
-index a93c473d8da..ac855848f24 100644
+index b2db48ecf0..1db974f118 100644
 --- a/dlls/wined3d/device.c
 +++ b/dlls/wined3d/device.c
-@@ -3504,10 +3504,11 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
-         struct wined3d_stateblock *stateblock)
- {
-     const struct wined3d_stateblock_state *state = &stateblock->stateblock_state;
-+    const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
+@@ -3484,7 +3484,7 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
      const struct wined3d_saved_states *changed = &stateblock->changed;
      const unsigned int word_bit_count = sizeof(DWORD) * CHAR_BIT;
      BOOL set_blend_state = FALSE, set_rasterizer_state = FALSE;
@@ -77,13 +73,11 @@ index a93c473d8da..ac855848f24 100644
      struct wined3d_range range;
      uint32_t map;
  
-@@ -3518,9 +3519,13 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
+@@ -3495,9 +3495,11 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
      if (changed->pixelShader)
          wined3d_device_set_pixel_shader(device, state->ps);
  
-+    vs_uniform_count = device->create_parms.flags
-+            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
-+            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
++    vs_uniform_count = wined3d_device_get_vs_uniform_count(device);
 +
      for (start = 0; ; start = range.offset + range.size)
      {
@@ -93,7 +87,7 @@ index a93c473d8da..ac855848f24 100644
  
          wined3d_device_set_vs_consts_f(device, range.offset, range.size, &state->vs_consts_f[range.offset]);
 diff --git a/dlls/wined3d/glsl_shader.c b/dlls/wined3d/glsl_shader.c
-index 412b12184f1..33666d5eb8c 100644
+index 4f7cc772be..a88f92cc03 100644
 --- a/dlls/wined3d/glsl_shader.c
 +++ b/dlls/wined3d/glsl_shader.c
 @@ -1913,7 +1913,7 @@ static void shader_glsl_update_float_vertex_constants(struct wined3d_device *dev
@@ -106,14 +100,12 @@ index 412b12184f1..33666d5eb8c 100644
          update_heap_entry(heap, i, priv->next_constant_version);
      }
 diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
-index db0019adbf4..0641fb4b754 100644
+index db0019adbf..6be1115f82 100644
 --- a/dlls/wined3d/stateblock.c
 +++ b/dlls/wined3d/stateblock.c
-@@ -713,9 +713,10 @@ static void wined3d_state_record_lights(struct wined3d_light_state *dst_state,
- void CDECL wined3d_stateblock_capture(struct wined3d_stateblock *stateblock,
+@@ -714,8 +714,8 @@ void CDECL wined3d_stateblock_capture(struct wined3d_stateblock *stateblock,
          const struct wined3d_stateblock *device_state)
  {
-+    const struct wined3d_d3d_info *d3d_info = &stateblock->device->adapter->d3d_info;
      const struct wined3d_stateblock_state *state = &device_state->stateblock_state;
 +    unsigned int i, start, vs_uniform_count;
      struct wined3d_range range;
@@ -121,13 +113,11 @@ index db0019adbf4..0641fb4b754 100644
      DWORD map;
  
      TRACE("stateblock %p, device_state %p.\n", stateblock, device_state);
-@@ -731,9 +732,13 @@ void CDECL wined3d_stateblock_capture(struct wined3d_stateblock *stateblock,
+@@ -731,9 +731,11 @@ void CDECL wined3d_stateblock_capture(struct wined3d_stateblock *stateblock,
          stateblock->stateblock_state.vs = state->vs;
      }
  
-+    vs_uniform_count = stateblock->device->create_parms.flags
-+            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
-+            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
++    vs_uniform_count = wined3d_device_get_vs_uniform_count(stateblock->device);
 +
      for (start = 0; ; start = range.offset + range.size)
      {
@@ -136,11 +126,9 @@ index db0019adbf4..0641fb4b754 100644
              break;
  
          memcpy(&stateblock->stateblock_state.vs_consts_f[range.offset], &state->vs_consts_f[range.offset],
-@@ -976,9 +981,10 @@ void CDECL wined3d_stateblock_capture(struct wined3d_stateblock *stateblock,
- void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock,
+@@ -977,8 +979,8 @@ void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock,
          struct wined3d_stateblock *device_state)
  {
-+    const struct wined3d_d3d_info *d3d_info = &stateblock->device->adapter->d3d_info;
      const struct wined3d_stateblock_state *state = &stateblock->stateblock_state;
 +    unsigned int i, start, vs_uniform_count;
      struct wined3d_range range;
@@ -148,13 +136,11 @@ index db0019adbf4..0641fb4b754 100644
      DWORD map;
  
      TRACE("stateblock %p, device_state %p.\n", stateblock, device_state);
-@@ -986,9 +992,13 @@ void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock,
+@@ -986,9 +988,11 @@ void CDECL wined3d_stateblock_apply(const struct wined3d_stateblock *stateblock,
      if (stateblock->changed.vertexShader)
          wined3d_stateblock_set_vertex_shader(device_state, state->vs);
  
-+    vs_uniform_count = stateblock->device->create_parms.flags
-+            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
-+            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
++    vs_uniform_count = wined3d_device_get_vs_uniform_count(stateblock->device);
 +
      for (start = 0; ; start = range.offset + range.size)
      {
@@ -163,10 +149,11 @@ index db0019adbf4..0641fb4b754 100644
              break;
          wined3d_stateblock_set_vs_consts_f(device_state, range.offset, range.size, &state->vs_consts_f[range.offset]);
      }
-@@ -1184,12 +1194,16 @@ HRESULT CDECL wined3d_stateblock_set_vs_consts_f(struct wined3d_stateblock *stat
+@@ -1183,13 +1187,14 @@ static void wined3d_bitmap_set_bits(uint32_t *bitmap, unsigned int start, unsign
+ HRESULT CDECL wined3d_stateblock_set_vs_consts_f(struct wined3d_stateblock *stateblock,
          unsigned int start_idx, unsigned int count, const struct wined3d_vec4 *constants)
  {
-     const struct wined3d_d3d_info *d3d_info = &stateblock->device->adapter->d3d_info;
+-    const struct wined3d_d3d_info *d3d_info = &stateblock->device->adapter->d3d_info;
 +    unsigned int constants_count;
  
      TRACE("stateblock %p, start_idx %u, count %u, constants %p.\n",
@@ -174,15 +161,13 @@ index db0019adbf4..0641fb4b754 100644
  
 -    if (!constants || start_idx >= d3d_info->limits.vs_uniform_count
 -            || count > d3d_info->limits.vs_uniform_count - start_idx)
-+    constants_count = stateblock->device->create_parms.flags
-+            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
-+            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
++    constants_count = wined3d_device_get_vs_uniform_count(stateblock->device);
 +
 +    if (!constants || start_idx >= constants_count || count > constants_count - start_idx)
          return WINED3DERR_INVALIDCALL;
  
      memcpy(&stateblock->stateblock_state.vs_consts_f[start_idx], constants, count * sizeof(*constants));
-@@ -1937,7 +1951,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock, const stru
+@@ -1937,7 +1942,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock, const stru
              stateblock_init_lights(stateblock->stateblock_state.light_state->light_map,
                      device_state->stateblock_state.light_state->light_map);
              stateblock_savedstates_set_all(&stateblock->changed,
@@ -191,7 +176,7 @@ index db0019adbf4..0641fb4b754 100644
              break;
  
          case WINED3D_SBT_PIXEL_STATE:
-@@ -1949,7 +1963,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock, const stru
+@@ -1949,7 +1954,7 @@ static HRESULT stateblock_init(struct wined3d_stateblock *stateblock, const stru
              stateblock_init_lights(stateblock->stateblock_state.light_state->light_map,
                      device_state->stateblock_state.light_state->light_map);
              stateblock_savedstates_set_vertex(&stateblock->changed,
@@ -201,10 +186,10 @@ index db0019adbf4..0641fb4b754 100644
  
          default:
 diff --git a/dlls/wined3d/wined3d_private.h b/dlls/wined3d/wined3d_private.h
-index 4a7f843a108..6073331b5d2 100644
+index 51b5cc4ac7..eef5d4fec2 100644
 --- a/dlls/wined3d/wined3d_private.h
 +++ b/dlls/wined3d/wined3d_private.h
-@@ -3210,7 +3210,7 @@ struct wined3d_state
+@@ -3206,7 +3206,7 @@ struct wined3d_state
      struct wined3d_shader_resource_view *shader_resource_view[WINED3D_SHADER_TYPE_COUNT][MAX_SHADER_RESOURCE_VIEWS];
      struct wined3d_unordered_access_view *unordered_access_view[WINED3D_PIPELINE_COUNT][MAX_UNORDERED_ACCESS_VIEWS];
  
@@ -213,7 +198,23 @@ index 4a7f843a108..6073331b5d2 100644
      struct wined3d_ivec4 vs_consts_i[WINED3D_MAX_CONSTS_I];
      BOOL vs_consts_b[WINED3D_MAX_CONSTS_B];
  
-@@ -3947,7 +3947,7 @@ struct wined3d_vertex_declaration
+@@ -3354,6 +3354,15 @@ HRESULT wined3d_device_set_implicit_swapchain(struct wined3d_device *device,
+         struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
+ void wined3d_device_uninit_3d(struct wined3d_device *device) DECLSPEC_HIDDEN;
+ 
++static inline unsigned int wined3d_device_get_vs_uniform_count(const struct wined3d_device *device)
++{
++    const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
++
++    return device->create_parms.flags
++            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
++            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
++}
++
+ struct wined3d_device_no3d
+ {
+     struct wined3d_device d;
+@@ -3923,7 +3932,7 @@ struct wined3d_vertex_declaration
  
  struct wined3d_saved_states
  {
@@ -223,10 +224,10 @@ index 4a7f843a108..6073331b5d2 100644
      WORD vertexShaderConstantsB;                /* WINED3D_MAX_CONSTS_B, 16 */
      DWORD ps_consts_f[WINED3D_MAX_PS_CONSTS_F >> 5];
 diff --git a/include/wine/wined3d.h b/include/wine/wined3d.h
-index cdefb46e969..3c109b8058c 100644
+index 3606c4e245..845cd6745f 100644
 --- a/include/wine/wined3d.h
 +++ b/include/wine/wined3d.h
-@@ -2174,7 +2174,7 @@ struct wined3d_stateblock_state
+@@ -2165,7 +2165,7 @@ struct wined3d_stateblock_state
      int base_vertex_index;
  
      struct wined3d_shader *vs;

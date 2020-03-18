@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7ad740cd29c6bd87238df6231689b861058bc5a8"
+	echo "c43998cb51c53ab9c355c2ff37489d51f9009e2d"
 }
 
 # Show version information
@@ -309,7 +309,6 @@ patch_enable_all ()
 	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Main="$1"
-	enable_wined3d_Dual_Source_Blending="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
 	enable_wined3d_SWVP_shaders="$1"
 	enable_wined3d_Silence_FIXMEs="$1"
@@ -1037,9 +1036,6 @@ patch_enable ()
 			;;
 		wined3d-CSMT_Main)
 			enable_wined3d_CSMT_Main="$2"
-			;;
-		wined3d-Dual_Source_Blending)
-			enable_wined3d_Dual_Source_Blending="$2"
 			;;
 		wined3d-Indexed_Vertex_Blending)
 			enable_wined3d_Indexed_Vertex_Blending="$2"
@@ -6555,21 +6551,6 @@ if test "$enable_wined3d_CSMT_Main" -eq 1; then
 	patch_apply wined3d-CSMT_Main/0045-wined3d-Improve-wined3d_cs_emit_update_sub_resource.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Improve wined3d_cs_emit_update_sub_resource.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset wined3d-Dual_Source_Blending
-# |
-# | Modified files:
-# |   *	dlls/d3d11/tests/d3d11.c, dlls/wined3d/adapter_gl.c, dlls/wined3d/context.c, dlls/wined3d/glsl_shader.c,
-# | 	dlls/wined3d/shader.c, dlls/wined3d/state.c, dlls/wined3d/wined3d_private.h
-# |
-if test "$enable_wined3d_Dual_Source_Blending" -eq 1; then
-	patch_apply wined3d-Dual_Source_Blending/0002-d3d11-tests-Add-basic-dual-source-blend-test.patch
-	patch_apply wined3d-Dual_Source_Blending/0003-wined3d-Implement-dual-source-blending.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "d3d11/tests: Add basic dual source blend test.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "wined3d: Implement dual source blending.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -6789,10 +6789,8 @@ fi
 # |
 if test "$enable_winemenubuilder_integration" -eq 1; then
 	patch_apply winemenubuilder-integration/0001-winemenubuilder-Blacklist-desktop-integration-for-ce.patch
-	patch_apply winemenubuilder-integration/0002-winemenubuilder-Create-.desktop-files-for-programs-t.patch
 	(
 		printf '%s\n' '+    { "Alex Henrie", "winemenubuilder: Blacklist desktop integration for certain associations.", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "winemenubuilder: Create .desktop files for programs that open URIs.", 1 },';
 	) >> "$patchlist"
 fi
 

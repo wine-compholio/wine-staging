@@ -1,4 +1,4 @@
-From a0b58c6366226c2079da60a4b5d757da4bd728b6 Mon Sep 17 00:00:00 2001
+From e1e41f084c6cdeba3cb44aaa6753b13bc1411df8 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 11:26:48 -0600
 Subject: [PATCH] ntdll: Perform the Unix-style hidden file check within the
@@ -11,10 +11,10 @@ Subject: [PATCH] ntdll: Perform the Unix-style hidden file check within the
  3 files changed, 10 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index c853470..56737b8 100644
+index ba50aa1b807..d6bf1354a5b 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -1267,17 +1267,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
+@@ -1274,17 +1274,17 @@ static DWORD WINAPI init_options( RTL_RUN_ONCE *once, void *param, void **contex
   *
   * Check if the specified file should be hidden based on its name and the show dot files option.
   */
@@ -37,7 +37,7 @@ index c853470..56737b8 100644
      if (p == end || *p != '.') return FALSE;
      /* make sure it isn't '.' or '..' */
      if (p + 1 == end) return FALSE;
-@@ -1526,11 +1526,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
+@@ -1532,11 +1532,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
      if (class != FileNamesInformation)
      {
          if (st.st_dev != dir_data->id.dev) st.st_ino = 0;  /* ignore inode if on a different device */
@@ -50,11 +50,11 @@ index c853470..56737b8 100644
      }
  
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 0dbf612..5926c99 100644
+index 6a935044f46..a0e54c27198 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -227,6 +227,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
-             st->st_mode = (st->st_mode & ~S_IFMT) | (is_dir ? S_IFDIR : S_IFREG);
+@@ -250,6 +250,10 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+         RtlFreeHeap( GetProcessHeap(), 0, parent_path );
      }
      *attr |= get_file_attributes( st );
 +    /* convert Unix-style hidden files to a DOS hidden file attribute */
@@ -64,7 +64,7 @@ index 0dbf612..5926c99 100644
      len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
      if (len == -1) return ret;
      *attr |= get_file_xattr( hexattr, len );
-@@ -3447,8 +3451,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+@@ -3489,8 +3493,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
              info->AllocationSize = std.AllocationSize;
              info->EndOfFile      = std.EndOfFile;
              info->FileAttributes = basic.FileAttributes;
@@ -73,7 +73,7 @@ index 0dbf612..5926c99 100644
          }
          RtlFreeAnsiString( &unix_name );
      }
-@@ -3476,11 +3478,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
+@@ -3518,11 +3520,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
          else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
              status = STATUS_INVALID_INFO_CLASS;
          else
@@ -86,10 +86,10 @@ index 0dbf612..5926c99 100644
      }
      else WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index b762ceb..32db62e 100644
+index aeed9b857c2..b1cb9aa6843 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -164,7 +164,7 @@ extern NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
+@@ -168,7 +168,7 @@ extern NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
                                  FILE_INFORMATION_CLASS class ) DECLSPEC_HIDDEN;
  extern NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name ) DECLSPEC_HIDDEN;
  extern void init_directories(void) DECLSPEC_HIDDEN;
@@ -99,5 +99,5 @@ index b762ceb..32db62e 100644
  extern NTSTATUS DIR_get_unix_cwd( char **cwd ) DECLSPEC_HIDDEN;
  extern unsigned int DIR_get_drives_info( struct drive_info info[MAX_DOS_DRIVES] ) DECLSPEC_HIDDEN;
 -- 
-1.9.1
+2.25.1
 

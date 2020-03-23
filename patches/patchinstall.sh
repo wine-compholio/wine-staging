@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3ddf3a720f2a342141550c973f10854b573d80ed"
+	echo "00e55c8fc0c08e14c39880e62526f8503468b641"
 }
 
 # Show version information
@@ -4005,11 +4005,9 @@ fi
 if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
 	patch_apply ntdll-FileDispositionInformation/0001-ntdll-tests-Added-tests-to-set-disposition-on-file-w.patch
 	patch_apply ntdll-FileDispositionInformation/0002-server-Do-not-allow-to-set-disposition-on-file-which.patch
-	patch_apply ntdll-FileDispositionInformation/0003-server-When-combining-root-and-name-make-sure-there-.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests to set disposition on file which is mapped to memory.", 1 },';
 		printf '%s\n' '+    { "Qian Hong", "server: Do not allow to set disposition on file which has a file mapping.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: When combining root and name, make sure there is only one slash.", 2 },';
 	) >> "$patchlist"
 fi
 
@@ -6346,7 +6344,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
-# | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c, include/wincodec.idl
+# | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
 	patch_apply windowscodecs-TIFF_Support/0006-windowscodecs-Add-support-for-16bppGray-and-32bppGra.patch

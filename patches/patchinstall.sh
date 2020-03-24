@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "00e55c8fc0c08e14c39880e62526f8503468b641"
+	echo "9c190f8118faa2f4708e86340e3e0440f668835b"
 }
 
 # Show version information
@@ -7256,7 +7256,7 @@ fi
 # | 	dlls/xactengine3_7/Makefile.in, dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in,
 # | 	dlls/xaudio2_7/tests/Makefile.in, dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc,
 # | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c,
-# | 	dlls/xaudio2_7/xaudio_dll.c, include/Makefile.in, include/config.h.in, include/xact3.idl, include/xact3wb.h
+# | 	include/Makefile.in, include/xact3.idl, include/xact3wb.h
 # |
 if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0001-include-Add-xact3.idl.patch
@@ -7270,7 +7270,6 @@ if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0009-xaudio2_7-unwrap-structure-based-of-it-s-type.patch
 	patch_apply xactengine-initial/0010-xaudio2_7-Correct-callback-to-windows-function.patch
 	patch_apply xactengine-initial/0011-xaudio2_7-Initial-IXACT3Engine-tests.patch
-	patch_apply xactengine-initial/0012-xaudio2_7-Trace-FAudio-version-being-used.patch
 	patch_apply xactengine-initial/0013-xaudio2_7-Trace-FAudio-version-being-used.patch
 	patch_apply xactengine-initial/0014-include-Add-XACTENGINE_-error-codes.patch
 	patch_apply xactengine-initial/0015-include-Add-XACT-defines.patch

@@ -1,19 +1,19 @@
-From 7db6d5b2412223cc16ff726502c7b3c66eab41c3 Mon Sep 17 00:00:00 2001
+From 64f380eeb8ba1de36b47b6035510373fd1edeaac Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 24 Feb 2016 19:18:52 +0100
-Subject: [PATCH 3/3] server: Assign random name when no name was passed to
+Subject: [PATCH] server: Assign random name when no name was passed to
  create_winstation.
 
 ---
  dlls/user32/tests/winstation.c |  4 ++--
- server/winstation.c            | 24 +++++++++++++++++++++++-
- 2 files changed, 25 insertions(+), 3 deletions(-)
+ server/winstation.c            | 23 ++++++++++++++++++++++-
+ 2 files changed, 24 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/user32/tests/winstation.c b/dlls/user32/tests/winstation.c
-index 6bebfe9..1ca71a1 100644
+index 4aa5565b96c..9eb3b433c11 100644
 --- a/dlls/user32/tests/winstation.c
 +++ b/dlls/user32/tests/winstation.c
-@@ -220,8 +220,8 @@ static void test_handles(void)
+@@ -225,8 +225,8 @@ static void test_handles(void)
      memset( buffer, 0, sizeof(buffer) );
      ret = GetUserObjectInformationA( w2, UOI_NAME, buffer, sizeof(buffer), &size );
      ok( ret, "GetUserObjectInformationA failed with error %u\n", GetLastError() );
@@ -25,18 +25,25 @@ index 6bebfe9..1ca71a1 100644
      SetLastError( 0xdeadbeef );
      w3 = OpenWindowStationA( "", TRUE, WINSTA_ALL_ACCESS );
 diff --git a/server/winstation.c b/server/winstation.c
-index fde6b68..f96936f 100644
+index b120859b39a..fee8980224c 100644
 --- a/server/winstation.c
 +++ b/server/winstation.c
-@@ -113,9 +113,30 @@ static const struct object_ops desktop_ops =
+@@ -38,6 +38,7 @@
+ #include "user.h"
+ #include "file.h"
+ #include "security.h"
++#include "unicode.h"
+ 
+ 
+ static struct list winstation_list = LIST_INIT(winstation_list);
+@@ -114,9 +115,28 @@ static const struct object_ops desktop_ops =
  static struct winstation *create_winstation( struct object *root, const struct unicode_str *name,
                                               unsigned int attr, unsigned int flags )
  {
-+    static const WCHAR formatW[] = {'S','e','r','v','i','c','e','-','0','x','0','-','%','x','$',0};
 +    static unsigned int id = 0x10000;
      struct winstation *winstation;
 +    struct unicode_str default_name;
-+    WCHAR buffer[32];
++    char buffer[32];
  
 -    if ((winstation = create_named_object( root, &winstation_ops, name, attr, NULL )))
 +    if (name->len)
@@ -48,9 +55,8 @@ index fde6b68..f96936f 100644
 +    do
 +    {
 +        if (!++id) id = 1;  /* avoid an id of 0 */
-+        sprintfW( buffer, formatW, id );
-+        default_name.str = buffer;
-+        default_name.len = strlenW( buffer ) * sizeof(WCHAR);
++        sprintf( buffer, "Service-0x0-%x$", id);
++        ascii_to_unicode_str( buffer, &default_name );
 +        winstation = create_named_object( root, &winstation_ops, &default_name, attr & ~OBJ_OPENIF, NULL );
 +    }
 +    while (!winstation && get_error() == STATUS_OBJECT_NAME_COLLISION);
@@ -60,7 +66,7 @@ index fde6b68..f96936f 100644
      {
          if (get_error() != STATUS_OBJECT_NAME_EXISTS)
          {
-@@ -133,6 +154,7 @@ static struct winstation *create_winstation( struct object *root, const struct u
+@@ -134,6 +154,7 @@ static struct winstation *create_winstation( struct object *root, const struct u
          }
          else clear_error();
      }
@@ -69,5 +75,5 @@ index fde6b68..f96936f 100644
  }
  
 -- 
-1.9.1
+2.25.1
 

@@ -1,4 +1,4 @@
-From 162663c659f87dc2ddf09202e7988ff4d50368e7 Mon Sep 17 00:00:00 2001
+From 3d74d528e07008df764caef28993d551bfd934ba Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Fri, 3 Jan 2020 17:39:08 +0300
 Subject: [PATCH] ntdll: Call NtOpenFile through syscall thunk.
@@ -9,13 +9,13 @@ Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=48410
  dlls/ntdll/directory.c  | 2 +-
  dlls/ntdll/loader.c     | 2 +-
  dlls/ntdll/locale.c     | 4 ++--
- dlls/ntdll/ntdll_misc.h | 9 +++++++++
+ dlls/ntdll/ntdll_misc.h | 8 ++++++++
  dlls/ntdll/path.c       | 2 +-
  dlls/ntdll/process.c    | 2 +-
- 7 files changed, 17 insertions(+), 8 deletions(-)
+ 7 files changed, 16 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/actctx.c b/dlls/ntdll/actctx.c
-index c5134198285..0c6cda1cfaa 100644
+index d5f376f224e..cb6b9bb5097 100644
 --- a/dlls/ntdll/actctx.c
 +++ b/dlls/ntdll/actctx.c
 @@ -2890,7 +2890,7 @@ static NTSTATUS open_nt_file( HANDLE *handle, UNICODE_STRING *name )
@@ -37,10 +37,10 @@ index c5134198285..0c6cda1cfaa 100644
      {
          sxs_ai = *ai;
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 95af2dde240..ba50aa1b807 100644
+index 993a661015e..7d1ed8c83ba 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -3012,7 +3012,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
+@@ -3000,7 +3000,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
          attr.SecurityDescriptor = NULL;
          attr.SecurityQualityOfService = NULL;
  
@@ -50,10 +50,10 @@ index 95af2dde240..ba50aa1b807 100644
          RtlFreeUnicodeString( &dirW );
          if (status != STATUS_SUCCESS) goto done;
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 7e8fd20e9d7..8fcd53b26ba 100644
+index 9cd2d7255ae..34e799e4e2a 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -2375,7 +2375,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
+@@ -2372,7 +2372,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
      attr.ObjectName = nt_name;
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
@@ -63,7 +63,7 @@ index 7e8fd20e9d7..8fcd53b26ba 100644
                                FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE )))
      {
 diff --git a/dlls/ntdll/locale.c b/dlls/ntdll/locale.c
-index afd65f3c02c..52f5d1f1d83 100644
+index 123b8985b1c..20d13407077 100644
 --- a/dlls/ntdll/locale.c
 +++ b/dlls/ntdll/locale.c
 @@ -659,7 +659,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
@@ -85,14 +85,13 @@ index afd65f3c02c..52f5d1f1d83 100644
      }
      RtlFreeUnicodeString( &valueW );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 94e8bf54576..0d8a603c859 100644
+index 3c33d304a24..e3d3d418adf 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -289,4 +289,13 @@ extern BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi) DECLSPEC_
- /* string functions */
- int __cdecl NTDLL_tolower( int c );
- int __cdecl _stricmp( LPCSTR str1, LPCSTR str2 );
-+
+@@ -323,4 +323,12 @@ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
+     while (len--) *dst++ = (unsigned char)*src++;
+ }
+ 
 +#if defined(__i386__) || defined(__x86_64__)
 +NTSTATUS WINAPI __syscall_NtOpenFile( PHANDLE handle, ACCESS_MASK access,
 +                            POBJECT_ATTRIBUTES attr, PIO_STATUS_BLOCK io,
@@ -103,7 +102,7 @@ index 94e8bf54576..0d8a603c859 100644
 +
  #endif
 diff --git a/dlls/ntdll/path.c b/dlls/ntdll/path.c
-index 610646be85b..e37c8957e24 100644
+index 65539fa0188..635eba0251f 100644
 --- a/dlls/ntdll/path.c
 +++ b/dlls/ntdll/path.c
 @@ -1021,7 +1021,7 @@ NTSTATUS WINAPI RtlSetCurrentDirectory_U(const UNICODE_STRING* dir)
@@ -116,7 +115,7 @@ index 610646be85b..e37c8957e24 100644
      if (nts != STATUS_SUCCESS) goto out;
  
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index a1c688745a7..83d610010b3 100644
+index 5d5ea6d20d1..0d8096af91f 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
 @@ -1396,7 +1396,7 @@ static NTSTATUS get_pe_file_info( UNICODE_STRING *path, ULONG attributes,

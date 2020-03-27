@@ -1,22 +1,22 @@
-From c6c3f424a6ee8983f37d3ce212dfd5519a195055 Mon Sep 17 00:00:00 2001
+From 4855e0338f57525304221ba1c29c3926a9f16263 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 16:27:56 +0200
 Subject: [PATCH] winebuild: Add stub functions in fake dlls.
 
 ---
  dlls/kernel32/tests/loader.c |   8 +-
- dlls/ntdll/signal_i386.c     |  40 +++++++
+ dlls/ntdll/signal_i386.c     |  34 ++++++
  include/winternl.h           |   2 +-
  tools/winebuild/build.h      |   1 +
  tools/winebuild/spec32.c     | 209 +++++++++++++++++++++++++++++++++--
  tools/winebuild/utils.c      |  10 +-
- 6 files changed, 255 insertions(+), 15 deletions(-)
+ 6 files changed, 249 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 4d9a26075..29cf15585 100644
+index e72dea9ca51..bf3cf00f964 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1559,9 +1559,7 @@ static void test_FakeDLL(void)
+@@ -1560,9 +1560,7 @@ static void test_FakeDLL(void)
      ok(ptr != NULL, "MapViewOfFile failed with error %u\n", GetLastError());
  
      dir = RtlImageDirectoryEntryToData(ptr, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &size);
@@ -26,7 +26,7 @@ index 4d9a26075..29cf15585 100644
  
      names    = RVAToAddr(dir->AddressOfNames, ptr);
      ordinals = RVAToAddr(dir->AddressOfNameOrdinals, ptr);
-@@ -1590,17 +1588,20 @@ todo_wine
+@@ -1591,17 +1589,20 @@ todo_wine
          /* check position in memory */
          dll_rva = (DWORD_PTR)dll_func - (DWORD_PTR)module;
          map_rva = funcs[ordinals[i]];
@@ -47,7 +47,7 @@ index 4d9a26075..29cf15585 100644
          ok(!memcmp(map_func, dll_func, 0x20), "%s: Function content does not match!\n", func_name);
  
          if (!strcmp(func_name, "NtSetEvent"))
-@@ -1614,10 +1615,11 @@ todo_wine
+@@ -1615,10 +1616,11 @@ todo_wine
          ok(event != NULL, "CreateEvent failed with error %u\n", GetLastError());
          pNtSetEvent(event, 0);
          ok(WaitForSingleObject(event, 0) == WAIT_OBJECT_0, "Event was not signaled\n");
@@ -61,19 +61,13 @@ index 4d9a26075..29cf15585 100644
      CloseHandle(map);
      CloseHandle(file);
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index a0f8b3a2e..e55164630 100644
+index a0f8b3a2ec6..72285f0b456 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -445,6 +445,45 @@ static wine_signal_handler handlers[256];
+@@ -445,6 +445,39 @@ static wine_signal_handler handlers[256];
  extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
  extern NTSTATUS WINAPI __syscall_NtGetContextThread( HANDLE handle, CONTEXT *context );
  
-+/* convert from straight ASCII to Unicode without depending on the current codepage */
-+static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
-+{
-+    while (len--) *dst++ = (unsigned char)*src++;
-+}
-+
 +static void* WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
 +{
 +    UNICODE_STRING name;
@@ -110,7 +104,7 @@ index a0f8b3a2e..e55164630 100644
  enum i386_trap_code
  {
      TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
-@@ -2307,6 +2346,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -2307,6 +2340,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
          (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
@@ -119,7 +113,7 @@ index a0f8b3a2e..e55164630 100644
          if (!(thread_data->fs = wine_ldt_alloc_fs()))
          {
 diff --git a/include/winternl.h b/include/winternl.h
-index 713e71802..754bdae14 100644
+index 1fbf05b0125..f44722093ba 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -398,7 +398,7 @@ typedef struct _TEB
@@ -132,7 +126,7 @@ index 713e71802..754bdae14 100644
      PVOID                        ReservedForPerf;                   /* f7c/1750 */
      PVOID                        ReservedForOle;                    /* f80/1758 */
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
-index 53d4ba192..09a654de1 100644
+index e0d33036440..6712a694773 100644
 --- a/tools/winebuild/build.h
 +++ b/tools/winebuild/build.h
 @@ -357,6 +357,7 @@ extern void put_word( unsigned short val );
@@ -144,7 +138,7 @@ index 53d4ba192..09a654de1 100644
  extern void align_output_rva( unsigned int file_align, unsigned int rva_align );
  extern size_t label_pos( const char *name );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index e67cb48cd..692db4c7e 100644
+index e67cb48cd08..692db4c7e0b 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -884,6 +884,163 @@ void output_spec32_file( DLLSPEC *spec )
@@ -400,10 +394,10 @@ index e67cb48cd..692db4c7e 100644
      /* .reloc contents */
      align_output_rva( file_align, section_align );
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index f53e09227..0f4642d43 100644
+index b0be1b594b3..b1e34c5da18 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
-@@ -548,7 +548,7 @@ size_t output_buffer_size;
+@@ -549,7 +549,7 @@ size_t output_buffer_size;
  struct label
  {
      struct list entry;
@@ -412,7 +406,7 @@ index f53e09227..0f4642d43 100644
      size_t pos;
      size_t rva;
  };
-@@ -566,7 +566,7 @@ struct label *get_label( const char *name )
+@@ -567,7 +567,7 @@ struct label *get_label( const char *name )
      }
  
      label = xmalloc( sizeof(*label) );
@@ -421,7 +415,7 @@ index f53e09227..0f4642d43 100644
      label->pos = 0;
      label->rva = 0;
  
-@@ -618,6 +618,7 @@ void free_labels( void )
+@@ -619,6 +619,7 @@ void free_labels( void )
      LIST_FOR_EACH_ENTRY_SAFE( label, label2, &labels, struct label, entry )
      {
          list_remove( &label->entry );
@@ -429,7 +423,7 @@ index f53e09227..0f4642d43 100644
          free( label );
      }
  }
-@@ -749,6 +750,11 @@ void put_pword( unsigned int val )
+@@ -750,6 +751,11 @@ void put_pword( unsigned int val )
      else put_dword( val );
  }
  
@@ -442,5 +436,5 @@ index f53e09227..0f4642d43 100644
  {
      size_t size = align - (output_buffer_pos % align);
 -- 
-2.25.0
+2.25.1
 

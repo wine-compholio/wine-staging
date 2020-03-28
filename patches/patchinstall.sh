@@ -341,6 +341,7 @@ patch_enable_all ()
 	enable_winex11_drv_mouse_coorrds="$1"
 	enable_wininet_Cleanup="$1"
 	enable_winmm_Delay_Import_Depends="$1"
+	enable_winmm_Replace_OpenFile="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
@@ -1133,6 +1134,9 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
+			;;
+		winmm-Replace_OpenFile)
+			enable_winmm_Replace_OpenFile="$2"
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
@@ -4962,7 +4966,7 @@ fi
 # Patchset ntdll-avoid-fstatat
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c
+# |   *	dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h
 # |
 if test "$enable_ntdll_avoid_fstatat" -eq 1; then
 	patch_apply ntdll-avoid-fstatat/0001-ntdll-Avoid-fstatat.patch
@@ -7081,6 +7085,21 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winmm-Replace_OpenFile
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48832] When _lopen to avoid the 128 character path limit.
+# |
+# | Modified files:
+# |   *	dlls/winmm/mmio.c
+# |
+if test "$enable_winmm_Replace_OpenFile" -eq 1; then
+	patch_apply winmm-Replace_OpenFile/0001-winmm-Use-_lopen-instead-of-OpenFile.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winmm: Use _lopen instead of OpenFile.", 1 },';
 	) >> "$patchlist"
 fi
 

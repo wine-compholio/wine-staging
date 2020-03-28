@@ -1,0 +1,37 @@
+From 997cebb3b42bb30bdfaab21c6e8260d7088ac972 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Sat, 28 Mar 2020 13:17:25 -0500
+Subject: [PATCH] ntdll: Avoid fstatat().
+
+---
+ dlls/ntdll/file.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index bd27d5a434..e64435252f 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -139,8 +139,18 @@ static inline ULONG get_file_attributes( const struct stat *st )
+ static BOOL fd_is_mount_point( int fd, const struct stat *st )
+ {
+     struct stat parent;
+-    return S_ISDIR( st->st_mode ) && !fstatat( fd, "..", &parent, 0 )
+-            && (parent.st_dev != st->st_dev || parent.st_ino == st->st_ino);
++    BOOL ret = FALSE;
++    int cwd;
++
++    if (!S_ISDIR( st->st_mode )) return FALSE;
++    if ((cwd = open(".", O_RDONLY) == -1)) return FALSE;
++    if (!fchdir( fd ))
++    {
++        ret = !stat( "..", &parent ) && (parent.st_dev != st->st_dev || parent.st_ino == st->st_ino);
++        if (fchdir( cwd ) == -1) chdir( "/" );
++    }
++    close( cwd );
++    return ret;
+ }
+ 
+ /* get the stat info and file attributes for a file (by file descriptor) */
+-- 
+2.25.2
+

@@ -214,6 +214,7 @@ patch_enable_all ()
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
+	enable_ntdll_avoid_fstatat="$1"
 	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_unaligned_futex="$1"
@@ -751,6 +752,9 @@ patch_enable ()
 			;;
 		ntdll-aarch-TEB)
 			enable_ntdll_aarch_TEB="$2"
+			;;
+		ntdll-avoid-fstatat)
+			enable_ntdll_avoid_fstatat="$2"
 			;;
 		ntdll-ext4-case-folder)
 			enable_ntdll_ext4_case_folder="$2"
@@ -4952,6 +4956,18 @@ if test "$enable_ntdll_aarch_TEB" -eq 1; then
 	(
 		printf '%s\n' '+    { "Martin Storsjo", "configure: Avoid clobbering x18 on arm64 within wine.", 1 },';
 		printf '%s\n' '+    { "Martin Storsjo", "ntdll: Always restore TEB to x18 on aarch 64 on return from calls to builtins.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-avoid-fstatat
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c
+# |
+if test "$enable_ntdll_avoid_fstatat" -eq 1; then
+	patch_apply ntdll-avoid-fstatat/0001-ntdll-Avoid-fstatat.patch
+	(
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Avoid fstatat().", 1 },';
 	) >> "$patchlist"
 fi
 

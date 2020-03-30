@@ -1,4 +1,4 @@
-From 3d74d528e07008df764caef28993d551bfd934ba Mon Sep 17 00:00:00 2001
+From bf7e50ee28fcab7b47800412c27a05934e1da7ee Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Fri, 3 Jan 2020 17:39:08 +0300
 Subject: [PATCH] ntdll: Call NtOpenFile through syscall thunk.
@@ -15,10 +15,10 @@ Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=48410
  7 files changed, 16 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/actctx.c b/dlls/ntdll/actctx.c
-index d5f376f224e..cb6b9bb5097 100644
+index b6306fdbac5..9bda553ccb8 100644
 --- a/dlls/ntdll/actctx.c
 +++ b/dlls/ntdll/actctx.c
-@@ -2890,7 +2890,7 @@ static NTSTATUS open_nt_file( HANDLE *handle, UNICODE_STRING *name )
+@@ -2893,7 +2893,7 @@ static NTSTATUS open_nt_file( HANDLE *handle, UNICODE_STRING *name )
      attr.ObjectName = name;
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
@@ -27,7 +27,7 @@ index d5f376f224e..cb6b9bb5097 100644
  }
  
  static NTSTATUS get_manifest_in_module( struct actctx_loader* acl, struct assembly_identity* ai,
-@@ -3207,7 +3207,7 @@ static NTSTATUS lookup_winsxs(struct actctx_loader* acl, struct assembly_identit
+@@ -3210,7 +3210,7 @@ static NTSTATUS lookup_winsxs(struct actctx_loader* acl, struct assembly_identit
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
  
@@ -37,10 +37,10 @@ index d5f376f224e..cb6b9bb5097 100644
      {
          sxs_ai = *ai;
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 993a661015e..7d1ed8c83ba 100644
+index 1783b8ad438..1c7388b6d75 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -3000,7 +3000,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
+@@ -3011,7 +3011,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
          attr.SecurityDescriptor = NULL;
          attr.SecurityQualityOfService = NULL;
  
@@ -50,10 +50,10 @@ index 993a661015e..7d1ed8c83ba 100644
          RtlFreeUnicodeString( &dirW );
          if (status != STATUS_SUCCESS) goto done;
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 9cd2d7255ae..34e799e4e2a 100644
+index 524d8ea72d4..7187dee032d 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -2372,7 +2372,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
+@@ -2373,7 +2373,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
      attr.ObjectName = nt_name;
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
@@ -63,12 +63,12 @@ index 9cd2d7255ae..34e799e4e2a 100644
                                FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE )))
      {
 diff --git a/dlls/ntdll/locale.c b/dlls/ntdll/locale.c
-index 123b8985b1c..20d13407077 100644
+index 63d0bf3e98a..ca04f638cd0 100644
 --- a/dlls/ntdll/locale.c
 +++ b/dlls/ntdll/locale.c
 @@ -659,7 +659,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
          return STATUS_NO_MEMORY;
-     valueW.Length = sprintfW( valueW.Buffer, pathfmtW, dir, name ) * sizeof(WCHAR);
+     valueW.Length = NTDLL_swprintf( valueW.Buffer, pathfmtW, dir, name ) * sizeof(WCHAR);
      InitializeObjectAttributes( &attr, &valueW, 0, 0, NULL );
 -    status = NtOpenFile( file, GENERIC_READ, &attr, &io, FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_ALERT );
 +    status = __syscall_NtOpenFile( file, GENERIC_READ, &attr, &io, FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_ALERT );
@@ -85,10 +85,10 @@ index 123b8985b1c..20d13407077 100644
      }
      RtlFreeUnicodeString( &valueW );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 3c33d304a24..e3d3d418adf 100644
+index d8ae4301467..cad17f6fd09 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -323,4 +323,12 @@ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
+@@ -326,4 +326,12 @@ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
      while (len--) *dst++ = (unsigned char)*src++;
  }
  
@@ -102,7 +102,7 @@ index 3c33d304a24..e3d3d418adf 100644
 +
  #endif
 diff --git a/dlls/ntdll/path.c b/dlls/ntdll/path.c
-index 65539fa0188..635eba0251f 100644
+index 2f7b031d81d..276eb29bd93 100644
 --- a/dlls/ntdll/path.c
 +++ b/dlls/ntdll/path.c
 @@ -1021,7 +1021,7 @@ NTSTATUS WINAPI RtlSetCurrentDirectory_U(const UNICODE_STRING* dir)
@@ -115,7 +115,7 @@ index 65539fa0188..635eba0251f 100644
      if (nts != STATUS_SUCCESS) goto out;
  
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index 5d5ea6d20d1..0d8096af91f 100644
+index 17335126e4a..1fa5316c509 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
 @@ -1396,7 +1396,7 @@ static NTSTATUS get_pe_file_info( UNICODE_STRING *path, ULONG attributes,

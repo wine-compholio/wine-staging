@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "123c0543e0bb4c99fbee0a568e786405ff886a93"
+	echo "9bcb1f5195d1e65e0e7afb288d36fee716fe3a60"
 }
 
 # Show version information
@@ -3976,7 +3976,7 @@ fi
 # |   *	ntdll-Junction_Points
 # |
 # | This patchset fixes the following Wine bugs:
-# |   *	[#38970] Improve mapping of DACL to file permissions
+# |   *	[#44691] Improve mapping of DACL to file permissions
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c

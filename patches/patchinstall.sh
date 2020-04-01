@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5c0e699dbad3e4b4494852c6482125bd8bda9148"
+	echo "12c3177ed5cae39de8a9f9111a1cb450296cc8e6"
 }
 
 # Show version information
@@ -1876,13 +1876,6 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	enable_ntdll_ThreadTime=1
 fi
 
-if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
-	if test "$enable_ntdll_Exception" -gt 1; then
-		abort "Patchset ntdll-Exception disabled, but ntdll-SystemRoot_Symlink depends on that."
-	fi
-	enable_ntdll_Exception=1
-fi
-
 if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-RtlCreateUserThread depends on that."
@@ -3436,25 +3429,7 @@ if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Exception
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
-# |
-# | Modified files:
-# |   *	dlls/kernelbase/debug.c, dlls/ntdll/tests/exception.c
-# |
-if test "$enable_ntdll_Exception" -eq 1; then
-	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-SystemRoot_Symlink
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Exception
 # |
 # | Modified files:
 # |   *	dlls/ntdll/om.c
@@ -3593,8 +3568,8 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-
-# | 	Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
+# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4456,6 +4431,21 @@ if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Exception
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44819] Throw second DBG_PRINTEXCEPTION_C when debugging.
+# |
+# | Modified files:
+# |   *	dlls/kernelbase/debug.c, dlls/ntdll/tests/exception.c
+# |
+if test "$enable_ntdll_Exception" -eq 1; then
+	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-FileFsFullSizeInformation
 # |
 # | Modified files:
@@ -4730,7 +4720,7 @@ fi
 # Patchset ntdll-NtSetLdtEntries
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/nt.c, libs/wine/ldt.c
+# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/signal_i386.c, libs/wine/ldt.c
 # |
 if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-Implement-NtSetLdtEntries.patch
@@ -5311,8 +5301,8 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-
-# | 	Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -7215,9 +7205,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-Exception, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-
-# | 	Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization,
-# | 	server-Desktop_Refcount
+# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-
+# | 	Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

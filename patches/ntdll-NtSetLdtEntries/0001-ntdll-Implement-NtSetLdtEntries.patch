@@ -1,18 +1,17 @@
-From d1dca9874d914f25f3257c850275a14c3835a7e9 Mon Sep 17 00:00:00 2001
+From 72ace2e57404a068679a703268c505c5f5ac3b12 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 28 Apr 2016 18:14:36 +0800
 Subject: [PATCH] ntdll: Implement NtSetLdtEntries.
 
 ---
  dlls/kernel32/tests/thread.c | 79 ++++++++++++++++++++++++++++++++++++
- dlls/ntdll/nt.c              | 28 ++++++++++++-
- 2 files changed, 106 insertions(+), 1 deletion(-)
+ 1 file changed, 79 insertions(+)
 
 diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
-index 180eed82419..5e9d51c24cd 100644
+index b6a65a4207c..70b22367e18 100644
 --- a/dlls/kernel32/tests/thread.c
 +++ b/dlls/kernel32/tests/thread.c
-@@ -107,6 +107,7 @@ static BOOL (WINAPI *pSetThreadGroupAffinity)(HANDLE,const GROUP_AFFINITY*,GROUP
+@@ -99,6 +99,7 @@ static BOOL (WINAPI *pSetThreadGroupAffinity)(HANDLE,const GROUP_AFFINITY*,GROUP
  static NTSTATUS (WINAPI *pNtSetInformationThread)(HANDLE,THREADINFOCLASS,LPCVOID,ULONG);
  static HRESULT (WINAPI *pSetThreadDescription)(HANDLE,const WCHAR *);
  static HRESULT (WINAPI *pGetThreadDescription)(HANDLE,WCHAR **);
@@ -20,8 +19,8 @@ index 180eed82419..5e9d51c24cd 100644
  
  static HANDLE create_target_process(const char *arg)
  {
-@@ -1223,6 +1224,82 @@ static void test_GetThreadSelectorEntry(void)
-     ok(entry.HighWord.Bits.Granularity == 0,  "expected 0, got %u\n", entry.HighWord.Bits.Granularity);
+@@ -1262,6 +1263,82 @@ static void test_GetThreadSelectorEntry(void)
+     ok(entry.HighWord.Bits.Granularity == 1,  "expected 1, got %u\n", entry.HighWord.Bits.Granularity);
  }
  
 +static void test_NtSetLdtEntries(void)
@@ -103,7 +102,7 @@ index 180eed82419..5e9d51c24cd 100644
  #endif  /* __i386__ */
  
  static HANDLE finish_event;
-@@ -2291,6 +2368,7 @@ static void init_funcs(void)
+@@ -2324,6 +2401,7 @@ static void init_funcs(void)
         X(NtQueryInformationThread);
         X(RtlGetThreadErrorMode);
         X(NtSetInformationThread);
@@ -111,7 +110,7 @@ index 180eed82419..5e9d51c24cd 100644
     }
  #undef X
  }
-@@ -2346,6 +2424,7 @@ START_TEST(thread)
+@@ -2379,6 +2457,7 @@ START_TEST(thread)
  #ifdef __i386__
     test_SetThreadContext();
     test_GetThreadSelectorEntry();
@@ -119,52 +118,6 @@ index 180eed82419..5e9d51c24cd 100644
  #endif
     test_QueueUserWorkItem();
     test_RegisterWaitForSingleObject();
-diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index 85cefa638ab..fd3a7cb7eae 100644
---- a/dlls/ntdll/nt.c
-+++ b/dlls/ntdll/nt.c
-@@ -75,6 +75,7 @@
- #include "winternl.h"
- #include "ntdll_misc.h"
- #include "wine/server.h"
-+#include "wine/library.h"
- #include "ddk/wdm.h"
- 
- #ifdef __APPLE__
-@@ -3781,7 +3782,32 @@ NTSTATUS WINAPI NtSystemDebugControl(SYSDBG_COMMAND command, PVOID inbuffer, ULO
- NTSTATUS WINAPI NtSetLdtEntries(ULONG selector1, ULONG entry1_low, ULONG entry1_high,
-                                 ULONG selector2, ULONG entry2_low, ULONG entry2_high)
- {
--    FIXME("(%u, %u, %u, %u, %u, %u): stub\n", selector1, entry1_low, entry1_high, selector2, entry2_low, entry2_high);
-+#ifdef __i386__
-+    union
-+    {
-+        LDT_ENTRY entry;
-+        ULONG dw[2];
-+    } sel;
-+
-+    TRACE("(%x,%x,%x,%x,%x,%x)\n", selector1, entry1_low, entry1_high, selector2, entry2_low, entry2_high);
- 
-+    if (selector1)
-+    {
-+        sel.dw[0] = entry1_low;
-+        sel.dw[1] = entry1_high;
-+        if (wine_ldt_set_entry(selector1, &sel.entry) < 0)
-+            return STATUS_ACCESS_DENIED;
-+    }
-+    if (selector2)
-+    {
-+        sel.dw[0] = entry2_low;
-+        sel.dw[1] = entry2_high;
-+        if (wine_ldt_set_entry(selector2, &sel.entry) < 0)
-+            return STATUS_ACCESS_DENIED;
-+    }
-+    return STATUS_SUCCESS;
-+#else
-+    FIXME("(%x,%x,%x,%x,%x,%x): stub\n", selector1, entry1_low, entry1_high, selector2, entry2_low, entry2_high);
-     return STATUS_NOT_IMPLEMENTED;
-+#endif
- }
 -- 
-2.17.1
+2.26.0
 

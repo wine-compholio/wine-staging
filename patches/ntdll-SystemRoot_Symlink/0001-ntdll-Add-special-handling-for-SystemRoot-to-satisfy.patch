@@ -1,26 +1,18 @@
-From bb213b463267c035887fbda1e5227da68705db39 Mon Sep 17 00:00:00 2001
+From e0b0ac874fbe3dcab53222f38831978f63177602 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Mon, 17 Aug 2015 06:17:33 +0200
 Subject: ntdll: Add special handling for \SystemRoot to satisfy MSYS2
  case-insensitive system check.
 
 ---
- dlls/ntdll/om.c | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+ dlls/ntdll/om.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
 
 diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
-index 35c3672..9a2539c 100644
+index 0d66867496b..f8f0760de70 100644
 --- a/dlls/ntdll/om.c
 +++ b/dlls/ntdll/om.c
-@@ -39,6 +39,7 @@
- #include "ntdll_misc.h"
- #include "wine/server.h"
- #include "wine/exception.h"
-+#include "wine/unicode.h"
- 
- WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
- 
-@@ -606,6 +607,7 @@ NTSTATUS WINAPI NtQueryDirectoryObject(HANDLE handle, PDIRECTORY_BASIC_INFORMATI
+@@ -602,6 +602,7 @@ NTSTATUS WINAPI NtQueryDirectoryObject(HANDLE handle, PDIRECTORY_BASIC_INFORMATI
  NTSTATUS WINAPI NtOpenSymbolicLinkObject( HANDLE *handle, ACCESS_MASK access,
                                            const OBJECT_ATTRIBUTES *attr)
  {
@@ -28,14 +20,14 @@ index 35c3672..9a2539c 100644
      NTSTATUS ret;
  
      TRACE("(%p,0x%08x,%s)\n", handle, access, debugstr_ObjectAttributes(attr));
-@@ -613,6 +615,16 @@ NTSTATUS WINAPI NtOpenSymbolicLinkObject( HANDLE *handle, ACCESS_MASK access,
+@@ -609,6 +610,16 @@ NTSTATUS WINAPI NtOpenSymbolicLinkObject( HANDLE *handle, ACCESS_MASK access,
      if (!handle) return STATUS_ACCESS_VIOLATION;
      if ((ret = validate_open_object_attributes( attr ))) return ret;
  
 +    /* MSYS2 tries to open \\SYSTEMROOT to check for case-insensitive systems */
 +    if (!access && !attr->RootDirectory &&
 +        attr->ObjectName->Length == sizeof(SystemRootW) &&
-+        !memicmpW( attr->ObjectName->Buffer, SystemRootW,
++        !wcsnicmp( attr->ObjectName->Buffer, SystemRootW,
 +                   sizeof(SystemRootW)/sizeof(WCHAR) ))
 +    {
 +        TRACE( "returning STATUS_ACCESS_DENIED\n" );
@@ -46,5 +38,5 @@ index 35c3672..9a2539c 100644
      {
          req->access     = access;
 -- 
-2.8.0
+2.26.0
 

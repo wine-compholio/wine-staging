@@ -1,7 +1,7 @@
-From 36cdcc900c03de3e2e27a16252242a7a5ec55513 Mon Sep 17 00:00:00 2001
+From 18e7f7c6475673f382a8d3015140383c2dd756b0 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Thu, 28 Apr 2016 17:01:16 +0200
-Subject: libs/wine: Allow to modify reserved LDT entries.
+Subject: [PATCH] libs/wine: Allow to modify reserved LDT entries.
 
 Some implementation notes:
 
@@ -17,14 +17,15 @@ entries without that flag set and NtQueryInformationThread(ThreadDescriptorTable
 fails.
 ---
  dlls/kernel32/tests/thread.c | 4 ----
+ dlls/ntdll/signal_i386.c     | 2 --
  libs/wine/ldt.c              | 4 +---
- 2 files changed, 1 insertion(+), 7 deletions(-)
+ 3 files changed, 1 insertion(+), 9 deletions(-)
 
 diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
-index 981e3c4..6efc52a 100644
+index 70b22367e18..a454bf118cc 100644
 --- a/dlls/kernel32/tests/thread.c
 +++ b/dlls/kernel32/tests/thread.c
-@@ -1163,16 +1163,12 @@ static void test_NtSetLdtEntries(void)
+@@ -1325,16 +1325,12 @@ static void test_NtSetLdtEntries(void)
      {
          memset(&sel.entry, 0x9a, sizeof(sel.entry));
          ret = GetThreadSelectorEntry(GetCurrentThread(), 0x000f, &sel.entry);
@@ -41,11 +42,24 @@ index 981e3c4..6efc52a 100644
          ok(!memcmp(&ds_entry, &sel.entry, sizeof(ds_entry)), "entries do not match\n");
      }
  }
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index e812f634ff9..16ee93e001a 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -2558,8 +2558,6 @@ NTSTATUS get_thread_ldt_entry( HANDLE handle, void *data, ULONG len, ULONG *ret_
+ NTSTATUS WINAPI NtSetLdtEntries( ULONG sel1, LDT_ENTRY entry1, ULONG sel2, LDT_ENTRY entry2 )
+ {
+     if (sel1 >> 16 || sel2 >> 16) return STATUS_INVALID_LDT_DESCRIPTOR;
+-    if (sel1 && (sel1 >> 3) < first_ldt_entry) return STATUS_INVALID_LDT_DESCRIPTOR;
+-    if (sel2 && (sel2 >> 3) < first_ldt_entry) return STATUS_INVALID_LDT_DESCRIPTOR;
+ 
+     ldt_lock();
+     if (sel1) ldt_set_entry( sel1, entry1 );
 diff --git a/libs/wine/ldt.c b/libs/wine/ldt.c
-index 0946407..8ac779a 100644
+index baf12a2e3a7..b9371814ba2 100644
 --- a/libs/wine/ldt.c
 +++ b/libs/wine/ldt.c
-@@ -169,8 +169,6 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
+@@ -170,8 +170,6 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
  {
      int ret = 0, index = sel >> 3;
  
@@ -54,7 +68,7 @@ index 0946407..8ac779a 100644
  #ifdef linux
      {
          struct modify_ldt_s ldt_info;
-@@ -222,7 +220,7 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
+@@ -223,7 +221,7 @@ static int internal_set_entry( unsigned short sel, const LDT_ENTRY *entry )
          wine_ldt_copy.limit[index] = wine_ldt_get_limit(entry);
          wine_ldt_copy.flags[index] = (entry->HighWord.Bits.Type |
                                   (entry->HighWord.Bits.Default_Big ? WINE_LDT_FLAGS_32BIT : 0) |
@@ -64,5 +78,5 @@ index 0946407..8ac779a 100644
      return ret;
  }
 -- 
-2.8.0
+2.26.0
 

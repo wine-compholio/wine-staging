@@ -1,4 +1,4 @@
-From c2736168d1010e311233bfc078b75bfcd68b959d Mon Sep 17 00:00:00 2001
+From f39b7dba77e8991bc586b8102ee232842daa5c91 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
 Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
@@ -6,15 +6,15 @@ Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
 ---
  dlls/ntdll/directory.c        |  2 +-
  dlls/ntdll/ntdll_misc.h       |  1 +
- dlls/ntdll/virtual.c          | 38 +++++++++++++++++++++++++++++------
+ dlls/ntdll/virtual.c          | 37 +++++++++++++++++++++++++++++------
  dlls/psapi/tests/psapi_main.c |  6 +-----
- 4 files changed, 35 insertions(+), 12 deletions(-)
+ 4 files changed, 34 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 6ea95037153..725c002ab62 100644
+index 242dbd27b2f..fe8b896682d 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -2875,7 +2875,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+@@ -2852,7 +2852,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
  }
  
  /* read the contents of an NT symlink object */
@@ -24,10 +24,10 @@ index 6ea95037153..725c002ab62 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 59393e3a414..1b2b4e701bb 100644
+index a5fe98c8d85..93fd8a9354b 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -171,6 +171,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
+@@ -174,6 +174,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
  /* virtual memory */
  extern NTSTATUS virtual_alloc_aligned( PVOID *ret, unsigned short zero_bits_64, SIZE_T *size_ptr,
                                         ULONG type, ULONG protect, ULONG alignment ) DECLSPEC_HIDDEN;
@@ -36,18 +36,10 @@ index 59393e3a414..1b2b4e701bb 100644
                                       const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr, ULONG alloc_type,
                                       ULONG protect, pe_image_info_t *image_info ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 966b2a4c386..26963020c1b 100644
+index f49127c3e85..46c070561b0 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -56,6 +56,7 @@
- #include "wine/library.h"
- #include "wine/server.h"
- #include "wine/exception.h"
-+#include "wine/unicode.h"
- #include "wine/rbtree.h"
- #include "wine/debug.h"
- #include "ntdll_misc.h"
-@@ -163,6 +164,8 @@ static BYTE **pages_vprot;
+@@ -177,6 +177,8 @@ static BYTE **pages_vprot;
  static BYTE *pages_vprot;
  #endif
  
@@ -56,7 +48,7 @@ index 966b2a4c386..26963020c1b 100644
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
  static const size_t view_block_size = 0x100000;
  static void *preload_reserve_start;
-@@ -3075,12 +3078,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -3197,12 +3199,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
@@ -73,7 +65,7 @@ index 966b2a4c386..26963020c1b 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -3139,14 +3145,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -3261,14 +3266,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:
@@ -92,13 +84,13 @@ index 966b2a4c386..26963020c1b 100644
 +        }
 +    }
 +
-+    *res_len = sizeof(MEMORY_SECTION_NAME) + strlenW(symlinkW) * sizeof(WCHAR) +
++    *res_len = sizeof(MEMORY_SECTION_NAME) + wcslen(symlinkW) * sizeof(WCHAR) +
 +               nt_name.Length - offset * sizeof(WCHAR) + sizeof(WCHAR);
      if (len >= *res_len)
      {
 -        info->SectionFileName.Length = nt_name.Length;
 -        info->SectionFileName.MaximumLength = nt_name.Length + sizeof(WCHAR);
-+        info->SectionFileName.Length = strlenW(symlinkW) * sizeof(WCHAR) +
++        info->SectionFileName.Length = wcslen(symlinkW) * sizeof(WCHAR) +
 +                                       nt_name.Length - offset * sizeof(WCHAR);
 +        info->SectionFileName.MaximumLength = info->SectionFileName.Length + sizeof(WCHAR);
          info->SectionFileName.Buffer = (WCHAR *)(info + 1);
@@ -106,18 +98,18 @@ index 966b2a4c386..26963020c1b 100644
 -        info->SectionFileName.Buffer[ nt_name.Length / sizeof(WCHAR) ] = 0;
 +
 +        ptr = (WCHAR *)(info + 1);
-+        strcpyW( ptr, symlinkW );
-+        ptr += strlenW(symlinkW);
++        wcscpy( ptr, symlinkW );
++        ptr += wcslen(symlinkW);
 +        memcpy( ptr, nt_name.Buffer + offset, nt_name.Length - offset * sizeof(WCHAR) );
 +        ptr[ nt_name.Length / sizeof(WCHAR) - offset ] = 0;
      }
      else
          status = (len < sizeof(MEMORY_SECTION_NAME)) ? STATUS_INFO_LENGTH_MISMATCH : STATUS_BUFFER_OVERFLOW;
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index 9143fa79e7d..80636eb74a8 100644
+index f6a7b69eca0..a8263a2f44b 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -489,7 +489,6 @@ static void test_GetMappedFileName(void)
+@@ -476,7 +476,6 @@ static void test_GetMappedFileName(void)
      ret = GetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
      ok(ret, "GetMappedFileName error %d\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
@@ -125,7 +117,7 @@ index 9143fa79e7d..80636eb74a8 100644
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
  
      SetLastError(0xdeadbeef);
-@@ -502,7 +501,6 @@ todo_wine {
+@@ -489,7 +488,6 @@ todo_wine {
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -133,7 +125,7 @@ index 9143fa79e7d..80636eb74a8 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-@@ -515,7 +513,6 @@ todo_wine
+@@ -502,7 +500,6 @@ todo_wine
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -141,7 +133,7 @@ index 9143fa79e7d..80636eb74a8 100644
          ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
      }
  
-@@ -523,7 +520,6 @@ todo_wine
+@@ -510,7 +507,6 @@ todo_wine
      ret = GetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
      ok(ret, "GetMappedFileName error %d\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
@@ -149,7 +141,7 @@ index 9143fa79e7d..80636eb74a8 100644
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
  
      SetLastError(0xdeadbeef);
-@@ -605,7 +601,7 @@ static void test_GetProcessImageFileName(void)
+@@ -592,7 +588,7 @@ static void test_GetProcessImageFileName(void)
      {
          /* Windows returns 2*strlen-1 */
          ok(ret >= strlen(szImgPath), "szImgPath=\"%s\" ret=%d\n", szImgPath, ret);
@@ -159,5 +151,5 @@ index 9143fa79e7d..80636eb74a8 100644
  
      SetLastError(0xdeadbeef);
 -- 
-2.17.1
+2.26.0
 

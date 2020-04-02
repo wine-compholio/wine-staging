@@ -273,6 +273,7 @@ patch_enable_all ()
 	enable_user32_Dialog_Paint_Event="$1"
 	enable_user32_DrawTextExW="$1"
 	enable_user32_FlashWindowEx="$1"
+	enable_user32_GetMouseMovePointsEx="$1"
 	enable_user32_GetSystemMetrics="$1"
 	enable_user32_Implement_CascadeWindows="$1"
 	enable_user32_InternalGetWindowIcon="$1"
@@ -930,6 +931,9 @@ patch_enable ()
 			;;
 		user32-FlashWindowEx)
 			enable_user32_FlashWindowEx="$2"
+			;;
+		user32-GetMouseMovePointsEx)
+			enable_user32_GetMouseMovePointsEx="$2"
 			;;
 		user32-GetSystemMetrics)
 			enable_user32_GetSystemMetrics="$2"
@@ -5899,6 +5903,21 @@ if test "$enable_user32_FlashWindowEx" -eq 1; then
 	patch_apply user32-FlashWindowEx/0001-user32-Improve-FlashWindowEx-message-and-return-valu.patch
 	(
 		printf '%s\n' '+    { "James Coonradt", "user32: Improve FlashWindowEx message and return value.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-GetMouseMovePointsEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#36873] Semi-stub GetMouseMovePointsEx
+# |
+# | Modified files:
+# |   *	dlls/user32/input.c
+# |
+if test "$enable_user32_GetMouseMovePointsEx" -eq 1; then
+	patch_apply user32-GetMouseMovePointsEx/0001-user32-Semi-stub-GetMouseMovePointsEx.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Semi-stub GetMouseMovePointsEx.", 1 },';
 	) >> "$patchlist"
 fi
 

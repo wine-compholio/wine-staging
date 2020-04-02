@@ -5915,9 +5915,9 @@ fi
 # |   *	dlls/user32/input.c
 # |
 if test "$enable_user32_GetMouseMovePointsEx" -eq 1; then
-	patch_apply user32-GetMouseMovePointsEx/0001-user32-Semi-stub-GetMouseMovePointsEx.patch
+	patch_apply user32-GetMouseMovePointsEx/0001-user32-Partially-implement-GetMouseMovePointsEx.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Semi-stub GetMouseMovePointsEx.", 1 },';
+		printf '%s\n' '+    { "Ryan S. Northrup (RyNo)", "user32: Semi-stub GetMouseMovePointsEx.", 2 },';
 	) >> "$patchlist"
 fi
 

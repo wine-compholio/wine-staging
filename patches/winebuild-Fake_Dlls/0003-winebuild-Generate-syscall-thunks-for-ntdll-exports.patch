@@ -1,4 +1,4 @@
-From cc13b2bb6b823df3de62dfacabeff22ebb2cf93e Mon Sep 17 00:00:00 2001
+From b2d95f8d335ec606f9779eebb3bbcbed7d4c00ad Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -17,7 +17,7 @@ Based on a patch by Erich E. Hoover.
  9 files changed, 206 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index ba127c00361..915b344aabe 100644
+index 5d01acd00fc..0b2a62fe1a8 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -481,6 +481,9 @@ static ULONG first_ldt_entry = 32;
@@ -30,16 +30,16 @@ index ba127c00361..915b344aabe 100644
  enum i386_trap_code
  {
      TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
-@@ -1512,7 +1515,7 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
+@@ -1519,7 +1522,7 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
          {
              context->Ebp    = ebp;
              context->Esp    = (DWORD)&retaddr;
 -            context->Eip    = *(&edi - 1);
 +            context->Eip    = (DWORD)__syscall_NtGetContextThread + 18;
-             context->SegCs  = wine_get_cs();
-             context->SegSs  = wine_get_ss();
+             context->SegCs  = get_cs();
+             context->SegSs  = get_ds();
              context->EFlags = eflags;
-@@ -2599,6 +2602,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
+@@ -2613,6 +2616,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
          *teb = addr;
          (*teb)->Tib.Self = &(*teb)->Tib;
          (*teb)->Tib.ExceptionList = (void *)~0UL;
@@ -48,7 +48,7 @@ index ba127c00361..915b344aabe 100644
          if (!(thread_data->fs = ldt_alloc_fs( *teb, first_thread )))
          {
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index 249ba9d7c39..b10e2f65553 100644
+index 72afb0a3764..fbd90661ee0 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
 @@ -1643,6 +1643,8 @@ static void test_thread_context(void)
@@ -61,7 +61,7 @@ index 249ba9d7c39..b10e2f65553 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/include/winternl.h b/include/winternl.h
-index 7ab105752df..e469012b236 100644
+index d4316092e05..9e9a5eb819e 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -359,7 +359,7 @@ typedef struct _TEB
@@ -253,7 +253,7 @@ index be705c25f0f..004b6aea7ab 100644
  }
  
 diff --git a/tools/winebuild/spec16.c b/tools/winebuild/spec16.c
-index 3a7e457282a..a179175b8c1 100644
+index a52c03aaa6a..15ef9a3f893 100644
 --- a/tools/winebuild/spec16.c
 +++ b/tools/winebuild/spec16.c
 @@ -495,27 +495,6 @@ static int relay_type_compare( const void *e1, const void *e2 )
@@ -458,5 +458,5 @@ index be877080486..63aeeca4468 100644
 +    return j + 1;
 +}
 -- 
-2.26.0
+2.25.1
 

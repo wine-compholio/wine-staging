@@ -1621,13 +1621,6 @@ if test "$enable_user32_rawinput_hid" -eq 1; then
 	enable_user32_rawinput_nolegacy=1
 fi
 
-if test "$enable_user32_rawinput_nolegacy" -eq 1; then
-	if test "$enable_user32_rawinput_mouse" -gt 1; then
-		abort "Patchset user32-rawinput-mouse disabled, but user32-rawinput-nolegacy depends on that."
-	fi
-	enable_user32_rawinput_mouse=1
-fi
-
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	if test "$enable_widl_SLTG_Typelib_Support" -gt 1; then
 		abort "Patchset widl-SLTG_Typelib_Support disabled, but stdole32.tlb-SLTG_Typelib depends on that."
@@ -1851,17 +1844,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	enable_ws2_32_WSACleanup=1
 fi
 
-if test "$enable_user32_rawinput_mouse" -eq 1; then
-	if test "$enable_loader_KeyboardLayouts" -gt 1; then
-		abort "Patchset loader-KeyboardLayouts disabled, but user32-rawinput-mouse depends on that."
-	fi
-	if test "$enable_winex11_drv_mouse_coorrds" -gt 1; then
-		abort "Patchset winex11.drv-mouse-coorrds disabled, but user32-rawinput-mouse depends on that."
-	fi
-	enable_loader_KeyboardLayouts=1
-	enable_winex11_drv_mouse_coorrds=1
-fi
-
 if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
@@ -1875,10 +1857,36 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_server_Signal_Thread" -gt 1; then
 		abort "Patchset server-Signal_Thread disabled, but server-Shared_Memory depends on that."
 	fi
+	if test "$enable_user32_rawinput_nolegacy" -gt 1; then
+		abort "Patchset user32-rawinput-nolegacy disabled, but server-Shared_Memory depends on that."
+	fi
 	enable_ntdll_Threading=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
+	enable_user32_rawinput_nolegacy=1
+fi
+
+if test "$enable_user32_rawinput_nolegacy" -eq 1; then
+	if test "$enable_server_Key_State" -gt 1; then
+		abort "Patchset server-Key_State disabled, but user32-rawinput-nolegacy depends on that."
+	fi
+	if test "$enable_user32_rawinput_mouse" -gt 1; then
+		abort "Patchset user32-rawinput-mouse disabled, but user32-rawinput-nolegacy depends on that."
+	fi
+	enable_server_Key_State=1
+	enable_user32_rawinput_mouse=1
+fi
+
+if test "$enable_user32_rawinput_mouse" -eq 1; then
+	if test "$enable_loader_KeyboardLayouts" -gt 1; then
+		abort "Patchset loader-KeyboardLayouts disabled, but user32-rawinput-mouse depends on that."
+	fi
+	if test "$enable_winex11_drv_mouse_coorrds" -gt 1; then
+		abort "Patchset winex11.drv-mouse-coorrds disabled, but user32-rawinput-mouse depends on that."
+	fi
+	enable_loader_KeyboardLayouts=1
+	enable_winex11_drv_mouse_coorrds=1
 fi
 
 if test "$enable_server_Realtime_Priority" -eq 1; then
@@ -3525,38 +3533,6 @@ if test "$enable_server_Signal_Thread" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset server-Shared_Memory
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
-# | 	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h, include/wine/server.h, include/winternl.h,
-# | 	server/fd.c, server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c, server/thread.c,
-# | 	server/thread.h
-# |
-if test "$enable_server_Shared_Memory" -eq 1; then
-	patch_apply server-Shared_Memory/0001-ntdll-Implement-virtual_map_shared_memory.patch
-	patch_apply server-Shared_Memory/0002-server-Implement-support-for-global-and-local-shared.patch
-	patch_apply server-Shared_Memory/0003-user32-Get-rid-of-wineserver-call-for-GetInputState.patch
-	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
-	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
-	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
-	patch_apply server-Shared_Memory/0007-server-Store-a-list-of-associated-queues-for-each-th.patch
-	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset loader-KeyboardLayouts
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3635,6 +3611,64 @@ if test "$enable_user32_rawinput_mouse" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset user32-rawinput-nolegacy
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	server-Key_State, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse
+# |
+# | Modified files:
+# |   *	dlls/dinput/dinput_main.c, dlls/dinput8/tests/device.c, dlls/user32/rawinput.c, server/queue.c
+# |
+if test "$enable_user32_rawinput_nolegacy" -eq 1; then
+	patch_apply user32-rawinput-nolegacy/0001-dinput8-tests-Add-test-for-DISCL_EXCLUSIVE-flag-inte.patch
+	patch_apply user32-rawinput-nolegacy/0002-user32-Add-support-for-RIDEV_NOLEGACY-flag-in-Regist.patch
+	patch_apply user32-rawinput-nolegacy/0003-dinput-Set-RIDEV_INPUTSINK-flag-only-when-DISCL_BACK.patch
+	patch_apply user32-rawinput-nolegacy/0004-dinput-Set-correct-rawinput-flags-for-DISCL_EXCLUSIV.patch
+	patch_apply user32-rawinput-nolegacy/0005-server-Update-desktop-cursor-pos-even-if-RIDEV_NOLEG.patch
+	patch_apply user32-rawinput-nolegacy/0006-server-Also-update-the-key-state-if-RIDEV_NOLEGACY-i.patch
+	(
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8/tests: Add test for DISCL_EXCLUSIVE flag interaction with rawinput.", 1 },';
+		printf '%s\n' '+    { "Derek Lesho", "user32: Add support for RIDEV_NOLEGACY flag in RegisterRawInputDevices.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput: Set RIDEV_INPUTSINK flag only when DISCL_BACKGROUND is requested.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput: Set correct rawinput flags for DISCL_EXCLUSIVE.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Update desktop cursor pos even if RIDEV_NOLEGACY flag is set.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Also update the key state if RIDEV_NOLEGACY is used.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Shared_Memory
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-
+# | 	coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
+# | 	dlls/user32/input.c, dlls/user32/message.c, dlls/user32/user_private.h, include/wine/server.h, include/winternl.h,
+# | 	server/fd.c, server/file.h, server/main.c, server/mapping.c, server/protocol.def, server/queue.c, server/thread.c,
+# | 	server/thread.h
+# |
+if test "$enable_server_Shared_Memory" -eq 1; then
+	patch_apply server-Shared_Memory/0001-ntdll-Implement-virtual_map_shared_memory.patch
+	patch_apply server-Shared_Memory/0002-server-Implement-support-for-global-and-local-shared.patch
+	patch_apply server-Shared_Memory/0003-user32-Get-rid-of-wineserver-call-for-GetInputState.patch
+	patch_apply server-Shared_Memory/0004-user32-Avoid-unnecessary-wineserver-calls-in-PeekMes.patch
+	patch_apply server-Shared_Memory/0005-user32-Get-rid-of-wineserver-call-for-GetLastInputIn.patch
+	patch_apply server-Shared_Memory/0006-ntdll-Only-enable-wineserver-shared-memory-communica.patch
+	patch_apply server-Shared_Memory/0007-server-Store-a-list-of-associated-queues-for-each-th.patch
+	patch_apply server-Shared_Memory/0008-user32-Get-rid-of-wineserver-call-for-GetActiveWindo.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Implement virtual_map_shared_memory.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "server: Implement support for global and local shared memory blocks based on memfd.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetInputState.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Avoid unnecessary wineserver calls in PeekMessage/GetMessage.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "user32: Get rid of wineserver call for GetLastInputInfo.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Only enable wineserver shared memory communication when a special environment variable is set.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Store a list of associated queues for each thread input.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "user32: Get rid of wineserver call for GetActiveWindow, GetFocus, GetCapture.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3659,8 +3693,8 @@ fi
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
 # | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
-# | 	-rawinput-mouse, ws2_32-WSACleanup
+# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
+# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -5376,8 +5410,8 @@ fi
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
 # | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
-# | 	-rawinput-mouse, ws2_32-WSACleanup, eventfd_synchronization
+# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
+# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -5465,7 +5499,8 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, server-Shared_Memory
+# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-
+# | 	coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -6186,33 +6221,10 @@ if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset user32-rawinput-nolegacy
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse
-# |
-# | Modified files:
-# |   *	dlls/dinput/dinput_main.c, dlls/dinput8/tests/device.c, dlls/user32/rawinput.c, server/queue.c
-# |
-if test "$enable_user32_rawinput_nolegacy" -eq 1; then
-	patch_apply user32-rawinput-nolegacy/0001-dinput8-tests-Add-test-for-DISCL_EXCLUSIVE-flag-inte.patch
-	patch_apply user32-rawinput-nolegacy/0002-user32-Add-support-for-RIDEV_NOLEGACY-flag-in-Regist.patch
-	patch_apply user32-rawinput-nolegacy/0003-dinput-Set-RIDEV_INPUTSINK-flag-only-when-DISCL_BACK.patch
-	patch_apply user32-rawinput-nolegacy/0004-dinput-Set-correct-rawinput-flags-for-DISCL_EXCLUSIV.patch
-	patch_apply user32-rawinput-nolegacy/0005-server-Update-desktop-cursor-pos-even-if-RIDEV_NOLEG.patch
-	(
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8/tests: Add test for DISCL_EXCLUSIVE flag interaction with rawinput.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "user32: Add support for RIDEV_NOLEGACY flag in RegisterRawInputDevices.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput: Set RIDEV_INPUTSINK flag only when DISCL_BACKGROUND is requested.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput: Set correct rawinput flags for DISCL_EXCLUSIVE.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "server: Update desktop cursor pos even if RIDEV_NOLEGACY flag is set.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-rawinput-hid
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |   *	server-Key_State, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
 # |
 # | Modified files:
 # |   *	dlls/hidclass.sys/device.c, dlls/hidclass.sys/hid.h, dlls/hidclass.sys/pnp.c, dlls/user32/message.c,
@@ -6236,7 +6248,7 @@ fi
 # Patchset user32-rawinput-mouse-experimental
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |   *	server-Key_State, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45882] - Raw Input should use untransformed mouse values (affects Overwatch, several Source games).
@@ -7235,8 +7247,8 @@ fi
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
 # | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
-# | 	-rawinput-mouse, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
+# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
+# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

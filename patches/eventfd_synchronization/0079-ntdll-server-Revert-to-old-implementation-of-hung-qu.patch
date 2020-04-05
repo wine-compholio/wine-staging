@@ -1,8 +1,8 @@
-From 055edbb9f2cdf23160fa9be1d7f597ec9935c19c Mon Sep 17 00:00:00 2001
+From 997461625f8169228a34358a6908ff24b1d4f602 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Mon, 13 Aug 2018 21:35:06 -0500
-Subject: [PATCH 79/83] ntdll, server: Revert to old implementation of hung
- queue detection.
+Subject: [PATCH] ntdll, server: Revert to old implementation of hung queue
+ detection.
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -22,7 +22,7 @@ critical code that this patchset was written for.
  3 files changed, 73 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index b84b7b83c..501175c1d 100644
+index ea4654d1f13..4ffbc4bd25e 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -831,8 +831,8 @@ static void update_grabbed_object( struct esync *obj )
@@ -59,7 +59,7 @@ index b84b7b83c..501175c1d 100644
      }
  
      if (has_esync && has_server)
-@@ -1282,6 +1271,44 @@ userapc:
+@@ -1283,6 +1272,44 @@ userapc:
      return ret;
  }
  
@@ -105,10 +105,10 @@ index b84b7b83c..501175c1d 100644
      const LARGE_INTEGER *timeout )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index dbb8770df..fb7f1ad1e 100644
+index 7082fee04b5..7078c33b94b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4078,7 +4078,11 @@ struct handle_info
+@@ -4077,7 +4077,11 @@ struct handle_info
  
  /* Retrieve the fd to wait on for user APCs. */
  @REQ(get_esync_apc_fd)
@@ -122,7 +122,7 @@ index dbb8770df..fb7f1ad1e 100644
  
  enum esync_type
 diff --git a/server/queue.c b/server/queue.c
-index 174a4ac09..56fa4d98c 100644
+index b6ed2478c6e..5eb1a046f7b 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -126,6 +126,7 @@ struct msg_queue
@@ -177,9 +177,9 @@ index 174a4ac09..56fa4d98c 100644
  
      if (!(msg = mem_alloc( sizeof(*msg) ))) return 0;
  
-@@ -3289,3 +3299,14 @@ DECL_HANDLER(update_rawinput_devices)
-     e = find_rawinput_device( 1, 6 );
-     current->process->rawinput_kbd   = e ? &e->device : NULL;
+@@ -3383,3 +3393,14 @@ DECL_HANDLER(get_rawinput_devices)
+ 
+     set_reply_data_ptr( devices, device_count * sizeof (*devices) );
  }
 +
 +DECL_HANDLER(esync_msgwait)
@@ -193,5 +193,5 @@ index 174a4ac09..56fa4d98c 100644
 +        set_event( current->process->idle_event );
 +}
 -- 
-2.20.1
+2.26.0
 

@@ -1628,13 +1628,6 @@ if test "$enable_user32_rawinput_nolegacy" -eq 1; then
 	enable_user32_rawinput_mouse=1
 fi
 
-if test "$enable_user32_rawinput_mouse" -eq 1; then
-	if test "$enable_winex11_drv_mouse_coorrds" -gt 1; then
-		abort "Patchset winex11.drv-mouse-coorrds disabled, but user32-rawinput-mouse depends on that."
-	fi
-	enable_winex11_drv_mouse_coorrds=1
-fi
-
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
 	if test "$enable_widl_SLTG_Typelib_Support" -gt 1; then
 		abort "Patchset widl-SLTG_Typelib_Support disabled, but stdole32.tlb-SLTG_Typelib depends on that."
@@ -1840,6 +1833,9 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_server_Shared_Memory" -gt 1; then
 		abort "Patchset server-Shared_Memory disabled, but eventfd_synchronization depends on that."
 	fi
+	if test "$enable_user32_rawinput_mouse" -gt 1; then
+		abort "Patchset user32-rawinput-mouse disabled, but eventfd_synchronization depends on that."
+	fi
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1851,7 +1847,19 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	enable_ntdll_User_Shared_Data=1
 	enable_server_Realtime_Priority=1
 	enable_server_Shared_Memory=1
+	enable_user32_rawinput_mouse=1
 	enable_ws2_32_WSACleanup=1
+fi
+
+if test "$enable_user32_rawinput_mouse" -eq 1; then
+	if test "$enable_loader_KeyboardLayouts" -gt 1; then
+		abort "Patchset loader-KeyboardLayouts disabled, but user32-rawinput-mouse depends on that."
+	fi
+	if test "$enable_winex11_drv_mouse_coorrds" -gt 1; then
+		abort "Patchset winex11.drv-mouse-coorrds disabled, but user32-rawinput-mouse depends on that."
+	fi
+	enable_loader_KeyboardLayouts=1
+	enable_winex11_drv_mouse_coorrds=1
 fi
 
 if test "$enable_server_Shared_Memory" -eq 1; then
@@ -3549,6 +3557,84 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset loader-KeyboardLayouts
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47439] loader: Add Keyboard Layouts registry enteries.
+# |
+# | Modified files:
+# |   *	dlls/user32/driver.c, dlls/user32/tests/input.c, loader/wine.inf.in
+# |
+if test "$enable_loader_KeyboardLayouts" -eq 1; then
+	patch_apply loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
+	patch_apply loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Improve GetKeyboardLayoutList.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winex11.drv-mouse-coorrds
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46309] winex11.drv: Use root-relative coordinates for events, if possible.
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c
+# |
+if test "$enable_winex11_drv_mouse_coorrds" -eq 1; then
+	patch_apply winex11.drv-mouse-coorrds/0001-winex11.drv-mouse-Use-root-relative-coordinates-for-ev.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/mouse: Use root-relative coordinates for events, if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-rawinput-mouse
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42631] Mouse drift, jump or don't react to small slow movements in Unity-engine games and Fallout 4 (partly fixed in
+# | 	Unity games, have walkaround in Fallout4 )
+# |   *	[#42675] Overwatch: Phantom mouse input / view pulled up to ceiling
+# |
+# | Modified files:
+# |   *	dlls/dinput/device_private.h, dlls/dinput/dinput_main.c, dlls/dinput/mouse.c, dlls/dinput8/tests/device.c,
+# | 	dlls/user32/input.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/user32/user32.spec,
+# | 	dlls/wineandroid.drv/keyboard.c, dlls/wineandroid.drv/window.c, dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c,
+# | 	dlls/winemac.drv/mouse.c, dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c,
+# | 	dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c, include/winuser.h, server/protocol.def, server/queue.c
+# |
+if test "$enable_user32_rawinput_mouse" -eq 1; then
+	patch_apply user32-rawinput-mouse/0001-user32-tests-Add-rawinput-test-for-ClipCursor-intera.patch
+	patch_apply user32-rawinput-mouse/0002-user32-tests-Add-rawinput-test-for-cross-thread-inte.patch
+	patch_apply user32-rawinput-mouse/0003-user32-tests-Add-rawinput-test-for-cross-process-int.patch
+	patch_apply user32-rawinput-mouse/0004-server-Add-send_hardware_message-flags-for-rawinput-.patch
+	patch_apply user32-rawinput-mouse/0005-server-Broadcast-rawinput-message-if-request-flag-is.patch
+	patch_apply user32-rawinput-mouse/0006-user32-Add-__wine_send_input-flags-to-hint-raw-input.patch
+	patch_apply user32-rawinput-mouse/0007-winex11.drv-Advertise-XInput2-version-2.1-support.patch
+	patch_apply user32-rawinput-mouse/0008-winex11.drv-Keep-track-of-pointer-and-device-button-.patch
+	patch_apply user32-rawinput-mouse/0009-winex11.drv-Listen-to-RawMotion-and-RawButton-events.patch
+	patch_apply user32-rawinput-mouse/0010-user32-Implement-GetRegisteredRawInputDevices.patch
+	patch_apply user32-rawinput-mouse/0011-dinput8-Add-support-for-dinput-devices-that-use-raw-.patch
+	patch_apply user32-rawinput-mouse/0012-dinput8-Use-raw-input-interface-for-dinput8-mouse-de.patch
+	(
+		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for ClipCursor interactions.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-thread interactions.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-process interactions.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Add send_hardware_message flags for rawinput translation.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Broadcast rawinput message if request flag is SEND_HWMSG_RAWINPUT.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "user32: Add __wine_send_input flags to hint raw input translation.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Advertise XInput2 version 2.1 support.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Keep track of pointer and device button mappings.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Listen to RawMotion and RawButton* events in the desktop thread.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "user32: Implement GetRegisteredRawInputDevices.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Add support for dinput devices that use raw input interface.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Use raw input interface for dinput8 mouse device.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3573,7 +3659,8 @@ fi
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
 # | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
+# | 	-rawinput-mouse, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4156,23 +4243,6 @@ if test "$enable_libs_Debug_Channel" -eq 1; then
 	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "libwine: Add process specific debug channels.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset loader-KeyboardLayouts
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47439] loader: Add Keyboard Layouts registry enteries.
-# |
-# | Modified files:
-# |   *	dlls/user32/driver.c, dlls/user32/tests/input.c, loader/wine.inf.in
-# |
-if test "$enable_loader_KeyboardLayouts" -eq 1; then
-	patch_apply loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
-	patch_apply loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Improve GetKeyboardLayoutList.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5306,7 +5376,8 @@ fi
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
 # | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
+# | 	-rawinput-mouse, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -6115,71 +6186,10 @@ if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset winex11.drv-mouse-coorrds
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46309] winex11.drv: Use root-relative coordinates for events, if possible.
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/mouse.c
-# |
-if test "$enable_winex11_drv_mouse_coorrds" -eq 1; then
-	patch_apply winex11.drv-mouse-coorrds/0001-winex11.drv-mouse-Use-root-relative-coordinates-for-ev.patch
-	(
-		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/mouse: Use root-relative coordinates for events, if possible.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset user32-rawinput-mouse
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	winex11.drv-mouse-coorrds
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42631] Mouse drift, jump or don't react to small slow movements in Unity-engine games and Fallout 4 (partly fixed in
-# | 	Unity games, have walkaround in Fallout4 )
-# |   *	[#42675] Overwatch: Phantom mouse input / view pulled up to ceiling
-# |
-# | Modified files:
-# |   *	dlls/dinput/device_private.h, dlls/dinput/dinput_main.c, dlls/dinput/mouse.c, dlls/dinput8/tests/device.c,
-# | 	dlls/user32/input.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/user32/user32.spec,
-# | 	dlls/wineandroid.drv/keyboard.c, dlls/wineandroid.drv/window.c, dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c,
-# | 	dlls/winemac.drv/mouse.c, dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c,
-# | 	dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c, include/winuser.h, server/protocol.def, server/queue.c
-# |
-if test "$enable_user32_rawinput_mouse" -eq 1; then
-	patch_apply user32-rawinput-mouse/0001-user32-tests-Add-rawinput-test-for-ClipCursor-intera.patch
-	patch_apply user32-rawinput-mouse/0002-user32-tests-Add-rawinput-test-for-cross-thread-inte.patch
-	patch_apply user32-rawinput-mouse/0003-user32-tests-Add-rawinput-test-for-cross-process-int.patch
-	patch_apply user32-rawinput-mouse/0004-server-Add-send_hardware_message-flags-for-rawinput-.patch
-	patch_apply user32-rawinput-mouse/0005-server-Broadcast-rawinput-message-if-request-flag-is.patch
-	patch_apply user32-rawinput-mouse/0006-user32-Add-__wine_send_input-flags-to-hint-raw-input.patch
-	patch_apply user32-rawinput-mouse/0007-winex11.drv-Advertise-XInput2-version-2.1-support.patch
-	patch_apply user32-rawinput-mouse/0008-winex11.drv-Keep-track-of-pointer-and-device-button-.patch
-	patch_apply user32-rawinput-mouse/0009-winex11.drv-Listen-to-RawMotion-and-RawButton-events.patch
-	patch_apply user32-rawinput-mouse/0010-user32-Implement-GetRegisteredRawInputDevices.patch
-	patch_apply user32-rawinput-mouse/0011-dinput8-Add-support-for-dinput-devices-that-use-raw-.patch
-	patch_apply user32-rawinput-mouse/0012-dinput8-Use-raw-input-interface-for-dinput8-mouse-de.patch
-	(
-		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for ClipCursor interactions.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-thread interactions.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-process interactions.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "server: Add send_hardware_message flags for rawinput translation.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "server: Broadcast rawinput message if request flag is SEND_HWMSG_RAWINPUT.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32: Add __wine_send_input flags to hint raw input translation.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Advertise XInput2 version 2.1 support.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Keep track of pointer and device button mappings.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Listen to RawMotion and RawButton* events in the desktop thread.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32: Implement GetRegisteredRawInputDevices.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Add support for dinput devices that use raw input interface.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Use raw input interface for dinput8 mouse device.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset user32-rawinput-nolegacy
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	winex11.drv-mouse-coorrds, user32-rawinput-mouse
+# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse
 # |
 # | Modified files:
 # |   *	dlls/dinput/dinput_main.c, dlls/dinput8/tests/device.c, dlls/user32/rawinput.c, server/queue.c
@@ -6202,7 +6212,7 @@ fi
 # Patchset user32-rawinput-hid
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
 # |
 # | Modified files:
 # |   *	dlls/hidclass.sys/device.c, dlls/hidclass.sys/hid.h, dlls/hidclass.sys/pnp.c, dlls/user32/message.c,
@@ -6226,7 +6236,7 @@ fi
 # Patchset user32-rawinput-mouse-experimental
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |   *	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45882] - Raw Input should use untransformed mouse values (affects Overwatch, several Source games).
@@ -7225,8 +7235,8 @@ fi
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
 # | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-
-# | 	Desktop_Refcount
+# | 	PeekMessage, server-Signal_Thread, server-Shared_Memory, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
+# | 	-rawinput-mouse, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

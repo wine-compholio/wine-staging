@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7096ab45444d7b7cbb926b5a51af0cbc46960ed3"
+	echo "ca092dcf819174699f9bb1af45a285dff2f6ac81"
 }
 
 # Show version information
@@ -178,7 +178,6 @@ patch_enable_all ()
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
-	enable_ntdll_FileFsVolumeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
 	enable_ntdll_ForceBottomUpAlloc="$1"
 	enable_ntdll_HashLinks="$1"
@@ -342,7 +341,6 @@ patch_enable_all ()
 	enable_winex11_drv_mouse_coorrds="$1"
 	enable_wininet_Cleanup="$1"
 	enable_winmm_Delay_Import_Depends="$1"
-	enable_winmm_Replace_OpenFile="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
@@ -646,9 +644,6 @@ patch_enable ()
 			;;
 		ntdll-FileFsFullSizeInformation)
 			enable_ntdll_FileFsFullSizeInformation="$2"
-			;;
-		ntdll-FileFsVolumeInformation)
-			enable_ntdll_FileFsVolumeInformation="$2"
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
@@ -1138,9 +1133,6 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
-			;;
-		winmm-Replace_OpenFile)
-			enable_winmm_Replace_OpenFile="$2"
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
@@ -4566,21 +4558,6 @@ if test "$enable_ntdll_FileFsFullSizeInformation" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-FileFsVolumeInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21466] Add semi-stub for FileFsVolumeInformation information class
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_FileFsVolumeInformation" -eq 1; then
-	patch_apply ntdll-FileFsVolumeInformation/0001-ntdll-Add-semi-stub-for-FileFsVolumeInformation-info.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add semi-stub for FileFsVolumeInformation information class.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Fix_Alignment
 # |
 # | This patchset fixes the following Wine bugs:
@@ -7116,21 +7093,6 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winmm-Replace_OpenFile
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48832] When _lopen to avoid the 128 character path limit.
-# |
-# | Modified files:
-# |   *	dlls/winmm/mmio.c
-# |
-if test "$enable_winmm_Replace_OpenFile" -eq 1; then
-	patch_apply winmm-Replace_OpenFile/0001-winmm-Use-_lopen-instead-of-OpenFile.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winmm: Use _lopen instead of OpenFile.", 1 },';
 	) >> "$patchlist"
 fi
 

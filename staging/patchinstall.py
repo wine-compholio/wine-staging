@@ -34,7 +34,7 @@ patch_data = ''
 
 def usage():
     print '''
-Usage: ./staging/patchinstall.py [DESTDIR=path] [options] [patchset ...]
+Usage: ./staging/patchinstall.py [options] [patchset ...]
 
 Applies all Wine-Staging patch sets, or each specified patch set plus its
 dependencies, to a Wine tree.
@@ -53,7 +53,10 @@ Options:
               git-am-C1         use `git am -C1`
               git-apply         use `git apply`
     --no-patchlist              do not generate a patch list (needed for `wine --patches`)
+    --ignore-missing            automatically add dependencies, but do not fail
+                                if they are missing or disabled
     -r, --rebase-mode           alias for --backend=git-am-C1 --no-autoconf --no-patchlist
+    -d, --destdir=<path>        install to <path> (defaults to current working directory)
 '''
 
 def run(*args, **kwargs):
@@ -118,16 +121,18 @@ def add_patch_data(patch):
             elif line[:5] == 'From:':
                 author = line[6:line.index('<')-1]
             elif line[:8] == 'Subject:':
-                subject = line[9:].rstrip()
+                subject = line[9:]
                 if '[' in subject: subject = subject[subject.index(']') + 1:]
             if author and subject: break
+        author = author.strip().strip('"')
+        subject = subject.strip()
         patch_data += '+    {"%s", "%s", 1},\n' %(author, subject)
 
 def apply_set(patchlist, name):
     if name in applied:
         return True
     for dep in patchlist[name]:
-        if not apply_set(patchlist, dep):
+        if dep in patchlist and not apply_set(patchlist, dep):
             return False
     for patch in sorted(os.listdir(patchdir+'/'+name)):
         if patch.endswith('.patch') and patch.startswith('0'):
@@ -187,17 +192,20 @@ index 5262c76..0a3182f 100644
         apply_patch(f.name)
 
 def main():
-    global backend, force_autoconf
+    global backend, force_autoconf, winedir
     patchlist = {}
     excluded = []
     no_autoconf = False
     no_patchlist = False
+    ignore_missing = False
 
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'ahrvW:', \
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'ad:hrvW:', \
                 ['all',
                  'backend=',
+                 'destdir=',
                  'force-autoconf',
+                 'ignore-missing',
                  'help',
                  'no-autoconf',
                  'no-patchlist',
@@ -229,6 +237,8 @@ def main():
                     deps = parse_def_file(name, path + '/definition')
                     if deps != None: # it's not disabled
                         patchlist[name] = deps
+        elif o == '-d' or o == '--destdir':
+            winedir = a
         elif o == '--backend':
             backend = a
         elif o == '--no-autoconf':
@@ -237,10 +247,16 @@ def main():
             force_autoconf = True
         elif o == '--no-patchlist':
             no_patchlist = True
+        elif o == '--ignore-missing':
+            ignore_missing = True
 
     for a in args: add_patchset(patchlist, a)
 
     for p in excluded: del patchlist[p]
+
+    if not os.access(winedir + '/tools/make_requests', os.F_OK):
+        print "Target directory '%s' does not point to a Wine tree." %winedir
+        sys.exit(1)
 
     if not patchlist:
         print 'No patches specified, either use -a or specify one or more patch sets as arguments.'
@@ -251,8 +267,11 @@ def main():
         deps = patchlist[p]
         for d in deps:
             if d not in patchlist:
-                print 'Error: unknown or disabled dependency %s of %s.' %(d,p)
-                sys.exit(1)
+                if not ignore_missing:
+                    print 'Error: unknown or disabled dependency %s of %s.' %(d,p)
+                    sys.exit(1)
+                else:
+                    print 'Warning: unknown or disabled dependency %s of %s.' %(d,p)
 
     # Now try to apply each patch
     for p in sorted(patchlist.keys()):

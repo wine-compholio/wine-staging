@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ca092dcf819174699f9bb1af45a285dff2f6ac81"
+	echo "38e95ed2227dd3f0fc3d1394c884265d43e3b283"
 }
 
 # Show version information
@@ -2057,20 +2057,16 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/kernel32/process.c, dlls/ntdll/misc.c, dlls/ntdll/ntdll.spec, include/wine/library.h, libs/wine/Makefile.in,
-# | 	libs/wine/config.c, libs/wine/loader.c, libs/wine/wine.map, loader/main.c
+# | 	libs/wine/config.c, libs/wine/wine.map, loader/main.c
 # |
 if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch
 	patch_apply Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch
 	patch_apply Staging/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch
-	patch_apply Staging/0004-loader-Add-commandline-option-check-libs.patch
-	patch_apply Staging/0005-loader-Print-library-paths-for-check-libs-on-Mac-OS-.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "loader: Add commandline option --check-libs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "loader: Print library paths for --check-libs on Mac OS X.", 1 },';
 	) >> "$patchlist"
 fi
 

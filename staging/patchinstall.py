@@ -124,8 +124,8 @@ def add_patch_data(patch):
                 subject = line[9:]
                 if '[' in subject: subject = subject[subject.index(']') + 1:]
             if author and subject: break
-        author = author.strip().strip('"')
-        subject = subject.strip()
+        author = author.strip().strip('"').replace('\\','\\\\').replace('"','\\"')
+        subject = subject.strip().replace('\\','\\\\').replace('"','\\"')
         patch_data += '+    {"%s", "%s", 1},\n' %(author, subject)
 
 def apply_set(patchlist, name):

@@ -3583,6 +3583,7 @@ if test "$enable_user32_rawinput_mouse" -eq 1; then
 	patch_apply user32-rawinput-mouse/0010-user32-Implement-GetRegisteredRawInputDevices.patch
 	patch_apply user32-rawinput-mouse/0011-dinput8-Add-support-for-dinput-devices-that-use-raw-.patch
 	patch_apply user32-rawinput-mouse/0012-dinput8-Use-raw-input-interface-for-dinput8-mouse-de.patch
+	patch_apply user32-rawinput-mouse/0013-dinput-Fix-rawinput-events-sequence-number.patch
 	(
 		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for ClipCursor interactions.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-thread interactions.", 1 },';
@@ -3596,6 +3597,7 @@ if test "$enable_user32_rawinput_mouse" -eq 1; then
 		printf '%s\n' '+    { "Rémi Bernon", "user32: Implement GetRegisteredRawInputDevices.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Add support for dinput devices that use raw input interface.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Use raw input interface for dinput8 mouse device.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput: Fix rawinput events sequence number.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 8959c13f2be7e2a31f27c8483ee2202692f00710 Mon Sep 17 00:00:00 2001
+From 8fe522dadc480b57415a7b63e0752de113851231 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 01:45:29 +0200
 Subject: [PATCH] ntdll: Add function to create new tokens for elevation
@@ -14,10 +14,10 @@ Subject: [PATCH] ntdll: Add function to create new tokens for elevation
  6 files changed, 117 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index d626e0bf2..5057e2b07 100644
+index 853da5c3fcf..33c1355c8b5 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1556,6 +1556,9 @@
+@@ -1569,6 +1569,9 @@
  # Virtual memory
  @ cdecl __wine_locked_recvmsg(long ptr long)
  
@@ -28,12 +28,12 @@ index d626e0bf2..5057e2b07 100644
  @ cdecl wine_get_version() NTDLL_wine_get_version
  @ cdecl wine_get_patches() NTDLL_wine_get_patches
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index ac1469412..6c2345c6c 100644
+index b62239de5b4..d494dc71263 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -89,6 +89,9 @@ extern void init_user_process_params( SIZE_T data_size ) DECLSPEC_HIDDEN;
- extern char **build_envp( const WCHAR *envW ) DECLSPEC_HIDDEN;
- extern NTSTATUS restart_process( RTL_USER_PROCESS_PARAMETERS *params, NTSTATUS status ) DECLSPEC_HIDDEN;
+@@ -96,6 +96,9 @@ extern int __wine_main_argc;
+ extern char **__wine_main_argv;
+ extern WCHAR **__wine_main_wargv;
  
 +/* token */
 +extern HANDLE CDECL __wine_create_default_token(BOOL admin);
@@ -42,10 +42,10 @@ index ac1469412..6c2345c6c 100644
  extern timeout_t server_start_time DECLSPEC_HIDDEN;
  extern unsigned int server_cpus DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index 52d7ea429..e24691b8a 100644
+index 6d506c85306..9940e6cf7c9 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
-@@ -125,6 +125,24 @@ HANDLE CDECL __wine_make_process_system(void)
+@@ -124,6 +124,24 @@ HANDLE CDECL __wine_make_process_system(void)
      return ret;
  }
  
@@ -71,10 +71,10 @@ index 52d7ea429..e24691b8a 100644
  
  #define UNIMPLEMENTED_INFO_CLASS(c) \
 diff --git a/server/protocol.def b/server/protocol.def
-index e908f2131..0177cb579 100644
+index efacadac42b..434cd11baf0 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3734,6 +3734,14 @@ struct handle_info
+@@ -3749,6 +3749,14 @@ struct handle_info
  @END
  
  
@@ -90,7 +90,7 @@ index e908f2131..0177cb579 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/security.h b/server/security.h
-index 6c337143c..21e90ccf2 100644
+index 6c337143c3d..21e90ccf23f 100644
 --- a/server/security.h
 +++ b/server/security.h
 @@ -49,6 +49,7 @@ extern const PSID security_builtin_users_sid;
@@ -102,10 +102,10 @@ index 6c337143c..21e90ccf2 100644
  
  /* token functions */
 diff --git a/server/token.c b/server/token.c
-index 381ae6871..fcab79955 100644
+index c4f1cd943c2..970ed1838da 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -79,6 +79,7 @@ static const SID anonymous_logon_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORIT
+@@ -77,6 +77,7 @@ static const SID anonymous_logon_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORIT
  static const SID authenticated_user_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_AUTHENTICATED_USER_RID } };
  static const SID local_system_sid = { SID_REVISION, 1, { SECURITY_NT_AUTHORITY }, { SECURITY_LOCAL_SYSTEM_RID } };
  static const SID high_label_sid = { SID_REVISION, 1, { SECURITY_MANDATORY_LABEL_AUTHORITY }, { SECURITY_MANDATORY_HIGH_RID } };
@@ -113,7 +113,7 @@ index 381ae6871..fcab79955 100644
  static const SID_N(5) local_user_sid = { SID_REVISION, 5, { SECURITY_NT_AUTHORITY }, { SECURITY_NT_NON_UNIQUE, 0, 0, 0, 1000 } };
  static const SID_N(2) builtin_admins_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS } };
  static const SID_N(2) builtin_users_sid = { SID_REVISION, 2, { SECURITY_NT_AUTHORITY }, { SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS } };
-@@ -95,6 +96,7 @@ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
+@@ -93,6 +94,7 @@ const PSID security_builtin_admins_sid = (PSID)&builtin_admins_sid;
  const PSID security_builtin_users_sid = (PSID)&builtin_users_sid;
  const PSID security_domain_users_sid = (PSID)&domain_users_sid;
  const PSID security_high_label_sid = (PSID)&high_label_sid;
@@ -121,7 +121,7 @@ index 381ae6871..fcab79955 100644
  
  static luid_t prev_luid_value = { 1000, 0 };
  
-@@ -917,6 +919,64 @@ struct token *token_create_admin( void )
+@@ -915,6 +917,64 @@ struct token *token_create_admin( void )
      return token;
  }
  
@@ -186,7 +186,7 @@ index 381ae6871..fcab79955 100644
  static struct privilege *token_find_privilege( struct token *token, const LUID *luid, int enabled_only )
  {
      struct privilege *privilege;
-@@ -1722,3 +1782,27 @@ DECL_HANDLER(set_token_default_dacl)
+@@ -1720,3 +1780,27 @@ DECL_HANDLER(set_token_default_dacl)
          release_object( token );
      }
  }
@@ -215,5 +215,5 @@ index 381ae6871..fcab79955 100644
 +    }
 +}
 -- 
-2.23.0
+2.26.0
 

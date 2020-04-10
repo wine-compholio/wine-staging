@@ -1,7 +1,7 @@
-From 034af084be3e4867cdf1243148ce5c6be80703ec Mon Sep 17 00:00:00 2001
+From 6c3029fe763d6c94016a038d016eb810ad8e38ef Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Fri, 15 Jun 2018 11:01:44 -0500
-Subject: [PATCH 40/83] server: Create eventfd descriptors for timers.
+Subject: [PATCH] server: Create eventfd descriptors for timers.
 
 ---
  dlls/ntdll/esync.c  |  1 +
@@ -10,7 +10,7 @@ Subject: [PATCH 40/83] server: Create eventfd descriptors for timers.
  3 files changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index 4adf01a11..9d9d767c4 100644
+index 17890f9e1f0..c1d8882d817 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -241,6 +241,7 @@ static NTSTATUS get_waitable_object( HANDLE handle, struct esync **obj )
@@ -22,10 +22,10 @@ index 4adf01a11..9d9d767c4 100644
      case ESYNC_QUEUE:
          esync = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*esync) );
 diff --git a/server/protocol.def b/server/protocol.def
-index 7dbd0a6db..d14fdb607 100644
+index 0ab32aaca64..eb80c81d6e6 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4079,6 +4079,7 @@ enum esync_type
+@@ -4080,6 +4080,7 @@ enum esync_type
      ESYNC_AUTO_EVENT,
      ESYNC_MANUAL_EVENT,
      ESYNC_MUTEX,
@@ -34,7 +34,7 @@ index 7dbd0a6db..d14fdb607 100644
      ESYNC_QUEUE,
  };
 diff --git a/server/timer.c b/server/timer.c
-index 109aa0ff9..e0760ba11 100644
+index 2614e145c40..c3ebd3f52d3 100644
 --- a/server/timer.c
 +++ b/server/timer.c
 @@ -36,6 +36,7 @@
@@ -78,7 +78,7 @@ index 109aa0ff9..e0760ba11 100644
          }
      }
      return timer;
-@@ -171,6 +177,9 @@ static int set_timer( struct timer *timer, timeout_t expire, unsigned int period
+@@ -172,6 +178,9 @@ static int set_timer( struct timer *timer, timeout_t expire, unsigned int period
      {
          period = 0;  /* period doesn't make any sense for a manual timer */
          timer->signaled = 0;
@@ -86,9 +86,9 @@ index 109aa0ff9..e0760ba11 100644
 +        if (do_esync())
 +            esync_clear( timer->esync_fd );
      }
-     timer->when     = (expire <= 0) ? current_time - expire : max( expire, current_time );
+     timer->when     = (expire <= 0) ? expire - monotonic_time : max( expire, current_time );
      timer->period   = period;
-@@ -202,6 +211,13 @@ static int timer_signaled( struct object *obj, struct wait_queue_entry *entry )
+@@ -205,6 +214,13 @@ static int timer_signaled( struct object *obj, struct wait_queue_entry *entry )
      return timer->signaled;
  }
  
@@ -103,5 +103,5 @@ index 109aa0ff9..e0760ba11 100644
  {
      struct timer *timer = (struct timer *)obj;
 -- 
-2.20.1
+2.26.0
 

@@ -237,6 +237,7 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
+	enable_secur32_macos_compile="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
@@ -822,6 +823,9 @@ patch_enable ()
 			;;
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
+			;;
+		secur32-macos-compile)
+			enable_secur32_macos_compile="$2"
 			;;
 		server-Desktop_Refcount)
 			enable_server_Desktop_Refcount="$2"
@@ -5395,6 +5399,18 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset secur32-macos-compile
+# |
+# | Modified files:
+# |   *	dlls/secur32/schannel_macosx.c
+# |
+if test "$enable_secur32_macos_compile" -eq 1; then
+	patch_apply secur32-macos-compile/0001-secur32-Add-schan_imp_get_application_protocol-for-m.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "secur32: Add schan_imp_get_application_protocol for macos.", 1 },';
 	) >> "$patchlist"
 fi
 

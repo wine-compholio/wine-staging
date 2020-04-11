@@ -1,0 +1,45 @@
+From 8fcd62774c95cecf71bac1210767dc7120e3e4ae Mon Sep 17 00:00:00 2001
+From: Myah Caron <qsniyg@protonmail.com>
+Date: Thu, 2 Apr 2020 06:25:23 +0000
+Subject: [PATCH] ntdll: Cache LDR_IMAGE_IS_DLL for InitDLL
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=48817
+Signed-off-by: Myah Caron <qsniyg@protonmail.com>
+---
+ dlls/ntdll/loader.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 7090990c638..6fe7de58854 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -133,6 +133,7 @@ typedef struct _wine_modref
+     int                   alloc_deps;
+     int                   nDeps;
+     struct _wine_modref **deps;
++    BOOL                  is_dll;
+ } WINE_MODREF;
+ 
+ /* info about the current builtin dll load */
+@@ -1255,6 +1256,9 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
+             wm->ldr.EntryPoint = (char *)hModule + nt->OptionalHeader.AddressOfEntryPoint;
+     }
+ 
++    /* The flags can be modified later */
++    wm->is_dll = !!(wm->ldr.Flags & LDR_IMAGE_IS_DLL);
++
+     InsertTailList(&NtCurrentTeb()->Peb->LdrData->InLoadOrderModuleList,
+                    &wm->ldr.InLoadOrderModuleList);
+     InsertTailList(&NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList,
+@@ -1372,7 +1376,7 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved
+ 
+     if (wm->ldr.Flags & LDR_DONT_RESOLVE_REFS) return STATUS_SUCCESS;
+     if (wm->ldr.TlsIndex != -1) call_tls_callbacks( wm->ldr.BaseAddress, reason );
+-    if (!entry || !(wm->ldr.Flags & LDR_IMAGE_IS_DLL)) return STATUS_SUCCESS;
++    if (!entry || !(wm->is_dll)) return STATUS_SUCCESS;
+ 
+     if (TRACE_ON(relay))
+     {
+-- 
+2.25.1
+

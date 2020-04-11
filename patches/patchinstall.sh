@@ -185,6 +185,7 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
+	enable_ntdll_LDR_IMAGE_IS_DLL="$1"
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -665,6 +666,9 @@ patch_enable ()
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
+			;;
+		ntdll-LDR_IMAGE_IS_DLL)
+			enable_ntdll_LDR_IMAGE_IS_DLL="$2"
 			;;
 		ntdll-LDR_MODULE)
 			enable_ntdll_LDR_MODULE="$2"
@@ -4658,6 +4662,21 @@ if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	patch_apply ntdll-Interrupt-0x2e/0001-ntdll-Catch-windows-int-0x2e-syscall-on-i386.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Catch windows int 0x2e syscall on i386.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-LDR_IMAGE_IS_DLL
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48817] ntdll: Cache LDR_IMAGE_IS_DLL for InitDLL
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_LDR_IMAGE_IS_DLL" -eq 1; then
+	patch_apply ntdll-LDR_IMAGE_IS_DLL/0001-ntdll-Cache-LDR_IMAGE_IS_DLL-for-InitDLL.patch
+	(
+		printf '%s\n' '+    { "Myah Caron", "ntdll: Cache LDR_IMAGE_IS_DLL for InitDLL.", 1 },';
 	) >> "$patchlist"
 fi
 

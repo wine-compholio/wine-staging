@@ -1,22 +1,21 @@
-From e880d8328ae7d2602c828298fcf78e7bc9188add Mon Sep 17 00:00:00 2001
+From ffbf02d62296a0a0f56d3792bad1ff107d2ef725 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Wed, 20 Jun 2018 14:04:04 -0500
-Subject: [PATCH 56/83] ntdll: Avoid server_select() when waiting for critical
+Subject: [PATCH] ntdll: Avoid server_select() when waiting for critical
  sections.
 
 There's no reason not to always use NtWaitForSingleObject(), so just do that.
 
 And of course this lets esync work right.
-
 ---
  dlls/ntdll/critsection.c | 5 +----
  1 file changed, 1 insertion(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/critsection.c b/dlls/ntdll/critsection.c
-index 6b17cebe0..d9add3f06 100644
+index 1892d3abcb7..32907703730 100644
 --- a/dlls/ntdll/critsection.c
 +++ b/dlls/ntdll/critsection.c
-@@ -220,12 +220,9 @@ static inline NTSTATUS wait_semaphore( RTL_CRITICAL_SECTION *crit, int timeout )
+@@ -237,12 +237,9 @@ static inline NTSTATUS wait_semaphore( RTL_CRITICAL_SECTION *crit, int timeout )
      {
          HANDLE sem = get_semaphore( crit );
          LARGE_INTEGER time;
@@ -25,11 +24,11 @@ index 6b17cebe0..d9add3f06 100644
          time.QuadPart = timeout * (LONGLONG)-10000000;
 -        select_op.wait.op = SELECT_WAIT;
 -        select_op.wait.handles[0] = wine_server_obj_handle( sem );
--        ret = server_select( &select_op, offsetof( select_op_t, wait.handles[1] ), 0, &time );
+-        ret = server_wait( &select_op, offsetof( select_op_t, wait.handles[1] ), 0, &time );
 +        ret = NtWaitForSingleObject( sem, FALSE, &time );
      }
      return ret;
  }
 -- 
-2.20.1
+2.26.0
 

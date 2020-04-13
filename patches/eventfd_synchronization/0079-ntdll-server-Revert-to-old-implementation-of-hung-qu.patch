@@ -1,4 +1,4 @@
-From 997461625f8169228a34358a6908ff24b1d4f602 Mon Sep 17 00:00:00 2001
+From d67891b541cfcd5107805b088f20d3b8ca7f7d00 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Mon, 13 Aug 2018 21:35:06 -0500
 Subject: [PATCH] ntdll, server: Revert to old implementation of hung queue
@@ -22,7 +22,7 @@ critical code that this patchset was written for.
  3 files changed, 73 insertions(+), 21 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index ea4654d1f13..4ffbc4bd25e 100644
+index 2cdfcca4f04..9c7e8deea85 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -831,8 +831,8 @@ static void update_grabbed_object( struct esync *obj )
@@ -53,7 +53,7 @@ index ea4654d1f13..4ffbc4bd25e 100644
 -         * hung queues. Do it like this. */
 -        select_op.wait.op = SELECT_WAIT;
 -        select_op.wait.handles[0] = wine_server_obj_handle( handles[count - 1] );
--        ret = server_select( &select_op, offsetof( select_op_t, wait.handles[1] ), 0, &zero );
+-        ret = server_wait( &select_op, offsetof( select_op_t, wait.handles[1] ), 0, &zero );
 -        if (ret != STATUS_WAIT_0 && ret != STATUS_TIMEOUT)
 -            ERR("Unexpected ret %#x\n", ret);
      }
@@ -105,10 +105,10 @@ index ea4654d1f13..4ffbc4bd25e 100644
      const LARGE_INTEGER *timeout )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 7082fee04b5..7078c33b94b 100644
+index ab5e205462d..2260f432311 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4077,7 +4077,11 @@ struct handle_info
+@@ -4085,7 +4085,11 @@ struct handle_info
  
  /* Retrieve the fd to wait on for user APCs. */
  @REQ(get_esync_apc_fd)
@@ -122,7 +122,7 @@ index 7082fee04b5..7078c33b94b 100644
  
  enum esync_type
 diff --git a/server/queue.c b/server/queue.c
-index b6ed2478c6e..5eb1a046f7b 100644
+index c365eacb9e0..2b780deb112 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -126,6 +126,7 @@ struct msg_queue
@@ -133,7 +133,7 @@ index b6ed2478c6e..5eb1a046f7b 100644
      unsigned int           wake_bits;       /* wakeup bits */
      unsigned int           wake_mask;       /* wakeup mask */
      unsigned int           changed_bits;    /* changed wakeup bits */
-@@ -975,7 +976,21 @@ static void cleanup_results( struct msg_queue *queue )
+@@ -996,7 +997,21 @@ static void cleanup_results( struct msg_queue *queue )
  /* check if the thread owning the queue is hung (not checking for messages) */
  static int is_queue_hung( struct msg_queue *queue )
  {
@@ -156,7 +156,7 @@ index b6ed2478c6e..5eb1a046f7b 100644
  }
  
  static int msg_queue_add_queue( struct object *obj, struct wait_queue_entry *entry )
-@@ -991,12 +1006,6 @@ static int msg_queue_add_queue( struct object *obj, struct wait_queue_entry *ent
+@@ -1012,12 +1027,6 @@ static int msg_queue_add_queue( struct object *obj, struct wait_queue_entry *ent
      }
      if (process->idle_event && !(queue->wake_mask & QS_SMRESULT)) set_event( process->idle_event );
  
@@ -169,7 +169,7 @@ index b6ed2478c6e..5eb1a046f7b 100644
      if (queue->fd && list_empty( &obj->wait_queue ))  /* first on the queue */
          set_fd_events( queue->fd, POLLIN );
      add_queue( obj, entry );
-@@ -1688,6 +1697,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+@@ -1728,6 +1737,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
  
      if (!(hook_thread = get_first_global_hook( id ))) return 0;
      if (!(queue = hook_thread->queue)) return 0;
@@ -177,7 +177,7 @@ index b6ed2478c6e..5eb1a046f7b 100644
  
      if (!(msg = mem_alloc( sizeof(*msg) ))) return 0;
  
-@@ -3383,3 +3393,14 @@ DECL_HANDLER(get_rawinput_devices)
+@@ -3432,3 +3442,14 @@ DECL_HANDLER(get_rawinput_devices)
  
      set_reply_data_ptr( devices, device_count * sizeof (*devices) );
  }

@@ -1,5 +1,5 @@
-From 45f1f44052a57fac3b01fa63536b295d7bdade26 Mon Sep 17 00:00:00 2001
-From: Paul Gofman <gofmanp@gmail.com>
+From be6945e9103022b2c836dedc1049b1a08e75959e Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
 
@@ -9,16 +9,16 @@ used in the applications (i. e., that the applications
 get the number from syscall thunks). Linux specific Seccomp
 is used for trapping syscalls.
 ---
- configure.ac               |  1 +
- dlls/ntdll/signal_x86_64.c | 90 ++++++++++++++++++++++++++++++++++++++
- tools/winebuild/spec32.c   |  9 +++-
- 3 files changed, 98 insertions(+), 2 deletions(-)
+ configure.ac               |   1 +
+ dlls/ntdll/signal_x86_64.c | 104 +++++++++++++++++++++++++++++++++++++
+ tools/winebuild/spec32.c   |   9 +++-
+ 3 files changed, 112 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 3e42014f97..08f9570a8c 100644
+index 8e381272d2..122cb2d392 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -474,6 +474,7 @@ AC_CHECK_HEADERS(\
+@@ -473,6 +473,7 @@ AC_CHECK_HEADERS(\
  	linux/joystick.h \
  	linux/major.h \
  	linux/param.h \
@@ -27,7 +27,7 @@ index 3e42014f97..08f9570a8c 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index e5cddf6e25..4118caf606 100644
+index 26d688c3ab..3c09f62b8c 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -24,6 +24,7 @@
@@ -91,13 +91,26 @@ index e5cddf6e25..4118caf606 100644
  
  /***********************************************************************
   *           __wine_set_signal_handler   (NTDLL.@)
-@@ -3266,6 +3306,53 @@ void signal_init_thread( TEB *teb )
+@@ -3266,6 +3306,67 @@ void signal_init_thread( TEB *teb )
  #endif
  }
  
++#ifdef HAVE_SECCOMP
++static int sc_seccomp(unsigned int operation, unsigned int flags, void *args)
++{
++    return syscall(__NR_seccomp, operation, flags, args);
++}
++#endif
++
 +static void install_bpf(struct sigaction *sig_act)
 +{
 +#ifdef HAVE_SECCOMP
++#ifdef SECCOMP_FILTER_FLAG_SPEC_ALLOW
++    static const unsigned int flags = SECCOMP_FILTER_FLAG_SPEC_ALLOW;
++#else
++    static const unsigned int flags = 0;
++#endif
++
 +    static struct sock_filter filter[] =
 +    {
 +       BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
@@ -121,7 +134,8 @@ index e5cddf6e25..4118caf606 100644
 +            exit(1);
 +        }
 +
-+        if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog, 0, 0))
++        if (sc_seccomp(SECCOMP_SET_MODE_FILTER, flags, &prog))
++
 +        {
 +            perror("prctl(PR_SET_SECCOMP, ...)");
 +            exit(1);
@@ -145,7 +159,7 @@ index e5cddf6e25..4118caf606 100644
  /**********************************************************************
   *		signal_init_process
   */
-@@ -3298,6 +3385,9 @@ void signal_init_process(void)
+@@ -3298,6 +3399,9 @@ void signal_init_process(void)
      sig_act.sa_sigaction = trap_handler;
      if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
  #endif
@@ -197,5 +211,5 @@ index 497bbeff4a..5093f7fc28 100644
                  put_byte( 0x08 ); put_byte( 0x03 ); put_byte( 0xfe );
                  put_byte( 0x7f ); put_byte( 0x01 );
 -- 
-2.25.1
+2.25.2
 

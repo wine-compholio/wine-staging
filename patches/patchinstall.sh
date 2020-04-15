@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "5e75310837e5ec77ebc361d689ea3279fa49ebac"
+	echo "dc214bfad723efeea96a5d33eb7fc0802dc34be9"
 }
 
 # Show version information
@@ -185,7 +185,6 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
-	enable_ntdll_LDR_IMAGE_IS_DLL="$1"
 	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -217,7 +216,6 @@ patch_enable_all ()
 	enable_ntdll_avoid_fstatat="$1"
 	enable_ntdll_ext4_case_folder="$1"
 	enable_ntdll_set_full_cpu_context="$1"
-	enable_ntdll_unaligned_futex="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -667,9 +665,6 @@ patch_enable ()
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
 			;;
-		ntdll-LDR_IMAGE_IS_DLL)
-			enable_ntdll_LDR_IMAGE_IS_DLL="$2"
-			;;
 		ntdll-LDR_MODULE)
 			enable_ntdll_LDR_MODULE="$2"
 			;;
@@ -762,9 +757,6 @@ patch_enable ()
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
-			;;
-		ntdll-unaligned-futex)
-			enable_ntdll_unaligned_futex="$2"
 			;;
 		ntdll-x86_64_SegDs)
 			enable_ntdll_x86_64_SegDs="$2"
@@ -4665,21 +4657,6 @@ if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-LDR_IMAGE_IS_DLL
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48817] ntdll: Cache LDR_IMAGE_IS_DLL for InitDLL
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_LDR_IMAGE_IS_DLL" -eq 1; then
-	patch_apply ntdll-LDR_IMAGE_IS_DLL/0001-ntdll-Cache-LDR_IMAGE_IS_DLL-for-InitDLL.patch
-	(
-		printf '%s\n' '+    { "Myah Caron", "ntdll: Cache LDR_IMAGE_IS_DLL for InitDLL.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Manifest_Range
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5091,25 +5068,6 @@ if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	patch_apply ntdll-set_full_cpu_context/0001-ntdll-Add-back-SS-segment-prefixes-in-set_full_cpu_c.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add back SS segment prefixes in set_full_cpu_context.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-unaligned-futex
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48389] Detroit: Become Human has poor performance (use of unaligned futexes for condition variables on Linux)
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/sync.c, dlls/ntdll/sync.c
-# |
-if test "$enable_ntdll_unaligned_futex" -eq 1; then
-	patch_apply ntdll-unaligned-futex/0001-ntdll-Handle-unaligned-condition-variables-when-usin.patch
-	patch_apply ntdll-unaligned-futex/0002-ntdll-Handle-unaligned-SRW-locks-when-using-keyed-ev.patch
-	patch_apply ntdll-unaligned-futex/0003-ntdll-Handle-unaligned-SRW-locks-when-using-futexes.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Handle unaligned condition variables when using futexes.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Handle unaligned SRW locks when using keyed events.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Handle unaligned SRW locks when using futexes.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,22 +1,22 @@
-From 9a0c9443ada9bccc1d10270398dbf9bddb483d53 Mon Sep 17 00:00:00 2001
+From 323c45f237fc828f32e27448e4c24649b69b49e0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Tue, 12 Nov 2019 12:41:55 +0100
-Subject: [PATCH 05/12] server: Broadcast rawinput message if request flag is
+Subject: [PATCH] server: Broadcast rawinput message if request flag is
  SEND_HWMSG_RAWINPUT.
 
 If the request flag is equal to SEND_HWMSG_RAWINPUT, we broadcast the
 message to all listening processes -or at least to the foreground
 process until RIDEV_INPUTSINK is supported.
 ---
- dlls/user32/tests/input.c |  2 +-
- server/queue.c            | 98 ++++++++++++++++++++++++++++++---------
- 2 files changed, 78 insertions(+), 22 deletions(-)
+ dlls/user32/tests/input.c |   2 +-
+ server/queue.c            | 101 ++++++++++++++++++++++++++++++--------
+ 2 files changed, 81 insertions(+), 22 deletions(-)
 
 diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
-index cc7babd1af4..d18ccfebcaf 100644
+index d45a6b17ece..87e298ce8ff 100644
 --- a/dlls/user32/tests/input.c
 +++ b/dlls/user32/tests/input.c
-@@ -2057,7 +2057,7 @@ static void test_rawinput_mouse(const char *argv0)
+@@ -2050,7 +2050,7 @@ static void test_rawinput_mouse(const char *argv0)
          { TRUE, TRUE, RIDEV_INPUTSINK, 2, 2, 0, 0, TRUE },
  
          /* cross-process foreground tests */
@@ -26,10 +26,10 @@ index cc7babd1af4..d18ccfebcaf 100644
      };
  
 diff --git a/server/queue.c b/server/queue.c
-index 9528453b190..2bdd099d1bb 100644
+index 05d7af0206f..e1a01389fcf 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -1734,12 +1734,67 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+@@ -1596,12 +1596,70 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
      return 1;
  }
  
@@ -61,12 +61,15 @@ index 9528453b190..2bdd099d1bb 100644
 +        (raw_msg->desktop && desktop != raw_msg->desktop))
 +        goto done;
 +
++    if (!device->target && !desktop->foreground_input)
++        goto done;
++
 +    if (!(thread = get_window_thread( device->target ? device->target : desktop->foreground_input->active )) ||
 +        process != thread->process)
 +        goto done;
 +
 +    /* FIXME: Implement RIDEV_INPUTSINK */
-+    if (!(foreground = get_window_thread( desktop->foreground_input->active )) ||
++    if (!desktop->foreground_input || !(foreground = get_window_thread( desktop->foreground_input->active )) ||
 +        thread->process != foreground->process)
 +        goto done;
 +
@@ -98,7 +101,7 @@ index 9528453b190..2bdd099d1bb 100644
      struct message *msg;
      unsigned int i, time, flags;
      struct hw_msg_source source = { IMDT_MOUSE, origin };
-@@ -1789,24 +1844,24 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
+@@ -1651,24 +1709,24 @@ static int queue_mouse_message( struct desktop *desktop, user_handle_t win, cons
          y = desktop->cursor.y;
      }
  
@@ -133,7 +136,7 @@ index 9528453b190..2bdd099d1bb 100644
      }
  
      if (!(req_flags & SEND_HWMSG_WINDOW))
-@@ -1846,8 +1901,8 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
+@@ -1708,8 +1766,8 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
                                     unsigned int origin, struct msg_queue *sender, unsigned int req_flags )
  {
      struct hw_msg_source source = { IMDT_KEYBOARD, origin };
@@ -143,7 +146,7 @@ index 9528453b190..2bdd099d1bb 100644
      struct message *msg;
      unsigned char vkey = input->kbd.vkey;
      unsigned int message_code, time;
-@@ -1919,23 +1974,24 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
+@@ -1781,23 +1839,24 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
          break;
      }
  
@@ -178,5 +181,5 @@ index 9528453b190..2bdd099d1bb 100644
  
      if (!(req_flags & SEND_HWMSG_WINDOW))
 -- 
-2.24.1
+2.26.0
 

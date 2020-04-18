@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c18152630362c1bff1813fe8ad5c75ffb8dbb7cf"
+	echo "59987bc9ecdd0dbafd768a95c21a14884bc77c07"
 }
 
 # Show version information
@@ -229,7 +229,6 @@ patch_enable_all ()
 	enable_oleaut32_OleLoadPicture="$1"
 	enable_oleaut32_OleLoadPictureFile="$1"
 	enable_opencl_version_1_2="$1"
-	enable_opengl32_wglChoosePixelFormat="$1"
 	enable_packager_DllMain="$1"
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
@@ -306,7 +305,6 @@ patch_enable_all ()
 	enable_winebuild_Fake_Dlls="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
-	enable_winecfg_Unmounted_Devices="$1"
 	enable_wined3d_Accounting="$1"
 	enable_wined3d_CSMT_Main="$1"
 	enable_wined3d_Indexed_Vertex_Blending="$1"
@@ -797,9 +795,6 @@ patch_enable ()
 		opencl-version_1_2)
 			enable_opencl_version_1_2="$2"
 			;;
-		opengl32-wglChoosePixelFormat)
-			enable_opengl32_wglChoosePixelFormat="$2"
-			;;
 		packager-DllMain)
 			enable_packager_DllMain="$2"
 			;;
@@ -1027,9 +1022,6 @@ patch_enable ()
 			;;
 		winecfg-Staging)
 			enable_winecfg_Staging="$2"
-			;;
-		winecfg-Unmounted_Devices)
-			enable_winecfg_Unmounted_Devices="$2"
 			;;
 		wined3d-Accounting)
 			enable_wined3d_Accounting="$2"
@@ -5271,21 +5263,6 @@ if test "$enable_opencl_version_1_2" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset opengl32-wglChoosePixelFormat
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#43638] Treat invalid pixel types as PFD_TYPE_RGBA in wglChoosePixelFormat
-# |
-# | Modified files:
-# |   *	dlls/opengl32/tests/opengl.c, dlls/opengl32/wgl.c
-# |
-if test "$enable_opengl32_wglChoosePixelFormat" -eq 1; then
-	patch_apply opengl32-wglChoosePixelFormat/0001-opengl32-Treat-invalid-pixel-types-as-PFD_TYPE_RGBA-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "opengl32: Treat invalid pixel types as PFD_TYPE_RGBA in wglChoosePixelFormat.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset packager-DllMain
 # |
 # | This patchset fixes the following Wine bugs:
@@ -6516,18 +6493,6 @@ if test "$enable_winecfg_Staging" -eq 1; then
 		printf '%s\n' '+    { "Mark Harmstone", "winecfg: Add checkbox to enable/disable EAX support.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "winecfg: Add checkbox to enable/disable HideWineExports registry key.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "winecfg: Add option to enable/disable GTK3 theming.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winecfg-Unmounted_Devices
-# |
-# | Modified files:
-# |   *	programs/winecfg/drive.c, programs/winecfg/drivedetect.c, programs/winecfg/driveui.c
-# |
-if test "$enable_winecfg_Unmounted_Devices" -eq 1; then
-	patch_apply winecfg-Unmounted_Devices/0001-winecfg-Show-unmounted-devices-and-allow-changing-th.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winecfg: Show unmounted devices and allow changing the device value.", 1 },';
 	) >> "$patchlist"
 fi
 

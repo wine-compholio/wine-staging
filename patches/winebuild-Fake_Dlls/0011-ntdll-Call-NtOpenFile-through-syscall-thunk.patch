@@ -1,4 +1,4 @@
-From ed1f5ed8e90ddfa5d9534edd11d9bdc86ba20a7a Mon Sep 17 00:00:00 2001
+From cba87bb5a4aea10f9f4c2044db8290479a83f17e Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Fri, 3 Jan 2020 17:39:08 +0300
 Subject: [PATCH] ntdll: Call NtOpenFile through syscall thunk.
@@ -37,7 +37,7 @@ index 1ca14827a79..6f3bc369f82 100644
      {
          sxs_ai = *ai;
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 624c534ce92..c29112d3b0f 100644
+index f02feb8c442..1dcc3d42db7 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
 @@ -3010,7 +3010,7 @@ NTSTATUS DIR_get_unix_cwd( char **cwd )
@@ -50,10 +50,10 @@ index 624c534ce92..c29112d3b0f 100644
          RtlFreeUnicodeString( &dirW );
          if (status != STATUS_SUCCESS) goto done;
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 947ae103fcc..78a27fef94b 100644
+index 8a525c36a74..d964c296243 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -2372,7 +2372,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
+@@ -2565,7 +2565,7 @@ static NTSTATUS open_dll_file( UNICODE_STRING *nt_name, WINE_MODREF **pwm,
      attr.ObjectName = nt_name;
      attr.SecurityDescriptor = NULL;
      attr.SecurityQualityOfService = NULL;
@@ -63,7 +63,7 @@ index 947ae103fcc..78a27fef94b 100644
                                FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE )))
      {
 diff --git a/dlls/ntdll/locale.c b/dlls/ntdll/locale.c
-index ff9d7136247..2efd47f0e0d 100644
+index a28f5d0f580..deab31be66f 100644
 --- a/dlls/ntdll/locale.c
 +++ b/dlls/ntdll/locale.c
 @@ -662,7 +662,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
@@ -74,7 +74,7 @@ index ff9d7136247..2efd47f0e0d 100644
 +    status = __syscall_NtOpenFile( file, GENERIC_READ, &attr, &io, FILE_SHARE_READ, FILE_SYNCHRONOUS_IO_ALERT );
      if (!status) TRACE( "found %s\n", debugstr_w( valueW.Buffer ));
      RtlFreeUnicodeString( &valueW );
-     if (status != STATUS_OBJECT_NAME_NOT_FOUND) return status;
+     if (status != STATUS_OBJECT_NAME_NOT_FOUND && status != STATUS_OBJECT_PATH_NOT_FOUND) return status;
 @@ -686,7 +686,7 @@ static NTSTATUS open_nls_data_file( ULONG type, ULONG id, HANDLE *file )
          wcscat( valueW.Buffer, name );
          valueW.Length = wcslen(valueW.Buffer) * sizeof(WCHAR);
@@ -85,10 +85,10 @@ index ff9d7136247..2efd47f0e0d 100644
      }
      RtlFreeUnicodeString( &valueW );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index c7865a28d47..63e03d88366 100644
+index 6bb50f8ddd6..75060f6d8e9 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -336,4 +336,12 @@ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
+@@ -348,4 +348,12 @@ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
      while (len--) *dst++ = (unsigned char)*src++;
  }
  
@@ -115,7 +115,7 @@ index 32e1f951af5..71ae44dd498 100644
      if (nts != STATUS_SUCCESS) goto out;
  
 diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
-index b38c5e21b83..0c8181df0c7 100644
+index 1beb4b9341d..55ff4a7da1b 100644
 --- a/dlls/ntdll/process.c
 +++ b/dlls/ntdll/process.c
 @@ -1395,7 +1395,7 @@ static NTSTATUS get_pe_file_info( UNICODE_STRING *path, ULONG attributes,
@@ -128,5 +128,5 @@ index b38c5e21b83..0c8181df0c7 100644
      {
          BOOL is_64bit;
 -- 
-2.25.1
+2.26.1
 

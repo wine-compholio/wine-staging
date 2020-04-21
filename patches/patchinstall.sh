@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f31a29b8d1ea478af28f14cdaf3db1515a932853"
+	echo "f65cfbfe9b20e38537c7cb8608e7f411c9e8b725"
 }
 
 # Show version information
@@ -6323,28 +6323,16 @@ fi
 # |   *	windowscodecs-GIF_Encoder
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c, dlls/windowscodecs/regsvr.c,
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c,
 # | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c
 # |
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
-	patch_apply windowscodecs-TIFF_Support/0006-windowscodecs-Add-support-for-16bppGray-and-32bppGra.patch
-	patch_apply windowscodecs-TIFF_Support/0007-windowscodecs-Add-support-for-3bps-RGB-format-to-TIF.patch
-	patch_apply windowscodecs-TIFF_Support/0008-windowscodecs-Add-support-for-12bpp-RGB-format-to-TI.patch
-	patch_apply windowscodecs-TIFF_Support/0009-windowscodecs-Add-support-for-128bppRGBAFloat-format.patch
-	patch_apply windowscodecs-TIFF_Support/0011-windowscodecs-Add-support-for-32bppCMYK-and-64bppCMY.patch
-	patch_apply windowscodecs-TIFF_Support/0012-windowscodecs-Add-support-for-4bpp-RGBA-format-to-TI.patch
 	patch_apply windowscodecs-TIFF_Support/0013-windowscodecs-Add-support-for-16bpp-RGBA-format-to-T.patch
 	patch_apply windowscodecs-TIFF_Support/0014-windowscodecs-Add-some-tests-for-various-TIFF-color-.patch
 	patch_apply windowscodecs-TIFF_Support/0015-windowscodecs-Tolerate-partial-reads-in-the-IFD-meta.patch
 	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
 	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bppGray and 32bppGrayFloat formats to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 3bps RGB format to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 12bpp RGB format to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 128bppRGBAFloat format to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 32bppCMYK and 64bppCMYK formats to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 4bpp RGBA format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';

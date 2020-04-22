@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f65cfbfe9b20e38537c7cb8608e7f411c9e8b725"
+	echo "f52b33c63064aa59f48a9c10d624e3508da55b88"
 }
 
 # Show version information
@@ -6323,18 +6323,13 @@ fi
 # |   *	windowscodecs-GIF_Encoder
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c,
-# | 	dlls/windowscodecs/tests/tiffformat.c, dlls/windowscodecs/tiffformat.c
+# |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c
 # |
 if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
-	patch_apply windowscodecs-TIFF_Support/0013-windowscodecs-Add-support-for-16bpp-RGBA-format-to-T.patch
-	patch_apply windowscodecs-TIFF_Support/0014-windowscodecs-Add-some-tests-for-various-TIFF-color-.patch
 	patch_apply windowscodecs-TIFF_Support/0015-windowscodecs-Tolerate-partial-reads-in-the-IFD-meta.patch
 	patch_apply windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
 	patch_apply windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
 	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add support for 16bpp RGBA format to TIFF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add some tests for various TIFF color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Tolerate partial reads in the IFD metadata loader.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus: Add support for more image color formats.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "gdiplus/tests: Add some tests for loading TIFF images in various color formats.", 1 },';

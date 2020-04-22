@@ -1,4 +1,4 @@
-From be6945e9103022b2c836dedc1049b1a08e75959e Mon Sep 17 00:00:00 2001
+From e8157643d137ea238ad0af29c96665f05570e62b Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -10,15 +10,15 @@ get the number from syscall thunks). Linux specific Seccomp
 is used for trapping syscalls.
 ---
  configure.ac               |   1 +
- dlls/ntdll/signal_x86_64.c | 104 +++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/signal_x86_64.c | 105 +++++++++++++++++++++++++++++++++++++
  tools/winebuild/spec32.c   |   9 +++-
- 3 files changed, 112 insertions(+), 2 deletions(-)
+ 3 files changed, 113 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 8e381272d2..122cb2d392 100644
+index b8e363c93a1..cd7a2d6209d 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -473,6 +473,7 @@ AC_CHECK_HEADERS(\
+@@ -474,6 +474,7 @@ AC_CHECK_HEADERS(\
  	linux/joystick.h \
  	linux/major.h \
  	linux/param.h \
@@ -27,7 +27,7 @@ index 8e381272d2..122cb2d392 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 26d688c3ab..3c09f62b8c 100644
+index 26d688c3abe..e0608540a53 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -24,6 +24,7 @@
@@ -91,13 +91,16 @@ index 26d688c3ab..3c09f62b8c 100644
  
  /***********************************************************************
   *           __wine_set_signal_handler   (NTDLL.@)
-@@ -3266,6 +3306,67 @@ void signal_init_thread( TEB *teb )
+@@ -3266,6 +3306,68 @@ void signal_init_thread( TEB *teb )
  #endif
  }
  
 +#ifdef HAVE_SECCOMP
 +static int sc_seccomp(unsigned int operation, unsigned int flags, void *args)
 +{
++#ifndef __NR_seccomp
++#   define __NR_seccomp 317
++#endif
 +    return syscall(__NR_seccomp, operation, flags, args);
 +}
 +#endif
@@ -105,12 +108,10 @@ index 26d688c3ab..3c09f62b8c 100644
 +static void install_bpf(struct sigaction *sig_act)
 +{
 +#ifdef HAVE_SECCOMP
-+#ifdef SECCOMP_FILTER_FLAG_SPEC_ALLOW
++#   ifndef SECCOMP_FILTER_FLAG_SPEC_ALLOW
++#       define SECCOMP_FILTER_FLAG_SPEC_ALLOW (1UL << 2)
++#   endif
 +    static const unsigned int flags = SECCOMP_FILTER_FLAG_SPEC_ALLOW;
-+#else
-+    static const unsigned int flags = 0;
-+#endif
-+
 +    static struct sock_filter filter[] =
 +    {
 +       BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
@@ -159,7 +160,7 @@ index 26d688c3ab..3c09f62b8c 100644
  /**********************************************************************
   *		signal_init_process
   */
-@@ -3298,6 +3399,9 @@ void signal_init_process(void)
+@@ -3298,6 +3400,9 @@ void signal_init_process(void)
      sig_act.sa_sigaction = trap_handler;
      if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
  #endif
@@ -170,7 +171,7 @@ index 26d688c3ab..3c09f62b8c 100644
  
   error:
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 497bbeff4a..5093f7fc28 100644
+index 9cc4698d0d7..c572fe49923 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -531,7 +531,7 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
@@ -201,7 +202,7 @@ index 497bbeff4a..5093f7fc28 100644
      /* copy over any arguments on the stack */
      output( "\tleaq 0x38(%%rbp),%%rsi\n" );
      if (UsePIC)
-@@ -1233,7 +1238,7 @@ static void create_stub_exports_text_x64( DLLSPEC *spec )
+@@ -1192,7 +1197,7 @@ static void create_stub_exports_text_x64( DLLSPEC *spec )
          align_output_rva( 16, 16 );
          put_label( odp->link_name );
          put_byte( 0x4c ); put_byte( 0x8b ); put_byte( 0xd1 );  /* mov r10, rcx */
@@ -211,5 +212,5 @@ index 497bbeff4a..5093f7fc28 100644
                  put_byte( 0x08 ); put_byte( 0x03 ); put_byte( 0xfe );
                  put_byte( 0x7f ); put_byte( 0x01 );
 -- 
-2.25.2
+2.25.3
 

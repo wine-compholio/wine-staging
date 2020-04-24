@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f52b33c63064aa59f48a9c10d624e3508da55b88"
+	echo "28bc1bb463eb4075c6a113ba5c279a0506c6daea"
 }
 
 # Show version information
@@ -185,7 +185,6 @@ patch_enable_all ()
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
-	enable_ntdll_LDR_MODULE="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtContinue="$1"
@@ -662,9 +661,6 @@ patch_enable ()
 			;;
 		ntdll-Junction_Points)
 			enable_ntdll_Junction_Points="$2"
-			;;
-		ntdll-LDR_MODULE)
-			enable_ntdll_LDR_MODULE="$2"
 			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
@@ -1723,13 +1719,6 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
 	fi
 	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_ntdll_HashLinks" -eq 1; then
-	if test "$enable_ntdll_LDR_MODULE" -gt 1; then
-		abort "Patchset ntdll-LDR_MODULE disabled, but ntdll-HashLinks depends on that."
-	fi
-	enable_ntdll_LDR_MODULE=1
 fi
 
 if test "$enable_ntdll_DOS_Attributes" -eq 1; then
@@ -4588,22 +4577,7 @@ if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-LDR_MODULE
-# |
-# | Modified files:
-# |   *	include/winternl.h
-# |
-if test "$enable_ntdll_LDR_MODULE" -eq 1; then
-	patch_apply ntdll-LDR_MODULE/0002-include-Update-LDR_MODULE-to-more-recent-windows-ver.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "include: Update LDR_MODULE to more recent windows versions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-HashLinks
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-LDR_MODULE
 # |
 # | Modified files:
 # |   *	dlls/kernel32/tests/loader.c, dlls/ntdll/loader.c, include/winternl.h

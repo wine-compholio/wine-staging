@@ -1,4 +1,4 @@
-From e8157643d137ea238ad0af29c96665f05570e62b Mon Sep 17 00:00:00 2001
+From e193e84b7fb97f6f734b19d5bf2feb403d832abe Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -10,12 +10,12 @@ get the number from syscall thunks). Linux specific Seccomp
 is used for trapping syscalls.
 ---
  configure.ac               |   1 +
- dlls/ntdll/signal_x86_64.c | 105 +++++++++++++++++++++++++++++++++++++
- tools/winebuild/spec32.c   |   9 +++-
- 3 files changed, 113 insertions(+), 2 deletions(-)
+ dlls/ntdll/signal_x86_64.c | 109 +++++++++++++++++++++++++++++++++++++
+ tools/winebuild/spec32.c   |   9 ++-
+ 3 files changed, 117 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index b8e363c93a1..cd7a2d6209d 100644
+index e6245d8163f..485219e23b3 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -474,6 +474,7 @@ AC_CHECK_HEADERS(\
@@ -27,7 +27,7 @@ index b8e363c93a1..cd7a2d6209d 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 26d688c3abe..e0608540a53 100644
+index 26d688c3abe..87c5a99a65e 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -24,6 +24,7 @@
@@ -91,7 +91,7 @@ index 26d688c3abe..e0608540a53 100644
  
  /***********************************************************************
   *           __wine_set_signal_handler   (NTDLL.@)
-@@ -3266,6 +3306,68 @@ void signal_init_thread( TEB *teb )
+@@ -3266,6 +3306,72 @@ void signal_init_thread( TEB *teb )
  #endif
  }
  
@@ -110,6 +110,10 @@ index 26d688c3abe..e0608540a53 100644
 +#ifdef HAVE_SECCOMP
 +#   ifndef SECCOMP_FILTER_FLAG_SPEC_ALLOW
 +#       define SECCOMP_FILTER_FLAG_SPEC_ALLOW (1UL << 2)
++#   endif
++
++#   ifndef SECCOMP_SET_MODE_FILTER
++#       define SECCOMP_SET_MODE_FILTER 1
 +#   endif
 +    static const unsigned int flags = SECCOMP_FILTER_FLAG_SPEC_ALLOW;
 +    static struct sock_filter filter[] =
@@ -160,7 +164,7 @@ index 26d688c3abe..e0608540a53 100644
  /**********************************************************************
   *		signal_init_process
   */
-@@ -3298,6 +3400,9 @@ void signal_init_process(void)
+@@ -3298,6 +3404,9 @@ void signal_init_process(void)
      sig_act.sa_sigaction = trap_handler;
      if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
  #endif

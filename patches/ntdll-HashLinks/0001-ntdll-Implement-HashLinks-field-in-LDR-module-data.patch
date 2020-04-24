@@ -1,4 +1,4 @@
-From 36780c821f4ea99a93920625a6f6106a84883eb9 Mon Sep 17 00:00:00 2001
+From d2813193e018878f99328e6a1a84a484f1ff6ac4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 3 Apr 2017 05:30:27 +0200
 Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
@@ -10,7 +10,7 @@ Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
  3 files changed, 142 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 35c6b3c0996..17d742daaa7 100644
+index 5474d543248..2d382d4f326 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
 @@ -30,6 +30,7 @@
@@ -60,13 +60,13 @@ index 35c6b3c0996..17d742daaa7 100644
 +    static WCHAR kernel32W[] = {'k','e','r','n','e','l','3','2','.','d','l','l',0};
 +
 +    LIST_ENTRY *hash_map, *entry, *mark;
-+    LDR_MODULE *module;
++    LDR_DATA_TABLE_ENTRY *module;
 +    BOOL found;
 +
 +    entry = &NtCurrentTeb()->Peb->LdrData->InLoadOrderModuleList;
 +    entry = entry->Flink;
 +
-+    module = CONTAINING_RECORD(entry, LDR_MODULE, InLoadOrderModuleList);
++    module = CONTAINING_RECORD(entry, LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
 +    entry = module->HashLinks.Blink;
 +
 +    hash_map = entry - hash_basename(module->BaseDllName.Buffer);
@@ -75,7 +75,7 @@ index 35c6b3c0996..17d742daaa7 100644
 +    found = FALSE;
 +    for (entry = mark->Flink; entry != mark; entry = entry->Flink)
 +    {
-+        module = CONTAINING_RECORD(entry, LDR_MODULE, HashLinks);
++        module = CONTAINING_RECORD(entry, LDR_DATA_TABLE_ENTRY, HashLinks);
 +        if (!lstrcmpiW(module->BaseDllName.Buffer, ntdllW))
 +        {
 +            found = TRUE;
@@ -88,7 +88,7 @@ index 35c6b3c0996..17d742daaa7 100644
 +    found = FALSE;
 +    for (entry = mark->Flink; entry != mark; entry = entry->Flink)
 +    {
-+        module = CONTAINING_RECORD(entry, LDR_MODULE, HashLinks);
++        module = CONTAINING_RECORD(entry, LDR_DATA_TABLE_ENTRY, HashLinks);
 +        if (!lstrcmpiW(module->BaseDllName.Buffer, kernel32W))
 +        {
 +            found = TRUE;
@@ -115,7 +115,7 @@ index 35c6b3c0996..17d742daaa7 100644
      test_Loader();
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 04ea7ea121a..2a8b4b3ad97 100644
+index 38c893e3eb4..c226c467cd2 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -122,6 +122,9 @@ static const char * const reason_names[] =
@@ -128,7 +128,7 @@ index 04ea7ea121a..2a8b4b3ad97 100644
  /* internal representation of 32bit modules. per process. */
  typedef struct _wine_modref
  {
-@@ -462,6 +465,52 @@ static void call_ldr_notifications( ULONG reason, LDR_MODULE *module )
+@@ -462,6 +465,52 @@ static void call_ldr_notifications( ULONG reason, LDR_DATA_TABLE_ENTRY *module )
      }
  }
  
@@ -166,13 +166,13 @@ index 04ea7ea121a..2a8b4b3ad97 100644
 + */
 +static void recompute_hash_map(void)
 +{
-+    PLIST_ENTRY mark, entry;
-+    PLDR_MODULE mod;
++    LIST_ENTRY *mark, *entry;
++    LDR_DATA_TABLE_ENTRY *mod;
 +
 +    mark = &NtCurrentTeb()->Peb->LdrData->InLoadOrderModuleList;
 +    for (entry = mark->Flink; entry != mark; entry = entry->Flink)
 +    {
-+        mod = CONTAINING_RECORD(entry, LDR_MODULE, InLoadOrderModuleList);
++        mod = CONTAINING_RECORD(entry, LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
 +        RemoveEntryList( &mod->HashLinks );
 +        InsertTailList( &hash_table[hash_basename(mod->BaseDllName.Buffer)], &mod->HashLinks );
 +    }
@@ -182,41 +182,41 @@ index 04ea7ea121a..2a8b4b3ad97 100644
   *		get_modref
   *
 @@ -1227,7 +1276,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
-                    &wm->ldr.InLoadOrderModuleList);
+                    &wm->ldr.InLoadOrderLinks);
      InsertTailList(&NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList,
-                    &wm->ldr.InMemoryOrderModuleList);
+                    &wm->ldr.InMemoryOrderLinks);
 +    InsertTailList(&hash_table[hash_basename(wm->ldr.BaseDllName.Buffer)],
 +                   &wm->ldr.HashLinks);
 +
      /* wait until init is called for inserting into InInitializationOrderModuleList */
-+    wm->ldr.InInitializationOrderModuleList.Flink = NULL;
-+    wm->ldr.InInitializationOrderModuleList.Blink = NULL;
++    wm->ldr.InInitializationOrderLinks.Flink = NULL;
++    wm->ldr.InInitializationOrderLinks.Blink = NULL;
  
      if (!(nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_NX_COMPAT))
      {
 @@ -2030,6 +2084,7 @@ static NTSTATUS build_so_dll_module( const WCHAR *load_path, const UNICODE_STRIN
              /* the module has only been inserted in the load & memory order lists */
-             RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
-             RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
+             RemoveEntryList(&wm->ldr.InLoadOrderLinks);
+             RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
 +            RemoveEntryList(&wm->ldr.HashLinks);
              /* FIXME: free the modref */
              return status;
          }
 @@ -2573,6 +2628,7 @@ static NTSTATUS load_native_dll( LPCWSTR load_path, const UNICODE_STRING *nt_nam
              /* the module has only be inserted in the load & memory order lists */
-             RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
-             RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
+             RemoveEntryList(&wm->ldr.InLoadOrderLinks);
+             RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
 +            RemoveEntryList(&wm->ldr.HashLinks);
  
              /* FIXME: there are several more dangling references
               * left. Including dlls loaded by this dll before the
 @@ -3791,6 +3847,7 @@ static void free_modref( WINE_MODREF *wm )
  {
-     RemoveEntryList(&wm->ldr.InLoadOrderModuleList);
-     RemoveEntryList(&wm->ldr.InMemoryOrderModuleList);
+     RemoveEntryList(&wm->ldr.InLoadOrderLinks);
+     RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
 +    RemoveEntryList(&wm->ldr.HashLinks);
-     if (wm->ldr.InInitializationOrderModuleList.Flink)
-         RemoveEntryList(&wm->ldr.InInitializationOrderModuleList);
+     if (wm->ldr.InInitializationOrderLinks.Flink)
+         RemoveEntryList(&wm->ldr.InInitializationOrderLinks);
  
 @@ -4488,6 +4545,7 @@ void __wine_process_init(void)
      SIZE_T info_size;
@@ -247,10 +247,10 @@ index 04ea7ea121a..2a8b4b3ad97 100644
      server_init_process_done();
  }
 diff --git a/include/winternl.h b/include/winternl.h
-index f36419da782..20b267cd294 100644
+index 87d0bde2955..a6039dc2d40 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2330,8 +2330,8 @@ typedef struct _LDR_MODULE
+@@ -2330,8 +2330,8 @@ typedef struct _LDR_DATA_TABLE_ENTRY
      ULONG               Flags;
      SHORT               LoadCount;
      SHORT               TlsIndex;

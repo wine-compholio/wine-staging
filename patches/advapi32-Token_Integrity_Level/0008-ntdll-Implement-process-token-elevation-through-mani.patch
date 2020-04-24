@@ -1,4 +1,4 @@
-From 6a09d34647aa517e45bc0bb20a92d0d94a1da888 Mon Sep 17 00:00:00 2001
+From 2f03ded51b6f537ac6a4f3bfb51e1d0998a27c48 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: [PATCH] ntdll: Implement process token elevation through manifests.
@@ -12,10 +12,10 @@ Subject: [PATCH] ntdll: Implement process token elevation through manifests.
  5 files changed, 67 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 2f203447e..7c5dd308b 100644
+index 38c893e3eb4..d32b57612d5 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3804,6 +3804,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -4045,6 +4045,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
  }
  
  
@@ -48,7 +48,7 @@ index 2f203447e..7c5dd308b 100644
  /***********************************************************************
   *           load_global_options
   */
-@@ -4233,6 +4259,7 @@ void __wine_process_init(void)
+@@ -4478,6 +4504,7 @@ void __wine_process_init(void)
                                        's','y','s','t','e','m','3','2','\\',
                                        'k','e','r','n','e','l','3','2','.','d','l','l',0};
      RTL_USER_PROCESS_PARAMETERS *params;
@@ -56,7 +56,7 @@ index 2f203447e..7c5dd308b 100644
      WINE_MODREF *wm;
      NTSTATUS status;
      ANSI_STRING func_name;
-@@ -4324,6 +4351,16 @@ void __wine_process_init(void)
+@@ -4575,6 +4602,16 @@ void __wine_process_init(void)
  
      virtual_set_large_address_space();
  
@@ -71,10 +71,10 @@ index 2f203447e..7c5dd308b 100644
 +    }
 +
      /* the main exe needs to be the first in the load order list */
-     RemoveEntryList( &wm->ldr.InLoadOrderModuleList );
-     InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderModuleList );
+     RemoveEntryList( &wm->ldr.InLoadOrderLinks );
+     InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderLinks );
 diff --git a/server/process.c b/server/process.c
-index 4c7da9223..d6f71a774 100644
+index 4c7da9223c1..d6f71a774f3 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -1107,6 +1107,14 @@ struct process_snapshot *process_snap( int *count )
@@ -93,7 +93,7 @@ index 4c7da9223..d6f71a774 100644
  DECL_HANDLER(new_process)
  {
 diff --git a/server/process.h b/server/process.h
-index 5b83e111a..dfe5c4e52 100644
+index 5b83e111a6f..dfe5c4e52d8 100644
 --- a/server/process.h
 +++ b/server/process.h
 @@ -139,6 +139,7 @@ extern void kill_debugged_processes( struct thread *debugger, int exit_code );
@@ -105,10 +105,10 @@ index 5b83e111a..dfe5c4e52 100644
  /* console functions */
  extern void inherit_console( struct thread *parent_thread, struct process *parent,
 diff --git a/server/protocol.def b/server/protocol.def
-index 6022e1715..45ab670ea 100644
+index 68c66bc2fcb..55c821ac1e2 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3755,6 +3755,13 @@ struct handle_info
+@@ -3762,6 +3762,13 @@ struct handle_info
  @END
  
  
@@ -123,10 +123,10 @@ index 6022e1715..45ab670ea 100644
  @REQ(create_completion)
      unsigned int access;          /* desired access to a port */
 diff --git a/server/token.c b/server/token.c
-index fcab79955..181219d21 100644
+index 970ed1838da..1c1d49989b3 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -1806,3 +1806,17 @@ DECL_HANDLER(create_token)
+@@ -1804,3 +1804,17 @@ DECL_HANDLER(create_token)
          release_object( token );
      }
  }
@@ -145,5 +145,5 @@ index fcab79955..181219d21 100644
 +    }
 +}
 -- 
-2.24.0
+2.26.0
 

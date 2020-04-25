@@ -176,6 +176,7 @@ patch_enable_all ()
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_Exception="$1"
+	enable_ntdll_FLS_Callbacks="$1"
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
@@ -634,6 +635,9 @@ patch_enable ()
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
+			;;
+		ntdll-FLS_Callbacks)
+			enable_ntdll_FLS_Callbacks="$2"
 			;;
 		ntdll-FileDispositionInformation)
 			enable_ntdll_FileDispositionInformation="$2"
@@ -4518,6 +4522,32 @@ if test "$enable_ntdll_Exception" -eq 1; then
 	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-FLS_Callbacks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49012] Application build with .NET CoreRT crashes due to FLS callbacks not being called
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/fiber.c, dlls/kernel32/tests/loader.c, dlls/kernel32/tests/thread.c, dlls/kernelbase/thread.c,
+# | 	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_FLS_Callbacks" -eq 1; then
+	patch_apply ntdll-FLS_Callbacks/0001-kernelbase-Maintain-FLS-storage-list-in-PEB.patch
+	patch_apply ntdll-FLS_Callbacks/0002-kernelbase-Don-t-use-PEB-lock-for-FLS-data.patch
+	patch_apply ntdll-FLS_Callbacks/0003-kernelbase-Zero-all-FLS-slots-instances-in-FlsFree.patch
+	patch_apply ntdll-FLS_Callbacks/0004-ntdll-Call-FLS-callbacks-on-thread-shutdown.patch
+	patch_apply ntdll-FLS_Callbacks/0005-kernelbase-Call-FLS-callbacks-from-FlsFree.patch
+	patch_apply ntdll-FLS_Callbacks/0006-kernelbase-Call-FLS-callbacks-from-DeleteFiber.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Maintain FLS storage list in PEB.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Don'\''t use PEB lock for FLS data.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Zero all FLS slots instances in FlsFree().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call FLS callbacks on thread shutdown.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from FlsFree().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from DeleteFiber().", 1 },';
 	) >> "$patchlist"
 fi
 

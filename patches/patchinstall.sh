@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "c44e0cf60ad1a967d80fafb427974332b35a0071"
+	echo "28ec2795186c7db83637b3b17e4fa95095ebb77d"
 }
 
 # Show version information
@@ -119,7 +119,6 @@ patch_enable_all ()
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
 	enable_ddraw_Texture_Wrong_Caps="$1"
-	enable_ddraw_Write_Vtable="$1"
 	enable_ddraw_version_check="$1"
 	enable_dinput_SetActionMap_genre="$1"
 	enable_dinput_axis_recalc="$1"
@@ -464,9 +463,6 @@ patch_enable ()
 			;;
 		ddraw-Texture_Wrong_Caps)
 			enable_ddraw_Texture_Wrong_Caps="$2"
-			;;
-		ddraw-Write_Vtable)
-			enable_ddraw_Write_Vtable="$2"
 			;;
 		ddraw-version-check)
 			enable_ddraw_version_check="$2"
@@ -1821,6 +1817,9 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
 	fi
+	if test "$enable_ntdll_ext4_case_folder" -gt 1; then
+		abort "Patchset ntdll-ext4-case-folder disabled, but server-Shared_Memory depends on that."
+	fi
 	if test "$enable_server_Key_State" -gt 1; then
 		abort "Patchset server-Key_State disabled, but server-Shared_Memory depends on that."
 	fi
@@ -1834,6 +1833,7 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		abort "Patchset user32-rawinput-nolegacy disabled, but server-Shared_Memory depends on that."
 	fi
 	enable_ntdll_Threading=1
+	enable_ntdll_ext4_case_folder=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
 	enable_server_Signal_Thread=1
@@ -2801,24 +2801,6 @@ if test "$enable_ddraw_Texture_Wrong_Caps" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ddraw-Write_Vtable
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39534] Make ddraw1 and ddraw_surface1 vtable as writable.
-# |   *	[#46949] Make ddraw[2-7] and palette vtable as writable.
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/palette.c, dlls/ddraw/surface.c
-# |
-if test "$enable_ddraw_Write_Vtable" -eq 1; then
-	patch_apply ddraw-Write_Vtable/0001-ddraw-Remove-const-from-ddraw1_vtbl-and-ddraw_surfac.patch
-	patch_apply ddraw-Write_Vtable/0002-ddraw-Allow-writing-to-vtable-for-surface-and-palett.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ddraw: Remove const from ddraw1_vtbl and ddraw_surface1_vtbl.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ddraw: Allow writing to vtable for surface and palette.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-version-check
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -3457,6 +3439,21 @@ if test "$enable_ntdll_Threading" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-ext4-case-folder
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#47099] Support for EXT4 case folding per directory.
+# |
+# | Modified files:
+# |   *	dlls/ntdll/server.c
+# |
+if test "$enable_ntdll_ext4_case_folder" -eq 1; then
+	patch_apply ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "ntdll/server: Mark drive_c as case-insensitive when created.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset server-Key_State
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3610,8 +3607,8 @@ fi
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-
-# | 	coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |   *	ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-
+# | 	KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
@@ -3663,9 +3660,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
-# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup
+# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder,
+# | 	server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
+# | 	-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -5040,21 +5037,6 @@ if test "$enable_ntdll_avoid_fstatat" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ext4-case-folder
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#47099] Support for EXT4 case folding per directory.
-# |
-# | Modified files:
-# |   *	dlls/ntdll/server.c
-# |
-if test "$enable_ntdll_ext4_case_folder" -eq 1; then
-	patch_apply ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
-	(
-		printf '%s\n' '+    { "Gabriel Ivăncescu", "ntdll/server: Mark drive_c as case-insensitive when created.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-set_full_cpu_context
 # |
 # | Modified files:
@@ -5342,9 +5324,9 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
-# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder,
+# | 	server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
+# | 	-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -5432,8 +5414,8 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-
-# | 	coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory
+# |   *	ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-
+# | 	KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -6296,28 +6278,12 @@ fi
 # Patchset windowscodecs-GIF_Encoder
 # |
 # | Modified files:
-# |   *	dlls/gdiplus/tests/image.c, dlls/windowscodecs/clsfactory.c, dlls/windowscodecs/gifformat.c,
-# | 	dlls/windowscodecs/regsvr.c, dlls/windowscodecs/tests/converter.c, dlls/windowscodecs/wincodecs_private.h,
-# | 	dlls/windowscodecs/windowscodecs_wincodec.idl
+# |   *	dlls/windowscodecs/tests/converter.c
 # |
 if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 	patch_apply windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
-	patch_apply windowscodecs-GIF_Encoder/0008-windowscodecs-Add-initial-implementation-of-the-GIF-.patch
-	patch_apply windowscodecs-GIF_Encoder/0010-windowscodecs-Initialize-empty-property-bag-in-GIF-e.patch
-	patch_apply windowscodecs-GIF_Encoder/0020-windowscodecs-Add-registration-of-the-GIF-encoder.patch
-	patch_apply windowscodecs-GIF_Encoder/0021-windowscodecs-Fix-IWICBitmapDecoder-CopyPalette-for-.patch
-	patch_apply windowscodecs-GIF_Encoder/0022-windowscodecs-Better-follow-the-GIF-spec-and-don-t-s.patch
-	patch_apply windowscodecs-GIF_Encoder/0026-windowscodecs-tests-Add-the-tests-for-GIF-encoder-an.patch
-	patch_apply windowscodecs-GIF_Encoder/0028-windowscodecs-Correctly-indicate-that-the-global-inf.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "windowscodecs/tests: Add IWICBitmapEncoderInfo test.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add initial implementation of the GIF encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Initialize empty property bag in GIF encoder'\''s CreateNewFrame implementation.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Add registration of the GIF encoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Fix IWICBitmapDecoder::CopyPalette for a not initialized case in the GIF decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Better follow the GIF spec and don'\''t specify the local color table size if there is no local palette.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs/tests: Add the tests for GIF encoder and decoder.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "windowscodecs: Correctly indicate that the global info was written even without the global palette.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -7135,9 +7101,10 @@ fi
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
 # | 	Junction_Points, ntdll-ThreadTime, ntdll-Hide_Wine_Exports, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-
-# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
-# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
+# | 	RtlCreateUserThread, ntdll-SystemRoot_Symlink, server-Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder,
+# | 	server-Key_State, server-PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32
+# | 	-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-
+# | 	Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

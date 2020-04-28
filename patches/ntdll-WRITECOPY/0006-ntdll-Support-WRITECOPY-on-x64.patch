@@ -1,0 +1,85 @@
+From 75e8a937fbcf1a4ebb78ab29e42ecf13e8cede8b Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Fri, 24 Apr 2020 14:55:15 -0500
+Subject: [PATCH] ntdll: Support WRITECOPY on x64.
+
+Signed-off-by: Andrew Wesie <awesie@gmail.com>
+---
+ dlls/ntdll/signal_x86_64.c | 40 ++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/virtual.c       |  2 +-
+ 2 files changed, 41 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 4c26a8b52b4..95a0a1ad0ac 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2881,6 +2881,29 @@ static inline BOOL handle_interrupt( ucontext_t *sigcontext, struct stack_layout
+ }
+ 
+ 
++/**********************************************************************
++ *    segv_handler_early
++ *
++ * Handler for SIGSEGV and related errors. Used only during the initialization
++ * of the process to handle virtual faults.
++ */
++static void segv_handler_early( int signal, siginfo_t *siginfo, void *sigcontext )
++{
++    ucontext_t *ucontext = sigcontext;
++
++    switch(TRAP_sig(ucontext))
++    {
++    case TRAP_x86_PAGEFLT:  /* Page fault */
++        if (!virtual_handle_fault( siginfo->si_addr, (ERROR_sig(ucontext) >> 1) & 0x09, TRUE ))
++            return;
++        /* fall-through */
++    default:
++        WINE_ERR( "Got unexpected trap %lld during process initialization\n", TRAP_sig(ucontext) );
++        abort_thread(1);
++        break;
++    }
++}
++
+ /**********************************************************************
+  *		segv_handler
+  *
+@@ -3419,6 +3442,23 @@ void signal_init_process(void)
+  */
+ void signal_init_early(void)
+ {
++    struct sigaction sig_act;
++
++    sig_act.sa_mask = server_block_set;
++    sig_act.sa_flags = SA_RESTART | SA_SIGINFO | SA_ONSTACK;
++
++    sig_act.sa_sigaction = segv_handler_early;
++    if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
++    if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
++#ifdef SIGBUS
++    if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
++#endif
++
++    return;
++
++ error:
++    perror("sigaction");
++    exit(1);
+ }
+ 
+ static ULONG64 get_int_reg( CONTEXT *context, int reg )
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index b5baa4c6242..d255ed86f75 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -353,7 +353,7 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+         if (vprot & VPROT_READ) prot |= PROT_READ;
+         if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
+         if (vprot & VPROT_EXEC) prot |= PROT_EXEC | PROT_READ;
+-#if defined(__i386__)
++#if defined(__i386__) || defined(__x86_64__)
+         if (vprot & VPROT_WRITECOPY)
+         {
+             if (experimental_WRITECOPY() && !(vprot & VPROT_WRITTEN))
+-- 
+2.25.4
+

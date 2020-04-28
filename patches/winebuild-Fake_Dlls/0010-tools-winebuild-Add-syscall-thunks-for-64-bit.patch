@@ -1,4 +1,4 @@
-From 76abfa6c07701466a7a14bfeeaad64e357f54a1c Mon Sep 17 00:00:00 2001
+From 6037ccdc09121a1602089e7dcf50d7739a69114f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -13,10 +13,10 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  6 files changed, 302 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 78fed489e9..47309b53ed 100644
+index 5373dc4efe1..67d04876bd6 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1536,7 +1536,7 @@ static void test_filenames(void)
+@@ -1537,7 +1537,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -25,7 +25,7 @@ index 78fed489e9..47309b53ed 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1578,8 +1578,13 @@ static void test_FakeDLL(void)
+@@ -1579,8 +1579,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -40,10 +40,10 @@ index 78fed489e9..47309b53ed 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index c372f65b34..e48529d73a 100644
+index 31af1e98d3f..324a92b41a9 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -355,6 +355,7 @@ static inline void set_sigcontext( const CONTEXT *context, ucontext_t *sigcontex
+@@ -354,6 +354,7 @@ static inline void set_sigcontext( const CONTEXT *context, ucontext_t *sigcontex
  #endif
  }
  
@@ -51,16 +51,16 @@ index c372f65b34..e48529d73a 100644
  
  /***********************************************************************
   * Definitions for Win32 unwind tables
-@@ -3133,6 +3134,7 @@ NTSTATUS signal_alloc_thread( TEB **teb )
-     {
-         (*teb)->Tib.Self = &(*teb)->Tib;
-         (*teb)->Tib.ExceptionList = (void *)~0UL;
-+        (*teb)->WOW32Reserved = __wine_syscall_dispatcher;
-     }
-     return status;
+@@ -3119,6 +3120,7 @@ void signal_init_threading(void)
+  */
+ NTSTATUS signal_alloc_thread( TEB *teb )
+ {
++    teb->WOW32Reserved = __wine_syscall_dispatcher;
+     return STATUS_SUCCESS;
  }
+ 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index ca01e0df8c..b939724704 100644
+index 1650c17295a..0acc4d88524 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -63,6 +63,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
@@ -72,7 +72,7 @@ index ca01e0df8c..b939724704 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -326,6 +328,14 @@ TEB *thread_init(void)
+@@ -327,6 +329,14 @@ TEB *thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
@@ -88,10 +88,10 @@ index ca01e0df8c..b939724704 100644
       * Starting with Vista, the first user to log on has session id 1.
       * Session id 0 is for processes that don't interact with the user (like services).
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
-index b6cac2ab92..682d18f8da 100644
+index 4597a6cb324..3d0d75e9c6d 100644
 --- a/libs/wine/loader.c
 +++ b/libs/wine/loader.c
-@@ -467,7 +467,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
+@@ -398,7 +398,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
      sec->SizeOfRawData = code_end - code_start;
      sec->Misc.VirtualSize = sec->SizeOfRawData;
      sec->VirtualAddress   = code_start;
@@ -104,7 +104,7 @@ index b6cac2ab92..682d18f8da 100644
      sec++;
  
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index 004b6aea7a..40946409c5 100644
+index 74216f8bb6e..820516329a4 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -545,7 +545,7 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
@@ -117,10 +117,10 @@ index 004b6aea7a..40946409c5 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 800cb23023..19046e5a50 100644
+index 07d6eed05fc..9cc4698d0d7 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
-@@ -372,11 +372,11 @@ static void output_relay_debug( DLLSPEC *spec )
+@@ -375,11 +375,11 @@ static void output_relay_debug( DLLSPEC *spec )
  }
  
  /*******************************************************************
@@ -134,7 +134,7 @@ index 800cb23023..19046e5a50 100644
  {
      const unsigned int page_size = get_page_size();
      int i;
-@@ -485,6 +485,157 @@ static void output_syscall_thunks( DLLSPEC *spec )
+@@ -488,6 +488,157 @@ static void output_syscall_thunks( DLLSPEC *spec )
      output_function_size( "__wine_syscall_dispatcher" );
  }
  
@@ -292,7 +292,7 @@ index 800cb23023..19046e5a50 100644
  /*******************************************************************
   *         output_exports
   *
-@@ -883,7 +1034,10 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -845,7 +996,10 @@ void output_spec32_file( DLLSPEC *spec )
      open_output_file();
      output_standard_file_header();
      output_module( spec );
@@ -304,7 +304,7 @@ index 800cb23023..19046e5a50 100644
      output_stubs( spec );
      output_exports( spec );
      output_imports( spec );
-@@ -896,7 +1050,7 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -858,7 +1012,7 @@ void output_spec32_file( DLLSPEC *spec )
  
  static int needs_stub_exports( DLLSPEC *spec )
  {
@@ -313,7 +313,7 @@ index 800cb23023..19046e5a50 100644
          return 0;
      if (!(spec->characteristics & IMAGE_FILE_DLL))
          return 0;
-@@ -906,7 +1060,7 @@ static int needs_stub_exports( DLLSPEC *spec )
+@@ -868,7 +1022,7 @@ static int needs_stub_exports( DLLSPEC *spec )
  }
  
  
@@ -322,7 +322,7 @@ index 800cb23023..19046e5a50 100644
  {
      int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
      size_t rva, thunk;
-@@ -1064,6 +1218,122 @@ static void create_stub_exports_text( DLLSPEC *spec )
+@@ -1026,6 +1180,122 @@ static void create_stub_exports_text( DLLSPEC *spec )
  }
  
  
@@ -445,7 +445,7 @@ index 800cb23023..19046e5a50 100644
  static void create_stub_exports_data( DLLSPEC *spec )
  {
      int i;
-@@ -1263,7 +1533,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -1225,7 +1495,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
      if (needs_stub_exports( spec ))
      {
          put_label( "text_start" );
@@ -458,5 +458,5 @@ index 800cb23023..19046e5a50 100644
      }
      else
 -- 
-2.23.0
+2.26.2
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "28ec2795186c7db83637b3b17e4fa95095ebb77d"
+	echo "7ccc45f754a39a425ecc2358a4cfc5675ff11ffb"
 }
 
 # Show version information
@@ -2583,10 +2583,8 @@ fi
 # | 	dlls/d3dx9_42/d3dx9_42.spec, dlls/d3dx9_43/d3dx9_43.spec
 # |
 if test "$enable_d3dx9_36_D3DXOptimizeVertices" -eq 1; then
-	patch_apply d3dx9_36-D3DXOptimizeVertices/0001-d3dx9_36-tests-Remove-useless-n-within-some-ok-messa.patch
 	patch_apply d3dx9_36-D3DXOptimizeVertices/0002-d3dx9_36-Add-semi-stub-for-D3DXOptimizeVertices.patch
 	(
-		printf '%s\n' '+    { "Christian Costa", "d3dx9_36/tests: Remove useless \\n within some ok messages.", 1 },';
 		printf '%s\n' '+    { "Christian Costa", "d3dx9_36: Add semi-stub for D3DXOptimizeVertices.", 1 },';
 	) >> "$patchlist"
 fi

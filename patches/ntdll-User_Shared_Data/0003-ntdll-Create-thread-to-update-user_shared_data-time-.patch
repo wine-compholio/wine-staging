@@ -1,4 +1,4 @@
-From 7564fa0a561d40d940c36485e51dae017d883444 Mon Sep 17 00:00:00 2001
+From c6b63b60eabacaff48103e6bde62866190c559f1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 5 May 2017 05:40:50 +0200
 Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
@@ -12,10 +12,10 @@ Subject: [PATCH] ntdll: Create thread to update user_shared_data time values
  4 files changed, 113 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index b90e1516614..9d363817382 100644
+index 1cf82f421a5..ff99791cefe 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3824,6 +3824,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+@@ -4047,6 +4047,36 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
  }
  
  
@@ -52,7 +52,7 @@ index b90e1516614..9d363817382 100644
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
   *
-@@ -4445,6 +4475,7 @@ void __wine_process_init(void)
+@@ -4694,6 +4724,7 @@ void __wine_process_init(void)
          NtTerminateProcess( GetCurrentProcess(), status );
      }
  
@@ -61,10 +61,10 @@ index b90e1516614..9d363817382 100644
  
      virtual_set_large_address_space();
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index e8559c040a3..a8253669925 100644
+index 7aa678c79d6..1c1d6c67f28 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -200,6 +200,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+@@ -224,6 +224,9 @@ extern void virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
  extern void virtual_fill_image_information( const pe_image_info_t *pe_info,
                                              SECTION_IMAGE_INFORMATION *info ) DECLSPEC_HIDDEN;
  extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
@@ -75,7 +75,7 @@ index e8559c040a3..a8253669925 100644
  /* completion */
  extern NTSTATUS NTDLL_AddCompletion( HANDLE hFile, ULONG_PTR CompletionValue,
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 994bcdb651d..ca01e0df8c2 100644
+index 85a03013240..89174717374 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -47,6 +47,7 @@
@@ -97,7 +97,7 @@ index 994bcdb651d..ca01e0df8c2 100644
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
-@@ -290,7 +293,7 @@ TEB *thread_init(void)
+@@ -291,7 +294,7 @@ TEB *thread_init(void)
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
          exit(1);
      }
@@ -105,8 +105,8 @@ index 994bcdb651d..ca01e0df8c2 100644
 +	user_shared_data_external = addr;
      memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
  
-     /* allocate and initialize the PEB */
-@@ -364,18 +367,69 @@ TEB *thread_init(void)
+     /* allocate and initialize the PEB and initial TEB */
+@@ -356,18 +359,69 @@ TEB *thread_init(void)
   */
  BYTE* CDECL __wine_user_shared_data(void)
  {
@@ -183,10 +183,10 @@ index 994bcdb651d..ca01e0df8c2 100644
  {
      BOOL ret = FALSE;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index cb869feff02..418a1022d19 100644
+index 7700385eb7b..865344d91d2 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -2102,6 +2102,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2318,6 +2318,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
  {
      NTSTATUS ret = STATUS_ACCESS_VIOLATION;
      void *page = ROUND_ADDR( addr, page_mask );
@@ -194,7 +194,7 @@ index cb869feff02..418a1022d19 100644
      sigset_t sigset;
      BYTE vprot;
  
-@@ -2127,7 +2128,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2343,7 +2344,23 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
                  ret = STATUS_SUCCESS;
          }
      }
@@ -219,5 +219,5 @@ index cb869feff02..418a1022d19 100644
  }
  
 -- 
-2.17.1
+2.26.2
 

@@ -1,4 +1,4 @@
-From f39b7dba77e8991bc586b8102ee232842daa5c91 Mon Sep 17 00:00:00 2001
+From bf09af2ce4e625b3dcc7e8072e822100d80fb3e2 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
 Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
@@ -11,10 +11,10 @@ Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
  4 files changed, 34 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 242dbd27b2f..fe8b896682d 100644
+index eb7f3bc3718..0412824c811 100644
 --- a/dlls/ntdll/directory.c
 +++ b/dlls/ntdll/directory.c
-@@ -2852,7 +2852,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+@@ -2798,7 +2798,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
  }
  
  /* read the contents of an NT symlink object */
@@ -24,22 +24,22 @@ index 242dbd27b2f..fe8b896682d 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index a5fe98c8d85..93fd8a9354b 100644
+index 76e8ec284e8..1defe6c807a 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -174,6 +174,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
+@@ -194,6 +194,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
  /* virtual memory */
- extern NTSTATUS virtual_alloc_aligned( PVOID *ret, unsigned short zero_bits_64, SIZE_T *size_ptr,
-                                        ULONG type, ULONG protect, ULONG alignment ) DECLSPEC_HIDDEN;
+ extern NTSTATUS virtual_alloc( PVOID *ret, unsigned short zero_bits_64, SIZE_T *size_ptr,
+                                ULONG type, ULONG protect ) DECLSPEC_HIDDEN;
 +extern NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length ) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_map_section( HANDLE handle, PVOID *addr_ptr, unsigned short zero_bits_64, SIZE_T commit_size,
                                       const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr, ULONG alloc_type,
                                       ULONG protect, pe_image_info_t *image_info ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index f49127c3e85..46c070561b0 100644
+index 01ae8b06dac..ad5759884da 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -177,6 +177,8 @@ static BYTE **pages_vprot;
+@@ -188,6 +188,8 @@ static BYTE **pages_vprot;
  static BYTE *pages_vprot;
  #endif
  
@@ -48,7 +48,7 @@ index f49127c3e85..46c070561b0 100644
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
  static const size_t view_block_size = 0x100000;
  static void *preload_reserve_start;
-@@ -3197,12 +3199,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -3308,12 +3310,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
@@ -65,7 +65,7 @@ index f49127c3e85..46c070561b0 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -3261,14 +3266,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -3372,14 +3377,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:
@@ -151,5 +151,5 @@ index f6a7b69eca0..a8263a2f44b 100644
  
      SetLastError(0xdeadbeef);
 -- 
-2.26.0
+2.26.2
 

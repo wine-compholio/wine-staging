@@ -1,4 +1,4 @@
-From 0aee0556e8c5eaff0ac15cd2f2a8ba7c234dfe57 Mon Sep 17 00:00:00 2001
+From 2c3361713f010ec03423c6eae45bacda5e7e93ac Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Mon, 25 Nov 2019 12:19:20 +0300
 Subject: [PATCH] ntdll: Force bottom up allocation order for 64 bit arch
@@ -11,19 +11,18 @@ Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=46568
  1 file changed, 10 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 486693f312..81d844ab17 100644
+index 0c7d6990b8c..f2e961d31c3 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -1278,14 +1278,20 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+@@ -1256,13 +1256,19 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
      }
      else
      {
--        size_t view_size = size + mask + 1;
+-        size_t view_size = size + granularity_mask + 1;
          struct alloc_area alloc;
 +        size_t view_size;
  
          alloc.size = size;
-         alloc.mask = mask;
          alloc.top_down = top_down;
          alloc.limit = (void*)(get_zero_bits_64_mask( zero_bits_64 ) & (UINT_PTR)user_space_limit);
  
@@ -36,24 +35,24 @@ index 486693f312..81d844ab17 100644
          if (wine_mmap_enum_reserved_areas( alloc_reserved_area_callback, &alloc, top_down ))
          {
              ptr = alloc.result;
-@@ -1295,7 +1301,7 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+@@ -1272,7 +1278,7 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
              goto done;
          }
  
 -        if (zero_bits_64)
 +        if (is_win64 || zero_bits_64)
          {
-             if (!(ptr = map_free_area( address_space_start, alloc.limit, size, mask, top_down, VIRTUAL_GetUnixProt(vprot) )))
-                 return STATUS_NO_MEMORY;
-@@ -1303,6 +1309,8 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+             if (!(ptr = map_free_area( address_space_start, alloc.limit, size,
+                                        top_down, VIRTUAL_GetUnixProt(vprot) )))
+@@ -1281,6 +1287,8 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
              goto done;
          }
  
-+        view_size = size + mask + 1;
++        view_size = size + granularity_mask + 1;
 +
          for (;;)
          {
              if ((ptr = wine_anon_mmap( NULL, view_size, VIRTUAL_GetUnixProt(vprot), 0 )) == (void *)-1)
 -- 
-2.24.1
+2.26.2
 

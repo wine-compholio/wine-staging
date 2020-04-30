@@ -1,4 +1,4 @@
-From 6037ccdc09121a1602089e7dcf50d7739a69114f Mon Sep 17 00:00:00 2001
+From 61a744694dc9eafb8b92fbb826335bd4468f20f8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -6,11 +6,11 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 ---
  dlls/kernel32/tests/loader.c |   7 +-
  dlls/ntdll/signal_x86_64.c   |   2 +
- dlls/ntdll/thread.c          |  10 ++
+ dlls/ntdll/thread.c          |   6 +
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 302 insertions(+), 8 deletions(-)
+ 6 files changed, 298 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 5373dc4efe1..67d04876bd6 100644
@@ -60,11 +60,11 @@ index 31af1e98d3f..324a92b41a9 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 1650c17295a..0acc4d88524 100644
+index f4da99db760..03229a98bb8 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -63,6 +63,8 @@ struct _KUSER_SHARED_DATA *user_shared_data_external;
- struct _KUSER_SHARED_DATA *user_shared_data = &user_shared_data_internal;
+@@ -59,6 +59,8 @@ struct _KUSER_SHARED_DATA *user_shared_data = NULL;
+ size_t user_shared_data_size = 0;
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
 +extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
@@ -72,17 +72,13 @@ index 1650c17295a..0acc4d88524 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -327,6 +329,14 @@ TEB *thread_init(void)
+@@ -275,6 +277,10 @@ TEB *thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
-+#if defined(__APPLE__) && defined(__x86_64__)
-+    *((DWORD*)((char*)user_shared_data_external + 0x1000)) = __wine_syscall_dispatcher;
-+#endif
 +    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
 +     * Chromium; see output_syscall_thunks_x64() in winebuild. */
 +    user_shared_data->SystemCallPad[0] = 1;
-+    user_shared_data_external->SystemCallPad[0] = 1;
 +
      /*
       * Starting with Vista, the first user to log on has session id 1.

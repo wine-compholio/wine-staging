@@ -1,7 +1,7 @@
-From 7c2a302a95f6be16dbb5f6b3379e57d411a5310a Mon Sep 17 00:00:00 2001
+From ce12fa75ca18eeea3f0ec53788353d07ec683e95 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 1 Jun 2017 06:04:53 +0200
-Subject: ntdll: Fix holes in ELF mappings. (v2)
+Subject: [PATCH] ntdll: Fix holes in ELF mappings. (v2)
 
 Based on a patch by Andrew Wesie.
 ---
@@ -10,13 +10,14 @@ Based on a patch by Andrew Wesie.
  2 files changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 53db698..f1869be 100644
+index 6cb47f2cae8..2ba116c4e92 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -429,6 +429,16 @@ static inline BOOL is_write_watch_range( const void *addr, size_t size )
+@@ -485,6 +485,16 @@ static inline BOOL is_write_watch_range( const void *addr, size_t size )
+ }
  
  
- /***********************************************************************
++/***********************************************************************
 + *           is_system_range
 + */
 +static inline BOOL is_system_range( const void *addr, size_t size )
@@ -26,13 +27,12 @@ index 53db698..f1869be 100644
 +}
 +
 +
-+/***********************************************************************
+ /***********************************************************************
   *           find_view_range
   *
-  * Find the first view overlapping at least part of the specified range.
-@@ -2047,6 +2057,19 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
-         if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_READ) ret = STATUS_SUCCESS;
-         else update_shared_data = FALSE;
+@@ -2386,6 +2396,19 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+         /* ignore fault if page is writable now */
+         if (VIRTUAL_GetUnixProt( get_page_vprot( page )) & PROT_WRITE) ret = STATUS_SUCCESS;
      }
 +    else if (!err && (VIRTUAL_GetUnixProt( vprot ) & PROT_READ) && is_system_range( page, page_size ))
 +    {
@@ -48,13 +48,13 @@ index 53db698..f1869be 100644
 +            set_page_vprot_bits( page, page_size, 0, VPROT_READ | VPROT_EXEC );
 +    }
      server_leave_uninterrupted_section( &csVirtual, &sigset );
- 
-     if (update_shared_data)
+     return ret;
+ }
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index e61cf02..6e98754 100644
+index eb52fc690cf..178f5605a23 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -196,6 +196,7 @@ todo_wine
+@@ -195,6 +195,7 @@ todo_wine
  static void test_GetModuleInformation(void)
  {
      HMODULE hMod = GetModuleHandleA(NULL);
@@ -62,7 +62,7 @@ index e61cf02..6e98754 100644
      MODULEINFO info;
      DWORD ret;
  
-@@ -215,10 +216,21 @@ static void test_GetModuleInformation(void)
+@@ -214,10 +215,21 @@ static void test_GetModuleInformation(void)
      GetModuleInformation(hpQV, hMod, &info, sizeof(info)-1);
      ok(GetLastError() == ERROR_INSUFFICIENT_BUFFER, "expected error=ERROR_INSUFFICIENT_BUFFER but got %d\n", GetLastError());
  
@@ -86,5 +86,5 @@ index e61cf02..6e98754 100644
  
  static BOOL check_with_margin(SIZE_T perf, SIZE_T sysperf, int margin)
 -- 
-2.7.4
+2.26.2
 

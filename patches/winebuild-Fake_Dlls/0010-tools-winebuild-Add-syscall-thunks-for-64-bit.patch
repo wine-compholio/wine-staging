@@ -1,4 +1,4 @@
-From 7d5bb8de2172799e98449480c44a04b878f103c8 Mon Sep 17 00:00:00 2001
+From 8035154879b5e15e71d76b57f827ee0c3f3dc808 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -9,8 +9,8 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  dlls/ntdll/thread.c          |   6 +
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
- tools/winebuild/spec32.c     | 268 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 281 insertions(+), 8 deletions(-)
+ tools/winebuild/spec32.c     | 270 ++++++++++++++++++++++++++++++++++-
+ 6 files changed, 283 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 5373dc4efe1..67d04876bd6 100644
@@ -60,7 +60,7 @@ index 31af1e98d3f..324a92b41a9 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index a054164ee70..584076361e4 100644
+index f4da99db760..03229a98bb8 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -59,6 +59,8 @@ struct _KUSER_SHARED_DATA *user_shared_data = NULL;
@@ -113,7 +113,7 @@ index 74216f8bb6e..820516329a4 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 07d6eed05fc..b5a8c190e1f 100644
+index 07d6eed05fc..36645aef417 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -375,11 +375,11 @@ static void output_relay_debug( DLLSPEC *spec )
@@ -130,7 +130,7 @@ index 07d6eed05fc..b5a8c190e1f 100644
  {
      const unsigned int page_size = get_page_size();
      int i;
-@@ -488,6 +488,146 @@ static void output_syscall_thunks( DLLSPEC *spec )
+@@ -488,6 +488,149 @@ static void output_syscall_thunks( DLLSPEC *spec )
      output_function_size( "__wine_syscall_dispatcher" );
  }
  
@@ -184,8 +184,8 @@ index 07d6eed05fc..b5a8c190e1f 100644
 +        output( "\t.byte 0xc3\n" );                                         /* ret */
 +        output( "\t.byte 0xeb,0x01\n" );                                    /* jmp over ret */
 +        output( "\t.byte 0xc3\n" );                                         /* ret */
-+        output( "\t.byte 0x65,0x4c,0x8b,0x1c,0x25,0x30,0x00,0x00,0x00\n" ); /* mov r11, gs:[0x30] */
-+        output( "\t.byte 0x41,0xff,0x93,0x00,0x01,0x00,0x00\n" );           /* call qword ptr [r11+0x100] */
++        output( "\t.byte 0x65,0x48,0x8b,0x04,0x25,0x30,0x00,0x00,0x00\n" ); /* mov rax, gs:[0x30] */
++        output( "\t.byte 0xff,0x90,0x00,0x01,0x00,0x00\n" );                /* call qword ptr [rax+0x100] */
 +        /* This RET is never reached, but Legends of Runeterra demands that it
 +         * exist anyway. */
 +        output( "\t.byte 0xc3\n" );                                         /* ret */
@@ -234,7 +234,10 @@ index 07d6eed05fc..b5a8c190e1f 100644
 +
 +    /* Legends of Runeterra hooks the first system call return instruction, and
 +     * depends on us returning to it. Adjust the return address accordingly. */
-+    output( "\tsubq $0x14,0x8(%%rbp)\n" );
++    if (target_platform == PLATFORM_APPLE)
++        output( "\tsubq $0xb,0x8(%%rbp)\n" );
++    else
++        output( "\tsubq $0xc,0x8(%%rbp)\n" );
 +
 +    /* copy over any arguments on the stack */
 +    output( "\tleaq 0x38(%%rbp),%%rsi\n" );
@@ -277,7 +280,7 @@ index 07d6eed05fc..b5a8c190e1f 100644
  /*******************************************************************
   *         output_exports
   *
-@@ -845,7 +985,10 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -845,7 +988,10 @@ void output_spec32_file( DLLSPEC *spec )
      open_output_file();
      output_standard_file_header();
      output_module( spec );
@@ -289,7 +292,7 @@ index 07d6eed05fc..b5a8c190e1f 100644
      output_stubs( spec );
      output_exports( spec );
      output_imports( spec );
-@@ -858,7 +1001,7 @@ void output_spec32_file( DLLSPEC *spec )
+@@ -858,7 +1004,7 @@ void output_spec32_file( DLLSPEC *spec )
  
  static int needs_stub_exports( DLLSPEC *spec )
  {
@@ -298,7 +301,7 @@ index 07d6eed05fc..b5a8c190e1f 100644
          return 0;
      if (!(spec->characteristics & IMAGE_FILE_DLL))
          return 0;
-@@ -868,7 +1011,7 @@ static int needs_stub_exports( DLLSPEC *spec )
+@@ -868,7 +1014,7 @@ static int needs_stub_exports( DLLSPEC *spec )
  }
  
  
@@ -307,7 +310,7 @@ index 07d6eed05fc..b5a8c190e1f 100644
  {
      int i, nr_exports = spec->base <= spec->limit ? spec->limit - spec->base + 1 : 0;
      size_t rva, thunk;
-@@ -1026,6 +1169,116 @@ static void create_stub_exports_text( DLLSPEC *spec )
+@@ -1026,6 +1172,115 @@ static void create_stub_exports_text( DLLSPEC *spec )
  }
  
  
@@ -332,11 +335,10 @@ index 07d6eed05fc..b5a8c190e1f 100644
 +        put_byte( 0xc3 );                                      /* ret */
 +        put_byte( 0xeb ); put_byte( 0x01 );                    /* jmp */
 +        put_byte( 0xc3 );                                      /* ret */
-+        put_byte( 0x65 ); put_byte( 0x4c ); put_byte( 0x8b );  /* mov r11, gs:[0x30] */
-+                put_byte( 0x1c ); put_byte( 0x25 );
++        put_byte( 0x65 ); put_byte( 0x48 ); put_byte( 0x8b );  /* mov rax, gs:[0x30] */
++                put_byte( 0x04 ); put_byte( 0x25 );
 +                put_dword( 0x30 );
-+                                                               /* call qword ptr [r11+0x100] */
-+        put_byte( 0x41 ); put_byte( 0xff ); put_byte( 0x93 ); put_dword( 0x100 );
++        put_byte( 0xff ); put_byte( 0x90 ); put_dword( 0x100 ); /* call qword ptr [rax+0x100] */
 +        put_byte( 0xc3 );                                      /* ret */
 +    }
 +
@@ -424,7 +426,7 @@ index 07d6eed05fc..b5a8c190e1f 100644
  static void create_stub_exports_data( DLLSPEC *spec )
  {
      int i;
-@@ -1225,7 +1478,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
+@@ -1225,7 +1480,10 @@ static void output_fake_module_pass( DLLSPEC *spec )
      if (needs_stub_exports( spec ))
      {
          put_label( "text_start" );

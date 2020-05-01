@@ -1,4 +1,4 @@
-From e193e84b7fb97f6f734b19d5bf2feb403d832abe Mon Sep 17 00:00:00 2001
+From e285d01056bb6df332fa2c22569efbf44ee97399 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -10,12 +10,12 @@ get the number from syscall thunks). Linux specific Seccomp
 is used for trapping syscalls.
 ---
  configure.ac               |   1 +
- dlls/ntdll/signal_x86_64.c | 109 +++++++++++++++++++++++++++++++++++++
- tools/winebuild/spec32.c   |   9 ++-
- 3 files changed, 117 insertions(+), 2 deletions(-)
+ dlls/ntdll/signal_x86_64.c | 105 +++++++++++++++++++++++++++++++++++++
+ tools/winebuild/spec32.c   |   9 +++-
+ 3 files changed, 113 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index e6245d8163f..485219e23b3 100644
+index b32bc818741..c681379e736 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -474,6 +474,7 @@ AC_CHECK_HEADERS(\
@@ -27,7 +27,7 @@ index e6245d8163f..485219e23b3 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 26d688c3abe..87c5a99a65e 100644
+index 3a2f959c5e0..5205f8045c9 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -24,6 +24,7 @@
@@ -52,7 +52,7 @@ index 26d688c3abe..87c5a99a65e 100644
  #define NONAMELESSUNION
  #define NONAMELESSSTRUCT
  #include "ntstatus.h"
-@@ -3096,6 +3104,38 @@ static void usr1_handler( int signal, siginfo_t *siginfo, void *ucontext )
+@@ -3118,6 +3126,34 @@ static void usr1_handler( int signal, siginfo_t *siginfo, void *ucontext )
      restore_context( &context, ucontext );
  }
  
@@ -78,11 +78,7 @@ index 26d688c3abe..87c5a99a65e 100644
 +    rsp = (void ***)&ctx->uc_mcontext.gregs[REG_RSP];
 +    *rsp -= 1;
 +
-+#ifdef __APPLE__
-+    thunk_ret_offset = 0xb;
-+#else
-+    thunk_ret_offset = 0xc;
-+#endif
++    thunk_ret_offset = 0x14;
 +
 +    **rsp = (void *)(ctx->uc_mcontext.gregs[REG_RIP] + thunk_ret_offset);
 +    ctx->uc_mcontext.gregs[REG_RIP] = (ULONG64)__wine_syscall_dispatcher;
@@ -91,7 +87,7 @@ index 26d688c3abe..87c5a99a65e 100644
  
  /***********************************************************************
   *           __wine_set_signal_handler   (NTDLL.@)
-@@ -3266,6 +3306,72 @@ void signal_init_thread( TEB *teb )
+@@ -3271,6 +3307,72 @@ void signal_init_thread( TEB *teb )
  #endif
  }
  
@@ -164,7 +160,7 @@ index 26d688c3abe..87c5a99a65e 100644
  /**********************************************************************
   *		signal_init_process
   */
-@@ -3298,6 +3404,9 @@ void signal_init_process(void)
+@@ -3303,6 +3405,9 @@ void signal_init_process(void)
      sig_act.sa_sigaction = trap_handler;
      if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
  #endif
@@ -175,7 +171,7 @@ index 26d688c3abe..87c5a99a65e 100644
  
   error:
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 9cc4698d0d7..c572fe49923 100644
+index 753108f61e4..ab6bde3b10d 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -531,7 +531,7 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
@@ -187,7 +183,7 @@ index 9cc4698d0d7..c572fe49923 100644
          output( "\t.byte 0xf6,0x04,0x25,0x08,0x03,0xfe,0x7f,0x01\n" );      /* test byte ptr [0x7ffe0308], 1 */
          output( "\t.byte 0x75,0x03\n" );                                    /* jne (over syscall) */
          output( "\t.byte 0x0f,0x05\n" );                                    /* syscall */
-@@ -576,6 +576,9 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
+@@ -568,6 +568,9 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
          output( "\t.byte %d\n", max(get_args_size(odp), 32) - 32 );
      }
  
@@ -197,16 +193,16 @@ index 9cc4698d0d7..c572fe49923 100644
      output( "\n/* syscall dispatcher */\n\n" );
      output( "\t.text\n" );
      output( "\t.align %d\n", get_alignment(16) );
-@@ -601,6 +604,8 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
-     else
-         output( "\tsubq $0xc,0x8(%%rbp)\n" );
+@@ -590,6 +593,8 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
+      * depends on us returning to it. Adjust the return address accordingly. */
+     output( "\tsubq $0x14,0x8(%%rbp)\n" );
  
 +    output( "\tsub $0xf000,%%rax\n" );
 +
      /* copy over any arguments on the stack */
      output( "\tleaq 0x38(%%rbp),%%rsi\n" );
      if (UsePIC)
-@@ -1192,7 +1197,7 @@ static void create_stub_exports_text_x64( DLLSPEC *spec )
+@@ -1181,7 +1186,7 @@ static void create_stub_exports_text_x64( DLLSPEC *spec )
          align_output_rva( 16, 16 );
          put_label( odp->link_name );
          put_byte( 0x4c ); put_byte( 0x8b ); put_byte( 0xd1 );  /* mov r10, rcx */
@@ -216,5 +212,5 @@ index 9cc4698d0d7..c572fe49923 100644
                  put_byte( 0x08 ); put_byte( 0x03 ); put_byte( 0xfe );
                  put_byte( 0x7f ); put_byte( 0x01 );
 -- 
-2.25.3
+2.26.2
 

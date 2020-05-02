@@ -1,16 +1,17 @@
-From 61a744694dc9eafb8b92fbb826335bd4468f20f8 Mon Sep 17 00:00:00 2001
+From 566ba5ef5b751764a15be0571000dfbf72b10127 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 
 ---
  dlls/kernel32/tests/loader.c |   7 +-
+ dlls/ntdll/server.c          |   3 +-
  dlls/ntdll/signal_x86_64.c   |   2 +
- dlls/ntdll/thread.c          |   6 +
+ dlls/ntdll/thread.c          |  10 ++
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 298 insertions(+), 8 deletions(-)
+ 7 files changed, 303 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 5373dc4efe1..67d04876bd6 100644
@@ -39,6 +40,20 @@ index 5373dc4efe1..67d04876bd6 100644
          {
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
+diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
+index 973804967d1..6d3e981e4ad 100644
+--- a/dlls/ntdll/server.c
++++ b/dlls/ntdll/server.c
+@@ -2056,8 +2056,7 @@ void server_init_process_done(void)
+ 
+     if (usd_fd != -1)
+     {
+-        munmap( user_shared_data, user_shared_data_size );
+-        if (user_shared_data != mmap( user_shared_data, user_shared_data_size,
++        if (user_shared_data != mmap( user_shared_data, 0x1000,
+                                       PROT_READ, MAP_SHARED | MAP_FIXED, usd_fd, 0 ))
+             fatal_error( "failed to remap the process user shared data\n" );
+         close( usd_fd );
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
 index 31af1e98d3f..324a92b41a9 100644
 --- a/dlls/ntdll/signal_x86_64.c
@@ -60,7 +75,7 @@ index 31af1e98d3f..324a92b41a9 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index f4da99db760..03229a98bb8 100644
+index a054164ee70..4a90e16d2ee 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -59,6 +59,8 @@ struct _KUSER_SHARED_DATA *user_shared_data = NULL;
@@ -72,10 +87,14 @@ index f4da99db760..03229a98bb8 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -275,6 +277,10 @@ TEB *thread_init(void)
+@@ -275,6 +277,14 @@ TEB *thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  
++#if defined(__APPLE__) && defined(__x86_64__)
++    *((DWORD*)((char*)user_shared_data + 0x1000)) = __wine_syscall_dispatcher;
++#endif
++
 +    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
 +     * Chromium; see output_syscall_thunks_x64() in winebuild. */
 +    user_shared_data->SystemCallPad[0] = 1;

@@ -1,4 +1,4 @@
-From 24ba9bf89a735ea3b9d7b775eb271b25d1d43ab3 Mon Sep 17 00:00:00 2001
+From 9b9a9666a78c0cf0a8dda6f01103849a9e7422c3 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 27 Jul 2018 01:22:59 -0500
 Subject: [PATCH] ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.
@@ -12,7 +12,7 @@ reported version), and expects it to be called whenever a thread is created.
  3 files changed, 187 insertions(+), 36 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 95ef2d5b744..b87e19cbf50 100644
+index 82b1d58aff71..af8a14b50a67 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
 @@ -182,7 +182,7 @@
@@ -25,10 +25,10 @@ index 95ef2d5b744..b87e19cbf50 100644
  @ stdcall NtCreateTimer(ptr long ptr long)
  @ stub NtCreateToken
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 72c1d14a79a..45a943f5d21 100644
+index 484e60fc21e9..605221ee144b 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -594,34 +594,18 @@ static void start_thread( struct startup_info *info )
+@@ -409,34 +409,18 @@ static void start_thread( struct startup_info *info )
  /***********************************************************************
   *              NtCreateThreadEx   (NTDLL.@)
   */
@@ -68,7 +68,7 @@ index 72c1d14a79a..45a943f5d21 100644
      HANDLE handle = 0, actctx = 0;
      TEB *teb = NULL;
      DWORD tid = 0;
-@@ -632,6 +616,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -447,6 +431,33 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      struct object_attributes *objattr = NULL;
      INITIAL_TEB stack;
  
@@ -102,7 +102,7 @@ index 72c1d14a79a..45a943f5d21 100644
      if (process != NtCurrentProcess())
      {
          apc_call_t call;
-@@ -657,12 +668,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -472,12 +483,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
          return result.create_thread.status;
      }
  
@@ -116,7 +116,7 @@ index 72c1d14a79a..45a943f5d21 100644
  
      if (server_pipe( request_pipe ) == -1)
      {
-@@ -674,7 +680,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -489,7 +495,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      SERVER_START_REQ( new_thread )
      {
          req->process    = wine_server_obj_handle( process );
@@ -125,7 +125,7 @@ index 72c1d14a79a..45a943f5d21 100644
          req->suspend    = suspended;
          req->request_fd = request_pipe[0];
          wine_server_add_data( req, objattr, len );
-@@ -736,20 +742,20 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -548,20 +554,20 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
  
@@ -138,22 +138,22 @@ index 72c1d14a79a..45a943f5d21 100644
 -    pthread_attr_setscope( &attr, PTHREAD_SCOPE_SYSTEM ); /* force creating a kernel thread */
 +    pthread_attr_setguardsize( &pthread_attr, 0 );
 +    pthread_attr_setscope( &pthread_attr, PTHREAD_SCOPE_SYSTEM ); /* force creating a kernel thread */
-     interlocked_xchg_add( &nb_threads, 1 );
+     InterlockedIncrement( &nb_threads );
 -    if (pthread_create( &pthread_id, &attr, (void * (*)(void *))start_thread, info ))
 +    if (pthread_create( &pthread_id, &pthread_attr, (void * (*)(void *))start_thread, info ))
      {
-         interlocked_xchg_add( &nb_threads, -1 );
+         InterlockedDecrement( &nb_threads );
 -        pthread_attr_destroy( &attr );
 +        pthread_attr_destroy( &pthread_attr );
          status = STATUS_NO_MEMORY;
          goto error;
      }
 -    pthread_attr_destroy( &attr );
-+    pthread_attr_destroy( &pthread_attr );
++    pthread_attr_destroy( &nb_threads );
      pthread_sigmask( SIG_SETMASK, &sigset, NULL );
  
      if (id) id->UniqueThread = ULongToHandle(tid);
-@@ -766,6 +772,124 @@ error:
+@@ -578,6 +584,124 @@ error:
      return status;
  }
  
@@ -279,10 +279,10 @@ index 72c1d14a79a..45a943f5d21 100644
  /******************************************************************************
   *              RtlGetNtGlobalFlags   (NTDLL.@)
 diff --git a/include/winternl.h b/include/winternl.h
-index 3ace4fcf25e..b6674d75dd9 100644
+index 865e39d16e06..1d2d49414448 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2228,6 +2228,33 @@ typedef struct _NLSTABLEINFO
+@@ -2251,6 +2251,33 @@ typedef struct _NLSTABLEINFO
      USHORT     *LowerCaseTable;
  } NLSTABLEINFO, *PNLSTABLEINFO;
  
@@ -317,5 +317,5 @@ index 3ace4fcf25e..b6674d75dd9 100644
   * Loader structures
   *
 -- 
-2.24.0
+2.26.2
 

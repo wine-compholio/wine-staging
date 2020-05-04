@@ -1,7 +1,7 @@
-From 31994d20fb36774cb6cc0652bdd432e524ce4837 Mon Sep 17 00:00:00 2001
+From b03e8c0e0097e3dfd2c30f1f53f13abaa731b858 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 3 Mar 2015 03:39:12 +0100
-Subject: ntdll: Reuse old async fileio structures if possible.
+Subject: [PATCH] ntdll: Reuse old async fileio structures if possible.
 
 This should speed up apps which heavily rely on async io stuff. Some
 tests (using the kernel and ntdll wine tests) show that it is very
@@ -11,10 +11,10 @@ often possible to reuse old fileio structures.
  1 file changed, 18 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 264ad65fe0..011e47a1ca 100644
+index 45660b47ec2e..083a413aac5f 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -352,6 +352,7 @@ struct async_fileio
+@@ -387,6 +387,7 @@ struct async_fileio
  {
      async_callback_t    *callback; /* must be the first field */
      struct async_fileio *next;
@@ -22,12 +22,12 @@ index 264ad65fe0..011e47a1ca 100644
      HANDLE               handle;
  };
  
-@@ -396,18 +397,29 @@ static struct async_fileio *alloc_fileio( DWORD size, async_callback_t callback,
+@@ -430,18 +431,29 @@ static struct async_fileio *alloc_fileio( DWORD size, async_callback_t callback,
  {
      /* first free remaining previous fileinfos */
  
--    struct async_fileio *io = interlocked_xchg_ptr( (void **)&fileio_freelist, NULL );
-+    struct async_fileio *old_io = interlocked_xchg_ptr( (void **)&fileio_freelist, NULL );
+-    struct async_fileio *io = InterlockedExchangePointer( (void **)&fileio_freelist, NULL );
++    struct async_fileio *old_io = InterlockedExchangePointer( (void **)&fileio_freelist, NULL );
 +    struct async_fileio *io = NULL;
  
 -    while (io)
@@ -59,5 +59,5 @@ index 264ad65fe0..011e47a1ca 100644
      }
      return io;
 -- 
-2.11.0
+2.26.2
 

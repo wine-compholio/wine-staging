@@ -1,4 +1,4 @@
-From 86bfe6daff2fffab7c987b5c1becf154d660ad5f Mon Sep 17 00:00:00 2001
+From 0329ba2101bf6667bdfaa66bd70253b57ca4fdd1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 19 Mar 2015 01:22:34 +0100
 Subject: [PATCH] server: Implement support for global and local shared memory
@@ -20,10 +20,10 @@ Subject: [PATCH] server: Implement support for global and local shared memory
  12 files changed, 215 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index d63aaae824f..1dfc421cbf7 100644
+index d83166a0ffc9..f57189112a0c 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -131,6 +131,7 @@ extern int server_pipe( int fd[2] ) DECLSPEC_HIDDEN;
+@@ -140,6 +140,7 @@ extern int server_pipe( int fd[2] ) DECLSPEC_HIDDEN;
  extern NTSTATUS alloc_object_attributes( const OBJECT_ATTRIBUTES *attr, struct object_attributes **ret,
                                           data_size_t *ret_len ) DECLSPEC_HIDDEN;
  extern NTSTATUS validate_open_object_attributes( const OBJECT_ATTRIBUTES *attr ) DECLSPEC_HIDDEN;
@@ -32,10 +32,10 @@ index d63aaae824f..1dfc421cbf7 100644
  /* module handling */
  extern LIST_ENTRY tls_links DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index c0dd0f35fc3..19b88a32a5d 100644
+index 2ebc39e03e25..f004ed07d27e 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -1061,6 +1061,66 @@ done:
+@@ -1149,6 +1149,66 @@ done:
  }
  
  
@@ -102,7 +102,7 @@ index c0dd0f35fc3..19b88a32a5d 100644
  /***********************************************************************
   *           wine_server_fd_to_handle   (NTDLL.@)
   *
-@@ -1601,6 +1661,10 @@ size_t server_init_thread( void *entry_point, BOOL *suspend )
+@@ -2011,6 +2071,10 @@ size_t server_init_thread( void *entry_point, BOOL *suspend )
      }
      SERVER_END_REQ;
  
@@ -114,10 +114,10 @@ index c0dd0f35fc3..19b88a32a5d 100644
      ntdll_get_thread_data()->wow64_redir = is_wow64;
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 9c7b326bc09..c3959ae3166 100644
+index 8a0b612b39a4..464e01b1e305 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -533,6 +533,7 @@ void exit_thread( int status )
+@@ -429,6 +429,7 @@ void exit_thread( int status )
  void WINAPI RtlExitUserThread( ULONG status )
  {
      static void *prev_teb;
@@ -125,18 +125,18 @@ index 9c7b326bc09..c3959ae3166 100644
      sigset_t sigset;
      TEB *teb;
  
-@@ -557,6 +558,9 @@ void WINAPI RtlExitUserThread( ULONG status )
+@@ -453,6 +454,9 @@ void WINAPI RtlExitUserThread( ULONG status )
      LdrShutdownThread();
      RtlFreeThreadActivationContextStack();
  
-+    shmlocal = interlocked_xchg_ptr( &NtCurrentTeb()->Reserved5[2], NULL );
++    shmlocal = InterlockedExchangePointer( &NtCurrentTeb()->Reserved5[2], NULL );
 +    if (shmlocal) NtUnmapViewOfSection( NtCurrentProcess(), shmlocal );
 +
      pthread_sigmask( SIG_BLOCK, &server_block_set, NULL );
  
-     if ((teb = interlocked_xchg_ptr( &prev_teb, NtCurrentTeb() )))
+     if ((teb = InterlockedExchangePointer( &prev_teb, NtCurrentTeb() )))
 diff --git a/include/wine/server.h b/include/wine/server.h
-index ac5dcc6f8bc..5a845f424c2 100644
+index ac5dcc6f8bcd..5a845f424c28 100644
 --- a/include/wine/server.h
 +++ b/include/wine/server.h
 @@ -120,6 +120,17 @@ static inline void *wine_server_get_ptr( client_ptr_t ptr )
@@ -158,7 +158,7 @@ index ac5dcc6f8bc..5a845f424c2 100644
  /* macros for server requests */
  
 diff --git a/include/winternl.h b/include/winternl.h
-index a6e5be3a261..68343276e6b 100644
+index 1d2d49414448..39c269d29163 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -403,7 +403,7 @@ typedef struct _TEB
@@ -171,7 +171,7 @@ index a6e5be3a261..68343276e6b 100644
  #ifdef _WIN64
      PVOID                        DeallocationBStore;                /*    /1788 */
 diff --git a/server/fd.c b/server/fd.c
-index 405240e14d8..cc8df828a65 100644
+index 405240e14d84..cc8df828a653 100644
 --- a/server/fd.c
 +++ b/server/fd.c
 @@ -2704,6 +2704,33 @@ DECL_HANDLER(write)
@@ -209,10 +209,10 @@ index 405240e14d8..cc8df828a65 100644
  DECL_HANDLER(ioctl)
  {
 diff --git a/server/file.h b/server/file.h
-index 7395814dadd..1ea6e8e8e8d 100644
+index d577aaed3cfa..399f512cf49e 100644
 --- a/server/file.h
 +++ b/server/file.h
-@@ -180,6 +180,14 @@ extern struct object *create_mailslot_device( struct object *root, const struct
+@@ -182,6 +182,14 @@ extern struct object *create_mailslot_device( struct object *root, const struct
  extern struct object *create_unix_device( struct object *root, const struct unicode_str *name,
                                            const char *unix_path );
  
@@ -228,7 +228,7 @@ index 7395814dadd..1ea6e8e8e8d 100644
  
  extern void do_change_notify( int unix_fd );
 diff --git a/server/main.c b/server/main.c
-index 2b5065e1852..483a0c85580 100644
+index 2b5065e18526..483a0c855808 100644
 --- a/server/main.c
 +++ b/server/main.c
 @@ -146,6 +146,7 @@ int main( int argc, char *argv[] )
@@ -240,7 +240,7 @@ index 2b5065e1852..483a0c85580 100644
      return 0;
  }
 diff --git a/server/mapping.c b/server/mapping.c
-index 6990a1913d7..3d794bfaaf9 100644
+index d73d8de9c283..6c79f7d18a6f 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -29,8 +29,32 @@
@@ -276,7 +276,7 @@ index 6990a1913d7..3d794bfaaf9 100644
  #include "ntstatus.h"
  #define WIN32_NO_STATUS
  #include "windef.h"
-@@ -190,6 +214,10 @@ static const struct fd_ops mapping_fd_ops =
+@@ -191,6 +215,10 @@ static const struct fd_ops mapping_fd_ops =
  
  static size_t page_mask;
  
@@ -287,7 +287,7 @@ index 6990a1913d7..3d794bfaaf9 100644
  #define ROUND_SIZE(size)  (((size) + page_mask) & ~page_mask)
  
  
-@@ -261,6 +289,52 @@ static int check_current_dir_for_exec(void)
+@@ -262,6 +290,52 @@ static int check_current_dir_for_exec(void)
      return (ret != MAP_FAILED);
  }
  
@@ -341,7 +341,7 @@ index 6990a1913d7..3d794bfaaf9 100644
  static int create_temp_file( file_pos_t size )
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 1ea80c8ba99..c2d671d4b15 100644
+index 197a48592e0a..99651c9ed534 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -69,6 +69,15 @@ struct request_max_size
@@ -360,7 +360,7 @@ index 1ea80c8ba99..c2d671d4b15 100644
  
  /* debug event data */
  typedef union
-@@ -1334,6 +1343,12 @@ enum server_fd_type
+@@ -1335,6 +1344,12 @@ enum server_fd_type
  @END
  
  
@@ -374,10 +374,10 @@ index 1ea80c8ba99..c2d671d4b15 100644
  @REQ(flush)
      async_data_t   async;       /* async I/O parameters */
 diff --git a/server/thread.c b/server/thread.c
-index 6be0495a556..5b176f1b67d 100644
+index 987da2f7c4ff..233320c78ad5 100644
 --- a/server/thread.c
 +++ b/server/thread.c
-@@ -203,6 +203,8 @@ static inline void init_thread_structure( struct thread *thread )
+@@ -239,6 +239,8 @@ static inline void init_thread_structure( struct thread *thread )
      thread->desc            = NULL;
      thread->desc_len        = 0;
      thread->exit_poll       = NULL;
@@ -386,7 +386,7 @@ index 6be0495a556..5b176f1b67d 100644
  
      thread->creation_time = current_time;
      thread->exit_time     = 0;
-@@ -338,7 +340,10 @@ static void cleanup_thread( struct thread *thread )
+@@ -409,7 +411,10 @@ static void cleanup_thread( struct thread *thread )
              thread->inflight[i].client = thread->inflight[i].server = -1;
          }
      }
@@ -397,7 +397,7 @@ index 6be0495a556..5b176f1b67d 100644
      thread->req_data = NULL;
      thread->reply_data = NULL;
      thread->request_fd = NULL;
-@@ -348,6 +353,8 @@ static void cleanup_thread( struct thread *thread )
+@@ -418,6 +423,8 @@ static void cleanup_thread( struct thread *thread )
      thread->desktop = 0;
      thread->desc = NULL;
      thread->desc_len = 0;
@@ -407,7 +407,7 @@ index 6be0495a556..5b176f1b67d 100644
  
  /* destroy a thread when its refcount is 0 */
 diff --git a/server/thread.h b/server/thread.h
-index 7b4d4cb72ba..8029d65df44 100644
+index 912df68eaf63..00f6f7c64a93 100644
 --- a/server/thread.h
 +++ b/server/thread.h
 @@ -91,6 +91,8 @@ struct thread
@@ -420,5 +420,5 @@ index 7b4d4cb72ba..8029d65df44 100644
  
  struct thread_snapshot
 -- 
-2.26.1
+2.26.2
 

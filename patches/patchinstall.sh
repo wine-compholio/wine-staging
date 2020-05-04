@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0c27d244f76ad90301c5db09d738b3a0389bcdac"
+	echo "4e2ad334b5881af7661be4d6df3c51aae92ca4a2"
 }
 
 # Show version information
@@ -4428,15 +4428,13 @@ fi
 # Patchset ntdll-CriticalSection
 # |
 # | Modified files:
-# |   *	dlls/ntdll/critsection.c, dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/threadpool.c, include/wine/port.h
+# |   *	dlls/ntdll/heap.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/threadpool.c
 # |
 if test "$enable_ntdll_CriticalSection" -eq 1; then
-	patch_apply ntdll-CriticalSection/0001-include-Move-interlocked_inc-dec-to-port.h.patch
 	patch_apply ntdll-CriticalSection/0002-ntdll-Add-inline-versions-of-RtlEnterCriticalSection.patch
 	patch_apply ntdll-CriticalSection/0003-ntdll-Use-fast-CS-functions-for-heap-locking.patch
 	patch_apply ntdll-CriticalSection/0004-ntdll-Use-fast-CS-functions-for-threadpool-locking.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "include: Move interlocked_inc/dec to port.h.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add inline versions of RtlEnterCriticalSection / RtlLeaveCriticalSections.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for heap locking.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Use fast CS functions for threadpool locking.", 1 },';

@@ -1,4 +1,4 @@
-From 67bbbb723dc971116a7b9569081baf2dc387e2ac Mon Sep 17 00:00:00 2001
+From 91a597b6a9299483c29c2d79b7471735b3839009 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 25 Feb 2015 22:45:42 +0100
 Subject: [PATCH] ntdll: Fix race-condition when threads are killed during
@@ -15,14 +15,14 @@ only be executed safely when all other threads have terminated before. Most
 likely there are more Wine bugs in this area, but the attached patch should
 fix the most critical one (messed up refcounting of threads) for now.
 ---
- dlls/ntdll/thread.c | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+ dlls/ntdll/thread.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index c999d4b..5e02966 100644
+index eda5d1cea12b..8a0b612b39a4 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -459,6 +459,7 @@ void exit_thread( int status )
+@@ -429,6 +429,7 @@ void exit_thread( int status )
  void WINAPI RtlExitUserThread( ULONG status )
  {
      static void *prev_teb;
@@ -30,27 +30,18 @@ index c999d4b..5e02966 100644
      TEB *teb;
  
      if (status)  /* send the exit code to the server (0 is already the default) */
-@@ -472,7 +473,7 @@ void WINAPI RtlExitUserThread( ULONG status )
-         SERVER_END_REQ;
-     }
- 
--    if (interlocked_xchg_add( &nb_threads, -1 ) <= 1)
-+    if (interlocked_xchg_add( &nb_threads, 0 ) <= 1)
-     {
-         LdrShutdownProcess();
-         pthread_sigmask( SIG_BLOCK, &server_block_set, NULL );
-@@ -495,6 +496,11 @@ void WINAPI RtlExitUserThread( ULONG status )
+@@ -465,6 +466,11 @@ void WINAPI RtlExitUserThread( ULONG status )
          }
      }
  
 +    sigemptyset( &sigset );
 +    sigaddset( &sigset, SIGQUIT );
 +    pthread_sigmask( SIG_BLOCK, &sigset, NULL );
-+    if (interlocked_xchg_add( &nb_threads, -1 ) <= 1) _exit( status );
++    if (InterlockedDecrement( &nb_threads ) <= 1) _exit( status );
 +
      signal_exit_thread( status );
  }
  
 -- 
-2.7.4
+2.26.2
 

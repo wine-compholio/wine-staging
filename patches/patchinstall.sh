@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "4e2ad334b5881af7661be4d6df3c51aae92ca4a2"
+	echo "1976685a0f57bdec939228d73f6252c68ccb8f80"
 }
 
 # Show version information
@@ -114,7 +114,6 @@ patch_enable_all ()
 	enable_d3dx9_36_UpdateSkinnedMesh="$1"
 	enable_dbghelp_Debug_Symbols="$1"
 	enable_ddraw_Device_Caps="$1"
-	enable_ddraw_EnumSurfaces="$1"
 	enable_ddraw_IDirect3DTexture2_Load="$1"
 	enable_ddraw_Rendering_Targets="$1"
 	enable_ddraw_Silence_FIXMEs="$1"
@@ -448,9 +447,6 @@ patch_enable ()
 			;;
 		ddraw-Device_Caps)
 			enable_ddraw_Device_Caps="$2"
-			;;
-		ddraw-EnumSurfaces)
-			enable_ddraw_EnumSurfaces="$2"
 			;;
 		ddraw-IDirect3DTexture2_Load)
 			enable_ddraw_IDirect3DTexture2_Load="$2"
@@ -2710,23 +2706,6 @@ if test "$enable_ddraw_Device_Caps" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ddraw-EnumSurfaces
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#17233] Implement DDENUMSURFACES_CANBECREATED in IDirectDraw7::EnumSurfaces
-# |
-# | Modified files:
-# |   *	dlls/ddraw/ddraw.c, dlls/ddraw/tests/d3d.c
-# |
-if test "$enable_ddraw_EnumSurfaces" -eq 1; then
-	patch_apply ddraw-EnumSurfaces/0001-ddraw-tests-Add-more-tests-for-IDirectDraw7-EnumSurf.patch
-	patch_apply ddraw-EnumSurfaces/0003-ddraw-Implement-DDENUMSURFACES_CANBECREATED-flag-in-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ddraw/tests: Add more tests for IDirectDraw7::EnumSurfaces.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ddraw: Implement DDENUMSURFACES_CANBECREATED flag in ddraw7_EnumSurfaces.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ddraw-IDirect3DTexture2_Load
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3201,9 +3180,9 @@ fi
 # |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernel32/volume.c, dlls/msvcp120/tests/msvcp120.c,
-# | 	dlls/msvcp140/tests/msvcp140.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, include/Makefile.in,
-# | 	include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, server/fd.c
+# |   *	configure.ac, dlls/kernel32/path.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c,
+# | 	include/Makefile.in, include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in,
+# | 	libs/port/renameat2.c, server/fd.c
 # |
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
@@ -3211,7 +3190,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
 	patch_apply ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch
 	patch_apply ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
-	patch_apply ntdll-Junction_Points/0006-kernel32-Advertise-junction-point-support.patch
 	patch_apply ntdll-Junction_Points/0007-ntdll-Add-support-for-absolute-symlink-creation.patch
 	patch_apply ntdll-Junction_Points/0008-ntdll-Add-support-for-reading-absolute-symlinks.patch
 	patch_apply ntdll-Junction_Points/0009-ntdll-Add-support-for-deleting-symlinks.patch
@@ -3224,14 +3202,12 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0016-server-Properly-handle-file-symlink-deletion.patch
 	patch_apply ntdll-Junction_Points/0017-ntdll-Always-report-symbolic-links-as-containing-zer.patch
 	patch_apply ntdll-Junction_Points/0018-ntdll-Find-dangling-symlinks-quickly.patch
-	patch_apply ntdll-Junction_Points/0019-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Advertise junction point support.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for absolute symlink creation.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading absolute symlinks.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting symlinks.", 1 },';
@@ -3244,7 +3220,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Find dangling symlinks quickly.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse points.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3284,11 +3259,11 @@ fi
 # | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
 # | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
-# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c,
-# | 	dlls/ntdll/thread.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
-# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h,
-# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
-# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# | 	dlls/ntdll/process.c, dlls/ntdll/server.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c,
+# | 	dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c,
+# | 	dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c,
+# | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
+# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
@@ -4058,12 +4033,12 @@ fi
 # |   *	[#22690] Allow to cancel a file operation via progress callback
 # |
 # | Modified files:
-# |   *	dlls/kernel32/path.c, dlls/kernel32/tests/file.c
+# |   *	dlls/kernel32/tests/file.c, dlls/kernelbase/file.c
 # |
 if test "$enable_kernel32_CopyFileEx" -eq 1; then
 	patch_apply kernel32-CopyFileEx/0001-kernel32-Add-support-for-progress-callback-in-CopyFi.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Add support for progress callback in CopyFileEx.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "kernelbase: Add support for progress callback in CopyFileEx.", 1 },';
 	) >> "$patchlist"
 fi
 

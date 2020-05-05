@@ -1,4 +1,4 @@
-From bec0c81d2917427c8cdc22fea8f5db86157bccf8 Mon Sep 17 00:00:00 2001
+From cab7c1b99de7c594083c6fd16b728a79f16b9ac8 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 13 Mar 2019 16:02:05 -0600
 Subject: [PATCH] kernel32: Implement CreateSymbolicLink[A|W] with ntdll
@@ -6,135 +6,18 @@ Subject: [PATCH] kernel32: Implement CreateSymbolicLink[A|W] with ntdll
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/kernel32/path.c           | 124 +++++++++++++++++++++++++++++++--
- dlls/kernel32/tests/path.c     |  96 +++++++++++++++++++++++++
- dlls/msvcp120/tests/msvcp120.c |  75 +++++++++-----------
- dlls/msvcp140/tests/msvcp140.c |  63 +++++++----------
- 4 files changed, 277 insertions(+), 81 deletions(-)
+ dlls/kernel32/path.c           |  20 ++++++-
+ dlls/kernel32/tests/path.c     |  96 ++++++++++++++++++++++++++++++
+ dlls/kernelbase/file.c         | 105 ++++++++++++++++++++++++++++++++-
+ dlls/msvcp120/tests/msvcp120.c |  75 +++++++++++------------
+ dlls/msvcp140/tests/msvcp140.c |  63 +++++++++-----------
+ 5 files changed, 277 insertions(+), 82 deletions(-)
 
 diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 849be11d2..bc30e03b0 100644
+index 0f075d0af1c..3d17b53a829 100644
 --- a/dlls/kernel32/path.c
 +++ b/dlls/kernel32/path.c
-@@ -34,6 +34,8 @@
- #include "windef.h"
- #include "winbase.h"
- #include "winternl.h"
-+#include "winioctl.h"
-+#include "ntifs.h"
- 
- #include "kernel_private.h"
- #include "wine/unicode.h"
-@@ -926,8 +928,106 @@ WCHAR * CDECL wine_get_dos_file_name( LPCSTR str )
-  */
- BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
- {
--    FIXME("(%s %s %d): stub\n", debugstr_w(link), debugstr_w(target), flags);
--    return TRUE;
-+    static INT struct_size = offsetof(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer[0]);
-+    static INT header_size = offsetof(REPARSE_DATA_BUFFER, GenericReparseBuffer);
-+    INT buffer_size, data_size, string_len, prefix_len;
-+    WCHAR *subst_dest, *print_dest, *string;
-+    REPARSE_DATA_BUFFER *buffer;
-+    LPWSTR target_path = NULL;
-+    BOOL is_relative, is_dir;
-+    int target_path_len = 0;
-+    UNICODE_STRING nt_name;
-+    BOOLEAN bret = FALSE;
-+    NTSTATUS status;
-+    HANDLE hlink;
-+    DWORD dwret;
-+
-+    TRACE("(%s %s %d)\n", debugstr_w(link), debugstr_w(target), flags);
-+
-+    is_relative = (RtlDetermineDosPathNameType_U( target ) == RELATIVE_PATH);
-+    is_dir = (flags & SYMBOLIC_LINK_FLAG_DIRECTORY);
-+    if (is_dir && !CreateDirectoryW( link, NULL ))
-+        return FALSE;
-+    hlink = CreateFileW( link, GENERIC_READ | GENERIC_WRITE, 0, 0,
-+                         is_dir ? OPEN_EXISTING : CREATE_NEW,
-+                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0 );
-+    if (hlink == INVALID_HANDLE_VALUE)
-+        goto cleanup;
-+    if (is_relative)
-+    {
-+        UNICODE_STRING nt_path;
-+        int len;
-+
-+        status = RtlDosPathNameToNtPathName_U_WithStatus( link, &nt_path, NULL, NULL );
-+        if (status != STATUS_SUCCESS)
-+        {
-+            SetLastError( RtlNtStatusToDosError(status) );
-+            goto cleanup;
-+        }
-+        /* obtain the path of the link */
-+        for (; nt_path.Length > 0; nt_path.Length -= sizeof(WCHAR))
-+        {
-+            WCHAR c = nt_path.Buffer[nt_path.Length/sizeof(WCHAR)];
-+            if (c == '/' || c == '\\')
-+            {
-+                nt_path.Length += sizeof(WCHAR);
-+                break;
-+            }
-+        }
-+        /* append the target to the link path */
-+        target_path_len = nt_path.Length / sizeof(WCHAR);
-+        len = target_path_len + (strlenW( target ) + 1);
-+        target_path = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, len*sizeof(WCHAR) );
-+        lstrcpynW( target_path, nt_path.Buffer, target_path_len+1 );
-+        target_path[target_path_len+1] = 0;
-+        lstrcatW( target_path, target );
-+        RtlFreeUnicodeString( &nt_path );
-+    }
-+    else
-+        target_path = (LPWSTR)target;
-+    status = RtlDosPathNameToNtPathName_U_WithStatus( target_path, &nt_name, NULL, NULL );
-+    if (status != STATUS_SUCCESS)
-+    {
-+        SetLastError( RtlNtStatusToDosError(status) );
-+        goto cleanup;
-+    }
-+    if (is_relative && strncmpW( target_path, nt_name.Buffer, target_path_len ) != 0)
-+    {
-+        SetLastError( RtlNtStatusToDosError(status) );
-+        goto cleanup;
-+    }
-+    prefix_len = is_relative ? 0 : strlen("\\??\\");
-+    string = &nt_name.Buffer[target_path_len];
-+    string_len = lstrlenW( &string[prefix_len] );
-+    data_size = (prefix_len + 2 * string_len + 2) * sizeof(WCHAR);
-+    buffer_size = struct_size + data_size;
-+    buffer = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_size );
-+    buffer->ReparseTag = IO_REPARSE_TAG_SYMLINK;
-+    buffer->ReparseDataLength = struct_size - header_size + data_size;
-+    buffer->SymbolicLinkReparseBuffer.SubstituteNameLength = (prefix_len + string_len) * sizeof(WCHAR);
-+    buffer->SymbolicLinkReparseBuffer.PrintNameOffset = (prefix_len + string_len + 1) * sizeof(WCHAR);
-+    buffer->SymbolicLinkReparseBuffer.PrintNameLength = string_len * sizeof(WCHAR);
-+    buffer->SymbolicLinkReparseBuffer.Flags = is_relative ? SYMLINK_FLAG_RELATIVE : 0;
-+    subst_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[0];
-+    print_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[prefix_len + string_len + 1];
-+    lstrcpyW( subst_dest, string );
-+    lstrcpyW( print_dest, &string[prefix_len] );
-+    RtlFreeUnicodeString( &nt_name );
-+    bret = DeviceIoControl( hlink, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_size, NULL, 0,
-+                            &dwret, 0 );
-+    HeapFree( GetProcessHeap(), 0, buffer );
-+
-+cleanup:
-+    CloseHandle( hlink );
-+    if (!bret)
-+    {
-+        if (is_dir)
-+            RemoveDirectoryW( link );
-+        else
-+            DeleteFileW( link );
-+    }
-+    if (is_relative) HeapFree( GetProcessHeap(), 0, target_path );
-+    return bret;
- }
- 
- /*************************************************************************
-@@ -935,8 +1035,24 @@ BOOLEAN WINAPI CreateSymbolicLinkW(LPCWSTR link, LPCWSTR target, DWORD flags)
+@@ -385,8 +385,24 @@ WCHAR * CDECL wine_get_dos_file_name( LPCSTR str )
   */
  BOOLEAN WINAPI CreateSymbolicLinkA(LPCSTR link, LPCSTR target, DWORD flags)
  {
@@ -162,7 +45,7 @@ index 849be11d2..bc30e03b0 100644
  
  /*************************************************************************
 diff --git a/dlls/kernel32/tests/path.c b/dlls/kernel32/tests/path.c
-index 7342a865a..78a2e2e06 100644
+index 0e45ad44ff3..841353dcab8 100644
 --- a/dlls/kernel32/tests/path.c
 +++ b/dlls/kernel32/tests/path.c
 @@ -83,6 +83,9 @@ static NTSTATUS (WINAPI *pLdrGetDllPath)(LPCWSTR,ULONG,LPWSTR*,LPWSTR*);
@@ -190,7 +73,7 @@ index 7342a865a..78a2e2e06 100644
  #undef MAKEFUNC
  }
  
-@@ -2672,6 +2678,95 @@ static void test_LdrGetDllPath(void)
+@@ -2690,6 +2696,95 @@ static void test_LdrGetDllPath(void)
      SetEnvironmentVariableW( pathW, old_path );
  }
  
@@ -286,14 +169,138 @@ index 7342a865a..78a2e2e06 100644
  START_TEST(path)
  {
      CHAR origdir[MAX_PATH],curdir[MAX_PATH], curDrive, otherDrive;
-@@ -2701,4 +2796,5 @@ START_TEST(path)
+@@ -2719,4 +2814,5 @@ START_TEST(path)
      test_RtlGetSearchPath();
      test_RtlGetExePath();
      test_LdrGetDllPath();
 +    test_CreateSymbolicLink();
  }
+diff --git a/dlls/kernelbase/file.c b/dlls/kernelbase/file.c
+index 905029066e4..ed6ba6ae30e 100644
+--- a/dlls/kernelbase/file.c
++++ b/dlls/kernelbase/file.c
+@@ -36,6 +36,7 @@
+ #include "wincon.h"
+ #include "fileapi.h"
+ #include "shlwapi.h"
++#include "ntifs.h"
+ #include "ddk/ntddk.h"
+ #include "ddk/ntddser.h"
+ 
+@@ -943,10 +944,108 @@ done:
+ /*************************************************************************
+  *	CreateSymbolicLinkW   (kernelbase.@)
+  */
+-BOOLEAN WINAPI /* DECLSPEC_HOTPATCH */ CreateSymbolicLinkW( LPCWSTR link, LPCWSTR target, DWORD flags )
++BOOLEAN WINAPI DECLSPEC_HOTPATCH CreateSymbolicLinkW( const WCHAR *link, const WCHAR *target, DWORD flags )
+ {
+-    FIXME( "(%s %s %d): stub\n", debugstr_w(link), debugstr_w(target), flags );
+-    return TRUE;
++    static INT struct_size = offsetof(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer[0]);
++    static INT header_size = offsetof(REPARSE_DATA_BUFFER, GenericReparseBuffer);
++    INT buffer_size, data_size, string_len, prefix_len;
++    WCHAR *subst_dest, *print_dest, *string;
++    REPARSE_DATA_BUFFER *buffer;
++    LPWSTR target_path = NULL;
++    BOOL is_relative, is_dir;
++    int target_path_len = 0;
++    UNICODE_STRING nt_name;
++    BOOLEAN bret = FALSE;
++    NTSTATUS status;
++    HANDLE hlink;
++    DWORD dwret;
++
++    TRACE("(%s %s %d)\n", debugstr_w(link), debugstr_w(target), flags);
++
++    is_relative = (RtlDetermineDosPathNameType_U( target ) == RELATIVE_PATH);
++    is_dir = (flags & SYMBOLIC_LINK_FLAG_DIRECTORY);
++    if (is_dir && !CreateDirectoryW( link, NULL ))
++        return FALSE;
++    hlink = CreateFileW( link, GENERIC_READ | GENERIC_WRITE, 0, 0,
++                         is_dir ? OPEN_EXISTING : CREATE_NEW,
++                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0 );
++    if (hlink == INVALID_HANDLE_VALUE)
++        goto cleanup;
++    if (is_relative)
++    {
++        UNICODE_STRING nt_path;
++        int len;
++
++        status = RtlDosPathNameToNtPathName_U_WithStatus( link, &nt_path, NULL, NULL );
++        if (status != STATUS_SUCCESS)
++        {
++            SetLastError( RtlNtStatusToDosError(status) );
++            goto cleanup;
++        }
++        /* obtain the path of the link */
++        for (; nt_path.Length > 0; nt_path.Length -= sizeof(WCHAR))
++        {
++            WCHAR c = nt_path.Buffer[nt_path.Length/sizeof(WCHAR)];
++            if (c == '/' || c == '\\')
++            {
++                nt_path.Length += sizeof(WCHAR);
++                break;
++            }
++        }
++        /* append the target to the link path */
++        target_path_len = nt_path.Length / sizeof(WCHAR);
++        len = target_path_len + (wcslen( target ) + 1);
++        target_path = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, len*sizeof(WCHAR) );
++        lstrcpynW( target_path, nt_path.Buffer, target_path_len+1 );
++        target_path[target_path_len+1] = 0;
++        wcscat( target_path, target );
++        RtlFreeUnicodeString( &nt_path );
++    }
++    else
++        target_path = (LPWSTR)target;
++    status = RtlDosPathNameToNtPathName_U_WithStatus( target_path, &nt_name, NULL, NULL );
++    if (status != STATUS_SUCCESS)
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        goto cleanup;
++    }
++    if (is_relative && wcsncmp( target_path, nt_name.Buffer, target_path_len ))
++    {
++        SetLastError( RtlNtStatusToDosError(status) );
++        goto cleanup;
++    }
++    prefix_len = is_relative ? 0 : strlen("\\??\\");
++    string = &nt_name.Buffer[target_path_len];
++    string_len = wcslen( &string[prefix_len] );
++    data_size = (prefix_len + 2 * string_len + 2) * sizeof(WCHAR);
++    buffer_size = struct_size + data_size;
++    buffer = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_size );
++    buffer->ReparseTag = IO_REPARSE_TAG_SYMLINK;
++    buffer->ReparseDataLength = struct_size - header_size + data_size;
++    buffer->SymbolicLinkReparseBuffer.SubstituteNameLength = (prefix_len + string_len) * sizeof(WCHAR);
++    buffer->SymbolicLinkReparseBuffer.PrintNameOffset = (prefix_len + string_len + 1) * sizeof(WCHAR);
++    buffer->SymbolicLinkReparseBuffer.PrintNameLength = string_len * sizeof(WCHAR);
++    buffer->SymbolicLinkReparseBuffer.Flags = is_relative ? SYMLINK_FLAG_RELATIVE : 0;
++    subst_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[0];
++    print_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[prefix_len + string_len + 1];
++    wcscpy( subst_dest, string );
++    wcscpy( print_dest, &string[prefix_len] );
++    RtlFreeUnicodeString( &nt_name );
++    bret = DeviceIoControl( hlink, FSCTL_SET_REPARSE_POINT, buffer, buffer_size, NULL, 0,
++                            &dwret, 0 );
++    HeapFree( GetProcessHeap(), 0, buffer );
++
++cleanup:
++    CloseHandle( hlink );
++    if (!bret)
++    {
++        if (is_dir)
++            RemoveDirectoryW( link );
++        else
++            DeleteFileW( link );
++    }
++    if (is_relative) HeapFree( GetProcessHeap(), 0, target_path );
++    return bret;
+ }
+ 
+ 
 diff --git a/dlls/msvcp120/tests/msvcp120.c b/dlls/msvcp120/tests/msvcp120.c
-index 7a382ac6f..9775ef5e1 100644
+index 7a382ac6faa..9775ef5e1d8 100644
 --- a/dlls/msvcp120/tests/msvcp120.c
 +++ b/dlls/msvcp120/tests/msvcp120.c
 @@ -1615,15 +1615,14 @@ static void test_tr2_sys__Stat(void)
@@ -435,7 +442,7 @@ index 7a382ac6f..9775ef5e1 100644
      }
  
 diff --git a/dlls/msvcp140/tests/msvcp140.c b/dlls/msvcp140/tests/msvcp140.c
-index 751b1beed..382f5732c 100644
+index 751b1beed86..382f5732c29 100644
 --- a/dlls/msvcp140/tests/msvcp140.c
 +++ b/dlls/msvcp140/tests/msvcp140.c
 @@ -803,16 +803,15 @@ static void test_Stat(void)
@@ -545,5 +552,5 @@ index 751b1beed..382f5732c 100644
      }
  
 -- 
-2.25.0
+2.26.2
 

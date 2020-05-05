@@ -1,60 +1,87 @@
-From 96f59c91f45ca9572e3e9141ee9ad81bbb6ba45d Mon Sep 17 00:00:00 2001
+From 34b3bcb23bf0a4b81b1cddca90f8a248f478fee5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 26 Feb 2015 06:41:26 +0100
-Subject: [PATCH] kernel32: Add support for progress callback in CopyFileEx.
+Subject: [PATCH] kernelbase: Add support for progress callback in CopyFileEx.
 
 ---
- dlls/kernel32/path.c       | 66 +++++++++++++++++++++++++++++++++++++++++++---
- dlls/kernel32/tests/file.c |  6 -----
- 2 files changed, 62 insertions(+), 10 deletions(-)
+ dlls/kernel32/tests/file.c |  6 ----
+ dlls/kernelbase/file.c     | 65 ++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 63 insertions(+), 8 deletions(-)
 
-diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index 41f0d34..f04b0f4 100644
---- a/dlls/kernel32/path.c
-+++ b/dlls/kernel32/path.c
-@@ -1177,6 +1177,9 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
+index 2e26e2ace86..1cccb105448 100644
+--- a/dlls/kernel32/tests/file.c
++++ b/dlls/kernel32/tests/file.c
+@@ -1173,23 +1173,17 @@ static void test_CopyFileEx(void)
+     ok(hfile != INVALID_HANDLE_VALUE, "failed to open destination file, error %d\n", GetLastError());
+     SetLastError(0xdeadbeef);
+     retok = CopyFileExA(source, dest, copy_progress_cb, hfile, NULL, 0);
+-    todo_wine
+     ok(!retok, "CopyFileExA unexpectedly succeeded\n");
+-    todo_wine
+     ok(GetLastError() == ERROR_REQUEST_ABORTED, "expected ERROR_REQUEST_ABORTED, got %d\n", GetLastError());
+     ok(GetFileAttributesA(dest) != INVALID_FILE_ATTRIBUTES, "file was deleted\n");
+ 
+     hfile = CreateFileA(dest, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                         NULL, OPEN_EXISTING, 0, 0);
+-    todo_wine
+     ok(hfile != INVALID_HANDLE_VALUE, "failed to open destination file, error %d\n", GetLastError());
+     SetLastError(0xdeadbeef);
+     retok = CopyFileExA(source, dest, copy_progress_cb, hfile, NULL, 0);
+-    todo_wine
+     ok(!retok, "CopyFileExA unexpectedly succeeded\n");
+-    todo_wine
+     ok(GetLastError() == ERROR_REQUEST_ABORTED, "expected ERROR_REQUEST_ABORTED, got %d\n", GetLastError());
+-    todo_wine
+     ok(GetFileAttributesA(dest) == INVALID_FILE_ATTRIBUTES, "file was not deleted\n");
+ 
+     retok = CopyFileExA(source, NULL, copy_progress_cb, hfile, NULL, 0);
+diff --git a/dlls/kernelbase/file.c b/dlls/kernelbase/file.c
+index 3b00321eb1a..ab95c8babf1 100644
+--- a/dlls/kernelbase/file.c
++++ b/dlls/kernelbase/file.c
+@@ -503,6 +503,10 @@ BOOL WINAPI CopyFileExW( const WCHAR *source, const WCHAR *dest, LPPROGRESS_ROUT
      DWORD count;
      BOOL ret = FALSE;
      char *buffer;
 +    LARGE_INTEGER size;
 +    LARGE_INTEGER transferred;
 +    DWORD cbret;
++    DWORD source_access = GENERIC_READ;
  
      if (!source || !dest)
      {
-@@ -1191,7 +1194,13 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -517,7 +521,15 @@ BOOL WINAPI CopyFileExW( const WCHAR *source, const WCHAR *dest, LPPROGRESS_ROUT
  
      TRACE("%s -> %s, %x\n", debugstr_w(source), debugstr_w(dest), flags);
  
--    if ((h1 = CreateFileW(source, GENERIC_READ,
+-    if ((h1 = CreateFileW( source, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 +    if (flags & COPY_FILE_RESTARTABLE)
 +        FIXME("COPY_FILE_RESTARTABLE is not supported\n");
 +    if (flags & COPY_FILE_COPY_SYMLINK)
 +        FIXME("COPY_FILE_COPY_SYMLINK is not supported\n");
 +
-+    if ((h1 = CreateFileW(source, (flags & COPY_FILE_OPEN_SOURCE_FOR_WRITE) ?
-+                     GENERIC_WRITE | GENERIC_READ : GENERIC_READ,
-                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                      NULL, OPEN_EXISTING, 0, 0)) == INVALID_HANDLE_VALUE)
++    if (flags & COPY_FILE_OPEN_SOURCE_FOR_WRITE)
++        source_access |= GENERIC_WRITE;
++
++    if ((h1 = CreateFileW( source, source_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            NULL, OPEN_EXISTING, 0, 0 )) == INVALID_HANDLE_VALUE)
      {
-@@ -1227,9 +1236,13 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+         WARN("Unable to open source %s\n", debugstr_w(source));
+@@ -551,7 +563,11 @@ BOOL WINAPI CopyFileExW( const WCHAR *source, const WCHAR *dest, LPPROGRESS_ROUT
          }
      }
  
 -    if ((h2 = CreateFileW( dest, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
--                             (flags & COPY_FILE_FAIL_IF_EXISTS) ? CREATE_NEW : CREATE_ALWAYS,
--                             info.dwFileAttributes, h1 )) == INVALID_HANDLE_VALUE)
 +    if ((h2 = CreateFileW( dest, GENERIC_WRITE | DELETE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
 +                           (flags & COPY_FILE_FAIL_IF_EXISTS) ? CREATE_NEW : CREATE_ALWAYS,
 +                           info.dwFileAttributes, h1 )) == INVALID_HANDLE_VALUE &&
 +        /* retry without DELETE if we got a sharing violation */
 +        (h2 = CreateFileW( dest, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-+                           (flags & COPY_FILE_FAIL_IF_EXISTS) ? CREATE_NEW : CREATE_ALWAYS,
-+                           info.dwFileAttributes, h1 )) == INVALID_HANDLE_VALUE)
+                            (flags & COPY_FILE_FAIL_IF_EXISTS) ? CREATE_NEW : CREATE_ALWAYS,
+                            info.dwFileAttributes, h1 )) == INVALID_HANDLE_VALUE)
      {
-         WARN("Unable to open dest %s\n", debugstr_w(dest));
-         HeapFree( GetProcessHeap(), 0, buffer );
-@@ -1237,6 +1250,30 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -561,6 +577,30 @@ BOOL WINAPI CopyFileExW( const WCHAR *source, const WCHAR *dest, LPPROGRESS_ROUT
          return FALSE;
      }
  
@@ -85,7 +112,7 @@ index 41f0d34..f04b0f4 100644
      while (ReadFile( h1, buffer, buffer_size, &count, NULL ) && count)
      {
          char *p = buffer;
-@@ -1246,6 +1283,27 @@ BOOL WINAPI CopyFileExW(LPCWSTR source, LPCWSTR dest,
+@@ -570,6 +610,27 @@ BOOL WINAPI CopyFileExW( const WCHAR *source, const WCHAR *dest, LPPROGRESS_ROUT
              if (!WriteFile( h2, p, count, &res, NULL ) || !res) goto done;
              p += res;
              count -= res;
@@ -113,34 +140,6 @@ index 41f0d34..f04b0f4 100644
          }
      }
      ret =  TRUE;
-diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
-index b47b2b9..68396c0 100644
---- a/dlls/kernel32/tests/file.c
-+++ b/dlls/kernel32/tests/file.c
-@@ -1163,23 +1163,17 @@ static void test_CopyFileEx(void)
-     ok(hfile != INVALID_HANDLE_VALUE, "failed to open destination file, error %d\n", GetLastError());
-     SetLastError(0xdeadbeef);
-     retok = CopyFileExA(source, dest, copy_progress_cb, hfile, NULL, 0);
--    todo_wine
-     ok(!retok, "CopyFileExA unexpectedly succeeded\n");
--    todo_wine
-     ok(GetLastError() == ERROR_REQUEST_ABORTED, "expected ERROR_REQUEST_ABORTED, got %d\n", GetLastError());
-     ok(GetFileAttributesA(dest) != INVALID_FILE_ATTRIBUTES, "file was deleted\n");
- 
-     hfile = CreateFileA(dest, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                         NULL, OPEN_EXISTING, 0, 0);
--    todo_wine
-     ok(hfile != INVALID_HANDLE_VALUE, "failed to open destination file, error %d\n", GetLastError());
-     SetLastError(0xdeadbeef);
-     retok = CopyFileExA(source, dest, copy_progress_cb, hfile, NULL, 0);
--    todo_wine
-     ok(!retok, "CopyFileExA unexpectedly succeeded\n");
--    todo_wine
-     ok(GetLastError() == ERROR_REQUEST_ABORTED, "expected ERROR_REQUEST_ABORTED, got %d\n", GetLastError());
--    todo_wine
-     ok(GetFileAttributesA(dest) == INVALID_FILE_ATTRIBUTES, "file was not deleted\n");
- 
-     retok = CopyFileExA(source, NULL, copy_progress_cb, hfile, NULL, 0);
 -- 
-1.9.1
+2.26.2
 

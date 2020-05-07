@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1976685a0f57bdec939228d73f6252c68ccb8f80"
+	echo "148fc1adb53aa1d78a67b2a0ee5ea8058d92589a"
 }
 
 # Show version information
@@ -3162,7 +3162,7 @@ fi
 # Patchset kernel32-K32GetPerformanceInfo
 # |
 # | Modified files:
-# |   *	dlls/kernel32/cpu.c, server/process.c, server/protocol.def
+# |   *	dlls/kernelbase/debug.c, server/process.c, server/protocol.def
 # |
 if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
 	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
@@ -4756,7 +4756,7 @@ fi
 # |   *	[#27248] Implement K32GetMappedFileName
 # |
 # | Modified files:
-# |   *	dlls/kernel32/virtual.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
+# |   *	dlls/kernelbase/debug.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
 # | 	dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
 # |
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then

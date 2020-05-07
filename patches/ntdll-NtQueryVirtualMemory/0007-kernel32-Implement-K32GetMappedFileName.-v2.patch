@@ -1,84 +1,62 @@
-From b9e418cc3e9cf7808285b2000db6f8163a48eb47 Mon Sep 17 00:00:00 2001
+From 4c2836f5afe797f9b5cbe7efd37b9879abe623db Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Wed, 16 Mar 2016 20:23:28 +0800
 Subject: [PATCH] kernel32: Implement K32GetMappedFileName. (v2)
 
 ---
- dlls/kernel32/virtual.c       | 67 +++++++++++++++++++++++++++++++++++--------
- dlls/psapi/tests/psapi_main.c | 22 +++-----------
- 2 files changed, 59 insertions(+), 30 deletions(-)
+ dlls/kernelbase/debug.c       | 87 ++++++++++++++++++++++++++++++++---
+ dlls/psapi/tests/psapi_main.c | 22 ++-------
+ 2 files changed, 85 insertions(+), 24 deletions(-)
 
-diff --git a/dlls/kernel32/virtual.c b/dlls/kernel32/virtual.c
-index c7a15cd..f2a2c71 100644
---- a/dlls/kernel32/virtual.c
-+++ b/dlls/kernel32/virtual.c
-@@ -650,29 +650,72 @@ BOOL WINAPI IsBadStringPtrW( LPCWSTR str, UINT_PTR max )
+diff --git a/dlls/kernelbase/debug.c b/dlls/kernelbase/debug.c
+index 48c949355ad7..92f5750aa580 100644
+--- a/dlls/kernelbase/debug.c
++++ b/dlls/kernelbase/debug.c
+@@ -1247,15 +1247,59 @@ DWORD WINAPI DECLSPEC_HOTPATCH K32GetDeviceDriverFileNameW( void *image_base, WC
+     return 0;
  }
  
++static DWORD FILE_name_WtoA( LPCWSTR src, INT srclen, LPSTR dest, INT destlen )
++{
++    DWORD ret;
++
++    if (srclen < 0) srclen = lstrlenW( src ) + 1;
++    if (!destlen)
++    {
++        if (!AreFileApisANSI())
++        {
++            UNICODE_STRING strW;
++            strW.Buffer = (WCHAR *)src;
++            strW.Length = srclen * sizeof(WCHAR);
++            ret = RtlUnicodeStringToOemSize( &strW ) - 1;
++        }
++        else
++            RtlUnicodeToMultiByteSize( &ret, src, srclen * sizeof(WCHAR) );
++    }
++    else
++    {
++        if (!AreFileApisANSI())
++            RtlUnicodeToOemN( dest, destlen, &ret, src, srclen * sizeof(WCHAR) );
++        else
++            RtlUnicodeToMultiByteN( dest, destlen, &ret, src, srclen * sizeof(WCHAR) );
++    }
++    return ret;
++}
+ 
  /***********************************************************************
-- *           K32GetMappedFileNameA (KERNEL32.@)
-+ *           K32GetMappedFileNameW (KERNEL32.@)
+  *         K32GetMappedFileNameA   (kernelbase.@)
   */
--DWORD WINAPI K32GetMappedFileNameA(HANDLE process, LPVOID lpv, LPSTR file_name, DWORD size)
-+DWORD WINAPI K32GetMappedFileNameW(HANDLE process, LPVOID addr, LPWSTR file_name, DWORD size)
+ DWORD WINAPI DECLSPEC_HOTPATCH K32GetMappedFileNameA( HANDLE process, void *addr, char *name, DWORD size )
  {
--    FIXME_(file)("(%p, %p, %p, %d): stub\n", process, lpv, file_name, size);
-+    MEMORY_SECTION_NAME *name;
-+    SIZE_T buf_len;
-+    NTSTATUS status;
-+
-+    TRACE_(file)("(%p, %p, %p, %d)\n", process, addr, file_name, size);
-+
-+    if (!file_name || !size)
-+    {
-+        SetLastError(ERROR_INVALID_PARAMETER);
-+        return 0;
-+    }
- 
--    if (file_name && size)
--        file_name[0] = '\0';
-+    buf_len = sizeof(*name) + size * sizeof(WCHAR);
-+    name = HeapAlloc(GetProcessHeap(), 0, buf_len);
-+    if (!name)
-+    {
-+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-+        return 0;
-+    }
- 
+-    FIXME( "(%p, %p, %p, %d): stub\n", process, addr, name, size );
+-    if (name && size) name[0] = 0;
 -    return 0;
-+    status = NtQueryVirtualMemory(process, addr, MemorySectionName, name, buf_len, &buf_len);
-+    if (status)
-+    {
-+        HeapFree(GetProcessHeap(), 0, name);
-+        SetLastError(RtlNtStatusToDosError(status));
-+        return 0;
-+    }
-+
-+    memcpy(file_name, name->SectionFileName.Buffer, name->SectionFileName.MaximumLength);
-+    buf_len = name->SectionFileName.Length;
-+
-+    HeapFree(GetProcessHeap(), 0, name);
-+
-+    return buf_len;
- }
- 
- /***********************************************************************
-- *           K32GetMappedFileNameW (KERNEL32.@)
-+ *           K32GetMappedFileNameA (KERNEL32.@)
-  */
--DWORD WINAPI K32GetMappedFileNameW(HANDLE process, LPVOID lpv, LPWSTR file_name, DWORD size)
-+DWORD WINAPI K32GetMappedFileNameA(HANDLE process, LPVOID addr, LPSTR file_name, DWORD size)
- {
--    FIXME_(file)("(%p, %p, %p, %d): stub\n", process, lpv, file_name, size);
 +    WCHAR file_nameW[MAX_PATH];
 +    DWORD ret;
- 
--    if (file_name && size)
--        file_name[0] = '\0';
-+    TRACE_(file)("(%p, %p, %p, %d)\n", process, addr, file_name, size);
- 
--    return 0;
-+    if (!file_name || !size)
++
++    TRACE("(%p, %p, %p, %d)\n", process, addr, name, size);
++
++    if (!name || !size)
 +    {
 +        SetLastError(ERROR_INVALID_PARAMETER);
 +        return 0;
@@ -87,21 +65,65 @@ index c7a15cd..f2a2c71 100644
 +    ret = K32GetMappedFileNameW(process, addr, file_nameW, MAX_PATH);
 +    if (ret)
 +    {
-+        ret = FILE_name_WtoA(file_nameW, -1, file_name, size);
++        ret = FILE_name_WtoA(file_nameW, -1, name, size);
 +        if (ret > 1)
 +            ret--; /* don't account for terminating NUL */
 +        else
-+            file_name[0] = 0;
++            name[0] = 0;
 +    }
 +    return ret;
  }
  
- /***********************************************************************
+ 
+@@ -1264,9 +1308,40 @@ DWORD WINAPI DECLSPEC_HOTPATCH K32GetMappedFileNameA( HANDLE process, void *addr
+  */
+ DWORD WINAPI DECLSPEC_HOTPATCH K32GetMappedFileNameW( HANDLE process, void *addr, WCHAR *name, DWORD size )
+ {
+-    FIXME( "(%p, %p, %p, %d): stub\n", process, addr, name, size );
+-    if (name && size) name[0] = 0;
+-    return 0;
++    MEMORY_SECTION_NAME *section;
++    SIZE_T buf_len;
++    NTSTATUS status;
++
++    TRACE("(%p, %p, %p, %d)\n", process, addr, name, size);
++
++    if (!name || !size)
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return 0;
++    }
++
++    buf_len = sizeof(*section) + size * sizeof(WCHAR);
++    section = HeapAlloc(GetProcessHeap(), 0, buf_len);
++    if (!section)
++    {
++        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
++        return 0;
++    }
++
++    status = NtQueryVirtualMemory(process, addr, MemorySectionName, section, buf_len, &buf_len);
++    if (status)
++    {
++        HeapFree(GetProcessHeap(), 0, section);
++        SetLastError(RtlNtStatusToDosError(status));
++        return 0;
++    }
++
++    memcpy(name, section->SectionFileName.Buffer, section->SectionFileName.MaximumLength);
++    buf_len = section->SectionFileName.Length;
++
++    HeapFree(GetProcessHeap(), 0, section);
++
++    return buf_len;
+ }
+ 
+ 
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index af69646..e92b55b 100644
+index 9886bc476740..99e87db9543e 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -407,27 +407,22 @@ static void test_GetMappedFileName(void)
+@@ -418,27 +418,22 @@ static void test_GetMappedFileName(void)
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameA(NULL, hMod, szMapPath, sizeof(szMapPath));
      ok(!ret, "GetMappedFileName should fail\n");
@@ -129,7 +151,7 @@ index af69646..e92b55b 100644
          ok(szMapBaseName && *szMapBaseName, "szMapPath=\"%s\"\n", szMapPath);
          if (szMapBaseName)
          {
-@@ -465,29 +460,25 @@ todo_wine
+@@ -476,29 +471,25 @@ todo_wine
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameA(GetCurrentProcess(), base, map_name, 0);
      ok(!ret, "GetMappedFileName should fail\n");
@@ -160,7 +182,7 @@ index af69646..e92b55b 100644
  
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameW(GetCurrentProcess(), base, map_nameW, ARRAY_SIZE(map_nameW));
-@@ -505,10 +496,9 @@ todo_wine
+@@ -516,10 +507,9 @@ todo_wine
  
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameW(current_process, base, map_nameW, sizeof(map_nameW)/sizeof(map_nameW[0]));
@@ -172,7 +194,7 @@ index af69646..e92b55b 100644
      if (nt_get_mapped_file_name(current_process, base, nt_map_name, sizeof(nt_map_name)/sizeof(nt_map_name[0])))
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
-@@ -519,16 +509,14 @@ todo_wine
+@@ -530,16 +520,14 @@ todo_wine
  
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
@@ -190,7 +212,7 @@ index af69646..e92b55b 100644
      ok(GetLastError() == ERROR_UNEXP_NET_ERR, "expected ERROR_UNEXP_NET_ERR, got %d\n", GetLastError());
  
      SetLastError(0xdeadbeef);
-@@ -540,7 +528,6 @@ todo_wine
+@@ -551,7 +539,6 @@ todo_wine
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameA(0, base, map_name, sizeof(map_name));
      ok(!ret, "GetMappedFileName should fail\n");
@@ -198,7 +220,7 @@ index af69646..e92b55b 100644
      ok(GetLastError() == ERROR_INVALID_HANDLE, "expected ERROR_INVALID_HANDLE, got %d\n", GetLastError());
  
      UnmapViewOfFile(base);
-@@ -559,7 +546,6 @@ todo_wine
+@@ -570,7 +557,6 @@ todo_wine
      SetLastError(0xdeadbeef);
      ret = GetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
      ok(!ret, "GetMappedFileName should fail\n");
@@ -206,7 +228,7 @@ index af69646..e92b55b 100644
      ok(GetLastError() == ERROR_FILE_INVALID, "expected ERROR_FILE_INVALID, got %d\n", GetLastError());
  
      CloseHandle(current_process);
-@@ -606,7 +592,7 @@ static void test_GetProcessImageFileName(void)
+@@ -617,7 +603,7 @@ static void test_GetProcessImageFileName(void)
      if(ret && ret1)
      {
          /* Windows returns 2*strlen-1 */
@@ -216,5 +238,5 @@ index af69646..e92b55b 100644
      }
  
 -- 
-2.7.4
+2.26.2
 

@@ -1,19 +1,19 @@
-From 5cf696c2cb00fd040ddba99ac291806e5ce3c9bf Mon Sep 17 00:00:00 2001
+From 223addb60e053484eaa77df434898419683e926b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sun, 19 Feb 2017 05:38:40 +0100
 Subject: [PATCH] kernel32: Make K32GetPerformanceInfo faster.
 
 ---
- dlls/kernel32/cpu.c | 32 ++++++++------------------------
- server/process.c    | 18 ++++++++++++++++++
- server/protocol.def |  8 ++++++++
- 3 files changed, 34 insertions(+), 24 deletions(-)
+ dlls/kernelbase/debug.c | 44 ++++++++++++++---------------------------
+ server/process.c        | 18 +++++++++++++++++
+ server/protocol.def     |  8 ++++++++
+ 3 files changed, 41 insertions(+), 29 deletions(-)
 
-diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 7668a10ea..96180bed4 100644
---- a/dlls/kernel32/cpu.c
-+++ b/dlls/kernel32/cpu.c
-@@ -211,7 +211,6 @@ BOOL WINAPI K32GetPerformanceInfo(PPERFORMANCE_INFORMATION info, DWORD size)
+diff --git a/dlls/kernelbase/debug.c b/dlls/kernelbase/debug.c
+index 6acdf0f1ea95..8f021ebb0d21 100644
+--- a/dlls/kernelbase/debug.c
++++ b/dlls/kernelbase/debug.c
+@@ -1449,7 +1449,6 @@ BOOL WINAPI DECLSPEC_HOTPATCH K32GetPerformanceInfo( PPERFORMANCE_INFORMATION in
  {
      SYSTEM_PERFORMANCE_INFORMATION perf;
      SYSTEM_BASIC_INFORMATION basic;
@@ -21,7 +21,19 @@ index 7668a10ea..96180bed4 100644
      DWORD info_size;
      NTSTATUS status;
  
-@@ -240,34 +239,19 @@ BOOL WINAPI K32GetPerformanceInfo(PPERFORMANCE_INFORMATION info, DWORD size)
+@@ -1462,9 +1461,9 @@ BOOL WINAPI DECLSPEC_HOTPATCH K32GetPerformanceInfo( PPERFORMANCE_INFORMATION in
+     }
+ 
+     status = NtQuerySystemInformation( SystemPerformanceInformation, &perf, sizeof(perf), NULL );
+-    if (!set_ntstatus( status )) return FALSE;
++    if (status) goto err;
+     status = NtQuerySystemInformation( SystemBasicInformation, &basic, sizeof(basic), NULL );
+-    if (!set_ntstatus( status )) return FALSE;
++    if (status) goto err;
+ 
+     info->cb                 = sizeof(*info);
+     info->CommitTotal        = perf.TotalCommittedPages;
+@@ -1478,37 +1477,24 @@ BOOL WINAPI DECLSPEC_HOTPATCH K32GetPerformanceInfo( PPERFORMANCE_INFORMATION in
      info->KernelNonpaged     = perf.NonPagedPoolUsage;
      info->PageSize           = basic.PageSize;
  
@@ -37,18 +49,19 @@ index 7668a10ea..96180bed4 100644
          {
 -            SetLastError( ERROR_OUTOFMEMORY );
 -            return FALSE;
-+            info->ProcessCount = reply->processes;
-+            info->HandleCount = reply->handles;
-+            info->ThreadCount = reply->threads;
-         }
+-        }
 -        status = NtQuerySystemInformation( SystemProcessInformation, process, info_size, &info_size );
 -        if (!status) break;
 -        HeapFree( GetProcessHeap(), 0, process );
 -        if (status != STATUS_INFO_LENGTH_MISMATCH)
--            goto err;
+-        {
+-            SetLastError( RtlNtStatusToDosError( status ) );
+-            return FALSE;
++            info->ProcessCount = reply->processes;
++            info->HandleCount = reply->handles;
++            info->ThreadCount = reply->threads;
+         }
      }
-+    SERVER_END_REQ;
- 
 -    info->HandleCount = info->ProcessCount = info->ThreadCount = 0;
 -    spi = process;
 -    for (;;)
@@ -60,15 +73,22 @@ index 7668a10ea..96180bed4 100644
 -        spi = (SYSTEM_PROCESS_INFORMATION *)((char *)spi + spi->NextEntryOffset);
 -    }
 -    HeapFree( GetProcessHeap(), 0, process );
++    SERVER_END_REQ;
++
 +    if (status) goto err;
      return TRUE;
++
++err:
++    SetLastError( RtlNtStatusToDosError( status ) );
++    return FALSE;
+ }
  
- err:
+ 
 diff --git a/server/process.c b/server/process.c
-index beaa68603..2dacc4d5c 100644
+index 3156e1bc82a5..da5c55e5368a 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -1799,3 +1799,21 @@ DECL_HANDLER(resume_process)
+@@ -1830,3 +1830,21 @@ DECL_HANDLER(resume_process)
          release_object( process );
      }
  }
@@ -91,10 +111,10 @@ index beaa68603..2dacc4d5c 100644
 +    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index e450388c1..1c1459f3c 100644
+index ef10b5e1438c..ca34c9dc1b4b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3946,3 +3946,11 @@ struct handle_info
+@@ -3992,3 +3992,11 @@ struct handle_info
  @REQ(resume_process)
      obj_handle_t handle;       /* process handle */
  @END
@@ -107,5 +127,5 @@ index e450388c1..1c1459f3c 100644
 +    unsigned int handles;     /* number of handles */
 +@END
 -- 
-2.21.0
+2.26.2
 

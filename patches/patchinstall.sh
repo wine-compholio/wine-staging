@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "148fc1adb53aa1d78a67b2a0ee5ea8058d92589a"
+	echo "a897d858e4671e10e64ebf0bc3c0df6cb35944fd"
 }
 
 # Show version information
@@ -4364,10 +4364,9 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch
 	patch_apply ntdll-WRITECOPY/0005-ntdll-Track-if-a-WRITECOPY-page-has-been-modified.patch
 	patch_apply ntdll-WRITECOPY/0006-ntdll-Support-WRITECOPY-on-x64.patch
-	patch_apply ntdll-WRITECOPY/0007-ntdll-Always-enable-WRITECOPY-support.patch
-	patch_apply ntdll-WRITECOPY/0008-ntdll-Report-unmodified-WRITECOPY-pages-as-shared.patch
-	patch_apply ntdll-WRITECOPY/0009-ntdll-Fallback-to-copy-pages-for-WRITECOPY.patch
-	patch_apply ntdll-WRITECOPY/0010-kernel32-tests-psapi-tests-Update-tests.patch
+	patch_apply ntdll-WRITECOPY/0007-ntdll-Report-unmodified-WRITECOPY-pages-as-shared.patch
+	patch_apply ntdll-WRITECOPY/0008-ntdll-Fallback-to-copy-pages-for-WRITECOPY.patch
+	patch_apply ntdll-WRITECOPY/0009-kernel32-tests-psapi-tests-Update-tests.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Trigger write watches before passing userdata pointer to wait_reply.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "advapi: Trigger write watches before passing userdata pointer to read syscall.", 1 },';
@@ -4375,7 +4374,6 @@ if test "$enable_ntdll_WRITECOPY" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Properly handle PAGE_WRITECOPY protection.", 5 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Track if a WRITECOPY page has been modified.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Support WRITECOPY on x64.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Always enable WRITECOPY support.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Report unmodified WRITECOPY pages as shared.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Fallback to copy pages for WRITECOPY.", 1 },';
 		printf '%s\n' '+    { "Andrew Wesie", "kernel32/tests, psapi/tests: Update tests.", 1 },';

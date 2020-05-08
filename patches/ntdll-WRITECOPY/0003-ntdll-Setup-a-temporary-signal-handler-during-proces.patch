@@ -1,4 +1,4 @@
-From 1c3f679ce2419438e8a768bb5ed1728843a9f05c Mon Sep 17 00:00:00 2001
+From 3ecd352d441ac2d596508cd693431abdd7128ec6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
 Subject: [PATCH] ntdll: Setup a temporary signal handler during process
@@ -15,10 +15,10 @@ Subject: [PATCH] ntdll: Setup a temporary signal handler during process
  7 files changed, 79 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 27845ac7f51..e75e5de0954 100644
+index 58b688d06bd..f3ebfb72d32 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -82,6 +82,7 @@ extern NTSTATUS signal_alloc_thread( TEB **teb ) DECLSPEC_HIDDEN;
+@@ -84,6 +84,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_process(void) DECLSPEC_HIDDEN;
@@ -27,10 +27,10 @@ index 27845ac7f51..e75e5de0954 100644
  extern void signal_start_process( LPTHREAD_START_ROUTINE entry, BOOL suspend ) DECLSPEC_HIDDEN;
  extern void DECLSPEC_NORETURN signal_exit_thread( int status ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
-index 63c008224df..46c8d5eb25f 100644
+index 31280edce47..f903eb93434 100644
 --- a/dlls/ntdll/signal_arm.c
 +++ b/dlls/ntdll/signal_arm.c
-@@ -1053,6 +1053,12 @@ void signal_init_process(void)
+@@ -1031,6 +1031,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -44,10 +44,10 @@ index 63c008224df..46c8d5eb25f 100644
  /***********************************************************************
   *            RtlUnwind  (NTDLL.@)
 diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
-index 15e78dbb562..0d8d1697722 100644
+index 9f84d3fbfd1..8ab83a1d142 100644
 --- a/dlls/ntdll/signal_arm64.c
 +++ b/dlls/ntdll/signal_arm64.c
-@@ -1306,6 +1306,12 @@ void signal_init_thread( TEB *teb )
+@@ -1293,6 +1293,12 @@ void signal_init_thread( TEB *teb )
      pthread_setspecific( teb_key, teb );
  }
  
@@ -61,10 +61,10 @@ index 15e78dbb562..0d8d1697722 100644
  /**********************************************************************
   *		signal_init_process
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index fd1a764dacf..c4ef7ac7ef6 100644
+index 238d4eacf63..32c6eba0e51 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -2062,6 +2062,31 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
+@@ -2051,6 +2051,31 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
  }
  
  
@@ -96,7 +96,7 @@ index fd1a764dacf..c4ef7ac7ef6 100644
  /**********************************************************************
   *		segv_handler
   *
-@@ -2757,6 +2782,34 @@ void signal_init_process(void)
+@@ -2689,6 +2714,34 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -132,10 +132,10 @@ index fd1a764dacf..c4ef7ac7ef6 100644
  /*******************************************************************
   *		RtlUnwind (NTDLL.@)
 diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
-index ee765e226b1..632fffc187b 100644
+index 9df6eff31f4..e79fca3abce 100644
 --- a/dlls/ntdll/signal_powerpc.c
 +++ b/dlls/ntdll/signal_powerpc.c
-@@ -1068,6 +1068,12 @@ void signal_init_thread( TEB *teb )
+@@ -1047,6 +1047,12 @@ void signal_init_thread( TEB *teb )
      pthread_setspecific( teb_key, teb );
  }
  
@@ -149,10 +149,10 @@ index ee765e226b1..632fffc187b 100644
  /**********************************************************************
   *		signal_init_process
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 6c2f34b54ca..4c26a8b52b4 100644
+index 324a92b41a9..29829bfb1c6 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -3414,6 +3414,12 @@ void signal_init_process(void)
+@@ -3286,6 +3286,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -166,10 +166,10 @@ index 6c2f34b54ca..4c26a8b52b4 100644
  static ULONG64 get_int_reg( CONTEXT *context, int reg )
  {
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 744dc030d9c..393b99b6e61 100644
+index 125280ba257..af6861f6000 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -285,6 +285,7 @@ TEB *thread_init(void)
+@@ -284,6 +284,7 @@ TEB *thread_init(void)
      struct ntdll_thread_data *thread_data;
  
      virtual_init();
@@ -178,5 +178,5 @@ index 744dc030d9c..393b99b6e61 100644
      /* reserve space for shared user data */
  
 -- 
-2.25.4
+2.26.2
 

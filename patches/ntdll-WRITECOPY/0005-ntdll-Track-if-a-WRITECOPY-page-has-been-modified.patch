@@ -1,4 +1,4 @@
-From 7656f468a405a0b399994f0cbb9bd8388100cfde Mon Sep 17 00:00:00 2001
+From c38118527458007162f8cbe38bec0dd02b9de6e7 Mon Sep 17 00:00:00 2001
 From: Andrew Wesie <awesie@gmail.com>
 Date: Fri, 24 Apr 2020 14:55:14 -0500
 Subject: [PATCH] ntdll: Track if a WRITECOPY page has been modified.
@@ -12,10 +12,10 @@ Signed-off-by: Andrew Wesie <awesie@gmail.com>
  1 file changed, 19 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index fa39a67b9ca..b5baa4c6242 100644
+index 3533a087d88..75219ae2376 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -84,6 +84,7 @@ struct file_view
+@@ -85,6 +85,7 @@ struct file_view
  #define VPROT_GUARD      0x10
  #define VPROT_COMMITTED  0x20
  #define VPROT_WRITEWATCH 0x40
@@ -23,7 +23,7 @@ index fa39a67b9ca..b5baa4c6242 100644
  /* per-mapping protection flags */
  #define VPROT_SYSTEM     0x0200  /* system view (underlying mmap not under our control) */
  
-@@ -355,7 +356,7 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
+@@ -353,7 +354,7 @@ static int VIRTUAL_GetUnixProt( BYTE vprot )
  #if defined(__i386__)
          if (vprot & VPROT_WRITECOPY)
          {
@@ -32,7 +32,7 @@ index fa39a67b9ca..b5baa4c6242 100644
                  prot = (prot & ~PROT_WRITE) | PROT_READ;
              else
                  prot |= PROT_WRITE | PROT_READ;
-@@ -918,7 +919,11 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
+@@ -925,7 +926,11 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
   */
  static DWORD VIRTUAL_GetWin32Prot( BYTE vprot, unsigned int map_prot )
  {
@@ -45,7 +45,7 @@ index fa39a67b9ca..b5baa4c6242 100644
      if (vprot & VPROT_GUARD) ret |= PAGE_GUARD;
      if (map_prot & SEC_NOCACHE) ret |= PAGE_NOCACHE;
      return ret;
-@@ -1042,7 +1047,7 @@ static BOOL VIRTUAL_SetProt( struct file_view *view, /* [in] Pointer to view */
+@@ -1049,7 +1054,7 @@ static BOOL VIRTUAL_SetProt( struct file_view *view, /* [in] Pointer to view */
      if (view->protect & VPROT_WRITEWATCH)
      {
          /* each page may need different protections depending on write watch flag */
@@ -54,7 +54,7 @@ index fa39a67b9ca..b5baa4c6242 100644
          mprotect_range( base, size, 0, 0 );
          return TRUE;
      }
-@@ -1058,10 +1063,18 @@ static BOOL VIRTUAL_SetProt( struct file_view *view, /* [in] Pointer to view */
+@@ -1065,10 +1070,18 @@ static BOOL VIRTUAL_SetProt( struct file_view *view, /* [in] Pointer to view */
          return TRUE;
      }
  
@@ -74,7 +74,7 @@ index fa39a67b9ca..b5baa4c6242 100644
      return TRUE;
  }
  
-@@ -2319,7 +2332,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
+@@ -2368,7 +2381,7 @@ NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack )
          }
          if (vprot & VPROT_WRITECOPY)
          {
@@ -83,7 +83,7 @@ index fa39a67b9ca..b5baa4c6242 100644
              mprotect_range( page, page_size, 0, 0 );
          }
          /* ignore fault if page is writable now */
-@@ -3265,7 +3278,7 @@ static NTSTATUS get_basic_memory_info( HANDLE process, LPCVOID addr,
+@@ -3272,7 +3285,7 @@ static NTSTATUS get_basic_memory_info( HANDLE process, LPCVOID addr,
          else if (view->protect & (SEC_FILE | SEC_RESERVE | SEC_COMMIT)) info->Type = MEM_MAPPED;
          else info->Type = MEM_PRIVATE;
          for (ptr = base; ptr < base + range_size; ptr += page_size)
@@ -93,5 +93,5 @@ index fa39a67b9ca..b5baa4c6242 100644
      }
      server_leave_uninterrupted_section( &csVirtual, &sigset );
 -- 
-2.25.4
+2.26.2
 

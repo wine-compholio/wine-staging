@@ -1,17 +1,16 @@
-From 566ba5ef5b751764a15be0571000dfbf72b10127 Mon Sep 17 00:00:00 2001
+From cd9a767f1486be67feac18d7ea78a1ce6c1d0abc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 
 ---
  dlls/kernel32/tests/loader.c |   7 +-
- dlls/ntdll/server.c          |   3 +-
  dlls/ntdll/signal_x86_64.c   |   2 +
- dlls/ntdll/thread.c          |  10 ++
+ dlls/ntdll/thread.c          |  14 +-
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 7 files changed, 303 insertions(+), 10 deletions(-)
+ 6 files changed, 304 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 5373dc4efe1..67d04876bd6 100644
@@ -40,20 +39,6 @@ index 5373dc4efe1..67d04876bd6 100644
          {
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
-diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 973804967d1..6d3e981e4ad 100644
---- a/dlls/ntdll/server.c
-+++ b/dlls/ntdll/server.c
-@@ -2056,8 +2056,7 @@ void server_init_process_done(void)
- 
-     if (usd_fd != -1)
-     {
--        munmap( user_shared_data, user_shared_data_size );
--        if (user_shared_data != mmap( user_shared_data, user_shared_data_size,
-+        if (user_shared_data != mmap( user_shared_data, 0x1000,
-                                       PROT_READ, MAP_SHARED | MAP_FIXED, usd_fd, 0 ))
-             fatal_error( "failed to remap the process user shared data\n" );
-         close( usd_fd );
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
 index 31af1e98d3f..324a92b41a9 100644
 --- a/dlls/ntdll/signal_x86_64.c
@@ -75,11 +60,11 @@ index 31af1e98d3f..324a92b41a9 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index a054164ee70..4a90e16d2ee 100644
+index 0fc8aa9e928..bae49792ce5 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -59,6 +59,8 @@ struct _KUSER_SHARED_DATA *user_shared_data = NULL;
- size_t user_shared_data_size = 0;
+ static size_t user_shared_data_size;
  static const WCHAR default_windirW[] = {'C',':','\\','w','i','n','d','o','w','s',0};
  
 +extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
@@ -87,7 +72,25 @@ index a054164ee70..4a90e16d2ee 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -275,6 +277,14 @@ TEB *thread_init(void)
+@@ -294,7 +296,7 @@ TEB *thread_init(void)
+     /* reserve space for shared user data */
+ 
+     addr = (void *)0x7ffe0000;
+-    size = 0x1000;
++    size = 0x2000;
+     status = NtAllocateVirtualMemory( NtCurrentProcess(), &addr, 0, &size,
+                                       MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE );
+     if (status)
+@@ -303,7 +305,7 @@ TEB *thread_init(void)
+         exit(1);
+     }
+     user_shared_data = addr;
+-    user_shared_data_size = size;
++    user_shared_data_size = 0x1000;
+     memcpy( user_shared_data->NtSystemRoot, default_windirW, sizeof(default_windirW) );
+ 
+     /* allocate and initialize the PEB and initial TEB */
+@@ -333,6 +335,14 @@ TEB *thread_init(void)
      InitializeListHead( &ldr.InInitializationOrderModuleList );
      *(ULONG_PTR *)peb->Reserved = get_image_addr();
  

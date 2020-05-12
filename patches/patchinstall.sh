@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "b071d37b8017ff34a29f1555ab6630d4b88d1838"
+	echo "26b26a2e0efcb776e7b0115f15580d2507b10400"
 }
 
 # Show version information
@@ -207,7 +207,6 @@ patch_enable_all ()
 	enable_ntdll_ThreadHideFromDebugger="$1"
 	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
-	enable_ntdll_User_Shared_Data="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
@@ -726,9 +725,6 @@ patch_enable ()
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
-			;;
-		ntdll-User_Shared_Data)
-			enable_ntdll_User_Shared_Data="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -1786,9 +1782,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	if test "$enable_ntdll_SystemRoot_Symlink" -gt 1; then
 		abort "Patchset ntdll-SystemRoot_Symlink disabled, but eventfd_synchronization depends on that."
 	fi
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but eventfd_synchronization depends on that."
-	fi
 	if test "$enable_server_Realtime_Priority" -gt 1; then
 		abort "Patchset server-Realtime_Priority disabled, but eventfd_synchronization depends on that."
 	fi
@@ -1806,7 +1799,6 @@ if test "$enable_eventfd_synchronization" -eq 1; then
 	enable_ntdll_Junction_Points=1
 	enable_ntdll_RtlCreateUserThread=1
 	enable_ntdll_SystemRoot_Symlink=1
-	enable_ntdll_User_Shared_Data=1
 	enable_server_Realtime_Priority=1
 	enable_server_Shared_Memory=1
 	enable_user32_rawinput_mouse=1
@@ -1816,9 +1808,6 @@ fi
 if test "$enable_server_Shared_Memory" -eq 1; then
 	if test "$enable_ntdll_Threading" -gt 1; then
 		abort "Patchset ntdll-Threading disabled, but server-Shared_Memory depends on that."
-	fi
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but server-Shared_Memory depends on that."
 	fi
 	if test "$enable_ntdll_ext4_case_folder" -gt 1; then
 		abort "Patchset ntdll-ext4-case-folder disabled, but server-Shared_Memory depends on that."
@@ -1836,7 +1825,6 @@ if test "$enable_server_Shared_Memory" -eq 1; then
 		abort "Patchset user32-rawinput-nolegacy disabled, but server-Shared_Memory depends on that."
 	fi
 	enable_ntdll_Threading=1
-	enable_ntdll_User_Shared_Data=1
 	enable_ntdll_ext4_case_folder=1
 	enable_server_Key_State=1
 	enable_server_PeekMessage=1
@@ -1878,13 +1866,6 @@ if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-RtlCreateUserThread depends on that."
 	fi
 	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_User_Shared_Data" -gt 1; then
-		abort "Patchset ntdll-User_Shared_Data disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_User_Shared_Data=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -3223,28 +3204,7 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-User_Shared_Data
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#29168] Update user shared data at realtime
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/tests/time.c, dlls/ntdll/thread.c, dlls/ntoskrnl.exe/instr.c,
-# | 	server/file.h, server/mapping.c, server/process.c, server/protocol.def
-# |
-if test "$enable_ntdll_User_Shared_Data" -eq 1; then
-	patch_apply ntdll-User_Shared_Data/0001-ntdll-tests-Test-user_shared_data-timestamp-updates.patch
-	patch_apply ntdll-User_Shared_Data/0002-server-Add-USD-support-with-timestamp-updates.patch
-	(
-		printf '%s\n' '+    { "Rémi Bernon", "ntdll/tests: Test user_shared_data timestamp updates.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "server: Add USD support with timestamp updates.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-User_Shared_Data
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
@@ -3259,11 +3219,11 @@ fi
 # | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
 # | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
-# | 	dlls/ntdll/process.c, dlls/ntdll/server.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c,
-# | 	dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c,
-# | 	dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c,
-# | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
-# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c,
+# | 	dlls/ntdll/thread.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
+# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, tools/winebuild/build.h,
+# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
+# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
@@ -3295,7 +3255,7 @@ fi
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |   *	winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
@@ -3543,8 +3503,8 @@ fi
 # Patchset server-Shared_Memory
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, ntdll-User_Shared_Data, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-
-# | 	Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
+# |   *	ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-
+# | 	KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy
 # |
 # | Modified files:
 # |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/server.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c, dlls/user32/focus.c,
@@ -3595,10 +3555,10 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
-# | 	Junction_Points, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-SystemRoot_Symlink,
-# | 	ntdll-ThreadTime, server-Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
-# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup
+# | 	Junction_Points, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, server-
+# | 	Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread,
+# | 	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-
+# | 	Shared_Memory, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#36692] Many multi-threaded applications have poor performance due to heavy use of synchronization primitives
@@ -4666,7 +4626,7 @@ fi
 # Patchset ntdll-NtContinue
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |   *	winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31910] Add stub for NtContinue
@@ -4869,7 +4829,7 @@ fi
 # Patchset ntdll-Syscall_Emulation
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-User_Shared_Data, winebuild-Fake_Dlls
+# |   *	winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#48291] Detroit: Become Human crashes on launch
@@ -5279,10 +5239,10 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
-# | 	Junction_Points, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-SystemRoot_Symlink,
-# | 	ntdll-ThreadTime, server-Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
-# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
+# | 	Junction_Points, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, server-
+# | 	Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread,
+# | 	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-
+# | 	Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
@@ -5370,9 +5330,8 @@ fi
 # Patchset server-Object_Types
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Threading, ntdll-User_Shared_Data, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-
-# | 	Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy,
-# | 	server-Shared_Memory
+# |   *	ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread, loader-
+# | 	KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-Shared_Memory
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
@@ -7057,10 +7016,10 @@ fi
 # |
 # | This patchset has the following (direct or indirect) dependencies:
 # |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, kernel32-K32GetPerformanceInfo, ntdll-
-# | 	Junction_Points, ntdll-User_Shared_Data, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-SystemRoot_Symlink,
-# | 	ntdll-ThreadTime, server-Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-
-# | 	PeekMessage, server-Signal_Thread, loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32
-# | 	-rawinput-nolegacy, server-Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
+# | 	Junction_Points, winebuild-Fake_Dlls, ntdll-RtlCreateUserThread, ntdll-SystemRoot_Symlink, ntdll-ThreadTime, server-
+# | 	Realtime_Priority, ntdll-Threading, ntdll-ext4-case-folder, server-Key_State, server-PeekMessage, server-Signal_Thread,
+# | 	loader-KeyboardLayouts, winex11.drv-mouse-coorrds, user32-rawinput-mouse, user32-rawinput-nolegacy, server-
+# | 	Shared_Memory, ws2_32-WSACleanup, eventfd_synchronization, server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

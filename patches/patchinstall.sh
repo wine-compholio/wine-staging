@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "debe646aa70f88b4c4aa0dc4f380d6db939e573e"
+	echo "893080e4df5a45929320ebb88b8668eea316476c"
 }
 
 # Show version information
@@ -195,7 +195,6 @@ patch_enable_all ()
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
-	enable_ntdll_RtlIpv4StringToAddress="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
@@ -689,9 +688,6 @@ patch_enable ()
 			;;
 		ntdll-RtlCreateUserThread)
 			enable_ntdll_RtlCreateUserThread="$2"
-			;;
-		ntdll-RtlIpv4StringToAddress)
-			enable_ntdll_RtlIpv4StringToAddress="$2"
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
@@ -4761,29 +4757,6 @@ if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlIpv4StringToAddress
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46788] ntdll: Implement RtlIpv6AddressToStringA
-# |
-# | Modified files:
-# |   *	dlls/iphlpapi/iphlpapi_main.c, dlls/ntdll/ntdll.spec, dlls/ntdll/rtl.c, dlls/ntdll/tests/rtl.c, include/ip2string.h
-# |
-if test "$enable_ntdll_RtlIpv4StringToAddress" -eq 1; then
-	patch_apply ntdll-RtlIpv4StringToAddress/0001-ntdll-Implement-RtlIpv6StringToAddress-Ex-AW.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0002-include-Add-RtlIpv6StringToAddress-Ex-AW.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0003-iphlpapi-Implement-ParseNetworkString-for-IPv6-addre.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0004-ntdll-Add-semi-stub-for-RtlIpv6AddressToString-Ex-A.patch
-	patch_apply ntdll-RtlIpv4StringToAddress/0005-ntdll-Implement-RtlIpv6AddressToString-Ex-W.patch
-	(
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv6StringToAddress(Ex)[AW].", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "include: Add RtlIpv6StringToAddress(Ex)[AW].", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "iphlpapi: Implement ParseNetworkString for IPv6 addresses and services.", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Add semi-stub for RtlIpv6AddressToString(Ex)A.", 1 },';
-		printf '%s\n' '+    { "Alex Henrie", "ntdll: Implement RtlIpv6AddressToString(Ex)W.", 1 },';
 	) >> "$patchlist"
 fi
 

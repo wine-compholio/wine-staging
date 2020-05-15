@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "893080e4df5a45929320ebb88b8668eea316476c"
+	echo "9e26bc811656ad8eb901bffa5528b9ce25d44bc3"
 }
 
 # Show version information
@@ -150,7 +150,6 @@ patch_enable_all ()
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_K32GetPerformanceInfo="$1"
-	enable_kernel32_PE_Loader_Fixes="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
@@ -553,9 +552,6 @@ patch_enable ()
 			;;
 		kernel32-K32GetPerformanceInfo)
 			enable_kernel32_K32GetPerformanceInfo="$2"
-			;;
-		kernel32-PE_Loader_Fixes)
-			enable_kernel32_PE_Loader_Fixes="$2"
 			;;
 		kernel32-Processor_Group)
 			enable_kernel32_Processor_Group="$2"
@@ -1548,13 +1544,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	fi
 	enable_wineboot_DriveSerial=1
 	enable_wineboot_drivers_etc_Stubs=1
-fi
-
-if test "$enable_windowscodecs_TIFF_Support" -eq 1; then
-	if test "$enable_windowscodecs_GIF_Encoder" -gt 1; then
-		abort "Patchset windowscodecs-GIF_Encoder disabled, but windowscodecs-TIFF_Support depends on that."
-	fi
-	enable_windowscodecs_GIF_Encoder=1
 fi
 
 if test "$enable_uxtheme_GTK_Theming" -eq 1; then
@@ -4039,27 +4028,6 @@ if test "$enable_kernel32_Job_Tests" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset kernel32-PE_Loader_Fixes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#42125] Various PE loader fixes for 8k demos
-# |
-# | Modified files:
-# |   *	dlls/kernel32/process.c, dlls/kernel32/tests/loader.c, dlls/ntdll/virtual.c, server/mapping.c
-# |
-if test "$enable_kernel32_PE_Loader_Fixes" -eq 1; then
-	patch_apply kernel32-PE_Loader_Fixes/0001-server-All-fields-up-to-CheckSum-are-mandatory-regar.patch
-	patch_apply kernel32-PE_Loader_Fixes/0002-ntdll-If-PE-image-size-is-larger-than-the-backed-fil.patch
-	patch_apply kernel32-PE_Loader_Fixes/0003-kernel32-On-process-entry-store-PEB-address-in-ebx.patch
-	patch_apply kernel32-PE_Loader_Fixes/0005-kernel32-tests-Add-a-PE-test-image-that-resembles-fo.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "server: All fields up to CheckSum are mandatory regardless of SizeOfOptionalHeader value.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: If PE image size is larger than the backed file size then treat file as removable.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: On process entry store PEB address in %ebx.", 1 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add a PE test image that resembles format of some of 8k demos.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset kernel32-Processor_Group
 # |
 # | This patchset has the following (direct or indirect) dependencies:
@@ -6177,9 +6145,6 @@ if test "$enable_windowscodecs_GIF_Encoder" -eq 1; then
 fi
 
 # Patchset windowscodecs-TIFF_Support
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	windowscodecs-GIF_Encoder
 # |
 # | Modified files:
 # |   *	dlls/gdiplus/image.c, dlls/gdiplus/tests/image.c, dlls/windowscodecs/metadatahandler.c

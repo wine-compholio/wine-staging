@@ -1,4 +1,4 @@
-From ef25a40d4d6e2676ff66347297f96ca0c7a59460 Mon Sep 17 00:00:00 2001
+From 352d6aa96eb3e19acb61ad4942c86810a321c755 Mon Sep 17 00:00:00 2001
 From: Zebediah Figura <z.figura12@gmail.com>
 Date: Fri, 15 Jun 2018 14:12:22 -0500
 Subject: [PATCH] server, ntdll: Implement alertable waits.
@@ -16,7 +16,7 @@ We do this quite simply by waiting on an extra eventfd descriptor, which the ser
  8 files changed, 121 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/ntdll/esync.c b/dlls/ntdll/esync.c
-index d177bb47989..6f41c5e030b 100644
+index 7504f9b2931..15f99239fe9 100644
 --- a/dlls/ntdll/esync.c
 +++ b/dlls/ntdll/esync.c
 @@ -684,19 +684,43 @@ static int do_poll( struct pollfd *fds, nfds_t nfds, ULONGLONG *end )
@@ -196,7 +196,7 @@ index d177bb47989..6f41c5e030b 100644
  
  NTSTATUS esync_signal_and_wait( HANDLE signal, HANDLE wait, BOOLEAN alertable,
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 8e07b148c88..8ba11bcf94c 100644
+index e09528c4cc1..2a6ce77e6fd 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
 @@ -271,6 +271,7 @@ struct ntdll_thread_data
@@ -208,18 +208,18 @@ index 8e07b148c88..8ba11bcf94c 100644
      int                request_fd;    /* fd for sending server requests */
      int                reply_fd;      /* fd for receiving server replies */
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 688f16eb528..391c3b62ee3 100644
+index 92001e64c71..e0d646d6020 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -346,6 +346,7 @@ TEB *thread_init(void)
+@@ -439,6 +439,7 @@ TEB *thread_init(void)
      thread_data->wait_fd[0] = -1;
      thread_data->wait_fd[1] = -1;
      thread_data->esync_queue_fd = -1;
 +    thread_data->esync_apc_fd = -1;
  
-     debug_init();
+     unix_funcs->dbg_init();
      init_paths();
-@@ -720,6 +721,7 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT
+@@ -747,6 +748,7 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT
      thread_data->wait_fd[1]  = -1;
      thread_data->start_stack = (char *)teb->Tib.StackBase;
      thread_data->esync_queue_fd = -1;
@@ -284,10 +284,10 @@ index aeb58c5469c..cea025d9308 100644
  void esync_clear( int fd );
  
 diff --git a/server/protocol.def b/server/protocol.def
-index 8991462eb45..3955a8bd1c7 100644
+index 01f2207cc8a..9188893d7de 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -4069,6 +4069,11 @@ struct handle_info
+@@ -4070,6 +4070,11 @@ struct handle_info
      unsigned int shm_idx;       /* this object's index into the shm section */
  @END
  

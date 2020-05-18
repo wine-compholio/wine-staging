@@ -1,4 +1,4 @@
-From 3b0d0de794f903da33ce7fb4de545d0305163a31 Mon Sep 17 00:00:00 2001
+From e659b08734ee7f9265736dadfe7b9a763e7ee2c6 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <gofmanp@gmail.com>
 Date: Tue, 14 Jan 2020 21:42:21 +0300
 Subject: [PATCH] ntdll: Use free area list for virtual memory allocation.
@@ -8,7 +8,7 @@ Subject: [PATCH] ntdll: Use free area list for virtual memory allocation.
  1 file changed, 55 insertions(+), 56 deletions(-)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index a4bc4c6ef05..18524fc12de 100644
+index 167b9a7fedc..b66b7874ab7 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
 @@ -577,59 +577,6 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
@@ -95,7 +95,7 @@ index a4bc4c6ef05..18524fc12de 100644
  };
  
  /***********************************************************************
-@@ -1178,6 +1128,41 @@ static int alloc_reserved_area_callback( void *start, size_t size, void *arg )
+@@ -1178,6 +1128,41 @@ static int CDECL alloc_reserved_area_callback( void *start, SIZE_T size, void *a
      return 0;
  }
  
@@ -160,7 +160,7 @@ index a4bc4c6ef05..18524fc12de 100644
              goto done;
          }
  
-@@ -1955,6 +1942,12 @@ static int alloc_virtual_heap( void *base, size_t size, void *arg )
+@@ -1956,6 +1943,12 @@ static int CDECL alloc_virtual_heap( void *base, SIZE_T size, void *arg )
      return (alloc->base != (void *)-1);
  }
  
@@ -173,9 +173,9 @@ index a4bc4c6ef05..18524fc12de 100644
  /***********************************************************************
   *           virtual_init
   */
-@@ -2020,6 +2013,9 @@ void virtual_init(void)
+@@ -2021,6 +2014,9 @@ void virtual_init(void)
      size = (char *)address_space_start - (char *)0x10000;
-     if (size && wine_mmap_is_in_reserved_area( (void*)0x10000, size ) == 1)
+     if (size && unix_funcs->mmap_is_in_reserved_area( (void*)0x10000, size ) == 1)
          wine_anon_mmap( (void *)0x10000, size, PROT_READ | PROT_WRITE, MAP_FIXED );
 +
 +    wine_mmap_add_free_area(address_space_start, (char *)user_space_limit - (char *)address_space_start);
@@ -183,7 +183,7 @@ index a4bc4c6ef05..18524fc12de 100644
  }
  
  
-@@ -2791,6 +2787,9 @@ void virtual_set_large_address_space(void)
+@@ -2792,6 +2788,9 @@ void virtual_set_large_address_space(void)
      /* no large address space on win9x */
      if (NtCurrentTeb()->Peb->OSPlatformId != VER_PLATFORM_WIN32_NT) return;
  

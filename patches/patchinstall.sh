@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9e26bc811656ad8eb901bffa5528b9ce25d44bc3"
+	echo "3bb824f98891e8eb907c9c652fe528373a17b10d"
 }
 
 # Show version information
@@ -4099,7 +4099,7 @@ fi
 # Patchset libs-Debug_Channel
 # |
 # | Modified files:
-# |   *	dlls/ntdll/debugtools.c
+# |   *	dlls/ntdll/unix/debug.c
 # |
 if test "$enable_libs_Debug_Channel" -eq 1; then
 	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch

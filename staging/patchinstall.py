@@ -57,6 +57,7 @@ Options:
                                 if they are missing or disabled
     -r, --rebase-mode           alias for --backend=git-am-C1 --no-autoconf --no-patchlist
     -d, --destdir=<path>        install to <path> (defaults to current working directory)
+    --upstream-commit           print the Wine commit hash and exit
 '''
 
 def run(*args, **kwargs):
@@ -209,6 +210,7 @@ def main():
                  'help',
                  'no-autoconf',
                  'no-patchlist',
+                 'upstream-commit',
                  'version'])
     except getopt.GetoptError as err:
         print str(err)
@@ -249,6 +251,10 @@ def main():
             no_patchlist = True
         elif o == '--ignore-missing':
             ignore_missing = True
+        elif o == '--upstream-commit':
+            with open(stagingdir + 'staging/upstream-commit') as f:
+                print f.read().rstrip();
+            sys.exit(0)
 
     for a in args: add_patchset(patchlist, a)
 

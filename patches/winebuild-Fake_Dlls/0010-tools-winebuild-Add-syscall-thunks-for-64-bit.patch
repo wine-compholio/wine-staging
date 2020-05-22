@@ -1,4 +1,4 @@
-From 93f5d4ef07bc35fc672738fe804b829595c61eda Mon Sep 17 00:00:00 2001
+From 12ee1796b93e5f6556e0843c67fe7ef80ca751dc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -60,7 +60,7 @@ index 31af1e98d3f..324a92b41a9 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 19e09c7e383..857d6a68cf1 100644
+index 19e09c7e383..76b9b009e23 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -54,6 +54,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
@@ -72,7 +72,22 @@ index 19e09c7e383..857d6a68cf1 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -312,7 +314,7 @@ TEB *thread_init(void)
+@@ -206,6 +208,14 @@ static void fill_user_shared_data( struct _KUSER_SHARED_DATA *data )
+     data->NumberOfPhysicalPages       = sbi.MmNumberOfPhysicalPages;
+     wcscpy( data->NtSystemRoot, windows_dir );
+ 
++#if defined(__APPLE__) && defined(__x86_64__)
++    *((DWORD*)((char*)data + 0x1000)) = __wine_syscall_dispatcher;
++#endif
++
++    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
++     * Chromium; see output_syscall_thunks_x64() in winebuild. */
++    data->SystemCallPad[0] = 1;
++
+     switch (sci.Architecture)
+     {
+     case PROCESSOR_ARCHITECTURE_INTEL:
+@@ -312,7 +322,7 @@ TEB *thread_init(void)
      /* reserve space for shared user data */
  
      addr = (void *)0x7ffe0000;
@@ -81,21 +96,6 @@ index 19e09c7e383..857d6a68cf1 100644
      status = NtAllocateVirtualMemory( NtCurrentProcess(), &addr, 0, &size,
                                        MEM_RESERVE|MEM_COMMIT, PAGE_READONLY );
      if (status)
-@@ -349,6 +351,14 @@ TEB *thread_init(void)
-     InitializeListHead( &ldr.InInitializationOrderModuleList );
-     *(ULONG_PTR *)peb->Reserved = get_image_addr();
- 
-+#if defined(__APPLE__) && defined(__x86_64__)
-+    *((DWORD*)((char*)user_shared_data + 0x1000)) = __wine_syscall_dispatcher;
-+#endif
-+
-+    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
-+     * Chromium; see output_syscall_thunks_x64() in winebuild. */
-+    user_shared_data->SystemCallPad[0] = 1;
-+
-     /*
-      * Starting with Vista, the first user to log on has session id 1.
-      * Session id 0 is for processes that don't interact with the user (like services).
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
 index 4597a6cb324..3d0d75e9c6d 100644
 --- a/libs/wine/loader.c

@@ -1,4 +1,4 @@
-From 12ee1796b93e5f6556e0843c67fe7ef80ca751dc Mon Sep 17 00:00:00 2001
+From b72a4fc5697e18fab51553bf182e10352893b09f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -6,11 +6,11 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 ---
  dlls/kernel32/tests/loader.c |   7 +-
  dlls/ntdll/signal_x86_64.c   |   2 +
- dlls/ntdll/thread.c          |  12 +-
+ dlls/ntdll/thread.c          |  17 ++-
  libs/wine/loader.c           |   4 +
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 303 insertions(+), 9 deletions(-)
+ 6 files changed, 307 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 95939ba6bde..ae5462f6e55 100644
@@ -60,7 +60,7 @@ index 31af1e98d3f..324a92b41a9 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 19e09c7e383..76b9b009e23 100644
+index 9fcbd8310ed..ed1183b0512 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -54,6 +54,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
@@ -72,14 +72,10 @@ index 19e09c7e383..76b9b009e23 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -206,6 +208,14 @@ static void fill_user_shared_data( struct _KUSER_SHARED_DATA *data )
+@@ -206,6 +208,10 @@ static void fill_user_shared_data( struct _KUSER_SHARED_DATA *data )
      data->NumberOfPhysicalPages       = sbi.MmNumberOfPhysicalPages;
      wcscpy( data->NtSystemRoot, windows_dir );
  
-+#if defined(__APPLE__) && defined(__x86_64__)
-+    *((DWORD*)((char*)data + 0x1000)) = __wine_syscall_dispatcher;
-+#endif
-+
 +    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
 +     * Chromium; see output_syscall_thunks_x64() in winebuild. */
 +    data->SystemCallPad[0] = 1;
@@ -87,15 +83,32 @@ index 19e09c7e383..76b9b009e23 100644
      switch (sci.Architecture)
      {
      case PROCESSOR_ARCHITECTURE_INTEL:
-@@ -312,7 +322,7 @@ TEB *thread_init(void)
+@@ -312,9 +318,9 @@ TEB *thread_init(void)
      /* reserve space for shared user data */
  
      addr = (void *)0x7ffe0000;
 -    size = 0x1000;
 +    size = 0x2000;
      status = NtAllocateVirtualMemory( NtCurrentProcess(), &addr, 0, &size,
-                                       MEM_RESERVE|MEM_COMMIT, PAGE_READONLY );
+-                                      MEM_RESERVE|MEM_COMMIT, PAGE_READONLY );
++                                      MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE );
      if (status)
+     {
+         MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
+@@ -322,6 +328,13 @@ TEB *thread_init(void)
+     }
+     user_shared_data = addr;
+ 
++#if defined(__APPLE__) && defined(__x86_64__)
++    *((DWORD*)((char*)user_shared_data + 0x1000)) = __wine_syscall_dispatcher;
++#endif
++
++    /* Init this field early for x86_64 syscall thunks. */
++    user_shared_data->SystemCallPad[0] = 1;
++
+     /* allocate and initialize the PEB and initial TEB */
+ 
+     teb = virtual_alloc_first_teb();
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
 index 4597a6cb324..3d0d75e9c6d 100644
 --- a/libs/wine/loader.c

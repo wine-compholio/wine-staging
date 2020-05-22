@@ -154,7 +154,6 @@ patch_enable_all ()
 	enable_kernel32_SetProcessDEPPolicy="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
-	enable_libs_Debug_Channel="$1"
 	enable_loader_KeyboardLayouts="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
@@ -563,9 +562,6 @@ patch_enable ()
 			;;
 		krnl386.exe16-Invalid_Console_Handles)
 			enable_krnl386_exe16_Invalid_Console_Handles="$2"
-			;;
-		libs-Debug_Channel)
-			enable_libs_Debug_Channel="$2"
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
@@ -4089,18 +4085,6 @@ if test "$enable_krnl386_exe16_Invalid_Console_Handles" -eq 1; then
 	patch_apply krnl386.exe16-Invalid_Console_Handles/0001-krnl386.exe16-Really-translate-all-invalid-console-h.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "krnl386.exe16: Really translate all invalid console handles into usable DOS handles.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset libs-Debug_Channel
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/debug.c
-# |
-if test "$enable_libs_Debug_Channel" -eq 1; then
-	patch_apply libs-Debug_Channel/0001-libwine-Add-process-specific-debug-channels.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "libwine: Add process specific debug channels.", 1 },';
 	) >> "$patchlist"
 fi
 

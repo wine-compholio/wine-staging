@@ -197,6 +197,7 @@ patch_enable_all ()
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Emulation="$1"
+	enable_ntdll_SystemCodeIntegrityInformation="$1"
 	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
@@ -691,6 +692,9 @@ patch_enable ()
 			;;
 		ntdll-Syscall_Emulation)
 			enable_ntdll_Syscall_Emulation="$2"
+			;;
+		ntdll-SystemCodeIntegrityInformation)
+			enable_ntdll_SystemCodeIntegrityInformation="$2"
 			;;
 		ntdll-SystemExtendedProcessInformation)
 			enable_ntdll_SystemExtendedProcessInformation="$2"
@@ -1646,6 +1650,13 @@ if test "$enable_nvcuvid_CUDA_Video_Support" -eq 1; then
 		abort "Patchset nvapi-Stub_DLL disabled, but nvcuvid-CUDA_Video_Support depends on that."
 	fi
 	enable_nvapi_Stub_DLL=1
+fi
+
+if test "$enable_ntdll_SystemCodeIntegrityInformation" -eq 1; then
+	if test "$enable_ntdll_SystemExtendedProcessInformation" -gt 1; then
+		abort "Patchset ntdll-SystemExtendedProcessInformation disabled, but ntdll-SystemCodeIntegrityInformation depends on that."
+	fi
+	enable_ntdll_SystemExtendedProcessInformation=1
 fi
 
 if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
@@ -4778,6 +4789,24 @@ if test "$enable_ntdll_SystemExtendedProcessInformation" -eq 1; then
 	patch_apply ntdll-SystemExtendedProcessInformation/0001-ntdll-Add-stub-for-NtQuerySystemInformation-SystemEx.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add stub for NtQuerySystemInformation(SystemExtendedProcessInformation).", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-SystemCodeIntegrityInformation
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-SystemExtendedProcessInformation
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49192] ntdll: NtQuerySystemInformation support SystemCodeIntegrityInformation
+# |
+# | Modified files:
+# |   *	dlls/ntdll/nt.c, include/winternl.h
+# |
+if test "$enable_ntdll_SystemCodeIntegrityInformation" -eq 1; then
+	patch_apply ntdll-SystemCodeIntegrityInformation/0001-ntdll-NtQuerySystemInformation-support-SystemCodeInt.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntdll: NtQuerySystemInformation support SystemCodeIntegrityInformation.", 1 },';
 	) >> "$patchlist"
 fi
 

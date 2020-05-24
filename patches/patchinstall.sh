@@ -194,6 +194,7 @@ patch_enable_all ()
 	enable_ntdll_ProcessQuotaLimits="$1"
 	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
+	enable_ntdll_RtlQueryRegistryValuesEx="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
 	enable_ntdll_Syscall_Emulation="$1"
@@ -688,6 +689,9 @@ patch_enable ()
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
+			;;
+		ntdll-RtlQueryRegistryValuesEx)
+			enable_ntdll_RtlQueryRegistryValuesEx="$2"
 			;;
 		ntdll-Serial_Port_Detection)
 			enable_ntdll_Serial_Port_Detection="$2"
@@ -4748,6 +4752,21 @@ if test "$enable_ntdll_RtlQueryPackageIdentity" -eq 1; then
 	patch_apply ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll/tests: Add basic tests for RtlQueryPackageIdentity.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-RtlQueryRegistryValuesEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46969] ntdll: Implement RtlQueryRegistryValuesEx
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/reg.c
+# |
+if test "$enable_ntdll_RtlQueryRegistryValuesEx" -eq 1; then
+	patch_apply ntdll-RtlQueryRegistryValuesEx/0001-ntdll-Implement-RtlQueryRegistryValuesEx.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntdll: Implement RtlQueryRegistryValuesEx.", 1 },';
 	) >> "$patchlist"
 fi
 

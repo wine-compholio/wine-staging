@@ -213,6 +213,7 @@ patch_enable_all ()
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$1"
+	enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -741,6 +742,9 @@ patch_enable ()
 			;;
 		ntoskrnl.exe-KdRefreshDebuggerNotPresent)
 			enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$2"
+			;;
+		ntoskrnl.exe-KeSetSystemAffinityThreadEx)
+			enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -4948,6 +4952,21 @@ if test "$enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent" -eq 1; then
 	patch_apply ntoskrnl.exe-KdRefreshDebuggerNotPresent/0001-ntoskrnl.exe-Add-KdRefreshDebuggerNotPresent-stub.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KdRefreshDebuggerNotPresent stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl.exe-KeSetSystemAffinityThreadEx
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49224] ntoskrnl.exe: Add KeGenericCallDpc stub
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+# |
+if test "$enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx" -eq 1; then
+	patch_apply ntoskrnl.exe-KeSetSystemAffinityThreadEx/0001-ntoskrnl.exe-Add-KeSetSystemAffinityThreadEx-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSetSystemAffinityThreadEx stub.", 1 },';
 	) >> "$patchlist"
 fi
 

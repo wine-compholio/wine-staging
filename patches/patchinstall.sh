@@ -213,6 +213,7 @@ patch_enable_all ()
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$1"
+	enable_ntoskrnl_exe_KeGenericCallDpc="$1"
 	enable_ntoskrnl_exe_KeQueryActiveProcessorCountEx="$1"
 	enable_ntoskrnl_exe_KeRevertToUserAffinityThreadEx="$1"
 	enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx="$1"
@@ -744,6 +745,9 @@ patch_enable ()
 			;;
 		ntoskrnl.exe-KdRefreshDebuggerNotPresent)
 			enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$2"
+			;;
+		ntoskrnl.exe-KeGenericCallDpc)
+			enable_ntoskrnl_exe_KeGenericCallDpc="$2"
 			;;
 		ntoskrnl.exe-KeQueryActiveProcessorCountEx)
 			enable_ntoskrnl_exe_KeQueryActiveProcessorCountEx="$2"
@@ -4960,6 +4964,22 @@ if test "$enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent" -eq 1; then
 	patch_apply ntoskrnl.exe-KdRefreshDebuggerNotPresent/0001-ntoskrnl.exe-Add-KdRefreshDebuggerNotPresent-stub.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KdRefreshDebuggerNotPresent stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl.exe-KeGenericCallDpc
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
+# |
+if test "$enable_ntoskrnl_exe_KeGenericCallDpc" -eq 1; then
+	patch_apply ntoskrnl.exe-KeGenericCallDpc/0001-ntoskrnl.exe-Add-KeGenericCallDpc-stub.patch
+	patch_apply ntoskrnl.exe-KeGenericCallDpc/0002-ntoskrnl.exe-Add-KeSignalCallDpcSynchronize-stub.patch
+	patch_apply ntoskrnl.exe-KeGenericCallDpc/0003-ntoskrnl.exe-Add-KeSignalCallDpcDone-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeGenericCallDpc stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcSynchronize stub.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcDone stub.", 1 },';
 	) >> "$patchlist"
 fi
 

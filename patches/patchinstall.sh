@@ -212,6 +212,7 @@ patch_enable_all ()
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
+	enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -737,6 +738,9 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
+			;;
+		ntoskrnl.exe-KdRefreshDebuggerNotPresent)
+			enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -4929,6 +4933,21 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntoskrnl.exe-KdRefreshDebuggerNotPresent
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49216] ntoskrnl.exe: Add KdRefreshDebuggerNotPresent stub
+# |
+# | Modified files:
+# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
+# |
+if test "$enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent" -eq 1; then
+	patch_apply ntoskrnl.exe-KdRefreshDebuggerNotPresent/0001-ntoskrnl.exe-Add-KdRefreshDebuggerNotPresent-stub.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KdRefreshDebuggerNotPresent stub.", 1 },';
 	) >> "$patchlist"
 fi
 

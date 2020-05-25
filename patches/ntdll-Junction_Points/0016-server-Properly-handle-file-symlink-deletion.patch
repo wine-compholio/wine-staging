@@ -1,7 +1,7 @@
-From 460d07ee2cd46fb8c291b6a7ad0405b017370520 Mon Sep 17 00:00:00 2001
+From 9ac3c75b53eeeee76fcf4e1c1a5546ae5fc3b58a Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 13:41:07 -0600
-Subject: server: Properly handle file symlink deletion.
+Subject: [PATCH] server: Properly handle file symlink deletion.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
@@ -10,10 +10,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  2 files changed, 74 insertions(+), 8 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 0041a41b6d..f2c273e901 100644
+index 0b7e9e230227..a6085d8de75c 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5076,14 +5076,14 @@ static void test_reparse_points(void)
+@@ -5198,14 +5198,14 @@ static void test_reparse_points(void)
  
      /* Delete the symlink as a file */
      bret = DeleteFileW(reparse_path);
@@ -32,12 +32,12 @@ index 0041a41b6d..f2c273e901 100644
      /* Create the directory symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
 diff --git a/server/fd.c b/server/fd.c
-index 5d80e218b9..ac1c3f85a1 100644
+index 06d1d81bdb08..df0caa483827 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -105,6 +105,10 @@
- #include "winternl.h"
+@@ -106,6 +106,10 @@
  #include "winioctl.h"
+ #include "ddk/wdm.h"
  
 +#if !defined(O_SYMLINK) && defined(O_PATH)
 +# define O_SYMLINK (O_NOFOLLOW | O_PATH)
@@ -46,7 +46,7 @@ index 5d80e218b9..ac1c3f85a1 100644
  #if defined(HAVE_SYS_EPOLL_H) && defined(HAVE_EPOLL_CREATE)
  # include <sys/epoll.h>
  # define USE_EPOLL
-@@ -1069,7 +1073,7 @@ static void inode_destroy( struct object *obj )
+@@ -1146,7 +1150,7 @@ static void inode_destroy( struct object *obj )
          {
              /* make sure it is still the same file */
              struct stat st;
@@ -55,7 +55,7 @@ index 5d80e218b9..ac1c3f85a1 100644
              {
                  if (S_ISDIR(st.st_mode)) rmdir( fd->unix_name );
                  else unlink( fd->unix_name );
-@@ -1747,6 +1751,53 @@ char *dup_fd_name( struct fd *root, const char *name )
+@@ -1824,6 +1828,53 @@ char *dup_fd_name( struct fd *root, const char *name )
      return ret;
  }
  
@@ -109,7 +109,7 @@ index 5d80e218b9..ac1c3f85a1 100644
  /* open() wrapper that returns a struct fd with no fd user set */
  struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode, unsigned int access,
                      unsigned int sharing, unsigned int options )
-@@ -1815,6 +1866,13 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1891,6 +1942,13 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
              if ((access & FILE_UNIX_WRITE_ACCESS) || (flags & O_CREAT))
                  fd->unix_fd = open( name, O_RDONLY | (flags & ~(O_TRUNC | O_CREAT | O_EXCL)), *mode );
          }
@@ -123,7 +123,7 @@ index 5d80e218b9..ac1c3f85a1 100644
  
          if (fd->unix_fd == -1)
          {
-@@ -1826,14 +1884,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1909,14 +1967,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      closed_fd->unix_fd = fd->unix_fd;
      closed_fd->unlink = 0;
      closed_fd->unix_name = fd->unix_name;
@@ -141,7 +141,7 @@ index 5d80e218b9..ac1c3f85a1 100644
  
          if (!inode)
          {
-@@ -1848,13 +1907,20 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1931,13 +1990,20 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
          list_add_head( &inode->open, &fd->inode_entry );
          closed_fd = NULL;
  
@@ -165,5 +165,5 @@ index 5d80e218b9..ac1c3f85a1 100644
              set_error( STATUS_FILE_IS_A_DIRECTORY );
              goto error;
 -- 
-2.17.1
+2.26.2
 

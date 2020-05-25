@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "056c9df854817670dc4fb9c095cba29c99089ac8"
+	echo "ba920246e502afe7bc664c1881d528a27e980101"
 }
 
 # Show version information
@@ -213,9 +213,7 @@ patch_enable_all ()
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
-	enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$1"
 	enable_ntoskrnl_exe_KeGenericCallDpc="$1"
-	enable_ntoskrnl_exe_KeQueryActiveProcessorCountEx="$1"
 	enable_ntoskrnl_exe_KeRevertToUserAffinityThreadEx="$1"
 	enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx="$1"
 	enable_nvapi_Stub_DLL="$1"
@@ -747,14 +745,8 @@ patch_enable ()
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
 			;;
-		ntoskrnl.exe-KdRefreshDebuggerNotPresent)
-			enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent="$2"
-			;;
 		ntoskrnl.exe-KeGenericCallDpc)
 			enable_ntoskrnl_exe_KeGenericCallDpc="$2"
-			;;
-		ntoskrnl.exe-KeQueryActiveProcessorCountEx)
-			enable_ntoskrnl_exe_KeQueryActiveProcessorCountEx="$2"
 			;;
 		ntoskrnl.exe-KeRevertToUserAffinityThreadEx)
 			enable_ntoskrnl_exe_KeRevertToUserAffinityThreadEx="$2"
@@ -4971,21 +4963,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntoskrnl.exe-KdRefreshDebuggerNotPresent
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49216] ntoskrnl.exe: Add KdRefreshDebuggerNotPresent stub
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec, include/ddk/wdm.h
-# |
-if test "$enable_ntoskrnl_exe_KdRefreshDebuggerNotPresent" -eq 1; then
-	patch_apply ntoskrnl.exe-KdRefreshDebuggerNotPresent/0001-ntoskrnl.exe-Add-KdRefreshDebuggerNotPresent-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KdRefreshDebuggerNotPresent stub.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntoskrnl.exe-KeGenericCallDpc
 # |
 # | Modified files:
@@ -4999,21 +4976,6 @@ if test "$enable_ntoskrnl_exe_KeGenericCallDpc" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeGenericCallDpc stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcSynchronize stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcDone stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl.exe-KeQueryActiveProcessorCountEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49217] ntoskrnl.exe: Add KeQueryActiveProcessorCountEx stub
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntoskrnl_exe_KeQueryActiveProcessorCountEx" -eq 1; then
-	patch_apply ntoskrnl.exe-KeQueryActiveProcessorCountEx/0001-ntoskrnl.exe-Add-KeQueryActiveProcessorCountEx-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeQueryActiveProcessorCountEx stub.", 1 },';
 	) >> "$patchlist"
 fi
 

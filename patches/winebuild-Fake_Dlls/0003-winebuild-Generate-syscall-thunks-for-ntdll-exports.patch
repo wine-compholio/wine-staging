@@ -1,4 +1,4 @@
-From 7a530e0f3c9f0d3aadcea6d0bec7fc155691baae Mon Sep 17 00:00:00 2001
+From 43c4595226819c7b5993937fc8f088b8b6ffa545 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -17,7 +17,7 @@ Based on a patch by Erich E. Hoover.
  9 files changed, 207 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 8a976f7745d..04fdaf564b3 100644
+index 5353ab4df2ce..527ba01672e1 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -476,6 +476,9 @@ static ULONG first_ldt_entry = 32;
@@ -49,12 +49,12 @@ index 8a976f7745d..04fdaf564b3 100644
  }
  
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index 72afb0a3764..fbd90661ee0 100644
+index a5e6faa461a3..51938bf84cc1 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
 @@ -1643,6 +1643,8 @@ static void test_thread_context(void)
-     ok( (char *)context.Eip >= (char *)pNtGetContextThread - 0x10000 &&
-         (char *)context.Eip <= (char *)pNtGetContextThread + 0x10000,
+     ok( (char *)context.Eip >= (char *)pNtGetContextThread - 0x40000 &&
+         (char *)context.Eip <= (char *)pNtGetContextThread + 0x40000,
          "wrong Eip %08x/%08x\n", context.Eip, (DWORD)pNtGetContextThread );
 +    ok( *(WORD *)context.Eip == 0xc483 || *(WORD *)context.Eip == 0x08c2 || *(WORD *)context.Eip == 0x8dc3,
 +        "expected 0xc483 or 0x08c2 or 0x8dc3, got %04x\n", *(WORD *)context.Eip );
@@ -62,7 +62,7 @@ index 72afb0a3764..fbd90661ee0 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/include/winternl.h b/include/winternl.h
-index 0aa0ac311c3..26ee5b601fb 100644
+index 0f808d71dd33..d641ed1436ad 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -359,7 +359,7 @@ typedef struct _TEB
@@ -75,7 +75,7 @@ index 0aa0ac311c3..26ee5b601fb 100644
      ULONG                        FpSoftwareStatusRegister;          /* 0c8/010c */
      PVOID                        SystemReserved1[54];               /* 0cc/0110 used for krnl386.exe16 private data in Wine */
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
-index b30785b74a3..6ee847f908c 100644
+index c162888a0356..55d5b0b9dc28 100644
 --- a/tools/winebuild/build.h
 +++ b/tools/winebuild/build.h
 @@ -105,6 +105,7 @@ typedef struct
@@ -123,7 +123,7 @@ index b30785b74a3..6ee847f908c 100644
  
  extern int byte_swapped;
 diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
-index 04ab433dd65..0c6bafed8e5 100644
+index 04ab433dd65a..0c6bafed8e54 100644
 --- a/tools/winebuild/import.c
 +++ b/tools/winebuild/import.c
 @@ -531,6 +531,7 @@ static void check_undefined_forwards( DLLSPEC *spec )
@@ -163,7 +163,7 @@ index 04ab433dd65..0c6bafed8e5 100644
              }
          }
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index 0f2b9c1e10a..74216f8bb6e 100644
+index 0f2b9c1e10ad..74216f8bb6e7 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -543,6 +543,24 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
@@ -254,7 +254,7 @@ index 0f2b9c1e10a..74216f8bb6e 100644
  }
  
 diff --git a/tools/winebuild/spec16.c b/tools/winebuild/spec16.c
-index a52c03aaa6a..15ef9a3f893 100644
+index a52c03aaa6a7..15ef9a3f8930 100644
 --- a/tools/winebuild/spec16.c
 +++ b/tools/winebuild/spec16.c
 @@ -495,27 +495,6 @@ static int relay_type_compare( const void *e1, const void *e2 )
@@ -294,7 +294,7 @@ index a52c03aaa6a..15ef9a3f893 100644
          entry_point->u.func.nb_args = 0;
          assert( !spec->ordinals[0] );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index b1e20e0484d..22dd399cb2b 100644
+index b1e20e0484dc..22dd399cb2b4 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -374,6 +374,109 @@ static void output_relay_debug( DLLSPEC *spec )
@@ -416,10 +416,10 @@ index b1e20e0484d..22dd399cb2b 100644
      output_exports( spec );
      output_imports( spec );
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index 669520711c2..7dc61a708db 100644
+index 2a1fc960926b..07a579004adc 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
-@@ -854,6 +854,7 @@ void free_dll_spec( DLLSPEC *spec )
+@@ -860,6 +860,7 @@ void free_dll_spec( DLLSPEC *spec )
          free( odp->name );
          free( odp->export_name );
          free( odp->link_name );
@@ -427,7 +427,7 @@ index 669520711c2..7dc61a708db 100644
      }
      free( spec->file_name );
      free( spec->dll_name );
-@@ -863,6 +864,7 @@ void free_dll_spec( DLLSPEC *spec )
+@@ -869,6 +870,7 @@ void free_dll_spec( DLLSPEC *spec )
      free( spec->names );
      free( spec->ordinals );
      free( spec->resources );
@@ -435,7 +435,7 @@ index 669520711c2..7dc61a708db 100644
      free( spec );
  }
  
-@@ -1269,3 +1271,22 @@ const char *get_asm_string_section(void)
+@@ -1275,3 +1277,22 @@ const char *get_asm_string_section(void)
      default:             return ".section .rodata";
      }
  }

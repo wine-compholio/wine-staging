@@ -1,4 +1,4 @@
-From 0257e39905c92e0cffaf2faa6418c3bec7298603 Mon Sep 17 00:00:00 2001
+From da0da9472013ed502f5f0aabcca5b8359ffdc1c4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Feb 2017 16:20:37 +0100
 Subject: [PATCH] kernel32: Implement some processor group functions.
@@ -6,10 +6,10 @@ Subject: [PATCH] kernel32: Implement some processor group functions.
 ---
  ...pi-ms-win-core-kernel32-legacy-l1-1-0.spec |  2 +-
  ...pi-ms-win-core-kernel32-legacy-l1-1-1.spec |  2 +-
- dlls/kernel32/cpu.c                           | 28 ++++++++++++++-----
  dlls/kernel32/kernel32.spec                   |  2 +-
- dlls/kernel32/tests/process.c                 | 23 +++++++++++++++
- 5 files changed, 47 insertions(+), 10 deletions(-)
+ dlls/kernel32/process.c                       | 26 ++++++++++++++++---
+ dlls/kernel32/tests/process.c                 | 23 ++++++++++++++++
+ 5 files changed, 48 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec b/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec
 index e653ac6d2122..b6af37ab0aa2 100644
@@ -37,56 +37,8 @@ index 4998af04d9bc..5ce8e24713b5 100644
  @ stdcall GetNamedPipeClientProcessId(long ptr) kernel32.GetNamedPipeClientProcessId
  @ stdcall GetNamedPipeServerProcessId(long ptr) kernel32.GetNamedPipeServerProcessId
  @ stdcall GetNumaAvailableMemoryNodeEx(long ptr) kernel32.GetNumaAvailableMemoryNodeEx
-diff --git a/dlls/kernel32/cpu.c b/dlls/kernel32/cpu.c
-index 63014ea1c910..7d623556e660 100644
---- a/dlls/kernel32/cpu.c
-+++ b/dlls/kernel32/cpu.c
-@@ -51,7 +51,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(reg);
-  */
- WORD WINAPI GetActiveProcessorGroupCount(void)
- {
--    FIXME("semi-stub, always returning 1\n");
-+    TRACE("()\n");
-+
-+    /* systems with less than 64 logical processors only have group 0 */
-     return 1;
- }
- 
-@@ -60,14 +62,26 @@ WORD WINAPI GetActiveProcessorGroupCount(void)
-  */
- DWORD WINAPI GetActiveProcessorCount(WORD group)
- {
--    SYSTEM_INFO si;
--    DWORD cpus;
-+    TRACE("(%u)\n", group);
- 
--    GetSystemInfo( &si );
--    cpus = si.dwNumberOfProcessors;
-+    if (group && group != ALL_PROCESSOR_GROUPS)
-+    {
-+        SetLastError(ERROR_INVALID_PARAMETER);
-+        return 0;
-+    }
- 
--    FIXME("semi-stub, returning %u\n", cpus);
--    return cpus;
-+    return system_info.NumberOfProcessors;
-+}
-+
-+/***********************************************************************
-+ *           GetMaximumProcessorGroupCount (KERNEL32.@)
-+ */
-+WORD WINAPI GetMaximumProcessorGroupCount(void)
-+{
-+    TRACE("()\n");
-+
-+    /* systems with less than 64 logical processors only have group 0 */
-+    return 1;
- }
- 
- /***********************************************************************
 diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
-index a095a85e66b5..17e9e5babd53 100644
+index 1a6fdbab0185..6a1381b7c322 100644
 --- a/dlls/kernel32/kernel32.spec
 +++ b/dlls/kernel32/kernel32.spec
 @@ -717,7 +717,7 @@
@@ -98,8 +50,60 @@ index a095a85e66b5..17e9e5babd53 100644
  @ stdcall -import GetModuleFileNameA(long ptr long)
  @ stdcall -import GetModuleFileNameW(long ptr long)
  @ stdcall -import GetModuleHandleA(str)
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 8f506fcf1320..2f7ebb5edd25 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -706,7 +706,9 @@ HRESULT WINAPI RegisterApplicationRecoveryCallback(APPLICATION_RECOVERY_CALLBACK
+  */
+ WORD WINAPI GetActiveProcessorGroupCount(void)
+ {
+-    FIXME("semi-stub, always returning 1\n");
++    TRACE("()\n");
++
++    /* systems with less than 64 logical processors only have group 0 */
+     return 1;
+ }
+ 
+@@ -715,10 +717,14 @@ WORD WINAPI GetActiveProcessorGroupCount(void)
+  */
+ DWORD WINAPI GetActiveProcessorCount(WORD group)
+ {
+-    DWORD cpus = system_info.NumberOfProcessors;
++    TRACE("(%u)\n", group);
+ 
+-    FIXME("semi-stub, returning %u\n", cpus);
+-    return cpus;
++    if (group && group != ALL_PROCESSOR_GROUPS)
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return 0;
++    }
++    return system_info.NumberOfProcessors;
+ }
+ 
+ /***********************************************************************
+@@ -732,6 +738,18 @@ DWORD WINAPI GetMaximumProcessorCount(WORD group)
+     return cpus;
+ }
+ 
++/***********************************************************************
++ *           GetMaximumProcessorGroupCount (KERNEL32.@)
++ */
++WORD WINAPI GetMaximumProcessorGroupCount(void)
++{
++    TRACE("()\n");
++
++    /* systems with less than 64 logical processors only have group 0 */
++    return 1;
++}
++
++
+ /***********************************************************************
+  *           GetEnabledXStateFeatures (KERNEL32.@)
+  */
 diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
-index 2ecd3dc10e8c..39c17625c8af 100644
+index 32818042337b..da649eff62ed 100644
 --- a/dlls/kernel32/tests/process.c
 +++ b/dlls/kernel32/tests/process.c
 @@ -92,6 +92,7 @@ static SIZE_T (WINAPI *pGetLargePageMinimum)(void);
@@ -118,7 +122,7 @@ index 2ecd3dc10e8c..39c17625c8af 100644
  
      return TRUE;
  }
-@@ -4050,6 +4052,26 @@ void test_parent_process_attribute(unsigned int level, HANDLE read_pipe)
+@@ -3955,6 +3957,26 @@ void test_parent_process_attribute(unsigned int level, HANDLE read_pipe)
      }
  }
  
@@ -145,7 +149,7 @@ index 2ecd3dc10e8c..39c17625c8af 100644
  START_TEST(process)
  {
      HANDLE job;
-@@ -4160,6 +4182,7 @@ START_TEST(process)
+@@ -4065,6 +4087,7 @@ START_TEST(process)
      test_GetNumaProcessorNode();
      test_session_info();
      test_GetLogicalProcessorInformationEx();

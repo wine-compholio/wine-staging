@@ -214,8 +214,6 @@ patch_enable_all ()
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
 	enable_ntoskrnl_exe_KeGenericCallDpc="$1"
-	enable_ntoskrnl_exe_KeRevertToUserAffinityThreadEx="$1"
-	enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -747,12 +745,6 @@ patch_enable ()
 			;;
 		ntoskrnl.exe-KeGenericCallDpc)
 			enable_ntoskrnl_exe_KeGenericCallDpc="$2"
-			;;
-		ntoskrnl.exe-KeRevertToUserAffinityThreadEx)
-			enable_ntoskrnl_exe_KeRevertToUserAffinityThreadEx="$2"
-			;;
-		ntoskrnl.exe-KeSetSystemAffinityThreadEx)
-			enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -4055,7 +4047,7 @@ fi
 # | Modified files:
 # |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
 # | 	kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec, dlls/kernel32/cpu.c, dlls/kernel32/kernel32.spec,
-# | 	dlls/kernel32/tests/process.c, dlls/kernelbase/thread.c, include/winnt.h
+# | 	dlls/kernel32/tests/process.c, dlls/kernelbase/thread.c
 # |
 if test "$enable_kernel32_Processor_Group" -eq 1; then
 	patch_apply kernel32-Processor_Group/0001-kernel32-Implement-some-processor-group-functions.patch
@@ -4976,36 +4968,6 @@ if test "$enable_ntoskrnl_exe_KeGenericCallDpc" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeGenericCallDpc stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcSynchronize stub.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcDone stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl.exe-KeRevertToUserAffinityThreadEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49222] ntoskrnl.exe: Add KeRevertToUserAffinityThreadEx stub
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntoskrnl_exe_KeRevertToUserAffinityThreadEx" -eq 1; then
-	patch_apply ntoskrnl.exe-KeRevertToUserAffinityThreadEx/0001-ntoskrnl.exe-Add-KeRevertToUserAffinityThreadEx-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeRevertToUserAffinityThreadEx stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl.exe-KeSetSystemAffinityThreadEx
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49224] ntoskrnl.exe: Add KeGenericCallDpc stub
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntoskrnl_exe_KeSetSystemAffinityThreadEx" -eq 1; then
-	patch_apply ntoskrnl.exe-KeSetSystemAffinityThreadEx/0001-ntoskrnl.exe-Add-KeSetSystemAffinityThreadEx-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSetSystemAffinityThreadEx stub.", 1 },';
 	) >> "$patchlist"
 fi
 

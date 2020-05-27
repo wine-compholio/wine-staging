@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8257fe88fb99ca0bdeec27b47b7cf835bda5c061"
+	echo "e48fabff525061c8eea9558084a97308cebe6b7b"
 }
 
 # Show version information
@@ -213,7 +213,6 @@ patch_enable_all ()
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
-	enable_ntoskrnl_exe_KeGenericCallDpc="$1"
 	enable_nvapi_Stub_DLL="$1"
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
@@ -742,9 +741,6 @@ patch_enable ()
 			;;
 		ntoskrnl-Stubs)
 			enable_ntoskrnl_Stubs="$2"
-			;;
-		ntoskrnl.exe-KeGenericCallDpc)
-			enable_ntoskrnl_exe_KeGenericCallDpc="$2"
 			;;
 		nvapi-Stub_DLL)
 			enable_nvapi_Stub_DLL="$2"
@@ -4952,22 +4948,6 @@ if test "$enable_ntoskrnl_Stubs" -eq 1; then
 	(
 		printf '%s\n' '+    { "Christian Costa", "ntoskrnl.exe: Implement MmMapLockedPages and MmUnmapLockedPages.", 1 },';
 		printf '%s\n' '+    { "Jarkko Korpi", "ntoskrnl.exe: Add IoGetDeviceAttachmentBaseRef stub.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntoskrnl.exe-KeGenericCallDpc
-# |
-# | Modified files:
-# |   *	dlls/ntoskrnl.exe/ntoskrnl.c, dlls/ntoskrnl.exe/ntoskrnl.exe.spec
-# |
-if test "$enable_ntoskrnl_exe_KeGenericCallDpc" -eq 1; then
-	patch_apply ntoskrnl.exe-KeGenericCallDpc/0001-ntoskrnl.exe-Add-KeGenericCallDpc-stub.patch
-	patch_apply ntoskrnl.exe-KeGenericCallDpc/0002-ntoskrnl.exe-Add-KeSignalCallDpcSynchronize-stub.patch
-	patch_apply ntoskrnl.exe-KeGenericCallDpc/0003-ntoskrnl.exe-Add-KeSignalCallDpcDone-stub.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeGenericCallDpc stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcSynchronize stub.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "ntoskrnl.exe: Add KeSignalCallDpcDone stub.", 1 },';
 	) >> "$patchlist"
 fi
 

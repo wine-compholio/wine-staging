@@ -1,8 +1,8 @@
-From 599864f0a90e7bf64902dbd7ff135f253d270802 Mon Sep 17 00:00:00 2001
+From df6fb4c8cee4e6cf8223ca065234749dec3cfbaf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 5 Nov 2015 14:33:48 +0100
-Subject: winex11.drv: Allow to select default display frequency in registry
- key.
+Subject: [PATCH] winex11.drv: Allow to select default display frequency in
+ registry key.
 
 When an application doesn't request a specific display frequency, Wine
 currently just picks the first one. Most of the time this is fine, but
@@ -17,21 +17,27 @@ HKCU\Software\Wine\X11 Driver\DefaultDisplayFrequency
  3 files changed, 43 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/winex11.drv/settings.c b/dlls/winex11.drv/settings.c
-index 24644db62..4fac4beb6 100644
+index 70ce35361b6..cada9cd5df2 100644
 --- a/dlls/winex11.drv/settings.c
 +++ b/dlls/winex11.drv/settings.c
-@@ -319,8 +319,9 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
-                                            HWND hwnd, DWORD flags, LPVOID lpvoid )
- {
+@@ -348,7 +348,7 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+     WCHAR primary_adapter[CCHDEVICENAME];
      char bpp_buffer[16], freq_buffer[18];
+     DEVMODEW default_mode;
 -    DWORD i;
 +    DWORD i, mode;
+ 
+     if (!get_primary_adapter(primary_adapter))
+         return DISP_CHANGE_FAILED;
+@@ -379,6 +379,7 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+         return DISP_CHANGE_SUCCESSFUL;
+     }
  
 +    mode = ENUM_CURRENT_SETTINGS;
      for (i = 0; i < dd_mode_count; i++)
      {
          if (devmode->dmFields & DM_BITSPERPEL)
-@@ -338,32 +339,49 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
+@@ -396,32 +397,49 @@ LONG CDECL X11DRV_ChangeDisplaySettingsEx( LPCWSTR devname, LPDEVMODEW devmode,
              if (devmode->dmPelsHeight != dd_modes[i].height)
                  continue;
          }
@@ -101,10 +107,10 @@ index 24644db62..4fac4beb6 100644
 +    return DISP_CHANGE_SUCCESSFUL;
  }
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 98cab8947..9f76596e4 100644
+index 803e3e4103e..6dfe4a35f6b 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
-@@ -404,6 +404,7 @@ extern BOOL private_color_map DECLSPEC_HIDDEN;
+@@ -403,6 +403,7 @@ extern BOOL private_color_map DECLSPEC_HIDDEN;
  extern int primary_monitor DECLSPEC_HIDDEN;
  extern int copy_default_colors DECLSPEC_HIDDEN;
  extern int alloc_system_colors DECLSPEC_HIDDEN;
@@ -113,10 +119,10 @@ index 98cab8947..9f76596e4 100644
  extern HMODULE x11drv_module DECLSPEC_HIDDEN;
  extern char *process_name DECLSPEC_HIDDEN;
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index 4f611f5fa..981bcc6fb 100644
+index 0732aaa1113..ee8de0a3830 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
-@@ -86,6 +86,7 @@ BOOL client_side_with_render = TRUE;
+@@ -85,6 +85,7 @@ BOOL client_side_with_render = TRUE;
  BOOL shape_layered_windows = TRUE;
  int copy_default_colors = 128;
  int alloc_system_colors = 256;
@@ -124,7 +130,7 @@ index 4f611f5fa..981bcc6fb 100644
  DWORD thread_data_tls_index = TLS_OUT_OF_INDEXES;
  int xrender_error_base = 0;
  HMODULE x11drv_module = 0;
-@@ -436,6 +437,9 @@ static void setup_options(void)
+@@ -437,6 +438,9 @@ static void setup_options(void)
      if (!get_config_key( hkey, appkey, "AllocSystemColors", buffer, sizeof(buffer) ))
          alloc_system_colors = atoi(buffer);
  
@@ -135,5 +141,5 @@ index 4f611f5fa..981bcc6fb 100644
  
      if (appkey) RegCloseKey( appkey );
 -- 
-2.25.0
+2.26.2
 

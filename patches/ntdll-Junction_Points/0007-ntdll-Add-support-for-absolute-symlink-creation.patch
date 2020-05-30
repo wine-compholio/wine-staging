@@ -1,7 +1,7 @@
-From 5706d02d2bb68f87d4687f8acef96dd59978b6f8 Mon Sep 17 00:00:00 2001
+From d1024118fbb0a73abd19ef937d13d4378a61992b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 21:06:24 -0700
-Subject: ntdll: Add support for absolute symlink creation.
+Subject: [PATCH] ntdll: Add support for absolute symlink creation.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
@@ -11,10 +11,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  3 files changed, 143 insertions(+), 19 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index dbbb54768b..62941774ec 100644
+index 98f37af8793..825344dab86 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
-@@ -1648,17 +1648,33 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
+@@ -1672,17 +1672,33 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
  NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
  {
      BOOL src_allocated = FALSE, dest_allocated = FALSE, tempdir_created = FALSE;
@@ -48,10 +48,10 @@ index dbbb54768b..62941774ec 100644
 +        return STATUS_NOT_IMPLEMENTED;
 +    }
 +
-     if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
+     if ((status = unix_funcs->server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
          return status;
  
-@@ -1682,6 +1698,18 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -1706,6 +1722,18 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
              strcat( magic_dest, "." );
          strcat( magic_dest, "/" );
      }
@@ -70,7 +70,7 @@ index dbbb54768b..62941774ec 100644
      strcat( magic_dest, unix_dest.Buffer );
  
      /* Produce the link in a temporary location in the same folder */
-@@ -2034,6 +2062,7 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
+@@ -2058,6 +2086,7 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
          switch(buffer->ReparseTag)
          {
          case IO_REPARSE_TAG_MOUNT_POINT:
@@ -79,10 +79,10 @@ index dbbb54768b..62941774ec 100644
              break;
          default:
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 71e7dd56f3..05ba0fc57e 100644
+index 89f291536b2..92f03ab3d34 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -4832,26 +4832,50 @@ static void test_file_readonly_access(void)
+@@ -4954,26 +4954,50 @@ static void test_file_readonly_access(void)
      DeleteFileW(path);
  }
  
@@ -141,7 +141,7 @@ index 71e7dd56f3..05ba0fc57e 100644
      lstrcpyW(subst_dest, filename);
      lstrcpyW(print_dest, &filename[prefix_len]);
      *pbuffer = buffer;
-@@ -4871,10 +4895,12 @@ static void test_reparse_points(void)
+@@ -4993,10 +5017,12 @@ static void test_reparse_points(void)
      REPARSE_DATA_BUFFER *buffer = NULL;
      DWORD dwret, dwLen, dwFlags, err;
      INT buffer_len, string_len;
@@ -155,7 +155,7 @@ index 71e7dd56f3..05ba0fc57e 100644
      BOOL bret;
  
      /* Create a temporary folder for the junction point tests */
-@@ -4921,7 +4947,7 @@ static void test_reparse_points(void)
+@@ -5043,7 +5069,7 @@ static void test_reparse_points(void)
      }
      dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
      ok(dwret == STATUS_SUCCESS, "Failed to get junction point folder's attributes (0x%x).\n", dwret);
@@ -164,7 +164,7 @@ index 71e7dd56f3..05ba0fc57e 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
  
-@@ -4962,7 +4988,7 @@ static void test_reparse_points(void)
+@@ -5084,7 +5110,7 @@ static void test_reparse_points(void)
      HeapFree(GetProcessHeap(), 0, buffer);
      handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                              FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
@@ -173,7 +173,7 @@ index 71e7dd56f3..05ba0fc57e 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
      CloseHandle(handle);
-@@ -4977,7 +5003,7 @@ static void test_reparse_points(void)
+@@ -5099,7 +5125,7 @@ static void test_reparse_points(void)
      ok(bret, "Failed to create junction point target directory.\n");
      handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                           FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
@@ -182,7 +182,7 @@ index 71e7dd56f3..05ba0fc57e 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
      CloseHandle(handle);
-@@ -4990,14 +5016,73 @@ static void test_reparse_points(void)
+@@ -5112,14 +5138,73 @@ static void test_reparse_points(void)
      ok(dwret != (DWORD)~0, "Junction point doesn't exist (attributes: 0x%x)!\n", dwret);
      ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a junction point! (attributes: 0x%x)\n", dwret);
  
@@ -261,7 +261,7 @@ index 71e7dd56f3..05ba0fc57e 100644
  }
  
 diff --git a/include/ntifs.h b/include/ntifs.h
-index 4539b89d58..ab3273d3f8 100644
+index 4539b89d583..ab3273d3f81 100644
 --- a/include/ntifs.h
 +++ b/include/ntifs.h
 @@ -21,11 +21,20 @@
@@ -294,5 +294,5 @@ index 4539b89d58..ab3273d3f8 100644
  typedef struct _REPARSE_GUID_DATA_BUFFER {
      DWORD ReparseTag;
 -- 
-2.17.1
+2.26.2
 

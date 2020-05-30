@@ -1,4 +1,4 @@
-From 4906830101f0de0e165def16ff869ecc8a307b57 Mon Sep 17 00:00:00 2001
+From 22a440051f4dd3b63977a384735cf60fad7f28f5 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 12:00:51 -0600
 Subject: [PATCH] ntdll: Correctly report file symbolic links as files.
@@ -10,7 +10,7 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  2 files changed, 84 insertions(+), 44 deletions(-)
 
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 29a928153b9..4902dff190a 100644
+index 74df2aed687..7483c71a8db 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -123,6 +123,9 @@ mode_t FILE_umask = 0;
@@ -73,7 +73,7 @@ index 29a928153b9..4902dff190a 100644
 -    char *p;
      int i;
  
--    if ((status = server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
+-    if ((status = unix_funcs->server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
 -        return status;
 -
 -    if ((status = server_get_unix_name( handle, &unix_src )))
@@ -174,7 +174,7 @@ index 29a928153b9..4902dff190a 100644
 +    ULONG flags = 0;
 +    INT prefix_len;
 +
-+    if ((status = server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
++    if ((status = unix_funcs->server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
 +        return status;
 +
 +    if ((status = server_get_unix_name( handle, &unix_src )))
@@ -191,10 +191,10 @@ index 29a928153b9..4902dff190a 100644
      /* convert the relative path into an absolute path */
      if (flags == SYMLINK_FLAG_RELATIVE)
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 21bd72c7358..a1654fb8e9b 100644
+index e0116491eee..7f983583268 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5185,13 +5185,13 @@ static void test_reparse_points(void)
+@@ -5187,13 +5187,13 @@ static void test_reparse_points(void)
  
      /* Check deleting a file symlink as if it were a directory */
      bret = RemoveDirectoryW(reparse_path);
@@ -210,7 +210,7 @@ index 21bd72c7358..a1654fb8e9b 100644
      ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
  
      /* Delete the symlink as a file */
-@@ -5200,10 +5200,10 @@ static void test_reparse_points(void)
+@@ -5202,10 +5202,10 @@ static void test_reparse_points(void)
  
      /* Create a blank slate for directory symlink tests */
      bret = CreateDirectoryW(reparse_path, NULL);
@@ -224,5 +224,5 @@ index 21bd72c7358..a1654fb8e9b 100644
      /* Create the directory symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
 -- 
-2.25.1
+2.26.2
 

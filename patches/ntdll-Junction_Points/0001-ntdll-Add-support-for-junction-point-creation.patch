@@ -1,4 +1,4 @@
-From 5ee2cbd7b66c190eae47785907fd40562b05379b Mon Sep 17 00:00:00 2001
+From e171bdbabedaeaafc0181ee156bf08ef180809da Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -18,10 +18,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index 395992046e8..6ea81e0641a 100644
+index 816e3684510..a1b6096b9b7 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2210,6 +2210,8 @@ AC_CHECK_FUNCS(\
+@@ -2202,6 +2202,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -31,7 +31,7 @@ index 395992046e8..6ea81e0641a 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 1adc1e094ec..3e10703c5da 100644
+index 013706889bb..37dca75651c 100644
 --- a/dlls/ntdll/file.c
 +++ b/dlls/ntdll/file.c
 @@ -21,6 +21,7 @@
@@ -72,7 +72,7 @@ index 1adc1e094ec..3e10703c5da 100644
 +    NTSTATUS status;
 +    int i;
 +
-+    if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
++    if ((status = unix_funcs->server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
 +        return status;
 +
 +    if ((status = server_get_unix_name( handle, &unix_src )))
@@ -181,7 +181,7 @@ index 1adc1e094ec..3e10703c5da 100644
          return server_ioctl_file( handle, event, apc, apc_context, io, code,
                                    in_buffer, in_size, out_buffer, out_size );
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 33b8ead5528..e6fea0ff7fe 100644
+index 31c18454f0e..046b49c2d2b 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -192,7 +192,7 @@ index 33b8ead5528..e6fea0ff7fe 100644
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -4951,6 +4952,105 @@ static void test_file_readonly_access(void)
+@@ -4953,6 +4954,105 @@ static void test_file_readonly_access(void)
      DeleteFileW(path);
  }
  
@@ -298,17 +298,17 @@ index 33b8ead5528..e6fea0ff7fe 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -5021,4 +5121,5 @@ START_TEST(file)
+@@ -5023,4 +5123,5 @@ START_TEST(file)
      test_query_attribute_information_file();
      test_ioctl();
      test_flush_buffers_file();
 +    test_reparse_points();
  }
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 3f29a374144..daeb92cd13b 100644
+index 9796dd8e5d9..410ae718e99 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
-@@ -510,6 +510,7 @@ SOURCES = \
+@@ -517,6 +517,7 @@ SOURCES = \
  	ntddvdeo.h \
  	ntdef.h \
  	ntdsapi.h \
@@ -365,7 +365,7 @@ index 00000000000..21d42e17325
 +
 +#endif /* __WINE_NTIFS_H */
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 8514a4a43bf..a17ffe7ab84 100644
+index 928730a41d7..e8434c73cca 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -334,6 +334,15 @@ double rint(double x);
@@ -385,10 +385,10 @@ index 8514a4a43bf..a17ffe7ab84 100644
  int statvfs( const char *path, struct statvfs *buf );
  #endif
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index 08e143d26d0..1c850116785 100644
+index 7bc67fa3fee..1963afe2423 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
-@@ -15,6 +15,7 @@ C_SRCS = \
+@@ -14,6 +14,7 @@ C_SRCS = \
  	pread.c \
  	pwrite.c \
  	readlink.c \
@@ -458,5 +458,5 @@ index 00000000000..f46f407ec71
 +}
 +#endif /* HAVE_RENAMEAT2 */
 -- 
-2.25.1
+2.26.2
 

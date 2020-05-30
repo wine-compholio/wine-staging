@@ -1,4 +1,4 @@
-From de02412f5e105f162e2e457d5bec698575fffc10 Mon Sep 17 00:00:00 2001
+From 5ea68740395cd0ae34fb4d74d540b30170645ac3 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 4 Oct 2014 02:35:44 +0200
 Subject: [PATCH] ntdll: Trigger write watches before passing userdata pointer
@@ -10,7 +10,7 @@ Subject: [PATCH] ntdll: Trigger write watches before passing userdata pointer
  2 files changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 381062cceb1..e7c6ca63fe2 100644
+index 825f8451904..b414401634a 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -1557,7 +1557,6 @@ todo_wine
@@ -22,28 +22,25 @@ index 381062cceb1..e7c6ca63fe2 100644
         "Access and/or AccessStatus were changed!\n");
  
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 046cf601ebf..3d88b47a744 100644
+index ed4e3f25531..921dec86c82 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -406,9 +406,18 @@ unsigned int server_call_unlocked( void *req_ptr )
+@@ -166,6 +166,15 @@ static DECLSPEC_NORETURN void server_protocol_perror( const char *err )
   */
  unsigned int CDECL wine_server_call( void *req_ptr )
  {
 +    struct __server_request_info * const req = req_ptr;
-     sigset_t old_set;
-     unsigned int ret;
- 
++
 +    /* trigger write watches, otherwise read() might return EFAULT */
 +    if (req->u.req.request_header.reply_size &&
 +        !virtual_check_buffer_for_write( req->reply_data, req->u.req.request_header.reply_size ))
 +    {
-+        ret = STATUS_ACCESS_VIOLATION;
-+        return ret;
++        return STATUS_ACCESS_VIOLATION;
 +    }
 +
-     pthread_sigmask( SIG_BLOCK, &server_block_set, &old_set );
-     ret = server_call_unlocked( req_ptr );
-     pthread_sigmask( SIG_SETMASK, &old_set, NULL );
+     return unix_funcs->server_call( req_ptr );
+ }
+ 
 -- 
 2.26.2
 

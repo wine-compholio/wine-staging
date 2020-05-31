@@ -1,4 +1,4 @@
-From 45598a4fa2472c7df34c472fb0c193d9948a469d Mon Sep 17 00:00:00 2001
+From c605ff6f4bcab597bd9769f49b95d009d561b68d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -8,16 +8,16 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  dlls/ntdll/signal_x86_64.c   |   2 +
  dlls/ntdll/thread.c          |  13 +-
  libs/wine/loader.c           |   4 +
- programs/wineboot/wineboot.c |   4 +
+ server/mapping.c             |   6 +-
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 7 files changed, 307 insertions(+), 10 deletions(-)
+ 7 files changed, 308 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 95939ba6bde..ae5462f6e55 100644
+index 1f525194ce7..21af7b4ce7a 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1573,7 +1573,7 @@ static void test_filenames(void)
+@@ -1574,7 +1574,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -26,7 +26,7 @@ index 95939ba6bde..ae5462f6e55 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1615,8 +1615,13 @@ static void test_FakeDLL(void)
+@@ -1616,8 +1616,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -41,7 +41,7 @@ index 95939ba6bde..ae5462f6e55 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index e92470e9606..e089afd71f5 100644
+index 5defcd6a7af..c2936045c5d 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -354,6 +354,7 @@ static inline void set_sigcontext( const CONTEXT *context, ucontext_t *sigcontex
@@ -52,7 +52,7 @@ index e92470e9606..e089afd71f5 100644
  
  /***********************************************************************
   * Definitions for Win32 unwind tables
-@@ -3119,6 +3120,7 @@ void signal_init_threading(void)
+@@ -3142,6 +3143,7 @@ void signal_init_threading(void)
   */
  NTSTATUS signal_alloc_thread( TEB *teb )
  {
@@ -61,10 +61,10 @@ index e92470e9606..e089afd71f5 100644
  }
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index fb5320603dc..20934448fa3 100644
+index e5ff24f34f1..ddaf41637d0 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -54,6 +54,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+@@ -56,6 +56,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
  
  struct _KUSER_SHARED_DATA *user_shared_data = NULL;
  
@@ -73,7 +73,7 @@ index fb5320603dc..20934448fa3 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -230,9 +232,9 @@ TEB *thread_init(void)
+@@ -281,9 +283,9 @@ TEB *thread_init(void)
      /* reserve space for shared user data */
  
      addr = (void *)0x7ffe0000;
@@ -85,7 +85,7 @@ index fb5320603dc..20934448fa3 100644
      if (status)
      {
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
-@@ -240,6 +242,13 @@ TEB *thread_init(void)
+@@ -291,6 +293,13 @@ TEB *thread_init(void)
      }
      user_shared_data = addr;
  
@@ -115,21 +115,23 @@ index 4597a6cb324..3d0d75e9c6d 100644
      sec->Characteristics  = (IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ);
      sec++;
  
-diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
-index 21be0f55fb0..f84a7fe8a0c 100644
---- a/programs/wineboot/wineboot.c
-+++ b/programs/wineboot/wineboot.c
-@@ -235,6 +235,10 @@ static void create_user_shared_data(void)
-     data->NumberOfPhysicalPages       = sbi.MmNumberOfPhysicalPages;
-     wcscpy( data->NtSystemRoot, L"C:\\windows" );
+diff --git a/server/mapping.c b/server/mapping.c
+index 0941dd87c05..002f3215af2 100644
+--- a/server/mapping.c
++++ b/server/mapping.c
+@@ -964,7 +964,11 @@ struct object *create_user_data_mapping( struct object *root, const struct unico
+     if (!(mapping = create_mapping( root, name, OBJ_OPENIF, sizeof(KSHARED_USER_DATA),
+                                     SEC_COMMIT, 0, FILE_READ_DATA | FILE_WRITE_DATA, NULL ))) return NULL;
+     ptr = mmap( NULL, mapping->size, PROT_WRITE, MAP_SHARED, get_unix_fd( mapping->fd ), 0 );
+-    if (ptr != MAP_FAILED) user_shared_data = ptr;
++    if (ptr != MAP_FAILED)
++    {
++        user_shared_data = ptr;
++        user_shared_data->SystemCallPad[0] = 1;
++    }
+     return &mapping->obj;
+ }
  
-+    /* Pretend we don't support the SYSCALL instruction on x86-64. Needed for
-+     * Chromium; see output_syscall_thunks_x64() in winebuild. */
-+    data->SystemCallPad[0] = 1;
-+
-     features = data->ProcessorFeatures;
-     switch (sci.Architecture)
-     {
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
 index 74216f8bb6e..820516329a4 100644
 --- a/tools/winebuild/parser.c

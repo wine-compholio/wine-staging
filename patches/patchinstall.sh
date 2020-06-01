@@ -2335,6 +2335,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0041-d3d11-Allow-NULL-pointer-for-initial-count-in-d3d11_.patch
 	patch_apply d3d11-Deferred_Context/0042-d3d11-Correctly-align-map-info-buffer.patch
 	patch_apply d3d11-Deferred_Context/0043-d3d11-tests-Add-a-basic-test-for-drawing-with-deferr.patch
+	patch_apply d3d11-Deferred_Context/0044-d3d11-Support-ID3D11DeviceContext1-for-deferred-cont.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
@@ -2379,6 +2380,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Steve Melenchuk", "d3d11: Allow NULL pointer for initial count in d3d11_deferred_context_CSSetUnorderedAccessViews.", 1 },';
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Correctly align map info buffer.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "d3d11/tests: Add a basic test for drawing with deferred context.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3d11: Support ID3D11DeviceContext1 for deferred contexts.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4002,7 +4004,7 @@ fi
 # | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
 # | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c,
 # | 	dlls/ntdll/thread.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
-# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, programs/wineboot/wineboot.c,
+# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c,
 # | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
 # | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |

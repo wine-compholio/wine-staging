@@ -1,4 +1,4 @@
-From 6c463b0bd58fb0830271582e5dd916f936084daf Mon Sep 17 00:00:00 2001
+From 463baa9359f163b4e152f681a3703e602347ab04 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 30 May 2015 02:23:15 +0200
 Subject: [PATCH] ntdll: Add support for hiding wine version information from
@@ -10,10 +10,10 @@ Subject: [PATCH] ntdll: Add support for hiding wine version information from
  2 files changed, 104 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 926098ebf50a..4cf7fed9e1b2 100644
+index 71efed5fa32..ec9ddc73e9c 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -78,6 +78,7 @@ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
+@@ -77,6 +77,7 @@ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
  const WCHAR syswow64_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
                                's','y','s','w','o','w','6','4','\\',0};
  
@@ -21,7 +21,7 @@ index 926098ebf50a..4cf7fed9e1b2 100644
  /* system search path */
  static const WCHAR system_path[] =
      {'C',':','\\','w','i','n','d','o','w','s','\\','s','y','s','t','e','m','3','2',';',
-@@ -86,6 +87,9 @@ static const WCHAR system_path[] =
+@@ -85,6 +86,9 @@ static const WCHAR system_path[] =
  
  static const WCHAR dotW[] = {'.',0};
  
@@ -31,7 +31,7 @@ index 926098ebf50a..4cf7fed9e1b2 100644
  static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
  static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
  static int free_lib_count;   /* recursion depth of LdrUnloadDll calls */
-@@ -102,6 +106,8 @@ struct dll_dir_entry
+@@ -101,6 +105,8 @@ struct dll_dir_entry
  
  static struct list dll_dir_list = LIST_INIT( dll_dir_list );  /* extra dirs from LdrAddDllDirectory */
  
@@ -40,7 +40,7 @@ index 926098ebf50a..4cf7fed9e1b2 100644
  struct ldr_notification
  {
      struct list                    entry;
-@@ -1872,6 +1878,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+@@ -1810,6 +1816,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
  }
  
  
@@ -137,7 +137,7 @@ index 926098ebf50a..4cf7fed9e1b2 100644
  /******************************************************************
   *		LdrGetProcedureAddress  (NTDLL.@)
   */
-@@ -1892,7 +1988,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+@@ -1830,7 +1926,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
          LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
          void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
                            : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
@@ -146,20 +146,20 @@ index 926098ebf50a..4cf7fed9e1b2 100644
          {
              *address = proc;
              ret = STATUS_SUCCESS;
-@@ -4739,6 +4835,8 @@ void __wine_process_init(void)
+@@ -4491,6 +4587,8 @@ void __wine_process_init(void)
          NtTerminateProcess( GetCurrentProcess(), status );
      }
  
 +    hidden_exports_init( wm->ldr.FullDllName.Buffer );
 +
-     virtual_set_large_address_space();
+     unix_funcs->virtual_set_large_address_space();
  
      /* elevate process if necessary */
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 7d631cb33ddb..8256ec710a00 100644
+index dbd9a826429..b4666d82c8b 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -347,6 +347,11 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
+@@ -283,6 +283,11 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
  #define InterlockedCompareExchange64(dest,xchg,cmp) RtlInterlockedCompareExchange64(dest,xchg,cmp)
  #endif
  

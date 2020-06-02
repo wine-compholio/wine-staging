@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3c86adab766e3bc7c91da088c2dd6bc41a917055"
+	echo "48020f4846cca1a02f4e1dc037e2cc2068df5e9c"
 }
 
 # Show version information
@@ -187,7 +187,6 @@ patch_enable_all ()
 	enable_ntdll_NtDevicePath="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
-	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -661,9 +660,6 @@ patch_enable ()
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
-			;;
-		ntdll-NtQueryVirtualMemory)
-			enable_ntdll_NtQueryVirtualMemory="$2"
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
@@ -1685,13 +1681,6 @@ if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-RtlCreateUserThread depends on that."
 	fi
 	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	if test "$enable_ntdll_NtDevicePath" -gt 1; then
-		abort "Patchset ntdll-NtDevicePath disabled, but ntdll-NtQueryVirtualMemory depends on that."
-	fi
-	enable_ntdll_NtDevicePath=1
 fi
 
 if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
@@ -3677,8 +3666,8 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h,
-# | 	dlls/ntdll/server.c, dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/signal_powerpc.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/virtual.c,
+# | 	dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c,
+# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/unix/server.c, dlls/ntdll/unix/virtual.c,
 # | 	dlls/psapi/tests/psapi_main.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
@@ -3713,7 +3702,7 @@ fi
 # |   *	[#44650] Fix holes in ELF mappings
 # |
 # | Modified files:
-# |   *	dlls/ntdll/virtual.c, dlls/psapi/tests/psapi_main.c
+# |   *	dlls/ntdll/unix/virtual.c, dlls/psapi/tests/psapi_main.c
 # |
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	patch_apply ntdll-Builtin_Prot/0001-ntdll-Fix-holes-in-ELF-mappings.patch
@@ -3775,7 +3764,7 @@ fi
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c
 # |
 if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
@@ -3858,7 +3847,7 @@ fi
 # |   *	[#33162] Ensure NtProtectVirtualMemory and NtCreateSection are on separate pages
 # |
 # | Modified files:
-# |   *	dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/unix/virtual.c
 # |
 if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	patch_apply ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch
@@ -3875,7 +3864,7 @@ fi
 # | 	44-bit user-mode VA limitation from Windows < 8.1)
 # |
 # | Modified files:
-# |   *	dlls/ntdll/virtual.c
+# |   *	dlls/ntdll/unix/virtual.c
 # |
 if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
 	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Stop-search-on-mmap-error-in-try_map_free_area.patch
@@ -4111,36 +4100,6 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	patch_apply ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
 	(
 		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32/tests: Add tests for NtQuerySection.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtQueryVirtualMemory
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Pipe_SpecialCharacters, ntdll-NtDevicePath
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
-# |   *	[#27248] Implement K32GetMappedFileName
-# |
-# | Modified files:
-# |   *	dlls/kernelbase/debug.c, dlls/ntdll/directory.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/info.c, dlls/ntdll/virtual.c,
-# | 	dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
-# |
-if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0004-ntdll-tests-Add-tests-for-NtQueryVirtualMemory-Memor.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0005-ntdll-tests-Add-test-to-ensure-section-name-is-full-.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add test to ensure section name is full path.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 2f03ded51b6f537ac6a4f3bfb51e1d0998a27c48 Mon Sep 17 00:00:00 2001
+From 0e9d9a6aa1b65dae1c8dc34d6d5fb27aa73f96ea Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: [PATCH] ntdll: Implement process token elevation through manifests.
@@ -12,10 +12,10 @@ Subject: [PATCH] ntdll: Implement process token elevation through manifests.
  5 files changed, 67 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 38c893e3eb4..d32b57612d5 100644
+index 51addaaf983..71efed5fa32 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -4045,6 +4045,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -3903,6 +3903,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
  }
  
  
@@ -48,7 +48,7 @@ index 38c893e3eb4..d32b57612d5 100644
  /***********************************************************************
   *           load_global_options
   */
-@@ -4478,6 +4504,7 @@ void __wine_process_init(void)
+@@ -4363,6 +4389,7 @@ void __wine_process_init(void)
                                        's','y','s','t','e','m','3','2','\\',
                                        'k','e','r','n','e','l','3','2','.','d','l','l',0};
      RTL_USER_PROCESS_PARAMETERS *params;
@@ -56,9 +56,9 @@ index 38c893e3eb4..d32b57612d5 100644
      WINE_MODREF *wm;
      NTSTATUS status;
      ANSI_STRING func_name;
-@@ -4575,6 +4602,16 @@ void __wine_process_init(void)
+@@ -4466,6 +4493,16 @@ void __wine_process_init(void)
  
-     virtual_set_large_address_space();
+     unix_funcs->virtual_set_large_address_space();
  
 +    /* elevate process if necessary */
 +    status = RtlQueryInformationActivationContext( 0, NULL, 0, RunlevelInformationInActivationContext,
@@ -74,10 +74,10 @@ index 38c893e3eb4..d32b57612d5 100644
      RemoveEntryList( &wm->ldr.InLoadOrderLinks );
      InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderLinks );
 diff --git a/server/process.c b/server/process.c
-index 4c7da9223c1..d6f71a774f3 100644
+index 80a091b0c72..34010b301c3 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -1107,6 +1107,14 @@ struct process_snapshot *process_snap( int *count )
+@@ -1112,6 +1112,14 @@ struct process_snapshot *process_snap( int *count )
      return snapshot;
  }
  
@@ -105,7 +105,7 @@ index 5b83e111a6f..dfe5c4e52d8 100644
  /* console functions */
  extern void inherit_console( struct thread *parent_thread, struct process *parent,
 diff --git a/server/protocol.def b/server/protocol.def
-index 68c66bc2fcb..55c821ac1e2 100644
+index d8618a5c964..89adc93305c 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -3762,6 +3762,13 @@ struct handle_info
@@ -145,5 +145,5 @@ index 970ed1838da..1c1d49989b3 100644
 +    }
 +}
 -- 
-2.26.0
+2.26.2
 

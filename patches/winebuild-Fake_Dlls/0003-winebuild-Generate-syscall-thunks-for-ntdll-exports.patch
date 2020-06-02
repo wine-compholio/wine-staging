@@ -1,4 +1,4 @@
-From 505b2a7167d4b0ea533663ef30663f21b0ab9863 Mon Sep 17 00:00:00 2001
+From 3b9456b9e0bc870281df2144b67d42112baad4bd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -18,7 +18,7 @@ Based on a patch by Erich E. Hoover.
  10 files changed, 208 insertions(+), 27 deletions(-)
 
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 5fd54071ffd..950408cbc38 100644
+index eb6c87bce4d..d3cbfe63f1c 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -449,6 +449,8 @@ static ULONG first_ldt_entry = 32;
@@ -30,15 +30,15 @@ index 5fd54071ffd..950408cbc38 100644
  enum i386_trap_code
  {
      TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
-@@ -1487,7 +1489,7 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
-         {
-             context->Ebp    = ebp;
-             context->Esp    = (DWORD)&retaddr;
--            context->Eip    = *(&edi - 1);
-+            context->Eip    = (DWORD)__syscall_NtGetContextThread + 18;
-             context->SegCs  = get_cs();
-             context->SegSs  = get_ds();
-             context->EFlags = eflags;
+@@ -1275,7 +1277,7 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
+     {
+         context->Ebp    = ebp;
+         context->Esp    = (DWORD)&retaddr;
+-        context->Eip    = *(&edi - 1);
++        context->Eip    = (DWORD)__syscall_NtGetContextThread + 18;
+         context->EFlags = eflags;
+     }
+     return unix_funcs->NtGetContextThread( handle, context );
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
 index a5e6faa461a..51938bf84cc 100644
 --- a/dlls/ntdll/tests/exception.c
@@ -53,7 +53,7 @@ index a5e6faa461a..51938bf84cc 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index bb11521cf69..edd6c4dfa99 100644
+index f9ea9203ed8..7e435c4ccb3 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -212,6 +212,8 @@ void map_user_shared_data(void)
@@ -65,15 +65,15 @@ index bb11521cf69..edd6c4dfa99 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -248,6 +250,7 @@ TEB *thread_init(void)
+@@ -246,6 +248,7 @@ TEB *thread_init(void)
+ 
+     teb = unix_funcs->virtual_alloc_first_teb();
      unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy );
-     unix_funcs->alloc_thread( teb );
-     unix_funcs->init_thread( teb );
 +    teb->WOW32Reserved = __wine_syscall_dispatcher;
  
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
-@@ -493,6 +496,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
+@@ -491,6 +494,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
      teb->Tib.StackBase = stack.StackBase;
      teb->Tib.StackLimit = stack.StackLimit;
      teb->DeallocationStack = stack.DeallocationStack;

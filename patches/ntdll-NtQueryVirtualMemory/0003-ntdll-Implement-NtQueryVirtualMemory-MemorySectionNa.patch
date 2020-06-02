@@ -1,21 +1,22 @@
-From e718ef3521d76d455dbfd1088cc83e47121d987c Mon Sep 17 00:00:00 2001
+From fb9c617c12858107700c919aec3dfa5fbf0a65dc Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Sun, 28 May 2017 05:19:30 +0200
-Subject: ntdll: Implement NtQueryVirtualMemory(MemorySectionName). (v3)
+Subject: [PATCH] ntdll: Implement NtQueryVirtualMemory(MemorySectionName).
+ (v3)
 
 Contains several improvements by Sebastian Lackner <sebastian@fds-team.de>.
 ---
- dlls/ntdll/virtual.c          | 91 ++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/unix/virtual.c     | 91 ++++++++++++++++++++++++++++++++++-
  dlls/psapi/tests/psapi_main.c |  8 +--
  server/mapping.c              | 29 +++++++++++
  server/protocol.def           |  9 ++++
  4 files changed, 129 insertions(+), 8 deletions(-)
 
-diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 6ad2d21e0..f49127c3e 100644
---- a/dlls/ntdll/virtual.c
-+++ b/dlls/ntdll/virtual.c
-@@ -3192,6 +3192,93 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 0346d0d9753..06796f441ae 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -3695,6 +3695,93 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
      return STATUS_SUCCESS;
  }
  
@@ -109,7 +110,7 @@ index 6ad2d21e0..f49127c3e 100644
  #define UNIMPLEMENTED_INFO_CLASS(c) \
      case c: \
          FIXME("(process=%p,addr=%p) Unimplemented information class: " #c "\n", process, addr); \
-@@ -3216,8 +3303,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+@@ -3719,8 +3806,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
          case MemoryWorkingSetExInformation:
              return get_working_set_ex( process, addr, buffer, len, res_len );
  
@@ -122,10 +123,10 @@ index 6ad2d21e0..f49127c3e 100644
  
          default:
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
-index 0df247e9b..1cc0455aa 100644
+index da7524dd60a..bfe14231a9b 100644
 --- a/dlls/psapi/tests/psapi_main.c
 +++ b/dlls/psapi/tests/psapi_main.c
-@@ -375,14 +375,7 @@ static BOOL nt_get_mapped_file_name(HANDLE process, LPVOID addr, LPWSTR name, DW
+@@ -372,14 +372,7 @@ static BOOL nt_get_mapped_file_name(HANDLE process, LPVOID addr, LPWSTR name, DW
  
      ret_len = 0xdeadbeef;
      status = pNtQueryVirtualMemory(process, addr, MemorySectionName, buf, buf_len, &ret_len);
@@ -140,7 +141,7 @@ index 0df247e9b..1cc0455aa 100644
  
      section_name = (MEMORY_SECTION_NAME *)buf;
      ok(ret_len == section_name->SectionFileName.MaximumLength + sizeof(*section_name), "got %lu, %u\n",
-@@ -504,6 +497,7 @@ todo_wine {
+@@ -501,6 +494,7 @@ todo_wine {
      {
          ok(memcmp(map_nameW, nt_map_name, lstrlenW(map_nameW)) == 0, "map name does not start with a device name: %s\n", map_name);
          WideCharToMultiByte(CP_ACP, 0, map_nameW, -1, map_name, MAX_PATH, NULL, NULL);
@@ -149,10 +150,10 @@ index 0df247e9b..1cc0455aa 100644
      }
  
 diff --git a/server/mapping.c b/server/mapping.c
-index 6990a1913..ca28e8909 100644
+index 0941dd87c05..487cd2a6131 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
-@@ -1064,6 +1064,35 @@ DECL_HANDLER(unmap_view)
+@@ -1091,6 +1091,35 @@ DECL_HANDLER(unmap_view)
      if (view) free_memory_view( view );
  }
  
@@ -189,10 +190,10 @@ index 6990a1913..ca28e8909 100644
  DECL_HANDLER(get_mapping_committed_range)
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 6c44b2b43..e7753f8b7 100644
+index 632c996dc0e..223b45db1a8 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1838,6 +1838,15 @@ enum char_info_mode
+@@ -1849,6 +1849,15 @@ enum char_info_mode
  @END
  
  
@@ -209,5 +210,5 @@ index 6c44b2b43..e7753f8b7 100644
  @REQ(get_mapping_committed_range)
      client_ptr_t base;          /* view base address */
 -- 
-2.25.0
+2.26.2
 

@@ -1,18 +1,18 @@
-From edf5fb86ff4d075fb48fd562fc0be2140c8e66bb Mon Sep 17 00:00:00 2001
-From: Paul Gofman <gofmanp@gmail.com>
-Date: Wed, 15 Jan 2020 17:05:09 +0300
+From 0c26b2508ad1fc3c5bfb8eb775fb21febfeb4c0e Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 2 Jun 2020 21:06:33 +0300
 Subject: [PATCH] ntdll: Permanently exclude natively mapped areas from free
  areas list.
 
 ---
- dlls/ntdll/virtual.c | 22 ++++++++++++++++++++++
- 1 file changed, 22 insertions(+)
+ dlls/ntdll/virtual.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
 
 diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
-index 18524fc12de..63a10435890 100644
+index 81592a84715..6c6efea0285 100644
 --- a/dlls/ntdll/virtual.c
 +++ b/dlls/ntdll/virtual.c
-@@ -111,6 +111,9 @@ static const BYTE VIRTUAL_Win32Flags[16] =
+@@ -112,6 +112,9 @@ static const BYTE VIRTUAL_Win32Flags[16] =
  
  static struct wine_rb_tree views_tree;
  
@@ -22,7 +22,7 @@ index 18524fc12de..63a10435890 100644
  static RTL_CRITICAL_SECTION csVirtual;
  static RTL_CRITICAL_SECTION_DEBUG critsect_debug =
  {
-@@ -566,6 +569,13 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
+@@ -755,6 +758,13 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
          if (ptr != (void *)-1)
              munmap( ptr, size );
  
@@ -36,37 +36,31 @@ index 18524fc12de..63a10435890 100644
          if ((step > 0 && (char *)end - (char *)start < step) ||
              (step < 0 && (char *)start - (char *)base < -step) ||
              step == 0)
-@@ -1136,6 +1146,8 @@ static int alloc_free_area_callback( void *base, size_t area_size, void *arg )
-     ptrdiff_t step = alloc->top_down ? -(granularity_mask + 1) : (granularity_mask + 1);
-     void *start;
+@@ -1594,9 +1604,24 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
  
-+    TRACE("base %p, area_size %p, size %p.\n", base, (void *)area_size, (void *)size);
-+
-     if (base < address_space_start) base = address_space_start;
-     if (is_beyond_limit( base, size, alloc->limit )) end = alloc->limit;
-     if (base >= end) return 0;
-@@ -1265,11 +1277,21 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
-             goto done;
-         }
- 
-+
          if (is_win64 || zero_bits_64)
          {
 +            last_already_mapped = NULL;
 +
-             if (!wine_mmap_enum_free_areas( alloc_free_area_callback, &alloc, top_down ))
+             if (!(ptr = alloc_free_area( alloc.limit, alloc.size, top_down, alloc.unix_prot)))
                  return STATUS_NO_MEMORY;
  
 +            if (last_already_mapped)
 +            {
++                void *last_mapped_start, *last_mapped_end;
++
 +                TRACE("Permanently excluding %p - %p from free list.\n",
 +                        last_already_mapped, (char *)last_already_mapped + last_already_mapped_size - 1);
-+                wine_mmap_remove_free_area(last_already_mapped, last_already_mapped_size, 0);
++                last_mapped_start = ROUND_ADDR(last_already_mapped, granularity_mask);
++                last_mapped_end = ROUND_ADDR((char *)last_already_mapped + last_already_mapped_size + granularity_mask,
++                        granularity_mask);
++                if (ptr > last_mapped_end || (char *)ptr + size < (char *)last_mapped_start)
++                    free_ranges_remove_range(last_mapped_start, last_mapped_end, last_already_mapped);
 +            }
 +
-             ptr = alloc.result;
              TRACE( "got mem in free area %p-%p\n", ptr, (char *)ptr + size );
              goto done;
+         }
 -- 
 2.26.2
 

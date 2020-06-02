@@ -175,6 +175,7 @@ patch_enable_all ()
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
+	enable_ntdll_ForceBottomUpAlloc="$1"
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
@@ -624,6 +625,9 @@ patch_enable ()
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
+			;;
+		ntdll-ForceBottomUpAlloc)
+			enable_ntdll_ForceBottomUpAlloc="$2"
 			;;
 		ntdll-HashLinks)
 			enable_ntdll_HashLinks="$2"
@@ -3860,6 +3864,33 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	patch_apply ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-ForceBottomUpAlloc
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48175] AION (64 bit) - crashes in crysystem.dll.CryFree() due to high memory pointers allocated
+# |   *	[#46568] 64-bit msxml6.dll from Microsoft Core XML Services 6.0 redist package fails to load (Wine doesn't respect
+# | 	44-bit user-mode VA limitation from Windows < 8.1)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/virtual.c
+# |
+if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
+	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Stop-search-on-mmap-error-in-try_map_free_area.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0002-ntdll-Use-MAP_FIXED_NOREPLACE-flag-in-try_map_free_a.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0003-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0004-ntdll-Increase-step-after-failed-map-attempt-in-try_.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0005-ntdll-Use-free-area-list-for-virtual-memory-allocati.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0006-ntdll-Permanently-exclude-natively-mapped-areas-from.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Stop search on mmap() error in try_map_free_area().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use MAP_FIXED_NOREPLACE flag in try_map_free_area() if available.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Force bottom up allocation order for 64 bit arch unless top down is requested.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Increase step after failed map attempt in try_map_free_area().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use free area list for virtual memory allocation.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Permanently exclude natively mapped areas from free areas list.", 1 },';
 	) >> "$patchlist"
 fi
 

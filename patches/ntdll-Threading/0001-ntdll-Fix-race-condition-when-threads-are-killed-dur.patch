@@ -1,4 +1,4 @@
-From f8e12f51bebca8cda3be339bcc216ca8cc60a718 Mon Sep 17 00:00:00 2001
+From 5f34c6a4429025ee71616e677e0e59342bee17b0 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Wed, 25 Feb 2015 22:45:42 +0100
 Subject: [PATCH] ntdll: Fix race-condition when threads are killed during
@@ -19,10 +19,10 @@ fix the most critical one (messed up refcounting of threads) for now.
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index b25f87e437..5fbd9e06c3 100644
+index bb11521cf69..fee26ccd21d 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -336,6 +336,7 @@ void exit_thread( int status )
+@@ -298,6 +298,7 @@ TEB *thread_init(void)
  void WINAPI RtlExitUserThread( ULONG status )
  {
      static void *prev_teb;
@@ -30,7 +30,7 @@ index b25f87e437..5fbd9e06c3 100644
      TEB *teb;
  
      if (status)  /* send the exit code to the server (0 is already the default) */
-@@ -349,7 +350,7 @@ void WINAPI RtlExitUserThread( ULONG status )
+@@ -311,7 +312,7 @@ void WINAPI RtlExitUserThread( ULONG status )
          SERVER_END_REQ;
      }
  
@@ -38,8 +38,8 @@ index b25f87e437..5fbd9e06c3 100644
 +    if (InterlockedCompareExchange( &nb_threads, 0, 0 ) <= 0)
      {
          LdrShutdownProcess();
-         pthread_sigmask( SIG_BLOCK, &server_block_set, NULL );
-@@ -372,6 +373,11 @@ void WINAPI RtlExitUserThread( ULONG status )
+         unix_funcs->exit_process( status );
+@@ -333,6 +334,11 @@ void WINAPI RtlExitUserThread( ULONG status )
          }
      }
  
@@ -48,7 +48,7 @@ index b25f87e437..5fbd9e06c3 100644
 +    pthread_sigmask( SIG_BLOCK, &sigset, NULL );
 +    if (!InterlockedDecrement( &nb_threads )) _exit( status );
 +
-     signal_exit_thread( status );
+     for (;;) unix_funcs->exit_thread( status );
  }
  
 -- 

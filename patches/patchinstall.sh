@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bf83d755d987fec552cd1dce30638c31c49ab760"
+	echo "3c86adab766e3bc7c91da088c2dd6bc41a917055"
 }
 
 # Show version information
@@ -175,7 +175,6 @@ patch_enable_all ()
 	enable_ntdll_FileDispositionInformation="$1"
 	enable_ntdll_FileFsFullSizeInformation="$1"
 	enable_ntdll_Fix_Alignment="$1"
-	enable_ntdll_ForceBottomUpAlloc="$1"
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
@@ -625,9 +624,6 @@ patch_enable ()
 			;;
 		ntdll-Fix_Alignment)
 			enable_ntdll_Fix_Alignment="$2"
-			;;
-		ntdll-ForceBottomUpAlloc)
-			enable_ntdll_ForceBottomUpAlloc="$2"
 			;;
 		ntdll-HashLinks)
 			enable_ntdll_HashLinks="$2"
@@ -3867,35 +3863,6 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ForceBottomUpAlloc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48175] AION (64 bit) - crashes in crysystem.dll.CryFree() due to high memory pointers allocated
-# |   *	[#46568] 64-bit msxml6.dll from Microsoft Core XML Services 6.0 redist package fails to load (Wine doesn't respect
-# | 	44-bit user-mode VA limitation from Windows < 8.1)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/virtual.c, include/wine/library.h, libs/wine/mmap.c, libs/wine/wine.map
-# |
-if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
-	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Stop-search-on-mmap-error-in-try_map_free_area.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0002-ntdll-Use-MAP_FIXED_NOREPLACE-flag-in-try_map_free_a.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0003-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0004-ntdll-Increase-step-after-failed-map-attempt-in-try_.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0005-libs-wine-Add-functions-for-managing-free-area-list.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0006-ntdll-Use-free-area-list-for-virtual-memory-allocati.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0007-ntdll-Permanently-exclude-natively-mapped-areas-from.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Stop search on mmap() error in try_map_free_area().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use MAP_FIXED_NOREPLACE flag in try_map_free_area() if available.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Force bottom up allocation order for 64 bit arch unless top down is requested.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Increase step after failed map attempt in try_map_free_area().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "libs/wine: Add functions for managing free area list.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use free area list for virtual memory allocation.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Permanently exclude natively mapped areas from free areas list.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-HashLinks
 # |
 # | Modified files:
@@ -4002,11 +3969,11 @@ fi
 # | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
 # | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
-# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c, dlls/ntdll/tests/exception.c,
-# | 	dlls/ntdll/thread.c, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
-# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c,
-# | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
-# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c,
+# | 	dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c,
+# | 	dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h,
+# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
+# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
@@ -4149,7 +4116,7 @@ fi
 # Patchset ntdll-NtSetLdtEntries
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/signal_i386.c, libs/wine/ldt.c
+# |   *	dlls/kernel32/tests/thread.c, dlls/ntdll/unix/signal_i386.c, libs/wine/ldt.c
 # |
 if test "$enable_ntdll_NtSetLdtEntries" -eq 1; then
 	patch_apply ntdll-NtSetLdtEntries/0001-ntdll-Implement-NtSetLdtEntries.patch

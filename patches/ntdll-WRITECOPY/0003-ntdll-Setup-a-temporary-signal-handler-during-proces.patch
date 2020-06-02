@@ -1,4 +1,4 @@
-From 3ecd352d441ac2d596508cd693431abdd7128ec6 Mon Sep 17 00:00:00 2001
+From dcd95cc3f7ef19b34669ebfeb92c29da16ac2387 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
 Subject: [PATCH] ntdll: Setup a temporary signal handler during process
@@ -15,22 +15,22 @@ Subject: [PATCH] ntdll: Setup a temporary signal handler during process
  7 files changed, 79 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 58b688d06bd..f3ebfb72d32 100644
+index 427cdaad441..562f5ec8d4c 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -84,6 +84,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
- extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
- extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
+@@ -80,6 +80,7 @@ extern LPCSTR debugstr_ObjectAttributes(const OBJECT_ATTRIBUTES *oa) DECLSPEC_HI
+ extern SIZE_T signal_stack_size DECLSPEC_HIDDEN;
+ extern SIZE_T signal_stack_mask DECLSPEC_HIDDEN;
  extern void signal_init_process(void) DECLSPEC_HIDDEN;
 +extern void signal_init_early(void) DECLSPEC_HIDDEN;
  extern void signal_start_thread( LPTHREAD_START_ROUTINE entry, void *arg, BOOL suspend ) DECLSPEC_HIDDEN;
  extern void signal_start_process( LPTHREAD_START_ROUTINE entry, BOOL suspend ) DECLSPEC_HIDDEN;
- extern void DECLSPEC_NORETURN signal_exit_thread( int status ) DECLSPEC_HIDDEN;
+ extern void version_init(void) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/signal_arm.c b/dlls/ntdll/signal_arm.c
-index 31280edce47..f903eb93434 100644
+index e66cf922f91..dcfdeaa83ad 100644
 --- a/dlls/ntdll/signal_arm.c
 +++ b/dlls/ntdll/signal_arm.c
-@@ -1031,6 +1031,12 @@ void signal_init_process(void)
+@@ -988,6 +988,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -44,11 +44,11 @@ index 31280edce47..f903eb93434 100644
  /***********************************************************************
   *            RtlUnwind  (NTDLL.@)
 diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
-index 9f84d3fbfd1..8ab83a1d142 100644
+index c87f99f0c4c..fed76574dbc 100644
 --- a/dlls/ntdll/signal_arm64.c
 +++ b/dlls/ntdll/signal_arm64.c
-@@ -1293,6 +1293,12 @@ void signal_init_thread( TEB *teb )
-     pthread_setspecific( teb_key, teb );
+@@ -1303,6 +1303,12 @@ int CDECL __wine_set_signal_handler(unsigned int sig, wine_signal_handler wsh)
+     return 0;
  }
  
 +/**********************************************************************
@@ -61,10 +61,10 @@ index 9f84d3fbfd1..8ab83a1d142 100644
  /**********************************************************************
   *		signal_init_process
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 238d4eacf63..32c6eba0e51 100644
+index 2f2db70b57f..12771552a5d 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -2051,6 +2051,31 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
+@@ -1988,6 +1988,31 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
  }
  
  
@@ -88,7 +88,7 @@ index 238d4eacf63..32c6eba0e51 100644
 +        /* fall-through */
 +    default:
 +        WINE_ERR( "Got unexpected trap %d during process initialization\n", get_trap_code(context) );
-+        abort_thread(1);
++        unix_funcs->abort_thread(1);
 +        break;
 +    }
 +}
@@ -96,7 +96,7 @@ index 238d4eacf63..32c6eba0e51 100644
  /**********************************************************************
   *		segv_handler
   *
-@@ -2689,6 +2714,34 @@ void signal_init_process(void)
+@@ -2315,6 +2340,34 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -132,11 +132,11 @@ index 238d4eacf63..32c6eba0e51 100644
  /*******************************************************************
   *		RtlUnwind (NTDLL.@)
 diff --git a/dlls/ntdll/signal_powerpc.c b/dlls/ntdll/signal_powerpc.c
-index 9df6eff31f4..e79fca3abce 100644
+index a23f6b6e4d5..c3b4b6ffd42 100644
 --- a/dlls/ntdll/signal_powerpc.c
 +++ b/dlls/ntdll/signal_powerpc.c
-@@ -1047,6 +1047,12 @@ void signal_init_thread( TEB *teb )
-     pthread_setspecific( teb_key, teb );
+@@ -1009,6 +1009,12 @@ int CDECL __wine_set_signal_handler(unsigned int sig, wine_signal_handler wsh)
+     return 0;
  }
  
 +/**********************************************************************
@@ -149,10 +149,10 @@ index 9df6eff31f4..e79fca3abce 100644
  /**********************************************************************
   *		signal_init_process
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 324a92b41a9..29829bfb1c6 100644
+index d42438f88af..b4c11ed66ed 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -3286,6 +3286,12 @@ void signal_init_process(void)
+@@ -3141,6 +3141,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -166,10 +166,10 @@ index 324a92b41a9..29829bfb1c6 100644
  static ULONG64 get_int_reg( CONTEXT *context, int reg )
  {
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 125280ba257..af6861f6000 100644
+index bb11521cf69..ff18b119232 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -284,6 +284,7 @@ TEB *thread_init(void)
+@@ -228,6 +228,7 @@ TEB *thread_init(void)
      struct ntdll_thread_data *thread_data;
  
      virtual_init();

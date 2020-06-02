@@ -1,23 +1,22 @@
-From c605ff6f4bcab597bd9769f49b95d009d561b68d Mon Sep 17 00:00:00 2001
+From fa2f2b41cb6af594457b76ba90c042387c368ef6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 
 ---
  dlls/kernel32/tests/loader.c |   7 +-
- dlls/ntdll/signal_x86_64.c   |   2 +
  dlls/ntdll/thread.c          |  13 +-
  libs/wine/loader.c           |   4 +
  server/mapping.c             |   6 +-
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 7 files changed, 308 insertions(+), 11 deletions(-)
+ 6 files changed, 306 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 1f525194ce7..21af7b4ce7a 100644
+index 95939ba6bde..ae5462f6e55 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1574,7 +1574,7 @@ static void test_filenames(void)
+@@ -1573,7 +1573,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -26,7 +25,7 @@ index 1f525194ce7..21af7b4ce7a 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1616,8 +1616,13 @@ static void test_FakeDLL(void)
+@@ -1615,8 +1615,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -40,31 +39,11 @@ index 1f525194ce7..21af7b4ce7a 100644
          {
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
-diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 5defcd6a7af..c2936045c5d 100644
---- a/dlls/ntdll/signal_x86_64.c
-+++ b/dlls/ntdll/signal_x86_64.c
-@@ -354,6 +354,7 @@ static inline void set_sigcontext( const CONTEXT *context, ucontext_t *sigcontex
- #endif
- }
- 
-+extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
- 
- /***********************************************************************
-  * Definitions for Win32 unwind tables
-@@ -3142,6 +3143,7 @@ void signal_init_threading(void)
-  */
- NTSTATUS signal_alloc_thread( TEB *teb )
- {
-+    teb->WOW32Reserved = __wine_syscall_dispatcher;
-     return STATUS_SUCCESS;
- }
- 
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index e5ff24f34f1..ddaf41637d0 100644
+index 678af513264..297893d8898 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -56,6 +56,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+@@ -54,6 +54,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
  
  struct _KUSER_SHARED_DATA *user_shared_data = NULL;
  
@@ -73,7 +52,7 @@ index e5ff24f34f1..ddaf41637d0 100644
  void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
  
  /* info passed to a starting thread */
-@@ -281,9 +283,9 @@ TEB *thread_init(void)
+@@ -267,9 +269,9 @@ TEB *thread_init(void)
      /* reserve space for shared user data */
  
      addr = (void *)0x7ffe0000;
@@ -85,7 +64,7 @@ index e5ff24f34f1..ddaf41637d0 100644
      if (status)
      {
          MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
-@@ -291,6 +293,13 @@ TEB *thread_init(void)
+@@ -277,6 +279,13 @@ TEB *thread_init(void)
      }
      user_shared_data = addr;
  

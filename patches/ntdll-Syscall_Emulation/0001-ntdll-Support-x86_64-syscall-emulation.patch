@@ -1,4 +1,4 @@
-From 06b1233cbd6d149b30958e5ff35e8fa82c1896d0 Mon Sep 17 00:00:00 2001
+From b18e90a92f2e44b5167016c90ea1d49f4d7e3211 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -10,15 +10,15 @@ get the number from syscall thunks). Linux specific Seccomp
 is used for trapping syscalls.
 ---
  configure.ac               |   1 +
- dlls/ntdll/signal_x86_64.c | 109 +++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/signal_x86_64.c | 111 +++++++++++++++++++++++++++++++++++++
  tools/winebuild/spec32.c   |   9 ++-
- 3 files changed, 117 insertions(+), 2 deletions(-)
+ 3 files changed, 119 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 83c451e0870..d75433751bf 100644
+index 7b7433efde4..e62daf9e384 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -464,6 +464,7 @@ AC_CHECK_HEADERS(\
+@@ -474,6 +474,7 @@ AC_CHECK_HEADERS(\
  	linux/joystick.h \
  	linux/major.h \
  	linux/param.h \
@@ -27,7 +27,7 @@ index 83c451e0870..d75433751bf 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index d42438f88af..36bc2ef656a 100644
+index 66a17b9bbc9..2424109553c 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
 @@ -24,6 +24,7 @@
@@ -52,7 +52,16 @@ index d42438f88af..36bc2ef656a 100644
  #define NONAMELESSUNION
  #define NONAMELESSSTRUCT
  #include "ntstatus.h"
-@@ -3089,6 +3097,104 @@ static void usr1_handler( int signal, siginfo_t *siginfo, void *ucontext )
+@@ -77,6 +85,8 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(seh);
+ WINE_DECLARE_DEBUG_CHANNEL(relay);
+ 
++extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
++
+ typedef struct _SCOPE_TABLE
+ {
+     ULONG Count;
+@@ -3113,6 +3123,104 @@ static void usr1_handler( int signal, siginfo_t *siginfo, void *ucontext )
      restore_context( &context, ucontext );
  }
  
@@ -157,7 +166,7 @@ index d42438f88af..36bc2ef656a 100644
  
  /***********************************************************************
   *           __wine_set_signal_handler   (NTDLL.@)
-@@ -3134,6 +3240,9 @@ void signal_init_process(void)
+@@ -3158,6 +3266,9 @@ void signal_init_process(void)
      sig_act.sa_sigaction = trap_handler;
      if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
  #endif

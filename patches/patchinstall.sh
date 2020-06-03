@@ -2275,6 +2275,7 @@ fi
 # |   *	[#42191] Add semi-stub for D3D11 deferred context implementation
 # |   *	[#43743] No 3D graphics in Wolcen: Lords of Mayhem
 # |   *	[#44089] Correcly align the mapinfo buffer.
+# |   *	[#41636] d3d11: Implement ID3D11Device2 GetImmediateContext1
 # |
 # | Modified files:
 # |   *	dlls/d3d11/device.c, dlls/d3d11/tests/d3d11.c, dlls/wined3d/buffer.c, dlls/wined3d/resource.c, dlls/wined3d/texture.c,
@@ -2325,6 +2326,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 	patch_apply d3d11-Deferred_Context/0042-d3d11-Correctly-align-map-info-buffer.patch
 	patch_apply d3d11-Deferred_Context/0043-d3d11-tests-Add-a-basic-test-for-drawing-with-deferr.patch
 	patch_apply d3d11-Deferred_Context/0044-d3d11-Support-ID3D11DeviceContext1-for-deferred-cont.patch
+	patch_apply d3d11-Deferred_Context/0045-d3d11-Implement-ID3D11Device2-GetImmediateContext1.patch
 	(
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Add stub deferred rendering context.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "wined3d: Add wined3d_resource_map_info function.", 1 },';
@@ -2370,6 +2372,7 @@ if test "$enable_d3d11_Deferred_Context" -eq 1; then
 		printf '%s\n' '+    { "Kimmo Myllyvirta", "d3d11: Correctly align map info buffer.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "d3d11/tests: Add a basic test for drawing with deferred context.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3d11: Support ID3D11DeviceContext1 for deferred contexts.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "d3d11: Implement ID3D11Device2 GetImmediateContext1.", 1 },';
 	) >> "$patchlist"
 fi
 

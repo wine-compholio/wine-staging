@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "48020f4846cca1a02f4e1dc037e2cc2068df5e9c"
+	echo "aba27fd5a3241635adb15fa7ef40aa43bf3978a1"
 }
 
 # Show version information
@@ -4327,7 +4327,7 @@ fi
 # Patchset ntdll-Threading
 # |
 # | Modified files:
-# |   *	dlls/ntdll/thread.c
+# |   *	dlls/ntdll/thread.c, dlls/ntdll/unix/thread.c
 # |
 if test "$enable_ntdll_Threading" -eq 1; then
 	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
@@ -4383,7 +4383,7 @@ fi
 # Patchset ntdll-set_full_cpu_context
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_i386.c
+# |   *	dlls/ntdll/unix/signal_i386.c
 # |
 if test "$enable_ntdll_set_full_cpu_context" -eq 1; then
 	patch_apply ntdll-set_full_cpu_context/0001-ntdll-Add-back-SS-segment-prefixes-in-set_full_cpu_c.patch

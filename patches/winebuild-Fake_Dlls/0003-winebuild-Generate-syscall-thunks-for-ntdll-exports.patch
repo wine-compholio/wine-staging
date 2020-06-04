@@ -1,13 +1,14 @@
-From 3b9456b9e0bc870281df2144b67d42112baad4bd Mon Sep 17 00:00:00 2001
+From 916104878b837947e14ed7d44f591de5ba4fa2dc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
 
 Based on a patch by Erich E. Hoover.
 ---
+ dlls/ntdll/loader.c          |   3 +
  dlls/ntdll/signal_i386.c     |   4 +-
  dlls/ntdll/tests/exception.c |   2 +
- dlls/ntdll/thread.c          |   4 ++
+ dlls/ntdll/thread.c          |   3 +
  include/winternl.h           |   2 +-
  tools/winebuild/build.h      |   7 +++
  tools/winebuild/import.c     |  10 ++--
@@ -15,13 +16,34 @@ Based on a patch by Erich E. Hoover.
  tools/winebuild/spec16.c     |  22 +-------
  tools/winebuild/spec32.c     | 104 +++++++++++++++++++++++++++++++++++
  tools/winebuild/utils.c      |  21 +++++++
- 10 files changed, 208 insertions(+), 27 deletions(-)
+ 11 files changed, 210 insertions(+), 27 deletions(-)
 
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 51addaaf983..b888b680bc4 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -3810,6 +3810,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+     return ret;
+ }
+ 
++extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
+ 
+ /******************************************************************
+  *		LdrInitializeThunk (NTDLL.@)
+@@ -3827,6 +3828,8 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+     WINE_MODREF *wm;
+     LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
+ 
++    NtCurrentTeb()->WOW32Reserved = __wine_syscall_dispatcher;
++
+     pthread_sigmask( SIG_UNBLOCK, &server_block_set, NULL );
+ 
+     if (process_detaching) return;
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index eb6c87bce4d..d3cbfe63f1c 100644
+index 72413dcd6c7..88dffb03138 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
-@@ -449,6 +449,8 @@ static ULONG first_ldt_entry = 32;
+@@ -448,6 +448,8 @@ static ULONG first_ldt_entry = 32;
  
  static wine_signal_handler handlers[256];
  
@@ -30,7 +52,7 @@ index eb6c87bce4d..d3cbfe63f1c 100644
  enum i386_trap_code
  {
      TRAP_x86_UNKNOWN    = -1,  /* Unknown fault (TRAP_sig not defined) */
-@@ -1275,7 +1277,7 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
+@@ -1159,7 +1161,7 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
      {
          context->Ebp    = ebp;
          context->Esp    = (DWORD)&retaddr;
@@ -53,10 +75,10 @@ index a5e6faa461a..51938bf84cc 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index f9ea9203ed8..7e435c4ccb3 100644
+index d5e34cae3b1..73057d9a9a4 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -212,6 +212,8 @@ void map_user_shared_data(void)
+@@ -201,6 +201,8 @@ void map_user_shared_data(void)
      NtClose( section );
  }
  
@@ -65,7 +87,7 @@ index f9ea9203ed8..7e435c4ccb3 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -246,6 +248,7 @@ TEB *thread_init(void)
+@@ -235,6 +237,7 @@ TEB *thread_init(void)
  
      teb = unix_funcs->virtual_alloc_first_teb();
      unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy );
@@ -73,14 +95,6 @@ index f9ea9203ed8..7e435c4ccb3 100644
  
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
-@@ -491,6 +494,7 @@ NTSTATUS WINAPI RtlCreateUserThread( HANDLE process, SECURITY_DESCRIPTOR *descr,
-     teb->Tib.StackBase = stack.StackBase;
-     teb->Tib.StackLimit = stack.StackLimit;
-     teb->DeallocationStack = stack.DeallocationStack;
-+    teb->WOW32Reserved = __wine_syscall_dispatcher;
- 
-     thread_data = (struct ntdll_thread_data *)&teb->GdiTebBatch;
-     thread_data->request_fd  = request_pipe[1];
 diff --git a/include/winternl.h b/include/winternl.h
 index 44a58cadc7a..065f3d24f52 100644
 --- a/include/winternl.h

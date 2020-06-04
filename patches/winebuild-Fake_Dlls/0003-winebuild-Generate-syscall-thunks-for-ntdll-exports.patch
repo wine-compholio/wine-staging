@@ -1,25 +1,28 @@
-From 916104878b837947e14ed7d44f591de5ba4fa2dc Mon Sep 17 00:00:00 2001
+From e695bf789da272b2855ad864b0837c38c1a78e62 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
 
 Based on a patch by Erich E. Hoover.
 ---
- dlls/ntdll/loader.c          |   3 +
- dlls/ntdll/signal_i386.c     |   4 +-
- dlls/ntdll/tests/exception.c |   2 +
- dlls/ntdll/thread.c          |   3 +
- include/winternl.h           |   2 +-
- tools/winebuild/build.h      |   7 +++
- tools/winebuild/import.c     |  10 ++--
- tools/winebuild/parser.c     |  59 ++++++++++++++++++++
- tools/winebuild/spec16.c     |  22 +-------
- tools/winebuild/spec32.c     | 104 +++++++++++++++++++++++++++++++++++
- tools/winebuild/utils.c      |  21 +++++++
- 11 files changed, 210 insertions(+), 27 deletions(-)
+ dlls/ntdll/loader.c            |   3 +
+ dlls/ntdll/signal_i386.c       |   4 +-
+ dlls/ntdll/tests/exception.c   |   2 +
+ dlls/ntdll/thread.c            |   3 +-
+ dlls/ntdll/unix/thread.c       |   3 +-
+ dlls/ntdll/unix/unix_private.h |   2 +-
+ dlls/ntdll/unixlib.h           |   4 +-
+ include/winternl.h             |   2 +-
+ tools/winebuild/build.h        |   7 +++
+ tools/winebuild/import.c       |  10 ++--
+ tools/winebuild/parser.c       |  59 +++++++++++++++++++
+ tools/winebuild/spec16.c       |  22 +------
+ tools/winebuild/spec32.c       | 104 +++++++++++++++++++++++++++++++++
+ tools/winebuild/utils.c        |  21 +++++++
+ 14 files changed, 214 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 51addaaf983..b888b680bc4 100644
+index 45d32399adf..b42cff8bcd4 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3810,6 +3810,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
@@ -40,7 +43,7 @@ index 51addaaf983..b888b680bc4 100644
  
      if (process_detaching) return;
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 72413dcd6c7..88dffb03138 100644
+index be88d9bf3c7..84ab7991886 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -448,6 +448,8 @@ static ULONG first_ldt_entry = 32;
@@ -75,26 +78,82 @@ index a5e6faa461a..51938bf84cc 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index d5e34cae3b1..73057d9a9a4 100644
+index a2f5df1b1c2..dc9affc061a 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -201,6 +201,8 @@ void map_user_shared_data(void)
-     NtClose( section );
+@@ -173,6 +173,7 @@ int __cdecl __wine_dbg_output( const char *str )
+     return unix_funcs->dbg_output( str );
  }
  
 +extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
-+
+ 
  /***********************************************************************
   *           thread_init
-  *
-@@ -235,6 +237,7 @@ TEB *thread_init(void)
+@@ -189,7 +190,7 @@ TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
+     signal_init_early();
  
-     teb = unix_funcs->virtual_alloc_first_teb();
-     unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy );
-+    teb->WOW32Reserved = __wine_syscall_dispatcher;
+     teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, suspend, &server_cpus,
+-                                      &is_wow64, &server_start_time );
++                                      &is_wow64, &server_start_time, __wine_syscall_dispatcher );
  
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
+diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
+index d3e07cae80e..449e5814c2e 100644
+--- a/dlls/ntdll/unix/thread.c
++++ b/dlls/ntdll/unix/thread.c
+@@ -83,7 +83,7 @@ static void pthread_exit_wrapper( int status )
+  *           init_threading
+  */
+ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, BOOL *suspend,
+-                            unsigned int *cpus, BOOL *wow64, timeout_t *start_time )
++                            unsigned int *cpus, BOOL *wow64, timeout_t *start_time, void *syscall_handler )
+ {
+     TEB *teb;
+     SIZE_T info_size;
+@@ -95,6 +95,7 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
+     nb_threads = nb_threads_ptr;
+ 
+     teb = virtual_alloc_first_teb();
++    teb->WOW32Reserved = syscall_handler;
+     thread_data = (struct ntdll_thread_data *)&teb->GdiTebBatch;
+     thread_data->request_fd = -1;
+     thread_data->reply_fd   = -1;
+diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
+index 6512160972d..e9a56b37ea1 100644
+--- a/dlls/ntdll/unix/unix_private.h
++++ b/dlls/ntdll/unix/unix_private.h
+@@ -98,7 +98,7 @@ extern int CDECL server_pipe( int fd[2] ) DECLSPEC_HIDDEN;
+ extern void CDECL server_init_process_done(void) DECLSPEC_HIDDEN;
+ extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
+                                    BOOL *suspend, unsigned int *cpus, BOOL *wow64,
+-                                   timeout_t *start_time ) DECLSPEC_HIDDEN;
++                                   timeout_t *start_time, void *syscall_handler ) DECLSPEC_HIDDEN;
+ extern NTSTATUS CDECL create_thread( SIZE_T stack_reserve, SIZE_T stack_commit, HANDLE actctx, DWORD tid,
+                                      int request_fd, PRTL_THREAD_START_ROUTINE start,
+                                      void *param, void *relay ) DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
+index 72f35cf67e8..93a51871f1d 100644
+--- a/dlls/ntdll/unixlib.h
++++ b/dlls/ntdll/unixlib.h
+@@ -28,7 +28,7 @@ struct ldt_copy;
+ struct msghdr;
+ 
+ /* increment this when you change the function table */
+-#define NTDLL_UNIXLIB_VERSION 28
++#define NTDLL_UNIXLIB_VERSION 29
+ 
+ struct unix_funcs
+ {
+@@ -165,7 +165,7 @@ struct unix_funcs
+ 
+     /* thread/process functions */
+     TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
+-                                           BOOL *suspend, unsigned int *cpus, BOOL *wow64, timeout_t *start_time );
++                                           BOOL *suspend, unsigned int *cpus, BOOL *wow64, timeout_t *start_time, void *syscall_handler );
+     NTSTATUS      (CDECL *create_thread)( SIZE_T stack_reserve, SIZE_T stack_commit, HANDLE actctx,
+                                           DWORD tid, int request_fd, PRTL_THREAD_START_ROUTINE start,
+                                           void *param, void *relay );
 diff --git a/include/winternl.h b/include/winternl.h
 index 44a58cadc7a..065f3d24f52 100644
 --- a/include/winternl.h

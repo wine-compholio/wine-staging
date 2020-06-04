@@ -1,16 +1,16 @@
-From 9382d41830426f68bf5da895f308f6691df8111b Mon Sep 17 00:00:00 2001
+From 2f82153b52cd517c9e30ab5ac26a0c60ed70a48d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
 
 ---
  dlls/kernel32/tests/loader.c |   7 +-
- dlls/ntdll/thread.c          |  13 +-
+ dlls/ntdll/unix/virtual.c    |   4 +-
  libs/wine/loader.c           |   4 +
  server/mapping.c             |   6 +-
  tools/winebuild/parser.c     |   2 +-
  tools/winebuild/spec32.c     | 285 ++++++++++++++++++++++++++++++++++-
- 6 files changed, 306 insertions(+), 11 deletions(-)
+ 6 files changed, 297 insertions(+), 11 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
 index 95939ba6bde..ae5462f6e55 100644
@@ -39,45 +39,27 @@ index 95939ba6bde..ae5462f6e55 100644
          {
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
-diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 8187dbe1f2d..5427cbcf04e 100644
---- a/dlls/ntdll/thread.c
-+++ b/dlls/ntdll/thread.c
-@@ -51,6 +51,8 @@ WINE_DECLARE_DEBUG_CHANNEL(relay);
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 7c5b5d5cf15..66ae4cb841c 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -2546,14 +2546,14 @@ TEB *virtual_alloc_first_teb(void)
+     TEB *teb;
+     PEB *peb;
+     NTSTATUS status;
+-    SIZE_T data_size = page_size;
++    SIZE_T data_size = page_size * 2;
+     SIZE_T peb_size = page_size;
+     SIZE_T teb_size = signal_stack_mask + 1;
+     SIZE_T total = 32 * teb_size;
  
- struct _KUSER_SHARED_DATA *user_shared_data = NULL;
- 
-+extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
-+
- void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
- 
- static PEB *peb;
-@@ -256,9 +258,9 @@ TEB *thread_init(void)
      /* reserve space for shared user data */
- 
-     addr = (void *)0x7ffe0000;
--    size = 0x1000;
-+    size = 0x2000;
-     status = NtAllocateVirtualMemory( NtCurrentProcess(), &addr, 0, &size,
--                                      MEM_RESERVE|MEM_COMMIT, PAGE_READONLY );
-+                                      MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE );
+     status = NtAllocateVirtualMemory( NtCurrentProcess(), (void **)&user_shared_data, 0, &data_size,
+-                                      MEM_RESERVE | MEM_COMMIT, PAGE_READONLY );
++                                      MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
      if (status)
      {
-         MESSAGE( "wine: failed to map the shared user data: %08x\n", status );
-@@ -266,6 +268,13 @@ TEB *thread_init(void)
-     }
-     user_shared_data = addr;
- 
-+#if defined(__APPLE__) && defined(__x86_64__)
-+    *((DWORD*)((char*)user_shared_data + 0x1000)) = __wine_syscall_dispatcher;
-+#endif
-+
-+    /* Init this field early for x86_64 syscall thunks. */
-+    user_shared_data->SystemCallPad[0] = 1;
-+
-     /* allocate and initialize the PEB and initial TEB */
- 
-     teb = unix_funcs->virtual_alloc_first_teb();
+         ERR( "wine: failed to map the shared user data: %08x\n", status );
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
 index 4597a6cb324..3d0d75e9c6d 100644
 --- a/libs/wine/loader.c

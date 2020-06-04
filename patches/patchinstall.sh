@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "aba27fd5a3241635adb15fa7ef40aa43bf3978a1"
+	echo "3c72034b72014a087eae8d181252c67cb0782e28"
 }
 
 # Show version information
@@ -1702,6 +1702,17 @@ if test "$enable_ntdll_NtContinue" -eq 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
 	fi
 	enable_winebuild_Fake_Dlls=1
+fi
+
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_WRITECOPY" -gt 1; then
+		abort "Patchset ntdll-WRITECOPY disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	if test "$enable_ws2_32_WSACleanup" -gt 1; then
+		abort "Patchset ws2_32-WSACleanup disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	enable_ntdll_WRITECOPY=1
+	enable_ws2_32_WSACleanup=1
 fi
 
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
@@ -3977,7 +3988,29 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18670] Properly close sockets when WSACleanup is called
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
+# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
+# | 	include/wine/server.h, server/protocol.def, server/sock.c
+# |
+if test "$enable_ws2_32_WSACleanup" -eq 1; then
+	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
+	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
+	(
+		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset winebuild-Fake_Dlls
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
@@ -3993,6 +4026,7 @@ fi
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
 # | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
 # | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c,
+# | 	dlls/ntdll/unix/thread.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c, dlls/ntdll/unixlib.h,
 # | 	dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c,
 # | 	dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h,
 # | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
@@ -4028,7 +4062,7 @@ fi
 # Patchset ntdll-NtContinue
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	winebuild-Fake_Dlls
+# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#31910] Add stub for NtContinue
@@ -4139,7 +4173,7 @@ fi
 # Patchset ntdll-RtlCreateUserThread
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	winebuild-Fake_Dlls
+# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
@@ -4211,7 +4245,7 @@ fi
 # Patchset ntdll-Syscall_Emulation
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	winebuild-Fake_Dlls
+# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#48291] Detroit: Become Human crashes on launch
@@ -4659,25 +4693,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18670] Properly close sockets when WSACleanup is called
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
-# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
-# | 	include/wine/server.h, server/protocol.def, server/sock.c
-# |
-if test "$enable_ws2_32_WSACleanup" -eq 1; then
-	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
-	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
-	(
-		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
 	) >> "$patchlist"
 fi
 

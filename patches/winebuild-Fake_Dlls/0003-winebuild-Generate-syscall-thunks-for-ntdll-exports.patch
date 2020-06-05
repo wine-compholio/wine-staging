@@ -1,4 +1,4 @@
-From e695bf789da272b2855ad864b0837c38c1a78e62 Mon Sep 17 00:00:00 2001
+From 1fec139d96f32869fc0c8d15219fff493d9951d8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -78,7 +78,7 @@ index a5e6faa461a..51938bf84cc 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index a2f5df1b1c2..dc9affc061a 100644
+index 79d13a01a86..94eb6d1252d 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -173,6 +173,7 @@ int __cdecl __wine_dbg_output( const char *str )
@@ -99,7 +99,7 @@ index a2f5df1b1c2..dc9affc061a 100644
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index d3e07cae80e..449e5814c2e 100644
+index b6458da61ad..a158ec20a6a 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -83,7 +83,7 @@ static void pthread_exit_wrapper( int status )
@@ -120,42 +120,42 @@ index d3e07cae80e..449e5814c2e 100644
      thread_data->request_fd = -1;
      thread_data->reply_fd   = -1;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 6512160972d..e9a56b37ea1 100644
+index 880e3aacf33..6c7b961e95a 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -98,7 +98,7 @@ extern int CDECL server_pipe( int fd[2] ) DECLSPEC_HIDDEN;
+@@ -96,7 +96,7 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
  extern void CDECL server_init_process_done(void) DECLSPEC_HIDDEN;
  extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
                                     BOOL *suspend, unsigned int *cpus, BOOL *wow64,
 -                                   timeout_t *start_time ) DECLSPEC_HIDDEN;
 +                                   timeout_t *start_time, void *syscall_handler ) DECLSPEC_HIDDEN;
- extern NTSTATUS CDECL create_thread( SIZE_T stack_reserve, SIZE_T stack_commit, HANDLE actctx, DWORD tid,
-                                      int request_fd, PRTL_THREAD_START_ROUTINE start,
-                                      void *param, void *relay ) DECLSPEC_HIDDEN;
+ extern void CDECL DECLSPEC_NORETURN start_process( PRTL_THREAD_START_ROUTINE entry, BOOL suspend, void *relay ) DECLSPEC_HIDDEN;
+ extern void CDECL DECLSPEC_NORETURN abort_thread( int status ) DECLSPEC_HIDDEN;
+ extern void CDECL DECLSPEC_NORETURN exit_thread( int status ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index 72f35cf67e8..93a51871f1d 100644
+index 83c9f3a163b..63728b1c071 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
 @@ -28,7 +28,7 @@ struct ldt_copy;
  struct msghdr;
  
  /* increment this when you change the function table */
--#define NTDLL_UNIXLIB_VERSION 28
-+#define NTDLL_UNIXLIB_VERSION 29
+-#define NTDLL_UNIXLIB_VERSION 31
++#define NTDLL_UNIXLIB_VERSION 32
  
  struct unix_funcs
  {
-@@ -165,7 +165,7 @@ struct unix_funcs
+@@ -172,7 +172,7 @@ struct unix_funcs
  
      /* thread/process functions */
      TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
 -                                           BOOL *suspend, unsigned int *cpus, BOOL *wow64, timeout_t *start_time );
 +                                           BOOL *suspend, unsigned int *cpus, BOOL *wow64, timeout_t *start_time, void *syscall_handler );
-     NTSTATUS      (CDECL *create_thread)( SIZE_T stack_reserve, SIZE_T stack_commit, HANDLE actctx,
-                                           DWORD tid, int request_fd, PRTL_THREAD_START_ROUTINE start,
-                                           void *param, void *relay );
+     void          (CDECL *start_process)( PRTL_THREAD_START_ROUTINE entry, BOOL suspend, void *relay );
+     void          (CDECL *abort_thread)( int status );
+     void          (CDECL *exit_thread)( int status );
 diff --git a/include/winternl.h b/include/winternl.h
-index 44a58cadc7a..065f3d24f52 100644
+index 9b8218c861f..ff6916c98e7 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -359,7 +359,7 @@ typedef struct _TEB

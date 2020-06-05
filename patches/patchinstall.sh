@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3c72034b72014a087eae8d181252c67cb0782e28"
+	echo "3cc3b445752902e07231900befc296f74ad6576e"
 }
 
 # Show version information
@@ -190,7 +190,6 @@ patch_enable_all ()
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
-	enable_ntdll_RtlCreateUserThread="$1"
 	enable_ntdll_RtlQueryPackageIdentity="$1"
 	enable_ntdll_RtlQueryRegistryValuesEx="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
@@ -669,9 +668,6 @@ patch_enable ()
 			;;
 		ntdll-ProcessQuotaLimits)
 			enable_ntdll_ProcessQuotaLimits="$2"
-			;;
-		ntdll-RtlCreateUserThread)
-			enable_ntdll_RtlCreateUserThread="$2"
 			;;
 		ntdll-RtlQueryPackageIdentity)
 			enable_ntdll_RtlQueryPackageIdentity="$2"
@@ -1672,13 +1668,6 @@ fi
 if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
 		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-Syscall_Emulation depends on that."
-	fi
-	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
-	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
-		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-RtlCreateUserThread depends on that."
 	fi
 	enable_winebuild_Fake_Dlls=1
 fi
@@ -4167,24 +4156,6 @@ if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Add fake data implementation for ProcessQuotaLimits class.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-RtlCreateUserThread
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#45571] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtCreateThread/Ex)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/thread.c, include/winternl.h
-# |
-if test "$enable_ntdll_RtlCreateUserThread" -eq 1; then
-	patch_apply ntdll-RtlCreateUserThread/0001-ntdll-Refactor-RtlCreateUserThread-into-NtCreateThre.patch
-	(
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Refactor RtlCreateUserThread into NtCreateThreadEx.", 1 },';
 	) >> "$patchlist"
 fi
 

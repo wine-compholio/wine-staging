@@ -1,17 +1,17 @@
-From df7b650d5e17afa411024b88d1920d0910947a6b Mon Sep 17 00:00:00 2001
+From f14407ee5755b6482714a6232a4313bcd1531781 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Tue, 14 Jan 2020 21:42:21 +0300
-Subject: [PATCH] ntdll: Use free area list for virtual memory allocation.
+Subject: [PATCH 5/6] ntdll: Use free area list for virtual memory allocation.
 
 ---
- dlls/ntdll/unix/virtual.c | 318 ++++++++++++++++++++++++--------------
- 1 file changed, 204 insertions(+), 114 deletions(-)
+ dlls/ntdll/unix/virtual.c | 348 +++++++++++++++++++++++++-------------
+ 1 file changed, 234 insertions(+), 114 deletions(-)
 
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 720d45ecb9f..e323f4290bf 100644
+index 5e79faaf6fc..7f194effcaa 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -192,7 +192,11 @@ static BYTE *pages_vprot;
+@@ -195,7 +195,11 @@ static BYTE *pages_vprot;
  #endif
  
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
@@ -23,7 +23,7 @@ index 720d45ecb9f..e323f4290bf 100644
  static void *preload_reserve_start;
  static void *preload_reserve_end;
  static BOOL use_locks;
-@@ -528,13 +532,13 @@ static struct range_entry *free_ranges_lower_bound( void *addr )
+@@ -546,13 +550,13 @@ static struct range_entry *free_ranges_lower_bound( void *addr )
   *
   * Updates the free_ranges after a new view has been created.
   */
@@ -40,7 +40,7 @@ index 720d45ecb9f..e323f4290bf 100644
      /* free_ranges initial value is such that the view is either inside range or before another one. */
      assert( range != free_ranges_end );
      assert( range->end > view_base || next != free_ranges_end );
-@@ -545,7 +549,7 @@ static void free_ranges_insert_view( struct file_view *view )
+@@ -563,7 +567,7 @@ static void free_ranges_insert_view( struct file_view *view )
          (range->end == view_base && next->base >= view_end))
      {
          /* on Win64, assert that it's correctly aligned so we're not going to be in trouble later */
@@ -49,7 +49,7 @@ index 720d45ecb9f..e323f4290bf 100644
          WARN( "range %p - %p is already mapped\n", view_base, view_end );
          return;
      }
-@@ -585,6 +589,12 @@ static void free_ranges_insert_view( struct file_view *view )
+@@ -603,6 +607,12 @@ static void free_ranges_insert_view( struct file_view *view )
      }
  }
  
@@ -62,7 +62,7 @@ index 720d45ecb9f..e323f4290bf 100644
  
  /***********************************************************************
   *           free_ranges_remove_view
-@@ -615,6 +625,7 @@ static void free_ranges_remove_view( struct file_view *view )
+@@ -633,6 +643,7 @@ static void free_ranges_remove_view( struct file_view *view )
          return;
      }
  #endif
@@ -70,7 +70,7 @@ index 720d45ecb9f..e323f4290bf 100644
  
      /* free_ranges initial value is such that the view is either inside range or before another one. */
      assert( range != free_ranges_end );
-@@ -961,44 +972,6 @@ static struct file_view *find_view_range( const void *addr, size_t size )
+@@ -1008,44 +1019,6 @@ static struct file_view *find_view_range( const void *addr, size_t size )
  }
  
  
@@ -115,7 +115,7 @@ index 720d45ecb9f..e323f4290bf 100644
  /***********************************************************************
   *           try_map_free_area
   *
-@@ -1042,65 +1015,11 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
+@@ -1089,65 +1062,11 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
      return NULL;
  }
  
@@ -181,7 +181,7 @@ index 720d45ecb9f..e323f4290bf 100644
   */
  static void *find_reserved_free_area( void *base, void *end, size_t size, int top_down )
  {
-@@ -1314,8 +1233,7 @@ static void delete_view( struct file_view *view ) /* [in] View */
+@@ -1361,8 +1280,7 @@ static void delete_view( struct file_view *view ) /* [in] View */
  {
      if (!(view->protect & VPROT_SYSTEM)) unmap_area( view->base, view->size );
      set_page_vprot( view->base, view->size, 0 );
@@ -191,7 +191,7 @@ index 720d45ecb9f..e323f4290bf 100644
      wine_rb_remove( &views_tree, &view->entry );
      *(struct file_view **)view = next_free_view;
      next_free_view = view;
-@@ -1363,8 +1281,7 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
+@@ -1410,8 +1328,7 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
      set_page_vprot( base, size, vprot );
  
      wine_rb_put( &views_tree, view->base, &view->entry );
@@ -201,7 +201,7 @@ index 720d45ecb9f..e323f4290bf 100644
  
      *view_ret = view;
  
-@@ -1596,6 +1513,7 @@ struct alloc_area
+@@ -1656,6 +1573,7 @@ struct alloc_area
      int    top_down;
      void  *limit;
      void  *result;
@@ -209,7 +209,7 @@ index 720d45ecb9f..e323f4290bf 100644
  };
  
  /***********************************************************************
-@@ -1637,6 +1555,179 @@ static int CDECL alloc_reserved_area_callback( void *start, SIZE_T size, void *a
+@@ -1697,6 +1615,212 @@ static int CDECL alloc_reserved_area_callback( void *start, SIZE_T size, void *a
      return 0;
  }
  
@@ -303,11 +303,62 @@ index 720d45ecb9f..e323f4290bf 100644
 +    return 0;
 +}
 +
++static void *alloc_free_area_in_range(struct area_alloc_reserved *area, char *base, char *end,
++        size_t size, int top_down, int unix_prot)
++{
++    char *start;
++
++    TRACE("range %p-%p.\n", base, end);
++
++    if (base >= end) return NULL;
++
++    area->map_area_start = base;
++    area->map_area_end = end;
++
++    if (top_down)
++    {
++        start = ROUND_ADDR( end - size, granularity_mask );
++        if (start >= end || start < base)
++            return NULL;
++    }
++    else
++    {
++        start = ROUND_ADDR( base + granularity_mask, granularity_mask );
++        if (!start || start >= end || (char *)end - (char *)start < size)
++            return NULL;
++    }
++
++    mmap_enum_reserved_areas( alloc_area_in_reserved_or_between_callback, area, top_down );
++    if (area->result)
++        return area->result;
++
++    if (top_down)
++    {
++        start = ROUND_ADDR( area->map_area_end - size, granularity_mask );
++        if (start >= area->map_area_end || start < area->map_area_start)
++            return NULL;
++
++        return try_map_free_area( area->map_area_start, start + size, area->step,
++                start, size, unix_prot );
++    }
++    else
++    {
++        start = ROUND_ADDR( area->map_area_start + granularity_mask, granularity_mask );
++        if (!start || start >= area->map_area_end
++                || area->map_area_end - start < size)
++            return NULL;
++
++        return try_map_free_area( start, area->map_area_end, area->step,
++                start, size, unix_prot );
++    }
++}
++
 +static void *alloc_free_area(void *limit, size_t size, BOOL top_down, int unix_prot)
 +{
 +    struct range_entry *range, *ranges_start, *ranges_end;
++    char *reserve_start, *reserve_end;
 +    struct area_alloc_reserved area;
-+    char *start, *base, *end;
++    char *base, *end;
 +    int ranges_inc;
 +
 +    TRACE("limit %p, size %p, top_down %#x.\n", limit, (void *)size, top_down);
@@ -331,6 +382,9 @@ index 720d45ecb9f..e323f4290bf 100644
 +    area.top_down = top_down;
 +    area.unix_prot = unix_prot;
 +
++    reserve_start = ROUND_ADDR((char *)preload_reserve_start, granularity_mask);
++    reserve_end = ROUND_ADDR((char *)preload_reserve_end + granularity_mask, granularity_mask);
++
 +    for (range = ranges_start; range != ranges_end; range += ranges_inc)
 +    {
 +        base = range->base;
@@ -340,48 +394,27 @@ index 720d45ecb9f..e323f4290bf 100644
 +
 +        if (base < (char *)address_space_start) base = (char *)address_space_start;
 +        if (end > (char *)limit + granularity_mask + 1) end = (char *)limit + granularity_mask + 1;
-+        if (base >= end) continue;
 +
-+        area.map_area_start = base;
-+        area.map_area_end = end;
++        if (reserve_end >= base)
++        {
++            if (reserve_end >= end)
++            {
++                if (reserve_start <= base) continue;  /* no space in that area */
++                if (reserve_start < end) end = reserve_start;
++            }
++            else if (reserve_start <= base) base = reserve_end;
++            else
++            {
++                /* range is split in two by the preloader reservation, try first part */
++                if ((area.result = alloc_free_area_in_range(&area, base, reserve_start, size, top_down, unix_prot)))
++                    return area.result;
++                /* then fall through to try second part */
++                base = reserve_end;
++            }
++        }
 +
-+        if (top_down)
-+        {
-+            start = ROUND_ADDR( (char *)end - size, granularity_mask );
-+            if (start >= end || start < base)
-+                continue;
-+        }
-+        else
-+        {
-+            start = ROUND_ADDR( (char *)base + granularity_mask, granularity_mask );
-+            if (!start || start >= end || (char *)end - (char *)start < size)
-+                continue;
-+        }
-+        mmap_enum_reserved_areas( alloc_area_in_reserved_or_between_callback, &area, top_down );
-+        if (area.result)
++        if ((area.result = alloc_free_area_in_range(&area, base, end, size, top_down, unix_prot)))
 +            return area.result;
-+
-+        if (top_down)
-+        {
-+            start = ROUND_ADDR( area.map_area_end - size, granularity_mask );
-+            if (start >= area.map_area_end || start < area.map_area_start)
-+                continue;
-+
-+            if ((area.result = try_map_free_area( area.map_area_start, start + size, area.step,
-+                    start, size, unix_prot )))
-+                return area.result;
-+        }
-+        else
-+        {
-+            start = ROUND_ADDR( area.map_area_start + granularity_mask, granularity_mask );
-+            if (!start || start >= area.map_area_end
-+                    || area.map_area_end - start < size)
-+                continue;
-+
-+            if ((area.result = try_map_free_area( start, area.map_area_end, area.step,
-+                    start, size, unix_prot )))
-+                return area.result;
-+        }
 +    }
 +    return NULL;
 +}
@@ -389,7 +422,7 @@ index 720d45ecb9f..e323f4290bf 100644
  /***********************************************************************
   *           map_fixed_area
   *
-@@ -1722,11 +1813,15 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+@@ -1782,11 +1906,15 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
          alloc.size = size;
          alloc.top_down = top_down;
          alloc.limit = (void*)(get_zero_bits_64_mask( zero_bits_64 ) & (UINT_PTR)user_space_limit);
@@ -408,7 +441,7 @@ index 720d45ecb9f..e323f4290bf 100644
          }
  
          if (mmap_enum_reserved_areas( alloc_reserved_area_callback, &alloc, top_down ))
-@@ -1738,15 +1833,6 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+@@ -1798,15 +1926,6 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
              goto done;
          }
  
@@ -424,7 +457,15 @@ index 720d45ecb9f..e323f4290bf 100644
          view_size = size + granularity_mask + 1;
  
          for (;;)
-@@ -2466,10 +2552,14 @@ void virtual_init(void)
+@@ -2500,6 +2619,7 @@ void virtual_init(void)
+             if (preload_reserve_start)
+                 address_space_start = min( address_space_start, preload_reserve_start );
+         }
++        TRACE("preload reserve %p-%p.\n", preload_reserve_start, preload_reserve_end);
+     }
+ 
+     size = ROUND_SIZE( 0, sizeof(TEB) ) + max( MINSIGSTKSZ, 8192 );
+@@ -2528,8 +2648,8 @@ void virtual_init(void)
      pages_vprot = (void *)((char *)alloc_views.base + 2 * view_block_size);
      wine_rb_init( &views_tree, compare_view );
  
@@ -434,13 +475,7 @@ index 720d45ecb9f..e323f4290bf 100644
 +    free_ranges[0].end = address_space_limit;
      free_ranges_end = free_ranges + 1;
  
-+    free_ranges_remove_range(ROUND_ADDR(preload_reserve_start, granularity_mask),
-+            ROUND_ADDR((char *)preload_reserve_end + granularity_mask,
-+            granularity_mask), preload_reserve_start);
-+
      /* make the DOS area accessible (except the low 64K) to hide bugs in broken apps like Excel 2003 */
-     size = (char *)address_space_start - (char *)0x10000;
-     if (size && mmap_is_in_reserved_area( (void*)0x10000, size ) == 1)
 -- 
 2.26.2
 

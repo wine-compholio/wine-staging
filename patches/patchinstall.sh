@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "3cc3b445752902e07231900befc296f74ad6576e"
+	echo "17529582402ebe27ef975fc7dcb8353f4f95e629"
 }
 
 # Show version information
@@ -183,7 +183,6 @@ patch_enable_all ()
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
-	enable_ntdll_NtContinue="$1"
 	enable_ntdll_NtDevicePath="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
@@ -647,9 +646,6 @@ patch_enable ()
 			;;
 		ntdll-NtAccessCheck)
 			enable_ntdll_NtAccessCheck="$2"
-			;;
-		ntdll-NtContinue)
-			enable_ntdll_NtContinue="$2"
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
@@ -1672,6 +1668,17 @@ if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 	enable_winebuild_Fake_Dlls=1
 fi
 
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_WRITECOPY" -gt 1; then
+		abort "Patchset ntdll-WRITECOPY disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	if test "$enable_ws2_32_WSACleanup" -gt 1; then
+		abort "Patchset ws2_32-WSACleanup disabled, but winebuild-Fake_Dlls depends on that."
+	fi
+	enable_ntdll_WRITECOPY=1
+	enable_ws2_32_WSACleanup=1
+fi
+
 if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
 	if test "$enable_ntdll_Junction_Points" -gt 1; then
 		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
@@ -1684,24 +1691,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
-fi
-
-if test "$enable_ntdll_NtContinue" -eq 1; then
-	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
-		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-NtContinue depends on that."
-	fi
-	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_WRITECOPY" -gt 1; then
-		abort "Patchset ntdll-WRITECOPY disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	if test "$enable_ws2_32_WSACleanup" -gt 1; then
-		abort "Patchset ws2_32-WSACleanup disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_WRITECOPY=1
-	enable_ws2_32_WSACleanup=1
 fi
 
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
@@ -3977,98 +3966,6 @@ if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18670] Properly close sockets when WSACleanup is called
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
-# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
-# | 	include/wine/server.h, server/protocol.def, server/sock.c
-# |
-if test "$enable_ws2_32_WSACleanup" -eq 1; then
-	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
-	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
-	(
-		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
-# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
-# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
-# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
-# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
-# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
-# |
-# | Modified files:
-# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
-# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
-# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
-# | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
-# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c,
-# | 	dlls/ntdll/unix/thread.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c, dlls/ntdll/unixlib.h,
-# | 	dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c,
-# | 	dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h,
-# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
-# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
-# |
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
-	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
-	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
-	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
-	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
-	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
-	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
-	patch_apply winebuild-Fake_Dlls/0011-ntdll-Call-NtOpenFile-through-syscall-thunk.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call NtOpenFile through syscall thunk.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtContinue
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#31910] Add stub for NtContinue
-# |   *	[#45572] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of NtContinue)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/exception.c, dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_x86_64.c
-# |
-if test "$enable_ntdll_NtContinue" -eq 1; then
-	patch_apply ntdll-NtContinue/0001-ntdll-Add-stub-for-NtContinue.patch
-	patch_apply ntdll-NtContinue/0002-Use-NtContinue-to-continue-execution-after-exception.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add stub for NtContinue.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Use NtContinue to continue execution after exceptions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Pipe_SpecialCharacters
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4210,6 +4107,77 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return STATUS_INVALID_DEVICE_REQUEST when trying to call NtReadFile on directory.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18670] Properly close sockets when WSACleanup is called
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
+# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
+# | 	include/wine/server.h, server/protocol.def, server/sock.c
+# |
+if test "$enable_ws2_32_WSACleanup" -eq 1; then
+	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
+	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
+	(
+		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winebuild-Fake_Dlls
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
+# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
+# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
+# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
+# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
+# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
+# |
+# | Modified files:
+# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
+# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
+# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
+# | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
+# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c,
+# | 	dlls/ntdll/unix/thread.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c, dlls/ntdll/unixlib.h,
+# | 	dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c,
+# | 	dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h,
+# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
+# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# |
+if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
+	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
+	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
+	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
+	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
+	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
+	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
+	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
+	patch_apply winebuild-Fake_Dlls/0011-ntdll-Call-NtOpenFile-through-syscall-thunk.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call NtOpenFile through syscall thunk.", 1 },';
 	) >> "$patchlist"
 fi
 

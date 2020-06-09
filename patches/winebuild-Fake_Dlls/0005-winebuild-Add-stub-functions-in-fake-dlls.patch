@@ -1,4 +1,4 @@
-From 1c0ba3961674f316dba2d89042571b7863076f08 Mon Sep 17 00:00:00 2001
+From 167ad04157dd746ee9395afa9505fe00cc866f9b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 16:27:56 +0200
 Subject: [PATCH] winebuild: Add stub functions in fake dlls.
@@ -62,7 +62,7 @@ index 926fa913866..902907329c0 100644
      CloseHandle(map);
      CloseHandle(file);
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index b42cff8bcd4..b21d88bb13b 100644
+index 26c540050dc..09d3870c31a 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3811,6 +3811,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
@@ -73,19 +73,19 @@ index b42cff8bcd4..b21d88bb13b 100644
  
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
-@@ -3829,6 +3830,7 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -3828,6 +3829,7 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
      LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
  
      NtCurrentTeb()->WOW32Reserved = __wine_syscall_dispatcher;
 +    NtCurrentTeb()->Spare2 = (ULONG_PTR)__wine_fakedll_dispatcher;
  
-     pthread_sigmask( SIG_UNBLOCK, &server_block_set, NULL );
+     if (process_detaching) return;
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index ed77e4a2e98..a988d4c3e6b 100644
+index fa10cdf1062..4840f527e59 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -175,6 +175,39 @@ int __cdecl __wine_dbg_output( const char *str )
+@@ -172,6 +172,39 @@ int __cdecl __wine_dbg_output( const char *str )
  
  extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
  
@@ -125,16 +125,16 @@ index ed77e4a2e98..a988d4c3e6b 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -190,6 +223,7 @@ TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
- 
-     teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, suspend, &server_cpus,
-                                       &is_wow64, &server_start_time, __wine_syscall_dispatcher );
+@@ -183,6 +216,7 @@ TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
+ {
+     TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, suspend, &server_cpus,
+                                            &is_wow64, &server_start_time, __wine_syscall_dispatcher );
 +    teb->Spare2 = (ULONG_PTR)__wine_fakedll_dispatcher;
  
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
 diff --git a/include/winternl.h b/include/winternl.h
-index 065f3d24f52..199b8fc52f2 100644
+index f2da9157aab..ce8021af503 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -398,7 +398,7 @@ typedef struct _TEB

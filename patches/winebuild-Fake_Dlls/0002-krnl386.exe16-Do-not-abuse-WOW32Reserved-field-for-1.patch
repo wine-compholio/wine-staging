@@ -1,4 +1,4 @@
-From 362b04b78c2da18e81dd4f571d3671d452c76634 Mon Sep 17 00:00:00 2001
+From 25d08438aba3dee16c79ce3168a4f76f39816fad Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 16 May 2017 04:37:52 +0200
 Subject: [PATCH] krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit
@@ -13,7 +13,7 @@ Subject: [PATCH] krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit
  dlls/krnl386.exe16/task.c             | 14 +++++------
  dlls/krnl386.exe16/thunk.c            | 36 +++++++++++++--------------
  dlls/krnl386.exe16/wowthunk.c         | 20 +++++++--------
- dlls/ntdll/signal_i386.c              |  2 +-
+ dlls/ntdll/unix/signal_i386.c         |  2 +-
  dlls/system.drv16/system.c            |  2 +-
  dlls/toolhelp.dll16/toolhelp.c        |  6 ++---
  dlls/user.exe16/message.c             | 16 ++++++------
@@ -267,10 +267,10 @@ index 39a60cb97a9..21de62c5a01 100644
      context->Esp   = OFFSETOF(pData->old_ss_sp) - sizeof(DWORD); /*ret addr*/
      pData->old_ss_sp = 0;
 diff --git a/dlls/krnl386.exe16/thunk.c b/dlls/krnl386.exe16/thunk.c
-index 78925f594ba..141acb8d5e6 100644
+index e913a08f88c..ecc94371488 100644
 --- a/dlls/krnl386.exe16/thunk.c
 +++ b/dlls/krnl386.exe16/thunk.c
-@@ -428,7 +428,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
+@@ -429,7 +429,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
      context16.Eip   = LOWORD(context->Edx);
      /* point EBP to the STACK16FRAME on the stack
       * for the call_to_16 to set up the register content on calling */
@@ -279,7 +279,7 @@ index 78925f594ba..141acb8d5e6 100644
  
      /*
       * used to be (problematic):
-@@ -450,7 +450,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
+@@ -451,7 +451,7 @@ void WINAPI __regs_QT_Thunk( CONTEXT *context )
       * the number of parameters that the Win16 function
       * accepted (that it popped from the corresponding Win16 stack) */
      context->Esp +=   LOWORD(context16.Esp) -
@@ -288,7 +288,7 @@ index 78925f594ba..141acb8d5e6 100644
  }
  DEFINE_REGS_ENTRYPOINT( QT_Thunk )
  
-@@ -554,7 +554,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
+@@ -555,7 +555,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
  
      context16.SegCs = HIWORD(callTarget);
      context16.Eip   = LOWORD(callTarget);
@@ -297,7 +297,7 @@ index 78925f594ba..141acb8d5e6 100644
  
      argsize  = context->Ebp-context->Esp-0x40;
      if (argsize > sizeof(newstack)) argsize = sizeof(newstack);
-@@ -566,8 +566,8 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
+@@ -567,8 +567,8 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
  	if (mapESPrelative & (1 << i))
  	{
  	    SEGPTR *arg = (SEGPTR *)newstack[i];
@@ -308,7 +308,7 @@ index 78925f594ba..141acb8d5e6 100644
                                + (*(LPBYTE *)arg - oldstack));
  	}
  
-@@ -577,7 +577,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
+@@ -578,7 +578,7 @@ void WINAPI __regs_FT_Thunk( CONTEXT *context )
      context->Ecx = context16.Ecx;
  
      context->Esp +=   LOWORD(context16.Esp) -
@@ -317,7 +317,7 @@ index 78925f594ba..141acb8d5e6 100644
  
      /* Copy modified buffers back to 32-bit stack */
      memcpy( oldstack, newstack, argsize );
-@@ -712,7 +712,7 @@ void WINAPI __regs_Common32ThkLS( CONTEXT *context )
+@@ -713,7 +713,7 @@ void WINAPI __regs_Common32ThkLS( CONTEXT *context )
      context16.Edi   = LOWORD(context->Ecx);
      context16.SegCs = HIWORD(context->Eax);
      context16.Eip   = LOWORD(context->Eax);
@@ -326,7 +326,7 @@ index 78925f594ba..141acb8d5e6 100644
  
      argsize = HIWORD(context->Edx) * 4;
  
-@@ -768,7 +768,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
+@@ -769,7 +769,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
  
      context16.SegCs = HIWORD(context->Edx);
      context16.Eip   = LOWORD(context->Edx);
@@ -335,7 +335,7 @@ index 78925f594ba..141acb8d5e6 100644
  
      argsize = 2 * *(WORD *)context->Esp + 2;
  
-@@ -781,7 +781,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
+@@ -782,7 +782,7 @@ void WINAPI __regs_OT_32ThkLSF( CONTEXT *context )
              (LPBYTE)CURRENT_STACK16 - argsize, argsize );
  
      context->Esp +=   LOWORD(context16.Esp) -
@@ -344,7 +344,7 @@ index 78925f594ba..141acb8d5e6 100644
  }
  DEFINE_REGS_ENTRYPOINT( OT_32ThkLSF )
  
-@@ -1233,26 +1233,26 @@ void WINAPI __regs_K32Thk1632Prolog( CONTEXT *context )
+@@ -1234,26 +1234,26 @@ void WINAPI __regs_K32Thk1632Prolog( CONTEXT *context )
        DWORD argSize = context->Ebp - context->Esp;
        char *stack16 = (char *)context->Esp - 4;
        STACK16FRAME *frame16 = (STACK16FRAME *)stack16 - 1;
@@ -375,7 +375,7 @@ index 78925f594ba..141acb8d5e6 100644
     }
  
      /* entry_point is never used again once the entry point has
-@@ -1275,7 +1275,7 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
+@@ -1276,7 +1276,7 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
     if (   code[5] == 0xFF && code[6] == 0x55 && code[7] == 0xFC
         && code[13] == 0x66 && code[14] == 0xCB)
     {
@@ -384,7 +384,7 @@ index 78925f594ba..141acb8d5e6 100644
        char *stack16 = (char *)(frame16 + 1);
        DWORD argSize = frame16->ebp - (DWORD)stack16;
        char *stack32 = (char *)frame16->frame32 - argSize;
-@@ -1283,15 +1283,15 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
+@@ -1284,15 +1284,15 @@ void WINAPI __regs_K32Thk1632Epilog( CONTEXT *context )
        DWORD nArgsPopped = context->Esp - (DWORD)stack32;
  
        TRACE("before SYSTHUNK hack: EBP: %08x ESP: %08x cur_stack: %p\n",
@@ -403,7 +403,7 @@ index 78925f594ba..141acb8d5e6 100644
     }
  }
  DEFINE_REGS_ENTRYPOINT( K32Thk1632Epilog )
-@@ -2302,7 +2302,7 @@ void WINAPI Throw16( LPCATCHBUF lpbuf, INT16 retval, CONTEXT *context )
+@@ -2303,7 +2303,7 @@ void WINAPI Throw16( LPCATCHBUF lpbuf, INT16 retval, CONTEXT *context )
      frame32 = pFrame->frame32;
      while (frame32 && frame32->frame16)
      {
@@ -472,11 +472,11 @@ index 2dddbf93289..3a4b104a673 100644
              SYSLEVEL_CheckNotLevel( 2 );
          }
      }
-diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index e905ed0af17..8a976f7745d 100644
---- a/dlls/ntdll/signal_i386.c
-+++ b/dlls/ntdll/signal_i386.c
-@@ -912,7 +912,7 @@ static inline void *init_handler( const ucontext_t *sigcontext, WORD *fs, WORD *
+diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
+index 2928f314358..138f56b94eb 100644
+--- a/dlls/ntdll/unix/signal_i386.c
++++ b/dlls/ntdll/unix/signal_i386.c
+@@ -645,7 +645,7 @@ static inline void *init_handler( const ucontext_t *sigcontext )
           * SS is still non-system segment. This is why both CS and SS
           * are checked.
           */
@@ -630,7 +630,7 @@ index bf86719325b..1f53bdc9540 100644
      /* don't use WIN_Handle32 here, we don't care about the full handle */
      return IsWindow( HWND_32(hwnd) );
 diff --git a/include/winternl.h b/include/winternl.h
-index dd63300d915..0aa0ac311c3 100644
+index acbce20c212..68c1ae3fd82 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -362,7 +362,7 @@ typedef struct _TEB

@@ -1,4 +1,4 @@
-From cd04d1910294b035bb3858b3ef1bb295aec3a732 Mon Sep 17 00:00:00 2001
+From 3c60ef5d082e5298b113cf0cc93fa2bb44deadba Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -9,10 +9,10 @@ used in the applications (i. e., that the applications
 get the number from syscall thunks). Linux specific Seccomp
 is used for trapping syscalls.
 ---
- configure.ac               |   1 +
- dlls/ntdll/signal_x86_64.c | 111 +++++++++++++++++++++++++++++++++++++
- tools/winebuild/spec32.c   |   9 ++-
- 3 files changed, 119 insertions(+), 2 deletions(-)
+ configure.ac                    |   1 +
+ dlls/ntdll/unix/signal_x86_64.c | 109 ++++++++++++++++++++++++++++++++
+ tools/winebuild/spec32.c        |   9 ++-
+ 3 files changed, 117 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
 index e61a98455c3..4adeb52d225 100644
@@ -26,19 +26,19 @@ index e61a98455c3..4adeb52d225 100644
  	linux/serial.h \
  	linux/types.h \
  	linux/ucdrom.h \
-diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index dd8b45fa907..a5612abf2b1 100644
---- a/dlls/ntdll/signal_x86_64.c
-+++ b/dlls/ntdll/signal_x86_64.c
-@@ -24,6 +24,7 @@
+diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
+index 1d1b879310e..d4dda481127 100644
+--- a/dlls/ntdll/unix/signal_x86_64.c
++++ b/dlls/ntdll/unix/signal_x86_64.c
+@@ -28,6 +28,7 @@
  #include "wine/port.h"
  
  #include <assert.h>
 +#include <errno.h>
+ #include <pthread.h>
  #include <signal.h>
  #include <stdlib.h>
- #include <stdarg.h>
-@@ -59,6 +60,13 @@
+@@ -64,6 +65,13 @@
  # include <mach/mach.h>
  #endif
  
@@ -52,16 +52,16 @@ index dd8b45fa907..a5612abf2b1 100644
  #define NONAMELESSUNION
  #define NONAMELESSSTRUCT
  #include "ntstatus.h"
-@@ -76,6 +84,8 @@
+@@ -78,6 +86,8 @@
  
  WINE_DEFAULT_DEBUG_CHANNEL(seh);
  
 +extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
 +
- typedef struct _SCOPE_TABLE
- {
-     ULONG Count;
-@@ -2480,6 +2490,104 @@ static inline DWORD is_privileged_instr( CONTEXT *context )
+ /***********************************************************************
+  * signal context platform-specific definitions
+  */
+@@ -982,6 +992,104 @@ static inline DWORD is_privileged_instr( CONTEXT *context )
      return 0;
  }
  
@@ -166,13 +166,11 @@ index dd8b45fa907..a5612abf2b1 100644
  
  /***********************************************************************
   *           handle_interrupt
-@@ -2793,6 +2901,9 @@ void signal_init_process(void)
-     sig_act.sa_sigaction = trap_handler;
-     if (sigaction( SIGTRAP, &sig_act, NULL ) == -1) goto error;
- #endif
-+
+@@ -1431,6 +1539,7 @@ void signal_init_process(void)
+     if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
+     if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
+     if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
 +    install_bpf(&sig_act);
-+
      return;
  
   error:

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "17529582402ebe27ef975fc7dcb8353f4f95e629"
+	echo "bf454cc39428fc5299e5c26d9c0ddc6a9277c7ae"
 }
 
 # Show version information
@@ -3657,10 +3657,10 @@ fi
 # | 	Empires II, MSYS2)
 # |
 # | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/ntdll_misc.h,
-# | 	dlls/ntdll/signal_arm.c, dlls/ntdll/signal_arm64.c, dlls/ntdll/signal_i386.c, dlls/ntdll/signal_powerpc.c,
-# | 	dlls/ntdll/signal_x86_64.c, dlls/ntdll/thread.c, dlls/ntdll/unix/server.c, dlls/ntdll/unix/virtual.c,
-# | 	dlls/psapi/tests/psapi_main.c
+# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/unix/loader.c,
+# | 	dlls/ntdll/unix/server.c, dlls/ntdll/unix/signal_arm.c, dlls/ntdll/unix/signal_arm64.c, dlls/ntdll/unix/signal_i386.c,
+# | 	dlls/ntdll/unix/signal_powerpc.c, dlls/ntdll/unix/signal_x86_64.c, dlls/ntdll/unix/unix_private.h,
+# | 	dlls/ntdll/unix/virtual.c, dlls/psapi/tests/psapi_main.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
@@ -3930,7 +3930,7 @@ fi
 # |   *	[#42647] Implement stub handler for int 0x2e
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_i386.c
+# |   *	dlls/ntdll/unix/signal_i386.c
 # |
 if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	patch_apply ntdll-Interrupt-0x2e/0001-ntdll-Catch-windows-int-0x2e-syscall-on-i386.patch
@@ -4148,11 +4148,11 @@ fi
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
 # | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
 # | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c,
-# | 	dlls/ntdll/unix/thread.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c, dlls/ntdll/unixlib.h,
-# | 	dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c,
-# | 	dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h,
-# | 	tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c,
-# | 	tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# | 	dlls/ntdll/unix/signal_i386.c, dlls/ntdll/unix/thread.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c,
+# | 	dlls/ntdll/unixlib.h, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
+# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c,
+# | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
+# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
@@ -4190,7 +4190,7 @@ fi
 # |   *	[#48291] Detroit: Become Human crashes on launch
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/signal_x86_64.c, tools/winebuild/spec32.c
+# |   *	configure.ac, dlls/ntdll/unix/signal_x86_64.c, tools/winebuild/spec32.c
 # |
 if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 	patch_apply ntdll-Syscall_Emulation/0001-ntdll-Support-x86_64-syscall-emulation.patch
@@ -4371,7 +4371,7 @@ fi
 # |   *	[#47970] Legends of Runeterra crashes at launch
 # |
 # | Modified files:
-# |   *	dlls/ntdll/signal_x86_64.c
+# |   *	dlls/ntdll/unix/signal_x86_64.c
 # |
 if test "$enable_ntdll_x86_64_SegDs" -eq 1; then
 	patch_apply ntdll-x86_64_SegDs/0001-ntdll-Report-SegDs-to-be-identical-to-SegSs-on-x86_6.patch

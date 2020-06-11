@@ -1,4 +1,4 @@
-From 7ac261609be678c827b32e36656a56d77e729fcc Mon Sep 17 00:00:00 2001
+From a660effad7b09d7333aa46f9bbef45eb4c1bed3d Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -13,13 +13,13 @@ is used for trapping syscalls.
  dlls/ntdll/thread.c             |   8 ++-
  dlls/ntdll/unix/signal_x86_64.c | 105 ++++++++++++++++++++++++++++++++
  dlls/ntdll/unix/thread.c        |   8 ++-
- dlls/ntdll/unix/unix_private.h  |   5 +-
+ dlls/ntdll/unix/unix_private.h  |   6 +-
  dlls/ntdll/unixlib.h            |   3 +-
  tools/winebuild/spec32.c        |   9 ++-
- 7 files changed, 133 insertions(+), 6 deletions(-)
+ 7 files changed, 134 insertions(+), 6 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 5418d1aa7329..d82069e74574 100644
+index 5418d1aa732..d82069e7457 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -474,6 +474,7 @@ AC_CHECK_HEADERS(\
@@ -31,7 +31,7 @@ index 5418d1aa7329..d82069e74574 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index a14e3a12ae0c..a0411446e243 100644
+index a14e3a12ae0..a0411446e24 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -229,6 +229,12 @@ void __wine_syscall_dispatcher( void )
@@ -57,7 +57,7 @@ index a14e3a12ae0c..a0411446e243 100644
  
      peb = teb->Peb;
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index 1d1b879310ee..c8a8d1d1d33d 100644
+index 1d1b879310e..c8a8d1d1d33 100644
 --- a/dlls/ntdll/unix/signal_x86_64.c
 +++ b/dlls/ntdll/unix/signal_x86_64.c
 @@ -28,6 +28,7 @@
@@ -194,7 +194,7 @@ index 1d1b879310ee..c8a8d1d1d33d 100644
  
   error:
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index e1da90222d38..91e1596ddcba 100644
+index e1da90222d3..91e1596ddcb 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -58,6 +58,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(seh);
@@ -227,10 +227,10 @@ index e1da90222d38..91e1596ddcba 100644
      teb = virtual_alloc_first_teb();
      teb->WOW32Reserved = syscall_handler;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index d06f366d3c6d..4e1bdbcc5094 100644
+index 75594832572..e42fa44f9a0 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -108,7 +108,8 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
+@@ -112,7 +112,8 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
  extern void CDECL server_init_process_done( void *relay ) DECLSPEC_HIDDEN;
  extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
                                     BOOL *suspend, unsigned int *cpus, BOOL *wow64,
@@ -240,20 +240,21 @@ index d06f366d3c6d..4e1bdbcc5094 100644
  extern void CDECL DECLSPEC_NORETURN exit_thread( int status ) DECLSPEC_HIDDEN;
  extern void CDECL DECLSPEC_NORETURN exit_process( int status ) DECLSPEC_HIDDEN;
  extern NTSTATUS CDECL get_thread_ldt_entry( HANDLE handle, void *data, ULONG len, ULONG *ret_len ) DECLSPEC_HIDDEN;
-@@ -123,6 +124,8 @@ extern timeout_t server_start_time DECLSPEC_HIDDEN;
- extern sigset_t server_block_set DECLSPEC_HIDDEN;
- extern SIZE_T signal_stack_size DECLSPEC_HIDDEN;
- extern SIZE_T signal_stack_mask DECLSPEC_HIDDEN;
+@@ -132,6 +133,9 @@ extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
+ extern void init_environment( int argc, char *argv[], char *envp[] ) DECLSPEC_HIDDEN;
+ extern DWORD ntdll_umbstowcs( const char *src, DWORD srclen, WCHAR *dst, DWORD dstlen ) DECLSPEC_HIDDEN;
+ 
 +extern unsigned int __wine_nb_syscalls DECLSPEC_HIDDEN;
 +extern void *__wine_syscall_dispatcher DECLSPEC_HIDDEN;
- 
++
  extern unsigned int server_call_unlocked( void *req_ptr ) DECLSPEC_HIDDEN;
  extern void server_enter_uninterrupted_section( RTL_CRITICAL_SECTION *cs, sigset_t *sigset ) DECLSPEC_HIDDEN;
+ extern void server_leave_uninterrupted_section( RTL_CRITICAL_SECTION *cs, sigset_t *sigset ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index 4f0080db03d9..ae17b78862a3 100644
+index 63d0a519b74..92762e802ee 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
-@@ -199,7 +199,8 @@ struct unix_funcs
+@@ -204,7 +204,8 @@ struct unix_funcs
  
      /* thread/process functions */
      TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
@@ -264,7 +265,7 @@ index 4f0080db03d9..ae17b78862a3 100644
      void          (CDECL *exit_process)( int status );
      NTSTATUS      (CDECL *get_thread_ldt_entry)( HANDLE handle, void *data, ULONG len, ULONG *ret_len );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 9cc4698d0d7d..c572fe499230 100644
+index 9cc4698d0d7..c572fe49923 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -531,7 +531,7 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )

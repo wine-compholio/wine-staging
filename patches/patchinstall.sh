@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "343043153b44fa46a2081fa8a2c171eac7c8dab6"
+	echo "22970932d014f024fcf7f0f98b1a5384b1b1eb99"
 }
 
 # Show version information
@@ -4190,7 +4190,8 @@ fi
 # |   *	[#48291] Detroit: Become Human crashes on launch
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/unix/signal_x86_64.c, tools/winebuild/spec32.c
+# |   *	configure.ac, dlls/ntdll/thread.c, dlls/ntdll/unix/signal_x86_64.c, dlls/ntdll/unix/thread.c,
+# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, tools/winebuild/spec32.c
 # |
 if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 	patch_apply ntdll-Syscall_Emulation/0001-ntdll-Support-x86_64-syscall-emulation.patch

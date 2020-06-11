@@ -1,4 +1,4 @@
-From d8ff827f7a94aee2bed89c620120af0a148ca81c Mon Sep 17 00:00:00 2001
+From 531ffc16d33f96bfeb65973efd1cdbd22fb6a32f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -22,7 +22,7 @@ Based on a patch by Erich E. Hoover.
  14 files changed, 221 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 2553b0b9d397..cac6aae2f3dd 100644
+index 2553b0b9d39..cac6aae2f3d 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -4021,6 +4021,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
@@ -43,7 +43,7 @@ index 2553b0b9d397..cac6aae2f3dd 100644
  
      RtlEnterCriticalSection( &loader_section );
 diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
-index 21cc1b3ead40..18be5693a7d2 100644
+index 21cc1b3ead4..18be5693a7d 100644
 --- a/dlls/ntdll/signal_i386.c
 +++ b/dlls/ntdll/signal_i386.c
 @@ -346,6 +346,8 @@ __ASM_STDCALL_FUNC( RtlCaptureContext, 4,
@@ -65,7 +65,7 @@ index 21cc1b3ead40..18be5693a7d2 100644
      }
      return unix_funcs->NtGetContextThread( handle, context );
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index 1389a542cdee..54796476e25b 100644
+index 1389a542cde..54796476e25 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
 @@ -1643,6 +1643,8 @@ static void test_thread_context(void)
@@ -78,7 +78,7 @@ index 1389a542cdee..54796476e25b 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index ff5fe9d6226a..e93498b27ea0 100644
+index ff5fe9d6226..e93498b27ea 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
 @@ -220,6 +220,14 @@ int __cdecl __wine_dbg_output( const char *str )
@@ -106,7 +106,7 @@ index ff5fe9d6226a..e93498b27ea0 100644
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index 97b191e1a5b3..2dbaa43e731a 100644
+index 97b191e1a5b..2dbaa43e731 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -85,7 +85,7 @@ static void pthread_exit_wrapper( int status )
@@ -127,10 +127,10 @@ index 97b191e1a5b3..2dbaa43e731a 100644
      thread_data->request_fd = -1;
      thread_data->reply_fd   = -1;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 92a58417827b..33a551e947c2 100644
+index e26a64fdac0..e93d8f21d10 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -108,7 +108,7 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
+@@ -112,7 +112,7 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
  extern void CDECL server_init_process_done( void *relay ) DECLSPEC_HIDDEN;
  extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
                                     BOOL *suspend, unsigned int *cpus, BOOL *wow64,
@@ -140,19 +140,19 @@ index 92a58417827b..33a551e947c2 100644
  extern void CDECL DECLSPEC_NORETURN exit_process( int status ) DECLSPEC_HIDDEN;
  extern NTSTATUS CDECL get_thread_ldt_entry( HANDLE handle, void *data, ULONG len, ULONG *ret_len ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index 4c580c49d139..4f0080db03d9 100644
+index 768ab5b006c..63d0a519b74 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
 @@ -28,7 +28,7 @@ struct ldt_copy;
  struct msghdr;
  
  /* increment this when you change the function table */
--#define NTDLL_UNIXLIB_VERSION 38
-+#define NTDLL_UNIXLIB_VERSION 39
+-#define NTDLL_UNIXLIB_VERSION 41
++#define NTDLL_UNIXLIB_VERSION 42
  
  struct unix_funcs
  {
-@@ -199,7 +199,7 @@ struct unix_funcs
+@@ -204,7 +204,7 @@ struct unix_funcs
  
      /* thread/process functions */
      TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
@@ -162,7 +162,7 @@ index 4c580c49d139..4f0080db03d9 100644
      void          (CDECL *exit_process)( int status );
      NTSTATUS      (CDECL *get_thread_ldt_entry)( HANDLE handle, void *data, ULONG len, ULONG *ret_len );
 diff --git a/include/winternl.h b/include/winternl.h
-index 2d9f54b89d8c..0c15a0ee6c34 100644
+index 2d9f54b89d8..0c15a0ee6c3 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
 @@ -360,7 +360,7 @@ typedef struct _TEB
@@ -175,7 +175,7 @@ index 2d9f54b89d8c..0c15a0ee6c34 100644
      ULONG                        FpSoftwareStatusRegister;          /* 0c8/010c */
      PVOID                        SystemReserved1[54];               /* 0cc/0110 used for krnl386.exe16 private data in Wine */
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
-index c162888a0356..55d5b0b9dc28 100644
+index c162888a035..55d5b0b9dc2 100644
 --- a/tools/winebuild/build.h
 +++ b/tools/winebuild/build.h
 @@ -105,6 +105,7 @@ typedef struct
@@ -223,7 +223,7 @@ index c162888a0356..55d5b0b9dc28 100644
  
  extern int byte_swapped;
 diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
-index 04ab433dd65a..0c6bafed8e54 100644
+index 04ab433dd65..0c6bafed8e5 100644
 --- a/tools/winebuild/import.c
 +++ b/tools/winebuild/import.c
 @@ -531,6 +531,7 @@ static void check_undefined_forwards( DLLSPEC *spec )
@@ -263,7 +263,7 @@ index 04ab433dd65a..0c6bafed8e54 100644
              }
          }
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index 0f2b9c1e10ad..74216f8bb6e7 100644
+index 0f2b9c1e10a..74216f8bb6e 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -543,6 +543,24 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
@@ -354,7 +354,7 @@ index 0f2b9c1e10ad..74216f8bb6e7 100644
  }
  
 diff --git a/tools/winebuild/spec16.c b/tools/winebuild/spec16.c
-index a52c03aaa6a7..15ef9a3f8930 100644
+index a52c03aaa6a..15ef9a3f893 100644
 --- a/tools/winebuild/spec16.c
 +++ b/tools/winebuild/spec16.c
 @@ -495,27 +495,6 @@ static int relay_type_compare( const void *e1, const void *e2 )
@@ -394,7 +394,7 @@ index a52c03aaa6a7..15ef9a3f8930 100644
          entry_point->u.func.nb_args = 0;
          assert( !spec->ordinals[0] );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index b1e20e0484dc..22dd399cb2b4 100644
+index b1e20e0484d..22dd399cb2b 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -374,6 +374,109 @@ static void output_relay_debug( DLLSPEC *spec )
@@ -516,7 +516,7 @@ index b1e20e0484dc..22dd399cb2b4 100644
      output_exports( spec );
      output_imports( spec );
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index 2a1fc960926b..07a579004adc 100644
+index 2a1fc960926..07a579004ad 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
 @@ -860,6 +860,7 @@ void free_dll_spec( DLLSPEC *spec )

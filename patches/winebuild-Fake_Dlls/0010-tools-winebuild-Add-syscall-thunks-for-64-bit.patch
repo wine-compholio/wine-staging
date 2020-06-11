@@ -1,4 +1,4 @@
-From a5b4feebd008daab008f72567fe0001da619030e Mon Sep 17 00:00:00 2001
+From 6f1973aa2aee35139ae041e59d37a45ff22dc5bf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -7,18 +7,18 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  dlls/kernel32/tests/loader.c   |   7 +-
  dlls/ntdll/unix/thread.c       |   2 +-
  dlls/ntdll/unix/unix_private.h |   2 +-
- dlls/ntdll/unix/virtual.c      |  12 +-
+ dlls/ntdll/unix/virtual.c      |  11 +-
  libs/wine/loader.c             |   4 +
  server/mapping.c               |   6 +-
  tools/winebuild/parser.c       |   2 +-
  tools/winebuild/spec32.c       | 285 ++++++++++++++++++++++++++++++++-
- 8 files changed, 306 insertions(+), 14 deletions(-)
+ 8 files changed, 305 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 95939ba6bde..ae5462f6e55 100644
+index 1f525194ce73..21af7b4ce7a4 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1573,7 +1573,7 @@ static void test_filenames(void)
+@@ -1574,7 +1574,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -27,7 +27,7 @@ index 95939ba6bde..ae5462f6e55 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1615,8 +1615,13 @@ static void test_FakeDLL(void)
+@@ -1616,8 +1616,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -42,7 +42,7 @@ index 95939ba6bde..ae5462f6e55 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index 2dbaa43e731..e1da90222d3 100644
+index 2dbaa43e731a..e1da90222d38 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -110,7 +110,7 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
@@ -55,10 +55,10 @@ index 2dbaa43e731..e1da90222d3 100644
  
      if (size) *size = info_size;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index a1c48a52606..9c9e5b80b0c 100644
+index 33a551e947c2..d06f366d3c6d 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -152,7 +152,7 @@ extern void virtual_init(void) DECLSPEC_HIDDEN;
+@@ -153,7 +153,7 @@ extern void virtual_init(void) DECLSPEC_HIDDEN;
  extern TEB *virtual_alloc_first_teb(void) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_alloc_teb( TEB **ret_teb ) DECLSPEC_HIDDEN;
  extern void virtual_free_teb( TEB *teb ) DECLSPEC_HIDDEN;
@@ -68,10 +68,10 @@ index a1c48a52606..9c9e5b80b0c 100644
  extern BOOL virtual_is_valid_code_address( const void *addr, SIZE_T size ) DECLSPEC_HIDDEN;
  extern int virtual_handle_stack_fault( void *addr ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 660323d4dcc..a5e5cb8422d 100644
+index 9fb2ecd38ca3..ad11485d1cea 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2588,14 +2588,14 @@ TEB *virtual_alloc_first_teb(void)
+@@ -2772,14 +2772,14 @@ TEB *virtual_alloc_first_teb(void)
      TEB *teb;
      PEB *peb;
      NTSTATUS status;
@@ -88,12 +88,7 @@ index 660323d4dcc..a5e5cb8422d 100644
      if (status)
      {
          ERR( "wine: failed to map the shared user data: %08x\n", status );
-@@ -2787,11 +2787,12 @@ void virtual_clear_thread_stack( void *stack_end )
-     if (force_exec_prot) mprotect( stack, size, PROT_READ | PROT_WRITE | PROT_EXEC );
- }
- 
-+extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
- 
+@@ -2977,7 +2977,7 @@ void virtual_clear_thread_stack( void *stack_end )
  /***********************************************************************
   *           virtual_map_user_shared_data
   */
@@ -102,7 +97,7 @@ index 660323d4dcc..a5e5cb8422d 100644
  {
      static const WCHAR wine_usdW[] = {'\\','K','e','r','n','e','l','O','b','j','e','c','t','s',
                                        '\\','_','_','w','i','n','e','_','u','s','e','r','_','s','h','a','r','e','d','_','d','a','t','a',0};
-@@ -2814,6 +2815,11 @@ void virtual_map_user_shared_data(void)
+@@ -3000,6 +3000,11 @@ void virtual_map_user_shared_data(void)
          ERR( "failed to remap the process USD: %d\n", res );
          exit(1);
      }
@@ -115,7 +110,7 @@ index 660323d4dcc..a5e5cb8422d 100644
      NtClose( section );
  }
 diff --git a/libs/wine/loader.c b/libs/wine/loader.c
-index 4597a6cb324..3d0d75e9c6d 100644
+index 4597a6cb3243..3d0d75e9c6d3 100644
 --- a/libs/wine/loader.c
 +++ b/libs/wine/loader.c
 @@ -398,7 +398,11 @@ static void *map_dll( const IMAGE_NT_HEADERS *nt_descr )
@@ -131,7 +126,7 @@ index 4597a6cb324..3d0d75e9c6d 100644
      sec++;
  
 diff --git a/server/mapping.c b/server/mapping.c
-index 0941dd87c05..002f3215af2 100644
+index 0941dd87c05d..002f3215af2e 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -964,7 +964,11 @@ struct object *create_user_data_mapping( struct object *root, const struct unico
@@ -148,7 +143,7 @@ index 0941dd87c05..002f3215af2 100644
  }
  
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index 74216f8bb6e..820516329a4 100644
+index 74216f8bb6e7..820516329a47 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -545,7 +545,7 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )
@@ -161,7 +156,7 @@ index 74216f8bb6e..820516329a4 100644
      if (odp->flags & (FLAG_FORWARD | FLAG_REGISTER))
          return 0;
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 07d6eed05fc..9cc4698d0d7 100644
+index 07d6eed05fcc..9cc4698d0d7d 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -375,11 +375,11 @@ static void output_relay_debug( DLLSPEC *spec )

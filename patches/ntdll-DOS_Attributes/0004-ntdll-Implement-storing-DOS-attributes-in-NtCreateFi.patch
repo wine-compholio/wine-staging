@@ -1,136 +1,17 @@
-From 8fde8af21e169d9a48bab50bac4d6e24238141b6 Mon Sep 17 00:00:00 2001
+From 769a1043bb174557b600c9ce38765846a3126e7f Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: [PATCH] ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
- dlls/ntdll/file.c            | 76 +++++++++++++++++++++++-------------
  dlls/ntdll/tests/directory.c | 24 ++++++------
+ dlls/ntdll/unix/file.c       | 74 +++++++++++++++++++++++-------------
  include/wine/port.h          |  2 +
  libs/port/xattr.c            | 20 ++++++++++
- 4 files changed, 82 insertions(+), 40 deletions(-)
+ 4 files changed, 81 insertions(+), 39 deletions(-)
 
-diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index c077add9769e..a596afed72e7 100644
---- a/dlls/ntdll/file.c
-+++ b/dlls/ntdll/file.c
-@@ -255,6 +255,21 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
-     return ret;
- }
- 
-+NTSTATUS set_file_info( const char *path, ULONG attr )
-+{
-+    char hexattr[11];
-+    int len;
-+
-+    /* Note: unix mode already set when called this way */
-+    attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
-+    len = sprintf( hexattr, "0x%x", attr );
-+    if (attr != 0)
-+        xattr_set( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
-+    else
-+        xattr_remove( path, SAMBA_XATTR_DOS_ATTRIB );
-+    return STATUS_SUCCESS;
-+}
-+
- /**************************************************************************
-  *                 FILE_CreateFile                    (internal)
-  * Open a file.
-@@ -266,6 +281,10 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
-                                  ULONG attributes, ULONG sharing, ULONG disposition,
-                                  ULONG options, PVOID ea_buffer, ULONG ea_length )
- {
-+    static UNICODE_STRING empty_string;
-+    OBJECT_ATTRIBUTES unix_attr;
-+    data_size_t len;
-+    struct object_attributes *objattr;
-     ANSI_STRING unix_name;
-     BOOL created = FALSE;
- 
-@@ -309,37 +328,34 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
-         io->u.Status = STATUS_SUCCESS;
-     }
- 
--    if (io->u.Status == STATUS_SUCCESS)
-+    if (io->u.Status != STATUS_SUCCESS)
-     {
--        static UNICODE_STRING empty_string;
--        OBJECT_ATTRIBUTES unix_attr = *attr;
--        data_size_t len;
--        struct object_attributes *objattr;
--
--        unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
--        if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
--        {
--            RtlFreeAnsiString( &unix_name );
--            return io->u.Status;
--        }
-+        WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
-+        return io->u.Status;
-+    }
- 
--        SERVER_START_REQ( create_file )
--        {
--            req->access     = access;
--            req->sharing    = sharing;
--            req->create     = disposition;
--            req->options    = options;
--            req->attrs      = attributes;
--            wine_server_add_data( req, objattr, len );
--            wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
--            io->u.Status = wine_server_call( req );
--            *handle = wine_server_ptr_handle( reply->handle );
--        }
--        SERVER_END_REQ;
--        RtlFreeHeap( GetProcessHeap(), 0, objattr );
-+    unix_attr = *attr;
-+    unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
-+    if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
-+    {
-         RtlFreeAnsiString( &unix_name );
-+        return io->u.Status;
-     }
--    else WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
-+
-+    SERVER_START_REQ( create_file )
-+    {
-+        req->access     = access;
-+        req->sharing    = sharing;
-+        req->create     = disposition;
-+        req->options    = options;
-+        req->attrs      = attributes;
-+        wine_server_add_data( req, objattr, len );
-+        wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
-+        io->u.Status = wine_server_call( req );
-+        *handle = wine_server_ptr_handle( reply->handle );
-+    }
-+    SERVER_END_REQ;
-+    RtlFreeHeap( GetProcessHeap(), 0, objattr );
- 
-     if (io->u.Status == STATUS_SUCCESS)
-     {
-@@ -361,6 +377,11 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
-             io->Information = FILE_OVERWRITTEN;
-             break;
-         }
-+        if (io->Information == FILE_CREATED)
-+        {
-+            /* set any DOS extended attributes */
-+            set_file_info( unix_name.Buffer, attributes );
-+        }
-     }
-     else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
-     {
-@@ -368,6 +389,7 @@ static NTSTATUS FILE_CreateFile( PHANDLE handle, ACCESS_MASK access, POBJECT_ATT
-         if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
-     }
- 
-+    RtlFreeAnsiString( &unix_name );
-     return io->u.Status;
- }
- 
 diff --git a/dlls/ntdll/tests/directory.c b/dlls/ntdll/tests/directory.c
-index 4618f4eaff2b..44933c2153df 100644
+index 248ed99ab20..e0f4debc624 100644
 --- a/dlls/ntdll/tests/directory.c
 +++ b/dlls/ntdll/tests/directory.c
 @@ -55,7 +55,6 @@ static NTSTATUS (WINAPI *pRtlWow64EnableFsRedirectionEx)( ULONG disable, ULONG *
@@ -178,8 +59,125 @@ index 4618f4eaff2b..44933c2153df 100644
              testfiles[i].attr_done = TRUE;
          }
          testfiles[i].nfound++;
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 66ce2eb5fe4..0546039cc47 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -3004,6 +3004,20 @@ void CDECL set_show_dot_files( BOOL enable )
+     show_dot_files = enable;
+ }
+ 
++NTSTATUS set_file_info( const char *path, ULONG attr )
++{
++    char hexattr[11];
++    int len;
++
++    /* Note: unix mode already set when called this way */
++    attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
++    len = sprintf( hexattr, "0x%x", attr );
++    if (attr != 0)
++        xattr_set( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
++    else
++        xattr_remove( path, SAMBA_XATTR_DOS_ATTRIB );
++    return STATUS_SUCCESS;
++}
+ 
+ /******************************************************************************
+  *              NtCreateFile   (NTDLL.@)
+@@ -3013,6 +3027,10 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+                               ULONG attributes, ULONG sharing, ULONG disposition,
+                               ULONG options, void *ea_buffer, ULONG ea_length )
+ {
++    static UNICODE_STRING empty_string;
++    OBJECT_ATTRIBUTES unix_attr;
++    data_size_t len;
++    struct object_attributes *objattr;
+     ANSI_STRING unix_name;
+     BOOL created = FALSE;
+ 
+@@ -3055,36 +3073,34 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+         io->u.Status = STATUS_SUCCESS;
+     }
+ 
+-    if (io->u.Status == STATUS_SUCCESS)
++    if (io->u.Status != STATUS_SUCCESS)
+     {
+-        static UNICODE_STRING empty_string;
+-        OBJECT_ATTRIBUTES unix_attr = *attr;
+-        data_size_t len;
+-        struct object_attributes *objattr;
++        WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++        return io->u.Status;
++    }
+ 
+-        unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
+-        if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
+-        {
+-            RtlFreeAnsiString( &unix_name );
+-            return io->u.Status;
+-        }
+-        SERVER_START_REQ( create_file )
+-        {
+-            req->access     = access;
+-            req->sharing    = sharing;
+-            req->create     = disposition;
+-            req->options    = options;
+-            req->attrs      = attributes;
+-            wine_server_add_data( req, objattr, len );
+-            wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
+-            io->u.Status = wine_server_call( req );
+-            *handle = wine_server_ptr_handle( reply->handle );
+-        }
+-        SERVER_END_REQ;
+-        RtlFreeHeap( GetProcessHeap(), 0, objattr );
++    unix_attr = *attr;
++    unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
++    if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
++    {
+         RtlFreeAnsiString( &unix_name );
++        return io->u.Status;
+     }
+-    else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++
++    SERVER_START_REQ( create_file )
++    {
++        req->access     = access;
++        req->sharing    = sharing;
++        req->create     = disposition;
++        req->options    = options;
++        req->attrs      = attributes;
++        wine_server_add_data( req, objattr, len );
++        wine_server_add_data( req, unix_name.Buffer, unix_name.Length );
++        io->u.Status = wine_server_call( req );
++        *handle = wine_server_ptr_handle( reply->handle );
++    }
++    SERVER_END_REQ;
++    RtlFreeHeap( GetProcessHeap(), 0, objattr );
+ 
+     if (io->u.Status == STATUS_SUCCESS)
+     {
+@@ -3106,6 +3122,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+             io->Information = FILE_OVERWRITTEN;
+             break;
+         }
++        if (io->Information == FILE_CREATED)
++        {
++            /* set any DOS extended attributes */
++            set_file_info( unix_name.Buffer, attributes );
++        }
+     }
+     else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
+     {
+@@ -3113,6 +3134,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+         if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
+     }
+ 
++    RtlFreeAnsiString( &unix_name );
+     return io->u.Status;
+ }
+ 
 diff --git a/include/wine/port.h b/include/wine/port.h
-index f90396727d6d..7d2c73887073 100644
+index f90396727d6..7d2c7388707 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -371,6 +371,8 @@ extern int xattr_fget( int filedes, const char *name, void *value, size_t size )
@@ -192,7 +190,7 @@ index f90396727d6d..7d2c73887073 100644
  #else /* NO_LIBWINE_PORT */
  
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 6918c9956cc6..683e7a615e2b 100644
+index 6918c9956cc..683e7a615e2 100644
 --- a/libs/port/xattr.c
 +++ b/libs/port/xattr.c
 @@ -67,3 +67,23 @@ int xattr_get( const char *path, const char *name, void *value, size_t size )
@@ -220,5 +218,5 @@ index 6918c9956cc6..683e7a615e2b 100644
 +#endif
 +}
 -- 
-2.26.2
+2.27.0
 

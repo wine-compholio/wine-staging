@@ -1,23 +1,23 @@
-From 74693bc85e3dbc1f757cfea348dc385b4badeb89 Mon Sep 17 00:00:00 2001
+From 0bfc43bff3a9b53e65c82d987bb072f0ff0a3a2b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
- NtQueryInformationFile.
+ [fd_]get_file_info().
 
 ---
- configure.ac          | 12 ++++++++++++
- dlls/ntdll/file.c     | 16 ++++++++++++++++
- include/wine/port.h   |  8 ++++++++
- libs/port/Makefile.in |  3 ++-
- libs/port/xattr.c     | 39 +++++++++++++++++++++++++++++++++++++++
- 5 files changed, 77 insertions(+), 1 deletion(-)
+ configure.ac           | 12 +++++++++++
+ dlls/ntdll/unix/file.c | 22 ++++++++++++++++++-
+ include/wine/port.h    |  9 ++++++++
+ libs/port/Makefile.in  |  3 ++-
+ libs/port/xattr.c      | 49 ++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 93 insertions(+), 2 deletions(-)
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index 180d958fc4ef..1e3d2e0d4ef0 100644
+index d3bd12a6340..5e775c04449 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -89,6 +89,7 @@ AC_ARG_WITH(usb,       AS_HELP_STRING([--without-usb],[do not use the libusb lib
+@@ -88,6 +88,7 @@ AC_ARG_WITH(usb,       AS_HELP_STRING([--without-usb],[do not use the libusb lib
  AC_ARG_WITH(v4l2,      AS_HELP_STRING([--without-v4l2],[do not use v4l2 (video capture)]))
  AC_ARG_WITH(vkd3d,     AS_HELP_STRING([--without-vkd3d],[do not use vkd3d (Direct3D 12 support)]))
  AC_ARG_WITH(vulkan,    AS_HELP_STRING([--without-vulkan],[do not use Vulkan]))
@@ -25,7 +25,7 @@ index 180d958fc4ef..1e3d2e0d4ef0 100644
  AC_ARG_WITH(xcomposite,AS_HELP_STRING([--without-xcomposite],[do not use the Xcomposite extension]),
              [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xcomposite_h=no; fi])
  AC_ARG_WITH(xcursor,   AS_HELP_STRING([--without-xcursor],[do not use the Xcursor extension]),
-@@ -709,6 +710,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
+@@ -697,6 +698,17 @@ AC_CHECK_HEADERS([libprocstat.h],,,
  #include <sys/socket.h>
  #endif])
  
@@ -43,13 +43,13 @@ index 180d958fc4ef..1e3d2e0d4ef0 100644
  dnl **** Check for working dll ****
  
  AC_SUBST(DLLFLAGS,"-D_REENTRANT")
-diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 9a9acfdb623b..5536e61db2e4 100644
---- a/dlls/ntdll/file.c
-+++ b/dlls/ntdll/file.c
-@@ -126,6 +126,22 @@ mode_t FILE_umask = 0;
- NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, USHORT *unix_dest_len,
-                             DWORD *tag, ULONG *flags, BOOL *is_dir);
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 66ce2eb5fe4..d2e783f3300 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -1431,6 +1431,22 @@ static BOOL append_entry( struct dir_data *data, const char *long_name,
+ }
+ 
  
 +/* Match the Samba conventions for storing DOS file attributes */
 +#define SAMBA_XATTR_DOS_ATTRIB XATTR_USER_PREFIX "DOSATTRIB"
@@ -70,11 +70,31 @@ index 9a9acfdb623b..5536e61db2e4 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
+@@ -1450,7 +1466,8 @@ static inline ULONG get_file_attributes( const struct stat *st )
+ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
+ {
+     char *parent_path;
+-    int ret;
++    char hexattr[11];
++    int len, ret;
+ 
+     *attr = 0;
+     ret = lstat( path, st );
+@@ -1476,6 +1493,9 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
+         RtlFreeHeap( GetProcessHeap(), 0, parent_path );
+     }
+     *attr |= get_file_attributes( st );
++    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
++    if (len == -1) return ret;
++    *attr |= get_file_xattr( hexattr, len );
+     return ret;
+ }
+ 
 diff --git a/include/wine/port.h b/include/wine/port.h
-index e8434c73cca2..f0507efcc7e7 100644
+index e8434c73cca..6e81cb71a76 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -361,6 +361,14 @@ int usleep (unsigned int useconds);
+@@ -361,6 +361,15 @@ int usleep (unsigned int useconds);
  
  extern int mkstemps(char *template, int suffix_len);
  
@@ -85,12 +105,13 @@ index e8434c73cca2..f0507efcc7e7 100644
 +#endif
 +
 +extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
++extern int xattr_get( const char *path, const char *name, void *value, size_t size );
 +
  #else /* NO_LIBWINE_PORT */
  
  #define __WINE_NOT_PORTABLE(func) func##_is_not_portable func##_is_not_portable
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index 1963afe24232..4b1ecab7516b 100644
+index 1963afe2423..4b1ecab7516 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
 @@ -22,4 +22,5 @@ C_SRCS = \
@@ -102,10 +123,10 @@ index 1963afe24232..4b1ecab7516b 100644
 +	xattr.c
 diff --git a/libs/port/xattr.c b/libs/port/xattr.c
 new file mode 100644
-index 000000000000..94b77132bbf2
+index 00000000000..88e900dac6d
 --- /dev/null
 +++ b/libs/port/xattr.c
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,49 @@
 +/*
 + * extended attributes functions
 + *
@@ -145,6 +166,16 @@ index 000000000000..94b77132bbf2
 +    return -1;
 +#endif
 +}
++
++int xattr_get( const char *path, const char *name, void *value, size_t size )
++{
++#if defined(HAVE_ATTR_XATTR_H)
++    return getxattr( path, name, value, size );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
 -- 
-2.26.2
+2.27.0
 

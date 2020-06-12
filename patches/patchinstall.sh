@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "22970932d014f024fcf7f0f98b1a5384b1b1eb99"
+	echo "948a6a47b8dbd0ddd86cad04de03f0e4ba81b65d"
 }
 
 # Show version information
@@ -167,7 +167,6 @@ patch_enable_all ()
 	enable_ntdll_ApiSetMap="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CriticalSection="$1"
-	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_Exception="$1"
@@ -228,14 +227,12 @@ patch_enable_all ()
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
-	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
 	enable_server_Registry_Notifications="$1"
 	enable_server_Signal_Thread="$1"
-	enable_server_Stored_ACLs="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
@@ -599,9 +596,6 @@ patch_enable ()
 		ntdll-CriticalSection)
 			enable_ntdll_CriticalSection="$2"
 			;;
-		ntdll-DOS_Attributes)
-			enable_ntdll_DOS_Attributes="$2"
-			;;
 		ntdll-Dealloc_Thread_Stack)
 			enable_ntdll_Dealloc_Thread_Stack="$2"
 			;;
@@ -782,9 +776,6 @@ patch_enable ()
 		server-File_Permissions)
 			enable_server_File_Permissions="$2"
 			;;
-		server-Inherited_ACLs)
-			enable_server_Inherited_ACLs="$2"
-			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
 			;;
@@ -802,9 +793,6 @@ patch_enable ()
 			;;
 		server-Signal_Thread)
 			enable_server_Signal_Thread="$2"
-			;;
-		server-Stored_ACLs)
-			enable_server_Stored_ACLs="$2"
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
@@ -1608,24 +1596,6 @@ if test "$enable_server_Realtime_Priority" -eq 1; then
 	enable_ntdll_ThreadTime=1
 fi
 
-if test "$enable_server_Inherited_ACLs" -eq 1; then
-	if test "$enable_server_Stored_ACLs" -gt 1; then
-		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
-	fi
-	enable_server_Stored_ACLs=1
-fi
-
-if test "$enable_server_Stored_ACLs" -eq 1; then
-	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
-		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
-	fi
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
-	fi
-	enable_ntdll_DOS_Attributes=1
-	enable_server_File_Permissions=1
-fi
-
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but server-Desktop_Refcount depends on that."
@@ -1702,13 +1672,6 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	fi
 	enable_advapi32_Token_Integrity_Level=1
 	enable_ntdll_ThreadTime=1
-fi
-
-if test "$enable_ntdll_DOS_Attributes" -eq 1; then
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but ntdll-DOS_Attributes depends on that."
-	fi
-	enable_ntdll_Junction_Points=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -3214,7 +3177,7 @@ fi
 # |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c,
+# |   *	configure.ac, dlls/kernel32/path.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c,
 # | 	include/Makefile.in, include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in,
 # | 	libs/port/renameat2.c, server/fd.c
 # |
@@ -3719,40 +3682,6 @@ if test "$enable_ntdll_CriticalSection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-DOS_Attributes
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#9158] Support for DOS hidden/system file attributes
-# |   *	[#15679] cygwin symlinks not working in wine
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ntdll/directory.c, dlls/ntdll/file.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/tests/directory.c,
-# | 	dlls/ntdll/tests/file.c, include/wine/port.h, libs/port/Makefile.in, libs/port/xattr.c
-# |
-if test "$enable_ntdll_DOS_Attributes" -eq 1; then
-	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
-	patch_apply ntdll-DOS_Attributes/0002-ntdll-Implement-retrieving-DOS-attributes-in-NtQuery.patch
-	patch_apply ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch
-	patch_apply ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch
-	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
-	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
-	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
-	patch_apply ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQueryInformationFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in NtQuery[Full]AttributesFile and NtQueryDirectoryFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
 # | Modified files:
@@ -3972,7 +3901,7 @@ fi
 # |   *	[#28995] Allow special characters in pipe names
 # |
 # | Modified files:
-# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/directory.c
+# |   *	dlls/kernel32/tests/pipe.c, dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_Pipe_SpecialCharacters" -eq 1; then
 	patch_apply ntdll-Pipe_SpecialCharacters/0001-ntdll-Allow-special-characters-in-pipe-names.patch
@@ -3990,7 +3919,7 @@ fi
 # |   *	[#37487] Resolve \\SystemRoot\\ prefix when opening files
 # |
 # | Modified files:
-# |   *	dlls/ntdll/directory.c, dlls/ntdll/tests/file.c
+# |   *	dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
@@ -4674,52 +4603,6 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Stored_ACLs
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points, ntdll-DOS_Attributes, server-File_Permissions
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#33576] Support for stored file ACLs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
-# | 	server/object.h
-# |
-if test "$enable_server_Stored_ACLs" -eq 1; then
-	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
-	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
-	patch_apply server-Stored_ACLs/0003-server-Add-a-helper-function-set_sd_from_token_inter.patch
-	patch_apply server-Stored_ACLs/0004-server-Temporarily-store-the-full-security-descripto.patch
-	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
-	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
-	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Inherited_ACLs
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points, ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, server/file.c
-# |
-if test "$enable_server_Inherited_ACLs" -eq 1; then
-	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
 	) >> "$patchlist"
 fi
 
@@ -6644,6 +6527,7 @@ if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0014-include-Add-XACTENGINE_-error-codes.patch
 	patch_apply xactengine-initial/0015-include-Add-XACT-defines.patch
 	patch_apply xactengine-initial/0016-xaudio2_7-tests-Add-more-tests.patch
+	patch_apply xactengine-initial/0017-include-Correct-the-name-of-WAVEBANKMINIWAVEFORMAT.patch
 	(
 		printf '%s\n' '+    { "Ethan Lee", "include: Add xact3.idl.", 1 },';
 		printf '%s\n' '+    { "Ethan Lee", "xaudio2: Add support for xactengine3.", 1 },';
@@ -6660,6 +6544,7 @@ if test "$enable_xactengine_initial" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACTENGINE_* error codes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACT defines.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7/tests: Add more tests.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "include: Correct the name of WAVEBANKMINIWAVEFORMAT.", 1 },';
 	) >> "$patchlist"
 fi
 

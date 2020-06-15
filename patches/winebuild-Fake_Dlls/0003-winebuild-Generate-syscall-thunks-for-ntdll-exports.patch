@@ -1,4 +1,4 @@
-From 607a86f034677449a7fa4628ec2df013b65bfa90 Mon Sep 17 00:00:00 2001
+From 7e13aba360d1dd4d5a09f5b9a624dfa4e61d3ddf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -22,7 +22,7 @@ Based on a patch by Erich E. Hoover.
  14 files changed, 221 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index c2e65c94abc..0f9fe76e9af 100644
+index a09c17e3b50..d22fd0141c0 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3812,6 +3812,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
@@ -106,7 +106,7 @@ index 5a6809638ae..c6988ce08e3 100644
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index 97b191e1a5b..2dbaa43e731 100644
+index 0470f5eaa8a..55afc1748ef 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -85,7 +85,7 @@ static void pthread_exit_wrapper( int status )
@@ -127,7 +127,7 @@ index 97b191e1a5b..2dbaa43e731 100644
      thread_data->request_fd = -1;
      thread_data->reply_fd   = -1;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index abedfc316ae..62d0c115026 100644
+index 0d1d0e5025f..ac792801283 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
 @@ -111,7 +111,7 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
@@ -140,19 +140,19 @@ index abedfc316ae..62d0c115026 100644
  extern void CDECL DECLSPEC_NORETURN exit_process( int status ) DECLSPEC_HIDDEN;
  extern NTSTATUS CDECL get_thread_ldt_entry( HANDLE handle, void *data, ULONG len, ULONG *ret_len ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index 873cc7abdf2..c6fb8e0f2d4 100644
+index dd5c3e3784e..dae93ab1632 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
 @@ -28,7 +28,7 @@ struct ldt_copy;
  struct msghdr;
  
  /* increment this when you change the function table */
--#define NTDLL_UNIXLIB_VERSION 44
-+#define NTDLL_UNIXLIB_VERSION 45
+-#define NTDLL_UNIXLIB_VERSION 47
++#define NTDLL_UNIXLIB_VERSION 48
  
  struct unix_funcs
  {
-@@ -225,7 +225,7 @@ struct unix_funcs
+@@ -253,7 +253,7 @@ struct unix_funcs
  
      /* thread/process functions */
      TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,

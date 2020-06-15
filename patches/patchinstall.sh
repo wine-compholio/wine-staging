@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "948a6a47b8dbd0ddd86cad04de03f0e4ba81b65d"
+	echo "634cb775c27b61ad6ce1fbe3e9972b0edfa31dcb"
 }
 
 # Show version information
@@ -167,6 +167,7 @@ patch_enable_all ()
 	enable_ntdll_ApiSetMap="$1"
 	enable_ntdll_Builtin_Prot="$1"
 	enable_ntdll_CriticalSection="$1"
+	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
 	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_Exception="$1"
@@ -179,11 +180,9 @@ patch_enable_all ()
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
-	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtDevicePath="$1"
-	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -226,7 +225,6 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
-	enable_server_File_Permissions="$1"
 	enable_server_Key_State="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
@@ -596,6 +594,9 @@ patch_enable ()
 		ntdll-CriticalSection)
 			enable_ntdll_CriticalSection="$2"
 			;;
+		ntdll-DOS_Attributes)
+			enable_ntdll_DOS_Attributes="$2"
+			;;
 		ntdll-Dealloc_Thread_Stack)
 			enable_ntdll_Dealloc_Thread_Stack="$2"
 			;;
@@ -632,9 +633,6 @@ patch_enable ()
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
 			;;
-		ntdll-Junction_Points)
-			enable_ntdll_Junction_Points="$2"
-			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
 			;;
@@ -643,9 +641,6 @@ patch_enable ()
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
-			;;
-		ntdll-NtQueryEaFile)
-			enable_ntdll_NtQueryEaFile="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -772,9 +767,6 @@ patch_enable ()
 			;;
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
-			;;
-		server-File_Permissions)
-			enable_server_File_Permissions="$2"
 			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
@@ -1649,13 +1641,6 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	enable_ws2_32_WSACleanup=1
 fi
 
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
-	fi
-	enable_ntdll_Junction_Points=1
-fi
-
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
@@ -1700,20 +1685,6 @@ if test "$enable_kernel32_CopyFileEx" -eq 1; then
 		abort "Patchset ntdll-FileDispositionInformation disabled, but kernel32-CopyFileEx depends on that."
 	fi
 	enable_ntdll_FileDispositionInformation=1
-fi
-
-if test "$enable_ntdll_FileDispositionInformation" -eq 1; then
-	if test "$enable_server_File_Permissions" -gt 1; then
-		abort "Patchset server-File_Permissions disabled, but ntdll-FileDispositionInformation depends on that."
-	fi
-	enable_server_File_Permissions=1
-fi
-
-if test "$enable_server_File_Permissions" -eq 1; then
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but server-File_Permissions depends on that."
-	fi
-	enable_ntdll_Junction_Points=1
 fi
 
 if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
@@ -2715,12 +2686,10 @@ fi
 # |
 # | Modified files:
 # |   *	configure, configure.ac, dlls/directmanipulation/Makefile.in, dlls/directmanipulation/directmanip.idl,
-# | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/directmanipulation.spec,
-# | 	dlls/directmanipulation/tests/Makefile.in, dlls/directmanipulation/tests/manipulation.c, dlls/uuid/uuid.c
+# | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/tests/Makefile.in,
+# | 	dlls/directmanipulation/tests/manipulation.c
 # |
 if test "$enable_directmanipulation_new_dll" -eq 1; then
-	patch_apply directmanipulation-new-dll/0002-directmanipulation-New-dll.patch
-	patch_apply directmanipulation-new-dll/0003-uuid-Add-directmanipulation.h.patch
 	patch_apply directmanipulation-new-dll/0004-directmanipulation-Create-DirectManipulationManager-.patch
 	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
 	patch_apply directmanipulation-new-dll/0007-directmanipulation-Supprot-IDirectManipulationFrameI.patch
@@ -2733,8 +2702,6 @@ if test "$enable_directmanipulation_new_dll" -eq 1; then
 	patch_apply directmanipulation-new-dll/0016-directmanipulation-Support-IDirectManipulationConten.patch
 	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: New dll.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "uuid: Add directmanipulation.h.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Create DirectManipulationManager/DirectManipulationSharedManager objects.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Supprot IDirectManipulationFrameInfoProvider interface in IDirectManipulationCompositor.", 1 },';
@@ -3168,94 +3135,7 @@ if test "$enable_iphlpapi_System_Ping" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-Junction_Points
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12401] NET Framework 2.0, 3.0, 4.0 installers and other apps that make use of GAC API for managed assembly
-# | 	installation on NTFS filesystems need reparse point/junction API support
-# | 	(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
-# |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/ntdll/file.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c,
-# | 	include/Makefile.in, include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in,
-# | 	libs/port/renameat2.c, server/fd.c
-# |
-if test "$enable_ntdll_Junction_Points" -eq 1; then
-	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
-	patch_apply ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
-	patch_apply ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
-	patch_apply ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch
-	patch_apply ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
-	patch_apply ntdll-Junction_Points/0007-ntdll-Add-support-for-absolute-symlink-creation.patch
-	patch_apply ntdll-Junction_Points/0008-ntdll-Add-support-for-reading-absolute-symlinks.patch
-	patch_apply ntdll-Junction_Points/0009-ntdll-Add-support-for-deleting-symlinks.patch
-	patch_apply ntdll-Junction_Points/0010-ntdll-Add-support-for-relative-symlink-creation.patch
-	patch_apply ntdll-Junction_Points/0011-ntdll-Add-support-for-reading-relative-symlinks.patch
-	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
-	patch_apply ntdll-Junction_Points/0013-ntdll-Allow-creation-of-dangling-reparse-points-to-n.patch
-	patch_apply ntdll-Junction_Points/0014-ntdll-Correctly-report-file-symbolic-links-as-files.patch
-	patch_apply ntdll-Junction_Points/0015-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
-	patch_apply ntdll-Junction_Points/0016-server-Properly-handle-file-symlink-deletion.patch
-	patch_apply ntdll-Junction_Points/0017-ntdll-Always-report-symbolic-links-as-containing-zer.patch
-	patch_apply ntdll-Junction_Points/0018-ntdll-Find-dangling-symlinks-quickly.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for absolute symlink creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading absolute symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for relative symlink creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading relative symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Allow creation of dangling reparse points to non-existent paths.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Find dangling symlinks quickly.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-File_Permissions
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44691] Improve mapping of DACL to file permissions
-# |
-# | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c
-# |
-if test "$enable_server_File_Permissions" -eq 1; then
-	patch_apply server-File_Permissions/0001-server-Improve-STATUS_CANNOT_DELETE-checks-for-direc.patch
-	patch_apply server-File_Permissions/0002-server-Allow-to-open-files-without-any-permission-bi.patch
-	patch_apply server-File_Permissions/0003-server-When-creating-new-directories-temporarily-giv.patch
-	patch_apply server-File_Permissions/0004-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
-	patch_apply server-File_Permissions/0005-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
-	patch_apply server-File_Permissions/0006-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
-	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
-	patch_apply server-File_Permissions/0008-server-Improve-mapping-of-DACL-to-file-permissions.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
-		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-FileDispositionInformation
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points, server-File_Permissions
 # |
 # | Modified files:
 # |   *	dlls/ntdll/tests/file.c, server/fd.c
@@ -3272,7 +3152,7 @@ fi
 # Patchset kernel32-CopyFileEx
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points, server-File_Permissions, ntdll-FileDispositionInformation
+# |   *	ntdll-FileDispositionInformation
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#22692] Add support for CopyFileEx progress callback
@@ -3682,6 +3562,35 @@ if test "$enable_ntdll_CriticalSection" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-DOS_Attributes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#9158] Support for DOS hidden/system file attributes
+# |   *	[#15679] cygwin symlinks not working in wine
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/tests/directory.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/wine/port.h,
+# | 	libs/port/Makefile.in, libs/port/xattr.c
+# |
+if test "$enable_ntdll_DOS_Attributes" -eq 1; then
+	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-fd_-get.patch
+	patch_apply ntdll-DOS_Attributes/0003-ntdll-Implement-storing-DOS-attributes-in-NtSetInfor.patch
+	patch_apply ntdll-DOS_Attributes/0004-ntdll-Implement-storing-DOS-attributes-in-NtCreateFi.patch
+	patch_apply ntdll-DOS_Attributes/0005-libport-Add-support-for-Mac-OS-X-style-extended-attr.patch
+	patch_apply ntdll-DOS_Attributes/0006-libport-Add-support-for-FreeBSD-style-extended-attri.patch
+	patch_apply ntdll-DOS_Attributes/0007-ntdll-Perform-the-Unix-style-hidden-file-check-withi.patch
+	patch_apply ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement retrieving DOS attributes in [fd_]get_file_info().", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtSetInformationFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Implement storing DOS attributes in NtCreateFile.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for Mac OS X style extended attributes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "libport: Add support for FreeBSD style extended attributes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Perform the Unix-style hidden file check within the unified file info grabbing routine.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Always store SAMBA_XATTR_DOS_ATTRIB when path could be interpreted as hidden.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
 # | Modified files:
@@ -3925,21 +3834,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtQueryEaFile
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4595,7 +4489,7 @@ fi
 # Patchset server-FileEndOfFileInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, server/fd.c, server/protocol.def
+# |   *	dlls/ntdll/unix/file.c, server/fd.c, server/protocol.def
 # |
 if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	patch_apply server-FileEndOfFileInformation/0001-ntdll-Set-EOF-on-file-which-has-a-memory-mapping-sho.patch
@@ -4786,8 +4680,7 @@ fi
 # Patchset shell32-Progress_Dialog
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
-# | 	shell32-SHFileOperation_Move
+# |   *	ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move
 # |
 # | Modified files:
 # |   *	dlls/shell32/shell32.rc, dlls/shell32/shlfileop.c, dlls/shell32/shresdef.h
@@ -4808,8 +4701,7 @@ fi
 # Patchset shell32-ACE_Viewer
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-Junction_Points, server-File_Permissions, ntdll-FileDispositionInformation, kernel32-CopyFileEx,
-# | 	shell32-SHFileOperation_Move, shell32-Progress_Dialog
+# |   *	ntdll-FileDispositionInformation, kernel32-CopyFileEx, shell32-SHFileOperation_Move, shell32-Progress_Dialog
 # |
 # | Modified files:
 # |   *	dlls/aclui/Makefile.in, dlls/aclui/aclui.rc, dlls/aclui/aclui_main.c, dlls/aclui/resource.h, dlls/aclui/user_icons.bmp,
@@ -6509,7 +6401,7 @@ fi
 # | 	dlls/xactengine3_7/Makefile.in, dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in,
 # | 	dlls/xaudio2_7/tests/Makefile.in, dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc,
 # | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c,
-# | 	include/Makefile.in, include/xact3.idl, include/xact3wb.h
+# | 	include/Makefile.in, include/xact3.idl
 # |
 if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0001-include-Add-xact3.idl.patch
@@ -6527,7 +6419,6 @@ if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0014-include-Add-XACTENGINE_-error-codes.patch
 	patch_apply xactengine-initial/0015-include-Add-XACT-defines.patch
 	patch_apply xactengine-initial/0016-xaudio2_7-tests-Add-more-tests.patch
-	patch_apply xactengine-initial/0017-include-Correct-the-name-of-WAVEBANKMINIWAVEFORMAT.patch
 	(
 		printf '%s\n' '+    { "Ethan Lee", "include: Add xact3.idl.", 1 },';
 		printf '%s\n' '+    { "Ethan Lee", "xaudio2: Add support for xactengine3.", 1 },';
@@ -6544,7 +6435,6 @@ if test "$enable_xactengine_initial" -eq 1; then
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACTENGINE_* error codes.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACT defines.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7/tests: Add more tests.", 1 },';
-		printf '%s\n' '+    { "Zebediah Figura", "include: Correct the name of WAVEBANKMINIWAVEFORMAT.", 1 },';
 	) >> "$patchlist"
 fi
 

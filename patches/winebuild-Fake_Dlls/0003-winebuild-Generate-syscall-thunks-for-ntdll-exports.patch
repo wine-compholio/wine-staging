@@ -1,4 +1,4 @@
-From 7e13aba360d1dd4d5a09f5b9a624dfa4e61d3ddf Mon Sep 17 00:00:00 2001
+From 51d9c664ba86df86b3fb02a281642b5940cef430 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 11 May 2017 05:32:55 +0200
 Subject: [PATCH] winebuild: Generate syscall thunks for ntdll exports.
@@ -22,10 +22,10 @@ Based on a patch by Erich E. Hoover.
  14 files changed, 221 insertions(+), 32 deletions(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index a09c17e3b50..d22fd0141c0 100644
+index 99bcff94b3e..06cdf5cd350 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3812,6 +3812,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+@@ -4020,6 +4020,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
      return ret;
  }
  
@@ -33,7 +33,7 @@ index a09c17e3b50..d22fd0141c0 100644
  
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
-@@ -3828,6 +3829,8 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -4037,6 +4038,8 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
      WINE_MODREF *wm;
      LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
  
@@ -65,7 +65,7 @@ index 21cc1b3ead4..18be5693a7d 100644
      }
      return unix_funcs->NtGetContextThread( handle, context );
 diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
-index a5e6faa461a..51938bf84cc 100644
+index 1389a542cde..54796476e25 100644
 --- a/dlls/ntdll/tests/exception.c
 +++ b/dlls/ntdll/tests/exception.c
 @@ -1643,6 +1643,8 @@ static void test_thread_context(void)
@@ -78,10 +78,10 @@ index a5e6faa461a..51938bf84cc 100644
      ok( context.SegCs == LOWORD(expect.SegCs), "wrong SegCs %08x/%08x\n", context.SegCs, expect.SegCs );
      ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08x/%08x\n", context.SegDs, expect.SegDs );
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 5a6809638ae..c6988ce08e3 100644
+index 64dee4d0c12..2a22f1ca137 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -170,6 +170,14 @@ int __cdecl __wine_dbg_output( const char *str )
+@@ -220,6 +220,14 @@ int __cdecl __wine_dbg_output( const char *str )
      return unix_funcs->dbg_output( str );
  }
  
@@ -96,7 +96,7 @@ index 5a6809638ae..c6988ce08e3 100644
  
  /***********************************************************************
   *           thread_init
-@@ -181,7 +189,7 @@ int __cdecl __wine_dbg_output( const char *str )
+@@ -231,7 +239,7 @@ int __cdecl __wine_dbg_output( const char *str )
  TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
  {
      TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, suspend, &server_cpus,
@@ -106,7 +106,7 @@ index 5a6809638ae..c6988ce08e3 100644
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index 0470f5eaa8a..55afc1748ef 100644
+index 34cf12885d9..212ebda0443 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -85,7 +85,7 @@ static void pthread_exit_wrapper( int status )
@@ -127,10 +127,10 @@ index 0470f5eaa8a..55afc1748ef 100644
      thread_data->request_fd = -1;
      thread_data->reply_fd   = -1;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 0d1d0e5025f..ac792801283 100644
+index f19c8924008..e668c8e6fbb 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -111,7 +111,7 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
+@@ -108,7 +108,7 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
  extern void CDECL server_init_process_done( void *relay ) DECLSPEC_HIDDEN;
  extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
                                     BOOL *suspend, unsigned int *cpus, BOOL *wow64,
@@ -140,19 +140,19 @@ index 0d1d0e5025f..ac792801283 100644
  extern void CDECL DECLSPEC_NORETURN exit_process( int status ) DECLSPEC_HIDDEN;
  extern NTSTATUS CDECL get_thread_ldt_entry( HANDLE handle, void *data, ULONG len, ULONG *ret_len ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index dd5c3e3784e..dae93ab1632 100644
+index dbe68a1b486..b09f4942f05 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
 @@ -28,7 +28,7 @@ struct ldt_copy;
  struct msghdr;
  
  /* increment this when you change the function table */
--#define NTDLL_UNIXLIB_VERSION 47
-+#define NTDLL_UNIXLIB_VERSION 48
+-#define NTDLL_UNIXLIB_VERSION 52
++#define NTDLL_UNIXLIB_VERSION 53
  
  struct unix_funcs
  {
-@@ -253,7 +253,7 @@ struct unix_funcs
+@@ -281,7 +281,7 @@ struct unix_funcs
  
      /* thread/process functions */
      TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
@@ -162,10 +162,10 @@ index dd5c3e3784e..dae93ab1632 100644
      void          (CDECL *exit_process)( int status );
      NTSTATUS      (CDECL *get_thread_ldt_entry)( HANDLE handle, void *data, ULONG len, ULONG *ret_len );
 diff --git a/include/winternl.h b/include/winternl.h
-index 04e5dd1f62f..2b9a12cbb31 100644
+index 4f5ce4d0cfe..7d69a448e89 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -359,7 +359,7 @@ typedef struct _TEB
+@@ -360,7 +360,7 @@ typedef struct _TEB
      PVOID                        CsrClientThread;                   /* 03c/0070 */
      PVOID                        Win32ThreadInfo;                   /* 040/0078 */
      ULONG                        Win32ClientInfo[31];               /* 044/0080 used for user32 private data in Wine */

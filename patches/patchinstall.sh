@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "634cb775c27b61ad6ce1fbe3e9972b0edfa31dcb"
+	echo "f56e409c2feb62056eb133e53fe398eadd0a503e"
 }
 
 # Show version information
@@ -1881,9 +1881,9 @@ fi
 # | Modified files:
 # |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernelbase/process.c,
 # | 	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c,
-# | 	dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
-# | 	programs/runas/runas.rc, server/process.c, server/process.h, server/protocol.def, server/request.c, server/security.h,
-# | 	server/token.c
+# | 	dlls/ntdll/unix/process.c, dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in,
+# | 	programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/process.c, server/process.h,
+# | 	server/protocol.def, server/request.c, server/security.h, server/token.c
 # |
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	patch_apply advapi32-Token_Integrity_Level/0001-advapi32-tests-Extend-security-label-token-integrity.patch
@@ -3455,7 +3455,7 @@ fi
 # |   *	[#20230] Return correct values for GetThreadTimes function
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/thread.c, server/protocol.def,
+# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/thread.c, dlls/ntdll/unix/process.c, server/protocol.def,
 # | 	server/snapshot.c, server/thread.c, server/thread.h
 # |
 if test "$enable_ntdll_ThreadTime" -eq 1; then
@@ -3870,7 +3870,7 @@ fi
 # | 	2.x)
 # |
 # | Modified files:
-# |   *	dlls/ntdll/process.c
+# |   *	dlls/ntdll/unix/process.c
 # |
 if test "$enable_ntdll_ProcessQuotaLimits" -eq 1; then
 	patch_apply ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch

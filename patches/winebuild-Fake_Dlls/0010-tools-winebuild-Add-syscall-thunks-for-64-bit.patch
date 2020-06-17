@@ -1,4 +1,4 @@
-From b37d55d71b294fb96cb4816f2cb3f2448731e115 Mon Sep 17 00:00:00 2001
+From 88dc845f605a87a97247d4d2c795722afeba41dc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -15,10 +15,10 @@ Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
  8 files changed, 305 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 95939ba6bde..ae5462f6e55 100644
+index 1f525194ce7..21af7b4ce7a 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1573,7 +1573,7 @@ static void test_filenames(void)
+@@ -1574,7 +1574,7 @@ static void test_filenames(void)
  
  static void test_FakeDLL(void)
  {
@@ -27,7 +27,7 @@ index 95939ba6bde..ae5462f6e55 100644
      NTSTATUS (WINAPI *pNtSetEvent)(HANDLE, ULONG *) = NULL;
      IMAGE_EXPORT_DIRECTORY *dir;
      HMODULE module = GetModuleHandleA("ntdll.dll");
-@@ -1615,8 +1615,13 @@ static void test_FakeDLL(void)
+@@ -1616,8 +1616,13 @@ static void test_FakeDLL(void)
  
          dll_func = (BYTE *)GetProcAddress(module, func_name);
          ok(dll_func != NULL, "%s: GetProcAddress returned NULL\n", func_name);
@@ -42,7 +42,7 @@ index 95939ba6bde..ae5462f6e55 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index 55afc1748ef..0bffa4029c1 100644
+index 212ebda0443..0279690806c 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -110,7 +110,7 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
@@ -55,23 +55,23 @@ index 55afc1748ef..0bffa4029c1 100644
      NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
  
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index ac792801283..b7b66b6b440 100644
+index e668c8e6fbb..19196dbb296 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -176,7 +176,7 @@ extern void virtual_init(void) DECLSPEC_HIDDEN;
+@@ -171,7 +171,7 @@ extern ULONG_PTR get_system_affinity_mask(void) DECLSPEC_HIDDEN;
  extern TEB *virtual_alloc_first_teb(void) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_alloc_teb( TEB **ret_teb ) DECLSPEC_HIDDEN;
  extern void virtual_free_teb( TEB *teb ) DECLSPEC_HIDDEN;
 -extern void virtual_map_user_shared_data(void) DECLSPEC_HIDDEN;
 +extern void virtual_map_user_shared_data(void *) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_handle_fault( LPCVOID addr, DWORD err, BOOL on_signal_stack ) DECLSPEC_HIDDEN;
- extern BOOL virtual_is_valid_code_address( const void *addr, SIZE_T size ) DECLSPEC_HIDDEN;
- extern int virtual_handle_stack_fault( void *addr ) DECLSPEC_HIDDEN;
+ extern unsigned int virtual_locked_server_call( void *req_ptr ) DECLSPEC_HIDDEN;
+ extern ssize_t virtual_locked_read( int fd, void *addr, size_t size ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index b656a62c154..9b415fe5058 100644
+index a3b2cb2c477..5cf4eb626c0 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2588,14 +2588,14 @@ TEB *virtual_alloc_first_teb(void)
+@@ -2771,14 +2771,14 @@ TEB *virtual_alloc_first_teb(void)
      TEB *teb;
      PEB *peb;
      NTSTATUS status;
@@ -88,7 +88,7 @@ index b656a62c154..9b415fe5058 100644
      if (status)
      {
          ERR( "wine: failed to map the shared user data: %08x\n", status );
-@@ -2791,7 +2791,7 @@ void virtual_clear_thread_stack( void *stack_end )
+@@ -2976,7 +2976,7 @@ void virtual_clear_thread_stack( void *stack_end )
  /***********************************************************************
   *           virtual_map_user_shared_data
   */
@@ -97,7 +97,7 @@ index b656a62c154..9b415fe5058 100644
  {
      static const WCHAR wine_usdW[] = {'\\','K','e','r','n','e','l','O','b','j','e','c','t','s',
                                        '\\','_','_','w','i','n','e','_','u','s','e','r','_','s','h','a','r','e','d','_','d','a','t','a',0};
-@@ -2814,6 +2814,11 @@ void virtual_map_user_shared_data(void)
+@@ -2999,6 +2999,11 @@ void virtual_map_user_shared_data(void)
          ERR( "failed to remap the process USD: %d\n", res );
          exit(1);
      }

@@ -1,24 +1,23 @@
-From 42a9d6a0464a17831ae2c16df222f4de7638349e Mon Sep 17 00:00:00 2001
+From 9cdc9d195760a55263ba0bb7926e6e4d776cbd04 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
 Subject: [PATCH] ntdll: Setup a temporary signal handler during process
  startup to handle page faults. (v2)
 
 ---
- dlls/ntdll/unix/loader.c         |  1 +
- dlls/ntdll/unix/signal_arm.c     |  6 ++++
- dlls/ntdll/unix/signal_arm64.c   |  7 +++++
- dlls/ntdll/unix/signal_i386.c    | 52 ++++++++++++++++++++++++++++++++
- dlls/ntdll/unix/signal_powerpc.c |  6 ++++
- dlls/ntdll/unix/signal_x86_64.c  |  6 ++++
- dlls/ntdll/unix/unix_private.h   |  1 +
- 7 files changed, 79 insertions(+)
+ dlls/ntdll/unix/loader.c        |  1 +
+ dlls/ntdll/unix/signal_arm.c    |  6 ++++
+ dlls/ntdll/unix/signal_arm64.c  |  7 +++++
+ dlls/ntdll/unix/signal_i386.c   | 52 +++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/signal_x86_64.c |  6 ++++
+ dlls/ntdll/unix/unix_private.h  |  1 +
+ 6 files changed, 73 insertions(+)
 
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index eac43ba42c4..48910dd4d50 100644
+index 4db78fec823..91b98c44b3f 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -1418,6 +1418,7 @@ void __wine_main( int argc, char *argv[], char *envp[] )
+@@ -1244,6 +1244,7 @@ void __wine_main( int argc, char *argv[], char *envp[] )
  #endif
  
      virtual_init();
@@ -27,7 +26,7 @@ index eac43ba42c4..48910dd4d50 100644
      module = load_ntdll();
      fixup_ntdll_imports( &__wine_spec_nt_header, module );
 diff --git a/dlls/ntdll/unix/signal_arm.c b/dlls/ntdll/unix/signal_arm.c
-index 1ef3ff6618b..5e0b25cec5d 100644
+index faa2952a483..43e0fb848a3 100644
 --- a/dlls/ntdll/unix/signal_arm.c
 +++ b/dlls/ntdll/unix/signal_arm.c
 @@ -869,6 +869,12 @@ void signal_init_process(void)
@@ -44,7 +43,7 @@ index 1ef3ff6618b..5e0b25cec5d 100644
  /***********************************************************************
   *           init_thread_context
 diff --git a/dlls/ntdll/unix/signal_arm64.c b/dlls/ntdll/unix/signal_arm64.c
-index 6c9083664e0..3a4e7d5b9cb 100644
+index e2c52a1a4f6..f3c67e1f5f4 100644
 --- a/dlls/ntdll/unix/signal_arm64.c
 +++ b/dlls/ntdll/unix/signal_arm64.c
 @@ -791,6 +791,13 @@ void signal_init_process(void)
@@ -62,7 +61,7 @@ index 6c9083664e0..3a4e7d5b9cb 100644
   *           init_thread_context
   */
 diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
-index 7ae4cda33a6..1a86b6e05f3 100644
+index adf622ca673..44d0848a1ee 100644
 --- a/dlls/ntdll/unix/signal_i386.c
 +++ b/dlls/ntdll/unix/signal_i386.c
 @@ -1644,6 +1644,30 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, st
@@ -131,25 +130,8 @@ index 7ae4cda33a6..1a86b6e05f3 100644
  
  /***********************************************************************
   *           init_thread_context
-diff --git a/dlls/ntdll/unix/signal_powerpc.c b/dlls/ntdll/unix/signal_powerpc.c
-index f98d6fc9713..fdc5f66d092 100644
---- a/dlls/ntdll/unix/signal_powerpc.c
-+++ b/dlls/ntdll/unix/signal_powerpc.c
-@@ -978,6 +978,12 @@ void signal_init_process(void)
-     exit(1);
- }
- 
-+/**********************************************************************
-+ *    signal_init_early
-+ */
-+void signal_init_early(void)
-+{
-+}
- 
- /***********************************************************************
-  *           signal_exit_thread
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index d4a6e821a4c..98bd7bb8bed 100644
+index 1bf8f5e8b8e..73c6ba4c34e 100644
 --- a/dlls/ntdll/unix/signal_x86_64.c
 +++ b/dlls/ntdll/unix/signal_x86_64.c
 @@ -1415,6 +1415,12 @@ void signal_init_process(void)
@@ -166,10 +148,10 @@ index d4a6e821a4c..98bd7bb8bed 100644
  /***********************************************************************
   *           init_thread_context
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 3e61111cba5..1319ca90b96 100644
+index 95d4e2c2441..d88cf97f4b7 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -163,6 +163,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
+@@ -193,6 +193,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_process(void) DECLSPEC_HIDDEN;
@@ -178,5 +160,5 @@ index 3e61111cba5..1319ca90b96 100644
                                                     BOOL suspend, void *relay, TEB *teb ) DECLSPEC_HIDDEN;
  extern void DECLSPEC_NORETURN signal_exit_thread( int status, void (*func)(int) ) DECLSPEC_HIDDEN;
 -- 
-2.26.2
+2.27.0
 

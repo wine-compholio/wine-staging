@@ -1,21 +1,54 @@
-From 22a440051f4dd3b63977a384735cf60fad7f28f5 Mon Sep 17 00:00:00 2001
+From 6ab64d5c26ab8713b2e55911540538a700580017 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 12:00:51 -0600
 Subject: [PATCH] ntdll: Correctly report file symbolic links as files.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       | 120 ++++++++++++++++++++++++++--------------
  dlls/ntdll/tests/file.c |   8 +--
+ dlls/ntdll/unix/file.c  | 120 ++++++++++++++++++++++++++--------------
  2 files changed, 84 insertions(+), 44 deletions(-)
 
-diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 74df2aed687..7483c71a8db 100644
---- a/dlls/ntdll/file.c
-+++ b/dlls/ntdll/file.c
-@@ -123,6 +123,9 @@ mode_t FILE_umask = 0;
- #define FILE_WRITE_TO_END_OF_FILE      ((LONGLONG)-1)
- #define FILE_USE_FILE_POINTER_POSITION ((LONGLONG)-2)
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index 9530adb2a84..45cffce68ee 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -5205,13 +5205,13 @@ static void test_reparse_points(void)
+ 
+     /* Check deleting a file symlink as if it were a directory */
+     bret = RemoveDirectoryW(reparse_path);
+-    todo_wine ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
++    ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
+     err = GetLastError();
+     todo_wine ok(err == ERROR_DIRECTORY,
+                  "Expected last error 0x%x for RemoveDirectory on file symlink (actually 0x%x)!\n",
+                  ERROR_DIRECTORY, err);
+     dwret = GetFileAttributesW(reparse_path);
+-    todo_wine ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
++    ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
+     ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
+ 
+     /* Delete the symlink as a file */
+@@ -5220,10 +5220,10 @@ static void test_reparse_points(void)
+ 
+     /* Create a blank slate for directory symlink tests */
+     bret = CreateDirectoryW(reparse_path, NULL);
+-    ok(bret, "Failed to create junction point directory.\n");
++    todo_wine ok(bret, "Failed to create junction point directory.\n");
+     dwret = GetFileAttributesW(reparse_path);
+     ok(dwret != (DWORD)~0, "Path doesn't exist (attributes: 0x%x)!\n", dwret);
+-    ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
++    todo_wine ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
+ 
+     /* Create the directory symlink */
+     HeapFree(GetProcessHeap(), 0, buffer);
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index d77a788e0fb..9656f1eb14c 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -1470,6 +1470,9 @@ static inline int get_file_xattr( char *hexattr, int attrlen )
+     return 0;
+ }
  
 +NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, USHORT *unix_dest_len,
 +                            DWORD *tag, ULONG *flags, BOOL *is_dir);
@@ -23,7 +56,7 @@ index 74df2aed687..7483c71a8db 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -170,10 +173,15 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -1554,10 +1557,15 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
      if (ret == -1) return ret;
      if (S_ISLNK( st->st_mode ))
      {
@@ -43,7 +76,7 @@ index 74df2aed687..7483c71a8db 100644
      }
      else if (S_ISDIR( st->st_mode ) && (parent_path = RtlAllocateHeap( GetProcessHeap(), 0, strlen(path) + 4 )))
      {
-@@ -1841,48 +1849,33 @@ cleanup:
+@@ -5851,48 +5859,33 @@ cleanup:
  }
  
  
@@ -73,7 +106,7 @@ index 74df2aed687..7483c71a8db 100644
 -    char *p;
      int i;
  
--    if ((status = unix_funcs->server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
+-    if ((status = server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
 -        return status;
 -
 -    if ((status = server_get_unix_name( handle, &unix_src )))
@@ -91,7 +124,7 @@ index 74df2aed687..7483c71a8db 100644
 +        tmp = unix_dest;
 +    if ((ret = readlink( unix_src, tmp, len )) < 0)
      {
-         status = FILE_GetNtStatus();
+         status = errno_to_status( errno );
          goto cleanup;
      }
 -    unix_dest.Length = ret;
@@ -107,7 +140,7 @@ index 74df2aed687..7483c71a8db 100644
          p++;
      }
      if (*p++ != '/')
-@@ -1890,7 +1883,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -5900,7 +5893,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
          status = STATUS_NOT_IMPLEMENTED;
          goto cleanup;
      }
@@ -116,7 +149,7 @@ index 74df2aed687..7483c71a8db 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          char c = *p++;
-@@ -1905,21 +1898,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -5915,21 +5908,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
              status = STATUS_NOT_IMPLEMENTED;
              goto cleanup;
          }
@@ -174,7 +207,7 @@ index 74df2aed687..7483c71a8db 100644
 +    ULONG flags = 0;
 +    INT prefix_len;
 +
-+    if ((status = unix_funcs->server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
++    if ((status = server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
 +        return status;
 +
 +    if ((status = server_get_unix_name( handle, &unix_src )))
@@ -190,39 +223,6 @@ index 74df2aed687..7483c71a8db 100644
  
      /* convert the relative path into an absolute path */
      if (flags == SYMLINK_FLAG_RELATIVE)
-diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index e0116491eee..7f983583268 100644
---- a/dlls/ntdll/tests/file.c
-+++ b/dlls/ntdll/tests/file.c
-@@ -5187,13 +5187,13 @@ static void test_reparse_points(void)
- 
-     /* Check deleting a file symlink as if it were a directory */
-     bret = RemoveDirectoryW(reparse_path);
--    todo_wine ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
-+    ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
-     err = GetLastError();
-     todo_wine ok(err == ERROR_DIRECTORY,
-                  "Expected last error 0x%x for RemoveDirectory on file symlink (actually 0x%x)!\n",
-                  ERROR_DIRECTORY, err);
-     dwret = GetFileAttributesW(reparse_path);
--    todo_wine ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
-+    ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
-     ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
- 
-     /* Delete the symlink as a file */
-@@ -5202,10 +5202,10 @@ static void test_reparse_points(void)
- 
-     /* Create a blank slate for directory symlink tests */
-     bret = CreateDirectoryW(reparse_path, NULL);
--    ok(bret, "Failed to create junction point directory.\n");
-+    todo_wine ok(bret, "Failed to create junction point directory.\n");
-     dwret = GetFileAttributesW(reparse_path);
-     ok(dwret != (DWORD)~0, "Path doesn't exist (attributes: 0x%x)!\n", dwret);
--    ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
-+    todo_wine ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
- 
-     /* Create the directory symlink */
-     HeapFree(GetProcessHeap(), 0, buffer);
 -- 
-2.26.2
+2.27.0
 

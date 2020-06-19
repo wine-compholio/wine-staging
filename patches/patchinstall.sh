@@ -179,9 +179,11 @@ patch_enable_all ()
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
+	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtDevicePath="$1"
+	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -223,11 +225,14 @@ patch_enable_all ()
 	enable_riched20_IText_Interface="$1"
 	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
+	enable_server_File_Permissions="$1"
+	enable_server_Inherited_ACLs="$1"
 	enable_server_Key_State="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Registry_Notifications="$1"
 	enable_server_Signal_Thread="$1"
+	enable_server_Stored_ACLs="$1"
 	enable_setupapi_DiskSpaceList="$1"
 	enable_setupapi_SPFILENOTIFY_FILEINCABINET="$1"
 	enable_shdocvw_ParseURLFromOutsideSource_Tests="$1"
@@ -627,6 +632,9 @@ patch_enable ()
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
 			;;
+		ntdll-Junction_Points)
+			enable_ntdll_Junction_Points="$2"
+			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
 			;;
@@ -635,6 +643,9 @@ patch_enable ()
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
+			;;
+		ntdll-NtQueryEaFile)
+			enable_ntdll_NtQueryEaFile="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -759,6 +770,12 @@ patch_enable ()
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
 			;;
+		server-File_Permissions)
+			enable_server_File_Permissions="$2"
+			;;
+		server-Inherited_ACLs)
+			enable_server_Inherited_ACLs="$2"
+			;;
 		server-Key_State)
 			enable_server_Key_State="$2"
 			;;
@@ -773,6 +790,9 @@ patch_enable ()
 			;;
 		server-Signal_Thread)
 			enable_server_Signal_Thread="$2"
+			;;
+		server-Stored_ACLs)
+			enable_server_Stored_ACLs="$2"
 			;;
 		setupapi-DiskSpaceList)
 			enable_setupapi_DiskSpaceList="$2"
@@ -1569,6 +1589,31 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
+if test "$enable_server_Inherited_ACLs" -eq 1; then
+	if test "$enable_server_Stored_ACLs" -gt 1; then
+		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
+	fi
+	enable_server_Stored_ACLs=1
+fi
+
+if test "$enable_server_Stored_ACLs" -eq 1; then
+	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
+		abort "Patchset ntdll-DOS_Attributes disabled, but server-Stored_ACLs depends on that."
+	fi
+	if test "$enable_server_File_Permissions" -gt 1; then
+		abort "Patchset server-File_Permissions disabled, but server-Stored_ACLs depends on that."
+	fi
+	enable_ntdll_DOS_Attributes=1
+	enable_server_File_Permissions=1
+fi
+
+if test "$enable_server_File_Permissions" -eq 1; then
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but server-File_Permissions depends on that."
+	fi
+	enable_ntdll_Junction_Points=1
+fi
+
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but server-Desktop_Refcount depends on that."
@@ -1622,11 +1667,25 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	enable_ws2_32_WSACleanup=1
 fi
 
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	if test "$enable_ntdll_Junction_Points" -gt 1; then
+		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
+	fi
+	enable_ntdll_Junction_Points=1
+fi
+
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
+fi
+
+if test "$enable_ntdll_Junction_Points" -eq 1; then
+	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
+		abort "Patchset ntdll-DOS_Attributes disabled, but ntdll-Junction_Points depends on that."
+	fi
+	enable_ntdll_DOS_Attributes=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -3685,6 +3744,60 @@ if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-Junction_Points
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#12401] NET Framework 2.0, 3.0, 4.0 installers and other apps that make use of GAC API for managed assembly
+# | 	installation on NTFS filesystems need reparse point/junction API support
+# | 	(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
+# |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/kernel32/path.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/Makefile.in,
+# | 	include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, server/fd.c
+# |
+if test "$enable_ntdll_Junction_Points" -eq 1; then
+	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
+	patch_apply ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
+	patch_apply ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
+	patch_apply ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch
+	patch_apply ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
+	patch_apply ntdll-Junction_Points/0007-ntdll-Add-support-for-absolute-symlink-creation.patch
+	patch_apply ntdll-Junction_Points/0008-ntdll-Add-support-for-reading-absolute-symlinks.patch
+	patch_apply ntdll-Junction_Points/0009-ntdll-Add-support-for-deleting-symlinks.patch
+	patch_apply ntdll-Junction_Points/0010-ntdll-Add-support-for-relative-symlink-creation.patch
+	patch_apply ntdll-Junction_Points/0011-ntdll-Add-support-for-reading-relative-symlinks.patch
+	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
+	patch_apply ntdll-Junction_Points/0013-ntdll-Allow-creation-of-dangling-reparse-points-to-n.patch
+	patch_apply ntdll-Junction_Points/0014-ntdll-Correctly-report-file-symbolic-links-as-files.patch
+	patch_apply ntdll-Junction_Points/0015-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
+	patch_apply ntdll-Junction_Points/0016-server-Properly-handle-file-symlink-deletion.patch
+	patch_apply ntdll-Junction_Points/0017-ntdll-Always-report-symbolic-links-as-containing-zer.patch
+	patch_apply ntdll-Junction_Points/0018-ntdll-Find-dangling-symlinks-quickly.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for absolute symlink creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading absolute symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for relative symlink creation.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading relative symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Allow creation of dangling reparse points to non-existent paths.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Find dangling symlinks quickly.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Manifest_Range
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3742,6 +3855,21 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryEaFile
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points
+# |
+# | Modified files:
+# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4405,6 +4533,84 @@ if test "$enable_server_FileEndOfFileInformation" -eq 1; then
 	(
 		printf '%s\n' '+    { "Qian Hong", "ntdll: Set EOF on file which has a memory mapping should fail.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Growing files which are mapped to memory should still work.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-File_Permissions
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#44691] Improve mapping of DACL to file permissions
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/tests/file.c, server/fd.c, server/file.c
+# |
+if test "$enable_server_File_Permissions" -eq 1; then
+	patch_apply server-File_Permissions/0001-server-Improve-STATUS_CANNOT_DELETE-checks-for-direc.patch
+	patch_apply server-File_Permissions/0002-server-Allow-to-open-files-without-any-permission-bi.patch
+	patch_apply server-File_Permissions/0003-server-When-creating-new-directories-temporarily-giv.patch
+	patch_apply server-File_Permissions/0004-advapi32-tests-Add-tests-for-ACL-inheritance-in-Crea.patch
+	patch_apply server-File_Permissions/0005-advapi32-tests-Add-ACL-inheritance-tests-for-creatin.patch
+	patch_apply server-File_Permissions/0006-ntdll-tests-Added-tests-for-open-behaviour-on-readon.patch
+	patch_apply server-File_Permissions/0007-server-FILE_WRITE_ATTRIBUTES-should-succeed-for-read.patch
+	patch_apply server-File_Permissions/0008-server-Improve-mapping-of-DACL-to-file-permissions.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve STATUS_CANNOT_DELETE checks for directory case.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Allow to open files without any permission bits.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: When creating new directories temporarily give read-permissions until they are opened.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add tests for ACL inheritance in CreateDirectoryA.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "advapi32/tests: Add ACL inheritance tests for creating subdirectories with NtCreateFile.", 1 },';
+		printf '%s\n' '+    { "Qian Hong", "ntdll/tests: Added tests for open behaviour on readonly files.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: FILE_WRITE_ATTRIBUTES should succeed for readonly files.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Improve mapping of DACL to file permissions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Stored_ACLs
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#33576] Support for stored file ACLs
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
+# | 	server/object.h
+# |
+if test "$enable_server_Stored_ACLs" -eq 1; then
+	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch
+	patch_apply server-Stored_ACLs/0002-server-Unify-the-retrieval-of-security-attributes-fo.patch
+	patch_apply server-Stored_ACLs/0003-server-Add-a-helper-function-set_sd_from_token_inter.patch
+	patch_apply server-Stored_ACLs/0004-server-Temporarily-store-the-full-security-descripto.patch
+	patch_apply server-Stored_ACLs/0005-server-Store-file-security-attributes-with-extended-.patch
+	patch_apply server-Stored_ACLs/0006-server-Convert-return-of-file-security-masks-with-ge.patch
+	patch_apply server-Stored_ACLs/0007-server-Retrieve-file-security-attributes-with-extend.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the storage of security attributes for files and directories.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Unify the retrieval of security attributes for files and directories.", 7 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Add a helper function set_sd_from_token_internal to merge two security descriptors.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Temporarily store the full security descriptor for file objects.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Store file security attributes with extended file attributes.", 8 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Convert return of file security masks with generic access mappings.", 7 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Retrieve file security attributes with extended file attributes.", 7 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Inherited_ACLs
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions, server-Stored_ACLs
+# |
+# | Modified files:
+# |   *	dlls/advapi32/tests/security.c, server/file.c
+# |
+if test "$enable_server_Inherited_ACLs" -eq 1; then
+	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
+	(
+		printf '%s\n' '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
 	) >> "$patchlist"
 fi
 

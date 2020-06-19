@@ -1,32 +1,19 @@
-From 4df537eadbf20772213e02eb65d51fc1c016981e Mon Sep 17 00:00:00 2001
+From 3c058e77263895ea58b25f652b82d443bcde9dcc Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 1 May 2019 12:06:20 -0600
-Subject: ntdll: Always report symbolic links as containing zero bytes.
+Subject: [PATCH] ntdll: Always report symbolic links as containing zero bytes.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/file.c       |  2 ++
  dlls/ntdll/tests/file.c | 46 +++++++++++++++++++++++++++++++++++++++--
+ dlls/ntdll/unix/file.c  |  2 ++
  2 files changed, 46 insertions(+), 2 deletions(-)
 
-diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index be594ea517..6bb45f34f3 100644
---- a/dlls/ntdll/file.c
-+++ b/dlls/ntdll/file.c
-@@ -167,6 +167,8 @@ int get_file_info( const char *path, struct stat *st, ULONG *attr )
- 
-         /* return information about the destination (unless this is a dangling symlink) */
-         stat( path, st );
-+        /* symbolic links always report size 0 */
-+        st->st_size = 0;
-         /* symbolic links (either junction points or NT symlinks) are "reparse points" */
-         *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
-         /* whether a reparse point is a file or a directory is stored inside the link target */
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index f2c273e901..d776d12329 100644
+index cd2b294bceb..67d54c81fb0 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -4896,7 +4896,9 @@ static void test_reparse_points(void)
+@@ -5036,7 +5036,9 @@ static void test_reparse_points(void)
      static const WCHAR dotW[] = {'.',0};
      REPARSE_DATA_BUFFER *buffer = NULL;
      DWORD dwret, dwLen, dwFlags, err;
@@ -36,7 +23,7 @@ index f2c273e901..d776d12329 100644
      HANDLE handle, token;
      IO_STATUS_BLOCK iosb;
      UNICODE_STRING nameW;
-@@ -5024,8 +5026,6 @@ static void test_reparse_points(void)
+@@ -5164,8 +5166,6 @@ static void test_reparse_points(void)
         "Unexpected junction point attributes (0x%x != 0x410)!\n", dwret);
      bret = RemoveDirectoryW(target_path);
      ok(bret, "Failed to delete junction point target!\n");
@@ -45,7 +32,7 @@ index f2c273e901..d776d12329 100644
  
      /* Establish permissions for symlink creation */
      bret = OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &token);
-@@ -5050,6 +5050,13 @@ static void test_reparse_points(void)
+@@ -5190,6 +5190,13 @@ static void test_reparse_points(void)
      /* Delete the junction point directory and create a blank slate for symlink tests */
      bret = RemoveDirectoryW(reparse_path);
      ok(bret, "Failed to delete junction point!\n");
@@ -59,7 +46,7 @@ index f2c273e901..d776d12329 100644
  
      /* Create the file symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
-@@ -5063,6 +5070,37 @@ static void test_reparse_points(void)
+@@ -5203,6 +5210,37 @@ static void test_reparse_points(void)
      ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
      CloseHandle(handle);
  
@@ -97,7 +84,7 @@ index f2c273e901..d776d12329 100644
      /* Check deleting a file symlink as if it were a directory */
      bret = RemoveDirectoryW(reparse_path);
      ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
-@@ -5084,6 +5122,10 @@ static void test_reparse_points(void)
+@@ -5224,6 +5262,10 @@ static void test_reparse_points(void)
      dwret = GetFileAttributesW(reparse_path);
      ok(dwret != (DWORD)~0, "Path doesn't exist (attributes: 0x%x)!\n", dwret);
      ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
@@ -108,6 +95,19 @@ index f2c273e901..d776d12329 100644
  
      /* Create the directory symlink */
      HeapFree(GetProcessHeap(), 0, buffer);
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 7b32bac7fa3..ac4e09fc732 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -1511,6 +1511,8 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
+ 
+         /* return information about the destination (unless this is a dangling symlink) */
+         stat( path, st );
++        /* symbolic links always report size 0 */
++        st->st_size = 0;
+         /* symbolic links (either junction points or NT symlinks) are "reparse points" */
+         *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+         /* whether a reparse point is a file or a directory is stored inside the link target */
 -- 
-2.17.1
+2.27.0
 

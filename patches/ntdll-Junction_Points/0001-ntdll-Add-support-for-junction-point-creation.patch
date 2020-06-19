@@ -1,4 +1,4 @@
-From e3e2a837a2dd411b3e265581388fba1050e08c53 Mon Sep 17 00:00:00 2001
+From f886d8af24ba52e791535c7a606c4ca97cc5ed8e Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -6,19 +6,19 @@ Subject: [PATCH] ntdll: Add support for junction point creation.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  configure.ac            |   2 +
- dlls/ntdll/file.c       | 118 ++++++++++++++++++++++++++++++++++++++++
  dlls/ntdll/tests/file.c | 101 ++++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/file.c  | 117 ++++++++++++++++++++++++++++++++++++++++
  include/Makefile.in     |   1 +
- include/ntifs.h         |  42 ++++++++++++++
- include/wine/port.h     |   9 +++
+ include/ntifs.h         |  42 +++++++++++++++
+ include/wine/port.h     |   9 ++++
  libs/port/Makefile.in   |   1 +
  libs/port/renameat2.c   |  55 +++++++++++++++++++
- 8 files changed, 329 insertions(+)
+ 8 files changed, 328 insertions(+)
  create mode 100644 include/ntifs.h
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index 8a76b74e83d..d3bd12a6340 100644
+index 9c5f76669df..201ae3c2d98 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -2203,6 +2203,8 @@ AC_CHECK_FUNCS(\
@@ -30,156 +30,6 @@ index 8a76b74e83d..d3bd12a6340 100644
  	sched_yield \
  	select \
  	setproctitle \
-diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index b3e881ac3c9..5a4004a61a4 100644
---- a/dlls/ntdll/file.c
-+++ b/dlls/ntdll/file.c
-@@ -21,6 +21,7 @@
- 
- #include <stdlib.h>
- #include <string.h>
-+#include <libgen.h>
- #include <stdio.h>
- #include <errno.h>
- #include <assert.h>
-@@ -109,6 +110,7 @@
- #include "ddk/ntddser.h"
- #define WINE_MOUNTMGR_EXTENSIONS
- #include "ddk/mountmgr.h"
-+#include "ntifs.h"
- 
- WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
- 
-@@ -1545,6 +1547,104 @@ NTSTATUS WINAPI NtDeviceIoControlFile(HANDLE handle, HANDLE event,
- }
- 
- 
-+/*
-+ * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink the
-+ * requested directory to the location of the old directory.
-+ */
-+NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
-+{
-+    BOOL src_allocated = FALSE, dest_allocated = FALSE, tempdir_created = FALSE;
-+    int dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
-+    int offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
-+    WCHAR *dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
-+    char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
-+    ANSI_STRING unix_src, unix_dest;
-+    char magic_dest[PATH_MAX];
-+    int dest_fd, needs_close;
-+    UNICODE_STRING nt_dest;
-+    NTSTATUS status;
-+    int i;
-+
-+    if ((status = unix_funcs->server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
-+        return status;
-+
-+    if ((status = server_get_unix_name( handle, &unix_src )))
-+        goto cleanup;
-+    src_allocated = TRUE;
-+    nt_dest.Buffer = dest;
-+    nt_dest.Length = dest_len;
-+    status = wine_nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
-+    if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
-+        goto cleanup;
-+    dest_allocated = TRUE;
-+
-+    TRACE("Linking %s to %s\n", unix_src.Buffer, unix_dest.Buffer);
-+
-+    /* Encode the reparse tag into the symlink */
-+    strcpy( magic_dest, "/" );
-+    for (i = 0; i < sizeof(ULONG)*8; i++)
-+    {
-+        if ((buffer->ReparseTag >> i) & 1)
-+            strcat( magic_dest, "." );
-+        strcat( magic_dest, "/" );
-+    }
-+    strcat( magic_dest, unix_dest.Buffer );
-+
-+    /* Produce the link in a temporary location in the same folder */
-+    strcpy( tmpdir, unix_src.Buffer );
-+    d = dirname( tmpdir);
-+    if (d != tmpdir) strcpy( tmpdir, d );
-+    strcat( tmpdir, "/.winelink.XXXXXX" );
-+    if (mkdtemp( tmpdir ) == NULL)
-+    {
-+        status = FILE_GetNtStatus();
-+        goto cleanup;
-+    }
-+    tempdir_created = TRUE;
-+    strcpy( tmplink, tmpdir );
-+    strcat( tmplink, "/tmplink" );
-+    if (symlink( magic_dest, tmplink ))
-+    {
-+        status = FILE_GetNtStatus();
-+        goto cleanup;
-+    }
-+    /* Atomically move the link into position */
-+    if (!renameat2( -1, tmplink, -1, unix_src.Buffer, RENAME_EXCHANGE ))
-+    {
-+        /* success: link and folder have switched locations */
-+        rmdir( tmplink ); /* remove the folder (at link location) */
-+    }
-+    else if (errno == ENOSYS)
-+    {
-+        FIXME( "Atomic exchange of directory with symbolic link unsupported on this system, "
-+               "using unsafe exchange instead.\n" );
-+        if (rmdir( unix_src.Buffer ))
-+        {
-+            status = FILE_GetNtStatus();
-+            goto cleanup;
-+        }
-+        if (rename( tmplink, unix_src.Buffer ))
-+        {
-+            status = FILE_GetNtStatus();
-+            goto cleanup; /* not moved, orignal file/folder at destination is orphaned */
-+        }
-+    }
-+    else
-+    {
-+        status = FILE_GetNtStatus();
-+        goto cleanup;
-+    }
-+    status = STATUS_SUCCESS;
-+
-+cleanup:
-+    if (tempdir_created) rmdir( tmpdir );
-+    if (dest_allocated) RtlFreeAnsiString( &unix_dest );
-+    if (src_allocated) RtlFreeAnsiString( &unix_src );
-+    if (needs_close) close( dest_fd );
-+    return status;
-+}
-+
-+
- /**************************************************************************
-  *              NtFsControlFile                 [NTDLL.@]
-  *              ZwFsControlFile                 [NTDLL.@]
-@@ -1629,6 +1729,24 @@ NTSTATUS WINAPI NtFsControlFile(HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc
-         io->Information = 0;
-         status = STATUS_SUCCESS;
-         break;
-+
-+    case FSCTL_SET_REPARSE_POINT:
-+    {
-+        REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)in_buffer;
-+
-+        switch(buffer->ReparseTag)
-+        {
-+        case IO_REPARSE_TAG_MOUNT_POINT:
-+            status = FILE_CreateSymlink( handle, buffer );
-+            break;
-+        default:
-+            FIXME("stub: FSCTL_SET_REPARSE_POINT(%x)\n", buffer->ReparseTag);
-+            status = STATUS_NOT_IMPLEMENTED;
-+            break;
-+        }
-+        break;
-+    }
-+
-     default:
-         return server_ioctl_file( handle, event, apc, apc_context, io, code,
-                                   in_buffer, in_size, out_buffer, out_size );
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
 index 184b7cdad59..8b5ddbb0da1 100644
 --- a/dlls/ntdll/tests/file.c
@@ -304,6 +154,155 @@ index 184b7cdad59..8b5ddbb0da1 100644
      test_flush_buffers_file();
 +    test_reparse_points();
  }
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index ca6899b50f5..44cb12f90ee 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -32,6 +32,7 @@
+ #include <dirent.h>
+ #include <errno.h>
+ #include <fcntl.h>
++#include <libgen.h>
+ #include <stdarg.h>
+ #include <string.h>
+ #include <stdlib.h>
+@@ -122,6 +123,7 @@
+ #include "ddk/wdm.h"
+ #define WINE_MOUNTMGR_EXTENSIONS
+ #include "ddk/mountmgr.h"
++#include "ntifs.h"
+ #include "wine/server.h"
+ #include "wine/list.h"
+ #include "wine/debug.h"
+@@ -5607,6 +5609,104 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+ }
+ 
+ 
++/*
++ * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink the
++ * requested directory to the location of the old directory.
++ */
++NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
++{
++    BOOL src_allocated = FALSE, dest_allocated = FALSE, tempdir_created = FALSE;
++    int dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
++    int offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
++    WCHAR *dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
++    char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
++    ANSI_STRING unix_src, unix_dest;
++    char magic_dest[PATH_MAX];
++    int dest_fd, needs_close;
++    UNICODE_STRING nt_dest;
++    NTSTATUS status;
++    int i;
++
++    if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
++        return status;
++
++    if ((status = server_get_unix_name( handle, &unix_src )))
++        goto cleanup;
++    src_allocated = TRUE;
++    nt_dest.Buffer = dest;
++    nt_dest.Length = dest_len;
++    status = nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
++    if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
++        goto cleanup;
++    dest_allocated = TRUE;
++
++    TRACE("Linking %s to %s\n", unix_src.Buffer, unix_dest.Buffer);
++
++    /* Encode the reparse tag into the symlink */
++    strcpy( magic_dest, "/" );
++    for (i = 0; i < sizeof(ULONG)*8; i++)
++    {
++        if ((buffer->ReparseTag >> i) & 1)
++            strcat( magic_dest, "." );
++        strcat( magic_dest, "/" );
++    }
++    strcat( magic_dest, unix_dest.Buffer );
++
++    /* Produce the link in a temporary location in the same folder */
++    strcpy( tmpdir, unix_src.Buffer );
++    d = dirname( tmpdir);
++    if (d != tmpdir) strcpy( tmpdir, d );
++    strcat( tmpdir, "/.winelink.XXXXXX" );
++    if (mkdtemp( tmpdir ) == NULL)
++    {
++        status = errno_to_status( errno );
++        goto cleanup;
++    }
++    tempdir_created = TRUE;
++    strcpy( tmplink, tmpdir );
++    strcat( tmplink, "/tmplink" );
++    if (symlink( magic_dest, tmplink ))
++    {
++        status = errno_to_status( errno );
++        goto cleanup;
++    }
++    /* Atomically move the link into position */
++    if (!renameat2( -1, tmplink, -1, unix_src.Buffer, RENAME_EXCHANGE ))
++    {
++        /* success: link and folder have switched locations */
++        rmdir( tmplink ); /* remove the folder (at link location) */
++    }
++    else if (errno == ENOSYS)
++    {
++        FIXME( "Atomic exchange of directory with symbolic link unsupported on this system, "
++               "using unsafe exchange instead.\n" );
++        if (rmdir( unix_src.Buffer ))
++        {
++            status = errno_to_status( errno );
++            goto cleanup;
++        }
++        if (rename( tmplink, unix_src.Buffer ))
++        {
++            status = errno_to_status( errno );
++            goto cleanup; /* not moved, orignal file/folder at destination is orphaned */
++        }
++    }
++    else
++    {
++        status = errno_to_status( errno );
++        goto cleanup;
++    }
++    status = STATUS_SUCCESS;
++
++cleanup:
++    if (tempdir_created) rmdir( tmpdir );
++    if (dest_allocated) RtlFreeAnsiString( &unix_dest );
++    if (src_allocated) RtlFreeAnsiString( &unix_src );
++    if (needs_close) close( dest_fd );
++    return status;
++}
++
++
+ /******************************************************************************
+  *              NtFsControlFile   (NTDLL.@)
+  */
+@@ -5671,6 +5771,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
+         io->Information = 0;
+         status = STATUS_SUCCESS;
+         break;
++
++    case FSCTL_SET_REPARSE_POINT:
++    {
++        REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)in_buffer;
++
++        switch(buffer->ReparseTag)
++        {
++        case IO_REPARSE_TAG_MOUNT_POINT:
++            status = FILE_CreateSymlink( handle, buffer );
++            break;
++        default:
++            FIXME("stub: FSCTL_SET_REPARSE_POINT(%x)\n", buffer->ReparseTag);
++            status = STATUS_NOT_IMPLEMENTED;
++            break;
++        }
++        break;
++    }
+     default:
+         return server_ioctl_file( handle, event, apc, apc_context, io, code,
+                                   in_buffer, in_size, out_buffer, out_size );
 diff --git a/include/Makefile.in b/include/Makefile.in
 index 9f70e72b4c7..1c5c456aa39 100644
 --- a/include/Makefile.in

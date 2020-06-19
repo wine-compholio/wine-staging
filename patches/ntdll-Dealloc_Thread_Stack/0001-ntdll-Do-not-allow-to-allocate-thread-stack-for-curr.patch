@@ -1,4 +1,4 @@
-From 7ecb980c3b1d3ee2b5ce2ad6419adf5782b85c7a Mon Sep 17 00:00:00 2001
+From d39ff3852f684bd9c0ca3c08d7e82e4e50be239d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 21 Aug 2015 06:39:47 +0800
 Subject: [PATCH] ntdll: Do not allow to deallocate thread stack for current
@@ -11,10 +11,10 @@ Subject: [PATCH] ntdll: Do not allow to deallocate thread stack for current
  3 files changed, 14 insertions(+)
 
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index e9a3230e814..e7a74131c30 100644
+index 47800db41b1..be285013afc 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -249,6 +249,7 @@ struct ntdll_thread_data
+@@ -154,6 +154,7 @@ struct ntdll_thread_data
      int                wait_fd[2];    /* fd for sleeping server requests */
      BOOL               wow64_redir;   /* Wow64 filesystem redirection flag */
      pthread_t          pthread_id;    /* pthread thread id */
@@ -23,22 +23,22 @@ index e9a3230e814..e7a74131c30 100644
  
  C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 8562efb7dd4..b34adf2f07f 100644
+index 9904ef7bfd5..232dea18bee 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -41,6 +41,7 @@ struct ntdll_thread_data
+@@ -46,6 +46,7 @@ struct ntdll_thread_data
      int                wait_fd[2];    /* fd for sleeping server requests */
      BOOL               wow64_redir;   /* Wow64 filesystem redirection flag */
      pthread_t          pthread_id;    /* pthread thread id */
 +    void              *pthread_stack; /* pthread stack */
+     struct list        entry;         /* entry in TEB list */
  };
  
- C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 0346d0d9753..5e995338a08 100644
+index 6166507871c..0bb8cef6d3b 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2715,6 +2715,8 @@ NTSTATUS CDECL virtual_alloc_thread_stack( INITIAL_TEB *stack, SIZE_T reserve_si
+@@ -2772,6 +2772,8 @@ NTSTATUS CDECL virtual_alloc_thread_stack( INITIAL_TEB *stack, SIZE_T reserve_si
      stack->DeallocationStack = view->base;
      stack->StackBase = (char *)view->base + view->size;
      stack->StackLimit = (char *)view->base + 2 * page_size;
@@ -47,7 +47,7 @@ index 0346d0d9753..5e995338a08 100644
  done:
      server_leave_uninterrupted_section( &csVirtual, &sigset );
      return status;
-@@ -3374,6 +3376,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
+@@ -3521,6 +3523,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
          /* Free the pages */
  
          if (size || (base != view->base)) status = STATUS_INVALID_PARAMETER;
@@ -65,5 +65,5 @@ index 0346d0d9753..5e995338a08 100644
          {
              delete_view( view );
 -- 
-2.26.2
+2.27.0
 

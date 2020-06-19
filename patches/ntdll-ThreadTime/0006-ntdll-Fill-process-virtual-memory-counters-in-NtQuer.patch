@@ -1,4 +1,4 @@
-From 3d5a92cbec870c2b129668b455012bf5b2693ccd Mon Sep 17 00:00:00 2001
+From ee29bbfa7e10de295db39ab6b89f2175d00692c5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 9 Mar 2017 22:56:45 +0100
 Subject: [PATCH] ntdll: Fill process virtual memory counters in
@@ -6,61 +6,17 @@ Subject: [PATCH] ntdll: Fill process virtual memory counters in
 
 FIXME: fill_VM_COUNTERS now uses a different method ... which one is better?
 ---
- dlls/ntdll/nt.c           | 41 +++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/thread.c       |  1 -
- dlls/ntdll/unix/process.c | 39 ++++++++++++++++++++++++++++++++++++-
- 3 files changed, 79 insertions(+), 2 deletions(-)
+ dlls/ntdll/nt.c         |  3 +++
+ dlls/ntdll/ntdll_misc.h |  1 +
+ dlls/ntdll/process.c    |  2 +-
+ dlls/ntdll/thread.c     | 36 ++++++++++++++++++++++++++++++++++++
+ 4 files changed, 41 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index c1c7a126daf..8b450082ada 100644
+index cbb7937631d..bb078c1aa21 100644
 --- a/dlls/ntdll/nt.c
 +++ b/dlls/ntdll/nt.c
-@@ -2627,6 +2627,44 @@ BOOLEAN WINAPI RtlIsProcessorFeaturePresent( UINT feature )
-     return feature < PROCESSOR_FEATURE_MAX && user_shared_data->ProcessorFeatures[feature];
- }
- 
-+/* Remove once NtQuerySystemInformation is moved to unix directory */
-+static BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi)
-+{
-+    BOOL ret = FALSE;
-+#ifdef __linux__
-+    unsigned long size, resident, shared, trs, drs, lrs, dt;
-+    char buf[512];
-+    FILE *fp;
-+
-+    sprintf( buf, "/proc/%u/statm", unix_pid );
-+    if ((fp = fopen( buf, "r" )))
-+    {
-+        if (fscanf( fp, "%lu %lu %lu %lu %lu %lu %lu",
-+            &size, &resident, &shared, &trs, &drs, &lrs, &dt ) == 7)
-+        {
-+            pvmi->VirtualSize = size * page_size;
-+            pvmi->WorkingSetSize = resident * page_size;
-+            pvmi->PrivatePageCount = size - shared;
-+
-+            /* these values are not available through /proc/pid/statm */
-+            pvmi->PeakVirtualSize = pvmi->VirtualSize;
-+            pvmi->PageFaultCount = 0;
-+            pvmi->PeakWorkingSetSize = pvmi->WorkingSetSize;
-+            pvmi->QuotaPagedPoolUsage = pvmi->VirtualSize;
-+            pvmi->QuotaPeakPagedPoolUsage = pvmi->QuotaPagedPoolUsage;
-+            pvmi->QuotaPeakNonPagedPoolUsage = 0;
-+            pvmi->QuotaNonPagedPoolUsage = 0;
-+            pvmi->PagefileUsage = 0;
-+            pvmi->PeakPagefileUsage = 0;
-+
-+            ret = TRUE;
-+        }
-+        fclose( fp );
-+    }
-+#endif
-+    return ret;
-+}
-+
- /******************************************************************************
-  * NtQuerySystemInformation [NTDLL.@]
-  * ZwQuerySystemInformation [NTDLL.@]
-@@ -2784,8 +2822,11 @@ NTSTATUS WINAPI NtQuerySystemInformation(
+@@ -2686,8 +2686,11 @@ NTSTATUS WINAPI NtQuerySystemInformation(
                              /* spi->ti will be set later on */
  
                              if (reply->unix_pid != -1)
@@ -72,27 +28,40 @@ index c1c7a126daf..8b450082ada 100644
                              unix_pid = reply->unix_pid;
                          }
                          len += procstructlen;
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 6e77694d87b..d725a678246 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -248,6 +248,7 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
+ /* process / thread time */
+ extern BOOL read_process_time(int unix_pid, int unix_tid, unsigned long clk_tck,
+                               LARGE_INTEGER *kernel, LARGE_INTEGER *user) DECLSPEC_HIDDEN;
++extern BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi) DECLSPEC_HIDDEN;
+ 
+ /* string functions */
+ int    __cdecl NTDLL_tolower( int c );
+diff --git a/dlls/ntdll/process.c b/dlls/ntdll/process.c
+index 35937ce6026..b4f2dbc8160 100644
+--- a/dlls/ntdll/process.c
++++ b/dlls/ntdll/process.c
+@@ -192,7 +192,7 @@ static void fill_VM_COUNTERS(VM_COUNTERS* pvmi)
+ 
+ static void fill_VM_COUNTERS(VM_COUNTERS* pvmi)
+ {
+-    /* FIXME : real data */
++    read_process_memory_stats(getpid(), pvmi);
+ }
+ 
+ #endif
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 29a9c19b923..320e63416cc 100644
+index 14198d77b7b..8ae8251f975 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -373,7 +373,6 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT
+@@ -381,6 +381,42 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle_ptr, ACCESS_MASK access, OBJECT
                                           flags, zero_bits, stack_commit, stack_reserve, attr_list );
  }
  
--
- /***********************************************************************
-  *              RtlCreateUserThread   (NTDLL.@)
-  */
-diff --git a/dlls/ntdll/unix/process.c b/dlls/ntdll/unix/process.c
-index 379a0036b63..210006f4c23 100644
---- a/dlls/ntdll/unix/process.c
-+++ b/dlls/ntdll/unix/process.c
-@@ -989,6 +989,43 @@ static void fill_VM_COUNTERS(VM_COUNTERS* pvmi)
- #endif
- }
- 
-+static BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi)
++BOOL read_process_memory_stats(int unix_pid, VM_COUNTERS *pvmi)
 +{
 +    BOOL ret = FALSE;
 +#ifdef __linux__
@@ -128,19 +97,9 @@ index 379a0036b63..210006f4c23 100644
 +#endif
 +    return ret;
 +}
-+
- #elif defined(linux)
  
- static void fill_VM_COUNTERS(VM_COUNTERS* pvmi)
-@@ -1024,7 +1061,7 @@ static void fill_VM_COUNTERS(VM_COUNTERS* pvmi)
- 
- static void fill_VM_COUNTERS(VM_COUNTERS* pvmi)
- {
--    /* FIXME : real data */
-+    read_process_memory_stats(getpid(), pvmi);
- }
- 
- #endif
+ /***********************************************************************
+  *              RtlCreateUserThread   (NTDLL.@)
 -- 
-2.27.0
+2.26.2
 

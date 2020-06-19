@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "67ef5151744b347d4a30c985da6712fb0061e675"
+	echo "e80df2d2d54a3f16389bea77f6863cc1c05d6251"
 }
 
 # Show version information
@@ -178,7 +178,6 @@ patch_enable_all ()
 	enable_ntdll_ForceBottomUpAlloc="$1"
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
-	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
@@ -198,7 +197,6 @@ patch_enable_all ()
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_ThreadHideFromDebugger="$1"
-	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
@@ -228,7 +226,6 @@ patch_enable_all ()
 	enable_server_Key_State="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
-	enable_server_Realtime_Priority="$1"
 	enable_server_Registry_Notifications="$1"
 	enable_server_Signal_Thread="$1"
 	enable_setupapi_DiskSpaceList="$1"
@@ -627,9 +624,6 @@ patch_enable ()
 		ntdll-Heap_Improvements)
 			enable_ntdll_Heap_Improvements="$2"
 			;;
-		ntdll-Hide_Wine_Exports)
-			enable_ntdll_Hide_Wine_Exports="$2"
-			;;
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
 			;;
@@ -686,9 +680,6 @@ patch_enable ()
 			;;
 		ntdll-ThreadHideFromDebugger)
 			enable_ntdll_ThreadHideFromDebugger="$2"
-			;;
-		ntdll-ThreadTime)
-			enable_ntdll_ThreadTime="$2"
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
@@ -776,9 +767,6 @@ patch_enable ()
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
-			;;
-		server-Realtime_Priority)
-			enable_server_Realtime_Priority="$2"
 			;;
 		server-Registry_Notifications)
 			enable_server_Registry_Notifications="$2"
@@ -1581,13 +1569,6 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
-	fi
-	enable_ntdll_ThreadTime=1
-fi
-
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but server-Desktop_Refcount depends on that."
@@ -1648,29 +1629,11 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	enable_ntdll_Pipe_SpecialCharacters=1
 fi
 
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
-		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
-	enable_advapi32_Token_Integrity_Level=1
-	enable_ntdll_ThreadTime=1
-fi
-
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 	if test "$enable_ntdll_WRITECOPY" -gt 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but ntdll-Builtin_Prot depends on that."
 	fi
 	enable_ntdll_WRITECOPY=1
-fi
-
-if test "$enable_ntdll_ApiSetMap" -eq 1; then
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but ntdll-ApiSetMap depends on that."
-	fi
-	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_kernel32_Processor_Group" -eq 1; then
@@ -2685,30 +2648,22 @@ fi
 # |   *	[#44865] directmanipulation: New DLL.
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/directmanipulation/Makefile.in, dlls/directmanipulation/directmanip.idl,
-# | 	dlls/directmanipulation/directmanipulation.c, dlls/directmanipulation/tests/Makefile.in,
-# | 	dlls/directmanipulation/tests/manipulation.c
+# |   *	dlls/directmanipulation/directmanip.idl, dlls/directmanipulation/directmanipulation.c
 # |
 if test "$enable_directmanipulation_new_dll" -eq 1; then
-	patch_apply directmanipulation-new-dll/0004-directmanipulation-Create-DirectManipulationManager-.patch
 	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
 	patch_apply directmanipulation-new-dll/0007-directmanipulation-Supprot-IDirectManipulationFrameI.patch
-	patch_apply directmanipulation-new-dll/0008-directmanipulation-Implement-IDirectManipulationMana.patch
 	patch_apply directmanipulation-new-dll/0009-directmanipulation-Implement-IDirectManipulationComp.patch
 	patch_apply directmanipulation-new-dll/0011-directmanipulation-Implement-IDirectManipulationMana.patch
-	patch_apply directmanipulation-new-dll/0012-directmanipulation-tests-Initial-tests.patch
 	patch_apply directmanipulation-new-dll/0013-directmanipulation-Fake-success-from-IDirectManipula.patch
 	patch_apply directmanipulation-new-dll/0015-directmanipulation-Implement-IDirectManipulationView.patch
 	patch_apply directmanipulation-new-dll/0016-directmanipulation-Support-IDirectManipulationConten.patch
 	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Create DirectManipulationManager/DirectManipulationSharedManager objects.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Supprot IDirectManipulationFrameInfoProvider interface in IDirectManipulationCompositor.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 GetUpdateManager.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationCompositor SetUpdateManager.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 CreateViewport.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation/tests: Initial tests.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support IDirectManipulationContent in IDirectManipulationPrimaryContent interface.", 1 },';
@@ -3428,7 +3383,7 @@ fi
 # Patchset ntdll-APC_Performance
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c
+# |   *	dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_APC_Performance" -eq 1; then
 	patch_apply ntdll-APC_Performance/0001-ntdll-Reuse-old-async-fileio-structures-if-possible.patch
@@ -3449,36 +3404,7 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ThreadTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#20230] Return correct values for GetThreadTimes function
-# |
-# | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/thread.c, dlls/ntdll/unix/process.c, server/protocol.def,
-# | 	server/snapshot.c, server/thread.c, server/thread.h
-# |
-if test "$enable_ntdll_ThreadTime" -eq 1; then
-	patch_apply ntdll-ThreadTime/0001-ntdll-Return-correct-values-in-GetThreadTimes-for-al.patch
-	patch_apply ntdll-ThreadTime/0002-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
-	patch_apply ntdll-ThreadTime/0003-ntdll-Fill-process-kernel-and-user-time.patch
-	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
-	patch_apply ntdll-ThreadTime/0005-ntdll-Fill-out-thread-times-in-process-enumeration.patch
-	patch_apply ntdll-ThreadTime/0006-ntdll-Fill-process-virtual-memory-counters-in-NtQuer.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return correct values in GetThreadTimes() for all threads.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process kernel and user time.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill out thread times in process enumeration.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Fill process virtual memory counters in NtQuerySystemInformation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-ApiSetMap
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44658] Add dummy apiset to PEB struct
@@ -3502,8 +3428,8 @@ fi
 # | Modified files:
 # |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/unix/loader.c,
 # | 	dlls/ntdll/unix/server.c, dlls/ntdll/unix/signal_arm.c, dlls/ntdll/unix/signal_arm64.c, dlls/ntdll/unix/signal_i386.c,
-# | 	dlls/ntdll/unix/signal_powerpc.c, dlls/ntdll/unix/signal_x86_64.c, dlls/ntdll/unix/unix_private.h,
-# | 	dlls/ntdll/unix/virtual.c, dlls/psapi/tests/psapi_main.c
+# | 	dlls/ntdll/unix/signal_x86_64.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c,
+# | 	dlls/psapi/tests/psapi_main.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
@@ -3609,7 +3535,7 @@ fi
 # |   *	[#36546] Return fake device type when systemroot is located on virtual disk
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c
+# |   *	dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
 	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
@@ -3662,7 +3588,7 @@ fi
 # Patchset ntdll-FileFsFullSizeInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |   *	dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_FileFsFullSizeInformation" -eq 1; then
 	patch_apply ntdll-FileFsFullSizeInformation/0001-ntdll-Add-support-for-FileFsFullSizeInformation-clas.patch
@@ -3741,24 +3667,6 @@ if test "$enable_ntdll_Heap_Improvements" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add helper function to delete free blocks.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve heap allocation performance.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Hide_Wine_Exports
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#38656] Add support for hiding wine version information from applications
-# |
-# | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
-# |
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3924,7 +3832,7 @@ fi
 # Patchset ntdll-Status_Mapping
 # |
 # | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
+# |   *	dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	patch_apply ntdll-Status_Mapping/0001-ntdll-Return-STATUS_INVALID_DEVICE_REQUEST-when-tryi.patch
@@ -3969,13 +3877,13 @@ fi
 # |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
 # | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
 # | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
-# | 	dlls/ntdll/directory.c, dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c,
-# | 	dlls/ntdll/process.c, dlls/ntdll/signal_i386.c, dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c,
-# | 	dlls/ntdll/unix/signal_i386.c, dlls/ntdll/unix/thread.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c,
-# | 	dlls/ntdll/unixlib.h, dlls/system.drv16/system.c, dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c,
-# | 	dlls/user.exe16/user.c, dlls/user.exe16/window.c, include/winternl.h, libs/wine/loader.c, server/mapping.c,
-# | 	tools/winebuild/build.h, tools/winebuild/import.c, tools/winebuild/parser.c, tools/winebuild/relay.c,
-# | 	tools/winebuild/res32.c, tools/winebuild/spec16.c, tools/winebuild/spec32.c, tools/winebuild/utils.c
+# | 	dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c, dlls/ntdll/signal_i386.c,
+# | 	dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/ntdll/unix/signal_i386.c, dlls/ntdll/unix/thread.c,
+# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c, dlls/ntdll/unixlib.h, dlls/system.drv16/system.c,
+# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
+# | 	include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h, tools/winebuild/import.c,
+# | 	tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c,
+# | 	tools/winebuild/spec32.c, tools/winebuild/utils.c
 # |
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
@@ -4112,7 +4020,7 @@ fi
 # |   *	[#48138] League of Legends 9.23: Crash after champ select
 # |
 # | Modified files:
-# |   *	dlls/ntdll/thread.c
+# |   *	dlls/ntdll/unix/thread.c
 # |
 if test "$enable_ntdll_ThreadHideFromDebugger" -eq 1; then
 	patch_apply ntdll-ThreadHideFromDebugger/0001-ntdll-Stub-NtQueryInformationThread-ThreadHideFromDe.patch
@@ -4562,21 +4470,6 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 3 },';
-	) >> "$patchlist"
-fi
-
-# Patchset server-Realtime_Priority
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
-# |
-# | Modified files:
-# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
-# |
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
-	(
-		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
 	) >> "$patchlist"
 fi
 

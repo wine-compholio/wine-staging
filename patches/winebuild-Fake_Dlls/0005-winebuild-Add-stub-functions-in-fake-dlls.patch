@@ -1,4 +1,4 @@
-From e5fc6ee60be5dd3b80af96dcbd81adb742ba7a5d Mon Sep 17 00:00:00 2001
+From ce23308632979fdff714da4322e4f56905873374 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 15 May 2017 16:27:56 +0200
 Subject: [PATCH] winebuild: Add stub functions in fake dlls.
@@ -6,18 +6,18 @@ Subject: [PATCH] winebuild: Add stub functions in fake dlls.
 ---
  dlls/kernel32/tests/loader.c |   8 +-
  dlls/ntdll/loader.c          |   2 +
- dlls/ntdll/thread.c          |  34 ++++++
+ dlls/ntdll/thread.c          |  35 ++++++
  include/winternl.h           |   2 +-
  tools/winebuild/build.h      |   1 +
  tools/winebuild/spec32.c     | 209 +++++++++++++++++++++++++++++++++--
  tools/winebuild/utils.c      |  10 +-
- 7 files changed, 251 insertions(+), 15 deletions(-)
+ 7 files changed, 252 insertions(+), 15 deletions(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index efd5a25a432d..182b61b731a2 100644
+index 984246681cb..78100205c9d 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
-@@ -1597,9 +1597,7 @@ static void test_FakeDLL(void)
+@@ -1594,9 +1594,7 @@ static void test_FakeDLL(void)
      ok(ptr != NULL, "MapViewOfFile failed with error %u\n", GetLastError());
  
      dir = RtlImageDirectoryEntryToData(ptr, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &size);
@@ -27,7 +27,7 @@ index efd5a25a432d..182b61b731a2 100644
  
      names    = RVAToAddr(dir->AddressOfNames, ptr);
      ordinals = RVAToAddr(dir->AddressOfNameOrdinals, ptr);
-@@ -1628,17 +1626,20 @@ todo_wine
+@@ -1625,17 +1623,20 @@ todo_wine
          /* check position in memory */
          dll_rva = (DWORD_PTR)dll_func - (DWORD_PTR)module;
          map_rva = funcs[ordinals[i]];
@@ -48,7 +48,7 @@ index efd5a25a432d..182b61b731a2 100644
          ok(!memcmp(map_func, dll_func, 0x20), "%s: Function content does not match!\n", func_name);
  
          if (!strcmp(func_name, "NtSetEvent"))
-@@ -1652,10 +1653,11 @@ todo_wine
+@@ -1649,10 +1650,11 @@ todo_wine
          ok(event != NULL, "CreateEvent failed with error %u\n", GetLastError());
          pNtSetEvent(event, 0);
          ok(WaitForSingleObject(event, 0) == WAIT_OBJECT_0, "Event was not signaled\n");
@@ -62,10 +62,10 @@ index efd5a25a432d..182b61b731a2 100644
      CloseHandle(map);
      CloseHandle(file);
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index cac6aae2f3dd..51d989f30b45 100644
+index 05d32ab167e..5b26a556f0d 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -4022,6 +4022,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+@@ -3813,6 +3813,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
  }
  
  extern void DECLSPEC_NORETURN __wine_syscall_dispatcher( void );
@@ -73,7 +73,7 @@ index cac6aae2f3dd..51d989f30b45 100644
  
  /******************************************************************
   *		LdrInitializeThunk (NTDLL.@)
-@@ -4040,6 +4041,7 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -3830,6 +3831,7 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
      LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
  
      NtCurrentTeb()->WOW32Reserved = __wine_syscall_dispatcher;
@@ -82,10 +82,18 @@ index cac6aae2f3dd..51d989f30b45 100644
      if (process_detaching) return;
  
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index e93498b27ea0..a14e3a12ae0c 100644
+index a878a7a27fa..21ae0e9ebbd 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -229,6 +229,39 @@ void __wine_syscall_dispatcher( void )
+@@ -36,6 +36,7 @@
+ #include "ddk/wdm.h"
+ #include "wine/exception.h"
+ 
++WINE_DEFAULT_DEBUG_CHANNEL(thread);
+ WINE_DECLARE_DEBUG_CHANNEL(relay);
+ 
+ struct _KUSER_SHARED_DATA *user_shared_data = (void *)0x7ffe0000;
+@@ -103,6 +104,39 @@ void __wine_syscall_dispatcher( void )
  }
  #endif
  
@@ -125,7 +133,7 @@ index e93498b27ea0..a14e3a12ae0c 100644
  /***********************************************************************
   *           thread_init
   *
-@@ -240,6 +273,7 @@ TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
+@@ -114,6 +148,7 @@ TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
  {
      TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, suspend, &server_cpus,
                                             &is_wow64, &server_start_time, __wine_syscall_dispatcher );
@@ -134,10 +142,10 @@ index e93498b27ea0..a14e3a12ae0c 100644
      peb = teb->Peb;
      peb->FastPebLock        = &peb_lock;
 diff --git a/include/winternl.h b/include/winternl.h
-index 0c15a0ee6c34..6da672e979e5 100644
+index 5f58366f649..d3b708c3e0d 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -399,7 +399,7 @@ typedef struct _TEB
+@@ -398,7 +398,7 @@ typedef struct _TEB
      PVOID                        Instrumentation[16];               /* f2c/16b8 */
      PVOID                        WinSockData;                       /* f6c/1738 */
      ULONG                        GdiBatchCount;                     /* f70/1740 */
@@ -147,7 +155,7 @@ index 0c15a0ee6c34..6da672e979e5 100644
      PVOID                        ReservedForPerf;                   /* f7c/1750 */
      PVOID                        ReservedForOle;                    /* f80/1758 */
 diff --git a/tools/winebuild/build.h b/tools/winebuild/build.h
-index 8930df408d3b..44113bad28af 100644
+index 8930df408d3..44113bad28a 100644
 --- a/tools/winebuild/build.h
 +++ b/tools/winebuild/build.h
 @@ -358,6 +358,7 @@ extern void put_word( unsigned short val );
@@ -159,7 +167,7 @@ index 8930df408d3b..44113bad28af 100644
  extern void align_output_rva( unsigned int file_align, unsigned int rva_align );
  extern size_t label_pos( const char *name );
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index c38f1fe663c7..bf82ca497c0d 100644
+index c38f1fe663c..bf82ca497c0 100644
 --- a/tools/winebuild/spec32.c
 +++ b/tools/winebuild/spec32.c
 @@ -843,6 +843,163 @@ void output_spec32_file( DLLSPEC *spec )
@@ -415,7 +423,7 @@ index c38f1fe663c7..bf82ca497c0d 100644
      /* .reloc contents */
      align_output_rva( file_align, section_align );
 diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
-index 80dec6db29ea..d394a1382c68 100644
+index 80dec6db29e..d394a1382c6 100644
 --- a/tools/winebuild/utils.c
 +++ b/tools/winebuild/utils.c
 @@ -549,7 +549,7 @@ size_t output_buffer_size;
@@ -457,5 +465,5 @@ index 80dec6db29ea..d394a1382c68 100644
  {
      size_t size = align - (output_buffer_pos % align);
 -- 
-2.26.2
+2.27.0
 

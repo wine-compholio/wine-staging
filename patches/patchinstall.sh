@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "16ac83bcbf0487576171a9d5ffbbef89f5a772ad"
+	echo "449b8c7e9212d0a80e28babff20f2755b7370872"
 }
 
 # Show version information
@@ -132,7 +132,6 @@ patch_enable_all ()
 	enable_dwrite_FontFallback="$1"
 	enable_dxdiagn_Enumerate_DirectSound="$1"
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
-	enable_dxva2_Video_Decoder="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
 	enable_fsutil_Stub_Program="$1"
@@ -183,7 +182,6 @@ patch_enable_all ()
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtDevicePath="$1"
-	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
@@ -491,9 +489,6 @@ patch_enable ()
 		dxdiagn-GetChildContainer_Leaf_Nodes)
 			enable_dxdiagn_GetChildContainer_Leaf_Nodes="$2"
 			;;
-		dxva2-Video_Decoder)
-			enable_dxva2_Video_Decoder="$2"
-			;;
 		explorer-Video_Registry_Key)
 			enable_explorer_Video_Registry_Key="$2"
 			;;
@@ -643,9 +638,6 @@ patch_enable ()
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
-			;;
-		ntdll-NtQueryEaFile)
-			enable_ntdll_NtQueryEaFile="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -1486,13 +1478,9 @@ if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 fi
 
 if test "$enable_winedevice_Default_Drivers" -eq 1; then
-	if test "$enable_dxva2_Video_Decoder" -gt 1; then
-		abort "Patchset dxva2-Video_Decoder disabled, but winedevice-Default_Drivers depends on that."
-	fi
 	if test "$enable_ntoskrnl_Stubs" -gt 1; then
 		abort "Patchset ntoskrnl-Stubs disabled, but winedevice-Default_Drivers depends on that."
 	fi
-	enable_dxva2_Video_Decoder=1
 	enable_ntoskrnl_Stubs=1
 fi
 
@@ -1665,13 +1653,6 @@ if test "$enable_winebuild_Fake_Dlls" -eq 1; then
 	fi
 	enable_ntdll_WRITECOPY=1
 	enable_ws2_32_WSACleanup=1
-fi
-
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryEaFile depends on that."
-	fi
-	enable_ntdll_Junction_Points=1
 fi
 
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
@@ -2707,21 +2688,15 @@ fi
 # |   *	[#44865] directmanipulation: New DLL.
 # |
 # | Modified files:
-# |   *	dlls/directmanipulation/directmanip.idl, dlls/directmanipulation/directmanipulation.c
+# |   *	dlls/directmanipulation/directmanipulation.c
 # |
 if test "$enable_directmanipulation_new_dll" -eq 1; then
-	patch_apply directmanipulation-new-dll/0006-directmanipulation-Support-DCompManipulationComposit.patch
-	patch_apply directmanipulation-new-dll/0007-directmanipulation-Supprot-IDirectManipulationFrameI.patch
-	patch_apply directmanipulation-new-dll/0009-directmanipulation-Implement-IDirectManipulationComp.patch
 	patch_apply directmanipulation-new-dll/0011-directmanipulation-Implement-IDirectManipulationMana.patch
 	patch_apply directmanipulation-new-dll/0013-directmanipulation-Fake-success-from-IDirectManipula.patch
 	patch_apply directmanipulation-new-dll/0015-directmanipulation-Implement-IDirectManipulationView.patch
 	patch_apply directmanipulation-new-dll/0016-directmanipulation-Support-IDirectManipulationConten.patch
 	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support DCompManipulationCompositor interface.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Supprot IDirectManipulationFrameInfoProvider interface in IDirectManipulationCompositor.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationCompositor SetUpdateManager.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 CreateViewport.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
@@ -2936,41 +2911,6 @@ if test "$enable_dxdiagn_GetChildContainer_Leaf_Nodes" -eq 1; then
 	patch_apply dxdiagn-GetChildContainer_Leaf_Nodes/0001-dxdiagn-Calling-GetChildContainer-with-an-empty-stri.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "dxdiagn: Calling GetChildContainer with an empty string on a leaf container returns the object itself.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset dxva2-Video_Decoder
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/dxva2/Makefile.in, dlls/dxva2/backend.idl, dlls/dxva2/devicemanager.c, dlls/dxva2/dxva2_private.h,
-# | 	dlls/dxva2/genericdecoder.c, dlls/dxva2/main.c, dlls/dxva2/softwareprocessor.c, dlls/dxva2/tests/Makefile.in,
-# | 	dlls/dxva2/tests/dxva2.c, dlls/dxva2/vaapi-h264.c, dlls/dxva2/vaapi-mpeg2.c, dlls/dxva2/vaapi.c,
-# | 	dlls/dxva2/videoservices.c
-# |
-if test "$enable_dxva2_Video_Decoder" -eq 1; then
-	patch_apply dxva2-Video_Decoder/0001-dxva2-Implement-semi-stub-for-Direct3DDeviceManager9.patch
-	patch_apply dxva2-Video_Decoder/0002-dxva2-Implement-stubbed-interfaces-for-IDirectXVideo.patch
-	patch_apply dxva2-Video_Decoder/0004-dxva2-Implement-stubbed-DirectX-Software-VideoProces.patch
-	patch_apply dxva2-Video_Decoder/0006-dxva2-tests-Add-tests-for-dxva2-decoder.patch
-	patch_apply dxva2-Video_Decoder/0007-dxva2-Initial-implementation-of-MPEG2-decoder-using-.patch
-	patch_apply dxva2-Video_Decoder/0008-dxva2-Implement-h264-decoder.patch
-	patch_apply dxva2-Video_Decoder/0009-dxva2-Add-DRM-mode-for-vaapi.patch
-	patch_apply dxva2-Video_Decoder/0010-dxva2-Fill-h264-luma-and-chroma-weights-offsets-with.patch
-	patch_apply dxva2-Video_Decoder/0011-dxva2-Always-destroy-buffers-when-calling-vaRenderPi.patch
-	patch_apply dxva2-Video_Decoder/0012-dxva2-Only-declare-debug-channels-when-they-are-actu.patch
-	patch_apply dxva2-Video_Decoder/0013-Revert-dxva2-Build-with-msvcrt.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "dxva2: Implement semi-stub for Direct3DDeviceManager9 interface.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed interfaces for IDirectXVideo{Acceleration,Decoder,Processor}Service.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement stubbed DirectX Software VideoProcessor interface.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2/tests: Add tests for dxva2 decoder.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Initial implementation of MPEG2 decoder using vaapi backend.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Implement h264 decoder.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Add DRM mode for vaapi.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Fill h264 luma and chroma weights / offsets with default values in case they are not specified.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Always destroy buffers when calling vaRenderPicture.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "dxva2: Only declare debug channels when they are actually used.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"dxva2: Build with msvcrt.\".", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3855,21 +3795,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-NtQueryEaFile
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points
-# |
-# | Modified files:
-# |   *	dlls/ntdll/file.c, dlls/ntdll/tests/file.c
-# |
-if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
-	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -5957,7 +5882,7 @@ fi
 # Patchset winedevice-Default_Drivers
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	dxva2-Video_Decoder, ntoskrnl-Stubs
+# |   *	ntoskrnl-Stubs
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/dxgkrnl.sys/Makefile.in, dlls/dxgkrnl.sys/dxgkrnl.sys.spec, dlls/dxgkrnl.sys/main.c,

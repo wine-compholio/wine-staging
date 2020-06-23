@@ -1,4 +1,4 @@
-From 4236b5607067148efa76cbe090d9efd58b297e32 Mon Sep 17 00:00:00 2001
+From 6a2146342b48977513f83a59cd16d182850767a9 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Mon, 30 Dec 2019 13:27:53 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -12,14 +12,14 @@ is used for trapping syscalls.
  configure.ac                    |   1 +
  dlls/ntdll/thread.c             |   8 ++-
  dlls/ntdll/unix/signal_x86_64.c | 105 ++++++++++++++++++++++++++++++++
- dlls/ntdll/unix/thread.c        |   8 ++-
- dlls/ntdll/unix/unix_private.h  |   6 +-
- dlls/ntdll/unixlib.h            |   3 +-
+ dlls/ntdll/unix/thread.c        |   7 ++-
+ dlls/ntdll/unix/unix_private.h  |   5 +-
+ dlls/ntdll/unixlib.h            |   2 +-
  tools/winebuild/spec32.c        |   9 ++-
- 7 files changed, 134 insertions(+), 6 deletions(-)
+ 7 files changed, 131 insertions(+), 6 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 9c5f76669df..f245c2f1507 100644
+index a78610c6490..eabd16b4732 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -464,6 +464,7 @@ AC_CHECK_HEADERS(\
@@ -31,10 +31,10 @@ index 9c5f76669df..f245c2f1507 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 557747062e4..0d65546588f 100644
+index 0eb7d901c4d..c5391fb0512 100644
 --- a/dlls/ntdll/thread.c
 +++ b/dlls/ntdll/thread.c
-@@ -103,6 +103,12 @@ void __wine_syscall_dispatcher( void )
+@@ -105,6 +105,12 @@ void __wine_syscall_dispatcher( void )
  }
  #endif
  
@@ -47,14 +47,14 @@ index 557747062e4..0d65546588f 100644
  void *WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
  {
      UNICODE_STRING name;
-@@ -146,7 +152,7 @@ void *WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
- TEB *thread_init( SIZE_T *info_size, BOOL *suspend )
+@@ -148,7 +154,7 @@ void *WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
+ TEB *thread_init( SIZE_T *info_size )
  {
-     TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, suspend, &server_cpus,
--                                           &is_wow64, &server_start_time, __wine_syscall_dispatcher );
-+                                           &is_wow64, &server_start_time, __wine_syscall_dispatcher, __wine_nb_syscalls );
-     teb->Spare2 = (ULONG_PTR)__wine_fakedll_dispatcher;
+     ULONG_PTR val;
+-    TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, __wine_syscall_dispatcher );
++    TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, __wine_syscall_dispatcher, __wine_nb_syscalls );
  
+     teb->Spare2 = (ULONG_PTR)__wine_fakedll_dispatcher;
      peb = teb->Peb;
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
 index 12ea74f7f5c..26097702985 100644
@@ -194,7 +194,7 @@ index 12ea74f7f5c..26097702985 100644
  
   error:
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index 196dc2d8c4e..dae792bd78b 100644
+index ca5eba4da88..36126a56f45 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -58,6 +58,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(seh);
@@ -207,17 +207,16 @@ index 196dc2d8c4e..dae792bd78b 100644
  static int *nb_threads;
  
  static inline int get_unix_exit_code( NTSTATUS status )
-@@ -85,7 +88,8 @@ static void pthread_exit_wrapper( int status )
+@@ -84,7 +87,7 @@ static void pthread_exit_wrapper( int status )
+ /***********************************************************************
   *           init_threading
   */
- TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, BOOL *suspend,
--                            unsigned int *cpus, BOOL *wow64, timeout_t *start_time, void *syscall_handler )
-+                            unsigned int *cpus, BOOL *wow64, timeout_t *start_time, void *syscall_handler,
-+                            unsigned int syscall_count )
+-TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler )
++TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler, unsigned int syscall_count )
  {
      TEB *teb;
-     SIZE_T info_size;
-@@ -94,6 +98,8 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
+     BOOL suspend;
+@@ -94,6 +97,8 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
      *ldt_copy = &__wine_ldt_copy;
  #endif
      nb_threads = nb_threads_ptr;
@@ -227,20 +226,19 @@ index 196dc2d8c4e..dae792bd78b 100644
      teb = virtual_alloc_first_teb();
      teb->WOW32Reserved = syscall_handler;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index df508e569f9..bcb80ddab85 100644
+index 15be5d3715a..516a6cfa1fe 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -113,7 +113,8 @@ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDE
+@@ -115,7 +115,7 @@ extern NTSTATUS CDECL server_handle_to_fd( HANDLE handle, unsigned int access, i
+                                            unsigned int *options ) DECLSPEC_HIDDEN;
+ extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDEN;
  extern void CDECL server_init_process_done( void *relay ) DECLSPEC_HIDDEN;
- extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
-                                    BOOL *suspend, unsigned int *cpus, BOOL *wow64,
--                                   timeout_t *start_time, void *syscall_handler ) DECLSPEC_HIDDEN;
-+                                   timeout_t *start_time, void *syscall_handler,
-+                                   unsigned int syscall_count ) DECLSPEC_HIDDEN;
+-extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler ) DECLSPEC_HIDDEN;
++extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler, unsigned int syscall_count ) DECLSPEC_HIDDEN;
  extern void CDECL DECLSPEC_NORETURN exit_thread( int status ) DECLSPEC_HIDDEN;
  extern void CDECL DECLSPEC_NORETURN exit_process( int status ) DECLSPEC_HIDDEN;
  extern NTSTATUS CDECL exec_process( UNICODE_STRING *path, UNICODE_STRING *cmdline, NTSTATUS status ) DECLSPEC_HIDDEN;
-@@ -146,6 +147,9 @@ extern NTSTATUS exec_wineloader( char **argv, int socketfd, int is_child_64bit,
+@@ -152,6 +152,9 @@ extern NTSTATUS exec_wineloader( char **argv, int socketfd, int is_child_64bit,
  extern void start_server( BOOL debug ) DECLSPEC_HIDDEN;
  extern ULONG_PTR get_image_address(void) DECLSPEC_HIDDEN;
  
@@ -251,16 +249,15 @@ index df508e569f9..bcb80ddab85 100644
  extern void server_enter_uninterrupted_section( RTL_CRITICAL_SECTION *cs, sigset_t *sigset ) DECLSPEC_HIDDEN;
  extern void server_leave_uninterrupted_section( RTL_CRITICAL_SECTION *cs, sigset_t *sigset ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index a9803478a37..e3bb8f7ce8e 100644
+index b5b7cb07c80..f61e0ed8525 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
-@@ -302,7 +302,8 @@ struct unix_funcs
+@@ -304,7 +304,7 @@ struct unix_funcs
+     void          (CDECL *virtual_set_large_address_space)(void);
  
      /* thread/process functions */
-     TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size,
--                                           BOOL *suspend, unsigned int *cpus, BOOL *wow64, timeout_t *start_time, void *syscall_handler );
-+                                           BOOL *suspend, unsigned int *cpus, BOOL *wow64, timeout_t *start_time,
-+                                           void *syscall_handler, unsigned int syscall_count );
+-    TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler );
++    TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler, unsigned int syscall_count );
      void          (CDECL *exit_thread)( int status );
      void          (CDECL *exit_process)( int status );
      NTSTATUS      (CDECL *exec_process)( UNICODE_STRING *path, UNICODE_STRING *cmdline, NTSTATUS status );

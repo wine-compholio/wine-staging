@@ -1,4 +1,4 @@
-From 2f3bcc431318c7db08080c6e2c9f9b566f9123ec Mon Sep 17 00:00:00 2001
+From 8650aa0a3229b84a102cca1d9fe40f9dbd5a038d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 7 Sep 2017 00:38:09 +0200
 Subject: [PATCH] tools/winebuild: Add syscall thunks for 64 bit.
@@ -42,23 +42,23 @@ index d39ebe4a37c..dccd9c1fc68 100644
              todo_wine ok(0, "%s: Export is a stub-function, skipping\n", func_name);
              continue;
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index cb44bbfd5ea..196dc2d8c4e 100644
+index 7952497645e..ca5eba4da88 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
 @@ -104,7 +104,7 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
      dbg_init();
      server_init_process();
-     info_size = server_init_thread( teb->Peb, suspend );
+     info_size = server_init_thread( teb->Peb, &suspend );
 -    virtual_map_user_shared_data();
-+    virtual_map_user_shared_data(syscall_handler);
++    virtual_map_user_shared_data( syscall_handler );
+     virtual_create_builtin_view( ntdll_module );
+     init_cpu_info();
      init_files();
-     NtCreateKeyedEvent( &keyed_event, GENERIC_READ | GENERIC_WRITE, NULL, 0 );
- 
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 166a6542724..df508e569f9 100644
+index 72987a0041b..15be5d3715a 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -177,7 +177,7 @@ extern TEB *virtual_alloc_first_teb(void) DECLSPEC_HIDDEN;
+@@ -187,7 +187,7 @@ extern TEB *virtual_alloc_first_teb(void) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_alloc_teb( TEB **ret_teb ) DECLSPEC_HIDDEN;
  extern void virtual_free_teb( TEB *teb ) DECLSPEC_HIDDEN;
  extern NTSTATUS virtual_clear_tls_index( ULONG index ) DECLSPEC_HIDDEN;
@@ -68,10 +68,10 @@ index 166a6542724..df508e569f9 100644
  extern unsigned int virtual_locked_server_call( void *req_ptr ) DECLSPEC_HIDDEN;
  extern ssize_t virtual_locked_read( int fd, void *addr, size_t size ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index ca25cdd304e..7f7660d0795 100644
+index e759cf686bd..0c8de5f2c24 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2607,14 +2607,14 @@ TEB *virtual_alloc_first_teb(void)
+@@ -2608,14 +2608,14 @@ TEB *virtual_alloc_first_teb(void)
      TEB *teb;
      PEB *peb;
      NTSTATUS status;
@@ -88,7 +88,7 @@ index ca25cdd304e..7f7660d0795 100644
      if (status)
      {
          ERR( "wine: failed to map the shared user data: %08x\n", status );
-@@ -2838,7 +2838,7 @@ void virtual_clear_thread_stack( void *stack_end )
+@@ -2839,7 +2839,7 @@ void virtual_clear_thread_stack( void *stack_end )
  /***********************************************************************
   *           virtual_map_user_shared_data
   */
@@ -97,7 +97,7 @@ index ca25cdd304e..7f7660d0795 100644
  {
      static const WCHAR wine_usdW[] = {'\\','K','e','r','n','e','l','O','b','j','e','c','t','s',
                                        '\\','_','_','w','i','n','e','_','u','s','e','r','_','s','h','a','r','e','d','_','d','a','t','a',0};
-@@ -2861,6 +2861,11 @@ void virtual_map_user_shared_data(void)
+@@ -2862,6 +2862,11 @@ void virtual_map_user_shared_data(void)
          ERR( "failed to remap the process USD: %d\n", res );
          exit(1);
      }
@@ -143,7 +143,7 @@ index 0941dd87c05..002f3215af2 100644
  }
  
 diff --git a/tools/winebuild/parser.c b/tools/winebuild/parser.c
-index 74216f8bb6e..820516329a4 100644
+index 91f596f1d2d..533ec5d2009 100644
 --- a/tools/winebuild/parser.c
 +++ b/tools/winebuild/parser.c
 @@ -545,7 +545,7 @@ static const char *parse_spec_flags( DLLSPEC *spec, ORDDEF *odp )

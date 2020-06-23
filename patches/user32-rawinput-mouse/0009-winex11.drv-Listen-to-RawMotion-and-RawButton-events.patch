@@ -1,43 +1,21 @@
-From e8b90f221774d70fb9510b6de18378ab3abdcad2 Mon Sep 17 00:00:00 2001
+From d337c8de3de6a0b7ff16cada895d2490d3240b53 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Wed, 11 Sep 2019 10:15:20 +0200
-Subject: [PATCH 09/12] winex11.drv: Listen to RawMotion and RawButton* events
- in the desktop thread.
+Subject: [PATCH] winex11.drv: Listen to RawMotion and RawButton* events in the
+ desktop thread.
 
 We still need to send "normal" input from the clipping window thread
 to trigger low-level hooks callbacks when clipping cursor. This is for
 instance used in our dinput implementation.
 ---
- dlls/user32/tests/input.c      |  8 ++--
  dlls/winex11.drv/event.c       | 10 +++-
  dlls/winex11.drv/mouse.c       | 88 ++++++++++++++++++++++++++++------
  dlls/winex11.drv/x11drv.h      |  3 ++
  dlls/winex11.drv/x11drv_main.c |  4 ++
- 5 files changed, 93 insertions(+), 20 deletions(-)
+ 4 files changed, 89 insertions(+), 16 deletions(-)
 
-diff --git a/dlls/user32/tests/input.c b/dlls/user32/tests/input.c
-index d18ccfebcaf..a1f983f1960 100644
---- a/dlls/user32/tests/input.c
-+++ b/dlls/user32/tests/input.c
-@@ -2049,12 +2049,12 @@ static void test_rawinput_mouse(const char *argv0)
-         { TRUE, TRUE, 0, 2, 2, -1, -1, FALSE },
- 
-         /* clip cursor tests */
--        { TRUE, TRUE, 0, 0, 0, 0, 0, TRUE },
--        { TRUE, TRUE, 0, 20, 20, 20, 20, TRUE },
-+        { TRUE, TRUE, 0, 0, 0, 0, 0, FALSE },
-+        { TRUE, TRUE, 0, 20, 20, 20, 20, FALSE },
- 
-         /* same-process foreground tests */
--        { TRUE, TRUE, 0, 2, 2, 0, 0, TRUE },
--        { TRUE, TRUE, RIDEV_INPUTSINK, 2, 2, 0, 0, TRUE },
-+        { TRUE, TRUE, 0, 2, 2, 0, 0, FALSE },
-+        { TRUE, TRUE, RIDEV_INPUTSINK, 2, 2, 0, 0, FALSE },
- 
-         /* cross-process foreground tests */
-         { TRUE, TRUE, 0, 0, 0, 0, 0, FALSE },
 diff --git a/dlls/winex11.drv/event.c b/dlls/winex11.drv/event.c
-index 87ba808956f..b3faf3f7cc5 100644
+index 07f7a1ad502..d722ba9d7cc 100644
 --- a/dlls/winex11.drv/event.c
 +++ b/dlls/winex11.drv/event.c
 @@ -321,6 +321,10 @@ static enum event_merge_action merge_raw_motion_events( XIRawEvent *prev, XIRawE
@@ -76,10 +54,10 @@ index 87ba808956f..b3faf3f7cc5 100644
  #endif
          }
 diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
-index 19ed2a29287..d331ed5aef8 100644
+index 26e8b4eea92..ded877a140f 100644
 --- a/dlls/winex11.drv/mouse.c
 +++ b/dlls/winex11.drv/mouse.c
-@@ -364,9 +364,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
+@@ -362,9 +362,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
  
  
  /***********************************************************************
@@ -91,7 +69,7 @@ index 19ed2a29287..d331ed5aef8 100644
  {
  #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
      struct x11drv_thread_data *data = x11drv_thread_data();
-@@ -398,9 +398,21 @@ static void enable_xinput2(void)
+@@ -396,9 +396,21 @@ static void enable_xinput2(void)
      mask.mask_len = sizeof(mask_bits);
      mask.deviceid = XIAllMasterDevices;
      memset( mask_bits, 0, sizeof(mask_bits) );
@@ -114,7 +92,7 @@ index 19ed2a29287..d331ed5aef8 100644
  
      pXISelectEvents( data->display, DefaultRootWindow( data->display ), &mask, 1 );
  
-@@ -413,9 +425,9 @@ static void enable_xinput2(void)
+@@ -411,9 +423,9 @@ static void enable_xinput2(void)
  }
  
  /***********************************************************************
@@ -126,7 +104,7 @@ index 19ed2a29287..d331ed5aef8 100644
  {
  #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
      struct x11drv_thread_data *data = x11drv_thread_data();
-@@ -475,7 +487,7 @@ static BOOL grab_clipping_window( const RECT *clip )
+@@ -473,7 +485,7 @@ static BOOL grab_clipping_window( const RECT *clip )
      }
  
      /* enable XInput2 unless we are already clipping */
@@ -135,7 +113,7 @@ index 19ed2a29287..d331ed5aef8 100644
  
      if (data->xi2_state != xi_enabled)
      {
-@@ -505,7 +517,7 @@ static BOOL grab_clipping_window( const RECT *clip )
+@@ -503,7 +515,7 @@ static BOOL grab_clipping_window( const RECT *clip )
  
      if (!clipping_cursor)
      {
@@ -144,7 +122,7 @@ index 19ed2a29287..d331ed5aef8 100644
          DestroyWindow( msg_hwnd );
          return FALSE;
      }
-@@ -586,7 +598,7 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND prev_clip_hwnd, HWND new_clip_hwnd )
+@@ -584,7 +596,7 @@ LRESULT clip_cursor_notify( HWND hwnd, HWND prev_clip_hwnd, HWND new_clip_hwnd )
          TRACE( "clip hwnd reset from %p\n", hwnd );
          data->clip_hwnd = 0;
          data->clip_reset = GetTickCount();
@@ -153,7 +131,7 @@ index 19ed2a29287..d331ed5aef8 100644
          DestroyWindow( hwnd );
      }
      else if (hwnd == GetForegroundWindow())  /* request to clip */
-@@ -725,7 +737,7 @@ static void send_mouse_input( HWND hwnd, Window window, unsigned int state, INPU
+@@ -723,7 +735,7 @@ static void send_mouse_input( HWND hwnd, Window window, unsigned int state, INPU
          }
          input->u.mi.dx += clip_rect.left;
          input->u.mi.dy += clip_rect.top;
@@ -162,7 +140,7 @@ index 19ed2a29287..d331ed5aef8 100644
          return;
      }
  
-@@ -765,7 +777,7 @@ static void send_mouse_input( HWND hwnd, Window window, unsigned int state, INPU
+@@ -763,7 +775,7 @@ static void send_mouse_input( HWND hwnd, Window window, unsigned int state, INPU
          SERVER_END_REQ;
      }
  
@@ -171,7 +149,7 @@ index 19ed2a29287..d331ed5aef8 100644
  }
  
  #ifdef SONAME_LIBXCURSOR
-@@ -1711,7 +1723,7 @@ void move_resize_window( HWND hwnd, int dir )
+@@ -1709,7 +1721,7 @@ void move_resize_window( HWND hwnd, int dir )
              input.u.mi.dwFlags     = button_up_flags[button - 1] | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
              input.u.mi.time        = GetTickCount();
              input.u.mi.dwExtraInfo = 0;
@@ -180,7 +158,7 @@ index 19ed2a29287..d331ed5aef8 100644
          }
  
          while (PeekMessageW( &msg, 0, 0, 0, PM_REMOVE ))
-@@ -1894,6 +1906,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1892,6 +1904,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
      x_rel = &thread_data->x_rel_valuator;
      y_rel = &thread_data->y_rel_valuator;
  
@@ -188,7 +166,7 @@ index 19ed2a29287..d331ed5aef8 100644
      input.u.mi.mouseData   = 0;
      input.u.mi.dwFlags     = MOUSEEVENTF_MOVE;
      input.u.mi.time        = EVENT_x11_time_to_win32_time( event->time );
-@@ -1929,10 +1942,53 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
+@@ -1927,10 +1940,53 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
          return FALSE;
      }
  
@@ -245,7 +223,7 @@ index 19ed2a29287..d331ed5aef8 100644
      return TRUE;
  }
  
-@@ -2008,6 +2064,10 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
+@@ -2006,6 +2062,10 @@ BOOL X11DRV_GenericEvent( HWND hwnd, XEvent *xev )
      case XI_RawMotion:
          ret = X11DRV_RawMotion( event );
          break;
@@ -257,7 +235,7 @@ index 19ed2a29287..d331ed5aef8 100644
      default:
          TRACE( "Unhandled event %#x\n", event->evtype );
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
-index 7145fec74e7..4a7cab67ada 100644
+index 73b1e90f12e..6febdc18b0a 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -196,6 +196,8 @@ extern BOOL CDECL X11DRV_UnrealizePalette( HPALETTE hpal ) DECLSPEC_HIDDEN;
@@ -269,7 +247,7 @@ index 7145fec74e7..4a7cab67ada 100644
  
  extern DWORD copy_image_bits( BITMAPINFO *info, BOOL is_r8g8b8, XImage *image,
                                const struct gdi_image_bits *src_bits, struct gdi_image_bits *dst_bits,
-@@ -343,6 +345,7 @@ struct x11drv_thread_data
+@@ -342,6 +344,7 @@ struct x11drv_thread_data
      struct x11drv_valuator_data x_rel_valuator;
      struct x11drv_valuator_data y_rel_valuator;
      int      xi2_core_pointer;     /* XInput2 core pointer id */
@@ -278,10 +256,10 @@ index 7145fec74e7..4a7cab67ada 100644
  
  extern struct x11drv_thread_data *x11drv_init_thread_data(void) DECLSPEC_HIDDEN;
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index ff9185a523c..f33a79d98bf 100644
+index 20e829ba64f..4eaedd1c556 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
-@@ -640,6 +640,8 @@ void CDECL X11DRV_ThreadDetach(void)
+@@ -632,6 +632,8 @@ void CDECL X11DRV_ThreadDetach(void)
  
      if (data)
      {
@@ -290,7 +268,7 @@ index ff9185a523c..f33a79d98bf 100644
          if (data->xim) XCloseIM( data->xim );
          if (data->font_set) XFreeFontSet( data->display, data->font_set );
          XCloseDisplay( data->display );
-@@ -712,6 +714,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
+@@ -701,6 +703,8 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
      TlsSetValue( thread_data_tls_index, data );
  
      if (use_xim) X11DRV_SetupXIM();
@@ -300,5 +278,5 @@ index ff9185a523c..f33a79d98bf 100644
      return data;
  }
 -- 
-2.24.1
+2.27.0
 

@@ -1,16 +1,15 @@
-From 8102136961bf8ed57bcde4b74548562e5e3e21a0 Mon Sep 17 00:00:00 2001
+From fdaeb6ba616ef833c275e2aa53fc06abacefc1ad Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Thu, 26 Feb 2015 23:21:26 +0100
-Subject: [PATCH] shell32: Pass FILE_INFORMATION into SHNotify*
- functions.
+Subject: [PATCH] shell32: Pass FILE_INFORMATION into SHNotify* functions.
 
 Preparation of the progressbar work. Based on a patch by Huw Campbell.
 ---
- dlls/shell32/shlfileop.c | 201 +++++++++++++++++++++++------------------------
+ dlls/shell32/shlfileop.c | 201 +++++++++++++++++++--------------------
  1 file changed, 98 insertions(+), 103 deletions(-)
 
 diff --git a/dlls/shell32/shlfileop.c b/dlls/shell32/shlfileop.c
-index 91d5781..71de462 100644
+index e4c7449f05e..028a1d76e4f 100644
 --- a/dlls/shell32/shlfileop.c
 +++ b/dlls/shell32/shlfileop.c
 @@ -59,16 +59,6 @@ WINE_DEFAULT_DEBUG_CHANNEL(shell);
@@ -215,7 +214,7 @@ index 91d5781..71de462 100644
      /* Destination file may already exist with read only attribute */
      attribs = GetFileAttributesW(dest);
      if (IsAttrib(attribs, FILE_ATTRIBUTE_READONLY))
-@@ -899,30 +922,6 @@ int WINAPI SHFileOperationA(LPSHFILEOPSTRUCTA lpFileOp)
+@@ -904,30 +927,6 @@ int WINAPI SHFileOperationA(LPSHFILEOPSTRUCTA lpFileOp)
      return retCode;
  }
  
@@ -246,7 +245,7 @@ index 91d5781..71de462 100644
  static inline void grow_list(FILE_LIST *list)
  {
      FILE_ENTRY *new = HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, list->feFiles,
-@@ -1085,7 +1084,7 @@ static void destroy_file_list(FILE_LIST *flList)
+@@ -1093,7 +1092,7 @@ static void destroy_file_list(FILE_LIST *flList)
  static void copy_dir_to_dir(FILE_OPERATION *op, const FILE_ENTRY *feFrom, LPCWSTR szDestPath)
  {
      WCHAR szFrom[MAX_PATH], szTo[MAX_PATH];
@@ -255,7 +254,7 @@ index 91d5781..71de462 100644
  
      static const WCHAR wildCardFiles[] = {'*','.','*',0};
  
-@@ -1113,17 +1112,16 @@ static void copy_dir_to_dir(FILE_OPERATION *op, const FILE_ENTRY *feFrom, LPCWST
+@@ -1121,17 +1120,16 @@ static void copy_dir_to_dir(FILE_OPERATION *op, const FILE_ENTRY *feFrom, LPCWST
      PathCombineW(szFrom, feFrom->szFullPath, wildCardFiles);
      szFrom[lstrlenW(szFrom) + 1] = '\0';
  
@@ -281,7 +280,7 @@ index 91d5781..71de462 100644
  }
  
  static BOOL copy_file_to_file(FILE_OPERATION *op, const WCHAR *szFrom, const WCHAR *szTo)
-@@ -1134,7 +1132,7 @@ static BOOL copy_file_to_file(FILE_OPERATION *op, const WCHAR *szFrom, const WCH
+@@ -1142,7 +1140,7 @@ static BOOL copy_file_to_file(FILE_OPERATION *op, const WCHAR *szFrom, const WCH
              return FALSE;
      }
  
@@ -290,7 +289,7 @@ index 91d5781..71de462 100644
  }
  
  /* copy a file or directory to another directory */
-@@ -1174,7 +1172,7 @@ static void create_dest_dirs(LPCWSTR szDestDir)
+@@ -1182,7 +1180,7 @@ static void create_dest_dirs(LPCWSTR szDestDir)
  }
  
  /* the FO_COPY operation */
@@ -299,16 +298,16 @@ index 91d5781..71de462 100644
  {
      DWORD i;
      const FILE_ENTRY *entryToCopy;
-@@ -1197,7 +1195,7 @@ static int copy_files(FILE_OPERATION *op, const FILE_LIST *flFrom, FILE_LIST *fl
+@@ -1205,7 +1203,7 @@ static int copy_files(FILE_OPERATION *op, const FILE_LIST *flFrom, FILE_LIST *fl
          fileDest = &flTo->feFiles[0];
      }
  
--    if (op->req->fFlags & FOF_MULTIDESTFILES)
-+    if (multidest)
+-    if (op->req->fFlags & FOF_MULTIDESTFILES && flTo->dwNumFiles > 1)
++    if (multidest && flTo->dwNumFiles > 1)
      {
          if (flFrom->bAnyFromWildcard)
              return ERROR_CANCELLED;
-@@ -1249,8 +1247,7 @@ static int copy_files(FILE_OPERATION *op, const FILE_LIST *flFrom, FILE_LIST *fl
+@@ -1257,8 +1255,7 @@ static int copy_files(FILE_OPERATION *op, const FILE_LIST *flFrom, FILE_LIST *fl
      {
          entryToCopy = &flFrom->feFiles[i];
  
@@ -318,7 +317,7 @@ index 91d5781..71de462 100644
          {
              fileDest = &flTo->feFiles[i];
          }
-@@ -1322,7 +1319,7 @@ static BOOL confirm_delete_list(HWND hWnd, DWORD fFlags, BOOL fTrash, const FILE
+@@ -1330,7 +1327,7 @@ static BOOL confirm_delete_list(HWND hWnd, DWORD fFlags, BOOL fTrash, const FILE
  }
  
  /* the FO_DELETE operation */
@@ -327,7 +326,7 @@ index 91d5781..71de462 100644
  {
      const FILE_ENTRY *fileEntry;
      DWORD i;
-@@ -1333,13 +1330,13 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
+@@ -1341,13 +1338,13 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
          return ERROR_SUCCESS;
  
      /* Windows also checks only the first item */
@@ -345,7 +344,7 @@ index 91d5781..71de462 100644
              return 0;
          }
  
-@@ -1348,7 +1345,7 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
+@@ -1356,7 +1353,7 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
          fileEntry = &flFrom->feFiles[i];
  
          if (!IsAttribFile(fileEntry->attributes) &&
@@ -354,7 +353,7 @@ index 91d5781..71de462 100644
              continue;
  
          if (bTrash)
-@@ -1358,14 +1355,14 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
+@@ -1366,14 +1363,14 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
                  continue;
  
              /* Note: Windows silently deletes the file in such a situation, we show a dialog */
@@ -372,7 +371,7 @@ index 91d5781..71de462 100644
                  break;
              }
          }
-@@ -1375,7 +1372,7 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
+@@ -1383,7 +1380,7 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
              ret = DeleteFileW(fileEntry->szFullPath) ?
                    ERROR_SUCCESS : GetLastError();
          else
@@ -381,7 +380,7 @@ index 91d5781..71de462 100644
  
          if (ret)
              return ret;
-@@ -1385,16 +1382,16 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
+@@ -1393,16 +1390,16 @@ static int delete_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom)
  }
  
  /* moves a file or directory to another directory */
@@ -401,7 +400,7 @@ index 91d5781..71de462 100644
  {
      DWORD i;
      INT mismatched = 0;
-@@ -1407,14 +1404,12 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
+@@ -1415,14 +1412,12 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
      if (!flTo->dwNumFiles)
          return ERROR_FILE_NOT_FOUND;
  
@@ -418,7 +417,7 @@ index 91d5781..71de462 100644
          flFrom->dwNumFiles > flTo->dwNumFiles)
      {
          return ERROR_CANCELLED;
-@@ -1427,7 +1422,7 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
+@@ -1435,7 +1430,7 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
              return ret;
      }
  
@@ -427,7 +426,7 @@ index 91d5781..71de462 100644
          mismatched = flFrom->dwNumFiles - flTo->dwNumFiles;
  
      fileDest = &flTo->feFiles[0];
-@@ -1438,7 +1433,7 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
+@@ -1446,7 +1441,7 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
          if (!PathFileExistsW(fileDest->szDirectory))
              return ERROR_CANCELLED;
  
@@ -436,7 +435,7 @@ index 91d5781..71de462 100644
          {
              if (i >= flTo->dwNumFiles)
                  break;
-@@ -1452,9 +1447,9 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
+@@ -1460,9 +1455,9 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
          }
  
          if (fileDest->bExists && IsAttribDir(fileDest->attributes))
@@ -448,7 +447,7 @@ index 91d5781..71de462 100644
      }
  
      if (mismatched > 0)
-@@ -1469,7 +1464,7 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
+@@ -1477,7 +1472,7 @@ static int move_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, const
  }
  
  /* the FO_RENAME files */
@@ -457,7 +456,7 @@ index 91d5781..71de462 100644
  {
      const FILE_ENTRY *feFrom;
      const FILE_ENTRY *feTo;
-@@ -1491,7 +1486,7 @@ static int rename_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
+@@ -1499,7 +1494,7 @@ static int rename_files(LPSHFILEOPSTRUCTW lpFileOp, const FILE_LIST *flFrom, con
      if (feTo->bExists)
          return ERROR_ALREADY_EXISTS;
  
@@ -466,7 +465,7 @@ index 91d5781..71de462 100644
  }
  
  /* alert the user if an unsupported flag is used */
-@@ -1538,16 +1533,16 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
+@@ -1546,16 +1541,16 @@ int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp)
      switch (lpFileOp->wFunc)
      {
          case FO_COPY:
@@ -488,5 +487,5 @@ index 91d5781..71de462 100644
          default:
              ret = ERROR_INVALID_PARAMETER;
 -- 
-1.9.1
+2.27.0
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "449b8c7e9212d0a80e28babff20f2755b7370872"
+	echo "bc282905d9491b9f9fe4ae4b69a8ccdf99c5aaa8"
 }
 
 # Show version information
@@ -196,7 +196,6 @@ patch_enable_all ()
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
-	enable_ntdll_ThreadHideFromDebugger="$1"
 	enable_ntdll_Threading="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
@@ -680,9 +679,6 @@ patch_enable ()
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
-			;;
-		ntdll-ThreadHideFromDebugger)
-			enable_ntdll_ThreadHideFromDebugger="$2"
 			;;
 		ntdll-Threading)
 			enable_ntdll_Threading="$2"
@@ -1577,6 +1573,13 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
+if test "$enable_server_Object_Types" -eq 1; then
+	if test "$enable_ntdll_SystemModuleInformation" -gt 1; then
+		abort "Patchset ntdll-SystemModuleInformation disabled, but server-Object_Types depends on that."
+	fi
+	enable_ntdll_SystemModuleInformation=1
+fi
+
 if test "$enable_server_Inherited_ACLs" -eq 1; then
 	if test "$enable_server_Stored_ACLs" -gt 1; then
 		abort "Patchset server-Stored_ACLs disabled, but server-Inherited_ACLs depends on that."
@@ -1645,12 +1648,16 @@ if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 fi
 
 if test "$enable_winebuild_Fake_Dlls" -eq 1; then
+	if test "$enable_ntdll_ApiSetMap" -gt 1; then
+		abort "Patchset ntdll-ApiSetMap disabled, but winebuild-Fake_Dlls depends on that."
+	fi
 	if test "$enable_ntdll_WRITECOPY" -gt 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but winebuild-Fake_Dlls depends on that."
 	fi
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but winebuild-Fake_Dlls depends on that."
 	fi
+	enable_ntdll_ApiSetMap=1
 	enable_ntdll_WRITECOPY=1
 	enable_ws2_32_WSACleanup=1
 fi
@@ -2691,16 +2698,10 @@ fi
 # |   *	dlls/directmanipulation/directmanipulation.c
 # |
 if test "$enable_directmanipulation_new_dll" -eq 1; then
-	patch_apply directmanipulation-new-dll/0011-directmanipulation-Implement-IDirectManipulationMana.patch
 	patch_apply directmanipulation-new-dll/0013-directmanipulation-Fake-success-from-IDirectManipula.patch
-	patch_apply directmanipulation-new-dll/0015-directmanipulation-Implement-IDirectManipulationView.patch
-	patch_apply directmanipulation-new-dll/0016-directmanipulation-Support-IDirectManipulationConten.patch
 	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
 	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationManager2 CreateViewport.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Implement IDirectManipulationViewport2 GetPrimaryContent.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Support IDirectManipulationContent in IDirectManipulationPrimaryContent interface.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success in some functions.", 1 },';
 	) >> "$patchlist"
 fi
@@ -3916,7 +3917,7 @@ fi
 # Patchset winebuild-Fake_Dlls
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup
+# |   *	ntdll-ApiSetMap, ntdll-WRITECOPY, ws2_32-WSACleanup
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
@@ -3968,7 +3969,7 @@ fi
 # Patchset ntdll-Syscall_Emulation
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
+# |   *	ntdll-ApiSetMap, ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#48291] Detroit: Become Human crashes on launch
@@ -3991,7 +3992,7 @@ fi
 # | 	SystemExtendedProcessInformation)
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c
+# |   *	dlls/ntdll/unix/system.c
 # |
 if test "$enable_ntdll_SystemExtendedProcessInformation" -eq 1; then
 	patch_apply ntdll-SystemExtendedProcessInformation/0001-ntdll-Add-stub-for-NtQuerySystemInformation-SystemEx.patch
@@ -4009,7 +4010,7 @@ fi
 # |   *	[#49192] ntdll: NtQuerySystemInformation support SystemCodeIntegrityInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, include/winternl.h
+# |   *	dlls/ntdll/unix/system.c, include/winternl.h
 # |
 if test "$enable_ntdll_SystemCodeIntegrityInformation" -eq 1; then
 	patch_apply ntdll-SystemCodeIntegrityInformation/0001-ntdll-NtQuerySystemInformation-support-SystemCodeInt.patch
@@ -4024,7 +4025,7 @@ fi
 # |   *	[#39123] Return buffer filled with random values from SystemInterruptInformation
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c
+# |   *	dlls/ntdll/unix/system.c
 # |
 if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
 	patch_apply ntdll-SystemInterruptInformation/0001-ntdll-Return-buffer-filled-with-random-values-from-S.patch
@@ -4042,7 +4043,7 @@ fi
 # | 	NtQuerySystemInformation(SystemModuleInformationEx) in Windows Vista+ mode
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, include/winternl.h
+# |   *	dlls/ntdll/unix/system.c, include/winternl.h
 # |
 if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
 	patch_apply ntdll-SystemModuleInformation/0001-ntdll-Don-t-call-LdrQueryProcessModuleInformation-in.patch
@@ -4064,21 +4065,6 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ThreadHideFromDebugger
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48138] League of Legends 9.23: Crash after champ select
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/thread.c
-# |
-if test "$enable_ntdll_ThreadHideFromDebugger" -eq 1; then
-	patch_apply ntdll-ThreadHideFromDebugger/0001-ntdll-Stub-NtQueryInformationThread-ThreadHideFromDe.patch
-	(
-		printf '%s\n' '+    { "David Torok", "ntdll: Stub NtQueryInformationThread(ThreadHideFromDebugger).", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4429,21 +4415,19 @@ fi
 # |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
 # |
 # | Modified files:
-# |   *	dlls/user32/tests/winstation.c, programs/explorer/desktop.c, server/async.c, server/atom.c, server/change.c,
-# | 	server/clipboard.c, server/completion.c, server/console.c, server/debugger.c, server/device.c, server/directory.c,
-# | 	server/event.c, server/fd.c, server/file.c, server/handle.c, server/handle.h, server/hook.c, server/mailslot.c,
-# | 	server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c, server/object.h, server/process.c,
-# | 	server/queue.c, server/registry.c, server/request.c, server/semaphore.c, server/serial.c, server/signal.c,
-# | 	server/snapshot.c, server/sock.c, server/symlink.c, server/thread.c, server/timer.c, server/token.c, server/winstation.c
+# |   *	programs/explorer/desktop.c, server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c,
+# | 	server/console.c, server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c,
+# | 	server/handle.c, server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c,
+# | 	server/named_pipe.c, server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c,
+# | 	server/request.c, server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c,
+# | 	server/symlink.c, server/thread.c, server/timer.c, server/token.c, server/winstation.c
 # |
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
 	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
-	patch_apply server-Desktop_Refcount/0004-server-Assign-random-name-when-no-name-was-passed-to.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a new alloc_handle object callback.", 2 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Track desktop handle count more correctly.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Assign random name when no name was passed to create_winstation.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4559,12 +4543,15 @@ fi
 
 # Patchset server-Object_Types
 # |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-SystemModuleInformation
+# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44629] Process Hacker can't enumerate handles
 # |   *	[#45374] Yet Another Process Monitor (.NET 2.0 app) reports System.AccessViolationException
 # |
 # | Modified files:
-# |   *	dlls/ntdll/nt.c, dlls/ntdll/om.c, dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, include/winternl.h,
+# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, dlls/ntdll/unix/system.c, include/winternl.h,
 # | 	server/completion.c, server/directory.c, server/event.c, server/file.c, server/handle.c, server/mailslot.c,
 # | 	server/main.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c, server/object.h,
 # | 	server/process.c, server/protocol.def, server/registry.c, server/semaphore.c, server/symlink.c, server/thread.c,
@@ -5330,15 +5317,12 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/dinput/device_private.h, dlls/dinput/dinput_main.c, dlls/dinput/mouse.c, dlls/dinput8/tests/device.c,
-# | 	dlls/user32/input.c, dlls/user32/rawinput.c, dlls/user32/tests/input.c, dlls/user32/user32.spec,
-# | 	dlls/wineandroid.drv/keyboard.c, dlls/wineandroid.drv/window.c, dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c,
-# | 	dlls/winemac.drv/mouse.c, dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c,
-# | 	dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c, include/winuser.h, server/protocol.def, server/queue.c
+# | 	dlls/user32/input.c, dlls/user32/rawinput.c, dlls/user32/user32.spec, dlls/wineandroid.drv/keyboard.c,
+# | 	dlls/wineandroid.drv/window.c, dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c, dlls/winemac.drv/mouse.c,
+# | 	dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h,
+# | 	dlls/winex11.drv/x11drv_main.c, include/winuser.h, server/protocol.def, server/queue.c
 # |
 if test "$enable_user32_rawinput_mouse" -eq 1; then
-	patch_apply user32-rawinput-mouse/0001-user32-tests-Add-rawinput-test-for-ClipCursor-intera.patch
-	patch_apply user32-rawinput-mouse/0002-user32-tests-Add-rawinput-test-for-cross-thread-inte.patch
-	patch_apply user32-rawinput-mouse/0003-user32-tests-Add-rawinput-test-for-cross-process-int.patch
 	patch_apply user32-rawinput-mouse/0004-server-Add-send_hardware_message-flags-for-rawinput-.patch
 	patch_apply user32-rawinput-mouse/0005-server-Broadcast-rawinput-message-if-request-flag-is.patch
 	patch_apply user32-rawinput-mouse/0006-user32-Add-__wine_send_input-flags-to-hint-raw-input.patch
@@ -5350,9 +5334,6 @@ if test "$enable_user32_rawinput_mouse" -eq 1; then
 	patch_apply user32-rawinput-mouse/0012-dinput8-Use-raw-input-interface-for-dinput8-mouse-de.patch
 	patch_apply user32-rawinput-mouse/0013-dinput-Fix-rawinput-events-sequence-number.patch
 	(
-		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for ClipCursor interactions.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-thread interactions.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "user32/tests: Add rawinput test for cross-process interactions.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "server: Add send_hardware_message flags for rawinput translation.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "server: Broadcast rawinput message if request flag is SEND_HWMSG_RAWINPUT.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "user32: Add __wine_send_input flags to hint raw input translation.", 1 },';

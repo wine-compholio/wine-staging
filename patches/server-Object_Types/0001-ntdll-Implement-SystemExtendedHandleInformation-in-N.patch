@@ -1,82 +1,20 @@
-From 0384d32afa328e76bff7f8e508201ce2535ee763 Mon Sep 17 00:00:00 2001
+From e57cb9c97ea1147595a9c29e236515a2be69f9bd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Mar 2017 18:30:33 +0100
-Subject: ntdll: Implement SystemExtendedHandleInformation in
+Subject: [PATCH] ntdll: Implement SystemExtendedHandleInformation in
  NtQuerySystemInformation.
 
 ---
- dlls/ntdll/nt.c         | 51 +++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/tests/info.c | 60 +++++++++++++++++++++++++++++++++++++++++++++++++
- include/winternl.h      | 21 +++++++++++++++++
- 3 files changed, 132 insertions(+)
+ dlls/ntdll/tests/info.c  | 60 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/system.c | 52 ++++++++++++++++++++++++++++++++++
+ include/winternl.h       | 21 ++++++++++++++
+ 3 files changed, 133 insertions(+)
 
-diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index de8f16f9a0..a939298d19 100644
---- a/dlls/ntdll/nt.c
-+++ b/dlls/ntdll/nt.c
-@@ -2294,6 +2294,57 @@ NTSTATUS WINAPI NtQuerySystemInformation(
-             RtlFreeHeap( GetProcessHeap(), 0, info );
-         }
-         break;
-+    case SystemExtendedHandleInformation:
-+        {
-+            struct handle_info *info;
-+            DWORD i, num_handles;
-+
-+            if (Length < sizeof(SYSTEM_HANDLE_INFORMATION_EX))
-+            {
-+                ret = STATUS_INFO_LENGTH_MISMATCH;
-+                break;
-+            }
-+
-+            if (!SystemInformation)
-+            {
-+                ret = STATUS_ACCESS_VIOLATION;
-+                break;
-+            }
-+
-+            num_handles = (Length - FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle ));
-+            num_handles /= sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX);
-+            if (!(info = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*info) * num_handles )))
-+                return STATUS_NO_MEMORY;
-+
-+            SERVER_START_REQ( get_system_handles )
-+            {
-+                wine_server_set_reply( req, info, sizeof(*info) * num_handles );
-+                if (!(ret = wine_server_call( req )))
-+                {
-+                    SYSTEM_HANDLE_INFORMATION_EX *shi = SystemInformation;
-+                    shi->Count = wine_server_reply_size( req ) / sizeof(*info);
-+                    shi->Reserved = 0;
-+                    len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle[shi->Count] );
-+                    for (i = 0; i < shi->Count; i++)
-+                    {
-+                        memset( &shi->Handle[i], 0, sizeof(shi->Handle[i]) );
-+                        shi->Handle[i].UniqueProcessId = info[i].owner;
-+                        shi->Handle[i].HandleValue     = info[i].handle;
-+                        shi->Handle[i].GrantedAccess   = info[i].access;
-+                        /* FIXME: Fill out remaining fields */
-+                    }
-+                }
-+                else if (ret == STATUS_BUFFER_TOO_SMALL)
-+                {
-+                    len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle[reply->count] );
-+                    ret = STATUS_INFO_LENGTH_MISMATCH;
-+                }
-+            }
-+            SERVER_END_REQ;
-+
-+            RtlFreeHeap( GetProcessHeap(), 0, info );
-+        }
-+        break;
-     case SystemCacheInformation:
-         {
-             SYSTEM_CACHE_INFORMATION sci;
 diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
-index 32cb4f5a5d..c65a74bf5e 100644
+index eaf2f1a45b7..1728ab82225 100644
 --- a/dlls/ntdll/tests/info.c
 +++ b/dlls/ntdll/tests/info.c
-@@ -561,6 +561,62 @@ done:
+@@ -662,6 +662,62 @@ done:
      HeapFree( GetProcessHeap(), 0, shi);
  }
  
@@ -139,7 +77,7 @@ index 32cb4f5a5d..c65a74bf5e 100644
  static void test_query_cache(void)
  {
      NTSTATUS status;
-@@ -2147,6 +2203,10 @@ START_TEST(info)
+@@ -2715,6 +2771,10 @@ START_TEST(info)
      trace("Starting test_query_handle()\n");
      test_query_handle();
  
@@ -150,11 +88,74 @@ index 32cb4f5a5d..c65a74bf5e 100644
      /* 0x15 SystemCacheInformation */
      trace("Starting test_query_cache()\n");
      test_query_cache();
+diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
+index 5ba9fb41156..df4e11a0f56 100644
+--- a/dlls/ntdll/unix/system.c
++++ b/dlls/ntdll/unix/system.c
+@@ -1985,6 +1985,58 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+         break;
+     }
+ 
++    case SystemExtendedHandleInformation:
++    {
++        struct handle_info *handle_info;
++        DWORD i, num_handles;
++
++        if (size < sizeof(SYSTEM_HANDLE_INFORMATION_EX))
++        {
++            ret = STATUS_INFO_LENGTH_MISMATCH;
++            break;
++        }
++
++        if (!info)
++        {
++            ret = STATUS_ACCESS_VIOLATION;
++            break;
++        }
++
++        num_handles = size - FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle );
++        num_handles /= sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX);
++        if (!(handle_info = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*handle_info) * num_handles )))
++            return STATUS_NO_MEMORY;
++
++        SERVER_START_REQ( get_system_handles )
++        {
++            wine_server_set_reply( req, handle_info, sizeof(*handle_info) * num_handles );
++            if (!(ret = wine_server_call( req )))
++            {
++                SYSTEM_HANDLE_INFORMATION_EX *shi = info;
++                shi->Count = wine_server_reply_size( req ) / sizeof(*handle_info);
++                shi->Reserved = 0;
++                len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle[shi->Count] );
++                for (i = 0; i < shi->Count; i++)
++                {
++                    memset( &shi->Handle[i], 0, sizeof(shi->Handle[i]) );
++                    shi->Handle[i].UniqueProcessId = handle_info[i].owner;
++                    shi->Handle[i].HandleValue     = handle_info[i].handle;
++                    shi->Handle[i].GrantedAccess   = handle_info[i].access;
++                    /* FIXME: Fill out remaining fields */
++                }
++            }
++            else if (ret == STATUS_BUFFER_TOO_SMALL)
++            {
++                len = FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle[reply->count] );
++                ret = STATUS_INFO_LENGTH_MISMATCH;
++            }
++        }
++        SERVER_END_REQ;
++
++        RtlFreeHeap( GetProcessHeap(), 0, handle_info );
++        break;
++    }
++
+     case SystemCacheInformation:
+     {
+         SYSTEM_CACHE_INFORMATION sci = { 0 };
 diff --git a/include/winternl.h b/include/winternl.h
-index 87b2c4d253..7ffe4f6c81 100644
+index 3ff15f28c15..66cd05dac15 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -1442,6 +1442,27 @@ typedef struct _SYSTEM_HANDLE_INFORMATION {
+@@ -1531,6 +1531,27 @@ typedef struct _SYSTEM_HANDLE_INFORMATION {
      SYSTEM_HANDLE_ENTRY Handle[1];
  } SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
  
@@ -183,5 +184,5 @@ index 87b2c4d253..7ffe4f6c81 100644
  
  typedef struct _SYSTEM_CACHE_INFORMATION {
 -- 
-2.11.0
+2.27.0
 

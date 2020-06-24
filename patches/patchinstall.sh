@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "bc282905d9491b9f9fe4ae4b69a8ccdf99c5aaa8"
+	echo "1f6423f778f7036a3875613e10b9c8c3b84584f0"
 }
 
 # Show version information
@@ -124,7 +124,6 @@ patch_enable_all ()
 	enable_dinput_joy_mappings="$1"
 	enable_dinput_reconnect_joystick="$1"
 	enable_dinput_remap_joystick="$1"
-	enable_directmanipulation_new_dll="$1"
 	enable_dsdmo_new_dll="$1"
 	enable_dsound_EAX="$1"
 	enable_dsound_Fast_Mixer="$1"
@@ -463,9 +462,6 @@ patch_enable ()
 			;;
 		dinput-remap-joystick)
 			enable_dinput_remap_joystick="$2"
-			;;
-		directmanipulation-new-dll)
-			enable_directmanipulation_new_dll="$2"
 			;;
 		dsdmo-new-dll)
 			enable_dsdmo_new_dll="$2"
@@ -2686,23 +2682,6 @@ if test "$enable_dinput_remap_joystick" -eq 1; then
 	patch_apply dinput-remap-joystick/0001-dinput-Allow-remapping-of-joystick-buttons.patch
 	(
 		printf '%s\n' '+    { "Andrew Church", "dinput: Allow remapping of joystick buttons.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset directmanipulation-new-dll
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#44865] directmanipulation: New DLL.
-# |
-# | Modified files:
-# |   *	dlls/directmanipulation/directmanipulation.c
-# |
-if test "$enable_directmanipulation_new_dll" -eq 1; then
-	patch_apply directmanipulation-new-dll/0013-directmanipulation-Fake-success-from-IDirectManipula.patch
-	patch_apply directmanipulation-new-dll/0017-directmanipulation-Fake-success-in-some-functions.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success from IDirectManipulationViewport2 ActivateConfiguration.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "directmanipulation: Fake success in some functions.", 1 },';
 	) >> "$patchlist"
 fi
 

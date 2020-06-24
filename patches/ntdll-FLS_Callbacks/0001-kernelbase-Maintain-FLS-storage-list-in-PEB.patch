@@ -1,4 +1,4 @@
-From 3fe24d6e3b216c21b6a7b68766414213fdd2ff2d Mon Sep 17 00:00:00 2001
+From 96a5e54b5f72d99a9c3d03ac4c5800fe324e44c0 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Thu, 23 Apr 2020 14:32:23 +0300
 Subject: [PATCH] kernelbase: Maintain FLS storage list in PEB.
@@ -73,10 +73,10 @@ index 7501165dc87..2bcc3ee60c4 100644
       * FlsFree should fail
       * FlsGetValue and FlsSetValue should succeed
 diff --git a/dlls/kernel32/tests/thread.c b/dlls/kernel32/tests/thread.c
-index a9869863b44..b24f9e98bc7 100644
+index b91d279e327..924f19703bf 100644
 --- a/dlls/kernel32/tests/thread.c
 +++ b/dlls/kernel32/tests/thread.c
-@@ -2377,7 +2377,6 @@ START_TEST(thread)
+@@ -2445,7 +2445,6 @@ START_TEST(thread)
         }
         return;
     }
@@ -84,7 +84,7 @@ index a9869863b44..b24f9e98bc7 100644
     test_thread_info();
     test_reserved_tls();
     test_CreateRemoteThread();
-@@ -2405,6 +2404,5 @@ START_TEST(thread)
+@@ -2473,6 +2472,5 @@ START_TEST(thread)
     test_thread_fpu_cw();
     test_thread_actctx();
     test_thread_description();
@@ -92,7 +92,7 @@ index a9869863b44..b24f9e98bc7 100644
     test_threadpool();
  }
 diff --git a/dlls/kernelbase/thread.c b/dlls/kernelbase/thread.c
-index f20d460d07d..3c77b6a42f4 100644
+index f44f2ff6538..3423fe8c727 100644
 --- a/dlls/kernelbase/thread.c
 +++ b/dlls/kernelbase/thread.c
 @@ -38,6 +38,10 @@
@@ -106,7 +106,7 @@ index f20d460d07d..3c77b6a42f4 100644
  
  /***********************************************************************
   * Threads
-@@ -915,6 +919,19 @@ static void init_fiber_context( struct fiber_data *fiber )
+@@ -928,6 +932,19 @@ static void init_fiber_context( struct fiber_data *fiber )
  #endif
  }
  
@@ -126,7 +126,7 @@ index f20d460d07d..3c77b6a42f4 100644
  
  /***********************************************************************
   *           CreateFiber   (kernelbase.@)
-@@ -1022,7 +1039,16 @@ void WINAPI DECLSPEC_HOTPATCH DeleteFiber( LPVOID fiber_ptr )
+@@ -1035,7 +1052,16 @@ void WINAPI DECLSPEC_HOTPATCH DeleteFiber( LPVOID fiber_ptr )
          RtlExitUserThread( 1 );
      }
      RtlFreeUserStack( fiber->stack_allocation );
@@ -144,7 +144,7 @@ index f20d460d07d..3c77b6a42f4 100644
      HeapFree( GetProcessHeap(), 0, fiber );
  }
  
-@@ -1044,6 +1070,19 @@ void WINAPI DECLSPEC_HOTPATCH SwitchToFiber( LPVOID fiber )
+@@ -1057,6 +1083,19 @@ void WINAPI DECLSPEC_HOTPATCH SwitchToFiber( LPVOID fiber )
      struct fiber_data *new_fiber = fiber;
      struct fiber_data *current_fiber = NtCurrentTeb()->Tib.u.FiberData;
  
@@ -164,7 +164,7 @@ index f20d460d07d..3c77b6a42f4 100644
      current_fiber->except      = NtCurrentTeb()->Tib.ExceptionList;
      current_fiber->stack_limit = NtCurrentTeb()->Tib.StackLimit;
      current_fiber->fls_slots   = NtCurrentTeb()->FlsSlots;
-@@ -1069,9 +1108,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH FlsAlloc( PFLS_CALLBACK_FUNCTION callback )
+@@ -1082,9 +1121,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH FlsAlloc( PFLS_CALLBACK_FUNCTION callback )
      PEB * const peb = NtCurrentTeb()->Peb;
  
      RtlAcquirePebLock();
@@ -175,7 +175,7 @@ index f20d460d07d..3c77b6a42f4 100644
      {
          SetLastError( ERROR_NOT_ENOUGH_MEMORY );
          index = FLS_OUT_OF_INDEXES;
-@@ -1081,9 +1118,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH FlsAlloc( PFLS_CALLBACK_FUNCTION callback )
+@@ -1094,9 +1131,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH FlsAlloc( PFLS_CALLBACK_FUNCTION callback )
          index = RtlFindClearBitsAndSet( peb->FlsBitmap, 1, 1 );
          if (index != ~0U)
          {
@@ -186,7 +186,7 @@ index f20d460d07d..3c77b6a42f4 100644
              {
                  RtlClearBits( peb->FlsBitmap, index, 1 );
                  index = FLS_OUT_OF_INDEXES;
-@@ -1091,8 +1126,8 @@ DWORD WINAPI DECLSPEC_HOTPATCH FlsAlloc( PFLS_CALLBACK_FUNCTION callback )
+@@ -1104,8 +1139,8 @@ DWORD WINAPI DECLSPEC_HOTPATCH FlsAlloc( PFLS_CALLBACK_FUNCTION callback )
              }
              else
              {
@@ -197,7 +197,7 @@ index f20d460d07d..3c77b6a42f4 100644
              }
          }
          else SetLastError( ERROR_NO_MORE_ITEMS );
-@@ -1116,7 +1151,7 @@ BOOL WINAPI DECLSPEC_HOTPATCH FlsFree( DWORD index )
+@@ -1129,7 +1164,7 @@ BOOL WINAPI DECLSPEC_HOTPATCH FlsFree( DWORD index )
      {
          /* FIXME: call Fls callback */
          /* FIXME: add equivalent of ThreadZeroTlsCell here */
@@ -206,7 +206,7 @@ index f20d460d07d..3c77b6a42f4 100644
      }
      else SetLastError( ERROR_INVALID_PARAMETER );
      RtlReleasePebLock();
-@@ -1135,7 +1170,7 @@ PVOID WINAPI DECLSPEC_HOTPATCH FlsGetValue( DWORD index )
+@@ -1148,7 +1183,7 @@ PVOID WINAPI DECLSPEC_HOTPATCH FlsGetValue( DWORD index )
          return NULL;
      }
      SetLastError( ERROR_SUCCESS );
@@ -215,7 +215,7 @@ index f20d460d07d..3c77b6a42f4 100644
  }
  
  
-@@ -1149,14 +1184,12 @@ BOOL WINAPI DECLSPEC_HOTPATCH FlsSetValue( DWORD index, PVOID data )
+@@ -1162,14 +1197,12 @@ BOOL WINAPI DECLSPEC_HOTPATCH FlsSetValue( DWORD index, PVOID data )
          SetLastError( ERROR_INVALID_PARAMETER );
          return FALSE;
      }
@@ -233,10 +233,10 @@ index f20d460d07d..3c77b6a42f4 100644
  }
  
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index ffbc9fabb23..be53d98e5b8 100644
+index b884b43b154..c0a18669590 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -169,6 +169,15 @@ static CRITICAL_SECTION_DEBUG dlldir_critsect_debug =
+@@ -153,6 +153,15 @@ static CRITICAL_SECTION_DEBUG dlldir_critsect_debug =
  };
  static CRITICAL_SECTION dlldir_section = { &dlldir_critsect_debug, -1, 0, 0, 0, 0 };
  
@@ -252,7 +252,7 @@ index ffbc9fabb23..be53d98e5b8 100644
  static WINE_MODREF *cached_modref;
  static WINE_MODREF *current_modref;
  static WINE_MODREF *last_failed_modref;
-@@ -209,6 +218,16 @@ static RTL_UNLOAD_EVENT_TRACE unload_traces[RTL_UNLOAD_EVENT_TRACE_NUMBER];
+@@ -193,6 +202,16 @@ static RTL_UNLOAD_EVENT_TRACE unload_traces[RTL_UNLOAD_EVENT_TRACE_NUMBER];
  static RTL_UNLOAD_EVENT_TRACE *unload_trace_ptr;
  static unsigned int unload_trace_seq;
  
@@ -269,7 +269,7 @@ index ffbc9fabb23..be53d98e5b8 100644
  static void module_push_unload_trace( const LDR_DATA_TABLE_ENTRY *ldr )
  {
      RTL_UNLOAD_EVENT_TRACE *ptr = &unload_traces[unload_trace_seq];
-@@ -3610,6 +3629,13 @@ void WINAPI LdrShutdownThread(void)
+@@ -3187,6 +3206,13 @@ void WINAPI LdrShutdownThread(void)
      /* don't do any detach calls if process is exiting */
      if (process_detaching) return;
  
@@ -281,9 +281,9 @@ index ffbc9fabb23..be53d98e5b8 100644
 +    }
 +
      RtlEnterCriticalSection( &loader_section );
+     wm = get_modref( NtCurrentTeb()->Peb->ImageBaseAddress );
  
-     mark = &NtCurrentTeb()->Peb->LdrData->InInitializationOrderModuleList;
-@@ -3819,6 +3845,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
+@@ -3400,6 +3426,7 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
   */
  void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknown3, ULONG_PTR unknown4 )
  {
@@ -291,7 +291,7 @@ index ffbc9fabb23..be53d98e5b8 100644
      static int attach_done;
      int i;
      NTSTATUS status;
-@@ -3856,6 +3883,25 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -3435,6 +3462,25 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
      InsertHeadList( &tls_links, &NtCurrentTeb()->TlsLinks );
      RtlReleasePebLock();
  
@@ -318,5 +318,5 @@ index ffbc9fabb23..be53d98e5b8 100644
      {
          attach_done = 1;
 -- 
-2.26.2
+2.27.0
 

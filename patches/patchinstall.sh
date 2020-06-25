@@ -305,6 +305,7 @@ patch_enable_all ()
 	enable_winemenubuilder_integration="$1"
 	enable_wineps_drv_PostScript_Fixes="$1"
 	enable_winepulse_PulseAudio_Support="$1"
+	enable_winevulkan_vkGetPhysicalDeviceSurfaceCapabilitiesKHR="$1"
 	enable_winex11_CandidateWindowPos="$1"
 	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
@@ -1005,6 +1006,9 @@ patch_enable ()
 			;;
 		winepulse-PulseAudio_Support)
 			enable_winepulse_PulseAudio_Support="$2"
+			;;
+		winevulkan-vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
+			enable_winevulkan_vkGetPhysicalDeviceSurfaceCapabilitiesKHR="$2"
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
@@ -5958,6 +5962,21 @@ if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Account for PA devices that fall way behind.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Fix local buffer offset wrapping.", 1 },';
 		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t fake being one period behind in GetPosition.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winevulkan-vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49298] winevulkan: Avoid returning 0 for swapchain maxImageCount.
+# |
+# | Modified files:
+# |   *	dlls/winevulkan/make_vulkan, dlls/winevulkan/vulkan.c, dlls/winevulkan/vulkan_thunks.c, dlls/winevulkan/vulkan_thunks.h
+# |
+if test "$enable_winevulkan_vkGetPhysicalDeviceSurfaceCapabilitiesKHR" -eq 1; then
+	patch_apply winevulkan-vkGetPhysicalDeviceSurfaceCapabilitiesKHR/0001-winevulkan-Avoid-returning-0-for-swapchain-maxImageC.patch
+	(
+		printf '%s\n' '+    { "Józef Kucia", "winevulkan: Avoid returning 0 for swapchain maxImageCount.", 1 },';
 	) >> "$patchlist"
 fi
 

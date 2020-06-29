@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "13b2587d4f55d64a1381c60ac34acf4abe6bb1e8"
+	echo "ec9e556d31278d2de28b8ba82a063dc9fffdb440"
 }
 
 # Show version information
@@ -189,13 +189,11 @@ patch_enable_all ()
 	enable_ntdll_RtlQueryRegistryValuesEx="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
-	enable_ntdll_Syscall_Emulation="$1"
 	enable_ntdll_SystemCodeIntegrityInformation="$1"
 	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
-	enable_ntdll_Threading="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
@@ -280,7 +278,6 @@ patch_enable_all ()
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_ProxySettings="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
-	enable_winebuild_Fake_Dlls="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_wined3d_Accounting="$1"
@@ -654,9 +651,6 @@ patch_enable ()
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
 			;;
-		ntdll-Syscall_Emulation)
-			enable_ntdll_Syscall_Emulation="$2"
-			;;
 		ntdll-SystemCodeIntegrityInformation)
 			enable_ntdll_SystemCodeIntegrityInformation="$2"
 			;;
@@ -671,9 +665,6 @@ patch_enable ()
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
-			;;
-		ntdll-Threading)
-			enable_ntdll_Threading="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -926,9 +917,6 @@ patch_enable ()
 			;;
 		wineboot-drivers_etc_Stubs)
 			enable_wineboot_drivers_etc_Stubs="$2"
-			;;
-		winebuild-Fake_Dlls)
-			enable_winebuild_Fake_Dlls="$2"
 			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
@@ -1584,28 +1572,6 @@ if test "$enable_ntdll_SystemCodeIntegrityInformation" -eq 1; then
 	enable_ntdll_SystemExtendedProcessInformation=1
 fi
 
-if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
-	if test "$enable_winebuild_Fake_Dlls" -gt 1; then
-		abort "Patchset winebuild-Fake_Dlls disabled, but ntdll-Syscall_Emulation depends on that."
-	fi
-	enable_winebuild_Fake_Dlls=1
-fi
-
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	if test "$enable_ntdll_ApiSetMap" -gt 1; then
-		abort "Patchset ntdll-ApiSetMap disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	if test "$enable_ntdll_WRITECOPY" -gt 1; then
-		abort "Patchset ntdll-WRITECOPY disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	if test "$enable_ws2_32_WSACleanup" -gt 1; then
-		abort "Patchset ws2_32-WSACleanup disabled, but winebuild-Fake_Dlls depends on that."
-	fi
-	enable_ntdll_ApiSetMap=1
-	enable_ntdll_WRITECOPY=1
-	enable_ws2_32_WSACleanup=1
-fi
-
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
@@ -1625,6 +1591,13 @@ if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but ntdll-Builtin_Prot depends on that."
 	fi
 	enable_ntdll_WRITECOPY=1
+fi
+
+if test "$enable_ntdll_ApiSetMap" -eq 1; then
+	if test "$enable_ntdll_FLS_Callbacks" -gt 1; then
+		abort "Patchset ntdll-FLS_Callbacks disabled, but ntdll-ApiSetMap depends on that."
+	fi
+	enable_ntdll_FLS_Callbacks=1
 fi
 
 if test "$enable_kernel32_Processor_Group" -eq 1; then
@@ -3331,13 +3304,42 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-FLS_Callbacks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49012] Application build with .NET CoreRT crashes due to FLS callbacks not being called
+# |
+# | Modified files:
+# |   *	dlls/kernel32/tests/fiber.c, dlls/kernel32/tests/loader.c, dlls/kernel32/tests/thread.c, dlls/kernelbase/thread.c,
+# | 	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_FLS_Callbacks" -eq 1; then
+	patch_apply ntdll-FLS_Callbacks/0001-kernelbase-Maintain-FLS-storage-list-in-PEB.patch
+	patch_apply ntdll-FLS_Callbacks/0002-kernelbase-Don-t-use-PEB-lock-for-FLS-data.patch
+	patch_apply ntdll-FLS_Callbacks/0003-kernelbase-Zero-all-FLS-slots-instances-in-FlsFree.patch
+	patch_apply ntdll-FLS_Callbacks/0004-ntdll-Call-FLS-callbacks-on-thread-shutdown.patch
+	patch_apply ntdll-FLS_Callbacks/0005-kernelbase-Call-FLS-callbacks-from-FlsFree.patch
+	patch_apply ntdll-FLS_Callbacks/0006-kernelbase-Call-FLS-callbacks-from-DeleteFiber.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Maintain FLS storage list in PEB.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Don'\''t use PEB lock for FLS data.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Zero all FLS slots instances in FlsFree().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call FLS callbacks on thread shutdown.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from FlsFree().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from DeleteFiber().", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-ApiSetMap
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-FLS_Callbacks
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44658] Add dummy apiset to PEB struct
 # |
 # | Modified files:
-# |   *	dlls/ntdll/thread.c, include/Makefile.in, include/apiset.h, include/winternl.h
+# |   *	dlls/ntdll/loader.c, include/Makefile.in, include/apiset.h, include/winternl.h
 # |
 if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	patch_apply ntdll-ApiSetMap/0001-ntdll-Add-dummy-apiset-to-PEB.patch
@@ -3483,32 +3485,6 @@ if test "$enable_ntdll_Exception" -eq 1; then
 	patch_apply ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: OutputDebugString should throw the exception a second time, if a debugger is attached.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-FLS_Callbacks
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49012] Application build with .NET CoreRT crashes due to FLS callbacks not being called
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/fiber.c, dlls/kernel32/tests/loader.c, dlls/kernel32/tests/thread.c, dlls/kernelbase/thread.c,
-# | 	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_FLS_Callbacks" -eq 1; then
-	patch_apply ntdll-FLS_Callbacks/0001-kernelbase-Maintain-FLS-storage-list-in-PEB.patch
-	patch_apply ntdll-FLS_Callbacks/0002-kernelbase-Don-t-use-PEB-lock-for-FLS-data.patch
-	patch_apply ntdll-FLS_Callbacks/0003-kernelbase-Zero-all-FLS-slots-instances-in-FlsFree.patch
-	patch_apply ntdll-FLS_Callbacks/0004-ntdll-Call-FLS-callbacks-on-thread-shutdown.patch
-	patch_apply ntdll-FLS_Callbacks/0005-kernelbase-Call-FLS-callbacks-from-FlsFree.patch
-	patch_apply ntdll-FLS_Callbacks/0006-kernelbase-Call-FLS-callbacks-from-DeleteFiber.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Maintain FLS storage list in PEB.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Don'\''t use PEB lock for FLS data.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Zero all FLS slots instances in FlsFree().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call FLS callbacks on thread shutdown.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from FlsFree().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from DeleteFiber().", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3822,96 +3798,6 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18670] Properly close sockets when WSACleanup is called
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
-# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
-# | 	include/wine/server.h, server/protocol.def, server/sock.c
-# |
-if test "$enable_ws2_32_WSACleanup" -eq 1; then
-	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
-	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
-	(
-		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winebuild-Fake_Dlls
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ApiSetMap, ntdll-WRITECOPY, ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
-# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
-# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
-# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V)
-# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
-# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
-# |
-# | Modified files:
-# |   *	dlls/dbghelp/cpu_i386.c, dlls/kernel32/tests/loader.c, dlls/krnl386.exe16/kernel.c,
-# | 	dlls/krnl386.exe16/kernel16_private.h, dlls/krnl386.exe16/ne_module.c, dlls/krnl386.exe16/ne_segment.c,
-# | 	dlls/krnl386.exe16/task.c, dlls/krnl386.exe16/thunk.c, dlls/krnl386.exe16/wowthunk.c, dlls/ntdll/actctx.c,
-# | 	dlls/ntdll/loader.c, dlls/ntdll/locale.c, dlls/ntdll/ntdll_misc.h, dlls/ntdll/path.c, dlls/ntdll/signal_i386.c,
-# | 	dlls/ntdll/tests/exception.c, dlls/ntdll/thread.c, dlls/ntdll/unix/signal_i386.c, dlls/ntdll/unix/thread.c,
-# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c, dlls/ntdll/unixlib.h, dlls/system.drv16/system.c,
-# | 	dlls/toolhelp.dll16/toolhelp.c, dlls/user.exe16/message.c, dlls/user.exe16/user.c, dlls/user.exe16/window.c,
-# | 	include/winternl.h, libs/wine/loader.c, server/mapping.c, tools/winebuild/build.h, tools/winebuild/import.c,
-# | 	tools/winebuild/parser.c, tools/winebuild/relay.c, tools/winebuild/res32.c, tools/winebuild/spec16.c,
-# | 	tools/winebuild/spec32.c, tools/winebuild/utils.c
-# |
-if test "$enable_winebuild_Fake_Dlls" -eq 1; then
-	patch_apply winebuild-Fake_Dlls/0001-kernel32-tests-Add-basic-tests-for-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0002-krnl386.exe16-Do-not-abuse-WOW32Reserved-field-for-1.patch
-	patch_apply winebuild-Fake_Dlls/0003-winebuild-Generate-syscall-thunks-for-ntdll-exports.patch
-	patch_apply winebuild-Fake_Dlls/0004-winebuild-Use-multipass-label-system-to-generate-fak.patch
-	patch_apply winebuild-Fake_Dlls/0005-winebuild-Add-stub-functions-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0006-winebuild-Add-syscall-thunks-in-fake-dlls.patch
-	patch_apply winebuild-Fake_Dlls/0007-winebuild-Fix-size-of-relocation-information-in-fake.patch
-	patch_apply winebuild-Fake_Dlls/0008-winebuild-Try-to-make-sure-RVA-matches-between-fake-.patch
-	patch_apply winebuild-Fake_Dlls/0009-libs-wine-Use-same-file-alignment-for-fake-and-built.patch
-	patch_apply winebuild-Fake_Dlls/0010-tools-winebuild-Add-syscall-thunks-for-64-bit.patch
-	patch_apply winebuild-Fake_Dlls/0011-ntdll-Call-NtOpenFile-through-syscall-thunk.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32/tests: Add basic tests for fake dlls.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "krnl386.exe16: Do not abuse WOW32Reserved field for 16-bit stack address.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Generate syscall thunks for ntdll exports.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Use multipass label system to generate fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add stub functions in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Add syscall thunks in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Fix size of relocation information in fake dlls.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "winebuild: Try to make sure RVA matches between fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "libs/wine: Use same file alignment for fake and builtin DLLs.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "tools/winebuild: Add syscall thunks for 64 bit.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call NtOpenFile through syscall thunk.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Syscall_Emulation
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ApiSetMap, ntdll-WRITECOPY, ws2_32-WSACleanup, winebuild-Fake_Dlls
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48291] Detroit: Become Human crashes on launch
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/ntdll/thread.c, dlls/ntdll/unix/signal_x86_64.c, dlls/ntdll/unix/thread.c,
-# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, tools/winebuild/spec32.c
-# |
-if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
-	patch_apply ntdll-Syscall_Emulation/0001-ntdll-Support-x86_64-syscall-emulation.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Support x86_64 syscall emulation.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-SystemExtendedProcessInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3992,18 +3878,6 @@ if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
 	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Threading
-# |
-# | Modified files:
-# |   *	dlls/ntdll/thread.c, dlls/ntdll/unix/thread.c
-# |
-if test "$enable_ntdll_Threading" -eq 1; then
-	patch_apply ntdll-Threading/0001-ntdll-Fix-race-condition-when-threads-are-killed-dur.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix race-condition when threads are killed during shutdown.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4330,6 +4204,25 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Stub for ITextPara interface and implement ITextRange::GetPara.", 1 },';
 		printf '%s\n' '+    { "Jactry Zeng", "riched20: Fix ME_RunOfsFromCharOfs() when nCharOfs > strlen().", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "riched20: Silence repeated FIXMEs triggered by Adobe Reader.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ws2_32-WSACleanup
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#18670] Properly close sockets when WSACleanup is called
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
+# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
+# | 	include/wine/server.h, server/protocol.def, server/sock.c
+# |
+if test "$enable_ws2_32_WSACleanup" -eq 1; then
+	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
+	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
+	(
+		printf '%s\n' '+    { "Matt Durgavich", "ws2_32: Proper WSACleanup implementation using wineserver function.", 2 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ws2_32: Invalidate client-side file descriptor cache in WSACleanup.", 1 },';
 	) >> "$patchlist"
 fi
 

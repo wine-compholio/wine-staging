@@ -1,4 +1,4 @@
-From 250b8699aa64096bb4b38d454c03b57afe91a619 Mon Sep 17 00:00:00 2001
+From 54796a7cba6fd2017c4826874ccd09a9662aff00 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 3 Apr 2017 05:30:27 +0200
 Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
@@ -115,7 +115,7 @@ index 59965984a67..95f18fb71e3 100644
      test_Loader();
  }
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 42cdc628021..df8e0c69185 100644
+index efacc0c081e..b0b5c93b41b 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -121,6 +121,9 @@ struct file_id
@@ -128,7 +128,7 @@ index 42cdc628021..df8e0c69185 100644
  /* internal representation of loaded modules */
  typedef struct _wine_modref
  {
-@@ -446,6 +449,52 @@ static void call_ldr_notifications( ULONG reason, LDR_DATA_TABLE_ENTRY *module )
+@@ -460,6 +463,52 @@ static void call_ldr_notifications( ULONG reason, LDR_DATA_TABLE_ENTRY *module )
      }
  }
  
@@ -181,7 +181,7 @@ index 42cdc628021..df8e0c69185 100644
  /*************************************************************************
   *		get_modref
   *
-@@ -1188,7 +1237,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
+@@ -1202,7 +1251,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
                     &wm->ldr.InLoadOrderLinks);
      InsertTailList(&NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList,
                     &wm->ldr.InMemoryOrderLinks);
@@ -194,7 +194,7 @@ index 42cdc628021..df8e0c69185 100644
  
      if (!(nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_NX_COMPAT))
      {
-@@ -1894,6 +1948,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
+@@ -1908,6 +1962,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
              /* the module has only be inserted in the load & memory order lists */
              RemoveEntryList(&wm->ldr.InLoadOrderLinks);
              RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
@@ -202,7 +202,7 @@ index 42cdc628021..df8e0c69185 100644
  
              /* FIXME: there are several more dangling references
               * left. Including dlls loaded by this dll before the
-@@ -3226,6 +3281,7 @@ static void free_modref( WINE_MODREF *wm )
+@@ -3244,6 +3299,7 @@ static void free_modref( WINE_MODREF *wm )
  {
      RemoveEntryList(&wm->ldr.InLoadOrderLinks);
      RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
@@ -210,15 +210,15 @@ index 42cdc628021..df8e0c69185 100644
      if (wm->ldr.InInitializationOrderLinks.Flink)
          RemoveEntryList(&wm->ldr.InInitializationOrderLinks);
  
-@@ -3945,6 +4001,7 @@ void __wine_process_init(void)
-     SIZE_T info_size;
-     TEB *teb;
-     PEB *peb;
+@@ -3937,6 +3993,7 @@ void __wine_process_init(void)
+     ULONG_PTR val;
+     TEB *teb = NtCurrentTeb();
+     PEB *peb = teb->Peb;
 +    DWORD i;
  
-     if (!unix_funcs) load_ntdll_so( ntdll_module, &__wine_spec_nt_header );
- 
-@@ -3961,6 +4018,10 @@ void __wine_process_init(void)
+     peb->LdrData            = &ldr;
+     peb->FastPebLock        = &peb_lock;
+@@ -3974,6 +4031,10 @@ void __wine_process_init(void)
      load_global_options();
      version_init();
  
@@ -229,7 +229,7 @@ index 42cdc628021..df8e0c69185 100644
      /* setup the load callback and create ntdll modref */
      RtlInitUnicodeString( &nt_name, ntdllW );
      status = build_so_dll_module( params->DllPath.Buffer, &nt_name, ntdll_module, 0, &wm );
-@@ -4034,6 +4095,9 @@ void __wine_process_init(void)
+@@ -4047,6 +4108,9 @@ void __wine_process_init(void)
      teb->Tib.StackLimit = stack.StackLimit;
      teb->DeallocationStack = stack.DeallocationStack;
  
@@ -240,10 +240,10 @@ index 42cdc628021..df8e0c69185 100644
  }
  
 diff --git a/include/winternl.h b/include/winternl.h
-index 3ff15f28c15..59e9eddd26d 100644
+index 9a70a2014f1..424481b1a6d 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2369,8 +2369,8 @@ typedef struct _LDR_DATA_TABLE_ENTRY
+@@ -2370,8 +2370,8 @@ typedef struct _LDR_DATA_TABLE_ENTRY
      ULONG               Flags;
      SHORT               LoadCount;
      SHORT               TlsIndex;

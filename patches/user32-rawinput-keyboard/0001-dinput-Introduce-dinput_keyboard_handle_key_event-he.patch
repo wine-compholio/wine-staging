@@ -1,0 +1,98 @@
+From f59841a0e07a536adda717cbe0bcd2686ab11507 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sat, 6 Jun 2020 17:51:05 +0200
+Subject: [PATCH] dinput: Introduce dinput_keyboard_handle_key_event helper.
+
+This factor the key event logic, so we can then use it in rawinput
+message handler as well.
+---
+ dlls/dinput/keyboard.c | 52 +++++++++++++++++++++++++++---------------
+ 1 file changed, 33 insertions(+), 19 deletions(-)
+
+diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
+index 9981372d957..aa5bf30a378 100644
+--- a/dlls/dinput/keyboard.c
++++ b/dlls/dinput/keyboard.c
+@@ -103,21 +103,16 @@ static BYTE map_dik_code(DWORD scanCode, DWORD vkCode, DWORD subType, DWORD vers
+     return scanCode;
+ }
+ 
+-int dinput_keyboard_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam )
++static void dinput_keyboard_handle_key_event( LPDIRECTINPUTDEVICE8A iface, DWORD vkey_code,
++                                              DWORD scan_code, BOOL is_key_ext, BOOL is_key_up )
+ {
+     SysKeyboardImpl *This = impl_from_IDirectInputDevice8A(iface);
+-    int dik_code, ret = This->base.dwCoopLevel & DISCL_EXCLUSIVE;
+-    KBDLLHOOKSTRUCT *hook = (KBDLLHOOKSTRUCT *)lparam;
+-    BYTE new_diks;
++    int dik_code;
++    BYTE dik_state;
+ 
+-    if (wparam != WM_KEYDOWN && wparam != WM_KEYUP &&
+-        wparam != WM_SYSKEYDOWN && wparam != WM_SYSKEYUP)
+-        return 0;
++    TRACE("(%p) vk %02x, scan %02x\n", iface, vkey_code, scan_code);
+ 
+-    TRACE("(%p) wp %08lx, lp %08lx, vk %02x, scan %02x\n",
+-          iface, wparam, lparam, hook->vkCode, hook->scanCode);
+-
+-    switch (hook->vkCode)
++    switch (vkey_code)
+     {
+         /* R-Shift is special - it is an extended key with separate scan code */
+         case VK_RSHIFT  : dik_code = DIK_RSHIFT; break;
+@@ -125,24 +120,43 @@ int dinput_keyboard_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lpa
+         case VK_NUMLOCK : dik_code = DIK_NUMLOCK; break;
+         case VK_SUBTRACT: dik_code = DIK_SUBTRACT; break;
+         default:
+-            dik_code = map_dik_code(hook->scanCode & 0xff, hook->vkCode, This->subtype, This->base.dinput->dwVersion);
+-            if (hook->flags & LLKHF_EXTENDED) dik_code |= 0x80;
++            dik_code = map_dik_code(scan_code & 0xff, vkey_code, This->subtype, This->base.dinput->dwVersion);
++            if (is_key_ext) dik_code |= 0x80;
+     }
+-    new_diks = hook->flags & LLKHF_UP ? 0 : 0x80;
++    dik_state = (is_key_up ? 0 : 0x80);
+ 
+     /* returns now if key event already known */
+-    if (new_diks == This->DInputKeyState[dik_code])
+-        return ret;
++    if (dik_state == This->DInputKeyState[dik_code])
++        return;
+ 
+-    This->DInputKeyState[dik_code] = new_diks;
++    This->DInputKeyState[dik_code] = dik_state;
+     TRACE(" setting %02X to %02X\n", dik_code, This->DInputKeyState[dik_code]);
+ 
+     EnterCriticalSection(&This->base.crit);
+     queue_event(iface, DIDFT_MAKEINSTANCE(dik_code) | DIDFT_PSHBUTTON,
+-                new_diks, GetCurrentTime(), This->base.dinput->evsequence++);
++                dik_state, GetCurrentTime(), This->base.dinput->evsequence++);
+     LeaveCriticalSection(&This->base.crit);
++}
++
++int dinput_keyboard_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam )
++{
++    SysKeyboardImpl *This = impl_from_IDirectInputDevice8A(iface);
++    KBDLLHOOKSTRUCT *hook = (KBDLLHOOKSTRUCT *)lparam;
++    DWORD vkey_code, scan_code;
++    BOOL is_key_ext, is_key_up;
++
++    if (wparam != WM_KEYDOWN && wparam != WM_KEYUP &&
++        wparam != WM_SYSKEYDOWN && wparam != WM_SYSKEYUP)
++        return 0;
++
++    vkey_code = hook->vkCode;
++    scan_code = hook->scanCode;
++    is_key_ext = (hook->flags & LLKHF_EXTENDED);
++    is_key_up = (hook->flags & LLKHF_UP);
++
++    dinput_keyboard_handle_key_event(iface, vkey_code, scan_code, is_key_ext, is_key_up);
+ 
+-    return ret;
++    return (This->base.dwCoopLevel & DISCL_EXCLUSIVE);
+ }
+ 
+ static DWORD get_keyboard_subtype(void)
+-- 
+2.27.0
+

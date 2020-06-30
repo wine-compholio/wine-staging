@@ -1,0 +1,87 @@
+From 5449030617b7c85792128554b99b971ce2579e4d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sat, 6 Jun 2020 17:52:26 +0200
+Subject: [PATCH] dinput8: Use rawinput interface for keyboard device.
+
+---
+ dlls/dinput/dinput_main.c    | 10 ++++++++++
+ dlls/dinput/dinput_private.h |  1 +
+ dlls/dinput/keyboard.c       | 22 ++++++++++++++++++++++
+ 3 files changed, 33 insertions(+)
+
+diff --git a/dlls/dinput/dinput_main.c b/dlls/dinput/dinput_main.c
+index 5e03964f901..0e45d821897 100644
+--- a/dlls/dinput/dinput_main.c
++++ b/dlls/dinput/dinput_main.c
+@@ -662,6 +662,16 @@ static LRESULT WINAPI di_em_win_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
+                 dinput_mouse_rawinput_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam, &ri );
+             LeaveCriticalSection( &dinput_hook_crit );
+         }
++        else if (ri.header.dwType == RIM_TYPEKEYBOARD)
++        {
++            EnterCriticalSection( &dinput_hook_crit );
++            LIST_FOR_EACH_ENTRY( dev, &acquired_keyboard_list, IDirectInputDeviceImpl, entry )
++            {
++                if (!dev->use_raw_input) continue;
++                dinput_keyboard_rawinput_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam, &ri );
++            }
++            LeaveCriticalSection( &dinput_hook_crit );
++        }
+     }
+ 
+     return DefWindowProcW(hwnd, msg, wparam, lparam);
+diff --git a/dlls/dinput/dinput_private.h b/dlls/dinput/dinput_private.h
+index c0c88da9674..690e4947f0b 100644
+--- a/dlls/dinput/dinput_private.h
++++ b/dlls/dinput/dinput_private.h
+@@ -74,6 +74,7 @@ extern void dinput_hooks_unacquire_device(LPDIRECTINPUTDEVICE8W iface);
+ extern int dinput_mouse_hook(LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam);
+ extern int dinput_keyboard_hook(LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam);
+ extern void dinput_mouse_rawinput_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam, RAWINPUT *raw );
++extern void dinput_keyboard_rawinput_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam, RAWINPUT *raw );
+ 
+ extern void check_dinput_hooks(LPDIRECTINPUTDEVICE8W, BOOL) DECLSPEC_HIDDEN;
+ extern void check_dinput_events(void) DECLSPEC_HIDDEN;
+diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
+index aa5bf30a378..fc59006018c 100644
+--- a/dlls/dinput/keyboard.c
++++ b/dlls/dinput/keyboard.c
+@@ -138,6 +138,21 @@ static void dinput_keyboard_handle_key_event( LPDIRECTINPUTDEVICE8A iface, DWORD
+     LeaveCriticalSection(&This->base.crit);
+ }
+ 
++void dinput_keyboard_rawinput_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam, RAWINPUT *ri )
++{
++    DWORD vkey_code, scan_code;
++    BOOL is_key_ext, is_key_up;
++
++    TRACE("(%p) wp %08lx, lp %08lx\n", iface, wparam, lparam);
++
++    vkey_code = ri->data.keyboard.VKey;
++    scan_code = ri->data.keyboard.MakeCode;
++    is_key_ext = (ri->data.keyboard.Flags & RI_KEY_E0);
++    is_key_up = (ri->data.keyboard.Flags & RI_KEY_BREAK);
++
++    dinput_keyboard_handle_key_event(iface, vkey_code, scan_code, is_key_ext, is_key_up);
++}
++
+ int dinput_keyboard_hook( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM lparam )
+ {
+     SysKeyboardImpl *This = impl_from_IDirectInputDevice8A(iface);
+@@ -304,6 +319,13 @@ static SysKeyboardImpl *alloc_device(REFGUID rguid, IDirectInputImpl *dinput)
+     newDevice->base.data_format.wine_df = df;
+     IDirectInput_AddRef(&newDevice->base.dinput->IDirectInput7A_iface);
+ 
++    if (dinput->dwVersion >= 0x800)
++    {
++        newDevice->base.use_raw_input = TRUE;
++        newDevice->base.raw_device.usUsagePage = 1; /* HID generic device page */
++        newDevice->base.raw_device.usUsage = 6; /* HID generic keyboard */
++    }
++
+     return newDevice;
+ 
+ failed:
+-- 
+2.27.0
+

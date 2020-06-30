@@ -266,6 +266,9 @@ patch_enable_all ()
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
+	enable_user32_rawinput_hid="$1"
+	enable_user32_rawinput_mouse="$1"
+	enable_user32_rawinput_mouse_experimental="$1"
 	enable_user32_recursive_activation="$1"
 	enable_user32_window_activation="$1"
 	enable_uxtheme_CloseThemeClass="$1"
@@ -885,6 +888,15 @@ patch_enable ()
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
 			;;
+		user32-rawinput-hid)
+			enable_user32_rawinput_hid="$2"
+			;;
+		user32-rawinput-mouse)
+			enable_user32_rawinput_mouse="$2"
+			;;
+		user32-rawinput-mouse-experimental)
+			enable_user32_rawinput_mouse_experimental="$2"
+			;;
 		user32-recursive-activation)
 			enable_user32_recursive_activation="$2"
 			;;
@@ -1490,6 +1502,27 @@ if test "$enable_user32_window_activation" -eq 1; then
 		abort "Patchset user32-recursive-activation disabled, but user32-window-activation depends on that."
 	fi
 	enable_user32_recursive_activation=1
+fi
+
+if test "$enable_user32_rawinput_mouse_experimental" -eq 1; then
+	if test "$enable_user32_rawinput_mouse" -gt 1; then
+		abort "Patchset user32-rawinput-mouse disabled, but user32-rawinput-mouse-experimental depends on that."
+	fi
+	enable_user32_rawinput_mouse=1
+fi
+
+if test "$enable_user32_rawinput_hid" -eq 1; then
+	if test "$enable_user32_rawinput_mouse" -gt 1; then
+		abort "Patchset user32-rawinput-mouse disabled, but user32-rawinput-hid depends on that."
+	fi
+	enable_user32_rawinput_mouse=1
+fi
+
+if test "$enable_user32_rawinput_mouse" -eq 1; then
+	if test "$enable_winex11_drv_mouse_coorrds" -gt 1; then
+		abort "Patchset winex11.drv-mouse-coorrds disabled, but user32-rawinput-mouse depends on that."
+	fi
+	enable_winex11_drv_mouse_coorrds=1
 fi
 
 if test "$enable_stdole32_tlb_SLTG_Typelib" -eq 1; then
@@ -3592,7 +3625,7 @@ fi
 # |   *	[#43224] Improvement for heap allocation performance
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/heap.c
+# |   *	dlls/ntdll/heap.c
 # |
 if test "$enable_ntdll_Heap_Improvements" -eq 1; then
 	patch_apply ntdll-Heap_Improvements/0001-ntdll-Add-helper-function-to-delete-free-blocks.patch
@@ -3626,7 +3659,7 @@ fi
 # |   *	[#38656] Add support for hiding wine version information from applications
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
 # |
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
@@ -5169,6 +5202,110 @@ if test "$enable_user32_msgbox_Support_WM_COPY_mesg" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset winex11.drv-mouse-coorrds
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#46309] winex11.drv: Use root-relative coordinates for events, if possible.
+# |
+# | Modified files:
+# |   *	dlls/winex11.drv/mouse.c
+# |
+if test "$enable_winex11_drv_mouse_coorrds" -eq 1; then
+	patch_apply winex11.drv-mouse-coorrds/0001-winex11.drv-mouse-Use-root-relative-coordinates-for-ev.patch
+	(
+		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/mouse: Use root-relative coordinates for events, if possible.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-rawinput-mouse
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	winex11.drv-mouse-coorrds
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42631] Mouse drift, jump or don't react to small slow movements in Unity-engine games and Fallout 4 (partly fixed in
+# | 	Unity games, have walkaround in Fallout4 )
+# |   *	[#42675] Overwatch: Phantom mouse input / view pulled up to ceiling
+# |
+# | Modified files:
+# |   *	dlls/dinput/device_private.h, dlls/dinput/dinput_main.c, dlls/dinput/dinput_private.h, dlls/dinput/mouse.c,
+# | 	dlls/dinput8/tests/device.c, dlls/user32/input.c, dlls/user32/rawinput.c, dlls/user32/user32.spec,
+# | 	dlls/wineandroid.drv/keyboard.c, dlls/wineandroid.drv/window.c, dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c,
+# | 	dlls/winemac.drv/mouse.c, dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c,
+# | 	dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c, include/winuser.h, server/protocol.def, server/queue.c
+# |
+if test "$enable_user32_rawinput_mouse" -eq 1; then
+	patch_apply user32-rawinput-mouse/0001-user32-Implement-GetRegisteredRawInputDevices.patch
+	patch_apply user32-rawinput-mouse/0002-dinput8-tests-Add-DISCL_EXCLUSIVE-rawinput-test.patch
+	patch_apply user32-rawinput-mouse/0003-dinput8-Add-support-for-rawinput-based-devices.patch
+	patch_apply user32-rawinput-mouse/0004-dinput8-Use-rawinput-interface-for-mouse-device.patch
+	patch_apply user32-rawinput-mouse/0005-dinput8-Stop-using-LL-hooks-for-mouse-devices.patch
+	patch_apply user32-rawinput-mouse/0006-server-Add-send_hardware_message-flags-for-rawinput-.patch
+	patch_apply user32-rawinput-mouse/0007-user32-Add-__wine_send_input-flags-to-hint-raw-input.patch
+	patch_apply user32-rawinput-mouse/0008-winex11.drv-Advertise-XInput2-version-2.1-support.patch
+	patch_apply user32-rawinput-mouse/0009-winex11.drv-Keep-track-of-pointer-and-device-button-.patch
+	patch_apply user32-rawinput-mouse/0010-winex11.drv-Listen-to-RawMotion-and-RawButton-events.patch
+	(
+		printf '%s\n' '+    { "Rémi Bernon", "user32: Implement GetRegisteredRawInputDevices.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8/tests: Add DISCL_EXCLUSIVE / rawinput test.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Add support for rawinput based devices.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Use rawinput interface for mouse device.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Stop using LL hooks for mouse devices.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Add send_hardware_message flags for rawinput translation.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "user32: Add __wine_send_input flags to hint raw input translation.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Advertise XInput2 version 2.1 support.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Keep track of pointer and device button mappings.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Listen to RawMotion and RawButton* events in the desktop thread.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-rawinput-hid
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	winex11.drv-mouse-coorrds, user32-rawinput-mouse
+# |
+# | Modified files:
+# |   *	dlls/hidclass.sys/device.c, dlls/hidclass.sys/hid.h, dlls/hidclass.sys/pnp.c, dlls/user32/message.c,
+# | 	dlls/user32/rawinput.c, dlls/user32/user_private.h, server/protocol.def, server/queue.c, server/trace.c
+# |
+if test "$enable_user32_rawinput_hid" -eq 1; then
+	patch_apply user32-rawinput-hid/0001-server-Add-process-argument-to-find_rawinput_device.patch
+	patch_apply user32-rawinput-hid/0002-server-Allow-extra-data-for-hardware_msg_data-messag.patch
+	patch_apply user32-rawinput-hid/0003-server-Make-it-possible-to-queue-rawinput-message-on.patch
+	patch_apply user32-rawinput-hid/0004-server-Add-HID-input-message-type-to-send_hardware_m.patch
+	patch_apply user32-rawinput-hid/0005-hidclass.sys-Send-input-message-to-server-when-HID-r.patch
+	(
+		printf '%s\n' '+    { "Rémi Bernon", "server: Add process argument to find_rawinput_device.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Allow extra data for hardware_msg_data message.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Make it possible to queue rawinput message on all desktops.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "server: Add HID input message type to send_hardware_message request.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "hidclass.sys: Send input message to server when HID report is received.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-rawinput-mouse-experimental
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	winex11.drv-mouse-coorrds, user32-rawinput-mouse
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#45882] - Raw Input should use untransformed mouse values (affects Overwatch, several Source games).
+# |
+# | Modified files:
+# |   *	dlls/user32/rawinput.c, dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c,
+# | 	server/queue.c
+# |
+if test "$enable_user32_rawinput_mouse_experimental" -eq 1; then
+	patch_apply user32-rawinput-mouse-experimental/0001-winex11.drv-Add-support-for-absolute-RawMotion-event.patch
+	patch_apply user32-rawinput-mouse-experimental/0002-winex11.drv-Send-relative-RawMotion-events-unprocess.patch
+	patch_apply user32-rawinput-mouse-experimental/0003-winex11.drv-Accumulate-mouse-movement-to-avoid-round.patch
+	(
+		printf '%s\n' '+    { "Derek Lesho", "winex11.drv: Add support for absolute RawMotion events.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Send relative RawMotion events unprocessed.", 1 },';
+		printf '%s\n' '+    { "Jordan Galby", "winex11.drv: Accumulate mouse movement to avoid rounding losses.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset user32-recursive-activation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5949,21 +6086,6 @@ if test "$enable_winex11_drv_Query_server_position" -eq 1; then
 	patch_apply winex11.drv-Query_server_position/0001-winex11.drv-window-Query-the-X-server-for-the-actual.patch
 	(
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/window: Query the X server for the actual rect of the window before unmapping it.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11.drv-mouse-coorrds
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46309] winex11.drv: Use root-relative coordinates for events, if possible.
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/mouse.c
-# |
-if test "$enable_winex11_drv_mouse_coorrds" -eq 1; then
-	patch_apply winex11.drv-mouse-coorrds/0001-winex11.drv-mouse-Use-root-relative-coordinates-for-ev.patch
-	(
-		printf '%s\n' '+    { "Gabriel Ivăncescu", "winex11.drv/mouse: Use root-relative coordinates for events, if possible.", 1 },';
 	) >> "$patchlist"
 fi
 

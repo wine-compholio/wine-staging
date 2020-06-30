@@ -1,19 +1,16 @@
-From 7d1d098c5c456e1791bae10dd27996a62c7d993a Mon Sep 17 00:00:00 2001
+From 11344cc9631192fa0bb5a3d90f5956c09ec67991 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Mon, 26 Aug 2019 16:06:59 +0200
-Subject: [PATCH] dinput8: Add support for dinput devices that use raw input
- interface.
+Subject: [PATCH] dinput8: Add support for rawinput based devices.
 
-This adds a global message window that will receive WM_INPUT messages,
-dispatched to every raw input device event_proc.
+This adds a global message window that will receive WM_INPUT messages.
 
-Devices that use raw input interface will not register low-level hooks
-anymore. They will also conflict with any raw input device registered
-outside of dinput, as exposed by the unit tests.
+Devices that use rawinput will conflict with any rawinput device
+registered outside of dinput, as exposed by the unit tests.
 ---
  dlls/dinput/device_private.h |  3 ++
- dlls/dinput/dinput_main.c    | 98 ++++++++++++++++++++++++++++++++++--
- 2 files changed, 97 insertions(+), 4 deletions(-)
+ dlls/dinput/dinput_main.c    | 80 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 83 insertions(+)
 
 diff --git a/dlls/dinput/device_private.h b/dlls/dinput/device_private.h
 index fe5644f21c7..2fac4f0e61e 100644
@@ -30,7 +27,7 @@ index fe5644f21c7..2fac4f0e61e 100644
      int                         queue_len;   /* valid size of the queue                     */
      int                         queue_head;  /* position to write new event into queue      */
 diff --git a/dlls/dinput/dinput_main.c b/dlls/dinput/dinput_main.c
-index 2e561502406..f7e30606bf4 100644
+index 2e561502406..d0937d35e5b 100644
 --- a/dlls/dinput/dinput_main.c
 +++ b/dlls/dinput/dinput_main.c
 @@ -97,6 +97,10 @@ static const struct dinput_device *dinput_devices[] =
@@ -44,37 +41,23 @@ index 2e561502406..f7e30606bf4 100644
  static BOOL check_hook_thread(void);
  static CRITICAL_SECTION dinput_hook_crit;
  static struct list direct_input_list = LIST_INIT( direct_input_list );
-@@ -637,6 +641,61 @@ static HRESULT WINAPI IDirectInputWImpl_QueryInterface(LPDIRECTINPUT7W iface, RE
+@@ -637,6 +641,47 @@ static HRESULT WINAPI IDirectInputWImpl_QueryInterface(LPDIRECTINPUT7W iface, RE
      return IDirectInputAImpl_QueryInterface( &This->IDirectInput7A_iface, riid, ppobj );
  }
  
 +static LRESULT WINAPI di_em_win_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 +{
 +    IDirectInputDeviceImpl *dev;
-+    IDirectInputImpl *dinput;
++    RAWINPUT ri;
++    UINT size = sizeof(ri);
++    int rim = GET_RAWINPUT_CODE_WPARAM(wparam);
 +
 +    TRACE( "%p %d %lx %lx\n", hwnd, msg, wparam, lparam );
 +
-+    if (msg == WM_INPUT)
++    if (msg == WM_INPUT && (rim == RIM_INPUT || rim == RIM_INPUTSINK))
 +    {
-+        EnterCriticalSection( &dinput_hook_crit );
-+        LIST_FOR_EACH_ENTRY( dev, &acquired_mouse_list, IDirectInputDeviceImpl, entry )
-+        {
-+            if (dev->use_raw_input)
-+            {
-+                TRACE("calling dinput_mouse_hook (%p %lx %lx)\n", dev, wparam, lparam);
-+                dinput_mouse_hook( &dev->IDirectInputDevice8A_iface, GET_RAWINPUT_CODE_WPARAM(wparam), lparam );
-+            }
-+        }
-+        LIST_FOR_EACH_ENTRY( dev, &acquired_keyboard_list, IDirectInputDeviceImpl, entry )
-+        {
-+            if (dev->use_raw_input)
-+            {
-+                TRACE("calling dinput_keyboard_hook (%p %lx %lx)\n", dev, wparam, lparam);
-+                dinput_keyboard_hook( &dev->IDirectInputDevice8A_iface, GET_RAWINPUT_CODE_WPARAM(wparam), lparam );
-+            }
-+        }
-+        LeaveCriticalSection( &dinput_hook_crit );
++        if (GetRawInputData( (HRAWINPUT)lparam, RID_INPUT, &ri, &size, sizeof(RAWINPUTHEADER) ) > sizeof(ri))
++            WARN( "Unable to read raw input data\n" );
 +    }
 +
 +    return DefWindowProcW(hwnd, msg, wparam, lparam);
@@ -106,31 +89,21 @@ index 2e561502406..f7e30606bf4 100644
  static HRESULT initialize_directinput_instance(IDirectInputImpl *This, DWORD dwVersion)
  {
      if (!This->initialized)
-@@ -1668,13 +1727,19 @@ static LRESULT CALLBACK LL_hook_proc( int code, WPARAM wparam, LPARAM lparam )
+@@ -1668,11 +1713,13 @@ static LRESULT CALLBACK LL_hook_proc( int code, WPARAM wparam, LPARAM lparam )
      EnterCriticalSection( &dinput_hook_crit );
      LIST_FOR_EACH_ENTRY( dev, &acquired_mouse_list, IDirectInputDeviceImpl, entry )
      {
--        TRACE("calling dinput_mouse_hook (%p %lx %lx)\n", dev, wparam, lparam);
--        skip |= dinput_mouse_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam );
-+        if (!dev->use_raw_input)
-+        {
-+            TRACE("calling dinput_mouse_hook (%p %lx %lx)\n", dev, wparam, lparam);
-+            skip |= dinput_mouse_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam );
-+        }
++        if (dev->use_raw_input) continue;
+         TRACE("calling dinput_mouse_hook (%p %lx %lx)\n", dev, wparam, lparam);
+         skip |= dinput_mouse_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam );
      }
      LIST_FOR_EACH_ENTRY( dev, &acquired_keyboard_list, IDirectInputDeviceImpl, entry )
      {
--        TRACE("calling dinput_keyboard_hook (%p %lx %lx)\n", dev, wparam, lparam);
--        skip |= dinput_keyboard_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam );
-+        if (!dev->use_raw_input)
-+        {
-+            TRACE("calling dinput_keyboard_hook (%p %lx %lx)\n", dev, wparam, lparam);
-+            skip |= dinput_keyboard_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam );
-+        }
++        if (dev->use_raw_input) continue;
+         TRACE("calling dinput_keyboard_hook (%p %lx %lx)\n", dev, wparam, lparam);
+         skip |= dinput_keyboard_hook( &dev->IDirectInputDevice8A_iface, wparam, lparam );
      }
-     LeaveCriticalSection( &dinput_hook_crit );
- 
-@@ -1728,6 +1793,9 @@ static DWORD WINAPI hook_thread_proc(void *param)
+@@ -1728,6 +1775,9 @@ static DWORD WINAPI hook_thread_proc(void *param)
      static HHOOK kbd_hook, mouse_hook;
      MSG msg;
  
@@ -140,7 +113,7 @@ index 2e561502406..f7e30606bf4 100644
      /* Force creation of the message queue */
      PeekMessageW( &msg, 0, 0, 0, PM_NOREMOVE );
      SetEvent(param);
-@@ -1778,6 +1846,9 @@ static DWORD WINAPI hook_thread_proc(void *param)
+@@ -1778,6 +1828,9 @@ static DWORD WINAPI hook_thread_proc(void *param)
          DispatchMessageW(&msg);
      }
  
@@ -150,7 +123,7 @@ index 2e561502406..f7e30606bf4 100644
      FreeLibraryAndExitThread(DINPUT_instance, 0);
  }
  
-@@ -1860,6 +1931,23 @@ void check_dinput_hooks(LPDIRECTINPUTDEVICE8W iface, BOOL acquired)
+@@ -1860,6 +1913,31 @@ void check_dinput_hooks(LPDIRECTINPUTDEVICE8W iface, BOOL acquired)
          hook_thread_event = NULL;
      }
  
@@ -158,7 +131,15 @@ index 2e561502406..f7e30606bf4 100644
 +    {
 +        if (acquired)
 +        {
-+            dev->raw_device.dwFlags = RIDEV_INPUTSINK;
++            dev->raw_device.dwFlags = 0;
++            if (dev->dwCoopLevel & DISCL_BACKGROUND)
++                dev->raw_device.dwFlags |= RIDEV_INPUTSINK;
++            if (dev->dwCoopLevel & DISCL_EXCLUSIVE)
++                dev->raw_device.dwFlags |= RIDEV_NOLEGACY;
++            if ((dev->dwCoopLevel & DISCL_EXCLUSIVE) && dev->raw_device.usUsage == 2)
++                dev->raw_device.dwFlags |= RIDEV_CAPTUREMOUSE;
++            if ((dev->dwCoopLevel & DISCL_EXCLUSIVE) && dev->raw_device.usUsage == 6)
++                dev->raw_device.dwFlags |= RIDEV_NOHOTKEYS;
 +            dev->raw_device.hwndTarget = di_em_win;
 +        }
 +        else
@@ -174,7 +155,7 @@ index 2e561502406..f7e30606bf4 100644
      if (acquired)
          hook_change_finished_event = CreateEventW( NULL, FALSE, FALSE, NULL );
      PostThreadMessageW( hook_thread_id, WM_USER+0x10, 1, (LPARAM)hook_change_finished_event );
-@@ -1894,9 +1982,11 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved)
+@@ -1894,9 +1972,11 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved)
        case DLL_PROCESS_ATTACH:
          DisableThreadLibraryCalls(inst);
          DINPUT_instance = inst;
@@ -187,5 +168,5 @@ index 2e561502406..f7e30606bf4 100644
          break;
      }
 -- 
-2.26.2
+2.27.0
 

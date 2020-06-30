@@ -176,6 +176,7 @@ patch_enable_all ()
 	enable_ntdll_ForceBottomUpAlloc="$1"
 	enable_ntdll_HashLinks="$1"
 	enable_ntdll_Heap_Improvements="$1"
+	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
 	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Manifest_Range="$1"
@@ -194,6 +195,7 @@ patch_enable_all ()
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
+	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
@@ -223,6 +225,7 @@ patch_enable_all ()
 	enable_server_Inherited_ACLs="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
+	enable_server_Realtime_Priority="$1"
 	enable_server_Registry_Notifications="$1"
 	enable_server_Signal_Thread="$1"
 	enable_server_Stored_ACLs="$1"
@@ -612,6 +615,9 @@ patch_enable ()
 		ntdll-Heap_Improvements)
 			enable_ntdll_Heap_Improvements="$2"
 			;;
+		ntdll-Hide_Wine_Exports)
+			enable_ntdll_Hide_Wine_Exports="$2"
+			;;
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
 			;;
@@ -665,6 +671,9 @@ patch_enable ()
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
+			;;
+		ntdll-ThreadTime)
+			enable_ntdll_ThreadTime="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -752,6 +761,9 @@ patch_enable ()
 			;;
 		server-PeekMessage)
 			enable_server_PeekMessage="$2"
+			;;
+		server-Realtime_Priority)
+			enable_server_Realtime_Priority="$2"
 			;;
 		server-Registry_Notifications)
 			enable_server_Registry_Notifications="$2"
@@ -1505,6 +1517,13 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
+	fi
+	enable_ntdll_ThreadTime=1
+fi
+
 if test "$enable_server_Object_Types" -eq 1; then
 	if test "$enable_ntdll_SystemModuleInformation" -gt 1; then
 		abort "Patchset ntdll-SystemModuleInformation disabled, but server-Object_Types depends on that."
@@ -1584,6 +1603,17 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		abort "Patchset ntdll-DOS_Attributes disabled, but ntdll-Junction_Points depends on that."
 	fi
 	enable_ntdll_DOS_Attributes=1
+fi
+
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
+		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
+	if test "$enable_ntdll_ThreadTime" -gt 1; then
+		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
+	fi
+	enable_advapi32_Token_Integrity_Level=1
+	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -3573,6 +3603,38 @@ if test "$enable_ntdll_Heap_Improvements" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-ThreadTime
+# |
+# | Modified files:
+# |   *	dlls/ntdll/unix/system.c, server/protocol.def, server/snapshot.c, server/thread.h
+# |
+if test "$enable_ntdll_ThreadTime" -eq 1; then
+	patch_apply ntdll-ThreadTime/0002-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
+	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
+	(
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
+		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Hide_Wine_Exports
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#38656] Add support for hiding wine version information from applications
+# |
+# | Modified files:
+# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
+# |
+if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
+	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add support for hiding wine version information from applications.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-Interrupt-0x2e
 # |
 # | This patchset fixes the following Wine bugs:
@@ -4390,6 +4452,21 @@ if test "$enable_server_PeekMessage" -eq 1; then
 	patch_apply server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "server: Fix handling of GetMessage after previous PeekMessage call.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Realtime_Priority
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ThreadTime
+# |
+# | Modified files:
+# |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h
+# |
+if test "$enable_server_Realtime_Priority" -eq 1; then
+	patch_apply server-Realtime_Priority/0001-wineserver-Draft-to-implement-priority-levels-throug.patch
+	(
+		printf '%s\n' '+    { "Joakim Hernberg", "wineserver: Draft to implement priority levels through POSIX scheduling policies on linux.", 1 },';
 	) >> "$patchlist"
 fi
 

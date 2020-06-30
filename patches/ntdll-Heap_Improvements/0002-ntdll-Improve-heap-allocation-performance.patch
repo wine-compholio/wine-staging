@@ -1,35 +1,14 @@
-From d7997c1fffbf407f08fc18464c2fe3f17a3038a4 Mon Sep 17 00:00:00 2001
+From a64bc7c1b8d5625fcb7b1b666d95aced4009341b Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 22 Jul 2017 07:21:45 +0200
 Subject: [PATCH] ntdll: Improve heap allocation performance. (v2)
 
 ---
- configure.ac      |   9 ++
- dlls/ntdll/heap.c | 321 ++++++++++++++++++++++++++++++++--------------
- 2 files changed, 234 insertions(+), 96 deletions(-)
+ dlls/ntdll/heap.c | 306 +++++++++++++++++++++++++++++++---------------
+ 1 file changed, 210 insertions(+), 96 deletions(-)
 
-diff --git a/configure.ac b/configure.ac
-index 0ce3cb5c573..2fa1c7d4223 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -2790,6 +2790,15 @@ AC_CHECK_FUNCS(\
- )
- LIBS="$ac_save_LIBS"
- 
-+dnl Check for __builtin_ctzl
-+AC_CACHE_CHECK([for __builtin_ctzl], ac_cv_have___builtin_ctzl,
-+               AC_LINK_IFELSE([AC_LANG_PROGRAM(,[[return __builtin_ctzl(1)]])],
-+               [ac_cv_have___builtin_ctzl="yes"], [ac_cv_have___builtin_ctzl="no"]))
-+if test "$ac_cv_have___builtin_ctzl" = "yes"
-+then
-+    AC_DEFINE(HAVE___BUILTIN_CTZL, 1, [Define to 1 if you have the `__builtin_ctzl' built-in function.])
-+fi
-+
- dnl Check for __builtin_popcount
- AC_CACHE_CHECK([for __builtin_popcount], ac_cv_have___builtin_popcount,
-                AC_LINK_IFELSE([AC_LANG_PROGRAM(,[[return __builtin_popcount(1)]])],
 diff --git a/dlls/ntdll/heap.c b/dlls/ntdll/heap.c
-index db5c039bb76..f51dc63f371 100644
+index 3cbbff2de35..fc669d9dc4d 100644
 --- a/dlls/ntdll/heap.c
 +++ b/dlls/ntdll/heap.c
 @@ -3,6 +3,7 @@
@@ -40,7 +19,7 @@ index db5c039bb76..f51dc63f371 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -41,6 +42,7 @@
+@@ -35,6 +36,7 @@
  #include "winternl.h"
  #include "ntdll_misc.h"
  #include "wine/list.h"
@@ -48,7 +27,7 @@ index db5c039bb76..f51dc63f371 100644
  #include "wine/debug.h"
  #include "wine/server.h"
  
-@@ -62,7 +64,11 @@ typedef struct tagARENA_FREE
+@@ -56,7 +58,11 @@ typedef struct tagARENA_FREE
  {
      DWORD                 size;     /* Block size; must be the first field */
      DWORD                 magic;    /* Magic number */
@@ -61,7 +40,7 @@ index db5c039bb76..f51dc63f371 100644
  } ARENA_FREE;
  
  typedef struct
-@@ -75,9 +81,11 @@ typedef struct
+@@ -69,9 +75,11 @@ typedef struct
      DWORD                 magic;      /* these must remain at the end of the structure */
  } ARENA_LARGE;
  
@@ -76,7 +55,7 @@ index db5c039bb76..f51dc63f371 100644
  #define ARENA_LARGE_SIZE       0xfedcba90  /* magic value for 'size' field in large blocks */
  
  /* Value for arena 'magic' field */
-@@ -95,6 +103,8 @@ typedef struct
+@@ -89,6 +97,8 @@ typedef struct
  #define LARGE_ALIGNMENT        16  /* large blocks have stricter alignment */
  #define ARENA_OFFSET           (ALIGNMENT - sizeof(ARENA_INUSE))
  
@@ -85,7 +64,7 @@ index db5c039bb76..f51dc63f371 100644
  C_ASSERT( sizeof(ARENA_LARGE) % LARGE_ALIGNMENT == 0 );
  
  #define ROUND_SIZE(size)       ((((size) + ALIGNMENT - 1) & ~(ALIGNMENT-1)) + ARENA_OFFSET)
-@@ -103,9 +113,7 @@ C_ASSERT( sizeof(ARENA_LARGE) % LARGE_ALIGNMENT == 0 );
+@@ -97,9 +107,7 @@ C_ASSERT( sizeof(ARENA_LARGE) % LARGE_ALIGNMENT == 0 );
  #define NOISY                  0           /* Report all errors  */
  
  /* minimum data size (without arenas) of an allocated block */
@@ -96,7 +75,7 @@ index db5c039bb76..f51dc63f371 100644
  /* minimum size that must remain to shrink an allocated block */
  #define HEAP_MIN_SHRINK_SIZE  (HEAP_MIN_DATA_SIZE+sizeof(ARENA_FREE))
  /* minimum size to start allocating large blocks */
-@@ -114,23 +122,14 @@ C_ASSERT( sizeof(ARENA_LARGE) % LARGE_ALIGNMENT == 0 );
+@@ -108,23 +116,14 @@ C_ASSERT( sizeof(ARENA_LARGE) % LARGE_ALIGNMENT == 0 );
  #define HEAP_TAIL_EXTRA_SIZE(flags) \
      ((flags & HEAP_TAIL_CHECKING_ENABLED) || RUNNING_ON_VALGRIND ? ALIGNMENT : 0)
  
@@ -128,17 +107,17 @@ index db5c039bb76..f51dc63f371 100644
  
  struct tagHEAP;
  
-@@ -163,9 +162,17 @@ typedef struct tagHEAP
+@@ -157,9 +156,17 @@ typedef struct tagHEAP
      DWORD            pending_pos;   /* Position in pending free requests ring */
      ARENA_INUSE    **pending_free;  /* Ring buffer for pending free requests */
      RTL_CRITICAL_SECTION critSection; /* Critical section for serialization */
 -    FREE_LIST_ENTRY *freeList;      /* Free lists */
 +    struct list     *freeList;      /* Free lists */
 +    struct wine_rb_tree freeTree;   /* Free tree */
-+    unsigned long    freeMask[HEAP_NB_FREE_LISTS / (8 * sizeof(unsigned long))];
++    DWORD            freeMask[HEAP_NB_FREE_LISTS / (8 * sizeof(DWORD))];
  } HEAP;
  
-+#define HEAP_FREEMASK_BLOCK    (8 * sizeof(unsigned long))
++#define HEAP_FREEMASK_BLOCK    (8 * sizeof(DWORD))
 +#define HEAP_FREEMASK_INDEX(x) ((x) / HEAP_FREEMASK_BLOCK)
 +#define HEAP_FREEMASK_BIT(x)   (1UL << ((x) & (HEAP_FREEMASK_BLOCK - 1)))
 +
@@ -147,7 +126,7 @@ index db5c039bb76..f51dc63f371 100644
  #define HEAP_MAGIC       ((DWORD)('H' | ('E'<<8) | ('A'<<16) | ('P'<<24)))
  
  #define HEAP_DEF_SIZE        0x110000   /* Default heap size = 1Mb + 64Kb */
-@@ -182,6 +189,30 @@ static HEAP *processHeap;  /* main process heap */
+@@ -176,6 +183,13 @@ static HEAP *processHeap;  /* main process heap */
  
  static BOOL HEAP_IsRealArena( HEAP *heapPtr, DWORD flags, LPCVOID block, BOOL quiet );
  
@@ -158,27 +137,10 @@ index db5c039bb76..f51dc63f371 100644
 +    return (arena->size & ARENA_SIZE_MASK);
 +}
 +
-+/* return number of trailing 0-bits in x */
-+static inline int ctzl(unsigned long x)
-+{
-+#ifdef HAVE___BUILTIN_CTZL
-+    return __builtin_ctzl(x);
-+#else
-+    int c = 1;
-+    if (!(x & 0xffffffff)) { x >>= 32; c += 32; }
-+    if (!(x & 0x0000ffff)) { x >>= 16; c += 16; }
-+    if (!(x & 0x000000ff)) { x >>=  8; c +=  8; }
-+    if (!(x & 0x0000000f)) { x >>=  4; c +=  4; }
-+    if (!(x & 0x00000003)) { x >>=  2; c +=  2; }
-+    c -= (x & 0x00000001);
-+    return c;
-+#endif
-+}
-+
  /* mark a block of memory as free for debugging purposes */
  static inline void mark_block_free( void *ptr, SIZE_T size, DWORD flags )
  {
-@@ -303,20 +334,6 @@ static void subheap_notify_free_all(SUBHEAP const *subheap)
+@@ -297,20 +311,6 @@ static void subheap_notify_free_all(SUBHEAP const *subheap)
  #endif
  }
  
@@ -199,7 +161,7 @@ index db5c039bb76..f51dc63f371 100644
  /* get the memory protection type to use for a given heap */
  static inline ULONG get_protection_type( DWORD flags )
  {
-@@ -344,13 +361,31 @@ static void HEAP_Dump( HEAP *heap )
+@@ -338,13 +338,31 @@ static void HEAP_Dump( HEAP *heap )
      TRACE( "Next: %p  Sub-heaps:", LIST_ENTRY( heap->entry.next, HEAP, entry ) );
      LIST_FOR_EACH_ENTRY( subheap, &heap->subheap_list, SUBHEAP, entry ) TRACE( " %p", subheap );
  
@@ -237,7 +199,7 @@ index db5c039bb76..f51dc63f371 100644
  
      LIST_FOR_EACH_ENTRY( subheap, &heap->subheap_list, SUBHEAP, entry )
      {
-@@ -365,11 +400,32 @@ static void HEAP_Dump( HEAP *heap )
+@@ -359,11 +377,32 @@ static void HEAP_Dump( HEAP *heap )
              if (*(DWORD *)ptr & ARENA_FLAG_FREE)
              {
                  ARENA_FREE *pArena = (ARENA_FREE *)ptr;
@@ -275,7 +237,7 @@ index db5c039bb76..f51dc63f371 100644
                  ptr += sizeof(*pArena) + (pArena->size & ARENA_SIZE_MASK);
                  arenaSize += sizeof(ARENA_FREE);
                  freeSize += pArena->size & ARENA_SIZE_MASK;
-@@ -477,20 +533,19 @@ static HEAP *HEAP_GetPtr(
+@@ -471,20 +510,19 @@ static HEAP *HEAP_GetPtr(
   */
  static inline void HEAP_InsertFreeBlock( HEAP *heap, ARENA_FREE *pArena, BOOL last )
  {
@@ -304,7 +266,7 @@ index db5c039bb76..f51dc63f371 100644
  }
  
  
-@@ -501,7 +556,19 @@ static inline void HEAP_InsertFreeBlock( HEAP *heap, ARENA_FREE *pArena, BOOL la
+@@ -495,7 +533,19 @@ static inline void HEAP_InsertFreeBlock( HEAP *heap, ARENA_FREE *pArena, BOOL la
   */
  static inline void HEAP_DeleteFreeBlock( HEAP *heap, ARENA_FREE *pArena )
  {
@@ -325,7 +287,7 @@ index db5c039bb76..f51dc63f371 100644
  }
  
  
-@@ -880,6 +947,15 @@ static BOOL validate_large_arena( HEAP *heap, const ARENA_LARGE *arena, BOOL qui
+@@ -875,6 +925,15 @@ static BOOL validate_large_arena( HEAP *heap, const ARENA_LARGE *arena, BOOL qui
  }
  
  
@@ -341,7 +303,7 @@ index db5c039bb76..f51dc63f371 100644
  /***********************************************************************
   *           HEAP_CreateSubHeap
   */
-@@ -887,7 +963,6 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -882,7 +941,6 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
                                      SIZE_T commitSize, SIZE_T totalSize )
  {
      SUBHEAP *subheap;
@@ -349,7 +311,7 @@ index db5c039bb76..f51dc63f371 100644
      unsigned int i;
  
      if (!address)
-@@ -948,17 +1023,21 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -943,17 +1001,21 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
          subheap->headerSize = ROUND_SIZE( sizeof(HEAP) );
          list_add_head( &heap->subheap_list, &subheap->entry );
  
@@ -376,12 +338,12 @@ index db5c039bb76..f51dc63f371 100644
 +
 +        /* Initialize the free mask */
 +
-+        for (i = 0; i < sizeof(heap->freeMask) / sizeof(heap->freeMask[0]); i++)
++        for (i = 0; i < ARRAY_SIZE(heap->freeMask); i++)
 +            heap->freeMask[i] = 0;
  
          /* Initialize critical section */
  
-@@ -1001,6 +1080,34 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -996,6 +1058,34 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
  }
  
  
@@ -416,12 +378,12 @@ index db5c039bb76..f51dc63f371 100644
  /***********************************************************************
   *           HEAP_FindFreeBlock
   *
-@@ -1010,26 +1117,39 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
+@@ -1005,26 +1095,41 @@ static SUBHEAP *HEAP_CreateSubHeap( HEAP *heap, LPVOID address, DWORD flags,
  static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
                                         SUBHEAP **ppSubHeap )
  {
 +    struct wine_rb_entry *ptr;
-+    unsigned long mask;
++    DWORD mask;
 +    ARENA_FREE *arena;
      SUBHEAP *subheap;
 -    struct list *ptr;
@@ -445,7 +407,9 @@ index db5c039bb76..f51dc63f371 100644
          {
 -            subheap = HEAP_FindSubHeap( heap, pArena );
 -            if (!HEAP_Commit( subheap, (ARENA_INUSE *)pArena, size )) return NULL;
-+            index = (index & ~(HEAP_FREEMASK_BLOCK - 1)) | ctzl( mask );
++            DWORD ctz;
++            BitScanForward( &ctz, mask );
++            index = (index & ~(HEAP_FREEMASK_BLOCK - 1)) | ctz;
 +            arena = LIST_ENTRY( heap->freeList[index].next, ARENA_FREE, entry.list );
 +            subheap = HEAP_FindSubHeap( heap, arena );
 +            if (!HEAP_Commit( subheap, (ARENA_INUSE *)arena, size )) return NULL;
@@ -468,7 +432,7 @@ index db5c039bb76..f51dc63f371 100644
      }
  
      /* If no block was found, attempt to grow the heap */
-@@ -1075,13 +1195,10 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
+@@ -1070,13 +1175,10 @@ static ARENA_FREE *HEAP_FindFreeBlock( HEAP *heap, SIZE_T size,
   */
  static BOOL HEAP_IsValidArenaPtr( const HEAP *heap, const ARENA_FREE *ptr )
  {
@@ -482,7 +446,7 @@ index db5c039bb76..f51dc63f371 100644
      return FALSE;
  }
  
-@@ -1093,7 +1210,7 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
+@@ -1088,7 +1190,7 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
  {
      DWORD flags = subheap->heap->flags;
      SIZE_T size;
@@ -491,7 +455,7 @@ index db5c039bb76..f51dc63f371 100644
      char *heapEnd = (char *)subheap->base + subheap->size;
  
      /* Check for unaligned pointers */
-@@ -1110,7 +1227,8 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
+@@ -1105,7 +1207,8 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
          return FALSE;
      }
      /* Check size flags */
@@ -501,7 +465,7 @@ index db5c039bb76..f51dc63f371 100644
          (pArena->size & ARENA_FLAG_PREV_FREE))
      {
          ERR("Heap %p: bad flags %08x for free arena %p\n",
-@@ -1124,34 +1242,45 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
+@@ -1119,34 +1222,45 @@ static BOOL HEAP_ValidateFreeArena( SUBHEAP *subheap, ARENA_FREE *pArena )
          ERR("Heap %p: bad size %08lx for free arena %p\n", subheap->heap, size, pArena );
          return FALSE;
      }
@@ -556,5 +520,5 @@ index db5c039bb76..f51dc63f371 100644
              subheap->heap, prev, pArena );
          return FALSE;
 -- 
-2.24.0.rc1
+2.27.0
 

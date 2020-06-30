@@ -1,27 +1,19 @@
-From dceb199f694af989df0655f7846a40ae29c67ea0 Mon Sep 17 00:00:00 2001
+From 2afb2a42779c13459bf07921b57fe0d0e5cc65c6 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 30 May 2015 02:23:15 +0200
 Subject: [PATCH] ntdll: Add support for hiding wine version information from
  applications.
 
 ---
- dlls/ntdll/loader.c     | 100 +++++++++++++++++++++++++++++++++++++++-
- dlls/ntdll/ntdll_misc.h |   5 ++
- 2 files changed, 104 insertions(+), 1 deletion(-)
+ dlls/ntdll/loader.c     | 99 ++++++++++++++++++++++++++++++++++++++++-
+ dlls/ntdll/ntdll_misc.h |  5 +++
+ 2 files changed, 103 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index c471755139f..e36764d9a3e 100644
+index 3b68f6685d0..63c7109a763 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -71,6 +71,7 @@ const WCHAR system_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
- const WCHAR syswow64_dir[] = {'C',':','\\','w','i','n','d','o','w','s','\\',
-                               's','y','s','w','o','w','6','4','\\',0};
- 
-+
- /* system search path */
- static const WCHAR system_path[] =
-     {'C',':','\\','w','i','n','d','o','w','s','\\','s','y','s','t','e','m','3','2',';',
-@@ -79,6 +80,9 @@ static const WCHAR system_path[] =
+@@ -76,6 +76,9 @@ static const WCHAR system_path[] =
  
  static const WCHAR dotW[] = {'.',0};
  
@@ -31,7 +23,7 @@ index c471755139f..e36764d9a3e 100644
  static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
  static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
  static int free_lib_count;   /* recursion depth of LdrUnloadDll calls */
-@@ -95,6 +99,8 @@ struct dll_dir_entry
+@@ -92,6 +95,8 @@ struct dll_dir_entry
  
  static struct list dll_dir_list = LIST_INIT( dll_dir_list );  /* extra dirs from LdrAddDllDirectory */
  
@@ -40,7 +32,7 @@ index c471755139f..e36764d9a3e 100644
  struct ldr_notification
  {
      struct list                    entry;
-@@ -1709,6 +1715,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+@@ -1704,6 +1709,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
  }
  
  
@@ -128,16 +120,16 @@ index c471755139f..e36764d9a3e 100644
 + */
 +static BOOL is_hidden_export( void *proc )
 +{
-+    return hide_wine_exports && (proc == &NTDLL_wine_get_version ||
-+                                 proc == &NTDLL_wine_get_build_id ||
-+                                 proc == &NTDLL_wine_get_host_version);
++    return hide_wine_exports && (proc == &wine_get_version ||
++                                 proc == &wine_get_build_id ||
++                                 proc == &wine_get_host_version);
 +}
 +
 +
  /******************************************************************
   *		LdrGetProcedureAddress  (NTDLL.@)
   */
-@@ -1729,7 +1825,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+@@ -1724,7 +1819,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
          LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
          void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
                            : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
@@ -146,7 +138,7 @@ index c471755139f..e36764d9a3e 100644
          {
              *address = proc;
              ret = STATUS_SUCCESS;
-@@ -4061,6 +4157,8 @@ void __wine_process_init(void)
+@@ -4057,6 +4152,8 @@ void __wine_process_init(void)
          NtTerminateProcess( GetCurrentProcess(), status );
      }
  
@@ -156,21 +148,21 @@ index c471755139f..e36764d9a3e 100644
  
      /* elevate process if necessary */
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 1afda71c3ad..d489b850963 100644
+index 80be882e76d..783c5499d46 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -153,6 +153,11 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
+@@ -150,6 +150,11 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
  #define InterlockedCompareExchange64(dest,xchg,cmp) RtlInterlockedCompareExchange64(dest,xchg,cmp)
  #endif
  
 +/* version */
-+extern const char * CDECL NTDLL_wine_get_version(void);
-+extern const char * CDECL NTDLL_wine_get_build_id(void);
-+extern void CDECL NTDLL_wine_get_host_version( const char **sysname, const char **release );
++extern const char * CDECL wine_get_version(void);
++extern const char * CDECL wine_get_build_id(void);
++extern void CDECL wine_get_host_version( const char **sysname, const char **release );
 +
- /* string functions */
- void * __cdecl NTDLL_memchr( const void *ptr, int c, size_t n );
- char * __cdecl NTDLL_strcat( char *dst, const char *src );
+ /* convert from straight ASCII to Unicode without depending on the current codepage */
+ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
+ {
 -- 
 2.27.0
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "ec9e556d31278d2de28b8ba82a063dc9fffdb440"
+	echo "359ee2ecc21b08e4118f0f77b3a208e4b5e1e63d"
 }
 
 # Show version information
@@ -3479,7 +3479,7 @@ fi
 # Patchset ntdll-Dealloc_Thread_Stack
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll_misc.h, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c
+# |   *	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c
 # |
 if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	patch_apply ntdll-Dealloc_Thread_Stack/0001-ntdll-Do-not-allow-to-allocate-thread-stack-for-curr.patch
@@ -3626,7 +3626,7 @@ fi
 # |   *	[#38656] Add support for hiding wine version information from applications
 # |
 # | Modified files:
-# |   *	dlls/ntdll/loader.c, dlls/ntdll/ntdll_misc.h
+# |   *	dlls/ntdll/loader.c
 # |
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	patch_apply ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch

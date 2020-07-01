@@ -223,6 +223,7 @@ patch_enable_all ()
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
+	enable_server_Key_State="$1"
 	enable_server_Object_Types="$1"
 	enable_server_PeekMessage="$1"
 	enable_server_Realtime_Priority="$1"
@@ -758,6 +759,9 @@ patch_enable ()
 			;;
 		server-Inherited_ACLs)
 			enable_server_Inherited_ACLs="$2"
+			;;
+		server-Key_State)
+			enable_server_Key_State="$2"
 			;;
 		server-Object_Types)
 			enable_server_Object_Types="$2"
@@ -4435,6 +4439,24 @@ if test "$enable_server_Inherited_ACLs" -eq 1; then
 	patch_apply server-Inherited_ACLs/0001-server-Inherit-security-attributes-from-parent-direc.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Inherit security attributes from parent directories on creation.", 7 },';
+	) >> "$patchlist"
+fi
+
+# Patchset server-Key_State
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31899] Implement locking and synchronization of key states
+# |   *	[#35907] Fix caps lock state issues with multiple processes
+# |
+# | Modified files:
+# |   *	server/queue.c
+# |
+if test "$enable_server_Key_State" -eq 1; then
+	patch_apply server-Key_State/0001-server-Introduce-a-helper-function-to-update-the-thr.patch
+	patch_apply server-Key_State/0002-server-Implement-locking-and-synchronization-of-keys.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Introduce a helper function to update the thread_input key state.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "server: Implement locking and synchronization of keystate buffer.", 3 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 8df095ad7919b8eb1f6317ffa90e0242bc51f243 Mon Sep 17 00:00:00 2001
+From b4259641f65faa6272c882019d773989b1f1d3d4 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 10 Jul 2015 16:13:53 +0200
 Subject: [PATCH] server: Implement locking and synchronization of keystate
@@ -9,7 +9,7 @@ Subject: [PATCH] server: Implement locking and synchronization of keystate
  1 file changed, 57 insertions(+), 2 deletions(-)
 
 diff --git a/server/queue.c b/server/queue.c
-index e8df9775022..8d421195f63 100644
+index cd84684d4a0..77496da03ca 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -113,7 +113,9 @@ struct thread_input
@@ -30,7 +30,7 @@ index e8df9775022..8d421195f63 100644
      int                    paint_count;     /* pending paint messages count */
      int                    hotkey_count;    /* pending hotkey messages count */
      int                    quit_message;    /* is there a pending quit message? */
-@@ -257,9 +260,11 @@ static struct thread_input *create_thread_input( struct thread *thread )
+@@ -259,9 +262,11 @@ static struct thread_input *create_thread_input( struct thread *thread )
          input->move_size    = 0;
          input->cursor       = 0;
          input->cursor_count = 0;
@@ -42,7 +42,7 @@ index e8df9775022..8d421195f63 100644
  
          if (!(input->desktop = get_thread_desktop( thread, 0 /* FIXME: access rights */ )))
          {
-@@ -290,6 +295,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
+@@ -292,6 +297,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
          queue->wake_mask       = 0;
          queue->changed_bits    = 0;
          queue->changed_mask    = 0;
@@ -50,7 +50,7 @@ index e8df9775022..8d421195f63 100644
          queue->paint_count     = 0;
          queue->hotkey_count    = 0;
          queue->quit_message    = 0;
-@@ -333,8 +339,10 @@ static int assign_thread_input( struct thread *thread, struct thread_input *new_
+@@ -335,8 +341,10 @@ static int assign_thread_input( struct thread *thread, struct thread_input *new_
      }
      if (queue->input)
      {
@@ -61,7 +61,7 @@ index e8df9775022..8d421195f63 100644
      }
      queue->input = (struct thread_input *)grab_object( new_input );
      new_input->cursor_count += queue->cursor_count;
-@@ -1025,6 +1033,7 @@ static void msg_queue_destroy( struct object *obj )
+@@ -1027,6 +1035,7 @@ static void msg_queue_destroy( struct object *obj )
          free( timer );
      }
      if (queue->timeout) remove_timeout_user( queue->timeout );
@@ -69,7 +69,7 @@ index e8df9775022..8d421195f63 100644
      queue->input->cursor_count -= queue->cursor_count;
      release_object( queue->input );
      if (queue->hooks) release_object( queue->hooks );
-@@ -1125,7 +1134,11 @@ int attach_thread_input( struct thread *thread_from, struct thread *thread_to )
+@@ -1127,7 +1136,11 @@ int attach_thread_input( struct thread *thread_from, struct thread *thread_to )
      }
  
      ret = assign_thread_input( thread_from, input );
@@ -82,8 +82,8 @@ index e8df9775022..8d421195f63 100644
      release_object( input );
      return ret;
  }
-@@ -1383,9 +1396,30 @@ static void update_desktop_mouse_state( struct desktop *desktop, unsigned int fl
-         update_input_key_state( desktop, desktop->keystate, WM_XBUTTONUP, wparam );
+@@ -1385,9 +1398,30 @@ static void update_desktop_mouse_state( struct desktop *desktop, unsigned int fl
+         update_key_state( desktop, desktop->keystate, WM_XBUTTONUP, wparam );
  }
  
 +/* synchronizes the thread input key state with the desktop */
@@ -113,7 +113,7 @@ index e8df9775022..8d421195f63 100644
      update_key_state( input->desktop, input->keystate, msg, wparam );
  }
  
-@@ -1586,6 +1620,15 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
+@@ -1588,6 +1622,15 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
      else
      {
          msg->unique_id = 0;  /* will be set once we return it to the app */
@@ -129,7 +129,7 @@ index e8df9775022..8d421195f63 100644
          list_add_tail( &input->msg_list, &msg->entry );
          set_queue_bits( thread->queue, get_hardware_msg_bit(msg) );
      }
-@@ -2524,6 +2567,13 @@ DECL_HANDLER(get_message)
+@@ -2526,6 +2569,13 @@ DECL_HANDLER(get_message)
      queue->last_get_msg = current_time;
      if (!filter) filter = QS_ALLINPUT;
  
@@ -143,7 +143,7 @@ index e8df9775022..8d421195f63 100644
      /* first check for sent messages */
      if ((ptr = list_head( &queue->msg_list[SEND_MESSAGE] )))
      {
-@@ -2980,7 +3030,12 @@ DECL_HANDLER(get_key_state)
+@@ -2982,7 +3032,12 @@ DECL_HANDLER(get_key_state)
          if (!(thread = get_thread_from_id( req->tid ))) return;
          if (thread->queue)
          {

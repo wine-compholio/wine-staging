@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "10b17932fa829fac10a5e6717d96ed5d56de80fe"
+	echo "8bd5fe30014c2aa60f0c4570db4ef936e8c51245"
 }
 
 # Show version information
@@ -6329,40 +6329,31 @@ fi
 # | 	dlls/xactengine3_5/xactengine3_5.spec, dlls/xactengine3_6/Makefile.in, dlls/xactengine3_6/xactengine3_6.spec,
 # | 	dlls/xactengine3_7/Makefile.in, dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in,
 # | 	dlls/xaudio2_7/tests/Makefile.in, dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc,
-# | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c,
-# | 	include/Makefile.in, include/xact3.idl
+# | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c
 # |
 if test "$enable_xactengine_initial" -eq 1; then
-	patch_apply xactengine-initial/0001-include-Add-xact3.idl.patch
 	patch_apply xactengine-initial/0002-xaudio2-Add-support-for-xactengine3.patch
 	patch_apply xactengine-initial/0003-xaudio2_7-Support-older-XACT3Engine-interfaces.patch
 	patch_apply xactengine-initial/0004-xaudio2_7-IXACT3Engine-Initialize-return-valid-error.patch
 	patch_apply xactengine-initial/0005-xaudio2_7-IXACT3Engine-CreateSoundBank-return-correc.patch
 	patch_apply xactengine-initial/0006-xaudio2_7-Always-return-S_OK-in-IXACT34Cue-Destroy.patch
 	patch_apply xactengine-initial/0007-xaudio2_7-Dont-cast-interface-pointers.patch
-	patch_apply xactengine-initial/0008-include-Add-XACTNOTIFICATIONTYPE_-values.patch
 	patch_apply xactengine-initial/0009-xaudio2_7-unwrap-structure-based-of-it-s-type.patch
 	patch_apply xactengine-initial/0010-xaudio2_7-Correct-callback-to-windows-function.patch
 	patch_apply xactengine-initial/0011-xaudio2_7-Initial-IXACT3Engine-tests.patch
 	patch_apply xactengine-initial/0013-xaudio2_7-Trace-FAudio-version-being-used.patch
-	patch_apply xactengine-initial/0014-include-Add-XACTENGINE_-error-codes.patch
-	patch_apply xactengine-initial/0015-include-Add-XACT-defines.patch
 	patch_apply xactengine-initial/0016-xaudio2_7-tests-Add-more-tests.patch
 	(
-		printf '%s\n' '+    { "Ethan Lee", "include: Add xact3.idl.", 1 },';
 		printf '%s\n' '+    { "Ethan Lee", "xaudio2: Add support for xactengine3.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Support older XACT3Engine interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: IXACT3Engine Initialize return valid error code.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: IXACT3Engine CreateSoundBank return correct HRESULT values.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Always return S_OK in IXACT34Cue Destroy.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Dont cast interface pointers.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACTNOTIFICATIONTYPE_* values.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Unwrap structure based of it'\''s type.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Correct callback to windows function.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Initial IXACT3Engine tests.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Trace FAudio version being used.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACTENGINE_* error codes.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "include: Add XACT defines.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7/tests: Add more tests.", 1 },';
 	) >> "$patchlist"
 fi

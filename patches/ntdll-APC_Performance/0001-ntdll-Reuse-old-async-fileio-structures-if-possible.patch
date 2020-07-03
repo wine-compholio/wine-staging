@@ -1,4 +1,4 @@
-From 2fc74d8b5fd617e4b614e80c2eba9971a2dea00e Mon Sep 17 00:00:00 2001
+From 4a46bc2a1bf83744f8f5ad97594328986edd693e Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Tue, 3 Mar 2015 03:39:12 +0100
 Subject: [PATCH] ntdll: Reuse old async fileio structures if possible.
@@ -11,10 +11,10 @@ often possible to reuse old fileio structures.
  1 file changed, 18 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index ca6899b50f5..4c3f3dac465 100644
+index a10c4bf81aa..370dfe95471 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -4433,6 +4433,7 @@ struct async_fileio
+@@ -4553,6 +4553,7 @@ struct async_fileio
  {
      async_callback_t    *callback; /* must be the first field */
      struct async_fileio *next;
@@ -22,7 +22,7 @@ index ca6899b50f5..4c3f3dac465 100644
      HANDLE               handle;
  };
  
-@@ -4484,18 +4485,29 @@ static void release_fileio( struct async_fileio *io )
+@@ -4604,18 +4605,29 @@ static void release_fileio( struct async_fileio *io )
  static struct async_fileio *alloc_fileio( DWORD size, async_callback_t callback, HANDLE handle )
  {
      /* first free remaining previous fileinfos */
@@ -34,7 +34,7 @@ index ca6899b50f5..4c3f3dac465 100644
 +    while (old_io)
      {
 -        struct async_fileio *next = io->next;
--        RtlFreeHeap( GetProcessHeap(), 0, io );
+-        free( io );
 -        io = next;
 +        if (!io && old_io->size >= size && old_io->size <= max(4096, 4 * size))
 +        {
@@ -45,13 +45,13 @@ index ca6899b50f5..4c3f3dac465 100644
 +        else
 +        {
 +            struct async_fileio *next = old_io->next;
-+            RtlFreeHeap( GetProcessHeap(), 0, old_io );
++            free( old_io );
 +            old_io = next;
 +        }
      }
  
--    if ((io = RtlAllocateHeap( GetProcessHeap(), 0, size )))
-+    if (io || (io = RtlAllocateHeap( GetProcessHeap(), 0, size )))
+-    if ((io = malloc( size )))
++    if (io || (io = malloc( size )))
      {
          io->callback = callback;
 +        io->size     = size;

@@ -1,14 +1,14 @@
-From 769a1043bb174557b600c9ce38765846a3126e7f Mon Sep 17 00:00:00 2001
+From 7fbcb02d4e88819dead5b944c3b4676fb4c3bc35 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: [PATCH] ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
- dlls/ntdll/tests/directory.c | 24 ++++++------
- dlls/ntdll/unix/file.c       | 74 +++++++++++++++++++++++-------------
+ dlls/ntdll/tests/directory.c | 24 +++++------
+ dlls/ntdll/unix/file.c       | 78 +++++++++++++++++++++++-------------
  include/wine/port.h          |  2 +
- libs/port/xattr.c            | 20 ++++++++++
- 4 files changed, 81 insertions(+), 39 deletions(-)
+ libs/port/xattr.c            | 20 +++++++++
+ 4 files changed, 83 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/ntdll/tests/directory.c b/dlls/ntdll/tests/directory.c
 index 248ed99ab20..e0f4debc624 100644
@@ -60,10 +60,10 @@ index 248ed99ab20..e0f4debc624 100644
          }
          testfiles[i].nfound++;
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 66ce2eb5fe4..0546039cc47 100644
+index e3477f5cb5b..73bacabb4f3 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -3004,6 +3004,20 @@ void CDECL set_show_dot_files( BOOL enable )
+@@ -3572,6 +3572,20 @@ void CDECL set_show_dot_files( BOOL enable )
      show_dot_files = enable;
  }
  
@@ -84,7 +84,7 @@ index 66ce2eb5fe4..0546039cc47 100644
  
  /******************************************************************************
   *              NtCreateFile   (NTDLL.@)
-@@ -3013,6 +3027,10 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3581,6 +3595,10 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
                                ULONG attributes, ULONG sharing, ULONG disposition,
                                ULONG options, void *ea_buffer, ULONG ea_length )
  {
@@ -95,7 +95,7 @@ index 66ce2eb5fe4..0546039cc47 100644
      ANSI_STRING unix_name;
      BOOL created = FALSE;
  
-@@ -3055,36 +3073,34 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3623,36 +3641,34 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
          io->u.Status = STATUS_SUCCESS;
      }
  
@@ -106,10 +106,7 @@ index 66ce2eb5fe4..0546039cc47 100644
 -        OBJECT_ATTRIBUTES unix_attr = *attr;
 -        data_size_t len;
 -        struct object_attributes *objattr;
-+        WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
-+        return io->u.Status;
-+    }
- 
+-
 -        unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
 -        if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
 -        {
@@ -129,15 +126,20 @@ index 66ce2eb5fe4..0546039cc47 100644
 -            *handle = wine_server_ptr_handle( reply->handle );
 -        }
 -        SERVER_END_REQ;
--        RtlFreeHeap( GetProcessHeap(), 0, objattr );
+-        free( objattr );
+-        RtlFreeAnsiString( &unix_name );
++        WARN("%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++        return io->u.Status;
+     }
+-    else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++
 +    unix_attr = *attr;
 +    unix_attr.ObjectName = &empty_string;  /* we send the unix name instead */
 +    if ((io->u.Status = alloc_object_attributes( &unix_attr, &objattr, &len )))
 +    {
-         RtlFreeAnsiString( &unix_name );
++        RtlFreeAnsiString( &unix_name );
 +        return io->u.Status;
-     }
--    else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++    }
 +
 +    SERVER_START_REQ( create_file )
 +    {
@@ -152,11 +154,11 @@ index 66ce2eb5fe4..0546039cc47 100644
 +        *handle = wine_server_ptr_handle( reply->handle );
 +    }
 +    SERVER_END_REQ;
-+    RtlFreeHeap( GetProcessHeap(), 0, objattr );
++    free( objattr );
  
      if (io->u.Status == STATUS_SUCCESS)
      {
-@@ -3106,6 +3122,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3674,6 +3690,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -168,7 +170,7 @@ index 66ce2eb5fe4..0546039cc47 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -3113,6 +3134,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3681,6 +3702,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  
@@ -177,10 +179,10 @@ index 66ce2eb5fe4..0546039cc47 100644
  }
  
 diff --git a/include/wine/port.h b/include/wine/port.h
-index f90396727d6..7d2c7388707 100644
+index e0249b4c59f..930efeeea1f 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -371,6 +371,8 @@ extern int xattr_fget( int filedes, const char *name, void *value, size_t size )
+@@ -362,6 +362,8 @@ extern int xattr_fget( int filedes, const char *name, void *value, size_t size )
  extern int xattr_fremove( int filedes, const char *name );
  extern int xattr_fset( int filedes, const char *name, void *value, size_t size );
  extern int xattr_get( const char *path, const char *name, void *value, size_t size );

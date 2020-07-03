@@ -1,4 +1,4 @@
-From 93e4ba286e3eee3cb846d05014cea4e92bee6c1b Mon Sep 17 00:00:00 2001
+From 04a45064d81f63de64effc2748b70cf15bba5f5d Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Tue, 14 Jan 2020 21:42:21 +0300
 Subject: [PATCH] ntdll: Use free area list for virtual memory allocation.
@@ -8,10 +8,10 @@ Subject: [PATCH] ntdll: Use free area list for virtual memory allocation.
  1 file changed, 230 insertions(+), 112 deletions(-)
 
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index f4dba39cb160..4827a1d785a4 100644
+index 00b29bc5d1d..667401aaa93 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -195,7 +195,11 @@ static BYTE *pages_vprot;
+@@ -186,7 +186,11 @@ static BYTE *pages_vprot;
  #endif
  
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
@@ -22,8 +22,8 @@ index f4dba39cb160..4827a1d785a4 100644
 +#endif
  static void *preload_reserve_start;
  static void *preload_reserve_end;
- static BOOL use_locks;
-@@ -546,13 +550,13 @@ static struct range_entry *free_ranges_lower_bound( void *addr )
+ static BOOL force_exec_prot;  /* whether to force PROT_EXEC on all PROT_READ mmaps */
+@@ -521,13 +525,13 @@ static struct range_entry *free_ranges_lower_bound( void *addr )
   *
   * Updates the free_ranges after a new view has been created.
   */
@@ -40,7 +40,7 @@ index f4dba39cb160..4827a1d785a4 100644
      /* free_ranges initial value is such that the view is either inside range or before another one. */
      assert( range != free_ranges_end );
      assert( range->end > view_base || next != free_ranges_end );
-@@ -563,7 +567,7 @@ static void free_ranges_insert_view( struct file_view *view )
+@@ -538,7 +542,7 @@ static void free_ranges_insert_view( struct file_view *view )
          (range->end == view_base && next->base >= view_end))
      {
          /* on Win64, assert that it's correctly aligned so we're not going to be in trouble later */
@@ -49,7 +49,7 @@ index f4dba39cb160..4827a1d785a4 100644
          WARN( "range %p - %p is already mapped\n", view_base, view_end );
          return;
      }
-@@ -603,6 +607,12 @@ static void free_ranges_insert_view( struct file_view *view )
+@@ -578,6 +582,12 @@ static void free_ranges_insert_view( struct file_view *view )
      }
  }
  
@@ -62,7 +62,7 @@ index f4dba39cb160..4827a1d785a4 100644
  
  /***********************************************************************
   *           free_ranges_remove_view
-@@ -633,6 +643,7 @@ static void free_ranges_remove_view( struct file_view *view )
+@@ -608,6 +618,7 @@ static void free_ranges_remove_view( struct file_view *view )
          return;
      }
  #endif
@@ -70,7 +70,7 @@ index f4dba39cb160..4827a1d785a4 100644
  
      /* free_ranges initial value is such that the view is either inside range or before another one. */
      assert( range != free_ranges_end );
-@@ -1008,44 +1019,6 @@ static struct file_view *find_view_range( const void *addr, size_t size )
+@@ -954,44 +965,6 @@ static struct file_view *find_view_range( const void *addr, size_t size )
  }
  
  
@@ -78,7 +78,7 @@ index f4dba39cb160..4827a1d785a4 100644
 - *           find_view_inside_range
 - *
 - * Find first (resp. last, if top_down) view inside a range.
-- * The csVirtual section must be held by caller.
+- * virtual_mutex must be held by caller.
 - */
 -static struct wine_rb_entry *find_view_inside_range( void **base_ptr, void **end_ptr, int top_down )
 -{
@@ -115,7 +115,7 @@ index f4dba39cb160..4827a1d785a4 100644
  /***********************************************************************
   *           try_map_free_area
   *
-@@ -1089,65 +1062,11 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
+@@ -1035,65 +1008,11 @@ static void* try_map_free_area( void *base, void *end, ptrdiff_t step,
      return NULL;
  }
  
@@ -124,7 +124,7 @@ index f4dba39cb160..4827a1d785a4 100644
 - *           map_free_area
 - *
 - * Find a free area between views inside the specified range and map it.
-- * The csVirtual section must be held by caller.
+- * virtual_mutex must be held by caller.
 - */
 -static void *map_free_area( void *base, void *end, size_t size, int top_down, int unix_prot )
 -{
@@ -176,12 +176,12 @@ index f4dba39cb160..4827a1d785a4 100644
   *           find_reserved_free_area
   *
   * Find a free area between views inside the specified range.
-  * The csVirtual section must be held by caller.
+  * virtual_mutex must be held by caller.
 - * The range must be inside the preloader reserved range.
   */
  static void *find_reserved_free_area( void *base, void *end, size_t size, int top_down )
  {
-@@ -1361,8 +1280,7 @@ static void delete_view( struct file_view *view ) /* [in] View */
+@@ -1307,8 +1226,7 @@ static void delete_view( struct file_view *view ) /* [in] View */
  {
      if (!(view->protect & VPROT_SYSTEM)) unmap_area( view->base, view->size );
      set_page_vprot( view->base, view->size, 0 );
@@ -191,7 +191,7 @@ index f4dba39cb160..4827a1d785a4 100644
      wine_rb_remove( &views_tree, &view->entry );
      *(struct file_view **)view = next_free_view;
      next_free_view = view;
-@@ -1410,8 +1328,7 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
+@@ -1356,8 +1274,7 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
      set_page_vprot( base, size, vprot );
  
      wine_rb_put( &views_tree, view->base, &view->entry );
@@ -201,7 +201,7 @@ index f4dba39cb160..4827a1d785a4 100644
  
      *view_ret = view;
  
-@@ -1656,6 +1573,7 @@ struct alloc_area
+@@ -1589,6 +1506,7 @@ struct alloc_area
      int    top_down;
      void  *limit;
      void  *result;
@@ -209,7 +209,7 @@ index f4dba39cb160..4827a1d785a4 100644
  };
  
  /***********************************************************************
-@@ -1697,6 +1615,210 @@ static int CDECL alloc_reserved_area_callback( void *start, SIZE_T size, void *a
+@@ -1630,6 +1548,210 @@ static int CDECL alloc_reserved_area_callback( void *start, SIZE_T size, void *a
      return 0;
  }
  
@@ -420,7 +420,7 @@ index f4dba39cb160..4827a1d785a4 100644
  /***********************************************************************
   *           map_fixed_area
   *
-@@ -1782,11 +1904,15 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+@@ -1715,11 +1837,15 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
          alloc.size = size;
          alloc.top_down = top_down;
          alloc.limit = (void*)(get_zero_bits_64_mask( zero_bits_64 ) & (UINT_PTR)user_space_limit);
@@ -439,7 +439,7 @@ index f4dba39cb160..4827a1d785a4 100644
          }
  
          if (mmap_enum_reserved_areas( alloc_reserved_area_callback, &alloc, top_down ))
-@@ -1798,15 +1924,6 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
+@@ -1731,15 +1857,6 @@ static NTSTATUS map_view( struct file_view **view_ret, void *base, size_t size,
              goto done;
          }
  
@@ -455,7 +455,7 @@ index f4dba39cb160..4827a1d785a4 100644
          view_size = size + granularity_mask + 1;
  
          for (;;)
-@@ -2500,6 +2617,7 @@ void virtual_init(void)
+@@ -2392,6 +2509,7 @@ void virtual_init(void)
              if (preload_reserve_start)
                  address_space_start = min( address_space_start, preload_reserve_start );
          }
@@ -464,5 +464,5 @@ index f4dba39cb160..4827a1d785a4 100644
  
      size = ROUND_SIZE( 0, sizeof(TEB) ) + max( MINSIGSTKSZ, 8192 );
 -- 
-2.26.2
+2.27.0
 

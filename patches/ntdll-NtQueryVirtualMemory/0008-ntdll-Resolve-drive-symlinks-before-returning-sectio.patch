@@ -1,20 +1,20 @@
-From 02ea4a27a1d6598e3d6a1ab5c2a25d5459e5390c Mon Sep 17 00:00:00 2001
+From 01031e9eb282bffce2449891e68eb9efeded1ee9 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
 Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
 
 ---
- dlls/ntdll/directory.c        |  2 +-
- dlls/ntdll/ntdll_misc.h       |  1 +
- dlls/ntdll/unix/virtual.c     | 37 +++++++++++++++++++++++++++++------
- dlls/psapi/tests/psapi_main.c |  6 +-----
+ dlls/ntdll/unix/file.c         |  2 +-
+ dlls/ntdll/unix/unix_private.h |  1 +
+ dlls/ntdll/unix/virtual.c      | 37 ++++++++++++++++++++++++++++------
+ dlls/psapi/tests/psapi_main.c  |  6 +-----
  4 files changed, 34 insertions(+), 12 deletions(-)
 
-diff --git a/dlls/ntdll/directory.c b/dlls/ntdll/directory.c
-index 453568d641e..12da4316e88 100644
---- a/dlls/ntdll/directory.c
-+++ b/dlls/ntdll/directory.c
-@@ -2798,7 +2798,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 551d0450584..65ddf0df4a2 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -3425,7 +3425,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
  }
  
  /* read the contents of an NT symlink object */
@@ -23,23 +23,23 @@ index 453568d641e..12da4316e88 100644
  {
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
-diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index e9a3230e814..750b01bd059 100644
---- a/dlls/ntdll/ntdll_misc.h
-+++ b/dlls/ntdll/ntdll_misc.h
-@@ -175,6 +175,7 @@ extern NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
-                                            UINT disposition ) DECLSPEC_HIDDEN;
- 
- /* virtual memory */
+diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
+index e14da3ff7ec..5410248e8a7 100644
+--- a/dlls/ntdll/unix/unix_private.h
++++ b/dlls/ntdll/unix/unix_private.h
+@@ -103,6 +103,7 @@ extern void CDECL get_initial_directory( UNICODE_STRING *dir ) DECLSPEC_HIDDEN;
+ extern void CDECL get_initial_console( HANDLE *handle, HANDLE *std_in, HANDLE *std_out, HANDLE *std_err ) DECLSPEC_HIDDEN;
+ extern USHORT * CDECL get_unix_codepage_data(void) DECLSPEC_HIDDEN;
+ extern void CDECL get_locales( WCHAR *sys, WCHAR *user ) DECLSPEC_HIDDEN;
 +extern NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length ) DECLSPEC_HIDDEN;
- extern NTSTATUS virtual_map_section( HANDLE handle, PVOID *addr_ptr, unsigned short zero_bits_64, SIZE_T commit_size,
-                                      const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr, ULONG alloc_type,
-                                      ULONG protect, pe_image_info_t *image_info ) DECLSPEC_HIDDEN;
+ extern NTSTATUS CDECL virtual_map_section( HANDLE handle, PVOID *addr_ptr, unsigned short zero_bits_64, SIZE_T commit_size,
+                                            const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr, ULONG alloc_type,
+                                            ULONG protect, pe_image_info_t *image_info ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 97244822082..15b4697c441 100644
+index 1515963b9c7..5cee0da5d24 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -194,6 +194,8 @@ static BYTE **pages_vprot;
+@@ -188,6 +188,8 @@ static BYTE **pages_vprot;
  static BYTE *pages_vprot;
  #endif
  
@@ -48,7 +48,7 @@ index 97244822082..15b4697c441 100644
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
  #ifdef _WIN64
  static const size_t view_block_size = 0x200000;
-@@ -3836,12 +3838,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -4016,12 +4018,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
@@ -65,7 +65,7 @@ index 97244822082..15b4697c441 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -3900,14 +3905,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -4080,14 +4085,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:
@@ -151,5 +151,5 @@ index f6a7b69eca0..a8263a2f44b 100644
  
      SetLastError(0xdeadbeef);
 -- 
-2.26.2
+2.27.0
 

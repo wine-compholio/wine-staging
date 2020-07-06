@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "51dd1ba02e4a96a3e0c9381a434bfd1fd4347d83"
+	echo "6e2a54ec76d225d76506fe909a9c300702636d5b"
 }
 
 # Show version information
@@ -6374,11 +6374,9 @@ fi
 # | 	dlls/xactengine3_5/xactengine3_5.spec, dlls/xactengine3_6/Makefile.in, dlls/xactengine3_6/xactengine3_6.spec,
 # | 	dlls/xactengine3_7/Makefile.in, dlls/xactengine3_7/xactengine3_7.spec, dlls/xaudio2_7/Makefile.in,
 # | 	dlls/xaudio2_7/tests/Makefile.in, dlls/xaudio2_7/tests/globals.xgs, dlls/xaudio2_7/tests/rsrc.rc,
-# | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c,
-# | 	include/xact3.h
+# | 	dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c, dlls/xaudio2_7/xact_classes.idl, dlls/xaudio2_7/xact_dll.c
 # |
 if test "$enable_xactengine_initial" -eq 1; then
-	patch_apply xactengine-initial/0001-include-Correct-a-spelling-error-in-the-definition-o.patch
 	patch_apply xactengine-initial/0002-xaudio2-Add-support-for-xactengine3.patch
 	patch_apply xactengine-initial/0003-xaudio2_7-Support-older-XACT3Engine-interfaces.patch
 	patch_apply xactengine-initial/0004-xaudio2_7-IXACT3Engine-Initialize-return-valid-error.patch
@@ -6391,7 +6389,6 @@ if test "$enable_xactengine_initial" -eq 1; then
 	patch_apply xactengine-initial/0013-xaudio2_7-Trace-FAudio-version-being-used.patch
 	patch_apply xactengine-initial/0016-xaudio2_7-tests-Add-more-tests.patch
 	(
-		printf '%s\n' '+    { "Bernhard Rosenkränzer", "include: Correct a spelling error in the definition of IXACT3Engine_Initialize.", 1 },';
 		printf '%s\n' '+    { "Ethan Lee", "xaudio2: Add support for xactengine3.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: Support older XACT3Engine interfaces.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xaudio2_7: IXACT3Engine Initialize return valid error code.", 1 },';

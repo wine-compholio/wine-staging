@@ -146,7 +146,6 @@ patch_enable_all ()
 	enable_kernel32_Debugger="$1"
 	enable_kernel32_FindFirstFile="$1"
 	enable_kernel32_Job_Tests="$1"
-	enable_kernel32_K32GetPerformanceInfo="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
@@ -528,9 +527,6 @@ patch_enable ()
 			;;
 		kernel32-Job_Tests)
 			enable_kernel32_Job_Tests="$2"
-			;;
-		kernel32-K32GetPerformanceInfo)
-			enable_kernel32_K32GetPerformanceInfo="$2"
 			;;
 		kernel32-Processor_Group)
 			enable_kernel32_Processor_Group="$2"
@@ -3128,18 +3124,6 @@ if test "$enable_kernel32_Job_Tests" -eq 1; then
 	patch_apply kernel32-Job_Tests/0001-kernel32-tests-Add-tests-for-job-object-accounting.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "kernel32/tests: Add tests for job object accounting.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset kernel32-K32GetPerformanceInfo
-# |
-# | Modified files:
-# |   *	dlls/kernelbase/debug.c, server/process.c, server/protocol.def
-# |
-if test "$enable_kernel32_K32GetPerformanceInfo" -eq 1; then
-	patch_apply kernel32-K32GetPerformanceInfo/0001-kernel32-Make-K32GetPerformanceInfo-faster.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Make K32GetPerformanceInfo faster.", 1 },';
 	) >> "$patchlist"
 fi
 

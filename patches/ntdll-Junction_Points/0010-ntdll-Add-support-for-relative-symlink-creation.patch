@@ -1,4 +1,4 @@
-From 6a13b364b9b8a92d706b8ee2f4e69743ab3bee5a Mon Sep 17 00:00:00 2001
+From 2fe2cb6a67925f22e9b3fbffefd20c2fe0040775 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 11 Apr 2019 12:16:49 -0600
 Subject: [PATCH] ntdll: Add support for relative symlink creation.
@@ -11,7 +11,7 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  3 files changed, 77 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index df912e18496..515a84da4d6 100644
+index b93ba0e87ed..975a72e7103 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -4972,7 +4972,8 @@ static void test_file_readonly_access(void)
@@ -101,10 +101,10 @@ index df912e18496..515a84da4d6 100644
      /* Cleanup */
      pRtlFreeUnicodeString(&nameW);
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index e35ea49d17f..eb39dc0873b 100644
+index fe945cef477..a1d1863133a 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -5615,16 +5615,19 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+@@ -5669,16 +5669,19 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
   */
  NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
  {
@@ -126,7 +126,7 @@ index e35ea49d17f..eb39dc0873b 100644
      int i;
  
      switch(buffer->ReparseTag)
-@@ -5633,11 +5636,13 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5687,11 +5690,13 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
          dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
          offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
          dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
@@ -140,7 +140,7 @@ index e35ea49d17f..eb39dc0873b 100644
          break;
      default:
          return STATUS_NOT_IMPLEMENTED;
-@@ -5649,17 +5654,54 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5703,17 +5708,54 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      if ((status = server_get_unix_name( handle, &unix_src )))
          goto cleanup;
      src_allocated = TRUE;
@@ -173,7 +173,7 @@ index e35ea49d17f..eb39dc0873b 100644
 +        nt_dest.Length = dest_len;
 +    }
 +    nt_dest_allocated = TRUE;
-     status = nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
+     status = nt_to_unix_file_name( &nt_dest, &unix_dest, 0 );
      if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
          goto cleanup;
      dest_allocated = TRUE;
@@ -199,7 +199,7 @@ index e35ea49d17f..eb39dc0873b 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          if ((buffer->ReparseTag >> i) & 1)
-@@ -5678,7 +5720,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5732,7 +5774,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
              strcat( magic_dest, "." );
          strcat( magic_dest, "/" );
      }
@@ -208,7 +208,7 @@ index e35ea49d17f..eb39dc0873b 100644
  
      /* Produce the link in a temporary location in the same folder */
      strcpy( tmpdir, unix_src.Buffer );
-@@ -5728,7 +5770,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5782,7 +5824,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
  
  cleanup:
      if (tempdir_created) rmdir( tmpdir );

@@ -1,4 +1,4 @@
-From 1f2b1bafabfd457836f18741f178b3745e129c36 Mon Sep 17 00:00:00 2001
+From b7e3ca4678d073c92f950708c1be35f37fda86d0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: [PATCH] ntdll: Implement process token elevation through manifests.
@@ -12,10 +12,10 @@ Subject: [PATCH] ntdll: Implement process token elevation through manifests.
  5 files changed, 67 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 0c8f05285c4..92ae87c6e6d 100644
+index 3513102b6f0..3b68f6685d0 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -3898,6 +3898,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
+@@ -3489,6 +3489,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
  }
  
  
@@ -48,7 +48,7 @@ index 0c8f05285c4..92ae87c6e6d 100644
  /***********************************************************************
   *           load_global_options
   */
-@@ -4359,6 +4385,7 @@ void __wine_process_init(void)
+@@ -3922,6 +3948,7 @@ void __wine_process_init(void)
                                        'k','e','r','n','e','l','3','2','.','d','l','l',0};
      void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
      RTL_USER_PROCESS_PARAMETERS *params;
@@ -56,7 +56,7 @@ index 0c8f05285c4..92ae87c6e6d 100644
      WINE_MODREF *wm;
      NTSTATUS status;
      ANSI_STRING func_name;
-@@ -4453,6 +4480,16 @@ void __wine_process_init(void)
+@@ -4032,6 +4059,16 @@ void __wine_process_init(void)
  
      unix_funcs->virtual_set_large_address_space();
  
@@ -74,11 +74,11 @@ index 0c8f05285c4..92ae87c6e6d 100644
      RemoveEntryList( &wm->ldr.InLoadOrderLinks );
      InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderLinks );
 diff --git a/server/process.c b/server/process.c
-index ac85cace95d..52604ec4d61 100644
+index c414717a8d7..100cb424623 100644
 --- a/server/process.c
 +++ b/server/process.c
-@@ -1115,6 +1115,14 @@ struct process_snapshot *process_snap( int *count )
-     return snapshot;
+@@ -1086,6 +1086,14 @@ int set_process_debug_flag( struct process *process, int flag )
+     return write_process_memory( process, process->peb + 2, 1, &data );
  }
  
 +/* replace the token of a process */
@@ -93,22 +93,22 @@ index ac85cace95d..52604ec4d61 100644
  DECL_HANDLER(new_process)
  {
 diff --git a/server/process.h b/server/process.h
-index 5b83e111a6f..dfe5c4e52d8 100644
+index fb29f21cb12..d0b7ec4987b 100644
 --- a/server/process.h
 +++ b/server/process.h
-@@ -139,6 +139,7 @@ extern void kill_debugged_processes( struct thread *debugger, int exit_code );
+@@ -129,6 +129,7 @@ extern void kill_console_processes( struct thread *renderer, int exit_code );
+ extern void kill_debugged_processes( struct thread *debugger, int exit_code );
  extern void detach_debugged_processes( struct thread *debugger );
- extern struct process_snapshot *process_snap( int *count );
  extern void enum_processes( int (*cb)(struct process*, void*), void *user);
 +extern void replace_process_token( struct process *process, struct token *token );
  
  /* console functions */
  extern void inherit_console( struct thread *parent_thread, struct process *parent,
 diff --git a/server/protocol.def b/server/protocol.def
-index 7315f8ac4ea..901c380b721 100644
+index bc0d0723eb3..ec67ce7ab87 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3763,6 +3763,13 @@ struct handle_info
+@@ -3737,6 +3737,13 @@ struct handle_info
  @END
  
  
@@ -145,5 +145,5 @@ index 970ed1838da..1c1d49989b3 100644
 +    }
 +}
 -- 
-2.26.2
+2.27.0
 

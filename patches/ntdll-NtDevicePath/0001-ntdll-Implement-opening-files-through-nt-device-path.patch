@@ -1,4 +1,4 @@
-From 351c405a950985a6d5a2262ce88b46ecf83b03ff Mon Sep 17 00:00:00 2001
+From 38833e0b211516ba54a68cb7e6f560c8caf952ff Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 26 May 2017 05:17:17 +0200
 Subject: [PATCH] ntdll: Implement opening files through nt device paths.
@@ -9,7 +9,7 @@ Subject: [PATCH] ntdll: Implement opening files through nt device paths.
  2 files changed, 147 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index e7918140323..7247f792941 100644
+index 9e65a1f6ddd..7b65152f7cf 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -135,18 +135,22 @@ static void WINAPI apc( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved )
@@ -63,10 +63,10 @@ index e7918140323..7247f792941 100644
  
  static void open_file_test(void)
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 22f34a1f008..72fea5b8aab 100644
+index a7f22e83e12..b93c169f856 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -3360,16 +3360,10 @@ static NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
+@@ -3307,16 +3307,10 @@ static NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
  
  
  /******************************************************************************
@@ -80,13 +80,13 @@ index 22f34a1f008..72fea5b8aab 100644
 + *           nt_to_unix_file_name_internal
   */
 -NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
--                                     UINT disposition, BOOLEAN check_case )
+-                                     UINT disposition )
 +static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
-+                                               UINT disposition, BOOLEAN check_case )
++                                               UINT disposition )
  {
      static const WCHAR unixW[] = {'u','n','i','x'};
      static const WCHAR pipeW[] = {'p','i','p','e'};
-@@ -3482,6 +3476,126 @@ NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *u
+@@ -3430,6 +3424,126 @@ NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *u
      return status;
  }
  
@@ -166,7 +166,7 @@ index 22f34a1f008..72fea5b8aab 100644
 + * returned, but the unix name is still filled in properly.
 + */
 +NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
-+                                          UINT disposition, BOOLEAN check_case )
++                                     UINT disposition )
 +{
 +    static const WCHAR systemrootW[] = {'\\','S','y','s','t','e','m','R','o','o','t','\\',0};
 +    static const WCHAR dosprefixW[] = {'\\','?','?','\\'};
@@ -189,7 +189,7 @@ index 22f34a1f008..72fea5b8aab 100644
 +        prefix = user_shared_data->NtSystemRoot;
 +    }
 +    else
-+        return nt_to_unix_file_name_internal( nameW, unix_name_ret, disposition, check_case );
++        return nt_to_unix_file_name_internal( nameW, unix_name_ret, disposition );
 +
 +    name_len = sizeof(dosprefixW) + wcslen(prefix) * sizeof(WCHAR) +
 +               nameW->Length - offset * sizeof(WCHAR) + sizeof(WCHAR);
@@ -205,7 +205,7 @@ index 22f34a1f008..72fea5b8aab 100644
 +    ptr[ nameW->Length / sizeof(WCHAR) - offset ] = 0;
 +
 +    RtlInitUnicodeString( &dospathW, name );
-+    status = nt_to_unix_file_name_internal( &dospathW, unix_name_ret, disposition, check_case );
++    status = nt_to_unix_file_name_internal( &dospathW, unix_name_ret, disposition );
 +
 +    RtlFreeHeap( GetProcessHeap(), 0, name );
 +    return status;

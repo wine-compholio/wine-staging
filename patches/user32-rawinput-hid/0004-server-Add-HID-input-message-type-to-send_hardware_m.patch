@@ -1,4 +1,4 @@
-From 2c92d595325accce44db85552efda8070f526569 Mon Sep 17 00:00:00 2001
+From f836f939423f02291ba1ee175542f195ec6eb182 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Mon, 11 Nov 2019 18:35:18 +0100
 Subject: [PATCH] server: Add HID input message type to send_hardware_message
@@ -14,7 +14,7 @@ Subject: [PATCH] server: Add HID input message type to send_hardware_message
  6 files changed, 143 insertions(+), 17 deletions(-)
 
 diff --git a/dlls/user32/message.c b/dlls/user32/message.c
-index c5c7db667cf..bb7c79b9b2c 100644
+index aadec28b559..a6e0b3cf94d 100644
 --- a/dlls/user32/message.c
 +++ b/dlls/user32/message.c
 @@ -3244,10 +3244,10 @@ NTSTATUS send_hardware_message( HWND hwnd, const INPUT *input, UINT flags )
@@ -46,7 +46,7 @@ index c5c7db667cf..bb7c79b9b2c 100644
              req->input.hw.lparam = MAKELONG( input->u.hi.wParamL, input->u.hi.wParamH );
              break;
 diff --git a/dlls/user32/rawinput.c b/dlls/user32/rawinput.c
-index 43da5248faf..90dc911397d 100644
+index bcdb70bdb81..4914c67c98b 100644
 --- a/dlls/user32/rawinput.c
 +++ b/dlls/user32/rawinput.c
 @@ -47,6 +47,7 @@ struct device
@@ -110,7 +110,7 @@ index 43da5248faf..90dc911397d 100644
  static void find_devices(void)
  {
      static ULONGLONG last_check;
-@@ -325,6 +361,22 @@ BOOL rawinput_from_hardware_message(RAWINPUT *rawinput, const struct hardware_ms
+@@ -327,6 +363,22 @@ BOOL rawinput_from_hardware_message(RAWINPUT *rawinput, const struct hardware_ms
          rawinput->data.keyboard.Message          = msg_data->rawinput.kbd.message;
          rawinput->data.keyboard.ExtraInformation = msg_data->info;
      }
@@ -133,16 +133,16 @@ index 43da5248faf..90dc911397d 100644
      else
      {
          FIXME("Unhandled rawinput type %#x.\n", msg_data->rawinput.type);
-@@ -514,7 +566,7 @@ UINT WINAPI DECLSPEC_HOTPATCH GetRawInputBuffer(RAWINPUT *data, UINT *data_size,
- {
+@@ -525,7 +577,7 @@ UINT WINAPI DECLSPEC_HOTPATCH GetRawInputBuffer(RAWINPUT *data, UINT *data_size,
      struct hardware_msg_data *msg_data;
+     struct rawinput_thread_data *thread_data;
      RAWINPUT *rawinput;
 -    UINT count = 0, rawinput_size, next_size, overhead;
 +    UINT count = 0, rawinput_size, msg_size, next_size, overhead;
      BOOL is_wow64;
      int i;
  
-@@ -572,7 +624,10 @@ UINT WINAPI DECLSPEC_HOTPATCH GetRawInputBuffer(RAWINPUT *data, UINT *data_size,
+@@ -585,7 +637,10 @@ UINT WINAPI DECLSPEC_HOTPATCH GetRawInputBuffer(RAWINPUT *data, UINT *data_size,
                                data->header.dwSize - sizeof(RAWINPUTHEADER));
          data->header.dwSize += overhead;
          data = NEXTRAWINPUTBLOCK(data);
@@ -154,7 +154,7 @@ index 43da5248faf..90dc911397d 100644
      }
  
      if (count == 0 && next_size == 0) *data_size = 0;
-@@ -647,6 +702,7 @@ UINT WINAPI GetRawInputDeviceInfoW(HANDLE handle, UINT command, void *data, UINT
+@@ -660,6 +715,7 @@ UINT WINAPI GetRawInputDeviceInfoW(HANDLE handle, UINT command, void *data, UINT
              handle, command, data, data_size);
  
      if (!data_size) return ~0U;
@@ -163,10 +163,10 @@ index 43da5248faf..90dc911397d 100644
      /* each case below must set:
       *     *data_size: length (meaning defined by command) of data we want to copy
 diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
-index eb828203597..6592927cfae 100644
+index 8fa54b9229a..460f3aa1c3e 100644
 --- a/dlls/user32/user_private.h
 +++ b/dlls/user32/user_private.h
-@@ -380,4 +380,6 @@ static inline WCHAR *heap_strdupW(const WCHAR *src)
+@@ -386,4 +386,6 @@ static inline WCHAR *heap_strdupW(const WCHAR *src)
      return dst;
  }
  
@@ -174,7 +174,7 @@ index eb828203597..6592927cfae 100644
 +
  #endif /* __WINE_USER_PRIVATE_H */
 diff --git a/server/protocol.def b/server/protocol.def
-index 21de849e5d8..d49c33f63f9 100644
+index 521e2a78fa9..651e6423e82 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -312,6 +312,13 @@ struct hardware_msg_data
@@ -234,7 +234,7 @@ index 21de849e5d8..d49c33f63f9 100644
  
  typedef union
  {
-@@ -2330,6 +2349,7 @@ enum message_type
+@@ -2301,6 +2320,7 @@ enum message_type
      user_handle_t   win;       /* window handle */
      hw_input_t      input;     /* input data */
      unsigned int    flags;     /* flags (see below) */
@@ -243,10 +243,10 @@ index 21de849e5d8..d49c33f63f9 100644
      int             wait;      /* do we need to wait for a reply? */
      int             prev_x;    /* previous cursor position */
 diff --git a/server/queue.c b/server/queue.c
-index 59c6cbb6921..fbed47d6951 100644
+index 3ad376b776b..baf19fa17a6 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -1594,7 +1594,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+@@ -1588,7 +1588,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
      struct msg_queue *queue;
      struct message *msg;
      timeout_t timeout = 2000 * -10000;  /* FIXME: load from registry */
@@ -255,7 +255,7 @@ index 59c6cbb6921..fbed47d6951 100644
  
      if (!(hook_thread = get_first_global_hook( id ))) return 0;
      if (!(queue = hook_thread->queue)) return 0;
-@@ -1612,7 +1612,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
+@@ -1606,7 +1606,7 @@ static int send_hook_ll_message( struct desktop *desktop, struct message *hardwa
      msg->data_size = hardware_msg->data_size;
      msg->result    = NULL;
  
@@ -264,7 +264,7 @@ index 59c6cbb6921..fbed47d6951 100644
      {
          unsigned short vkey = input->kbd.vkey;
          if (input->kbd.flags & KEYEVENTF_UNICODE) vkey = VK_PACKET;
-@@ -1648,6 +1648,8 @@ struct rawinput_message
+@@ -1642,6 +1642,8 @@ struct rawinput_message
      struct desktop          *desktop;
      struct hw_msg_source     source;
      unsigned int             time;
@@ -273,7 +273,7 @@ index 59c6cbb6921..fbed47d6951 100644
      struct hardware_msg_data data;
      const void              *extra;
      data_size_t              extra_len;
-@@ -1657,6 +1659,7 @@ struct rawinput_message
+@@ -1651,6 +1653,7 @@ struct rawinput_message
  static int queue_rawinput_message( struct process* process, void *arg )
  {
      const struct rawinput_message* raw_msg = arg;
@@ -281,7 +281,7 @@ index 59c6cbb6921..fbed47d6951 100644
      const struct rawinput_device *device = NULL;
      struct desktop *target_desktop = NULL, *desktop = NULL;
      struct thread *target_thread = NULL, *foreground = NULL;
-@@ -1668,6 +1671,8 @@ static int queue_rawinput_message( struct process* process, void *arg )
+@@ -1662,6 +1665,8 @@ static int queue_rawinput_message( struct process* process, void *arg )
          device = process->rawinput_mouse;
      else if (raw_msg->data.rawinput.type == RIM_TYPEKEYBOARD)
          device = process->rawinput_kbd;
@@ -290,7 +290,7 @@ index 59c6cbb6921..fbed47d6951 100644
      if (!device) return 0;
  
      if (raw_msg->desktop) desktop = (struct desktop *)grab_object( raw_msg->desktop );
-@@ -1986,6 +1991,37 @@ static void queue_custom_hardware_message( struct desktop *desktop, user_handle_
+@@ -1980,6 +1985,37 @@ static void queue_custom_hardware_message( struct desktop *desktop, user_handle_
      queue_hardware_message( desktop, msg, 1 );
  }
  
@@ -328,7 +328,7 @@ index 59c6cbb6921..fbed47d6951 100644
  /* check message filter for a hardware message */
  static int check_hw_message_filter( user_handle_t win, unsigned int msg_code,
                                      user_handle_t filter_win, unsigned int first, unsigned int last )
-@@ -2491,15 +2527,18 @@ DECL_HANDLER(send_hardware_message)
+@@ -2485,15 +2521,18 @@ DECL_HANDLER(send_hardware_message)
  
      switch (req->input.type)
      {
@@ -350,7 +350,7 @@ index 59c6cbb6921..fbed47d6951 100644
      default:
          set_error( STATUS_INVALID_PARAMETER );
      }
-@@ -3271,20 +3310,23 @@ DECL_HANDLER(get_rawinput_buffer)
+@@ -3265,20 +3304,23 @@ DECL_HANDLER(get_rawinput_buffer)
      {
          struct message *msg = LIST_ENTRY( ptr, struct message, entry );
          struct hardware_msg_data *data = msg->data;
@@ -378,7 +378,7 @@ index 59c6cbb6921..fbed47d6951 100644
      }
  
 diff --git a/server/trace.c b/server/trace.c
-index 2fb5afd5ef1..bbf129ca4f1 100644
+index dfb39300668..3d2fc875176 100644
 --- a/server/trace.c
 +++ b/server/trace.c
 @@ -386,24 +386,28 @@ static void dump_hw_input( const char *prefix, const hw_input_t *input )

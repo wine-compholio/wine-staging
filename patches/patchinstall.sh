@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6e2a54ec76d225d76506fe909a9c300702636d5b"
+	echo "e0e3b6bc91f7db956e3a66f2938eea45d4055a39"
 }
 
 # Show version information
@@ -196,7 +196,6 @@ patch_enable_all ()
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_SystemRoot_Symlink="$1"
-	enable_ntdll_ThreadTime="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
@@ -679,9 +678,6 @@ patch_enable ()
 			;;
 		ntdll-SystemRoot_Symlink)
 			enable_ntdll_SystemRoot_Symlink="$2"
-			;;
-		ntdll-ThreadTime)
-			enable_ntdll_ThreadTime="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -1558,13 +1554,6 @@ if test "$enable_shell32_Progress_Dialog" -eq 1; then
 	enable_shell32_SHFileOperation_Move=1
 fi
 
-if test "$enable_server_Realtime_Priority" -eq 1; then
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but server-Realtime_Priority depends on that."
-	fi
-	enable_ntdll_ThreadTime=1
-fi
-
 if test "$enable_server_Object_Types" -eq 1; then
 	if test "$enable_ntdll_SystemModuleInformation" -gt 1; then
 		abort "Patchset ntdll-SystemModuleInformation disabled, but server-Object_Types depends on that."
@@ -1661,11 +1650,7 @@ if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
 	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
 		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-Hide_Wine_Exports depends on that."
 	fi
-	if test "$enable_ntdll_ThreadTime" -gt 1; then
-		abort "Patchset ntdll-ThreadTime disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
 	enable_advapi32_Token_Integrity_Level=1
-	enable_ntdll_ThreadTime=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -3655,24 +3640,10 @@ if test "$enable_ntdll_Heap_Improvements" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-ThreadTime
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/system.c, server/protocol.def, server/snapshot.c, server/thread.h
-# |
-if test "$enable_ntdll_ThreadTime" -eq 1; then
-	patch_apply ntdll-ThreadTime/0002-ntdll-Set-correct-thread-creation-time-for-SystemPro.patch
-	patch_apply ntdll-ThreadTime/0004-ntdll-Set-process-start-time.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set correct thread creation time for SystemProcessInformation in NtQuerySystemInformation.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Set process start time.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Hide_Wine_Exports
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level, ntdll-ThreadTime
+# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38656] Add support for hiding wine version information from applications
@@ -4383,8 +4354,8 @@ fi
 # | 	server/console.c, server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c,
 # | 	server/handle.c, server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c,
 # | 	server/named_pipe.c, server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c,
-# | 	server/request.c, server/semaphore.c, server/serial.c, server/signal.c, server/snapshot.c, server/sock.c,
-# | 	server/symlink.c, server/thread.c, server/timer.c, server/token.c, server/winstation.c
+# | 	server/request.c, server/semaphore.c, server/serial.c, server/signal.c, server/sock.c, server/symlink.c,
+# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
 # |
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
@@ -4556,9 +4527,6 @@ if test "$enable_server_PeekMessage" -eq 1; then
 fi
 
 # Patchset server-Realtime_Priority
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ThreadTime
 # |
 # | Modified files:
 # |   *	server/Makefile.in, server/main.c, server/scheduler.c, server/thread.c, server/thread.h

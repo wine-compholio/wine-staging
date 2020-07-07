@@ -1,4 +1,4 @@
-From f886d8af24ba52e791535c7a606c4ca97cc5ed8e Mon Sep 17 00:00:00 2001
+From e043e7d570fcdc0f7bc662d794d111baaa15b015 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -18,10 +18,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index 9c5f76669df..201ae3c2d98 100644
+index a403c9436ca..dbd07791de7 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2203,6 +2203,8 @@ AC_CHECK_FUNCS(\
+@@ -2218,6 +2218,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -31,7 +31,7 @@ index 9c5f76669df..201ae3c2d98 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 184b7cdad59..8b5ddbb0da1 100644
+index a502a8eec75..bce34f03920 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -155,7 +155,7 @@ index 184b7cdad59..8b5ddbb0da1 100644
 +    test_reparse_points();
  }
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index ca6899b50f5..44cb12f90ee 100644
+index b76d07a8175..271151ed1be 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
 @@ -32,6 +32,7 @@
@@ -174,7 +174,7 @@ index ca6899b50f5..44cb12f90ee 100644
  #include "wine/server.h"
  #include "wine/list.h"
  #include "wine/debug.h"
-@@ -5607,6 +5609,104 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+@@ -5661,6 +5663,104 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
  }
  
  
@@ -204,7 +204,7 @@ index ca6899b50f5..44cb12f90ee 100644
 +    src_allocated = TRUE;
 +    nt_dest.Buffer = dest;
 +    nt_dest.Length = dest_len;
-+    status = nt_to_unix_file_name( &nt_dest, &unix_dest, 0, FALSE );
++    status = nt_to_unix_file_name( &nt_dest, &unix_dest, 0 );
 +    if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
 +        goto cleanup;
 +    dest_allocated = TRUE;
@@ -279,7 +279,7 @@ index ca6899b50f5..44cb12f90ee 100644
  /******************************************************************************
   *              NtFsControlFile   (NTDLL.@)
   */
-@@ -5671,6 +5771,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
+@@ -5748,6 +5848,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
          io->Information = 0;
          status = STATUS_SUCCESS;
          break;
@@ -304,10 +304,10 @@ index ca6899b50f5..44cb12f90ee 100644
          return server_ioctl_file( handle, event, apc, apc_context, io, code,
                                    in_buffer, in_size, out_buffer, out_size );
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 9f70e72b4c7..1c5c456aa39 100644
+index 216adf0d7ae..7dc16c230b6 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
-@@ -518,6 +518,7 @@ SOURCES = \
+@@ -520,6 +520,7 @@ SOURCES = \
  	ntddvdeo.h \
  	ntdef.h \
  	ntdsapi.h \
@@ -364,7 +364,7 @@ index 00000000000..21d42e17325
 +
 +#endif /* __WINE_NTIFS_H */
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 928730a41d7..e8434c73cca 100644
+index 930efeeea1f..7d2c7388707 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -334,6 +334,15 @@ double rint(double x);
@@ -384,7 +384,7 @@ index 928730a41d7..e8434c73cca 100644
  int statvfs( const char *path, struct statvfs *buf );
  #endif
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index 7bc67fa3fee..1963afe2423 100644
+index d1de285d527..4b1ecab7516 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
 @@ -14,6 +14,7 @@ C_SRCS = \

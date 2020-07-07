@@ -1,4 +1,4 @@
-From 204a68de061f5b6b1bcd992e743b61c3f9f53956 Mon Sep 17 00:00:00 2001
+From 66c0779d339d5d27753e6f0ac6509741b908cca1 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 4 Apr 2015 21:09:18 +0200
 Subject: [PATCH] dsound: Various improvements to EAX support.
@@ -24,10 +24,10 @@ the buffers).
  5 files changed, 37 insertions(+), 41 deletions(-)
 
 diff --git a/dlls/dsound/buffer.c b/dlls/dsound/buffer.c
-index 10daf4fa71a..25aaa61f3de 100644
+index 030f0849fed..252122d0374 100644
 --- a/dlls/dsound/buffer.c
 +++ b/dlls/dsound/buffer.c
-@@ -1106,8 +1106,6 @@ HRESULT secondarybuffer_create(DirectSoundDevice *device, const DSBUFFERDESC *ds
+@@ -1084,8 +1084,6 @@ HRESULT secondarybuffer_create(DirectSoundDevice *device, const DSBUFFERDESC *ds
  	/* calculate fragment size and write lead */
  	DSOUND_RecalcFormat(dsb);
  
@@ -36,7 +36,7 @@ index 10daf4fa71a..25aaa61f3de 100644
  	if (dsb->dsbd.dwFlags & DSBCAPS_CTRL3D) {
  		dsb->ds3db_ds3db.dwSize = sizeof(DS3DBUFFER);
  		dsb->ds3db_ds3db.vPosition.x = 0.0;
-@@ -1192,7 +1190,7 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
+@@ -1168,7 +1166,7 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
      HRESULT hres = DS_OK;
      TRACE("(%p,%p,%p)\n", device, ppdsb, pdsb);
  
@@ -45,7 +45,7 @@ index 10daf4fa71a..25aaa61f3de 100644
      if (dsb == NULL) {
          WARN("out of memory\n");
          *ppdsb = NULL;
-@@ -1229,6 +1227,8 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
+@@ -1205,6 +1203,8 @@ HRESULT IDirectSoundBufferImpl_Duplicate(
  
      InitializeSRWLock(&dsb->lock);
  
@@ -92,7 +92,7 @@ index 110dfe2c207..bca2bf46601 100644
  void init_eax_buffer(IDirectSoundBufferImpl *dsb) DECLSPEC_HIDDEN;
  void process_eax_buffer(IDirectSoundBufferImpl *dsb, float *buf, DWORD count) DECLSPEC_HIDDEN;
 diff --git a/dlls/dsound/eax.c b/dlls/dsound/eax.c
-index a05b00e1c02..e10156e3d4a 100644
+index a05b00e1c02..535ff92d44d 100644
 --- a/dlls/dsound/eax.c
 +++ b/dlls/dsound/eax.c
 @@ -114,6 +114,8 @@ static const float LATE_LINE_MULTIPLIER = 4.0f;
@@ -152,12 +152,12 @@ index a05b00e1c02..e10156e3d4a 100644
  {
      int i;
  
-+    RtlAcquireResourceShared(&dev->buffer_list_lock, TRUE);
++    AcquireSRWLockShared(&dev->buffer_list_lock, TRUE);
      for (i = 0; i < dev->nrofbuffers; i++) {
 -        ReverbUpdate(dev->buffers[i]);
 +        dev->buffers[i]->eax.reverb_update = TRUE;
      }
-+    RtlReleaseResource(&dev->buffer_list_lock);
++    ReleaseSRWLockShared(&dev->buffer_list_lock);
  
      return TRUE;
  }
@@ -253,5 +253,5 @@ index a05b00e1c02..e10156e3d4a 100644
          switch (dwPropID) {
              case DSPROPERTY_EAXBUFFER_ALL:
 -- 
-2.17.1
+2.27.0
 

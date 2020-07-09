@@ -1,4 +1,4 @@
-From 67cacb66b16c354aa30f4c94bba9da44f7e45619 Mon Sep 17 00:00:00 2001
+From 3473ccddec5c67bbfe1d477ce36f537493fae54b Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 21:02:11 -0700
 Subject: [PATCH] kernel32,ntdll: Add support for deleting junction points with
@@ -6,55 +6,14 @@ Subject: [PATCH] kernel32,ntdll: Add support for deleting junction points with
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/kernel32/path.c    | 19 +++++++++++++------
  dlls/ntdll/tests/file.c | 34 +++++++++++++++++++++++++++++++++-
- 2 files changed, 46 insertions(+), 7 deletions(-)
+ 1 file changed, 33 insertions(+), 1 deletion(-)
 
-diff --git a/dlls/kernel32/path.c b/dlls/kernel32/path.c
-index db2c1fb0240..6b7912359cf 100644
---- a/dlls/kernel32/path.c
-+++ b/dlls/kernel32/path.c
-@@ -233,6 +233,7 @@ BOOL WINAPI CreateDirectoryExA( LPCSTR template, LPCSTR path, LPSECURITY_ATTRIBU
-  */
- BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
- {
-+    FILE_BASIC_INFORMATION info;
-     OBJECT_ATTRIBUTES attr;
-     UNICODE_STRING nt_name;
-     ANSI_STRING unix_name;
-@@ -264,15 +265,21 @@ BOOL WINAPI RemoveDirectoryW( LPCWSTR path )
-     }
- 
-     status = wine_nt_to_unix_file_name( &nt_name, &unix_name, FILE_OPEN );
--    RtlFreeUnicodeString( &nt_name );
--    if (!set_ntstatus( status ))
-+    if (status == STATUS_SUCCESS)
-     {
--        NtClose( handle );
--        return FALSE;
-+        status = NtQueryAttributesFile( &attr, &info );
-+        if (status == STATUS_SUCCESS && (info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
-+                                        (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-+            ret = (unlink( unix_name.Buffer ) != -1);
-+        else
-+            ret = (rmdir( unix_name.Buffer ) != -1);
-+        if (!ret) FILE_SetDosError();
-+        RtlFreeAnsiString( &unix_name );
-     }
-+    else
-+        set_ntstatus( status );
-+    RtlFreeUnicodeString( &nt_name );
- 
--    if (!(ret = (rmdir( unix_name.Buffer ) != -1))) FILE_SetDosError();
--    RtlFreeAnsiString( &unix_name );
-     NtClose( handle );
-     return ret;
- }
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index c7107500939..5b71f6f658b 100644
+index 6b3071f4095..1d5e0ce95b0 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5009,7 +5009,7 @@ static void test_reparse_points(void)
+@@ -5010,7 +5010,7 @@ static void test_reparse_points(void)
      REPARSE_GUID_DATA_BUFFER guid_buffer;
      static const WCHAR dotW[] = {'.',0};
      REPARSE_DATA_BUFFER *buffer = NULL;
@@ -63,7 +22,7 @@ index c7107500939..5b71f6f658b 100644
      INT buffer_len, string_len;
      IO_STATUS_BLOCK iosb;
      UNICODE_STRING nameW;
-@@ -5098,6 +5098,38 @@ static void test_reparse_points(void)
+@@ -5099,6 +5099,38 @@ static void test_reparse_points(void)
         "Junction point folder's access time does not match.\n");
      CloseHandle(handle);
  

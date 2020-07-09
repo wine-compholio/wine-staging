@@ -1,90 +1,21 @@
-From df0394fbe1b04909081ab265eb8ec7f20ff4e8b6 Mon Sep 17 00:00:00 2001
+From 6c4383e0d465d9cf79e772687111ac7b5d250b75 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 8 Mar 2017 02:12:37 +0100
-Subject: ntdll: Implement ObjectTypesInformation in NtQueryObject.
+Subject: [PATCH] ntdll: Implement ObjectTypesInformation in NtQueryObject.
 
 ---
- dlls/ntdll/om.c       | 51 ++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/tests/om.c | 57 +++++++++++++++++++++++++++++++++++++++++++
- include/winternl.h    | 30 +++++++++++++++++++++--
- server/directory.c    | 19 ++++++++++++++-
- server/protocol.def   |  9 +++++++
- 5 files changed, 163 insertions(+), 3 deletions(-)
+ dlls/ntdll/tests/om.c  | 57 ++++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/file.c | 53 +++++++++++++++++++++++++++++++++++++++
+ include/winternl.h     | 30 ++++++++++++++++++++--
+ server/directory.c     | 19 +++++++++++++-
+ server/protocol.def    |  9 +++++++
+ 5 files changed, 165 insertions(+), 3 deletions(-)
 
-diff --git a/dlls/ntdll/om.c b/dlls/ntdll/om.c
-index 0b562513..88a4f800 100644
---- a/dlls/ntdll/om.c
-+++ b/dlls/ntdll/om.c
-@@ -42,6 +42,7 @@
- 
- WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
- 
-+#define ROUND_UP(value, alignment) (((value) + ((alignment) - 1)) & ~((alignment)-1))
- 
- /*
-  *	Generic object functions
-@@ -187,6 +188,56 @@ NTSTATUS WINAPI NtQueryObject(IN HANDLE handle,
-             SERVER_END_REQ;
-         }
-         break;
-+    case ObjectTypesInformation:
-+        {
-+            OBJECT_TYPES_INFORMATION *p = ptr;
-+            OBJECT_TYPE_INFORMATION *type = (OBJECT_TYPE_INFORMATION *)(p + 1);
-+            ULONG count, type_len, req_len = sizeof(OBJECT_TYPES_INFORMATION);
-+
-+            for (count = 0, status = STATUS_SUCCESS; !status; count++)
-+            {
-+                SERVER_START_REQ( get_object_type_by_index )
-+                {
-+                    req->index = count;
-+                    if (len > sizeof(*type))
-+                        wine_server_set_reply( req, type + 1, len - sizeof(*type) );
-+                    status = wine_server_call( req );
-+                    if (status == STATUS_SUCCESS)
-+                    {
-+                        type_len = sizeof(*type);
-+                        if (reply->total)
-+                            type_len += ROUND_UP( reply->total + sizeof(WCHAR), sizeof(DWORD_PTR) );
-+                        req_len += type_len;
-+                    }
-+                    if (status == STATUS_SUCCESS && len >= req_len)
-+                    {
-+                        ULONG res = wine_server_reply_size( reply );
-+                        memset( type, 0, sizeof(*type) );
-+                        if (reply->total)
-+                        {
-+                            type->TypeName.Buffer = (WCHAR *)(type + 1);
-+                            type->TypeName.Length = res;
-+                            type->TypeName.MaximumLength = res + sizeof(WCHAR);
-+                            type->TypeName.Buffer[res / sizeof(WCHAR)] = 0;
-+                        }
-+                        type->TypeIndex = count;
-+                        type = (OBJECT_TYPE_INFORMATION *)((char *)type + type_len);
-+                    }
-+                }
-+                SERVER_END_REQ;
-+            }
-+
-+            if (status != STATUS_NO_MORE_ENTRIES)
-+                return status;
-+
-+            if (used_len) *used_len = req_len;
-+            if (len < req_len)
-+                return STATUS_INFO_LENGTH_MISMATCH;
-+
-+            p->NumberOfTypes = count - 1;
-+            status = STATUS_SUCCESS;
-+        }
-+        break;
-     case ObjectDataInformation:
-         {
-             OBJECT_DATA_INFORMATION* p = ptr;
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index 3f627aad..dbe7be39 100644
+index c17b6ffa8db..6e760066915 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
-@@ -79,6 +79,21 @@ static void     (WINAPI *pRtlWakeAddressSingle)( const void * );
+@@ -81,6 +81,21 @@ static void     (WINAPI *pRtlWakeAddressSingle)( const void * );
  #define KEYEDEVENT_WAKE       0x0002
  #define KEYEDEVENT_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | 0x0003)
  
@@ -106,7 +37,7 @@ index 3f627aad..dbe7be39 100644
  static void test_case_sensitive (void)
  {
      static const WCHAR buffer1[] = {'\\','B','a','s','e','N','a','m','e','d','O','b','j','e','c','t','s','\\','t','e','s','t',0};
-@@ -1579,6 +1594,47 @@ static void test_query_object(void)
+@@ -1583,6 +1598,47 @@ static void test_query_object(void)
  
  }
  
@@ -154,7 +85,7 @@ index 3f627aad..dbe7be39 100644
  static void test_type_mismatch(void)
  {
      HANDLE h;
-@@ -2178,6 +2234,7 @@ START_TEST(om)
+@@ -2215,6 +2271,7 @@ START_TEST(om)
      test_directory();
      test_symboliclink();
      test_query_object();
@@ -162,11 +93,82 @@ index 3f627aad..dbe7be39 100644
      test_type_mismatch();
      test_event();
      test_mutant();
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index dff246f5e74..708fe842020 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -130,6 +130,8 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(file);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
++#define ROUND_UP(value, alignment) (((value) + ((alignment) - 1)) & ~((alignment)-1))
++
+ #define MAX_DOS_DRIVES 26
+ 
+ #define FILE_WRITE_TO_END_OF_FILE      ((LONGLONG)-1)
+@@ -6464,6 +6466,57 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
+         break;
+     }
+ 
++    case ObjectTypesInformation:
++    {
++        OBJECT_TYPES_INFORMATION *p = ptr;
++        OBJECT_TYPE_INFORMATION *type = (OBJECT_TYPE_INFORMATION *)(p + 1);
++        ULONG count, type_len, req_len = sizeof(OBJECT_TYPES_INFORMATION);
++
++        for (count = 0, status = STATUS_SUCCESS; !status; count++)
++        {
++            SERVER_START_REQ( get_object_type_by_index )
++            {
++                req->index = count;
++                if (len > sizeof(*type))
++                    wine_server_set_reply( req, type + 1, len - sizeof(*type) );
++                status = wine_server_call( req );
++                if (status == STATUS_SUCCESS)
++                {
++                    type_len = sizeof(*type);
++                    if (reply->total)
++                        type_len += ROUND_UP( reply->total + sizeof(WCHAR), sizeof(DWORD_PTR) );
++                    req_len += type_len;
++                }
++                if (status == STATUS_SUCCESS && len >= req_len)
++                {
++                    ULONG res = wine_server_reply_size( reply );
++                    memset( type, 0, sizeof(*type) );
++                    if (reply->total)
++                    {
++                        type->TypeName.Buffer = (WCHAR *)(type + 1);
++                        type->TypeName.Length = res;
++                        type->TypeName.MaximumLength = res + sizeof(WCHAR);
++                        type->TypeName.Buffer[res / sizeof(WCHAR)] = 0;
++                    }
++                    type->TypeIndex = count;
++                    type = (OBJECT_TYPE_INFORMATION *)((char *)type + type_len);
++                }
++            }
++            SERVER_END_REQ;
++        }
++
++        if (status != STATUS_NO_MORE_ENTRIES)
++            return status;
++
++        if (used_len) *used_len = req_len;
++        if (len < req_len)
++            return STATUS_INFO_LENGTH_MISMATCH;
++
++        p->NumberOfTypes = count - 1;
++        status = STATUS_SUCCESS;
++        break;
++    }
++
+     case ObjectDataInformation:
+     {
+         OBJECT_DATA_INFORMATION* p = ptr;
 diff --git a/include/winternl.h b/include/winternl.h
-index 0c8a5014..0b17c2f5 100644
+index 347b79ef8e0..fbc52b7d127 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -826,7 +826,7 @@ typedef enum _OBJECT_INFORMATION_CLASS {
+@@ -843,7 +843,7 @@ typedef enum _OBJECT_INFORMATION_CLASS {
      ObjectBasicInformation,
      ObjectNameInformation,
      ObjectTypeInformation,
@@ -175,7 +177,7 @@ index 0c8a5014..0b17c2f5 100644
      ObjectDataInformation
  } OBJECT_INFORMATION_CLASS, *POBJECT_INFORMATION_CLASS;
  
-@@ -1237,9 +1237,35 @@ typedef struct _OBJECT_NAME_INFORMATION {
+@@ -1281,9 +1281,35 @@ typedef struct _OBJECT_NAME_INFORMATION {
  
  typedef struct __OBJECT_TYPE_INFORMATION {
      UNICODE_STRING TypeName;
@@ -213,10 +215,10 @@ index 0c8a5014..0b17c2f5 100644
  #ifdef __WINESRC__
      DWORD_PTR ExitStatus;
 diff --git a/server/directory.c b/server/directory.c
-index 6aa3a55f..6e22a741 100644
+index 4d38393a6c8..799102379ff 100644
 --- a/server/directory.c
 +++ b/server/directory.c
-@@ -71,6 +71,8 @@ static const struct object_ops object_type_ops =
+@@ -72,6 +72,8 @@ static const struct object_ops object_type_ops =
      no_destroy                    /* destroy */
  };
  
@@ -235,7 +237,7 @@ index 6aa3a55f..6e22a741 100644
              make_object_static( &type->obj );
          }
          clear_error();
-@@ -529,3 +532,17 @@ DECL_HANDLER(get_object_type)
+@@ -563,3 +566,17 @@ DECL_HANDLER(get_object_type)
      }
      release_object( obj );
  }
@@ -254,10 +256,10 @@ index 6aa3a55f..6e22a741 100644
 +    else set_error( STATUS_NO_MORE_ENTRIES );
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index 3ffb8940..0d866986 100644
+index bf2d8bfd167..def84b35967 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3575,6 +3575,15 @@ struct handle_info
+@@ -3533,6 +3533,15 @@ struct handle_info
  @END
  
  
@@ -274,5 +276,5 @@ index 3ffb8940..0d866986 100644
  @REQ(unlink_object)
      obj_handle_t   handle;        /* handle to the object */
 -- 
-2.20.1
+2.27.0
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "e0e3b6bc91f7db956e3a66f2938eea45d4055a39"
+	echo "262e4ab9e0eeb126dde5cb4cba13fbf7f1d1cef0"
 }
 
 # Show version information
@@ -3669,8 +3669,9 @@ fi
 # |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/Makefile.in,
-# | 	include/ntifs.h, include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, server/fd.c
+# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernelbase/file.c, dlls/msvcp120/tests/msvcp120.c,
+# | 	dlls/msvcp140/tests/msvcp140.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/Makefile.in, include/ntifs.h,
+# | 	include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, server/fd.c
 # |
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
@@ -3686,10 +3687,10 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
 	patch_apply ntdll-Junction_Points/0013-ntdll-Allow-creation-of-dangling-reparse-points-to-n.patch
 	patch_apply ntdll-Junction_Points/0014-ntdll-Correctly-report-file-symbolic-links-as-files.patch
-	patch_apply ntdll-Junction_Points/0015-kernel32-Set-error-code-when-attempting-to-delete-fi.patch
 	patch_apply ntdll-Junction_Points/0016-server-Properly-handle-file-symlink-deletion.patch
 	patch_apply ntdll-Junction_Points/0017-ntdll-Always-report-symbolic-links-as-containing-zer.patch
 	patch_apply ntdll-Junction_Points/0018-ntdll-Find-dangling-symlinks-quickly.patch
+	patch_apply ntdll-Junction_Points/0019-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
 	(
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
@@ -3704,10 +3705,10 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Allow creation of dangling reparse points to non-existent paths.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Set error code when attempting to delete file symlinks as directories.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Find dangling symlinks quickly.", 1 },';
+		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse points.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4470,7 +4471,7 @@ fi
 # |   *	[#45374] Yet Another Process Monitor (.NET 2.0 app) reports System.AccessViolationException
 # |
 # | Modified files:
-# |   *	dlls/ntdll/om.c, dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, dlls/ntdll/unix/system.c, include/winternl.h,
+# |   *	dlls/ntdll/tests/info.c, dlls/ntdll/tests/om.c, dlls/ntdll/unix/file.c, dlls/ntdll/unix/system.c, include/winternl.h,
 # | 	server/completion.c, server/directory.c, server/event.c, server/file.c, server/handle.c, server/mailslot.c,
 # | 	server/main.c, server/mapping.c, server/mutex.c, server/named_pipe.c, server/object.c, server/object.h,
 # | 	server/process.c, server/protocol.def, server/registry.c, server/semaphore.c, server/symlink.c, server/thread.c,

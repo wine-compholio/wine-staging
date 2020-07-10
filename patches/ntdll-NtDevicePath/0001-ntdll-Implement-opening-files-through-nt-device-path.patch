@@ -1,15 +1,15 @@
-From 38833e0b211516ba54a68cb7e6f560c8caf952ff Mon Sep 17 00:00:00 2001
+From 0d4ebc66e01e42acef9db63872d38abc789d83c5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 26 May 2017 05:17:17 +0200
 Subject: [PATCH] ntdll: Implement opening files through nt device paths.
 
 ---
  dlls/ntdll/tests/file.c |  25 +++++++-
- dlls/ntdll/unix/file.c  | 132 +++++++++++++++++++++++++++++++++++++---
- 2 files changed, 147 insertions(+), 10 deletions(-)
+ dlls/ntdll/unix/file.c  | 122 +++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 145 insertions(+), 2 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 9e65a1f6ddd..7b65152f7cf 100644
+index 6164b0c4bde..6610edbd042 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -135,18 +135,22 @@ static void WINAPI apc( void *arg, IO_STATUS_BLOCK *iosb, ULONG reserved )
@@ -63,30 +63,19 @@ index 9e65a1f6ddd..7b65152f7cf 100644
  
  static void open_file_test(void)
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index a7f22e83e12..b93c169f856 100644
+index 3c4670e114c..6b0dbaa7b3d 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -3307,16 +3307,10 @@ static NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, ANSI_S
- 
- 
- /******************************************************************************
-- *           nt_to_unix_file_name
-- *
-- * Convert a file name from NT namespace to Unix namespace.
-- *
-- * If disposition is not FILE_OPEN or FILE_OVERWRITE, the last path
-- * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
-- * returned, but the unix name is still filled in properly.
-+ *           nt_to_unix_file_name_internal
+@@ -3279,7 +3279,7 @@ static NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, char *
+  * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
+  * returned, but the unix name is still filled in properly.
   */
--NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
--                                     UINT disposition )
-+static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
-+                                               UINT disposition )
+-NTSTATUS nt_to_unix_file_name( const UNICODE_STRING *nameW, char **unix_name_ret, UINT disposition )
++static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, char **unix_name_ret, UINT disposition )
  {
      static const WCHAR unixW[] = {'u','n','i','x'};
      static const WCHAR pipeW[] = {'p','i','p','e'};
-@@ -3430,6 +3424,126 @@ NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *u
+@@ -3417,6 +3417,126 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, char *nam
      return status;
  }
  
@@ -165,7 +154,7 @@ index a7f22e83e12..b93c169f856 100644
 + * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
 + * returned, but the unix name is still filled in properly.
 + */
-+NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, ANSI_STRING *unix_name_ret,
++NTSTATUS CDECL nt_to_unix_file_name( const UNICODE_STRING *nameW, char **unix_name_ret,
 +                                     UINT disposition )
 +{
 +    static const WCHAR systemrootW[] = {'\\','S','y','s','t','e','m','R','o','o','t','\\',0};

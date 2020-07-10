@@ -1,4 +1,4 @@
-From 01a10dd50491ca0162a5293836cf9b9a3d3c0e34 Mon Sep 17 00:00:00 2001
+From 78f53ba7362227cf5d725d6d5b70e06267597b5e Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 11:26:48 -0600
 Subject: [PATCH] ntdll: Perform the Unix-style hidden file check within the
@@ -9,10 +9,10 @@ Subject: [PATCH] ntdll: Perform the Unix-style hidden file check within the
  1 file changed, 9 insertions(+), 14 deletions(-)
 
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 496c92265e9..6f3772d20be 100644
+index 33fa49d0dea..a88daf1f7f3 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -1217,15 +1217,15 @@ static BOOLEAN get_dir_case_sensitivity( const char *dir )
+@@ -1238,15 +1238,15 @@ static BOOLEAN get_dir_case_sensitivity( const char *dir )
   *
   * Check if the specified file should be hidden based on its name and the show dot files option.
   */
@@ -33,7 +33,7 @@ index 496c92265e9..6f3772d20be 100644
      if (p == end || *p != '.') return FALSE;
      /* make sure it isn't '.' or '..' */
      if (p + 1 == end) return FALSE;
-@@ -1493,6 +1493,10 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -1571,6 +1571,10 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
          RtlFreeHeap( GetProcessHeap(), 0, parent_path );
      }
      *attr |= get_file_attributes( st );
@@ -44,7 +44,7 @@ index 496c92265e9..6f3772d20be 100644
      len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
      if (len == -1) return ret;
      *attr |= get_file_xattr( hexattr, len );
-@@ -1684,11 +1688,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
+@@ -2081,11 +2085,6 @@ static NTSTATUS get_dir_data_entry( struct dir_data *dir_data, void *info_ptr, I
      if (class != FileNamesInformation)
      {
          if (st.st_dev != dir_data->id.dev) st.st_ino = 0;  /* ignore inode if on a different device */
@@ -56,15 +56,15 @@ index 496c92265e9..6f3772d20be 100644
          fill_file_info( &st, attributes, info, class );
      }
  
-@@ -3301,7 +3300,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
+@@ -3857,7 +3856,6 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
              info->AllocationSize = std.AllocationSize;
              info->EndOfFile      = std.EndOfFile;
              info->FileAttributes = basic.FileAttributes;
 -            if (is_hidden_file( attr->ObjectName )) info->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
          }
-         RtlFreeAnsiString( &unix_name );
+         RtlFreeHeap( GetProcessHeap(), 0, unix_name );
      }
-@@ -3328,10 +3326,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
+@@ -3884,10 +3882,7 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
          else if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))
              status = STATUS_INVALID_INFO_CLASS;
          else
@@ -72,7 +72,7 @@ index 496c92265e9..6f3772d20be 100644
              status = fill_file_info( &st, attributes, info, FileBasicInformation );
 -            if (is_hidden_file( attr->ObjectName )) info->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
 -        }
-         RtlFreeAnsiString( &unix_name );
+         RtlFreeHeap( GetProcessHeap(), 0, unix_name );
      }
      else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
 -- 

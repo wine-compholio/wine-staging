@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "262e4ab9e0eeb126dde5cb4cba13fbf7f1d1cef0"
+	echo "18ae539c914a9b5a89f63d8cf9c2a21273eccc6c"
 }
 
 # Show version information
@@ -177,7 +177,6 @@ patch_enable_all ()
 	enable_ntdll_Heap_Improvements="$1"
 	enable_ntdll_Hide_Wine_Exports="$1"
 	enable_ntdll_Interrupt_0x2e="$1"
-	enable_ntdll_Junction_Points="$1"
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtDevicePath="$1"
@@ -620,9 +619,6 @@ patch_enable ()
 			;;
 		ntdll-Interrupt-0x2e)
 			enable_ntdll_Interrupt_0x2e="$2"
-			;;
-		ntdll-Junction_Points)
-			enable_ntdll_Junction_Points="$2"
 			;;
 		ntdll-Manifest_Range)
 			enable_ntdll_Manifest_Range="$2"
@@ -1575,13 +1571,6 @@ if test "$enable_server_Stored_ACLs" -eq 1; then
 	enable_server_File_Permissions=1
 fi
 
-if test "$enable_server_File_Permissions" -eq 1; then
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but server-File_Permissions depends on that."
-	fi
-	enable_ntdll_Junction_Points=1
-fi
-
 if test "$enable_server_Desktop_Refcount" -eq 1; then
 	if test "$enable_ws2_32_WSACleanup" -gt 1; then
 		abort "Patchset ws2_32-WSACleanup disabled, but server-Desktop_Refcount depends on that."
@@ -1633,13 +1622,6 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
 	fi
 	enable_ntdll_Pipe_SpecialCharacters=1
-fi
-
-if test "$enable_ntdll_Junction_Points" -eq 1; then
-	if test "$enable_ntdll_DOS_Attributes" -gt 1; then
-		abort "Patchset ntdll-DOS_Attributes disabled, but ntdll-Junction_Points depends on that."
-	fi
-	enable_ntdll_DOS_Attributes=1
 fi
 
 if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
@@ -3518,9 +3500,9 @@ fi
 # |   *	dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
-	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Return-fake-device-type-when-systemroot-is-loc.patch
+	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Don-t-translate-Unix-virtual-disks-to-FILE_DEV.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Return fake device type when systemroot is located on virtual disk.", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t translate Unix virtual disks to FILE_DEVICE_VIRTUAL_DISK.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3654,61 +3636,6 @@ if test "$enable_ntdll_Interrupt_0x2e" -eq 1; then
 	patch_apply ntdll-Interrupt-0x2e/0001-ntdll-Catch-windows-int-0x2e-syscall-on-i386.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Catch windows int 0x2e syscall on i386.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-Junction_Points
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#12401] NET Framework 2.0, 3.0, 4.0 installers and other apps that make use of GAC API for managed assembly
-# | 	installation on NTFS filesystems need reparse point/junction API support
-# | 	(FSCTL_SET_REPARSE_POINT/FSCTL_GET_REPARSE_POINT)
-# |   *	[#44948] Multiple apps (Spine (Mod starter for Gothic), MS Office 365 installer) need CreateSymbolicLinkW implementation
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/kernel32/path.c, dlls/kernel32/tests/path.c, dlls/kernelbase/file.c, dlls/msvcp120/tests/msvcp120.c,
-# | 	dlls/msvcp140/tests/msvcp140.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/Makefile.in, include/ntifs.h,
-# | 	include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, server/fd.c
-# |
-if test "$enable_ntdll_Junction_Points" -eq 1; then
-	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
-	patch_apply ntdll-Junction_Points/0002-ntdll-Add-support-for-reading-junction-points.patch
-	patch_apply ntdll-Junction_Points/0003-ntdll-Add-support-for-deleting-junction-points.patch
-	patch_apply ntdll-Junction_Points/0004-ntdll-Add-a-test-for-junction-point-advertisement.patch
-	patch_apply ntdll-Junction_Points/0005-kernel32-ntdll-Add-support-for-deleting-junction-poi.patch
-	patch_apply ntdll-Junction_Points/0007-ntdll-Add-support-for-absolute-symlink-creation.patch
-	patch_apply ntdll-Junction_Points/0008-ntdll-Add-support-for-reading-absolute-symlinks.patch
-	patch_apply ntdll-Junction_Points/0009-ntdll-Add-support-for-deleting-symlinks.patch
-	patch_apply ntdll-Junction_Points/0010-ntdll-Add-support-for-relative-symlink-creation.patch
-	patch_apply ntdll-Junction_Points/0011-ntdll-Add-support-for-reading-relative-symlinks.patch
-	patch_apply ntdll-Junction_Points/0012-ntdll-Add-support-for-file-symlinks.patch
-	patch_apply ntdll-Junction_Points/0013-ntdll-Allow-creation-of-dangling-reparse-points-to-n.patch
-	patch_apply ntdll-Junction_Points/0014-ntdll-Correctly-report-file-symbolic-links-as-files.patch
-	patch_apply ntdll-Junction_Points/0016-server-Properly-handle-file-symlink-deletion.patch
-	patch_apply ntdll-Junction_Points/0017-ntdll-Always-report-symbolic-links-as-containing-zer.patch
-	patch_apply ntdll-Junction_Points/0018-ntdll-Find-dangling-symlinks-quickly.patch
-	patch_apply ntdll-Junction_Points/0019-kernel32-Implement-CreateSymbolicLink-A-W-with-ntdll.patch
-	(
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for junction point creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading junction points.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting junction points.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add a test for junction point advertisement.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32,ntdll: Add support for deleting junction points with RemoveDirectory.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for absolute symlink creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading absolute symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for deleting symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for relative symlink creation.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for reading relative symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Add support for file symlinks.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Allow creation of dangling reparse points to non-existent paths.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Correctly report file symbolic links as files.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "server: Properly handle file symlink deletion.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Always report symbolic links as containing zero bytes.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "ntdll: Find dangling symlinks quickly.", 1 },';
-		printf '%s\n' '+    { "Erich E. Hoover", "kernel32: Implement CreateSymbolicLink[A|W] with ntdll reparse points.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4367,9 +4294,6 @@ fi
 
 # Patchset server-File_Permissions
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points
-# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44691] Improve mapping of DACL to file permissions
 # |
@@ -4400,7 +4324,7 @@ fi
 # Patchset server-Stored_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions
+# |   *	ntdll-DOS_Attributes, server-File_Permissions
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#33576] Support for stored file ACLs
@@ -4431,7 +4355,7 @@ fi
 # Patchset server-Inherited_ACLs
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-DOS_Attributes, ntdll-Junction_Points, server-File_Permissions, server-Stored_ACLs
+# |   *	ntdll-DOS_Attributes, server-File_Permissions, server-Stored_ACLs
 # |
 # | Modified files:
 # |   *	dlls/advapi32/tests/security.c, server/file.c

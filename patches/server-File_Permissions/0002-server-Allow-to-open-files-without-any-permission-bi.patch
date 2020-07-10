@@ -1,4 +1,4 @@
-From 9ecf9653d3f4d564f000d4e0f7f96ae0cd3610b2 Mon Sep 17 00:00:00 2001
+From b1dcc9759921e696a554c46d7aee2c4c29d3c7ae Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 3 Apr 2015 03:58:47 +0200
 Subject: [PATCH] server: Allow to open files without any permission bits. (try
@@ -13,7 +13,7 @@ Changes in v2:
  2 files changed, 32 insertions(+), 20 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index 1ec2e6bbb48..cc59210e609 100644
+index 825f8451904..948c257cea2 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
 @@ -3702,17 +3702,13 @@ static void test_CreateDirectoryA(void)
@@ -65,10 +65,10 @@ index 1ec2e6bbb48..cc59210e609 100644
  
  done:
 diff --git a/server/fd.c b/server/fd.c
-index d238c43cf1f..8292a0b82f2 100644
+index e5e1fdbbf32..188a632575f 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1825,6 +1825,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1835,6 +1835,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      int root_fd = -1;
      int rw_mode;
      char *path;
@@ -76,10 +76,10 @@ index d238c43cf1f..8292a0b82f2 100644
      int created = (flags & O_CREAT);
  
      if (((options & FILE_DELETE_ON_CLOSE) && !(access & DELETE)) ||
-@@ -1891,10 +1892,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
-             fd->unix_fd = open( name, rw_mode | O_SYMLINK | (flags & ~O_TRUNC), *mode );
+@@ -1894,10 +1895,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+             if ((access & FILE_UNIX_WRITE_ACCESS) || (flags & O_CREAT))
+                 fd->unix_fd = open( name, O_RDONLY | (flags & ~(O_TRUNC | O_CREAT | O_EXCL)), *mode );
          }
- #endif
 +        else if (errno == EACCES)
 +        {
 +            /* try to change permissions temporarily to open a file descriptor */
@@ -105,14 +105,14 @@ index d238c43cf1f..8292a0b82f2 100644
              goto error;
          }
      }
-@@ -1909,6 +1928,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1912,6 +1931,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      closed_fd->unix_fd = fd->unix_fd;
      closed_fd->unlink = 0;
      closed_fd->unix_name = fd->unix_name;
 +    if (do_chmod) chmod( name, *mode );
-     lstat( fd->unix_name, &st );
+     fstat( fd->unix_fd, &st );
      *mode = st.st_mode;
  
 -- 
-2.25.1
+2.27.0
 

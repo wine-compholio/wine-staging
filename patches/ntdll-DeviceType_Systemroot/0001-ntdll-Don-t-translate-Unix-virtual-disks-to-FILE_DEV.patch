@@ -1,0 +1,57 @@
+From 835c102cf1c8edf8216b12ea98846cb1e3b40219 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Fri, 29 May 2015 19:57:22 +0200
+Subject: [PATCH] ntdll: Don't translate Unix virtual disks to
+ FILE_DEVICE_VIRTUAL_DISK.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=36546
+Signed-off-by: Zebediah Figura <z.figura12@gmail.com>
+---
+Despite my sign-off, I don't profess to hold an opinion on whether this bug
+should be solved, but multiple users have requested this behaviour, and it
+seems not wholly unreasonable. I'm submitting this patch so that the question
+at least doesn't languish on bugzilla forever.
+
+This patch was tested with FutureMark's SystemInfo version 4.28; it refuses to
+install in a WINEPREFIX in tmpfs without this patch, and succeeds with it.
+
+ dlls/ntdll/unix/file.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index a0ad361fcbb..a28cfe9818f 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -6001,12 +6001,15 @@ static NTSTATUS get_device_info( int fd, FILE_FS_DEVICE_INFORMATION *info )
+             info->DeviceType = FILE_DEVICE_NETWORK_FILE_SYSTEM;
+             info->Characteristics |= FILE_REMOTE_DEVICE;
+             break;
+-        case 0x01021994:  /* tmpfs */
+-        case 0x28cd3d45:  /* cramfs */
+         case 0x1373:      /* devfs */
+         case 0x9fa0:      /* procfs */
+             info->DeviceType = FILE_DEVICE_VIRTUAL_DISK;
+             break;
++        case 0x01021994:  /* tmpfs */
++        case 0x28cd3d45:  /* cramfs */
++            /* Don't map these to FILE_DEVICE_VIRTUAL_DISK by default. Virtual
++             * filesystems are rare on Windows, and some programs refuse to
++             * recognize them as valid. */
+         default:
+             info->DeviceType = FILE_DEVICE_DISK_FILE_SYSTEM;
+             break;
+@@ -6050,8 +6053,9 @@ static NTSTATUS get_device_info( int fd, FILE_FS_DEVICE_INFORMATION *info )
+                 info->Characteristics |= FILE_REMOVABLE_MEDIA;
+                 break;
+             case DKC_MD:
+-                info->DeviceType = FILE_DEVICE_VIRTUAL_DISK;
+-                break;
++            /* Don't map these to FILE_DEVICE_VIRTUAL_DISK by default. Virtual
++             * filesystems are rare on Windows, and some programs refuse to
++             * recognize them as valid. */
+             default:
+                 info->DeviceType = FILE_DEVICE_DISK_FILE_SYSTEM;
+             }
+-- 
+2.27.0
+

@@ -1,4 +1,4 @@
-From 30bc9bbd5b1b413c7a574d5e9574f79a03b48d16 Mon Sep 17 00:00:00 2001
+From c1b6bc02ee2534dc2b51d8184fb0ca6717c33cf3 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Sun, 28 May 2017 05:19:30 +0200
 Subject: [PATCH] ntdll: Implement NtQueryVirtualMemory(MemorySectionName).
@@ -8,42 +8,42 @@ Contains several improvements by Sebastian Lackner <sebastian@fds-team.de>.
 ---
  dlls/ntdll/unix/file.c         |  2 +-
  dlls/ntdll/unix/unix_private.h |  1 +
- dlls/ntdll/unix/virtual.c      | 91 +++++++++++++++++++++++++++++++++-
+ dlls/ntdll/unix/virtual.c      | 96 +++++++++++++++++++++++++++++++++-
  dlls/psapi/tests/psapi_main.c  |  8 +--
- server/mapping.c               | 29 +++++++++++
+ server/mapping.c               | 29 ++++++++++
  server/protocol.def            |  9 ++++
- 6 files changed, 131 insertions(+), 9 deletions(-)
+ 6 files changed, 136 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 551d0450584..49e807a5f24 100644
+index 6b0dbaa7b3d..2ac7fcaae35 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
 @@ -1767,7 +1767,7 @@ static NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
  }
  
  
--static NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name )
-+NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name )
+-static NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name )
++NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name )
  {
      data_size_t size = 1024;
      NTSTATUS ret;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index e14da3ff7ec..b9a96424b4c 100644
+index 711a0bed2b7..466c59da75a 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -173,6 +173,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *
+@@ -170,6 +170,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *
                                                apc_result_t *result ) DECLSPEC_HIDDEN;
  extern int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
                                 int *needs_close, enum server_fd_type *type, unsigned int *options ) DECLSPEC_HIDDEN;
-+extern NTSTATUS server_get_unix_name( HANDLE handle, ANSI_STRING *unix_name ) DECLSPEC_HIDDEN;
++extern NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name ) DECLSPEC_HIDDEN;
  extern void server_init_process(void) DECLSPEC_HIDDEN;
  extern size_t server_init_thread( void *entry_point, BOOL *suspend ) DECLSPEC_HIDDEN;
  extern int server_pipe( int fd[2] ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index c49c60166c2..086943bdae8 100644
+index cd1bd162a2a..570a8a3bf49 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -4011,6 +4011,93 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
+@@ -4013,6 +4013,98 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
      return STATUS_SUCCESS;
  }
  
@@ -53,7 +53,8 @@ index c49c60166c2..086943bdae8 100644
 +                                  SIZE_T len, SIZE_T *res_len )
 +{
 +    UNICODE_STRING nt_name;
-+    ANSI_STRING unix_name;
++    WCHAR *nt_nameW;
++    char *unix_name;
 +    data_size_t size = 1024;
 +    WCHAR *name = NULL;
 +    NTSTATUS status;
@@ -76,10 +77,14 @@ index c49c60166c2..086943bdae8 100644
 +        NtClose( mapping );
 +        if (!status)
 +        {
-+            status = wine_unix_to_nt_file_name( &unix_name, &nt_name );
-+            RtlFreeAnsiString( &unix_name );
++            status = unix_to_nt_file_name( unix_name, &nt_nameW );
++            RtlFreeHeap( GetProcessHeap(), 0, unix_name );
 +        }
-+        if (!status) goto found;
++        if (!status)
++        {
++            RtlInitUnicodeString( &nt_name, nt_nameW );
++            goto found;
++        }
 +        if (status == STATUS_OBJECT_TYPE_MISMATCH) status = STATUS_FILE_INVALID;
 +        return status;
 +    }
@@ -137,7 +142,7 @@ index c49c60166c2..086943bdae8 100644
  #define UNIMPLEMENTED_INFO_CLASS(c) \
      case c: \
          FIXME("(process=%p,addr=%p) Unimplemented information class: " #c "\n", process, addr); \
-@@ -4035,8 +4122,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+@@ -4037,8 +4129,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
          case MemoryWorkingSetExInformation:
              return get_working_set_ex( process, addr, buffer, len, res_len );
  
@@ -177,10 +182,10 @@ index da7524dd60a..bfe14231a9b 100644
      }
  
 diff --git a/server/mapping.c b/server/mapping.c
-index 07c51c246d6..7f19a7572df 100644
+index db0debe0af5..6e74f5b770f 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
-@@ -1095,6 +1095,35 @@ DECL_HANDLER(unmap_view)
+@@ -1099,6 +1099,35 @@ DECL_HANDLER(unmap_view)
      if (view) free_memory_view( view );
  }
  
@@ -217,10 +222,10 @@ index 07c51c246d6..7f19a7572df 100644
  DECL_HANDLER(get_mapping_committed_range)
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 6416306c0a1..bdc1eeeb5c3 100644
+index bd6841d8000..345e0966c14 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1853,6 +1853,15 @@ enum char_info_mode
+@@ -1756,6 +1756,15 @@ enum char_info_mode
  @END
  
  

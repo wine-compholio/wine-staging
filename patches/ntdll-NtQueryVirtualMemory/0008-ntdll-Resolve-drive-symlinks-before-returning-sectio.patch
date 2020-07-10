@@ -1,4 +1,4 @@
-From 01031e9eb282bffce2449891e68eb9efeded1ee9 Mon Sep 17 00:00:00 2001
+From bb973ee8d79d0a1117c437afe8d62f34b9d9d3c8 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 28 May 2017 11:17:26 +0200
 Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
@@ -11,10 +11,10 @@ Subject: [PATCH] ntdll: Resolve drive symlinks before returning section name.
  4 files changed, 34 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 551d0450584..65ddf0df4a2 100644
+index 2ac7fcaae35..d39c98b2e49 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -3425,7 +3425,7 @@ static NTSTATUS nt_to_unix_file_name_internal( const UNICODE_STRING *nameW, ANSI
+@@ -3418,7 +3418,7 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, char *nam
  }
  
  /* read the contents of an NT symlink object */
@@ -24,7 +24,7 @@ index 551d0450584..65ddf0df4a2 100644
      OBJECT_ATTRIBUTES attr;
      UNICODE_STRING targetW;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index e14da3ff7ec..5410248e8a7 100644
+index 466c59da75a..884dff1e1b1 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
 @@ -103,6 +103,7 @@ extern void CDECL get_initial_directory( UNICODE_STRING *dir ) DECLSPEC_HIDDEN;
@@ -36,7 +36,7 @@ index e14da3ff7ec..5410248e8a7 100644
                                             const LARGE_INTEGER *offset_ptr, SIZE_T *size_ptr, ULONG alloc_type,
                                             ULONG protect, pe_image_info_t *image_info ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 1515963b9c7..5cee0da5d24 100644
+index 570a8a3bf49..c040adfaf23 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
 @@ -188,6 +188,8 @@ static BYTE **pages_vprot;
@@ -48,14 +48,15 @@ index 1515963b9c7..5cee0da5d24 100644
  static struct file_view *view_block_start, *view_block_end, *next_free_view;
  #ifdef _WIN64
  static const size_t view_block_size = 0x200000;
-@@ -4016,12 +4018,15 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -4018,13 +4020,16 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                    MEMORY_SECTION_NAME *info,
                                    SIZE_T len, SIZE_T *res_len )
  {
 +    static const WCHAR dosprefixW[] = {'\\','?','?','\\'};
 +    WCHAR symlinkW[MAX_DIR_ENTRY_LEN] = {0};
      UNICODE_STRING nt_name;
-     ANSI_STRING unix_name;
+     WCHAR *nt_nameW;
+     char *unix_name;
      data_size_t size = 1024;
 -    WCHAR *name = NULL;
 +    WCHAR *ptr, *name = NULL;
@@ -65,7 +66,7 @@ index 1515963b9c7..5cee0da5d24 100644
  
      if (!addr || !info || !res_len) return STATUS_INVALID_PARAMETER;
  
-@@ -4080,14 +4085,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
+@@ -4087,14 +4092,34 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
      }
  
  found:

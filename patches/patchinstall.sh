@@ -192,7 +192,6 @@ patch_enable_all ()
 	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
-	enable_ntdll_SystemRoot_Symlink="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
@@ -663,9 +662,6 @@ patch_enable ()
 			;;
 		ntdll-SystemModuleInformation)
 			enable_ntdll_SystemModuleInformation="$2"
-			;;
-		ntdll-SystemRoot_Symlink)
-			enable_ntdll_SystemRoot_Symlink="$2"
 			;;
 		ntdll-WRITECOPY)
 			enable_ntdll_WRITECOPY="$2"
@@ -3870,18 +3866,6 @@ if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
 	patch_apply ntdll-SystemModuleInformation/0003-ntdll-Add-stub-for-NtQuerySystemInformation-SystemMo.patch
 	(
 		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add stub for NtQuerySystemInformation(SystemModuleInformationEx).", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-SystemRoot_Symlink
-# |
-# | Modified files:
-# |   *	dlls/ntdll/om.c
-# |
-if test "$enable_ntdll_SystemRoot_Symlink" -eq 1; then
-	patch_apply ntdll-SystemRoot_Symlink/0001-ntdll-Add-special-handling-for-SystemRoot-to-satisfy.patch
-	(
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add special handling for \\SystemRoot to satisfy MSYS2 case-insensitive system check.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,52 +1,72 @@
-From ab068a620223a6566c2a1d089fb4583992359bd2 Mon Sep 17 00:00:00 2001
-From: Andrew Wesie <awesie@gmail.com>
+From 6c3862d1e2d08c9a82623e0d4ab3bb123a3efde0 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
 Date: Fri, 12 Apr 2019 20:06:08 -0500
 Subject: [PATCH] ntdll: Add stub for
  NtQuerySystemInformation(SystemModuleInformationEx).
 
+Based on a patch by Andrew Wesie.
 ---
- dlls/ntdll/unix/system.c | 22 ++++++++++++++++++++++
+ dlls/ntdll/unix/system.c | 41 ++++++++++++++++++++++++++++++++++++++++
  include/winternl.h       |  9 +++++++++
- 2 files changed, 31 insertions(+)
+ 2 files changed, 50 insertions(+)
 
 diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
-index f118db8a89f..eecde7dcf97 100644
+index c3dca7ffe28..1260326bc4b 100644
 --- a/dlls/ntdll/unix/system.c
 +++ b/dlls/ntdll/unix/system.c
-@@ -1974,6 +1974,28 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
-         }
+@@ -2328,6 +2328,47 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
          break;
+     }
  
 +    case SystemModuleInformationEx:
-+        if (!info)
-+            ret = STATUS_ACCESS_VIOLATION;
-+        else if (size < sizeof(SYSTEM_MODULE_INFORMATION_EX))
++    {
++        /* FIXME: return some fake info for now */
++        static const char *fake_modules[] =
 +        {
-+            len = sizeof(SYSTEM_MODULE_INFORMATION_EX);
-+            ret = STATUS_INFO_LENGTH_MISMATCH;
-+        }
++            "\\SystemRoot\\system32\\ntoskrnl.exe",
++            "\\SystemRoot\\system32\\hal.dll",
++            "\\SystemRoot\\system32\\drivers\\mountmgr.sys"
++        };
++
++        if (!info) ret = STATUS_ACCESS_VIOLATION;
 +        else
 +        {
-+            SYSTEM_MODULE_INFORMATION_EX *info = info;
++            ULONG i;
 +
-+            FIXME("info_class SystemModuleInformationEx stub!\n");
-+            get_ntdll_system_module(&info->BaseInfo);
-+            info->NextOffset = 0;
-+            info->ImageCheckSum = 0;
-+            info->TimeDateStamp = 0;
-+            info->DefaultBase = info->BaseInfo.ImageBaseAddress;
-+            ret = STATUS_SUCCESS;
++            for (i = 0; i < ARRAY_SIZE(fake_modules); i++)
++            {
++                SYSTEM_MODULE_INFORMATION_EX *smi = (SYSTEM_MODULE_INFORMATION_EX *)((char *)info + len);
++
++                len += sizeof(SYSTEM_MODULE_INFORMATION_EX);
++                if (len > size)
++                {
++                    ret = STATUS_INFO_LENGTH_MISMATCH;
++                    continue;
++                }
++
++                memset(smi, 0, sizeof(*smi));
++                if (i < ARRAY_SIZE(fake_modules) - 1)
++                    smi->NextOffset = len;
++                smi->BaseInfo.ImageBaseAddress = (char *)0x10000000 + 0x200000 * i;
++                smi->BaseInfo.ImageSize = 0x200000;
++                smi->BaseInfo.LoadOrderIndex = i;
++                smi->BaseInfo.LoadCount = 1;
++                strcpy( (char *)smi->BaseInfo.Name, fake_modules[i] );
++                smi->BaseInfo.NameOffset = strrchr( fake_modules[i], '\\' ) - fake_modules[i] + 1;
++                smi->DefaultBase = smi->BaseInfo.ImageBaseAddress;
++            }
 +        }
 +        break;
++    }
 +
      case SystemHandleInformation:
      {
          struct handle_info *handle_info;
 diff --git a/include/winternl.h b/include/winternl.h
-index 3ff15f28c15..879b0931fc5 100644
+index 10d109fede1..b91af1d2dbe 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2469,6 +2469,15 @@ typedef struct _SYSTEM_MODULE_INFORMATION
+@@ -2484,6 +2484,15 @@ typedef struct _SYSTEM_MODULE_INFORMATION
  #define PROCESS_CREATE_FLAGS_SUSPENDED              0x00000200
  #define PROCESS_CREATE_FLAGS_EXTENDED_UNKNOWN       0x00000400
  

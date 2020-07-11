@@ -1,4 +1,4 @@
-From 0d4ebc66e01e42acef9db63872d38abc789d83c5 Mon Sep 17 00:00:00 2001
+From 7ad6b055c6f24d9dc193f9d80e2f5921f4f7e67c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 26 May 2017 05:17:17 +0200
 Subject: [PATCH] ntdll: Implement opening files through nt device paths.
@@ -63,10 +63,10 @@ index 6164b0c4bde..6610edbd042 100644
  
  static void open_file_test(void)
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 3c4670e114c..6b0dbaa7b3d 100644
+index aae715521a5..7fcb9f23460 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -3279,7 +3279,7 @@ static NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, char *
+@@ -3294,7 +3294,7 @@ static NTSTATUS nt_to_unix_file_name_attr( const OBJECT_ATTRIBUTES *attr, char *
   * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
   * returned, but the unix name is still filled in properly.
   */
@@ -75,7 +75,7 @@ index 3c4670e114c..6b0dbaa7b3d 100644
  {
      static const WCHAR unixW[] = {'u','n','i','x'};
      static const WCHAR pipeW[] = {'p','i','p','e'};
-@@ -3417,6 +3417,126 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, char *nam
+@@ -3432,6 +3432,126 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, char *nam
      return status;
  }
  
@@ -109,7 +109,7 @@ index 3c4670e114c..6b0dbaa7b3d 100644
 +static NTSTATUS nt_to_dos_device( WCHAR *name, size_t length, WCHAR *device_ret )
 +{
 +    static const WCHAR dosdevicesW[] = {'\\','D','o','s','D','e','v','i','c','e','s',0};
-+    UNICODE_STRING dosdevW;
++    UNICODE_STRING dosdevW = { sizeof(dosdevicesW) - sizeof(WCHAR), sizeof(dosdevicesW), (WCHAR *)dosdevicesW };
 +    WCHAR symlinkW[MAX_DIR_ENTRY_LEN];
 +    OBJECT_ATTRIBUTES attr;
 +    NTSTATUS status;
@@ -126,7 +126,6 @@ index 3c4670e114c..6b0dbaa7b3d 100644
 +    attr.SecurityDescriptor = NULL;
 +    attr.SecurityQualityOfService = NULL;
 +
-+    RtlInitUnicodeString( &dosdevW, dosdevicesW );
 +    status = NtOpenDirectoryObject( &handle, FILE_LIST_DIRECTORY, &attr );
 +    if (status) return STATUS_BAD_DEVICE_TYPE;
 +
@@ -193,7 +192,8 @@ index 3c4670e114c..6b0dbaa7b3d 100644
 +    memcpy( ptr, nameW->Buffer + offset, nameW->Length - offset * sizeof(WCHAR) );
 +    ptr[ nameW->Length / sizeof(WCHAR) - offset ] = 0;
 +
-+    RtlInitUnicodeString( &dospathW, name );
++    dospathW.Buffer = name;
++    dospathW.Length = wcslen( name ) * sizeof(WCHAR);
 +    status = nt_to_unix_file_name_internal( &dospathW, unix_name_ret, disposition );
 +
 +    RtlFreeHeap( GetProcessHeap(), 0, name );

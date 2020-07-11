@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "18ae539c914a9b5a89f63d8cf9c2a21273eccc6c"
+	echo "caa41d4917a84dbbeb4aa14f18cfecfd17efe71a"
 }
 
 # Show version information
@@ -166,7 +166,6 @@ patch_enable_all ()
 	enable_ntdll_CriticalSection="$1"
 	enable_ntdll_DOS_Attributes="$1"
 	enable_ntdll_Dealloc_Thread_Stack="$1"
-	enable_ntdll_DeviceType_Systemroot="$1"
 	enable_ntdll_Exception="$1"
 	enable_ntdll_FLS_Callbacks="$1"
 	enable_ntdll_FileDispositionInformation="$1"
@@ -586,9 +585,6 @@ patch_enable ()
 			;;
 		ntdll-Dealloc_Thread_Stack)
 			enable_ntdll_Dealloc_Thread_Stack="$2"
-			;;
-		ntdll-DeviceType_Systemroot)
-			enable_ntdll_DeviceType_Systemroot="$2"
 			;;
 		ntdll-Exception)
 			enable_ntdll_Exception="$2"
@@ -1816,7 +1812,7 @@ fi
 # |
 # | Modified files:
 # |   *	dlls/kernelbase/security.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/winnt.h, include/winternl.h,
-# | 	server/process.c, server/protocol.def, server/security.h, server/token.c
+# | 	server/named_pipe.c, server/process.c, server/protocol.def, server/security.h, server/token.c
 # |
 if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
 	patch_apply advapi32-CreateRestrictedToken/0001-ntdll-Implement-NtFilterToken.patch
@@ -1854,8 +1850,8 @@ fi
 # |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernelbase/process.c,
 # | 	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c,
 # | 	dlls/ntdll/unix/process.c, dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in,
-# | 	programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/process.c, server/process.h,
-# | 	server/protocol.def, server/request.c, server/security.h, server/token.c
+# | 	programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/named_pipe.c, server/process.c,
+# | 	server/process.h, server/protocol.def, server/request.c, server/security.h, server/token.c
 # |
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	patch_apply advapi32-Token_Integrity_Level/0001-advapi32-tests-Extend-security-label-token-integrity.patch
@@ -3491,21 +3487,6 @@ if test "$enable_ntdll_Dealloc_Thread_Stack" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-DeviceType_Systemroot
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#36546] Return fake device type when systemroot is located on virtual disk
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/file.c
-# |
-if test "$enable_ntdll_DeviceType_Systemroot" -eq 1; then
-	patch_apply ntdll-DeviceType_Systemroot/0001-ntdll-Don-t-translate-Unix-virtual-disks-to-FILE_DEV.patch
-	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t translate Unix virtual disks to FILE_DEVICE_VIRTUAL_DISK.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-Exception
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3886,13 +3867,9 @@ fi
 # |   *	dlls/ntdll/unix/system.c, include/winternl.h
 # |
 if test "$enable_ntdll_SystemModuleInformation" -eq 1; then
-	patch_apply ntdll-SystemModuleInformation/0001-ntdll-Don-t-call-LdrQueryProcessModuleInformation-in.patch
-	patch_apply ntdll-SystemModuleInformation/0002-ntdll-Return-ntdll.dll-as-the-first-entry-for-System.patch
 	patch_apply ntdll-SystemModuleInformation/0003-ntdll-Add-stub-for-NtQuerySystemInformation-SystemMo.patch
 	(
-		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Don'\''t call LdrQueryProcessModuleInformation in NtQuerySystemInformation(SystemModuleInformation).", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Return ntdll.dll as the first entry for SystemModuleInformation.", 1 },';
-		printf '%s\n' '+    { "Andrew Wesie", "ntdll: Add stub for NtQuerySystemInformation(SystemModuleInformationEx).", 1 },';
+		printf '%s\n' '+    { "Zebediah Figura", "ntdll: Add stub for NtQuerySystemInformation(SystemModuleInformationEx).", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,14 +1,14 @@
-From 1eb9ac00c49041448f53be5a6b4097222567a8af Mon Sep 17 00:00:00 2001
+From 5f6d3c447ef1e243de6188d8813261d991c4ffc7 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: [PATCH] ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
  dlls/ntdll/tests/directory.c | 24 +++++++++++-------------
- dlls/ntdll/unix/file.c       | 25 ++++++++++++++++++++++++-
+ dlls/ntdll/unix/file.c       | 31 ++++++++++++++++++++++++++-----
  include/wine/port.h          |  2 ++
  libs/port/xattr.c            | 20 ++++++++++++++++++++
- 4 files changed, 57 insertions(+), 14 deletions(-)
+ 4 files changed, 59 insertions(+), 18 deletions(-)
 
 diff --git a/dlls/ntdll/tests/directory.c b/dlls/ntdll/tests/directory.c
 index 248ed99ab20..e0f4debc624 100644
@@ -60,7 +60,7 @@ index 248ed99ab20..e0f4debc624 100644
          }
          testfiles[i].nfound++;
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index f1176717819..aee464fbd16 100644
+index f1176717819..5d5e4ba2892 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
 @@ -3595,6 +3595,20 @@ void CDECL set_show_dot_files( BOOL enable )
@@ -84,26 +84,27 @@ index f1176717819..aee464fbd16 100644
  
  /******************************************************************************
   *              open_unix_file
-@@ -3640,6 +3654,10 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
-                               ULONG attributes, ULONG sharing, ULONG disposition,
-                               ULONG options, void *ea_buffer, ULONG ea_length )
- {
-+    static UNICODE_STRING empty_string;
-+    OBJECT_ATTRIBUTES unix_attr;
-+    data_size_t len;
-+    struct object_attributes *objattr;
-     char *unix_name;
-     BOOL created = FALSE;
- 
-@@ -3686,7 +3704,6 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
-     {
-         io->u.Status = open_unix_file( handle, unix_name, access, attr, attributes,
-                                        sharing, disposition, options, ea_buffer, ea_length );
--        RtlFreeHeap( GetProcessHeap(), 0, unix_name );
+@@ -3682,13 +3696,14 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+         io->u.Status = STATUS_SUCCESS;
      }
-     else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
  
-@@ -3710,6 +3727,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+-    if (io->u.Status == STATUS_SUCCESS)
++    if (io->u.Status != STATUS_SUCCESS)
+     {
+-        io->u.Status = open_unix_file( handle, unix_name, access, attr, attributes,
+-                                       sharing, disposition, options, ea_buffer, ea_length );
+-        RtlFreeHeap( GetProcessHeap(), 0, unix_name );
++        WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++        return io->u.Status;
+     }
+-    else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
++
++    io->u.Status = open_unix_file( handle, unix_name, access, attr, attributes,
++                                   sharing, disposition, options, ea_buffer, ea_length );
+ 
+     if (io->u.Status == STATUS_SUCCESS)
+     {
+@@ -3710,6 +3725,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -115,7 +116,7 @@ index f1176717819..aee464fbd16 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -3717,6 +3739,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3717,6 +3737,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  

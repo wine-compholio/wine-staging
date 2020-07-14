@@ -1,4 +1,4 @@
-From bcab391401b586a877ee0ff69525a3429a1b2b48 Mon Sep 17 00:00:00 2001
+From 6ddc75bcb9bff473ff52717021c5287d426fce13 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Tue, 14 Jul 2020 02:05:59 +0300
 Subject: [PATCH] ntdll: Also generate syscall thunks for Nt functions not yet
@@ -6,16 +6,16 @@ Subject: [PATCH] ntdll: Also generate syscall thunks for Nt functions not yet
 
 ---
  dlls/ntdll/ntdll.spec    |  1 +
- dlls/ntdll/unix/loader.c | 37 +++++++++++++++++++++++++++++++++
- tools/winebuild/import.c | 44 +++++++++++++++++++++++++++++++++++-----
- tools/winebuild/spec32.c | 16 ++++++++++++++-
- 4 files changed, 92 insertions(+), 6 deletions(-)
+ dlls/ntdll/unix/loader.c | 37 ++++++++++++++++++++++++
+ tools/winebuild/import.c | 62 +++++++++++++++++++++++++++++-----------
+ tools/winebuild/spec32.c | 16 ++++++++++-
+ 4 files changed, 98 insertions(+), 18 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index b873b54b09d6..09b060b094ae 100644
+index 79ec71ed91e0..b001a2fb2f91 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1588,6 +1588,7 @@
+@@ -1586,6 +1586,7 @@
  @ cdecl __wine_set_unix_funcs(long ptr)
  @ extern __wine_syscall_dispatcher
  @ extern -arch=i386 __wine_ldt_copy
@@ -24,7 +24,7 @@ index b873b54b09d6..09b060b094ae 100644
  # Debugging
  @ cdecl -norelay __wine_dbg_get_channel_flags(ptr)
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index b211708aca02..c6760831d48c 100644
+index d7aa088e1d4e..b95e1fb4de93 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
 @@ -788,6 +788,41 @@ static ULONG_PTR find_pe_export( HMODULE module, const IMAGE_EXPORT_DIRECTORY *e
@@ -79,10 +79,20 @@ index b211708aca02..c6760831d48c 100644
      if (!(p##name = (void *)find_named_export( ntdll_module, ntdll_exports, #name ))) \
          ERR( "%s not found\n", #name )
 diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
-index cf251c9b77d4..71d397122f60 100644
+index 094b9da0ccf5..229729386390 100644
 --- a/tools/winebuild/import.c
 +++ b/tools/winebuild/import.c
-@@ -1418,11 +1418,13 @@ void output_syscalls( DLLSPEC *spec )
+@@ -563,7 +563,8 @@ static void check_undefined_exports( DLLSPEC *spec )
+                             spec->src_name, odp->lineno, odp->link_name );
+                 break;
+             default:
+-                if (!strcmp( odp->link_name, "__wine_syscall_dispatcher" )) break;
++                if (!strcmp( odp->link_name, "__wine_syscall_dispatcher" )
++                        || !strcmp( odp->link_name, "pe_syscall_table" )) break;
+                 error( "%s:%d: external symbol '%s' is not a function\n",
+                        spec->src_name, odp->lineno, odp->link_name );
+                 break;
+@@ -1418,11 +1419,13 @@ void output_syscalls( DLLSPEC *spec )
      const unsigned int invalid_param = 0xc000000d; /* STATUS_INVALID_PARAMETER */
      int i, count;
      ORDDEF **syscalls = NULL;
@@ -97,7 +107,7 @@ index cf251c9b77d4..71d397122f60 100644
          if (!syscalls) syscalls = xmalloc( (spec->nb_entry_points - i) * sizeof(*syscalls) );
          syscalls[count++] = odp;
      }
-@@ -1560,25 +1562,57 @@ void output_syscalls( DLLSPEC *spec )
+@@ -1560,25 +1563,56 @@ void output_syscalls( DLLSPEC *spec )
          }
          output_cfi( ".cfi_endproc" );
          output_function_size( "__wine_syscall_dispatcher" );
@@ -137,7 +147,6 @@ index cf251c9b77d4..71d397122f60 100644
 +        else
 +            output( "\t%s 0xdeadcafe\n", get_asm_ptr_keyword());
 +    }
-+
 +    output( "\t.text\n" );
 +
      for (i = 0; i < count; i++)
@@ -159,6 +168,36 @@ index cf251c9b77d4..71d397122f60 100644
          output_cfi( ".cfi_startproc" );
          switch (target_cpu)
          {
+@@ -1613,16 +1647,10 @@ void output_syscalls( DLLSPEC *spec )
+             output( "\t.byte 0xc3\n" );           /* ret */
+             output( "\tjmp 1f\n" );
+             output( "\t.byte 0xc3\n" );           /* ret */
+-            if (target_platform == PLATFORM_WINDOWS || target_platform == PLATFORM_APPLE)
+-            {
+-                output( "1:\t.byte 0xff,0x14,0x25\n" ); /* call *(user_shared_data + 0x1000) */
+-                output( "\t.long 0x7ffe1000\n" );
+-            }
+-            else
+-            {
+-                output( "\tnop\n" );
+-                output( "1:\tcallq *%s(%%rip)\n", asm_name("__wine_syscall_dispatcher") );
+-            }
++
++            output( "1:\t.byte 0xff,0x14,0x25\n" ); /* call *(user_shared_data + 0x1000) */
++            output( "\t.long 0x7ffe1000\n" );
++
+             output( "\tret\n" );
+             break;
+         case CPU_ARM:
+@@ -1645,7 +1673,7 @@ void output_syscalls( DLLSPEC *spec )
+             assert(0);
+         }
+         output_cfi( ".cfi_endproc" );
+-        output_function_size( name );
++        output_function_size( exp_name );
+     }
+ 
+     if (target_cpu == CPU_x86 && !UsePIC)
 diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
 index c85249b2a961..7cfbe5389bdf 100644
 --- a/tools/winebuild/spec32.c

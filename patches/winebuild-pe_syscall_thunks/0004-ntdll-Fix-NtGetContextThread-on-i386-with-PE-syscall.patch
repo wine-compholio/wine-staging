@@ -1,0 +1,55 @@
+From 52177a4f877115f0fa358c37da6dcdcfb17e83f8 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 14 Jul 2020 13:31:48 +0300
+Subject: [PATCH] ntdll: Fix NtGetContextThread on i386 with PE syscall thunks.
+
+Note: to be dropped once i386 NtGetContextThread moves to the
+Unix part.
+---
+ dlls/ntdll/signal_i386.c | 8 +++++---
+ tools/winebuild/import.c | 3 +++
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/signal_i386.c b/dlls/ntdll/signal_i386.c
+index a130638cb310..e098b3e409b2 100644
+--- a/dlls/ntdll/signal_i386.c
++++ b/dlls/ntdll/signal_i386.c
+@@ -331,6 +331,8 @@ __ASM_STDCALL_FUNC( RtlCaptureContext, 4,
+                     "ret $4" )
+ 
+ 
++extern NTSTATUS WINAPI _syscall_NtGetContextThread( HANDLE handle, CONTEXT *context );
++
+ /***********************************************************************
+  *              NtGetContextThread  (NTDLL.@)
+  *              ZwGetContextThread  (NTDLL.@)
+@@ -353,9 +355,9 @@ NTSTATUS CDECL DECLSPEC_HIDDEN __regs_NtGetContextThread( DWORD edi, DWORD esi,
+     }
+     if (needed_flags & CONTEXT_CONTROL)
+     {
+-        context->Ebp    = ebp;
+-        context->Esp    = (DWORD)&retaddr;
+-        context->Eip    = (DWORD)NtGetContextThread + 12;
++        context->Ebp    = *(DWORD *)ebp;
++        context->Esp    = ebp + 4;
++        context->Eip    = (DWORD)_syscall_NtGetContextThread + 18;
+         context->EFlags = eflags;
+     }
+     return unix_funcs->NtGetContextThread( handle, context );
+diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
+index 71d397122f60..e8bd141e962b 100644
+--- a/tools/winebuild/import.c
++++ b/tools/winebuild/import.c
+@@ -1469,6 +1469,9 @@ void output_syscalls( DLLSPEC *spec )
+             output( "\tmovl %%esp,%%edi\n" );
+             output( "\tcld\n" );
+             output( "\trep; movsl\n" );
++            output( "\tmovl -0x4(%%ebp),%%esi\n" );
++            output( "\tmovl -0x8(%%ebp),%%edi\n" );
++
+             if (UsePIC)
+                 output( "\tcall *.Lsyscall_table-1b(%%eax,%%edx,4)\n" );
+             else
+-- 
+2.26.2
+

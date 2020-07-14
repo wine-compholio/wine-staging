@@ -1,0 +1,59 @@
+From 4b84ee691550970aa6f599ca649316f20272f84a Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 14 Jul 2020 02:41:53 +0300
+Subject: [PATCH] ntdll: Always align stack pointer in
+ __wine_syscall_dispatcher on x64.
+
+Syscall thunks break stack alignment for dispatcher. Regardless of that,
+it is probably better not to assume aligned stack in syscall thunk entry.
+---
+ tools/winebuild/import.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
+index 97191ca89ec2..4f641825e367 100644
+--- a/tools/winebuild/import.c
++++ b/tools/winebuild/import.c
+@@ -1497,23 +1497,25 @@ void output_syscalls( DLLSPEC *spec )
+              * depends on us returning to it. Adjust the return address accordingly. */
+             output( "\tsubq $0xb,0x8(%%rbp)\n" );
+             output( "\tcmpq $%u,%%rax\n", count );
+-            output( "\tjae 3f\n" );
++            output( "\tjae 4f\n" );
+             output( "\tleaq .Lsyscall_args(%%rip),%%rcx\n" );
+             output( "\tmovzbl (%%rcx,%%rax),%%ecx\n" );
+             output( "\tsubq $0x20,%%rcx\n" );
+-            output( "\tjbe 1f\n" );
+-            output( "\tsubq %%rcx,%%rsp\n" );
++            output( "\tja 1f\n" );
++            output( "\tandq $~15,%%rsp\n\t" );
++            output( "\tjmp 2f\n" );
++            output( "1:\tsubq %%rcx,%%rsp\n" );
+             output( "\tshrq $3,%%rcx\n" );
+             output( "\tleaq 0x38(%%rbp),%%rsi\n" );
+             output( "\tandq $~15,%%rsp\n\t" );
+             output( "\tmovq %%rsp,%%rdi\n" );
+             output( "\tcld\n" );
+             output( "\trep; movsq\n" );
+-            output( "1:\tmovq %%r10,%%rcx\n" );
++            output( "2:\tmovq %%r10,%%rcx\n" );
+             output( "\tsubq $0x20,%%rsp\n" );
+             output( "\tleaq .Lsyscall_table(%%rip),%%r10\n" );
+             output( "\tcallq *(%%r10,%%rax,8)\n" );
+-            output( "2:\tleaq -0x10(%%rbp),%%rsp\n" );
++            output( "3:\tleaq -0x10(%%rbp),%%rsp\n" );
+             output( "\tpopq %%rdi\n" );
+             output_cfi( ".cfi_same_value %%rdi" );
+             output( "\tpopq %%rsi\n" );
+@@ -1523,7 +1525,7 @@ void output_syscalls( DLLSPEC *spec )
+             output_cfi( ".cfi_adjust_cfa_offset -8" );
+             output_cfi( ".cfi_same_value %%rbp" );
+             output( "\tret\n" );
+-            output( "3:\tmovl $0x%x,%%eax\n", invalid_param );
++            output( "4:\tmovl $0x%x,%%eax\n", invalid_param );
+             output( "\tjmp 2b\n" );
+             break;
+         case CPU_ARM:
+-- 
+2.26.2
+

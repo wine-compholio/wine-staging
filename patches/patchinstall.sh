@@ -281,6 +281,7 @@ patch_enable_all ()
 	enable_wineboot_HKEY_DYN_DATA="$1"
 	enable_wineboot_ProxySettings="$1"
 	enable_wineboot_drivers_etc_Stubs="$1"
+	enable_winebuild_pe_syscall_thunks="$1"
 	enable_winecfg_Libraries="$1"
 	enable_winecfg_Staging="$1"
 	enable_wined3d_Accounting="$1"
@@ -929,6 +930,9 @@ patch_enable ()
 			;;
 		wineboot-drivers_etc_Stubs)
 			enable_wineboot_drivers_etc_Stubs="$2"
+			;;
+		winebuild-pe_syscall_thunks)
+			enable_winebuild_pe_syscall_thunks="$2"
 			;;
 		winecfg-Libraries)
 			enable_winecfg_Libraries="$2"
@@ -5434,6 +5438,34 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wineboot: Initialize proxy settings registry key.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winebuild-pe_syscall_thunks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
+# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
+# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
+# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V, World
+# | 	of Warcraft)
+# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
+# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/virtual.c,
+# | 	tools/winebuild/import.c, tools/winebuild/spec32.c
+# |
+if test "$enable_winebuild_pe_syscall_thunks" -eq 1; then
+	patch_apply winebuild-pe_syscall_thunks/0001-ntdll-Always-align-stack-pointer-in-__wine_syscall_d.patch
+	patch_apply winebuild-pe_syscall_thunks/0002-winebuild-Call-__wine_syscall_dispatcher-through-the.patch
+	patch_apply winebuild-pe_syscall_thunks/0003-ntdll-Also-generate-syscall-thunks-for-Nt-functions-.patch
+	patch_apply winebuild-pe_syscall_thunks/0004-ntdll-Fix-NtGetContextThread-on-i386-with-PE-syscall.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Always align stack pointer in __wine_syscall_dispatcher on x64.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "winebuild: Call __wine_syscall_dispatcher through the fixed address.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Also generate syscall thunks for Nt functions not yet in the Unix part.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix NtGetContextThread on i386 with PE syscall thunks.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,0 +1,205 @@
+From bcab391401b586a877ee0ff69525a3429a1b2b48 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 14 Jul 2020 02:05:59 +0300
+Subject: [PATCH] ntdll: Also generate syscall thunks for Nt functions not yet
+ in the Unix part.
+
+---
+ dlls/ntdll/ntdll.spec    |  1 +
+ dlls/ntdll/unix/loader.c | 37 +++++++++++++++++++++++++++++++++
+ tools/winebuild/import.c | 44 +++++++++++++++++++++++++++++++++++-----
+ tools/winebuild/spec32.c | 16 ++++++++++++++-
+ 4 files changed, 92 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index b873b54b09d6..09b060b094ae 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1588,6 +1588,7 @@
+ @ cdecl __wine_set_unix_funcs(long ptr)
+ @ extern __wine_syscall_dispatcher
+ @ extern -arch=i386 __wine_ldt_copy
++@ extern pe_syscall_table
+ 
+ # Debugging
+ @ cdecl -norelay __wine_dbg_get_channel_flags(ptr)
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index b211708aca02..c6760831d48c 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -788,6 +788,41 @@ static ULONG_PTR find_pe_export( HMODULE module, const IMAGE_EXPORT_DIRECTORY *e
+     return find_named_export( module, exports, (char *)name->Name );
+ }
+ 
++static void fixup_syscall_table(const IMAGE_EXPORT_DIRECTORY *ntdll_exports)
++{
++    extern unsigned int syscall_count;
++    extern void *syscall_table[];
++    unsigned int fixup_count;
++    void **pe_syscall_table;
++    unsigned int i;
++
++    pe_syscall_table = (void **)find_named_export( ntdll_module, ntdll_exports, "pe_syscall_table" );
++
++    if (!pe_syscall_table)
++    {
++        ERR( "pe_syscall_table not found\n" );
++        return;
++    }
++
++    fixup_count = 0;
++    for (i = 0; i < syscall_count; ++i)
++    {
++        assert ( (syscall_table[i] == (void *)0xdeadbeef
++                && pe_syscall_table[i] && pe_syscall_table[i] != (void *)0xdeadcafe)
++                || (pe_syscall_table[i] == (void *)0xdeadcafe && syscall_table[i]
++                && syscall_table[i] != (void *)0xdeadbeef) );
++
++        if (syscall_table[i] == (void *)0xdeadbeef)
++        {
++            syscall_table[i] = pe_syscall_table[i];
++            ++fixup_count;
++        }
++    }
++
++    if (!fixup_count)
++        FIXME("No functions to fixup.\n");
++}
++
+ static void fixup_ntdll_imports( const IMAGE_NT_HEADERS *nt )
+ {
+     const IMAGE_EXPORT_DIRECTORY *ntdll_exports = get_export_dir( ntdll_module );
+@@ -828,6 +863,8 @@ static void fixup_ntdll_imports( const IMAGE_NT_HEADERS *nt )
+         thunk_list++;
+     }
+ 
++    fixup_syscall_table(ntdll_exports);
++
+ #define GET_FUNC(name) \
+     if (!(p##name = (void *)find_named_export( ntdll_module, ntdll_exports, #name ))) \
+         ERR( "%s not found\n", #name )
+diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
+index cf251c9b77d4..71d397122f60 100644
+--- a/tools/winebuild/import.c
++++ b/tools/winebuild/import.c
+@@ -1418,11 +1418,13 @@ void output_syscalls( DLLSPEC *spec )
+     const unsigned int invalid_param = 0xc000000d; /* STATUS_INVALID_PARAMETER */
+     int i, count;
+     ORDDEF **syscalls = NULL;
++    int is_ntdll = spec->dll_name && !strcmp(spec->dll_name, "ntdll");
+ 
+     for (i = count = 0; i < spec->nb_entry_points; i++)
+     {
+         ORDDEF *odp = &spec->entry_points[i];
+-        if (!(odp->flags & FLAG_SYSCALL)) continue;
++        if (!(odp->flags & FLAG_SYSCALL) && (!is_ntdll
++                || (strncmp(odp->link_name, "Nt", 2) && strncmp(odp->link_name, "Zw", 2)))) continue;
+         if (!syscalls) syscalls = xmalloc( (spec->nb_entry_points - i) * sizeof(*syscalls) );
+         syscalls[count++] = odp;
+     }
+@@ -1560,25 +1562,57 @@ void output_syscalls( DLLSPEC *spec )
+         }
+         output_cfi( ".cfi_endproc" );
+         output_function_size( "__wine_syscall_dispatcher" );
+-
+         output( "\t.data\n" );
++
++        output( "\t.align %d\n", get_alignment( get_ptr_size() ) );
++        output( "%s\n", asm_globl("syscall_count") );
++        output( "\t.long %u\n", count );
++
+         output( "\t.align %d\n", get_alignment( get_ptr_size() ) );
++        output( "%s\n", asm_globl("syscall_table") );
+         output( ".Lsyscall_table:\n" );
+         for (i = 0; i < count; i++)
+-            output( "\t%s %s\n", get_asm_ptr_keyword(), asm_name( get_link_name( syscalls[i] )));
++        {
++            if (syscalls[i]->flags & FLAG_SYSCALL)
++                output( "\t%s %s\n", get_asm_ptr_keyword(), asm_name( get_link_name( syscalls[i] )));
++            else
++                output( "\t%s 0xdeadbeef\n", get_asm_ptr_keyword());
++        }
+         output( ".Lsyscall_args:\n" );
+         for (i = 0; i < count; i++)
+             output( "\t.byte %u\n", get_args_size( syscalls[i] ));
+         return;
+     }
+ 
++    output( "\t.data\n" );
++    output( "\t.align %d\n", get_alignment( get_ptr_size() ) );
++    output( "%s\n", asm_globl("pe_syscall_table") );
++    output( ".Lpe_syscall_table:\n" );
++
++    for (i = 0; i < count; i++)
++    {
++        if (!(syscalls[i]->flags & FLAG_SYSCALL))
++            output( "\t%s %s\n", get_asm_ptr_keyword(), asm_name( get_link_name( syscalls[i] )));
++        else
++            output( "\t%s 0xdeadcafe\n", get_asm_ptr_keyword());
++    }
++
++    output( "\t.text\n" );
++
+     for (i = 0; i < count; i++)
+     {
+         ORDDEF *odp = syscalls[i];
+         const char *name = get_link_name(odp);
++        char exp_name[256];
++
++        if (odp->flags & FLAG_SYSCALL)
++            strcpy(exp_name, name);
++        else
++            sprintf(exp_name, "_syscall_%s", name);
++
+         output( "\t.align %d\n", get_alignment(16) );
+-        output( "\t%s\n", func_declaration(name) );
+-        output( "%s\n", asm_globl(name) );
++        output( "\t%s\n", func_declaration(exp_name) );
++        output( "%s\n", asm_globl(exp_name) );
+         output_cfi( ".cfi_startproc" );
+         switch (target_cpu)
+         {
+diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
+index c85249b2a961..7cfbe5389bdf 100644
+--- a/tools/winebuild/spec32.c
++++ b/tools/winebuild/spec32.c
+@@ -394,6 +394,7 @@ void output_exports( DLLSPEC *spec )
+     int nr_exports = get_exports_count( spec );
+     const char *func_ptr = (target_platform == PLATFORM_WINDOWS) ? ".rva" : get_asm_ptr_keyword();
+     const char *name;
++    int is_ntdll = spec->dll_name && !strcmp(spec->dll_name, "ntdll");
+ 
+     if (!nr_exports) return;
+ 
+@@ -445,6 +446,7 @@ void output_exports( DLLSPEC *spec )
+             else if ((odp->flags & FLAG_IMPORT) && (target_cpu == CPU_x86 || target_cpu == CPU_x86_64))
+             {
+                 name = odp->name ? odp->name : odp->export_name;
++
+                 if (name) output( "\t%s %s_%s\n", func_ptr, asm_name("__wine_spec_imp"), name );
+                 else output( "\t%s %s_%u\n", func_ptr, asm_name("__wine_spec_imp"), i );
+                 needs_imports = 1;
+@@ -455,7 +457,19 @@ void output_exports( DLLSPEC *spec )
+             }
+             else
+             {
+-                output( "\t%s %s\n", func_ptr, asm_name( get_link_name( odp )));
++                const char *name = get_link_name( odp );
++
++                if (!(odp->flags & FLAG_SYSCALL) && is_ntdll
++                        && (!strncmp(name, "Nt", 2) || !strncmp(name, "Zw", 2)))
++                {
++                    char sc_name[256];
++                    sprintf(sc_name, "_syscall_%s", name);
++                    output( "\t%s %s\n", func_ptr, asm_name( sc_name ));
++                }
++                else
++                {
++                    output( "\t%s %s\n", func_ptr, asm_name( name ));
++                }
+             }
+             break;
+         case TYPE_STUB:
+-- 
+2.26.2
+

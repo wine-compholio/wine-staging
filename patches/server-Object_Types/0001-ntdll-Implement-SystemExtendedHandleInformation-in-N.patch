@@ -1,4 +1,4 @@
-From e57cb9c97ea1147595a9c29e236515a2be69f9bd Mon Sep 17 00:00:00 2001
+From 04ab1c6e148411f43bea8d2c71fb1bfd5b90efab Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Mar 2017 18:30:33 +0100
 Subject: [PATCH] ntdll: Implement SystemExtendedHandleInformation in
@@ -11,7 +11,7 @@ Subject: [PATCH] ntdll: Implement SystemExtendedHandleInformation in
  3 files changed, 133 insertions(+)
 
 diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
-index eaf2f1a45b7..1728ab82225 100644
+index e399757b85d..d27bb06c5fe 100644
 --- a/dlls/ntdll/tests/info.c
 +++ b/dlls/ntdll/tests/info.c
 @@ -662,6 +662,62 @@ done:
@@ -77,7 +77,7 @@ index eaf2f1a45b7..1728ab82225 100644
  static void test_query_cache(void)
  {
      NTSTATUS status;
-@@ -2715,6 +2771,10 @@ START_TEST(info)
+@@ -2783,6 +2839,10 @@ START_TEST(info)
      trace("Starting test_query_handle()\n");
      test_query_handle();
  
@@ -89,10 +89,10 @@ index eaf2f1a45b7..1728ab82225 100644
      trace("Starting test_query_cache()\n");
      test_query_cache();
 diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
-index 5ba9fb41156..df4e11a0f56 100644
+index abec33bb289..c3774dcdef8 100644
 --- a/dlls/ntdll/unix/system.c
 +++ b/dlls/ntdll/unix/system.c
-@@ -1985,6 +1985,58 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+@@ -2399,6 +2399,58 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
          break;
      }
  
@@ -115,7 +115,7 @@ index 5ba9fb41156..df4e11a0f56 100644
 +
 +        num_handles = size - FIELD_OFFSET( SYSTEM_HANDLE_INFORMATION_EX, Handle );
 +        num_handles /= sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX);
-+        if (!(handle_info = RtlAllocateHeap( GetProcessHeap(), 0, sizeof(*handle_info) * num_handles )))
++        if (!(handle_info = malloc( sizeof(*handle_info) * num_handles )))
 +            return STATUS_NO_MEMORY;
 +
 +        SERVER_START_REQ( get_system_handles )
@@ -144,7 +144,7 @@ index 5ba9fb41156..df4e11a0f56 100644
 +        }
 +        SERVER_END_REQ;
 +
-+        RtlFreeHeap( GetProcessHeap(), 0, handle_info );
++        free( handle_info );
 +        break;
 +    }
 +
@@ -152,10 +152,10 @@ index 5ba9fb41156..df4e11a0f56 100644
      {
          SYSTEM_CACHE_INFORMATION sci = { 0 };
 diff --git a/include/winternl.h b/include/winternl.h
-index 3ff15f28c15..66cd05dac15 100644
+index 091a22376f8..1266f55c6b1 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -1531,6 +1531,27 @@ typedef struct _SYSTEM_HANDLE_INFORMATION {
+@@ -1532,6 +1532,27 @@ typedef struct _SYSTEM_HANDLE_INFORMATION {
      SYSTEM_HANDLE_ENTRY Handle[1];
  } SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
  

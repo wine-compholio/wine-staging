@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "fdb3d9ae320363c1bd9fa716b167a7ad313e638b"
+	echo "54b2a10659871032720df31ae9ca6cba2ff4acf0"
 }
 
 # Show version information
@@ -3829,12 +3829,10 @@ fi
 # | 	tools/winebuild/import.c, tools/winebuild/spec32.c
 # |
 if test "$enable_winebuild_pe_syscall_thunks" -eq 1; then
-	patch_apply winebuild-pe_syscall_thunks/0001-ntdll-Always-align-stack-pointer-in-__wine_syscall_d.patch
 	patch_apply winebuild-pe_syscall_thunks/0002-winebuild-Call-__wine_syscall_dispatcher-through-the.patch
 	patch_apply winebuild-pe_syscall_thunks/0003-ntdll-Also-generate-syscall-thunks-for-Nt-functions-.patch
 	patch_apply winebuild-pe_syscall_thunks/0004-ntdll-Fix-NtGetContextThread-on-i386-with-PE-syscall.patch
 	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Always align stack pointer in __wine_syscall_dispatcher on x64.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "winebuild: Call __wine_syscall_dispatcher through the fixed address.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "ntdll: Also generate syscall thunks for Nt functions not yet in the Unix part.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix NtGetContextThread on i386 with PE syscall thunks.", 1 },';

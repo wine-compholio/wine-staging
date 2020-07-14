@@ -1,4 +1,4 @@
-From 0bfc43bff3a9b53e65c82d987bb072f0ff0a3a2b Mon Sep 17 00:00:00 2001
+From f96ab0203c4119942b9d8ccc27207cc73389b375 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Tue, 19 Aug 2014 22:10:49 -0600
 Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
@@ -14,7 +14,7 @@ Subject: [PATCH] ntdll: Implement retrieving DOS attributes in
  create mode 100644 libs/port/xattr.c
 
 diff --git a/configure.ac b/configure.ac
-index d3bd12a6340..5e775c04449 100644
+index 4829648c3a5..cff2d4b8288 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -88,6 +88,7 @@ AC_ARG_WITH(usb,       AS_HELP_STRING([--without-usb],[do not use the libusb lib
@@ -44,10 +44,10 @@ index d3bd12a6340..5e775c04449 100644
  
  AC_SUBST(DLLFLAGS,"-D_REENTRANT")
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 66ce2eb5fe4..d2e783f3300 100644
+index bf435f109f1..6ac9b18da57 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -1431,6 +1431,22 @@ static BOOL append_entry( struct dir_data *data, const char *long_name,
+@@ -1448,6 +1448,22 @@ static BOOL append_entry( struct dir_data *data, const char *long_name,
  }
  
  
@@ -70,7 +70,7 @@ index 66ce2eb5fe4..d2e783f3300 100644
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -1450,7 +1466,8 @@ static inline ULONG get_file_attributes( const struct stat *st )
+@@ -1491,7 +1507,8 @@ static int fd_get_file_info( int fd, unsigned int options, struct stat *st, ULON
  static int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
      char *parent_path;
@@ -80,8 +80,8 @@ index 66ce2eb5fe4..d2e783f3300 100644
  
      *attr = 0;
      ret = lstat( path, st );
-@@ -1476,6 +1493,9 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
-         RtlFreeHeap( GetProcessHeap(), 0, parent_path );
+@@ -1517,6 +1534,9 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
+         free( parent_path );
      }
      *attr |= get_file_attributes( st );
 +    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
@@ -91,10 +91,10 @@ index 66ce2eb5fe4..d2e783f3300 100644
  }
  
 diff --git a/include/wine/port.h b/include/wine/port.h
-index e8434c73cca..6e81cb71a76 100644
+index 928730a41d7..4670891ae77 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
-@@ -361,6 +361,15 @@ int usleep (unsigned int useconds);
+@@ -352,6 +352,15 @@ int usleep (unsigned int useconds);
  
  extern int mkstemps(char *template, int suffix_len);
  
@@ -111,10 +111,10 @@ index e8434c73cca..6e81cb71a76 100644
  
  #define __WINE_NOT_PORTABLE(func) func##_is_not_portable func##_is_not_portable
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index 1963afe2423..4b1ecab7516 100644
+index 7bc67fa3fee..d1de285d527 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
-@@ -22,4 +22,5 @@ C_SRCS = \
+@@ -21,4 +21,5 @@ C_SRCS = \
  	strnlen.c \
  	symlink.c \
  	usleep.c \

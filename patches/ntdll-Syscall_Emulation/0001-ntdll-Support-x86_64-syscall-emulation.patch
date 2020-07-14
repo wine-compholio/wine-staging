@@ -1,28 +1,19 @@
-From 6a2146342b48977513f83a59cd16d182850767a9 Mon Sep 17 00:00:00 2001
+From b1ab7b26620fc62b2a4848a0efbb6c9e116a5adc Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
-Date: Mon, 30 Dec 2019 13:27:53 +0300
+Date: Tue, 14 Jul 2020 15:00:34 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
 
-The patch assigns the range of syscall numbers which does not
-overlap with native syscalls and assumes these numbers are
-used in the applications (i. e., that the applications
-get the number from syscall thunks). Linux specific Seccomp
-is used for trapping syscalls.
 ---
  configure.ac                    |   1 +
- dlls/ntdll/thread.c             |   8 ++-
- dlls/ntdll/unix/signal_x86_64.c | 105 ++++++++++++++++++++++++++++++++
- dlls/ntdll/unix/thread.c        |   7 ++-
- dlls/ntdll/unix/unix_private.h  |   5 +-
- dlls/ntdll/unixlib.h            |   2 +-
- tools/winebuild/spec32.c        |   9 ++-
- 7 files changed, 131 insertions(+), 6 deletions(-)
+ dlls/ntdll/unix/signal_x86_64.c | 119 ++++++++++++++++++++++++++++++++
+ tools/winebuild/import.c        |   3 +-
+ 3 files changed, 122 insertions(+), 1 deletion(-)
 
 diff --git a/configure.ac b/configure.ac
-index a78610c6490..eabd16b4732 100644
+index 65fa00ff5c6c..4c2c005bca1e 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -464,6 +464,7 @@ AC_CHECK_HEADERS(\
+@@ -477,6 +477,7 @@ AC_CHECK_HEADERS(\
  	linux/joystick.h \
  	linux/major.h \
  	linux/param.h \
@@ -30,34 +21,8 @@ index a78610c6490..eabd16b4732 100644
  	linux/serial.h \
  	linux/types.h \
  	linux/ucdrom.h \
-diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
-index 0eb7d901c4d..c5391fb0512 100644
---- a/dlls/ntdll/thread.c
-+++ b/dlls/ntdll/thread.c
-@@ -105,6 +105,12 @@ void __wine_syscall_dispatcher( void )
- }
- #endif
- 
-+#if defined(__x86_64__)
-+extern unsigned int __wine_nb_syscalls;
-+#else
-+unsigned int __wine_nb_syscalls;
-+#endif
-+
- void *WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
- {
-     UNICODE_STRING name;
-@@ -148,7 +154,7 @@ void *WINAPI __wine_fakedll_dispatcher( const char *module, ULONG ord )
- TEB *thread_init( SIZE_T *info_size )
- {
-     ULONG_PTR val;
--    TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, __wine_syscall_dispatcher );
-+    TEB *teb = unix_funcs->init_threading( &nb_threads, &__wine_ldt_copy, info_size, __wine_syscall_dispatcher, __wine_nb_syscalls );
- 
-     teb->Spare2 = (ULONG_PTR)__wine_fakedll_dispatcher;
-     peb = teb->Peb;
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index 12ea74f7f5c..26097702985 100644
+index e8e98142a982..1b2d2891ab89 100644
 --- a/dlls/ntdll/unix/signal_x86_64.c
 +++ b/dlls/ntdll/unix/signal_x86_64.c
 @@ -28,6 +28,7 @@
@@ -82,37 +47,23 @@ index 12ea74f7f5c..26097702985 100644
  #define NONAMELESSUNION
  #define NONAMELESSSTRUCT
  #include "ntstatus.h"
-@@ -982,6 +990,102 @@ static inline DWORD is_privileged_instr( CONTEXT *context )
+@@ -2089,6 +2097,116 @@ static inline DWORD is_privileged_instr( CONTEXT *context )
      return 0;
  }
  
 +#ifdef HAVE_SECCOMP
 +static void sigsys_handler( int signal, siginfo_t *siginfo, void *sigcontext )
 +{
-+    unsigned int thunk_ret_offset;
 +    ucontext_t *ctx = sigcontext;
-+    unsigned int syscall_nr;
 +    void ***rsp;
 +
-+    WARN("SIGSYS, rax %#llx.\n", ctx->uc_mcontext.gregs[REG_RAX]);
-+
-+    syscall_nr = ctx->uc_mcontext.gregs[REG_RAX] - 0xf000;
-+    if (syscall_nr >= __wine_nb_syscalls)
-+    {
-+        ERR("Syscall %u is undefined.\n", syscall_nr);
-+        return;
-+    }
++    TRACE("SIGSYS, rax %#llx, rip %#llx.\n", ctx->uc_mcontext.gregs[REG_RAX],
++            ctx->uc_mcontext.gregs[REG_RIP]);
 +
 +    rsp = (void ***)&ctx->uc_mcontext.gregs[REG_RSP];
 +    *rsp -= 1;
++    **rsp = (void *)(ctx->uc_mcontext.gregs[REG_RIP] + 0xb);
 +
-+#ifdef __APPLE__
-+    thunk_ret_offset = 0xb;
-+#else
-+    thunk_ret_offset = 0xc;
-+#endif
-+
-+    **rsp = (void *)(ctx->uc_mcontext.gregs[REG_RIP] + thunk_ret_offset);
 +    ctx->uc_mcontext.gregs[REG_RIP] = (ULONG64)__wine_syscall_dispatcher;
 +}
 +#endif
@@ -126,6 +77,32 @@ index 12ea74f7f5c..26097702985 100644
 +    return syscall(__NR_seccomp, operation, flags, args);
 +}
 +#endif
++
++static void check_bpf_jit_enable(void)
++{
++    char enabled;
++    int fd;
++
++    fd = open("/proc/sys/net/core/bpf_jit_enable", O_RDONLY);
++    if (fd == -1)
++    {
++        WARN("Could not open /proc/sys/net/core/bpf_jit_enable.\n");
++        return;
++    }
++
++    if (read(fd, &enabled, sizeof(enabled)) == sizeof(enabled))
++    {
++        TRACE("enabled %#x.\n", enabled);
++
++        if (enabled != '1')
++            ERR("BPF JIT is not enabled in the kernel, enable it to reduce syscall emulation overhead.\n");
++    }
++    else
++    {
++        WARN("Could not read /proc/sys/net/core/bpf_jit_enable.\n");
++    }
++    close(fd);
++}
 +
 +static void install_bpf(struct sigaction *sig_act)
 +{
@@ -167,6 +144,8 @@ index 12ea74f7f5c..26097702985 100644
 +            perror("prctl(PR_SET_SECCOMP, ...)");
 +            exit(1);
 +        }
++
++        check_bpf_jit_enable();
 +    }
 +    else
 +    {
@@ -185,7 +164,7 @@ index 12ea74f7f5c..26097702985 100644
  
  /***********************************************************************
   *           handle_interrupt
-@@ -1431,6 +1535,7 @@ void signal_init_process(void)
+@@ -2538,6 +2656,7 @@ void signal_init_process(void)
      if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
      if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
      if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
@@ -193,115 +172,27 @@ index 12ea74f7f5c..26097702985 100644
      return;
  
   error:
-diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index ca5eba4da88..36126a56f45 100644
---- a/dlls/ntdll/unix/thread.c
-+++ b/dlls/ntdll/unix/thread.c
-@@ -58,6 +58,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(seh);
- #define PTHREAD_STACK_MIN 16384
- #endif
- 
-+unsigned int __wine_nb_syscalls;
-+void *__wine_syscall_dispatcher;
-+
- static int *nb_threads;
- 
- static inline int get_unix_exit_code( NTSTATUS status )
-@@ -84,7 +87,7 @@ static void pthread_exit_wrapper( int status )
- /***********************************************************************
-  *           init_threading
-  */
--TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler )
-+TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler, unsigned int syscall_count )
- {
-     TEB *teb;
-     BOOL suspend;
-@@ -94,6 +97,8 @@ TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZ
-     *ldt_copy = &__wine_ldt_copy;
- #endif
-     nb_threads = nb_threads_ptr;
-+    __wine_nb_syscalls = syscall_count;
-+    __wine_syscall_dispatcher = syscall_handler;
- 
-     teb = virtual_alloc_first_teb();
-     teb->WOW32Reserved = syscall_handler;
-diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 15be5d3715a..516a6cfa1fe 100644
---- a/dlls/ntdll/unix/unix_private.h
-+++ b/dlls/ntdll/unix/unix_private.h
-@@ -115,7 +115,7 @@ extern NTSTATUS CDECL server_handle_to_fd( HANDLE handle, unsigned int access, i
-                                            unsigned int *options ) DECLSPEC_HIDDEN;
- extern void CDECL server_release_fd( HANDLE handle, int unix_fd ) DECLSPEC_HIDDEN;
- extern void CDECL server_init_process_done( void *relay ) DECLSPEC_HIDDEN;
--extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler ) DECLSPEC_HIDDEN;
-+extern TEB * CDECL init_threading( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler, unsigned int syscall_count ) DECLSPEC_HIDDEN;
- extern void CDECL DECLSPEC_NORETURN exit_thread( int status ) DECLSPEC_HIDDEN;
- extern void CDECL DECLSPEC_NORETURN exit_process( int status ) DECLSPEC_HIDDEN;
- extern NTSTATUS CDECL exec_process( UNICODE_STRING *path, UNICODE_STRING *cmdline, NTSTATUS status ) DECLSPEC_HIDDEN;
-@@ -152,6 +152,9 @@ extern NTSTATUS exec_wineloader( char **argv, int socketfd, int is_child_64bit,
- extern void start_server( BOOL debug ) DECLSPEC_HIDDEN;
- extern ULONG_PTR get_image_address(void) DECLSPEC_HIDDEN;
- 
-+extern unsigned int __wine_nb_syscalls DECLSPEC_HIDDEN;
-+extern void *__wine_syscall_dispatcher DECLSPEC_HIDDEN;
-+
- extern unsigned int server_call_unlocked( void *req_ptr ) DECLSPEC_HIDDEN;
- extern void server_enter_uninterrupted_section( RTL_CRITICAL_SECTION *cs, sigset_t *sigset ) DECLSPEC_HIDDEN;
- extern void server_leave_uninterrupted_section( RTL_CRITICAL_SECTION *cs, sigset_t *sigset ) DECLSPEC_HIDDEN;
-diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index b5b7cb07c80..f61e0ed8525 100644
---- a/dlls/ntdll/unixlib.h
-+++ b/dlls/ntdll/unixlib.h
-@@ -304,7 +304,7 @@ struct unix_funcs
-     void          (CDECL *virtual_set_large_address_space)(void);
- 
-     /* thread/process functions */
--    TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler );
-+    TEB *         (CDECL *init_threading)( int *nb_threads_ptr, struct ldt_copy **ldt_copy, SIZE_T *size, void *syscall_handler, unsigned int syscall_count );
-     void          (CDECL *exit_thread)( int status );
-     void          (CDECL *exit_process)( int status );
-     NTSTATUS      (CDECL *exec_process)( UNICODE_STRING *path, UNICODE_STRING *cmdline, NTSTATUS status );
-diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
-index 9cc4698d0d7..c572fe49923 100644
---- a/tools/winebuild/spec32.c
-+++ b/tools/winebuild/spec32.c
-@@ -531,7 +531,7 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
-         output_cfi( ".cfi_startproc" );
-         output( "\t.byte 0x4c,0x8b,0xd1\n" );                               /* mov r10, rcx */
-         output( "\t.byte 0xb8\n" );                                         /* mov eax, SYSCALL */
--        output( "\t.long %d\n", i );
-+        output( "\t.long %d\n", i + 0xf000 );
-         output( "\t.byte 0xf6,0x04,0x25,0x08,0x03,0xfe,0x7f,0x01\n" );      /* test byte ptr [0x7ffe0308], 1 */
-         output( "\t.byte 0x75,0x03\n" );                                    /* jne (over syscall) */
-         output( "\t.byte 0x0f,0x05\n" );                                    /* syscall */
-@@ -576,6 +576,9 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
-         output( "\t.byte %d\n", max(get_args_size(odp), 32) - 32 );
-     }
- 
-+    output( "%s\n", asm_globl("__wine_nb_syscalls") );
-+    output( "\t.long %u\n", spec->nb_syscalls );
-+
-     output( "\n/* syscall dispatcher */\n\n" );
-     output( "\t.text\n" );
-     output( "\t.align %d\n", get_alignment(16) );
-@@ -601,6 +604,8 @@ static void output_syscall_thunks_x64( DLLSPEC *spec )
-     else
-         output( "\tsubq $0xc,0x8(%%rbp)\n" );
- 
-+    output( "\tsub $0xf000,%%rax\n" );
-+
-     /* copy over any arguments on the stack */
-     output( "\tleaq 0x38(%%rbp),%%rsi\n" );
-     if (UsePIC)
-@@ -1192,7 +1197,7 @@ static void create_stub_exports_text_x64( DLLSPEC *spec )
-         align_output_rva( 16, 16 );
-         put_label( odp->link_name );
-         put_byte( 0x4c ); put_byte( 0x8b ); put_byte( 0xd1 );  /* mov r10, rcx */
--        put_byte( 0xb8 ); put_dword( i );                      /* mov eax, SYSCALL */
-+        put_byte( 0xb8 ); put_dword( i + 0xf000 );             /* mov eax, SYSCALL */
-         put_byte( 0xf6 ); put_byte( 0x04 ); put_byte( 0x25 );  /* test byte ptr [0x7ffe0308], 1 */
-                 put_byte( 0x08 ); put_byte( 0x03 ); put_byte( 0xfe );
-                 put_byte( 0x7f ); put_byte( 0x01 );
+diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
+index e8bd141e962b..334278a7e50d 100644
+--- a/tools/winebuild/import.c
++++ b/tools/winebuild/import.c
+@@ -1501,6 +1501,7 @@ void output_syscalls( DLLSPEC *spec )
+             /* Legends of Runeterra hooks the first system call return instruction, and
+              * depends on us returning to it. Adjust the return address accordingly. */
+             output( "\tsubq $0xb,0x8(%%rbp)\n" );
++            output( "\tsubq $0xf000,%%rax\n" );
+             output( "\tcmpq $%u,%%rax\n", count );
+             output( "\tjae 4f\n" );
+             output( "\tleaq .Lsyscall_args(%%rip),%%rcx\n" );
+@@ -1643,7 +1644,7 @@ void output_syscalls( DLLSPEC *spec )
+              * validate that instruction, we can just put a jmp there instead. */
+             output( "\t.byte 0x4c,0x8b,0xd1\n" ); /* movq %rcx,%r10 */
+             output( "\t.byte 0xb8\n" );           /* movl $i,%eax */
+-            output( "\t.long %u\n", i );
++            output( "\t.long %u\n", 0xf000 + i );
+             output( "\t.byte 0xf6,0x04,0x25,0x08,0x03,0xfe,0x7f,0x01\n" ); /* testb $1,0x7ffe0308 */
+             output( "\t.byte 0x75,0x03\n" );      /* jne 1f */
+             output( "\t.byte 0x0f,0x05\n" );      /* syscall */
 -- 
-2.27.0
+2.26.2
 

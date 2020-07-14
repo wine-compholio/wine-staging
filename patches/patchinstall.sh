@@ -188,6 +188,7 @@ patch_enable_all ()
 	enable_ntdll_RtlQueryRegistryValuesEx="$1"
 	enable_ntdll_Serial_Port_Detection="$1"
 	enable_ntdll_Status_Mapping="$1"
+	enable_ntdll_Syscall_Emulation="$1"
 	enable_ntdll_SystemCodeIntegrityInformation="$1"
 	enable_ntdll_SystemExtendedProcessInformation="$1"
 	enable_ntdll_SystemInterruptInformation="$1"
@@ -651,6 +652,9 @@ patch_enable ()
 			;;
 		ntdll-Status_Mapping)
 			enable_ntdll_Status_Mapping="$2"
+			;;
+		ntdll-Syscall_Emulation)
+			enable_ntdll_Syscall_Emulation="$2"
 			;;
 		ntdll-SystemCodeIntegrityInformation)
 			enable_ntdll_SystemCodeIntegrityInformation="$2"
@@ -1600,6 +1604,13 @@ if test "$enable_ntdll_SystemCodeIntegrityInformation" -eq 1; then
 		abort "Patchset ntdll-SystemExtendedProcessInformation disabled, but ntdll-SystemCodeIntegrityInformation depends on that."
 	fi
 	enable_ntdll_SystemExtendedProcessInformation=1
+fi
+
+if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
+	if test "$enable_winebuild_pe_syscall_thunks" -gt 1; then
+		abort "Patchset winebuild-pe_syscall_thunks disabled, but ntdll-Syscall_Emulation depends on that."
+	fi
+	enable_winebuild_pe_syscall_thunks=1
 fi
 
 if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
@@ -3802,6 +3813,52 @@ if test "$enable_ntdll_Status_Mapping" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset winebuild-pe_syscall_thunks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
+# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
+# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
+# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V, World
+# | 	of Warcraft)
+# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
+# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
+# |
+# | Modified files:
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/virtual.c,
+# | 	tools/winebuild/import.c, tools/winebuild/spec32.c
+# |
+if test "$enable_winebuild_pe_syscall_thunks" -eq 1; then
+	patch_apply winebuild-pe_syscall_thunks/0001-ntdll-Always-align-stack-pointer-in-__wine_syscall_d.patch
+	patch_apply winebuild-pe_syscall_thunks/0002-winebuild-Call-__wine_syscall_dispatcher-through-the.patch
+	patch_apply winebuild-pe_syscall_thunks/0003-ntdll-Also-generate-syscall-thunks-for-Nt-functions-.patch
+	patch_apply winebuild-pe_syscall_thunks/0004-ntdll-Fix-NtGetContextThread-on-i386-with-PE-syscall.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Always align stack pointer in __wine_syscall_dispatcher on x64.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "winebuild: Call __wine_syscall_dispatcher through the fixed address.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Also generate syscall thunks for Nt functions not yet in the Unix part.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix NtGetContextThread on i386 with PE syscall thunks.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-Syscall_Emulation
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	winebuild-pe_syscall_thunks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48291] Detroit: Become Human crashes on launch
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/ntdll/unix/signal_x86_64.c, tools/winebuild/import.c
+# |
+if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
+	patch_apply ntdll-Syscall_Emulation/0001-ntdll-Support-x86_64-syscall-emulation.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Support x86_64 syscall emulation.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-SystemExtendedProcessInformation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5438,34 +5495,6 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	patch_apply wineboot-ProxySettings/0001-wineboot-Initialize-proxy-settings-registry-key.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "wineboot: Initialize proxy settings registry key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winebuild-pe_syscall_thunks
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#21232] Chromium-based browser engines (Chrome, Opera, Comodo Dragon, SRWare Iron) crash on startup unless '--no-
-# | 	sandbox' is used (native API sandboxing/hooking scheme incompatible with Wine)
-# |   *	[#42741] StarCraft I: 1.18 PTR fails to initialize ClientSdk.dll
-# |   *	[#45349] Multiple applications and games crash due to missing support for 64-bit syscall thunks (StreetFighter V, World
-# | 	of Warcraft)
-# |   *	[#45573] League of Legends 8.12+ fails to start a game (anticheat engine, hooking of syscall return instructions)
-# |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/virtual.c,
-# | 	tools/winebuild/import.c, tools/winebuild/spec32.c
-# |
-if test "$enable_winebuild_pe_syscall_thunks" -eq 1; then
-	patch_apply winebuild-pe_syscall_thunks/0001-ntdll-Always-align-stack-pointer-in-__wine_syscall_d.patch
-	patch_apply winebuild-pe_syscall_thunks/0002-winebuild-Call-__wine_syscall_dispatcher-through-the.patch
-	patch_apply winebuild-pe_syscall_thunks/0003-ntdll-Also-generate-syscall-thunks-for-Nt-functions-.patch
-	patch_apply winebuild-pe_syscall_thunks/0004-ntdll-Fix-NtGetContextThread-on-i386-with-PE-syscall.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Always align stack pointer in __wine_syscall_dispatcher on x64.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "winebuild: Call __wine_syscall_dispatcher through the fixed address.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Also generate syscall thunks for Nt functions not yet in the Unix part.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix NtGetContextThread on i386 with PE syscall thunks.", 1 },';
 	) >> "$patchlist"
 fi
 

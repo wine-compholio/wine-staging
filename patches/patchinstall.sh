@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "9415667cdfbb4c94cdfe03a1e80a87482bee98c1"
+	echo "536aec511612afd002808508d76bd5640f359f25"
 }
 
 # Show version information
@@ -179,6 +179,7 @@ patch_enable_all ()
 	enable_ntdll_Manifest_Range="$1"
 	enable_ntdll_NtAccessCheck="$1"
 	enable_ntdll_NtDevicePath="$1"
+	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
 	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
@@ -625,6 +626,9 @@ patch_enable ()
 			;;
 		ntdll-NtDevicePath)
 			enable_ntdll_NtDevicePath="$2"
+			;;
+		ntdll-NtQueryEaFile)
+			enable_ntdll_NtQueryEaFile="$2"
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
@@ -3684,6 +3688,18 @@ if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	patch_apply ntdll-NtDevicePath/0001-ntdll-Implement-opening-files-through-nt-device-path.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement opening files through nt device paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-NtQueryEaFile
+# |
+# | Modified files:
+# |   *	dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c
+# |
+if test "$enable_ntdll_NtQueryEaFile" -eq 1; then
+	patch_apply ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
+	(
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Improve stub of NtQueryEaFile.", 1 },';
 	) >> "$patchlist"
 fi
 

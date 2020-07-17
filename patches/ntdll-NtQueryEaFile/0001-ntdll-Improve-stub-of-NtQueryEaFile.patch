@@ -1,53 +1,19 @@
-From 157385f6bdf23c65b1375126f73dad87fcb503f4 Mon Sep 17 00:00:00 2001
+From a010b05e656e6abc4c0b36f1e75902dbecb5dfdc Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 6 Jun 2015 07:03:33 +0800
 Subject: [PATCH] ntdll: Improve stub of NtQueryEaFile.
 
 Based on a patch by Qian Hong.
 ---
- dlls/ntdll/file.c       | 19 ++++++++--
  dlls/ntdll/tests/file.c | 83 +++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 98 insertions(+), 4 deletions(-)
+ dlls/ntdll/unix/file.c  | 15 +++++++-
+ 2 files changed, 96 insertions(+), 2 deletions(-)
 
-diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
-index 7a49cb5d8db..b940201c5a8 100644
---- a/dlls/ntdll/file.c
-+++ b/dlls/ntdll/file.c
-@@ -4041,14 +4041,25 @@ NTSTATUS WINAPI NtQueryVolumeInformationFile( HANDLE handle, PIO_STATUS_BLOCK io
-  *  Success: 0. Attributes read into buffer
-  *  Failure: An NTSTATUS error code describing the error.
-  */
--NTSTATUS WINAPI NtQueryEaFile( HANDLE hFile, PIO_STATUS_BLOCK iosb, PVOID buffer, ULONG length,
-+NTSTATUS WINAPI NtQueryEaFile( HANDLE handle, PIO_STATUS_BLOCK iosb, PVOID buffer, ULONG length,
-                                BOOLEAN single_entry, PVOID ea_list, ULONG ea_list_len,
-                                PULONG ea_index, BOOLEAN restart )
- {
--    FIXME("(%p,%p,%p,%d,%d,%p,%d,%p,%d) stub\n",
--            hFile, iosb, buffer, length, single_entry, ea_list,
-+    int fd, needs_close;
-+    NTSTATUS status;
-+
-+    FIXME("(%p,%p,%p,%d,%d,%p,%d,%p,%d) semi-stub\n",
-+            handle, iosb, buffer, length, single_entry, ea_list,
-             ea_list_len, ea_index, restart);
--    return STATUS_ACCESS_DENIED;
-+
-+    if ((status = unix_funcs->server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL )) != STATUS_SUCCESS)
-+        return status;
-+
-+    if (buffer && length)
-+        memset( buffer, 0, length );
-+
-+    if (needs_close) close( fd );
-+    return STATUS_NO_EAS_ON_FILE;
- }
- 
- 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 44335514761..abd5903e804 100644
+index 6164b0c4bde..802d7ca71aa 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -85,6 +85,7 @@ static NTSTATUS (WINAPI *pNtQueryDirectoryFile)(HANDLE,HANDLE,PIO_APC_ROUTINE,PV
+@@ -84,6 +84,7 @@ static NTSTATUS (WINAPI *pNtQueryDirectoryFile)(HANDLE,HANDLE,PIO_APC_ROUTINE,PV
  static NTSTATUS (WINAPI *pNtQueryVolumeInformationFile)(HANDLE,PIO_STATUS_BLOCK,PVOID,ULONG,FS_INFORMATION_CLASS);
  static NTSTATUS (WINAPI *pNtQueryFullAttributesFile)(const OBJECT_ATTRIBUTES*, FILE_NETWORK_OPEN_INFORMATION*);
  static NTSTATUS (WINAPI *pNtFlushBuffersFile)(HANDLE, IO_STATUS_BLOCK*);
@@ -55,7 +21,7 @@ index 44335514761..abd5903e804 100644
  
  static WCHAR fooW[] = {'f','o','o',0};
  
-@@ -4886,6 +4887,86 @@ static void test_flush_buffers_file(void)
+@@ -4904,6 +4905,86 @@ static void test_flush_buffers_file(void)
      DeleteFileA(buffer);
  }
  
@@ -142,7 +108,7 @@ index 44335514761..abd5903e804 100644
  static void test_file_readonly_access(void)
  {
      static const DWORD default_sharing = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-@@ -5375,6 +5456,7 @@ START_TEST(file)
+@@ -5012,6 +5093,7 @@ START_TEST(file)
      pNtQueryVolumeInformationFile = (void *)GetProcAddress(hntdll, "NtQueryVolumeInformationFile");
      pNtQueryFullAttributesFile = (void *)GetProcAddress(hntdll, "NtQueryFullAttributesFile");
      pNtFlushBuffersFile = (void *)GetProcAddress(hntdll, "NtFlushBuffersFile");
@@ -150,14 +116,40 @@ index 44335514761..abd5903e804 100644
  
      test_read_write();
      test_NtCreateFile();
-@@ -5404,6 +5486,7 @@ START_TEST(file)
+@@ -5041,5 +5123,6 @@ START_TEST(file)
      test_query_volume_information_file();
      test_query_attribute_information_file();
      test_ioctl();
 +    test_query_ea();
      test_flush_buffers_file();
-     test_reparse_points();
  }
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 20eb6a05922..75e78a0d004 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -6440,9 +6440,20 @@ NTSTATUS WINAPI NtQueryEaFile( HANDLE handle, IO_STATUS_BLOCK *io, void *buffer,
+                                BOOLEAN single_entry, void *list, ULONG list_len,
+                                ULONG *index, BOOLEAN restart )
+ {
+-    FIXME( "(%p,%p,%p,%d,%d,%p,%d,%p,%d) stub\n",
++    int fd, needs_close;
++    NTSTATUS status;
++
++    FIXME( "(%p,%p,%p,%d,%d,%p,%d,%p,%d) semi-stub\n",
+            handle, io, buffer, length, single_entry, list, list_len, index, restart );
+-    return STATUS_ACCESS_DENIED;
++
++    if ((status = server_get_unix_fd( handle, 0, &fd, &needs_close, NULL, NULL )))
++        return status;
++
++    if (buffer && length)
++        memset( buffer, 0, length );
++
++    if (needs_close) close( fd );
++    return STATUS_NO_EAS_ON_FILE;
+ }
+ 
+ 
 -- 
-2.26.2
+2.27.0
 

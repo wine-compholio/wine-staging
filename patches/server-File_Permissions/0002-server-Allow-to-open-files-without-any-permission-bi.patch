@@ -1,4 +1,4 @@
-From b1dcc9759921e696a554c46d7aee2c4c29d3c7ae Mon Sep 17 00:00:00 2001
+From 7f1169fde63549646dcd24d60ea648db3a11765c Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 3 Apr 2015 03:58:47 +0200
 Subject: [PATCH] server: Allow to open files without any permission bits. (try
@@ -65,10 +65,10 @@ index 825f8451904..948c257cea2 100644
  
  done:
 diff --git a/server/fd.c b/server/fd.c
-index e5e1fdbbf32..188a632575f 100644
+index 819f77d041e..c1401acc1aa 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -1835,6 +1835,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1892,6 +1892,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      int root_fd = -1;
      int rw_mode;
      char *path;
@@ -76,10 +76,10 @@ index e5e1fdbbf32..188a632575f 100644
      int created = (flags & O_CREAT);
  
      if (((options & FILE_DELETE_ON_CLOSE) && !(access & DELETE)) ||
-@@ -1894,10 +1895,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
-             if ((access & FILE_UNIX_WRITE_ACCESS) || (flags & O_CREAT))
-                 fd->unix_fd = open( name, O_RDONLY | (flags & ~(O_TRUNC | O_CREAT | O_EXCL)), *mode );
+@@ -1958,10 +1959,28 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+             fd->unix_fd = open( name, rw_mode | O_SYMLINK | (flags & ~O_TRUNC), *mode );
          }
+ #endif
 +        else if (errno == EACCES)
 +        {
 +            /* try to change permissions temporarily to open a file descriptor */
@@ -105,12 +105,12 @@ index e5e1fdbbf32..188a632575f 100644
              goto error;
          }
      }
-@@ -1912,6 +1931,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
-     closed_fd->unix_fd = fd->unix_fd;
+@@ -1978,6 +1997,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      closed_fd->unlink = 0;
+     closed_fd->unlink_name = fd->unlink_name;
      closed_fd->unix_name = fd->unix_name;
 +    if (do_chmod) chmod( name, *mode );
-     fstat( fd->unix_fd, &st );
+     lstat( fd->unlink_name, &st );
      *mode = st.st_mode;
  
 -- 

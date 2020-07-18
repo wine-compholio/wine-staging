@@ -1,62 +1,28 @@
-From 6ab64d5c26ab8713b2e55911540538a700580017 Mon Sep 17 00:00:00 2001
+From dcb3180f1f1569626956e51aa35b032271399390 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 12:00:51 -0600
 Subject: [PATCH] ntdll: Correctly report file symbolic links as files.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
- dlls/ntdll/tests/file.c |   8 +--
- dlls/ntdll/unix/file.c  | 120 ++++++++++++++++++++++++++--------------
- 2 files changed, 84 insertions(+), 44 deletions(-)
+ dlls/ntdll/unix/file.c | 115 +++++++++++++++++++++++++++--------------
+ 1 file changed, 77 insertions(+), 38 deletions(-)
 
-diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 9530adb2a84..45cffce68ee 100644
---- a/dlls/ntdll/tests/file.c
-+++ b/dlls/ntdll/tests/file.c
-@@ -5205,13 +5205,13 @@ static void test_reparse_points(void)
- 
-     /* Check deleting a file symlink as if it were a directory */
-     bret = RemoveDirectoryW(reparse_path);
--    todo_wine ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
-+    ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
-     err = GetLastError();
-     todo_wine ok(err == ERROR_DIRECTORY,
-                  "Expected last error 0x%x for RemoveDirectory on file symlink (actually 0x%x)!\n",
-                  ERROR_DIRECTORY, err);
-     dwret = GetFileAttributesW(reparse_path);
--    todo_wine ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
-+    ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
-     ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
- 
-     /* Delete the symlink as a file */
-@@ -5220,10 +5220,10 @@ static void test_reparse_points(void)
- 
-     /* Create a blank slate for directory symlink tests */
-     bret = CreateDirectoryW(reparse_path, NULL);
--    ok(bret, "Failed to create junction point directory.\n");
-+    todo_wine ok(bret, "Failed to create junction point directory.\n");
-     dwret = GetFileAttributesW(reparse_path);
-     ok(dwret != (DWORD)~0, "Path doesn't exist (attributes: 0x%x)!\n", dwret);
--    ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
-+    todo_wine ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
- 
-     /* Create the directory symlink */
-     HeapFree(GetProcessHeap(), 0, buffer);
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index d77a788e0fb..9656f1eb14c 100644
+index af964cf1334..205adafcd8f 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -1470,6 +1470,9 @@ static inline int get_file_xattr( char *hexattr, int attrlen )
+@@ -1466,6 +1466,9 @@ static inline int get_file_xattr( char *hexattr, int attrlen )
      return 0;
  }
  
-+NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, USHORT *unix_dest_len,
++NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_dest_len,
 +                            DWORD *tag, ULONG *flags, BOOL *is_dir);
 +
  /* fetch the attributes of a file */
  static inline ULONG get_file_attributes( const struct stat *st )
  {
-@@ -1554,10 +1557,15 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
+@@ -1550,10 +1553,15 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
      if (ret == -1) return ret;
      if (S_ISLNK( st->st_mode ))
      {
@@ -74,9 +40,9 @@ index d77a788e0fb..9656f1eb14c 100644
 +        if (FILE_DecodeSymlink( path, NULL, NULL, NULL, NULL, &is_dir ) == STATUS_SUCCESS)
 +            st->st_mode = (st->st_mode & ~S_IFMT) | (is_dir ? S_IFDIR : S_IFREG);
      }
-     else if (S_ISDIR( st->st_mode ) && (parent_path = RtlAllocateHeap( GetProcessHeap(), 0, strlen(path) + 4 )))
+     else if (S_ISDIR( st->st_mode ) && (parent_path = malloc( strlen(path) + 4 )))
      {
-@@ -5851,48 +5859,33 @@ cleanup:
+@@ -5879,47 +5887,34 @@ cleanup:
  }
  
  
@@ -85,20 +51,22 @@ index d77a788e0fb..9656f1eb14c 100644
 - * symlink corresponding to that file handle.
 - */
 -NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_size)
-+NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, USHORT *unix_dest_len,
++NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_dest_len,
 +                            DWORD *tag, ULONG *flags, BOOL *is_dir)
  {
--    ANSI_STRING unix_src, unix_dest;
+-    char *unix_src, unix_dest[PATH_MAX];
 -    VOID *subst_name, *print_name;
+-    SIZE_T nt_dest_len = PATH_MAX;
 -    BOOL dest_allocated = FALSE;
 -    int dest_fd, needs_close;
--    UNICODE_STRING nt_dest;
+-    int unix_dest_len;
 -    int path_len = 0;
 -    DWORD max_length;
-+    USHORT len = MAX_PATH;
++    int len = MAX_PATH;
 +    DWORD reparse_tag;
      NTSTATUS status;
 -    ULONG flags = 0;
+-    WCHAR *nt_dest;
 -    INT prefix_len;
 +    BOOL dir_flag;
 +    char *p, *tmp;
@@ -112,14 +80,11 @@ index d77a788e0fb..9656f1eb14c 100644
 -    if ((status = server_get_unix_name( handle, &unix_src )))
 -        goto cleanup;
 -
--    unix_dest.Buffer = RtlAllocateHeap( GetProcessHeap(), 0, PATH_MAX );
--    unix_dest.MaximumLength = PATH_MAX;
--    dest_allocated = TRUE;
--    ret = readlink( unix_src.Buffer, unix_dest.Buffer, unix_dest.MaximumLength );
+-    ret = readlink( unix_src, unix_dest, sizeof(unix_dest) );
 -    if (ret < 0)
 +    if (unix_dest_len) len = *unix_dest_len;
 +    if (!unix_dest)
-+        tmp = RtlAllocateHeap( GetProcessHeap(), 0, len );
++        tmp = malloc( len );
 +    else
 +        tmp = unix_dest;
 +    if ((ret = readlink( unix_src, tmp, len )) < 0)
@@ -127,11 +92,11 @@ index d77a788e0fb..9656f1eb14c 100644
          status = errno_to_status( errno );
          goto cleanup;
      }
--    unix_dest.Length = ret;
--
+-    unix_dest_len = ret;
 +    len = ret;
+ 
      /* Decode the reparse tag from the symlink */
--    p = unix_dest.Buffer;
+-    p = unix_dest;
 +    p = tmp;
      if (*p == '.')
      {
@@ -140,7 +105,7 @@ index d77a788e0fb..9656f1eb14c 100644
          p++;
      }
      if (*p++ != '/')
-@@ -5900,7 +5893,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -5927,7 +5922,7 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
          status = STATUS_NOT_IMPLEMENTED;
          goto cleanup;
      }
@@ -149,7 +114,7 @@ index d77a788e0fb..9656f1eb14c 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          char c = *p++;
-@@ -5915,21 +5908,68 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
+@@ -5942,21 +5937,65 @@ NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_s
              status = STATUS_NOT_IMPLEMENTED;
              goto cleanup;
          }
@@ -173,19 +138,19 @@ index d77a788e0fb..9656f1eb14c 100644
              goto cleanup;
          }
      }
--    unix_dest.Length -= (p - unix_dest.Buffer);
--    memmove(unix_dest.Buffer, p, unix_dest.Length);
+-    unix_dest_len -= (p - unix_dest);
+-    memmove(unix_dest, p, unix_dest_len);
 +    else
 +        dir_flag = TRUE;
 +    len -= (p - tmp);
 +    if (tag) *tag = reparse_tag;
 +    if (is_dir) *is_dir = dir_flag;
-+    if (unix_dest) memmove(unix_dest, p, len);
++    if (unix_dest) memmove(unix_dest, p, len + 1);
 +    if (unix_dest_len) *unix_dest_len = len;
 +    status = STATUS_SUCCESS;
 +
 +cleanup:
-+    if (!unix_dest) RtlFreeHeap( GetProcessHeap(), 0, tmp );
++    if (!unix_dest) free( tmp );
 +    return status;
 +}
 +
@@ -196,15 +161,17 @@ index d77a788e0fb..9656f1eb14c 100644
 + */
 +NTSTATUS FILE_GetSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG out_size)
 +{
-+    ANSI_STRING unix_src, unix_dest;
++    char *unix_src, unix_dest[PATH_MAX];
 +    VOID *subst_name, *print_name;
++    SIZE_T nt_dest_len = PATH_MAX;
++    int unix_dest_len = PATH_MAX;
 +    BOOL dest_allocated = FALSE;
 +    int dest_fd, needs_close;
-+    UNICODE_STRING nt_dest;
 +    int path_len = 0;
 +    DWORD max_length;
 +    NTSTATUS status;
 +    ULONG flags = 0;
++    WCHAR *nt_dest;
 +    INT prefix_len;
 +
 +    if ((status = server_get_unix_fd( handle, FILE_ANY_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
@@ -213,12 +180,7 @@ index d77a788e0fb..9656f1eb14c 100644
 +    if ((status = server_get_unix_name( handle, &unix_src )))
 +        goto cleanup;
 +
-+    unix_dest.MaximumLength = PATH_MAX;
-+    unix_dest.Buffer = RtlAllocateHeap( GetProcessHeap(), 0, unix_dest.MaximumLength );
-+    unix_dest.Length = unix_dest.MaximumLength;
-+    dest_allocated = TRUE;
-+    if ((status = FILE_DecodeSymlink( unix_src.Buffer, unix_dest.Buffer, &unix_dest.Length,
-+                                      &buffer->ReparseTag, &flags, NULL )))
++    if ((status = FILE_DecodeSymlink( unix_src, unix_dest, &unix_dest_len, &buffer->ReparseTag, &flags, NULL )))
 +        goto cleanup;
  
      /* convert the relative path into an absolute path */

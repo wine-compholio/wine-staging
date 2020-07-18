@@ -1,4 +1,4 @@
-From 2de64a6d61d01b9409ab6b61176c0a88a4838937 Mon Sep 17 00:00:00 2001
+From 4ad7e0d2a51606b323cbe2f33c64a99c3666a072 Mon Sep 17 00:00:00 2001
 From: Dmitry Timoshkov <dmitry@baikal.ru>
 Date: Sun, 28 May 2017 05:19:30 +0200
 Subject: [PATCH] ntdll: Implement NtQueryVirtualMemory(MemorySectionName).
@@ -15,35 +15,35 @@ Contains several improvements by Sebastian Lackner <sebastian@fds-team.de>.
  6 files changed, 136 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index b404bceb427..dcc76846c1e 100644
+index a41deb0881d..06ab827836d 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -1763,7 +1763,7 @@ static NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
+@@ -1835,7 +1835,7 @@ static NTSTATUS fill_file_info( const struct stat *st, ULONG attr, void *ptr,
  }
  
  
--static NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name )
-+NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name )
+-static NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name, BOOL nofollow )
++NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name, BOOL nofollow )
  {
      data_size_t size = 1024;
      NTSTATUS ret;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 3d56ea5d408..f24ca578ce1 100644
+index 3cf9ca66736..a9ce3be82b2 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -170,6 +170,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *
+@@ -171,6 +171,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *
                                                apc_result_t *result ) DECLSPEC_HIDDEN;
  extern int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
                                 int *needs_close, enum server_fd_type *type, unsigned int *options ) DECLSPEC_HIDDEN;
-+extern NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name ) DECLSPEC_HIDDEN;
++extern NTSTATUS server_get_unix_name( HANDLE handle, char **unix_name, BOOL nofollow ) DECLSPEC_HIDDEN;
  extern void server_init_process(void) DECLSPEC_HIDDEN;
  extern size_t server_init_thread( void *entry_point, BOOL *suspend ) DECLSPEC_HIDDEN;
  extern int server_pipe( int fd[2] ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 91989bd569e..d1c63bdb215 100644
+index 9d19a621666..9758b11de74 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -4009,6 +4009,98 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
+@@ -4060,6 +4060,98 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
      return STATUS_SUCCESS;
  }
  
@@ -73,7 +73,7 @@ index 91989bd569e..d1c63bdb215 100644
 +
 +    if (!status && mapping)
 +    {
-+        status = server_get_unix_name( mapping, &unix_name );
++        status = server_get_unix_name( mapping, &unix_name, FALSE );
 +        NtClose( mapping );
 +        if (!status)
 +        {
@@ -142,7 +142,7 @@ index 91989bd569e..d1c63bdb215 100644
  #define UNIMPLEMENTED_INFO_CLASS(c) \
      case c: \
          FIXME("(process=%p,addr=%p) Unimplemented information class: " #c "\n", process, addr); \
-@@ -4033,8 +4125,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
+@@ -4084,8 +4176,10 @@ NTSTATUS WINAPI NtQueryVirtualMemory( HANDLE process, LPCVOID addr,
          case MemoryWorkingSetExInformation:
              return get_working_set_ex( process, addr, buffer, len, res_len );
  
@@ -222,10 +222,10 @@ index db0debe0af5..6e74f5b770f 100644
  DECL_HANDLER(get_mapping_committed_range)
  {
 diff --git a/server/protocol.def b/server/protocol.def
-index 03e567c3dd4..3f0a68ccdcc 100644
+index faf4891a01e..0d98d9413e4 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -1686,6 +1686,15 @@ enum char_info_mode
+@@ -1691,6 +1691,15 @@ enum char_info_mode
  @END
  
  

@@ -1,0 +1,72 @@
+From 508f77e1653e67bfa8ed54eeb25251684b495115 Mon Sep 17 00:00:00 2001
+From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
+Date: Wed, 29 May 2019 15:38:30 -0600
+Subject: wcmd: Show reparse point target in directory listing.
+
+Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
+---
+ programs/cmd/directory.c | 34 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
+diff --git a/programs/cmd/directory.c b/programs/cmd/directory.c
+index 5b7416ce72a..87a5a310224 100644
+--- a/programs/cmd/directory.c
++++ b/programs/cmd/directory.c
+@@ -23,6 +23,8 @@
+ 
+ #include "wcmd.h"
+ #include "wine/debug.h"
++#include "winioctl.h"
++#include "ntifs.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(cmd);
+ 
+@@ -256,6 +258,7 @@ static DIRECTORY_STACK *WCMD_list_directory (DIRECTORY_STACK *inputparms, int le
+   static const WCHAR fmt3[]  = {'%','1','!','-','2','3','s','!','\0'};
+   static const WCHAR fmt4[]  = {'%','1','\0'};
+   static const WCHAR fmt5[]  = {'%','1','%','2','\0'};
++  static const WCHAR fmt6[]  = {' ','[','%','1',']','\0'};
+ 
+   dir_count = 0;
+   file_count = 0;
+@@ -417,6 +420,37 @@ static DIRECTORY_STACK *WCMD_list_directory (DIRECTORY_STACK *inputparms, int le
+            if (shortname) WCMD_output (fmt2, fd[i].cAlternateFileName);
+            if (usernames) WCMD_output (fmt3, username);
+            WCMD_output(fmt4,fd[i].cFileName);
++           if (fd[i].dwReserved0) {
++              REPARSE_DATA_BUFFER *buffer = NULL;
++              WCHAR *target = NULL;
++              INT buffer_len;
++              HANDLE hlink;
++              DWORD dwret;
++              BOOL bret;
++
++              hlink = CreateFileW(fd[i].cFileName, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
++                                  FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
++              buffer_len = sizeof(*buffer) + 2*MAX_PATH*sizeof(WCHAR);
++              buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_len);
++              bret = DeviceIoControl(hlink, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID)buffer,
++                                     buffer_len, &dwret, 0);
++              if (bret) {
++                 INT offset;
++                 switch(buffer->ReparseTag) {
++                 case IO_REPARSE_TAG_MOUNT_POINT:
++                    offset = buffer->MountPointReparseBuffer.PrintNameOffset/sizeof(WCHAR);
++                    target = &buffer->MountPointReparseBuffer.PathBuffer[offset];
++                    break;
++                 case IO_REPARSE_TAG_SYMLINK:
++                    offset = buffer->SymbolicLinkReparseBuffer.PrintNameOffset/sizeof(WCHAR);
++                    target = &buffer->SymbolicLinkReparseBuffer.PathBuffer[offset];
++                    break;
++                 }
++              }
++              CloseHandle(hlink);
++              if (target) WCMD_output(fmt6, target);
++              HeapFree(GetProcessHeap(), 0, buffer);
++           }
+         } else {
+            if (!((lstrcmpW(fd[i].cFileName, dotW) == 0) ||
+                  (lstrcmpW(fd[i].cFileName, dotdotW) == 0))) {
+-- 
+2.17.1
+

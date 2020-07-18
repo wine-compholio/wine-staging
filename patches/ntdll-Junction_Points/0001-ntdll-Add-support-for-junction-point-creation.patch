@@ -1,4 +1,4 @@
-From e043e7d570fcdc0f7bc662d794d111baaa15b015 Mon Sep 17 00:00:00 2001
+From 40fcca0f7bf71d2675bf44cdfd8f5a178d4275c3 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -6,19 +6,19 @@ Subject: [PATCH] ntdll: Add support for junction point creation.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  configure.ac            |   2 +
- dlls/ntdll/tests/file.c | 101 ++++++++++++++++++++++++++++++++++
- dlls/ntdll/unix/file.c  | 117 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 101 +++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/file.c  | 129 ++++++++++++++++++++++++++++++++++++++++
  include/Makefile.in     |   1 +
- include/ntifs.h         |  42 +++++++++++++++
- include/wine/port.h     |   9 ++++
+ include/ntifs.h         |  42 +++++++++++++
+ include/wine/port.h     |   9 +++
  libs/port/Makefile.in   |   1 +
- libs/port/renameat2.c   |  55 +++++++++++++++++++
- 8 files changed, 328 insertions(+)
+ libs/port/renameat2.c   |  55 +++++++++++++++++
+ 8 files changed, 340 insertions(+)
  create mode 100644 include/ntifs.h
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index a403c9436ca..dbd07791de7 100644
+index f3e93b3fdb8..918f4a5253c 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -2218,6 +2218,8 @@ AC_CHECK_FUNCS(\
@@ -31,7 +31,7 @@ index a403c9436ca..dbd07791de7 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index a502a8eec75..bce34f03920 100644
+index 5ca9742f0b6..1bc1af363e4 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -42,7 +42,7 @@ index a502a8eec75..bce34f03920 100644
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -4971,6 +4972,105 @@ static void test_file_readonly_access(void)
+@@ -5053,6 +5054,105 @@ static void test_file_readonly_access(void)
      DeleteFileW(path);
  }
  
@@ -148,39 +148,39 @@ index a502a8eec75..bce34f03920 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -5041,4 +5141,5 @@ START_TEST(file)
-     test_query_attribute_information_file();
+@@ -5125,4 +5225,5 @@ START_TEST(file)
      test_ioctl();
+     test_query_ea();
      test_flush_buffers_file();
 +    test_reparse_points();
  }
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index b76d07a8175..271151ed1be 100644
+index 372a8ec1248..cfa1ec0fe9c 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -32,6 +32,7 @@
- #include <dirent.h>
- #include <errno.h>
- #include <fcntl.h>
-+#include <libgen.h>
- #include <stdarg.h>
+@@ -36,6 +36,7 @@
  #include <string.h>
  #include <stdlib.h>
-@@ -122,6 +123,7 @@
- #include "ddk/wdm.h"
- #define WINE_MOUNTMGR_EXTENSIONS
- #include "ddk/mountmgr.h"
-+#include "ntifs.h"
- #include "wine/server.h"
+ #include <stdio.h>
++#include <libgen.h>
+ #include <limits.h>
+ #ifdef HAVE_MNTENT_H
+ #include <mntent.h>
+@@ -126,6 +127,7 @@
  #include "wine/list.h"
  #include "wine/debug.h"
-@@ -5661,6 +5663,104 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+ #include "unix_private.h"
++#include "ntifs.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(file);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+@@ -5645,6 +5647,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
  }
  
  
 +/*
-+ * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink the
-+ * requested directory to the location of the old directory.
++ * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink
++ * the requested directory to the location of the old directory.
 + */
 +NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
 +{
@@ -189,7 +189,8 @@ index b76d07a8175..271151ed1be 100644
 +    int offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
 +    WCHAR *dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
 +    char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
-+    ANSI_STRING unix_src, unix_dest;
++    SIZE_T unix_dest_len = PATH_MAX;
++    char *unix_src, *unix_dest;
 +    char magic_dest[PATH_MAX];
 +    int dest_fd, needs_close;
 +    UNICODE_STRING nt_dest;
@@ -204,12 +205,23 @@ index b76d07a8175..271151ed1be 100644
 +    src_allocated = TRUE;
 +    nt_dest.Buffer = dest;
 +    nt_dest.Length = dest_len;
-+    status = nt_to_unix_file_name( &nt_dest, &unix_dest, 0 );
++    for (;;)
++    {
++        unix_dest = malloc( unix_dest_len );
++        if (!unix_dest)
++        {
++            status = STATUS_NO_MEMORY;
++            goto cleanup;
++        }
++        status = wine_nt_to_unix_file_name( &nt_dest, unix_dest, &unix_dest_len, FALSE );
++        if (status != STATUS_BUFFER_TOO_SMALL) break;
++        free( unix_dest );
++    }
 +    if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
 +        goto cleanup;
 +    dest_allocated = TRUE;
 +
-+    TRACE("Linking %s to %s\n", unix_src.Buffer, unix_dest.Buffer);
++    TRACE( "Linking %s to %s\n", unix_src, unix_dest );
 +
 +    /* Encode the reparse tag into the symlink */
 +    strcpy( magic_dest, "/" );
@@ -219,10 +231,10 @@ index b76d07a8175..271151ed1be 100644
 +            strcat( magic_dest, "." );
 +        strcat( magic_dest, "/" );
 +    }
-+    strcat( magic_dest, unix_dest.Buffer );
++    strcat( magic_dest, unix_dest );
 +
 +    /* Produce the link in a temporary location in the same folder */
-+    strcpy( tmpdir, unix_src.Buffer );
++    strcpy( tmpdir, unix_src );
 +    d = dirname( tmpdir);
 +    if (d != tmpdir) strcpy( tmpdir, d );
 +    strcat( tmpdir, "/.winelink.XXXXXX" );
@@ -240,7 +252,7 @@ index b76d07a8175..271151ed1be 100644
 +        goto cleanup;
 +    }
 +    /* Atomically move the link into position */
-+    if (!renameat2( -1, tmplink, -1, unix_src.Buffer, RENAME_EXCHANGE ))
++    if (!renameat2( -1, tmplink, -1, unix_src, RENAME_EXCHANGE ))
 +    {
 +        /* success: link and folder have switched locations */
 +        rmdir( tmplink ); /* remove the folder (at link location) */
@@ -249,12 +261,12 @@ index b76d07a8175..271151ed1be 100644
 +    {
 +        FIXME( "Atomic exchange of directory with symbolic link unsupported on this system, "
 +               "using unsafe exchange instead.\n" );
-+        if (rmdir( unix_src.Buffer ))
++        if (rmdir( unix_src ))
 +        {
 +            status = errno_to_status( errno );
 +            goto cleanup;
 +        }
-+        if (rename( tmplink, unix_src.Buffer ))
++        if (rename( tmplink, unix_src ))
 +        {
 +            status = errno_to_status( errno );
 +            goto cleanup; /* not moved, orignal file/folder at destination is orphaned */
@@ -269,8 +281,8 @@ index b76d07a8175..271151ed1be 100644
 +
 +cleanup:
 +    if (tempdir_created) rmdir( tmpdir );
-+    if (dest_allocated) RtlFreeAnsiString( &unix_dest );
-+    if (src_allocated) RtlFreeAnsiString( &unix_src );
++    if (dest_allocated) free( unix_dest );
++    if (src_allocated) free( unix_src );
 +    if (needs_close) close( dest_fd );
 +    return status;
 +}
@@ -279,11 +291,10 @@ index b76d07a8175..271151ed1be 100644
  /******************************************************************************
   *              NtFsControlFile   (NTDLL.@)
   */
-@@ -5748,6 +5848,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
-         io->Information = 0;
-         status = STATUS_SUCCESS;
+@@ -5727,6 +5839,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
          break;
-+
+     }
+ 
 +    case FSCTL_SET_REPARSE_POINT:
 +    {
 +        REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)in_buffer;
@@ -300,9 +311,10 @@ index b76d07a8175..271151ed1be 100644
 +        }
 +        break;
 +    }
-     default:
-         return server_ioctl_file( handle, event, apc, apc_context, io, code,
-                                   in_buffer, in_size, out_buffer, out_size );
++
+     case FSCTL_SET_SPARSE:
+         TRACE("FSCTL_SET_SPARSE: Ignoring request\n");
+         io->Information = 0;
 diff --git a/include/Makefile.in b/include/Makefile.in
 index 216adf0d7ae..7dc16c230b6 100644
 --- a/include/Makefile.in

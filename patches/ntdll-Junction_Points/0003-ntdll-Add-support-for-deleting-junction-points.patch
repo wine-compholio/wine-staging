@@ -1,7 +1,7 @@
-From 864570de933285164823fad9d6861dd018ff5a19 Mon Sep 17 00:00:00 2001
+From 17713b3abdd15d7a76ffec8e6376f2424829ecfa Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 21:00:21 -0700
-Subject: [PATCH] ntdll: Add support for deleting junction points.
+Subject: ntdll: Add support for deleting junction points.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
@@ -11,10 +11,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  3 files changed, 131 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 938ef2026e3..80a532282c7 100644
+index 4fe94f58bf1..9da353bbbd2 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5003,12 +5003,15 @@ static void test_reparse_points(void)
+@@ -5004,12 +5004,15 @@ static void test_reparse_points(void)
      static const WCHAR reparseW[] = {'\\','r','e','p','a','r','s','e',0};
      WCHAR path[MAX_PATH], reparse_path[MAX_PATH], target_path[MAX_PATH];
      static const WCHAR targetW[] = {'\\','t','a','r','g','e','t',0};
@@ -30,7 +30,7 @@ index 938ef2026e3..80a532282c7 100644
      UNICODE_STRING nameW;
      HANDLE handle;
      WCHAR *dest;
-@@ -5056,6 +5059,8 @@ static void test_reparse_points(void)
+@@ -5057,6 +5060,8 @@ static void test_reparse_points(void)
          win_skip("Failed to open junction point directory handle (0x%x).\n", GetLastError());
          goto cleanup;
      }
@@ -39,7 +39,7 @@ index 938ef2026e3..80a532282c7 100644
      buffer_len = build_reparse_buffer(nameW.Buffer, &buffer);
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
-@@ -5070,6 +5075,22 @@ static void test_reparse_points(void)
+@@ -5071,6 +5076,22 @@ static void test_reparse_points(void)
      dest = &buffer->MountPointReparseBuffer.PathBuffer[buffer->MountPointReparseBuffer.SubstituteNameOffset/sizeof(WCHAR)];
      ok((memcmp(dest, nameW.Buffer, string_len) == 0), "Junction point destination does not match ('%s' != '%s')!\n",
                                                        wine_dbgstr_w(dest), wine_dbgstr_w(nameW.Buffer));
@@ -62,7 +62,7 @@ index 938ef2026e3..80a532282c7 100644
      CloseHandle(handle);
  
  cleanup:
-@@ -5077,7 +5098,7 @@ cleanup:
+@@ -5078,7 +5099,7 @@ cleanup:
      pRtlFreeUnicodeString(&nameW);
      HeapFree(GetProcessHeap(), 0, buffer);
      bret = RemoveDirectoryW(reparse_path);
@@ -72,10 +72,10 @@ index 938ef2026e3..80a532282c7 100644
      ok(bret, "Failed to remove temporary target directory!\n");
      RemoveDirectoryW(path);
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 52520f5f78f..c65ab7de16c 100644
+index cd523dcd313..3f6dcc6ab41 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -5807,6 +5807,87 @@ cleanup:
+@@ -5817,6 +5817,87 @@ cleanup:
  }
  
  
@@ -88,8 +88,8 @@ index 52520f5f78f..c65ab7de16c 100644
 +    char tmpdir[PATH_MAX], tmpfile[PATH_MAX], *d;
 +    BOOL tempdir_created = FALSE;
 +    int dest_fd, needs_close;
-+    ANSI_STRING unix_name;
 +    NTSTATUS status;
++    char *unix_name;
 +    struct stat st;
 +
 +    if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
@@ -98,7 +98,7 @@ index 52520f5f78f..c65ab7de16c 100644
 +    if ((status = server_get_unix_name( handle, &unix_name )))
 +        goto cleanup;
 +
-+    TRACE("Deleting symlink %s\n", unix_name.Buffer);
++    TRACE( "Deleting symlink %s\n", unix_name );
 +
 +    /* Produce the directory in a temporary location in the same folder */
 +    if (fstat( dest_fd, &st ) == -1)
@@ -106,7 +106,7 @@ index 52520f5f78f..c65ab7de16c 100644
 +        status = errno_to_status( errno );
 +        goto cleanup;
 +    }
-+    strcpy( tmpdir, unix_name.Buffer );
++    strcpy( tmpdir, unix_name );
 +    d = dirname( tmpdir);
 +    if (d != tmpdir) strcpy( tmpdir, d );
 +    strcat( tmpdir, "/.winelink.XXXXXX" );
@@ -126,7 +126,7 @@ index 52520f5f78f..c65ab7de16c 100644
 +    /* attemp to retain the ownership (if possible) */
 +    lchown( tmpfile, st.st_uid, st.st_gid );
 +    /* Atomically move the directory into position */
-+    if (!renameat2( -1, tmpfile, -1, unix_name.Buffer, RENAME_EXCHANGE ))
++    if (!renameat2( -1, tmpfile, -1, unix_name, RENAME_EXCHANGE ))
 +    {
 +        /* success: link and folder have switched locations */
 +        unlink( tmpfile ); /* remove the link (at folder location) */
@@ -135,12 +135,12 @@ index 52520f5f78f..c65ab7de16c 100644
 +    {
 +        FIXME( "Atomic exchange of directory with symbolic link unsupported on this system, "
 +               "using unsafe exchange instead.\n" );
-+        if (unlink( unix_name.Buffer ))
++        if (unlink( unix_name ))
 +        {
 +            status = errno_to_status( errno );
 +            goto cleanup;
 +        }
-+        if (rename( tmpfile, unix_name.Buffer ))
++        if (rename( tmpfile, unix_name ))
 +        {
 +            status = errno_to_status( errno );
 +            goto cleanup; /* not moved, orignal file/folder at destination is orphaned */
@@ -163,9 +163,9 @@ index 52520f5f78f..c65ab7de16c 100644
  /******************************************************************************
   *              NtFsControlFile   (NTDLL.@)
   */
-@@ -5872,6 +5953,22 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
-         status = STATUS_SUCCESS;
+@@ -5899,6 +5980,22 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
          break;
+     }
  
 +    case FSCTL_DELETE_REPARSE_POINT:
 +    {
@@ -208,5 +208,5 @@ index 21d42e17325..4539b89d583 100644
 +
  #endif /* __WINE_NTIFS_H */
 -- 
-2.27.0
+2.17.1
 

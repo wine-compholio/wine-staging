@@ -1,19 +1,32 @@
-From 9ac3c75b53eeeee76fcf4e1c1a5546ae5fc3b58a Mon Sep 17 00:00:00 2001
+From a936bfbd369e1199723b0e5f2fa1329c084561db Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Sat, 30 Mar 2019 13:41:07 -0600
-Subject: [PATCH] server: Properly handle file symlink deletion.
+Subject: server: Properly handle file symlink deletion.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  dlls/ntdll/tests/file.c |  6 ++--
- server/fd.c             | 76 ++++++++++++++++++++++++++++++++++++++---
- 2 files changed, 74 insertions(+), 8 deletions(-)
+ server/fd.c             | 69 +++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 70 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 0b7e9e230227..a6085d8de75c 100644
+index 7f69a9116f2..ddd3d693659 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5198,14 +5198,14 @@ static void test_reparse_points(void)
+@@ -5206,18 +5206,18 @@ static void test_reparse_points(void)
+ 
+     /* Check deleting a file symlink as if it were a directory */
+     bret = RemoveDirectoryW(reparse_path);
+-    todo_wine ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
++    ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
+     err = GetLastError();
+     ok(err == ERROR_DIRECTORY,
+        "Expected last error 0x%x for RemoveDirectory on file symlink (actually 0x%x)!\n",
+        ERROR_DIRECTORY, err);
+     dwret = GetFileAttributesW(reparse_path);
+-    todo_wine ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
++    ok(dwret != (DWORD)~0, "Symlink doesn't exist (attributes: 0x%x)!\n", dwret);
+     ok(dwret & FILE_ATTRIBUTE_REPARSE_POINT, "File is not a symlink! (attributes: 0x%x)\n", dwret);
  
      /* Delete the symlink as a file */
      bret = DeleteFileW(reparse_path);
@@ -22,20 +35,11 @@ index 0b7e9e230227..a6085d8de75c 100644
  
      /* Create a blank slate for directory symlink tests */
      bret = CreateDirectoryW(reparse_path, NULL);
--    todo_wine ok(bret, "Failed to create junction point directory.\n");
-+    ok(bret, "Failed to create junction point directory.\n");
-     dwret = GetFileAttributesW(reparse_path);
-     ok(dwret != (DWORD)~0, "Path doesn't exist (attributes: 0x%x)!\n", dwret);
--    todo_wine ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
-+    ok(!(dwret & FILE_ATTRIBUTE_REPARSE_POINT), "File is already a reparse point! (attributes: %d)\n", dwret);
- 
-     /* Create the directory symlink */
-     HeapFree(GetProcessHeap(), 0, buffer);
 diff --git a/server/fd.c b/server/fd.c
-index 06d1d81bdb08..df0caa483827 100644
+index c0d35e2fa4c..9e087917c0d 100644
 --- a/server/fd.c
 +++ b/server/fd.c
-@@ -106,6 +106,10 @@
+@@ -107,6 +107,10 @@
  #include "winioctl.h"
  #include "ddk/wdm.h"
  
@@ -46,16 +50,7 @@ index 06d1d81bdb08..df0caa483827 100644
  #if defined(HAVE_SYS_EPOLL_H) && defined(HAVE_EPOLL_CREATE)
  # include <sys/epoll.h>
  # define USE_EPOLL
-@@ -1146,7 +1150,7 @@ static void inode_destroy( struct object *obj )
-         {
-             /* make sure it is still the same file */
-             struct stat st;
--            if (!stat( fd->unix_name, &st ) && st.st_dev == inode->device->dev && st.st_ino == inode->ino)
-+            if (!lstat( fd->unix_name, &st ) && st.st_dev == inode->device->dev && st.st_ino == inode->ino)
-             {
-                 if (S_ISDIR(st.st_mode)) rmdir( fd->unix_name );
-                 else unlink( fd->unix_name );
-@@ -1824,6 +1828,53 @@ char *dup_fd_name( struct fd *root, const char *name )
+@@ -1829,6 +1833,55 @@ char *dup_fd_name( struct fd *root, const char *name )
      return ret;
  }
  
@@ -66,6 +61,8 @@ index 06d1d81bdb08..df0caa483827 100644
 +    int len, i;
 +
 +    len = readlink( name, link, sizeof(link) );
++    if (len == -1)
++        return;
 +    link[len] = 0;
 +    p = link;
 +    /* skip past relative/absolute indication */
@@ -109,7 +106,7 @@ index 06d1d81bdb08..df0caa483827 100644
  /* open() wrapper that returns a struct fd with no fd user set */
  struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode, unsigned int access,
                      unsigned int sharing, unsigned int options )
-@@ -1891,6 +1942,13 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1896,6 +1949,13 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
              if ((access & FILE_UNIX_WRITE_ACCESS) || (flags & O_CREAT))
                  fd->unix_fd = open( name, O_RDONLY | (flags & ~(O_TRUNC | O_CREAT | O_EXCL)), *mode );
          }
@@ -123,17 +120,7 @@ index 06d1d81bdb08..df0caa483827 100644
  
          if (fd->unix_fd == -1)
          {
-@@ -1909,14 +1967,15 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
-     closed_fd->unix_fd = fd->unix_fd;
-     closed_fd->unlink = 0;
-     closed_fd->unix_name = fd->unix_name;
--    fstat( fd->unix_fd, &st );
-+    lstat( fd->unix_name, &st );
-     *mode = st.st_mode;
- 
-     /* only bother with an inode for normal files and directories */
--    if (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode))
-+    if (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))
+@@ -1923,6 +1983,7 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
      {
          unsigned int err;
          struct inode *inode = get_inode( st.st_dev, st.st_ino, fd->unix_fd );
@@ -141,17 +128,17 @@ index 06d1d81bdb08..df0caa483827 100644
  
          if (!inode)
          {
-@@ -1931,13 +1990,20 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
+@@ -1937,16 +1998,20 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode,
          list_add_head( &inode->open, &fd->inode_entry );
          closed_fd = NULL;
  
 +        /* decode symlink type */
-+        fstat( fd->unix_fd, &st );
-+        *mode = st.st_mode;
+         fstat( fd->unix_fd, &st );
+         *mode = st.st_mode;
 +        is_dir = S_ISDIR(st.st_mode);
 +        if (is_link)
-+            decode_symlink(fd->unix_name, &is_dir);
-+
++            decode_symlink(fd->unlink_name, &is_dir);
+ 
          /* check directory options */
 -        if ((options & FILE_DIRECTORY_FILE) && !S_ISDIR(st.st_mode))
 +        if ((options & FILE_DIRECTORY_FILE) && !is_dir)
@@ -165,5 +152,5 @@ index 06d1d81bdb08..df0caa483827 100644
              set_error( STATUS_FILE_IS_A_DIRECTORY );
              goto error;
 -- 
-2.26.2
+2.17.1
 

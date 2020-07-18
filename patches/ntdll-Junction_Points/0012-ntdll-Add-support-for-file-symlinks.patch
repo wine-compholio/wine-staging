@@ -1,7 +1,7 @@
-From 13ccfb68becff81e4a9cd94654ed51facbe96bb9 Mon Sep 17 00:00:00 2001
+From d98202d50cdb09fe199414b8a313fcf954725e2d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 11 Apr 2019 17:57:53 -0600
-Subject: [PATCH] ntdll: Add support for file symlinks.
+Subject: ntdll: Add support for file symlinks.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
@@ -10,10 +10,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  2 files changed, 51 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 30ab4110105..ebeb1ec7713 100644
+index 0db7372a0c8..58fec76bec4 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -5190,6 +5190,35 @@ static void test_reparse_points(void)
+@@ -5191,6 +5191,35 @@ static void test_reparse_points(void)
      /* Delete the junction point directory and create a blank slate for symlink tests */
      bret = RemoveDirectoryW(reparse_path);
      ok(bret, "Failed to delete junction point!\n");
@@ -50,10 +50,10 @@ index 30ab4110105..ebeb1ec7713 100644
      ok(bret, "Failed to create junction point directory.\n");
      dwret = GetFileAttributesW(reparse_path);
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index d19b48d4224..fb1e6bd3c1c 100644
+index e62a2529bb2..242d344e1f5 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -5624,6 +5624,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5610,6 +5610,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      int relative_offset = 0;
      UNICODE_STRING nt_dest;
      int dest_len, offset;
@@ -61,7 +61,7 @@ index d19b48d4224..fb1e6bd3c1c 100644
      NTSTATUS status;
      struct stat st;
      WCHAR *dest;
-@@ -5716,7 +5717,8 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5745,7 +5746,8 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
              status = errno_to_status( errno );
              goto cleanup;
          }
@@ -71,9 +71,9 @@ index d19b48d4224..fb1e6bd3c1c 100644
              strcat( magic_dest, "." );
          strcat( magic_dest, "/" );
      }
-@@ -5743,8 +5745,11 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5772,8 +5774,11 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      /* Atomically move the link into position */
-     if (!renameat2( -1, tmplink, -1, unix_src.Buffer, RENAME_EXCHANGE ))
+     if (!renameat2( -1, tmplink, -1, unix_src, RENAME_EXCHANGE ))
      {
 -        /* success: link and folder have switched locations */
 -        rmdir( tmplink ); /* remove the folder (at link location) */
@@ -85,17 +85,17 @@ index d19b48d4224..fb1e6bd3c1c 100644
      }
      else if (errno == ENOSYS)
      {
-@@ -5953,6 +5958,7 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+@@ -6011,6 +6016,7 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+     char tmpdir[PATH_MAX], tmpfile[PATH_MAX], *d;
      BOOL tempdir_created = FALSE;
      int dest_fd, needs_close;
-     ANSI_STRING unix_name;
 +    BOOL is_dir = TRUE;
      NTSTATUS status;
+     char *unix_name;
      struct stat st;
+@@ -6023,12 +6029,13 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
  
-@@ -5964,12 +5970,13 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
- 
-     TRACE("Deleting symlink %s\n", unix_name.Buffer);
+     TRACE( "Deleting symlink %s\n", unix_name );
  
 -    /* Produce the directory in a temporary location in the same folder */
 +    /* Produce the file/directory in a temporary location in the same folder */
@@ -105,10 +105,10 @@ index d19b48d4224..fb1e6bd3c1c 100644
          goto cleanup;
      }
 +    is_dir = S_ISDIR(st.st_mode);
-     strcpy( tmpdir, unix_name.Buffer );
+     strcpy( tmpdir, unix_name );
      d = dirname( tmpdir);
      if (d != tmpdir) strcpy( tmpdir, d );
-@@ -5982,11 +5989,21 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
+@@ -6041,11 +6048,21 @@ NTSTATUS FILE_RemoveSymlink(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
      tempdir_created = TRUE;
      strcpy( tmpfile, tmpdir );
      strcat( tmpfile, "/tmpfile" );
@@ -132,5 +132,5 @@ index d19b48d4224..fb1e6bd3c1c 100644
      lchown( tmpfile, st.st_uid, st.st_gid );
      /* Atomically move the directory into position */
 -- 
-2.27.0
+2.17.1
 

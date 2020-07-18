@@ -199,6 +199,7 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_ext4_case_folder="$1"
+	enable_ntdll_freebsd_compile="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
@@ -687,6 +688,9 @@ patch_enable ()
 			;;
 		ntdll-ext4-case-folder)
 			enable_ntdll_ext4_case_folder="$2"
+			;;
+		ntdll-freebsd-compile)
+			enable_ntdll_freebsd_compile="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -4076,6 +4080,18 @@ if test "$enable_ntdll_ext4_case_folder" -eq 1; then
 	patch_apply ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
 	(
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "ntdll/server: Mark drive_c as case-insensitive when created.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ntdll-freebsd-compile
+# |
+# | Modified files:
+# |   *	dlls/ntdll/unix/registry.c
+# |
+if test "$enable_ntdll_freebsd_compile" -eq 1; then
+	patch_apply ntdll-freebsd-compile/0001-ntdll-Include-signal.h-for-sigset_t.patch
+	(
+		printf '%s\n' '+    { "Gerald Pfeifer", "ntdll: Include <signal.h> for sigset_t.", 1 },';
 	) >> "$patchlist"
 fi
 

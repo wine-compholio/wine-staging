@@ -263,6 +263,7 @@ patch_enable_all ()
 	enable_user32_LoadKeyboardLayoutEx="$1"
 	enable_user32_MessageBox_WS_EX_TOPMOST="$1"
 	enable_user32_Mouse_Message_Hwnd="$1"
+	enable_user32_QueryDisplayConfig="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
 	enable_user32_ShowWindow="$1"
@@ -880,6 +881,9 @@ patch_enable ()
 			;;
 		user32-Mouse_Message_Hwnd)
 			enable_user32_Mouse_Message_Hwnd="$2"
+			;;
+		user32-QueryDisplayConfig)
+			enable_user32_QueryDisplayConfig="$2"
 			;;
 		user32-Refresh_MDI_Menus)
 			enable_user32_Refresh_MDI_Menus="$2"
@@ -5227,6 +5231,21 @@ if test "$enable_user32_Mouse_Message_Hwnd" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for window region of layered windows.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "user32/tests: Add tests for DC region.", 1 },';
 		printf '%s\n' '+    { "Dmitry Timoshkov", "server: Add support for a layered window region.", 3 },';
+	) >> "$patchlist"
+fi
+
+# Patchset user32-QueryDisplayConfig
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49583] Implement QueryDisplayConfig
+# |
+# | Modified files:
+# |   *	dlls/user32/sysparams.c
+# |
+if test "$enable_user32_QueryDisplayConfig" -eq 1; then
+	patch_apply user32-QueryDisplayConfig/0001-user32-Implement-QueryDisplayConfig.patch
+	(
+		printf '%s\n' '+    { "Derek Lesho", "user32: Implement QueryDisplayConfig.", 1 },';
 	) >> "$patchlist"
 fi
 

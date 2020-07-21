@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "536aec511612afd002808508d76bd5640f359f25"
+	echo "a455ff61b40ff73b48d0ccc9c1f14679bb65ab8d"
 }
 
 # Show version information
@@ -199,7 +199,6 @@ patch_enable_all ()
 	enable_ntdll_Zero_mod_name="$1"
 	enable_ntdll_aarch_TEB="$1"
 	enable_ntdll_ext4_case_folder="$1"
-	enable_ntdll_freebsd_compile="$1"
 	enable_ntdll_set_full_cpu_context="$1"
 	enable_ntdll_x86_64_SegDs="$1"
 	enable_ntoskrnl_Stubs="$1"
@@ -689,9 +688,6 @@ patch_enable ()
 			;;
 		ntdll-ext4-case-folder)
 			enable_ntdll_ext4_case_folder="$2"
-			;;
-		ntdll-freebsd-compile)
-			enable_ntdll_freebsd_compile="$2"
 			;;
 		ntdll-set_full_cpu_context)
 			enable_ntdll_set_full_cpu_context="$2"
@@ -1860,7 +1856,7 @@ fi
 # |   *	[#25834] Implement advapi32.CreateRestrictedToken
 # |
 # | Modified files:
-# |   *	dlls/kernelbase/security.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, include/winnt.h, include/winternl.h,
+# |   *	dlls/kernelbase/security.c, dlls/ntdll/ntdll.spec, dlls/ntdll/unix/security.c, include/winnt.h, include/winternl.h,
 # | 	server/named_pipe.c, server/process.c, server/protocol.def, server/security.h, server/token.c
 # |
 if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
@@ -1897,8 +1893,8 @@ fi
 # |
 # | Modified files:
 # |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernelbase/process.c,
-# | 	dlls/ntdll/loader.c, dlls/ntdll/nt.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c,
-# | 	dlls/ntdll/unix/process.c, dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in,
+# | 	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/unix/process.c,
+# | 	dlls/ntdll/unix/security.c, dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in,
 # | 	programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/named_pipe.c, server/process.c,
 # | 	server/process.h, server/protocol.def, server/request.c, server/security.h, server/token.c
 # |
@@ -3763,7 +3759,7 @@ fi
 # Patchset ntdll-NtAccessCheck
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/sec.c
+# |   *	dlls/advapi32/tests/security.c, dlls/ntdll/unix/security.c
 # |
 if test "$enable_ntdll_NtAccessCheck" -eq 1; then
 	patch_apply ntdll-NtAccessCheck/0001-ntdll-Improve-invalid-paramater-handling-in-NtAccess.patch
@@ -4084,18 +4080,6 @@ if test "$enable_ntdll_ext4_case_folder" -eq 1; then
 	patch_apply ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
 	(
 		printf '%s\n' '+    { "Gabriel Ivăncescu", "ntdll/server: Mark drive_c as case-insensitive when created.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-freebsd-compile
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/registry.c
-# |
-if test "$enable_ntdll_freebsd_compile" -eq 1; then
-	patch_apply ntdll-freebsd-compile/0001-ntdll-Include-signal.h-for-sigset_t.patch
-	(
-		printf '%s\n' '+    { "Gerald Pfeifer", "ntdll: Include <signal.h> for sigset_t.", 1 },';
 	) >> "$patchlist"
 fi
 

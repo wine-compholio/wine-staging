@@ -1,19 +1,19 @@
-From ae503e8e7eb8f4fcb9bf3e642458c2a1bba6ccaa Mon Sep 17 00:00:00 2001
+From 6dc1b7d9e533379133857629bb9c09e1045a9020 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 7 Aug 2017 02:28:35 +0200
 Subject: [PATCH] server: Implement token integrity level.
 
 ---
- dlls/ntdll/nt.c     | 23 ++++++++++++++---------
- server/protocol.def |  7 +++++++
- server/token.c      | 30 +++++++++++++++++++++++++++---
+ dlls/ntdll/unix/security.c | 23 ++++++++++++++---------
+ server/protocol.def        |  7 +++++++
+ server/token.c             | 30 +++++++++++++++++++++++++++---
  3 files changed, 48 insertions(+), 12 deletions(-)
 
-diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index ca26ab15..8aab0a48 100644
---- a/dlls/ntdll/nt.c
-+++ b/dlls/ntdll/nt.c
-@@ -400,7 +400,7 @@ NTSTATUS WINAPI NtQueryInformationToken(
+diff --git a/dlls/ntdll/unix/security.c b/dlls/ntdll/unix/security.c
+index 03a81afa46e..f0057116dee 100644
+--- a/dlls/ntdll/unix/security.c
++++ b/dlls/ntdll/unix/security.c
+@@ -172,7 +172,7 @@ NTSTATUS WINAPI NtQueryInformationToken( HANDLE token, TOKEN_INFORMATION_CLASS c
          0,    /* TokenAccessInformation */
          0,    /* TokenVirtualizationAllowed */
          sizeof(DWORD), /* TokenVirtualizationEnabled */
@@ -22,9 +22,9 @@ index ca26ab15..8aab0a48 100644
          0,    /* TokenUIAccess */
          0,    /* TokenMandatoryPolicy */
          0,    /* TokenLogonSid */
-@@ -659,18 +659,23 @@ NTSTATUS WINAPI NtQueryInformationToken(
-         }
+@@ -428,18 +428,23 @@ NTSTATUS WINAPI NtQueryInformationToken( HANDLE token, TOKEN_INFORMATION_CLASS c
          break;
+ 
      case TokenIntegrityLevel:
 +        SERVER_START_REQ( get_token_integrity )
          {
@@ -32,14 +32,14 @@ index ca26ab15..8aab0a48 100644
 -            static const SID high_level = {SID_REVISION, 1, {SECURITY_MANDATORY_LABEL_AUTHORITY},
 -                                                            {SECURITY_MANDATORY_HIGH_RID}};
 -
-             TOKEN_MANDATORY_LABEL *tml = tokeninfo;
+             TOKEN_MANDATORY_LABEL *tml = info;
 -            PSID psid = tml + 1;
 +            PSID sid = tml + 1;
-+            DWORD sid_len = tokeninfolength < sizeof(*tml) ? 0 : tokeninfolength - sizeof(*tml);
++            DWORD sid_len = length < sizeof(*tml) ? 0 : length - sizeof(*tml);
  
 -            tml->Label.Sid = psid;
 -            tml->Label.Attributes = SE_GROUP_INTEGRITY | SE_GROUP_INTEGRITY_ENABLED;
--            memcpy(psid, &high_level, sizeof(SID));
+-            memcpy( psid, &high_level, sizeof(SID) );
 +            req->handle = wine_server_obj_handle( token );
 +            wine_server_set_reply( req, sid, sid_len );
 +            status = wine_server_call( req );
@@ -52,13 +52,13 @@ index ca26ab15..8aab0a48 100644
          }
 +        SERVER_END_REQ;
          break;
+ 
      case TokenAppContainerSid:
-         {
 diff --git a/server/protocol.def b/server/protocol.def
-index 11221d7d..1bfe3234 100644
+index 84f0b577d72..4d37a0df348 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3405,6 +3405,13 @@ enum caret_state
+@@ -3296,6 +3296,13 @@ enum caret_state
      VARARG(sid,SID);              /* the sid specified by which_sid from the token */
  @END
  
@@ -73,10 +73,10 @@ index 11221d7d..1bfe3234 100644
      obj_handle_t    handle;       /* handle to the token */
  @REPLY
 diff --git a/server/token.c b/server/token.c
-index ccde0c2d..2d81118a 100644
+index 7c510fbdad9..d267991f751 100644
 --- a/server/token.c
 +++ b/server/token.c
-@@ -113,6 +113,7 @@ struct token
+@@ -111,6 +111,7 @@ struct token
      TOKEN_SOURCE   source;          /* source of the token */
      int            impersonation_level; /* impersonation level this token is capable of if non-primary token */
      TOKEN_ELEVATION_TYPE elevation; /* elevation level */
@@ -84,7 +84,7 @@ index ccde0c2d..2d81118a 100644
  };
  
  struct privilege
-@@ -546,7 +547,8 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -553,7 +554,8 @@ static struct token *create_token( unsigned primary, const SID *user,
                                     const LUID_AND_ATTRIBUTES *privs, unsigned int priv_count,
                                     const ACL *default_dacl, TOKEN_SOURCE source,
                                     const luid_t *modified_id,
@@ -94,7 +94,7 @@ index ccde0c2d..2d81118a 100644
  {
      struct token *token = alloc_object( &token_ops );
      if (token)
-@@ -630,6 +632,7 @@ static struct token *create_token( unsigned primary, const SID *user,
+@@ -637,6 +639,7 @@ static struct token *create_token( unsigned primary, const SID *user,
          }
  
          token->source = source;
@@ -102,7 +102,7 @@ index ccde0c2d..2d81118a 100644
      }
      return token;
  }
-@@ -685,7 +688,8 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
+@@ -692,7 +695,8 @@ struct token *token_duplicate( struct token *src_token, unsigned primary,
                            NULL, 0, src_token->default_dacl,
                            src_token->source, modified_id,
                            impersonation_level,
@@ -112,7 +112,7 @@ index ccde0c2d..2d81118a 100644
      if (!token) return token;
  
      /* copy groups */
-@@ -890,7 +894,7 @@ struct token *token_create_admin( void )
+@@ -898,7 +902,7 @@ struct token *token_create_admin( void )
          static const TOKEN_SOURCE admin_source = {"SeMgr", {0, 0}};
          token = create_token( TRUE, user_sid, admin_groups, ARRAY_SIZE( admin_groups ),
                                admin_privs, ARRAY_SIZE( admin_privs ), default_dacl,
@@ -121,7 +121,7 @@ index ccde0c2d..2d81118a 100644
          /* we really need a primary group */
          assert( token->primary_group );
      }
-@@ -1524,6 +1528,26 @@ DECL_HANDLER(get_token_sid)
+@@ -1532,6 +1536,26 @@ DECL_HANDLER(get_token_sid)
      }
  }
  
@@ -149,5 +149,5 @@ index ccde0c2d..2d81118a 100644
  DECL_HANDLER(get_token_groups)
  {
 -- 
-2.19.1
+2.27.0
 

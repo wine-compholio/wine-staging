@@ -1,31 +1,43 @@
-From 8d80506ade85cac639a732280111226f65e0aac3 Mon Sep 17 00:00:00 2001
+From 1b222275e7faf71ae1e5c94e297004055ec6f82f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Fri, 4 Aug 2017 02:33:14 +0200
 Subject: [PATCH] ntdll: Implement NtFilterToken.
 
 ---
- dlls/ntdll/nt.c       | 59 ++++++++++++++++++++++++++++++
- dlls/ntdll/ntdll.spec |  2 +-
- include/winnt.h       |  5 +++
- include/winternl.h    |  1 +
- server/named_pipe.c   |  2 +-
- server/process.c      |  2 +-
- server/protocol.def   | 10 ++++++
- server/security.h     |  4 ++-
- server/token.c        | 84 +++++++++++++++++++++++++++++++++++++++++--
- 9 files changed, 163 insertions(+), 6 deletions(-)
+ dlls/ntdll/ntdll.spec      |  2 +-
+ dlls/ntdll/unix/security.c | 64 +++++++++++++++++++++++++++++
+ include/winnt.h            |  5 +++
+ include/winternl.h         |  1 +
+ server/named_pipe.c        |  2 +-
+ server/process.c           |  2 +-
+ server/protocol.def        | 10 +++++
+ server/security.h          |  4 +-
+ server/token.c             | 84 +++++++++++++++++++++++++++++++++++++-
+ 9 files changed, 168 insertions(+), 6 deletions(-)
 
-diff --git a/dlls/ntdll/nt.c b/dlls/ntdll/nt.c
-index cc13672b2b9..443d46c71c7 100644
---- a/dlls/ntdll/nt.c
-+++ b/dlls/ntdll/nt.c
-@@ -90,6 +90,65 @@ NTSTATUS WINAPI NtDuplicateToken(
-     return status;
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index a3bc57716da..f604c8a3c35 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -208,7 +208,7 @@
+ # @ stub NtEnumerateSystemEnvironmentValuesEx
+ @ stdcall -syscall NtEnumerateValueKey(long long long ptr long ptr)
+ @ stub NtExtendSection
+-# @ stub NtFilterToken
++@ stdcall -syscall NtFilterToken(long long ptr ptr ptr ptr)
+ @ stdcall -syscall NtFindAtom(ptr long ptr)
+ @ stdcall -syscall NtFlushBuffersFile(long ptr)
+ @ stdcall -syscall NtFlushInstructionCache(long ptr long)
+diff --git a/dlls/ntdll/unix/security.c b/dlls/ntdll/unix/security.c
+index daecc5e0591..d063d43d6d4 100644
+--- a/dlls/ntdll/unix/security.c
++++ b/dlls/ntdll/unix/security.c
+@@ -604,6 +604,70 @@ NTSTATUS WINAPI NtAdjustPrivilegesToken( HANDLE token, BOOLEAN disable, TOKEN_PR
  }
  
-+/******************************************************************************
-+ *  NtFilterToken        [NTDLL.@]
-+ *  ZwFilterToken        [NTDLL.@]
+ 
++/***********************************************************************
++ *             NtFilterToken  (NTDLL.@)
 + */
 +NTSTATUS WINAPI NtFilterToken( HANDLE token, ULONG flags, TOKEN_GROUPS *disable_sids,
 +                               TOKEN_PRIVILEGES *privileges, TOKEN_GROUPS *restrict_sids,
@@ -54,14 +66,18 @@ index cc13672b2b9..443d46c71c7 100644
 +        BYTE *tmp;
 +
 +        for (i = 0; i < disable_sids->GroupCount; i++)
-+            sids_len += RtlLengthSid( disable_sids->Groups[i].Sid );
++        {
++            SID *sid = disable_sids->Groups[i].Sid;
++            sids_len += offsetof( SID, SubAuthority[sid->SubAuthorityCount] );
++        }
 +
-+        sids = RtlAllocateHeap( GetProcessHeap(), 0, sids_len );
++        sids = malloc( sids_len );
 +        if (!sids) return STATUS_NO_MEMORY;
 +
 +        for (i = 0, tmp = (BYTE *)sids; i < disable_sids->GroupCount; i++, tmp += len)
 +        {
-+            len = RtlLengthSid( disable_sids->Groups[i].Sid );
++            SID *sid = disable_sids->Groups[i].Sid;
++            len = offsetof( SID, SubAuthority[sid->SubAuthorityCount] );
 +            memcpy( tmp, disable_sids->Groups[i].Sid, len );
 +        }
 +    }
@@ -78,26 +94,15 @@ index cc13672b2b9..443d46c71c7 100644
 +    }
 +    SERVER_END_REQ;
 +
-+    RtlFreeHeap( GetProcessHeap(), 0, sids );
++    free( sids );
 +    return status;
 +}
 +
- /******************************************************************************
-  *  NtOpenProcessToken		[NTDLL.@]
-  *  ZwOpenProcessToken		[NTDLL.@]
-diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 6293dc81ed4..36f7ddbda81 100644
---- a/dlls/ntdll/ntdll.spec
-+++ b/dlls/ntdll/ntdll.spec
-@@ -208,7 +208,7 @@
- # @ stub NtEnumerateSystemEnvironmentValuesEx
- @ stdcall -syscall NtEnumerateValueKey(long long long ptr long ptr)
- @ stub NtExtendSection
--# @ stub NtFilterToken
-+@ stdcall NtFilterToken(long long ptr ptr ptr ptr)
- @ stdcall -syscall NtFindAtom(ptr long ptr)
- @ stdcall -syscall NtFlushBuffersFile(long ptr)
- @ stdcall -syscall NtFlushInstructionCache(long ptr long)
++
++
+ /***********************************************************************
+  *             NtPrivilegeCheck  (NTDLL.@)
+  */
 diff --git a/include/winnt.h b/include/winnt.h
 index e1cf78420a6..da17fe3e330 100644
 --- a/include/winnt.h

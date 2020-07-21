@@ -1,20 +1,20 @@
-From 04ab1c6e148411f43bea8d2c71fb1bfd5b90efab Mon Sep 17 00:00:00 2001
+From 01c9f751698b45255b3a43f44ae656bf09646ddc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Tue, 7 Mar 2017 18:30:33 +0100
 Subject: [PATCH] ntdll: Implement SystemExtendedHandleInformation in
  NtQuerySystemInformation.
 
 ---
- dlls/ntdll/tests/info.c  | 60 ++++++++++++++++++++++++++++++++++++++++
- dlls/ntdll/unix/system.c | 52 ++++++++++++++++++++++++++++++++++
- include/winternl.h       | 21 ++++++++++++++
- 3 files changed, 133 insertions(+)
+ dlls/ntdll/tests/info.c  | 51 +++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/system.c | 52 ++++++++++++++++++++++++++++++++++++++++
+ include/winternl.h       | 21 ++++++++++++++++
+ 3 files changed, 124 insertions(+)
 
 diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
-index e399757b85d..d27bb06c5fe 100644
+index e5137ef5a45..04b8a6c454d 100644
 --- a/dlls/ntdll/tests/info.c
 +++ b/dlls/ntdll/tests/info.c
-@@ -662,6 +662,62 @@ done:
+@@ -570,6 +570,56 @@ done:
      HeapFree( GetProcessHeap(), 0, shi);
  }
  
@@ -52,12 +52,6 @@ index e399757b85d..d27bb06c5fe 100644
 +                ((HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == EventHandle);
 +    ok( found, "Expected to find event handle %p (pid %x) in handle list\n", EventHandle, GetCurrentProcessId() );
 +
-+    if (!found)
-+    {
-+        for (i = 0; i < shi->Count; i++)
-+            trace( "%d: handle %x pid %x\n", i, (DWORD)shi->Handle[i].HandleValue, (DWORD)shi->Handle[i].UniqueProcessId );
-+    }
-+
 +    CloseHandle(EventHandle);
 +
 +    ReturnLength = 0xdeadbeef;
@@ -77,19 +71,16 @@ index e399757b85d..d27bb06c5fe 100644
  static void test_query_cache(void)
  {
      NTSTATUS status;
-@@ -2783,6 +2839,10 @@ START_TEST(info)
-     trace("Starting test_query_handle()\n");
+@@ -2593,6 +2643,7 @@ START_TEST(info)
+     test_query_procperf();
+     test_query_module();
      test_query_handle();
- 
-+    /* 0x40 SystemHandleInformation */
-+    trace("Starting test_query_handle_ex()\n");
 +    test_query_handle_ex();
-+
-     /* 0x15 SystemCacheInformation */
-     trace("Starting test_query_cache()\n");
      test_query_cache();
+     test_query_interrupt();
+     test_time_adjustment();
 diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
-index abec33bb289..c3774dcdef8 100644
+index e34f6ab9384..4597a8d788e 100644
 --- a/dlls/ntdll/unix/system.c
 +++ b/dlls/ntdll/unix/system.c
 @@ -2399,6 +2399,58 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,

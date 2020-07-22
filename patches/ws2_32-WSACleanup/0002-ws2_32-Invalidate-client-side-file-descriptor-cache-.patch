@@ -1,4 +1,4 @@
-From 95070fa887dfecb93e3fbf8afd0cd4ac17e03b69 Mon Sep 17 00:00:00 2001
+From 3a762c7717a2d06b83525fa3f709aa57bf8466d2 Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sun, 6 Sep 2015 12:41:17 +0200
 Subject: [PATCH] ws2_32: Invalidate client-side file descriptor cache in
@@ -17,10 +17,10 @@ Subject: [PATCH] ws2_32: Invalidate client-side file descriptor cache in
  9 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index 0b0d4587969..99d4c57cdfe 100644
+index 2d4ced7e63e..598f57404b4 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1577,6 +1577,7 @@
+@@ -1582,6 +1582,7 @@
  
  # Server interface
  @ cdecl -norelay wine_server_call(ptr)
@@ -29,10 +29,10 @@ index 0b0d4587969..99d4c57cdfe 100644
  @ cdecl wine_server_handle_to_fd(long long ptr ptr)
  @ cdecl wine_server_release_fd(long long)
 diff --git a/dlls/ntdll/server.c b/dlls/ntdll/server.c
-index 9e1cc85a36e..3f4ba60b7bb 100644
+index a3ad3e68871..d6cd0b4ce22 100644
 --- a/dlls/ntdll/server.c
 +++ b/dlls/ntdll/server.c
-@@ -130,6 +130,14 @@ int CDECL wine_server_handle_to_fd( HANDLE handle, unsigned int access, int *uni
+@@ -120,6 +120,14 @@ int CDECL wine_server_handle_to_fd( HANDLE handle, unsigned int access, int *uni
      return unix_funcs->server_handle_to_fd( handle, access, unix_fd, options );
  }
  
@@ -48,10 +48,10 @@ index 9e1cc85a36e..3f4ba60b7bb 100644
  /***********************************************************************
   *           wine_server_release_fd   (NTDLL.@)
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index 51ff7f950e8..5da6dc7fa9d 100644
+index 8366e3a9989..649c03f116f 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -1024,6 +1024,7 @@ static struct unix_funcs unix_funcs =
+@@ -1442,6 +1442,7 @@ static struct unix_funcs unix_funcs =
      exec_process,
      wine_server_call,
      server_send_fd,
@@ -60,10 +60,10 @@ index 51ff7f950e8..5da6dc7fa9d 100644
      server_handle_to_fd,
      server_release_fd,
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index 299a311496b..0fac751d12f 100644
+index cb014c91230..1687d633a4c 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -981,6 +981,26 @@ static int remove_fd_from_cache( HANDLE handle )
+@@ -1012,6 +1012,26 @@ static int remove_fd_from_cache( HANDLE handle )
      return fd;
  }
  
@@ -91,11 +91,11 @@ index 299a311496b..0fac751d12f 100644
  /***********************************************************************
   *           server_get_unix_fd
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index e0bc5a9603e..c24b7503ede 100644
+index dad33ee5e9f..00b718dfb7e 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -111,6 +111,7 @@ extern void CDECL virtual_release_address_space(void) DECLSPEC_HIDDEN;
- extern void CDECL virtual_set_large_address_space(void) DECLSPEC_HIDDEN;
+@@ -114,6 +114,7 @@ extern ssize_t CDECL virtual_locked_recvmsg( int fd, struct msghdr *hdr, int fla
+ extern void CDECL virtual_release_address_space(void) DECLSPEC_HIDDEN;
  
  extern void CDECL server_send_fd( int fd ) DECLSPEC_HIDDEN;
 +extern void CDECL server_remove_fds_from_cache_by_type( enum server_fd_type type ) DECLSPEC_HIDDEN;
@@ -103,10 +103,10 @@ index e0bc5a9603e..c24b7503ede 100644
                                             HANDLE *handle ) DECLSPEC_HIDDEN;
  extern NTSTATUS CDECL server_handle_to_fd( HANDLE handle, unsigned int access, int *unix_fd,
 diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
-index 311d99f482d..39b30566365 100644
+index 715af516867..12c2ea15b5c 100644
 --- a/dlls/ntdll/unixlib.h
 +++ b/dlls/ntdll/unixlib.h
-@@ -310,6 +310,7 @@ struct unix_funcs
+@@ -100,6 +100,7 @@ struct unix_funcs
      /* server functions */
      unsigned int  (CDECL *server_call)( void *req_ptr );
      void          (CDECL *server_send_fd)( int fd );
@@ -115,7 +115,7 @@ index 311d99f482d..39b30566365 100644
                                                  HANDLE *handle );
      NTSTATUS      (CDECL *server_handle_to_fd)( HANDLE handle, unsigned int access, int *unix_fd,
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index f81d23650bc..27b309172ea 100644
+index 6bf4140ba00..4f0c3c3adfa 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
 @@ -1740,6 +1740,7 @@ INT WINAPI WSACleanup(void)

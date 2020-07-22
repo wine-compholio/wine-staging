@@ -1,4 +1,4 @@
-From 2afb2a42779c13459bf07921b57fe0d0e5cc65c6 Mon Sep 17 00:00:00 2001
+From 2a24fffb9cfb960455306ba8209ce6889fb379cb Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Sat, 30 May 2015 02:23:15 +0200
 Subject: [PATCH] ntdll: Add support for hiding wine version information from
@@ -10,7 +10,7 @@ Subject: [PATCH] ntdll: Add support for hiding wine version information from
  2 files changed, 103 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 3b68f6685d0..63c7109a763 100644
+index d0cdad0a9ff..434f3ef8803 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -76,6 +76,9 @@ static const WCHAR system_path[] =
@@ -32,7 +32,7 @@ index 3b68f6685d0..63c7109a763 100644
  struct ldr_notification
  {
      struct list                    entry;
-@@ -1704,6 +1709,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
+@@ -1802,6 +1807,96 @@ NTSTATUS WINAPI LdrUnlockLoaderLock( ULONG flags, ULONG_PTR magic )
  }
  
  
@@ -129,7 +129,7 @@ index 3b68f6685d0..63c7109a763 100644
  /******************************************************************
   *		LdrGetProcedureAddress  (NTDLL.@)
   */
-@@ -1724,7 +1819,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
+@@ -1822,7 +1917,7 @@ NTSTATUS WINAPI LdrGetProcedureAddress(HMODULE module, const ANSI_STRING *name,
          LPCWSTR load_path = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
          void *proc = name ? find_named_export( module, exports, exp_size, name->Buffer, -1, load_path )
                            : find_ordinal_export( module, exports, exp_size, ord - exports->Base, load_path );
@@ -138,20 +138,20 @@ index 3b68f6685d0..63c7109a763 100644
          {
              *address = proc;
              ret = STATUS_SUCCESS;
-@@ -4057,6 +4152,8 @@ void __wine_process_init(void)
+@@ -4174,6 +4269,8 @@ void __wine_process_init(void)
          NtTerminateProcess( GetCurrentProcess(), status );
      }
  
 +    hidden_exports_init( wm->ldr.FullDllName.Buffer );
 +
-     unix_funcs->virtual_set_large_address_space();
- 
      /* elevate process if necessary */
+     status = RtlQueryInformationActivationContext( 0, NULL, 0, RunlevelInformationInActivationContext,
+                                                    &runlevel, sizeof(runlevel), NULL );
 diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
-index 80be882e76d..783c5499d46 100644
+index ccba5bc8bd6..75a008fdf4a 100644
 --- a/dlls/ntdll/ntdll_misc.h
 +++ b/dlls/ntdll/ntdll_misc.h
-@@ -150,6 +150,11 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
+@@ -176,6 +176,11 @@ void     WINAPI LdrInitializeThunk(CONTEXT*,void**,ULONG_PTR,ULONG_PTR);
  #define InterlockedCompareExchange64(dest,xchg,cmp) RtlInterlockedCompareExchange64(dest,xchg,cmp)
  #endif
  

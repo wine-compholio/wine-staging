@@ -1,4 +1,4 @@
-From b7e3ca4678d073c92f950708c1be35f37fda86d0 Mon Sep 17 00:00:00 2001
+From d8ab42564dc0d4d6be59235487c903b4197dbe8c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 5 Aug 2017 03:39:55 +0200
 Subject: [PATCH] ntdll: Implement process token elevation through manifests.
@@ -12,7 +12,7 @@ Subject: [PATCH] ntdll: Implement process token elevation through manifests.
  5 files changed, 67 insertions(+)
 
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 3513102b6f0..3b68f6685d0 100644
+index bf8d71adeb3..ff35128ebe8 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
 @@ -3489,6 +3489,32 @@ void WINAPI LdrInitializeThunk( CONTEXT *context, void **entry, ULONG_PTR unknow
@@ -48,7 +48,7 @@ index 3513102b6f0..3b68f6685d0 100644
  /***********************************************************************
   *           load_global_options
   */
-@@ -3922,6 +3948,7 @@ void __wine_process_init(void)
+@@ -3900,6 +3926,7 @@ void __wine_process_init(void)
                                        'k','e','r','n','e','l','3','2','.','d','l','l',0};
      void (WINAPI *kernel32_start_process)(LPTHREAD_START_ROUTINE,void*) = NULL;
      RTL_USER_PROCESS_PARAMETERS *params;
@@ -56,9 +56,9 @@ index 3513102b6f0..3b68f6685d0 100644
      WINE_MODREF *wm;
      NTSTATUS status;
      ANSI_STRING func_name;
-@@ -4032,6 +4059,16 @@ void __wine_process_init(void)
- 
-     unix_funcs->virtual_set_large_address_space();
+@@ -4008,6 +4035,16 @@ void __wine_process_init(void)
+         NtTerminateProcess( GetCurrentProcess(), status );
+     }
  
 +    /* elevate process if necessary */
 +    status = RtlQueryInformationActivationContext( 0, NULL, 0, RunlevelInformationInActivationContext,
@@ -74,7 +74,7 @@ index 3513102b6f0..3b68f6685d0 100644
      RemoveEntryList( &wm->ldr.InLoadOrderLinks );
      InsertHeadList( &peb->LdrData->InLoadOrderModuleList, &wm->ldr.InLoadOrderLinks );
 diff --git a/server/process.c b/server/process.c
-index c414717a8d7..100cb424623 100644
+index 406167e825b..5d1248d7c4d 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -1086,6 +1086,14 @@ int set_process_debug_flag( struct process *process, int flag )
@@ -105,10 +105,10 @@ index fb29f21cb12..d0b7ec4987b 100644
  /* console functions */
  extern void inherit_console( struct thread *parent_thread, struct process *parent,
 diff --git a/server/protocol.def b/server/protocol.def
-index bc0d0723eb3..ec67ce7ab87 100644
+index 56b52dd2231..36c10ce7da8 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3737,6 +3737,13 @@ struct handle_info
+@@ -3589,6 +3589,13 @@ struct handle_info
  @END
  
  

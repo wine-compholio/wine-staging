@@ -1,4 +1,4 @@
-From 299205b6bbf5156bad5514dd52cd1bcd67dc4f14 Mon Sep 17 00:00:00 2001
+From 1d56beba1aeb7acb135db5333c2f61f40988b23f Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 21 Aug 2015 06:39:47 +0800
 Subject: [PATCH] ntdll: Do not allow to deallocate thread stack for current
@@ -10,22 +10,22 @@ Subject: [PATCH] ntdll: Do not allow to deallocate thread stack for current
  2 files changed, 13 insertions(+)
 
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index b509994f7ab..2c7cf2c9b07 100644
+index 0714d9ff898..5ea9664edcf 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -57,6 +57,7 @@ struct ntdll_thread_data
+@@ -58,6 +58,7 @@ struct ntdll_thread_data
+     int                reply_fd;      /* fd for receiving server replies */
      int                wait_fd[2];    /* fd for sleeping server requests */
-     BOOL               wow64_redir;   /* Wow64 filesystem redirection flag */
      pthread_t          pthread_id;    /* pthread thread id */
 +    void              *pthread_stack; /* pthread stack */
      struct list        entry;         /* entry in TEB list */
- };
- 
+     PRTL_THREAD_START_ROUTINE start;  /* thread entry point */
+     void              *param;         /* thread entry point parameter */
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 66bcde8aff1..a08ef1ce140 100644
+index 9b1ca761e9b..cb5db2891c6 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2819,6 +2819,8 @@ NTSTATUS CDECL virtual_alloc_thread_stack( INITIAL_TEB *stack, SIZE_T reserve_si
+@@ -2804,6 +2804,8 @@ NTSTATUS virtual_alloc_thread_stack( INITIAL_TEB *stack, SIZE_T reserve_size, SI
      stack->DeallocationStack = view->base;
      stack->StackBase = (char *)view->base + view->size;
      stack->StackLimit = (char *)view->base + 2 * page_size;
@@ -34,7 +34,7 @@ index 66bcde8aff1..a08ef1ce140 100644
  done:
      server_leave_uninterrupted_section( &virtual_mutex, &sigset );
      return status;
-@@ -3590,6 +3592,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
+@@ -3594,6 +3596,16 @@ NTSTATUS WINAPI NtFreeVirtualMemory( HANDLE process, PVOID *addr_ptr, SIZE_T *si
          /* Free the pages */
  
          if (size || (base != view->base)) status = STATUS_INVALID_PARAMETER;

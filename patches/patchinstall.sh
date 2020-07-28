@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "0d42388095e4fd5c7702a61824b01ce0f9fc4d74"
+	echo "6d66efa3fee7f529bba6c478e71d54e0d66995f5"
 }
 
 # Show version information
@@ -3866,17 +3866,15 @@ fi
 # |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/signal_i386.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/virtual.c,
-# | 	tools/winebuild/import.c, tools/winebuild/spec32.c
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/virtual.c, tools/winebuild/import.c,
+# | 	tools/winebuild/spec32.c
 # |
 if test "$enable_winebuild_pe_syscall_thunks" -eq 1; then
 	patch_apply winebuild-pe_syscall_thunks/0002-winebuild-Call-__wine_syscall_dispatcher-through-the.patch
 	patch_apply winebuild-pe_syscall_thunks/0003-ntdll-Also-generate-syscall-thunks-for-Nt-functions-.patch
-	patch_apply winebuild-pe_syscall_thunks/0004-ntdll-Fix-NtGetContextThread-on-i386-with-PE-syscall.patch
 	(
 		printf '%s\n' '+    { "Paul Gofman", "winebuild: Call __wine_syscall_dispatcher through the fixed address.", 1 },';
 		printf '%s\n' '+    { "Paul Gofman", "ntdll: Also generate syscall thunks for Nt functions not yet in the Unix part.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Fix NtGetContextThread on i386 with PE syscall thunks.", 1 },';
 	) >> "$patchlist"
 fi
 

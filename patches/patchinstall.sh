@@ -214,6 +214,7 @@ patch_enable_all ()
 	enable_opencl_version_1_2="$1"
 	enable_packager_DllMain="$1"
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
+	enable_programs_findstr="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
@@ -731,6 +732,9 @@ patch_enable ()
 			;;
 		pdh-PdhLookupPerfNameByIndex-processor)
 			enable_pdh_PdhLookupPerfNameByIndex_processor="$2"
+			;;
+		programs-findstr)
+			enable_programs_findstr="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -4242,6 +4246,21 @@ if test "$enable_pdh_PdhLookupPerfNameByIndex_processor" -eq 1; then
 	patch_apply pdh-PdhLookupPerfNameByIndex-processor/0001-pdh-Support-the-Processor-object-string.patch
 	(
 		printf '%s\n' '+    { "Erich Hoover", "pdh: Support the '\''Processor'\'' object string.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset programs-findstr
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#35254] findstr: Add minimal implementation
+# |
+# | Modified files:
+# |   *	programs/findstr/Makefile.in, programs/findstr/findstr.rc, programs/findstr/main.c, programs/findstr/resources.h
+# |
+if test "$enable_programs_findstr" -eq 1; then
+	patch_apply programs-findstr/0001-findstr.exe-add-minimal-implementation.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "findstr.exe: Add minimal implementation.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "6d66efa3fee7f529bba6c478e71d54e0d66995f5"
+	echo "ed8358393413d52096c56e96b44ee73f15053f91"
 }
 
 # Show version information
@@ -306,7 +306,6 @@ patch_enable_all ()
 	enable_winepulse_PulseAudio_Support="$1"
 	enable_winevulkan_vkGetPhysicalDeviceSurfaceCapabilitiesKHR="$1"
 	enable_winex11_CandidateWindowPos="$1"
-	enable_winex11_DefaultDisplayFrequency="$1"
 	enable_winex11_MWM_Decorations="$1"
 	enable_winex11_UpdateLayeredWindow="$1"
 	enable_winex11_Vulkan_support="$1"
@@ -1008,9 +1007,6 @@ patch_enable ()
 			;;
 		winex11-CandidateWindowPos)
 			enable_winex11_CandidateWindowPos="$2"
-			;;
-		winex11-DefaultDisplayFrequency)
-			enable_winex11_DefaultDisplayFrequency="$2"
 			;;
 		winex11-MWM_Decorations)
 			enable_winex11_MWM_Decorations="$2"
@@ -5914,18 +5910,6 @@ if test "$enable_winex11_CandidateWindowPos" -eq 1; then
 	patch_apply winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch
 	(
 		printf '%s\n' '+    { "Felix Yan", "winex11.drv: Update a candidate window'\''s position with over-the-spot style.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset winex11-DefaultDisplayFrequency
-# |
-# | Modified files:
-# |   *	dlls/winex11.drv/settings.c, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c
-# |
-if test "$enable_winex11_DefaultDisplayFrequency" -eq 1; then
-	patch_apply winex11-DefaultDisplayFrequency/0001-winex11.drv-Allow-to-select-default-display-frequenc.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "winex11.drv: Allow to select default display frequency in registry key.", 1 },';
 	) >> "$patchlist"
 fi
 

@@ -1,4 +1,4 @@
-From 959b3618856923c384de07bc44124ba0fa3a3a64 Mon Sep 17 00:00:00 2001
+From 33767942e97c0c4a32c1e30dd347f1a69ec5707e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 8 Mar 2017 02:12:37 +0100
 Subject: [PATCH] ntdll: Implement ObjectTypesInformation in NtQueryObject.
@@ -12,7 +12,7 @@ Subject: [PATCH] ntdll: Implement ObjectTypesInformation in NtQueryObject.
  5 files changed, 165 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index f68827c7180..b71e81ef364 100644
+index fba64b8f0d6..e38e4d633b6 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
 @@ -78,6 +78,21 @@ static void     (WINAPI *pRtlWakeAddressSingle)( const void * );
@@ -37,8 +37,8 @@ index f68827c7180..b71e81ef364 100644
  static void test_case_sensitive (void)
  {
      NTSTATUS status;
-@@ -1466,6 +1481,47 @@ static void test_query_object(void)
- 
+@@ -1495,6 +1510,47 @@ static void test_query_object(void)
+     pNtClose(handle);
  }
  
 +static void test_query_object_types(void)
@@ -85,7 +85,7 @@ index f68827c7180..b71e81ef364 100644
  static void test_type_mismatch(void)
  {
      HANDLE h;
-@@ -2063,6 +2119,7 @@ START_TEST(om)
+@@ -2092,6 +2148,7 @@ START_TEST(om)
      test_directory();
      test_symboliclink();
      test_query_object();
@@ -94,10 +94,10 @@ index f68827c7180..b71e81ef364 100644
      test_event();
      test_mutant();
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 20eb6a05922..bb9bee0340b 100644
+index 1800cc1f21d..a377ce7bd7b 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -130,6 +130,8 @@
+@@ -132,6 +132,8 @@
  WINE_DEFAULT_DEBUG_CHANNEL(file);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
  
@@ -106,7 +106,7 @@ index 20eb6a05922..bb9bee0340b 100644
  #define MAX_DOS_DRIVES 26
  
  #define FILE_WRITE_TO_END_OF_FILE      ((LONGLONG)-1)
-@@ -6595,6 +6597,57 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
+@@ -7438,6 +7440,57 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
          break;
      }
  
@@ -165,10 +165,10 @@ index 20eb6a05922..bb9bee0340b 100644
      {
          OBJECT_DATA_INFORMATION* p = ptr;
 diff --git a/include/winternl.h b/include/winternl.h
-index 1266f55c6b1..9ec91f743f9 100644
+index ac1e0880d59..8a3bdd2b95c 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -843,7 +843,7 @@ typedef enum _OBJECT_INFORMATION_CLASS {
+@@ -1116,7 +1116,7 @@ typedef enum _OBJECT_INFORMATION_CLASS {
      ObjectBasicInformation,
      ObjectNameInformation,
      ObjectTypeInformation,
@@ -177,7 +177,7 @@ index 1266f55c6b1..9ec91f743f9 100644
      ObjectDataInformation
  } OBJECT_INFORMATION_CLASS, *POBJECT_INFORMATION_CLASS;
  
-@@ -1281,9 +1281,35 @@ typedef struct _OBJECT_NAME_INFORMATION {
+@@ -1576,9 +1576,35 @@ typedef struct _OBJECT_NAME_INFORMATION {
  
  typedef struct __OBJECT_TYPE_INFORMATION {
      UNICODE_STRING TypeName;
@@ -215,10 +215,10 @@ index 1266f55c6b1..9ec91f743f9 100644
  #ifdef __WINESRC__
      DWORD_PTR ExitStatus;
 diff --git a/server/directory.c b/server/directory.c
-index 198fc48ece2..ab0498e952f 100644
+index b735602a805..d89da8b169b 100644
 --- a/server/directory.c
 +++ b/server/directory.c
-@@ -72,6 +72,8 @@ static const struct object_ops object_type_ops =
+@@ -73,6 +73,8 @@ static const struct object_ops object_type_ops =
      no_destroy                    /* destroy */
  };
  
@@ -227,7 +227,7 @@ index 198fc48ece2..ab0498e952f 100644
  
  struct directory
  {
-@@ -236,7 +238,8 @@ struct object_type *get_object_type( const struct unicode_str *name )
+@@ -238,7 +240,8 @@ struct object_type *get_object_type( const struct unicode_str *name )
      {
          if (get_error() != STATUS_OBJECT_NAME_EXISTS)
          {
@@ -237,7 +237,7 @@ index 198fc48ece2..ab0498e952f 100644
              make_object_static( &type->obj );
          }
          clear_error();
-@@ -551,3 +554,17 @@ DECL_HANDLER(get_object_type)
+@@ -553,3 +556,17 @@ DECL_HANDLER(get_object_type)
      }
      release_object( obj );
  }
@@ -256,10 +256,10 @@ index 198fc48ece2..ab0498e952f 100644
 +    else set_error( STATUS_NO_MORE_ENTRIES );
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index a121c371c19..aa3be515ffe 100644
+index ab5efef36e4..ade5e85d10b 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
-@@ -3440,6 +3440,15 @@ struct handle_info
+@@ -3408,6 +3408,15 @@ struct handle_info
  @END
  
  

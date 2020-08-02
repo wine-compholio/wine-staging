@@ -1,7 +1,7 @@
-From 9baddd14dceb102d123a6470a12e43ffd4e1e4de Mon Sep 17 00:00:00 2001
+From c3cc1222c92372b8f260618835e547910ba6a07d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 11 Apr 2019 12:16:49 -0600
-Subject: ntdll: Add support for relative symlink creation.
+Subject: [PATCH] ntdll: Add support for relative symlink creation.
 
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
@@ -11,11 +11,11 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  3 files changed, 109 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index b6a58c3f2a7..9b510fe9057 100644
+index 6e4e90b4bbf..9e05270a25e 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -4973,7 +4973,8 @@ static void test_file_readonly_access(void)
-     DeleteFileW(path);
+@@ -5205,7 +5205,8 @@ static void test_mailslot_name(void)
+     CloseHandle( device );
  }
  
 -static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_BUFFER **pbuffer)
@@ -24,7 +24,7 @@ index b6a58c3f2a7..9b510fe9057 100644
  {
      static INT header_size = offsetof(REPARSE_DATA_BUFFER, GenericReparseBuffer);
      INT buffer_size, struct_size, data_size, string_len, prefix_len;
-@@ -4991,7 +4992,7 @@ static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_B
+@@ -5223,7 +5224,7 @@ static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_B
      default:
          return 0;
      }
@@ -33,7 +33,7 @@ index b6a58c3f2a7..9b510fe9057 100644
      string_len = lstrlenW(&filename[prefix_len]);
      data_size = (prefix_len + 2 * string_len + 2) * sizeof(WCHAR);
      buffer_size = struct_size + data_size;
-@@ -5011,6 +5012,7 @@ static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_B
+@@ -5243,6 +5244,7 @@ static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_B
          buffer->SymbolicLinkReparseBuffer.SubstituteNameLength = (prefix_len + string_len) * sizeof(WCHAR);
          buffer->SymbolicLinkReparseBuffer.PrintNameOffset = (prefix_len + string_len + 1) * sizeof(WCHAR);
          buffer->SymbolicLinkReparseBuffer.PrintNameLength = string_len * sizeof(WCHAR);
@@ -41,7 +41,7 @@ index b6a58c3f2a7..9b510fe9057 100644
          subst_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[0];
          print_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[prefix_len + string_len + 1];
          break;
-@@ -5088,7 +5090,7 @@ static void test_reparse_points(void)
+@@ -5320,7 +5322,7 @@ static void test_reparse_points(void)
      }
      dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
      ok(dwret == STATUS_SUCCESS, "Failed to get junction point folder's attributes (0x%x).\n", dwret);
@@ -50,7 +50,7 @@ index b6a58c3f2a7..9b510fe9057 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
  
-@@ -5129,7 +5131,7 @@ static void test_reparse_points(void)
+@@ -5361,7 +5363,7 @@ static void test_reparse_points(void)
      HeapFree(GetProcessHeap(), 0, buffer);
      handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                              FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
@@ -59,7 +59,7 @@ index b6a58c3f2a7..9b510fe9057 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
      CloseHandle(handle);
-@@ -5144,7 +5146,7 @@ static void test_reparse_points(void)
+@@ -5376,7 +5378,7 @@ static void test_reparse_points(void)
      ok(bret, "Failed to create junction point target directory.\n");
      handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                           FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
@@ -68,7 +68,7 @@ index b6a58c3f2a7..9b510fe9057 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
      CloseHandle(handle);
-@@ -5206,7 +5208,7 @@ static void test_reparse_points(void)
+@@ -5438,7 +5440,7 @@ static void test_reparse_points(void)
      }
      dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
      ok(dwret == STATUS_SUCCESS, "Failed to get symlink folder's attributes (0x%x).\n", dwret);
@@ -77,7 +77,7 @@ index b6a58c3f2a7..9b510fe9057 100644
      bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
      ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
  
-@@ -5243,6 +5245,22 @@ static void test_reparse_points(void)
+@@ -5475,6 +5477,22 @@ static void test_reparse_points(void)
         "Symlink folder's access time does not match.\n");
      CloseHandle(handle);
  
@@ -101,10 +101,10 @@ index b6a58c3f2a7..9b510fe9057 100644
      /* Cleanup */
      pRtlFreeUnicodeString(&nameW);
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 232cbb36f42..3652fbb1a0d 100644
+index 0c6426242e8..fcad9fd68bb 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -5600,17 +5600,20 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+@@ -5663,17 +5663,20 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
   */
  NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
  {
@@ -127,7 +127,7 @@ index 232cbb36f42..3652fbb1a0d 100644
      int i;
  
      switch(buffer->ReparseTag)
-@@ -5619,11 +5622,13 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5682,11 +5685,13 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
          dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
          offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
          dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
@@ -141,7 +141,7 @@ index 232cbb36f42..3652fbb1a0d 100644
          break;
      default:
          return STATUS_NOT_IMPLEMENTED;
-@@ -5635,8 +5640,64 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5698,8 +5703,64 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      if ((status = server_get_unix_name( handle, &unix_src )))
          goto cleanup;
      src_allocated = TRUE;
@@ -208,7 +208,7 @@ index 232cbb36f42..3652fbb1a0d 100644
      for (;;)
      {
          unix_dest = malloc( unix_dest_len );
-@@ -5652,11 +5713,24 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5715,11 +5776,24 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
      if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
          goto cleanup;
      dest_allocated = TRUE;
@@ -235,7 +235,7 @@ index 232cbb36f42..3652fbb1a0d 100644
      for (i = 0; i < sizeof(ULONG)*8; i++)
      {
          if ((buffer->ReparseTag >> i) & 1)
-@@ -5675,7 +5749,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5738,7 +5812,7 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
              strcat( magic_dest, "." );
          strcat( magic_dest, "/" );
      }
@@ -244,7 +244,7 @@ index 232cbb36f42..3652fbb1a0d 100644
  
      /* Produce the link in a temporary location in the same folder */
      strcpy( tmpdir, unix_src );
-@@ -5725,7 +5799,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
+@@ -5788,7 +5862,9 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
  
  cleanup:
      if (tempdir_created) rmdir( tmpdir );
@@ -266,5 +266,5 @@ index ab3273d3f81..0d02225bc4f 100644
 +
  #endif /* __WINE_NTIFS_H */
 -- 
-2.17.1
+2.27.0
 

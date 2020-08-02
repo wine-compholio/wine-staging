@@ -1,4 +1,4 @@
-From 40fcca0f7bf71d2675bf44cdfd8f5a178d4275c3 Mon Sep 17 00:00:00 2001
+From cafaad67d4b5ed7985930e2a13e55d400cbbbbc9 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -18,10 +18,10 @@ Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
  create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index f3e93b3fdb8..918f4a5253c 100644
+index d85f4dee7c..1bc2b5cbe2 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2218,6 +2218,8 @@ AC_CHECK_FUNCS(\
+@@ -2214,6 +2214,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -31,7 +31,7 @@ index f3e93b3fdb8..918f4a5253c 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 5ca9742f0b6..1bc1af363e4 100644
+index 1bb71e711a..84fea2b869 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -42,8 +42,8 @@ index 5ca9742f0b6..1bc1af363e4 100644
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -5053,6 +5054,105 @@ static void test_file_readonly_access(void)
-     DeleteFileW(path);
+@@ -5143,6 +5144,105 @@ static void test_mailslot_name(void)
+     CloseHandle( device );
  }
  
 +static INT build_reparse_buffer(const WCHAR *filename, REPARSE_DATA_BUFFER **pbuffer)
@@ -148,14 +148,15 @@ index 5ca9742f0b6..1bc1af363e4 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -5125,4 +5225,5 @@ START_TEST(file)
+@@ -5215,5 +5315,6 @@ START_TEST(file)
      test_ioctl();
      test_query_ea();
      test_flush_buffers_file();
 +    test_reparse_points();
+     test_mailslot_name();
  }
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 372a8ec1248..cfa1ec0fe9c 100644
+index 7667bd6398..211ebc89df 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
 @@ -36,6 +36,7 @@
@@ -174,7 +175,7 @@ index 372a8ec1248..cfa1ec0fe9c 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(file);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
-@@ -5645,6 +5647,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+@@ -5643,6 +5645,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
  }
  
  
@@ -291,7 +292,7 @@ index 372a8ec1248..cfa1ec0fe9c 100644
  /******************************************************************************
   *              NtFsControlFile   (NTDLL.@)
   */
-@@ -5727,6 +5839,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
+@@ -5725,6 +5837,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
          break;
      }
  
@@ -316,7 +317,7 @@ index 372a8ec1248..cfa1ec0fe9c 100644
          TRACE("FSCTL_SET_SPARSE: Ignoring request\n");
          io->Information = 0;
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 216adf0d7ae..7dc16c230b6 100644
+index 216adf0d7a..7dc16c230b 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
 @@ -520,6 +520,7 @@ SOURCES = \
@@ -329,7 +330,7 @@ index 216adf0d7ae..7dc16c230b6 100644
  	ntsecapi.h \
 diff --git a/include/ntifs.h b/include/ntifs.h
 new file mode 100644
-index 00000000000..21d42e17325
+index 0000000000..21d42e1732
 --- /dev/null
 +++ b/include/ntifs.h
 @@ -0,0 +1,42 @@
@@ -376,7 +377,7 @@ index 00000000000..21d42e17325
 +
 +#endif /* __WINE_NTIFS_H */
 diff --git a/include/wine/port.h b/include/wine/port.h
-index 930efeeea1f..7d2c7388707 100644
+index 930efeeea1..7d2c738870 100644
 --- a/include/wine/port.h
 +++ b/include/wine/port.h
 @@ -334,6 +334,15 @@ double rint(double x);
@@ -396,7 +397,7 @@ index 930efeeea1f..7d2c7388707 100644
  int statvfs( const char *path, struct statvfs *buf );
  #endif
 diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index d1de285d527..4b1ecab7516 100644
+index d1de285d52..4b1ecab751 100644
 --- a/libs/port/Makefile.in
 +++ b/libs/port/Makefile.in
 @@ -14,6 +14,7 @@ C_SRCS = \
@@ -409,7 +410,7 @@ index d1de285d527..4b1ecab7516 100644
  	statvfs.c \
 diff --git a/libs/port/renameat2.c b/libs/port/renameat2.c
 new file mode 100644
-index 00000000000..f46f407ec71
+index 0000000000..f46f407ec7
 --- /dev/null
 +++ b/libs/port/renameat2.c
 @@ -0,0 +1,55 @@

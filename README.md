@@ -80,3 +80,32 @@ Contributing
 For information on contributing to Wine-Staging, please see
 <https://wiki.winehq.org/Wine-Staging_Contributing>. Note that GitHub pull
 requests are strongly dispreferred, especially for patches.
+
+Donations
+---------
+As many of you may or may not know, wine-staging is a large set of experimental
+patches which provide various improvements to WINE, but are not quite suitable for
+upstreaming. This set of patches has been continuously managed for many years by
+us, a small group of volunteers.  The way this works is that we often review patches
+attached to various bug reports found at https://bugs.winehq.org/ which may fix bugs,
+but may not be quite suitable to be upstreamed due to needing some cleanup or more
+proper implementation. In the event that this happens, we add the patches to wine-staging
+instead, and keep them updated/maintained as well as attempt to clean them up to be upstreamed.
+We also both write and verify patches which fix various bugs that may not have patches,
+and in turn allow them run better using WINE. This includes testing on various hardware,
+games, and applications. 
+
+As this is a volunteer project which is separate from WINE and CodeWeavers, any expenses
+for applications, games, or hardware which we do not own comes out of pocket. This is the
+reason this patreon has been created. All of our work is provided publicly for free and can
+be found at https://github.com/wine-staging/wine-staging. We do not expect to be paid for
+any of the work provided, as mentioned this project is completely voluntary. However the
+proceeds from Patreon are most definitely appreciated, and go towards helping us with
+obtaining the various hardware and software mentioned. This in turn allows us to continue
+to perform testing, provide fixes, and get them upstreamed, ultimately aiming to provide a
+better experience for all WINE users.
+
+
+For anyone interested, wine-staging Patreon can be found here:
+
+https://www.patreon.com/winestaging

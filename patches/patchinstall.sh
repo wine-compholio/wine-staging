@@ -320,6 +320,7 @@ patch_enable_all ()
 	enable_winex11_drv_mouse_coorrds="$1"
 	enable_wininet_Cleanup="$1"
 	enable_winmm_Delay_Import_Depends="$1"
+	enable_winmm_fullpath="$1"
 	enable_winmm_mciSendCommandA="$1"
 	enable_wintab32_improvements="$1"
 	enable_wintrust_WTHelperGetProvCertFromChain="$1"
@@ -1049,6 +1050,9 @@ patch_enable ()
 			;;
 		winmm-Delay_Import_Depends)
 			enable_winmm_Delay_Import_Depends="$2"
+			;;
+		winmm-fullpath)
+			enable_winmm_fullpath="$2"
 			;;
 		winmm-mciSendCommandA)
 			enable_winmm_mciSendCommandA="$2"
@@ -6122,6 +6126,21 @@ if test "$enable_winmm_Delay_Import_Depends" -eq 1; then
 	patch_apply winmm-Delay_Import_Depends/0001-winmm-Delay-import-ole32-msacm32-to-workaround-bug-w.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "winmm: Delay import ole32 msacm32 to workaround bug when loading multiple winmm versions.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset winmm-fullpath
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49650] winmm: Support relative paths when option media files
+# |
+# | Modified files:
+# |   *	dlls/winmm/mmio.c
+# |
+if test "$enable_winmm_fullpath" -eq 1; then
+	patch_apply winmm-fullpath/0001-winmm-Pass-a-fullpath-to-CreateFileA.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winmm: Pass a fullpath to CreateFileA.", 1 },';
 	) >> "$patchlist"
 fi
 

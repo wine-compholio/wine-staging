@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "f7895ef25a4cb2115ffbe04d28b87bcb6ee3c0b7"
+	echo "8cbbb4f394678411fdb57237553f5d974527877f"
 }
 
 # Show version information
@@ -132,7 +132,6 @@ patch_enable_all ()
 	enable_dxdiagn_GetChildContainer_Leaf_Nodes="$1"
 	enable_explorer_Video_Registry_Key="$1"
 	enable_fonts_Missing_Fonts="$1"
-	enable_fsutil_Stub_Program="$1"
 	enable_gdi32_Lazy_Font_Initialization="$1"
 	enable_gdi32_rotation="$1"
 	enable_gdiplus_Performance_Improvements="$1"
@@ -485,9 +484,6 @@ patch_enable ()
 			;;
 		fonts-Missing_Fonts)
 			enable_fonts_Missing_Fonts="$2"
-			;;
-		fsutil-Stub_Program)
-			enable_fsutil_Stub_Program="$2"
 			;;
 		gdi32-Lazy_Font_Initialization)
 			enable_gdi32_Lazy_Font_Initialization="$2"
@@ -2859,21 +2855,6 @@ if test "$enable_fonts_Missing_Fonts" -eq 1; then
 		printf '%s\n' '+    { "Sebastian Lackner", "fonts: Add Liberation Mono as an Courier New replacement.", 1 },';
 		printf '%s\n' '+    { "Erich E. Hoover", "fonts: Add WenQuanYi Micro Hei as a Microsoft Yahei replacement.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "Add licenses for fonts as separate files.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset fsutil-Stub_Program
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#22749] Add stub for fsutil.exe hardlink command
-# |
-# | Modified files:
-# |   *	programs/fsutil/Makefile.in, programs/fsutil/fsutil.rc, programs/fsutil/main.c, programs/fsutil/resources.h
-# |
-if test "$enable_fsutil_Stub_Program" -eq 1; then
-	patch_apply fsutil-Stub_Program/0001-fsutil-Add-fsutil-program-with-support-for-creating-.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "fsutil: Add fsutil program with support for creating hard links.", 1 },';
 	) >> "$patchlist"
 fi
 

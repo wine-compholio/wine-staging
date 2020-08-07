@@ -4235,9 +4235,9 @@ fi
 # |   *	programs/findstr/Makefile.in, programs/findstr/findstr.rc, programs/findstr/main.c, programs/findstr/resources.h
 # |
 if test "$enable_programs_findstr" -eq 1; then
-	patch_apply programs-findstr/0001-findstr.exe-add-minimal-implementation.patch
+	patch_apply programs-findstr/0001-findstr-add-basic-functionality-also-support-literal.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "findstr.exe: Add minimal implementation.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "findstr: Add basic functionality (also support literal search option e.g. c:/\"foo bar\").", 1 },';
 	) >> "$patchlist"
 fi
 

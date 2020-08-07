@@ -1,23 +1,24 @@
-From d8d1cce3600cfc6edc0908da462bf0760c01b16e Mon Sep 17 00:00:00 2001
+From 8913fe5871a9c0d16a44cbcc88af26b318da7ce2 Mon Sep 17 00:00:00 2001
 From: Louis Lenders <xerox.xerox2000x@gmail.com>
-Date: Thu, 30 Jul 2020 19:29:43 +0200
-Subject: [PATCH] findstr.exe: add minimal implementation
+Date: Wed, 5 Aug 2020 08:39:14 +0200
+Subject: [PATCH] findstr: add basic functionality (also support literal search
+ option e.g. c:/"foo bar")
 
 Signed-off-by: Louis Lenders <xerox.xerox2000x@gmail.com>
 ---
- programs/findstr/Makefile.in |   3 +
- programs/findstr/findstr.rc  |  27 +++++
- programs/findstr/main.c      | 229 ++++++++++++++++++++++++++++++++++-
+ programs/findstr/Makefile.in |   4 +
+ programs/findstr/findstr.rc  |  27 ++++
+ programs/findstr/main.c      | 243 ++++++++++++++++++++++++++++++++++-
  programs/findstr/resources.h |  29 +++++
- 4 files changed, 284 insertions(+), 4 deletions(-)
+ 4 files changed, 299 insertions(+), 4 deletions(-)
  create mode 100644 programs/findstr/findstr.rc
  create mode 100644 programs/findstr/resources.h
 
 diff --git a/programs/findstr/Makefile.in b/programs/findstr/Makefile.in
-index 0f29794591b..454caadfc1b 100644
+index 0f29794591..c9d799db6b 100644
 --- a/programs/findstr/Makefile.in
 +++ b/programs/findstr/Makefile.in
-@@ -1,6 +1,9 @@
+@@ -1,6 +1,10 @@
  MODULE    = findstr.exe
 +IMPORTS   = user32
  
@@ -26,10 +27,11 @@ index 0f29794591b..454caadfc1b 100644
  C_SRCS = \
  	main.c
 +
-+RC_SRCS = findstr.rc
++RC_SRCS = \
++	findstr.rc
 diff --git a/programs/findstr/findstr.rc b/programs/findstr/findstr.rc
 new file mode 100644
-index 00000000000..3a6fad7eb1a
+index 0000000000..3a6fad7eb1
 --- /dev/null
 +++ b/programs/findstr/findstr.rc
 @@ -0,0 +1,27 @@
@@ -61,7 +63,7 @@ index 00000000000..3a6fad7eb1a
 +    IDS_USAGE             "Usage: findstr /options string filename\r\n"
 +}
 diff --git a/programs/findstr/main.c b/programs/findstr/main.c
-index d25e1965f6e..590f39af225 100644
+index d25e1965f6..dc73fbba66 100644
 --- a/programs/findstr/main.c
 +++ b/programs/findstr/main.c
 @@ -1,5 +1,6 @@
@@ -71,7 +73,7 @@ index d25e1965f6e..590f39af225 100644
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
-@@ -16,18 +17,238 @@
+@@ -16,18 +17,252 @@
   * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
   */
  
@@ -175,7 +177,7 @@ index d25e1965f6e..590f39af225 100644
 +
 +static BOOL run_find_for_line(const WCHAR *line, const WCHAR *tofind)
 +{
-+    void *found;
++    WCHAR *found;
 +    WCHAR lineending[] = {'\r', '\n', 0};
 +
 +    if (lstrlenW(line) == 0 || lstrlenW(tofind) == 0)
@@ -203,12 +205,13 @@ index d25e1965f6e..590f39af225 100644
  int __cdecl wmain(int argc, WCHAR *argv[])
  {
 +    WCHAR *line;
-+    WCHAR *tofind_pattern = NULL; WCHAR *tofind = NULL;
++    WCHAR *pattern = NULL; WCHAR *tofind = NULL;
      int i;
 +    int exitcode;
 +    int file_paths_len = 0;
 +    int file_paths_max = 0;
 +    WCHAR** file_paths = NULL;
++    BOOL exact_match = FALSE;
  
 -    WINE_FIXME("stub:");
 +    TRACE("running find:");
@@ -216,7 +219,7 @@ index d25e1965f6e..590f39af225 100644
 -        WINE_FIXME(" %s", wine_dbgstr_w(argv[i]));
 -    WINE_FIXME("\n");
 +    {
-+        TRACE(" %s", wine_dbgstr_w(argv[i]));
++        FIXME(" %s", wine_dbgstr_w(argv[i]));
 +    }
 +    TRACE("\n");
 +
@@ -229,13 +232,21 @@ index d25e1965f6e..590f39af225 100644
 +            case '?':
 +                output_resource_message(IDS_USAGE);
 +                return 0;
++            case 'C':
++            case 'c':
++                 if (argv[i][2] == ':')
++                 {
++                     pattern = argv[i] + 3;
++                     exact_match = TRUE;
++                 }
++                 break;
 +            default:
-+                WINE_FIXME("options not supported\n");
++                ;
 +            }
 +        }
-+        else if (tofind_pattern == NULL)
++        else if (pattern == NULL)
 +        {
-+            tofind_pattern = argv[i];
++            pattern = argv[i];
 +        }
 +        else
 +        {
@@ -248,7 +259,7 @@ index d25e1965f6e..590f39af225 100644
 +        }
 +    }
 +
-+    if (tofind_pattern == NULL)
++    if (pattern == NULL)
 +    {
 +        output_resource_message(IDS_INVALID_PARAMETER);
 +        return 2;
@@ -279,16 +290,18 @@ index d25e1965f6e..590f39af225 100644
 +                write_to_stdout(message);
 +                continue;
 +            }
-+
 +            while ((line = read_line_from_handle(input)) != NULL)
 +            {
-+                tofind = _wcstok (tofind_pattern, L" |");   /* break up search pattern like "foo bar" or "foo | bar" into "foo" and "bar" */
-+                while (tofind != NULL && exitcode != 0)
-+                {
-+                    if (run_find_for_line(line, tofind))
-+                        exitcode = 0;
-+                    tofind = _wcstok (NULL, L" |");
-+                }
++                tofind = _wcstok (pattern, exact_match ? L"" : L" |" ); /* break up (if necessary) search pattern like "foo bar" or "foo | bar" into "foo" and "bar" */
++                    while (tofind != NULL)
++                    {
++                        if (run_find_for_line(line, tofind))
++                        {
++                            exitcode = 0;
++                            break;
++                        }
++                        tofind = _wcstok (NULL, L" |");
++                     }
 +            heap_free(line);
 +            }
 +            CloseHandle(input);
@@ -299,13 +312,16 @@ index d25e1965f6e..590f39af225 100644
 +        HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
 +        while ((line = read_line_from_handle(input)) != NULL)
 +        {
-+            tofind = _wcstok (tofind_pattern, L" |");   /* break up search pattern like "foo bar" or "foo | bar" into "foo" and "bar" */
-+            while (tofind != NULL && exitcode != 0)
++            tofind = _wcstok (pattern, exact_match ? L"" : L" |" ); /* break up (if necessary) search pattern like "foo bar" or "foo | bar" into "foo" and "bar" */
++            while (tofind != NULL)
 +            {
 +                if (run_find_for_line(line, tofind))
++                {
 +                    exitcode = 0;
++                    break;
++                }
 +                tofind = _wcstok (NULL, L" |");
-+            }
++             }
 +        heap_free(line);
 +        }
 +    }
@@ -316,7 +332,7 @@ index d25e1965f6e..590f39af225 100644
  }
 diff --git a/programs/findstr/resources.h b/programs/findstr/resources.h
 new file mode 100644
-index 00000000000..e868c7efa4a
+index 0000000000..e868c7efa4
 --- /dev/null
 +++ b/programs/findstr/resources.h
 @@ -0,0 +1,29 @@

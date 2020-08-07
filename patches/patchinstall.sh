@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8cbbb4f394678411fdb57237553f5d974527877f"
+	echo "1ec8bf9b739f1528b742169670eac2350b33a7d4"
 }
 
 # Show version information
@@ -2758,12 +2758,12 @@ fi
 # Patchset dwmapi-DwmGetTransportAttributes
 # |
 # | Modified files:
-# |   *	configure, configure.ac, dlls/dwmapi/tests/Makefile.in, dlls/dwmapi/tests/dwmapi.c
+# |   *	dlls/dwmapi/tests/dwmapi.c
 # |
 if test "$enable_dwmapi_DwmGetTransportAttributes" -eq 1; then
 	patch_apply dwmapi-DwmGetTransportAttributes/0002-dwmapi-add-initial-tests.patch
 	(
-		printf '%s\n' '+    { "Louis Lenders", "dwmapi: Add initial tests.", 1 },';
+		printf '%s\n' '+    { "Louis Lenders", "dwmapi: Add tests for DwmGetTransportAttributes().", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -4251,7 +4251,7 @@ fi
 # |   *	[#42027] systeminfo: Add basic functionality.
 # |
 # | Modified files:
-# |   *	programs/systeminfo/main.c
+# |   *	programs/systeminfo/Makefile.in, programs/systeminfo/main.c
 # |
 if test "$enable_programs_systeminfo" -eq 1; then
 	patch_apply programs-systeminfo/0001-systeminfo-add-basic-functionality.patch

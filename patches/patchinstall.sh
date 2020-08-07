@@ -214,6 +214,7 @@ patch_enable_all ()
 	enable_packager_DllMain="$1"
 	enable_pdh_PdhLookupPerfNameByIndex_processor="$1"
 	enable_programs_findstr="$1"
+	enable_programs_systeminfo="$1"
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
@@ -730,6 +731,9 @@ patch_enable ()
 			;;
 		programs-findstr)
 			enable_programs_findstr="$2"
+			;;
+		programs-systeminfo)
+			enable_programs_systeminfo="$2"
 			;;
 		quartz-MediaSeeking_Positions)
 			enable_quartz_MediaSeeking_Positions="$2"
@@ -4238,6 +4242,21 @@ if test "$enable_programs_findstr" -eq 1; then
 	patch_apply programs-findstr/0001-findstr-add-basic-functionality-also-support-literal.patch
 	(
 		printf '%s\n' '+    { "Louis Lenders", "findstr: Add basic functionality (also support literal search option e.g. c:/\"foo bar\").", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset programs-systeminfo
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#42027] systeminfo: Add basic functionality.
+# |
+# | Modified files:
+# |   *	programs/systeminfo/main.c
+# |
+if test "$enable_programs_systeminfo" -eq 1; then
+	patch_apply programs-systeminfo/0001-systeminfo-add-basic-functionality.patch
+	(
+		printf '%s\n' '+    { "Louis Lenders", "systeminfo: Add basic functionality.", 1 },';
 	) >> "$patchlist"
 fi
 

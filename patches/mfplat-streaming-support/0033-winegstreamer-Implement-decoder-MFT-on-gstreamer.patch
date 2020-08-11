@@ -1,0 +1,385 @@
+From 0c33d653e5c481bec56a2d1ebd6a0b2ae53774d1 Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Mon, 16 Mar 2020 12:09:39 -0500
+Subject: [PATCH 33/54] winegstreamer: Implement decoder MFT on gstreamer.
+
+---
+ dlls/winegstreamer/Makefile.in               |   1 +
+ dlls/winegstreamer/gst_cbs.c                 |  65 ++++++++++
+ dlls/winegstreamer/gst_cbs.h                 |  18 +++
+ dlls/winegstreamer/gst_private.h             |   7 ++
+ dlls/winegstreamer/main.c                    |   3 +-
+ dlls/winegstreamer/mfplat.c                  | 118 ++++++++++++++++++-
+ dlls/winegstreamer/winegstreamer_classes.idl |  12 ++
+ include/mfidl.idl                            |   4 +-
+ 8 files changed, 225 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/Makefile.in b/dlls/winegstreamer/Makefile.in
+index f2e8749445..e2af408582 100644
+--- a/dlls/winegstreamer/Makefile.in
++++ b/dlls/winegstreamer/Makefile.in
+@@ -13,6 +13,7 @@ C_SRCS = \
+ 	main.c \
+ 	media_source.c \
+ 	mediatype.c \
++	mf_decode.c \
+ 	mfplat.c \
+ 	pin.c \
+ 	qualitycontrol.c \
+diff --git a/dlls/winegstreamer/gst_cbs.c b/dlls/winegstreamer/gst_cbs.c
+index d2d36aeb86..e392f4526f 100644
+--- a/dlls/winegstreamer/gst_cbs.c
++++ b/dlls/winegstreamer/gst_cbs.c
+@@ -51,6 +51,8 @@ static void CALLBACK perform_cb(TP_CALLBACK_INSTANCE *instance, void *user)
+         perform_cb_gstdemux(cbdata);
+     else if (cbdata->type < MEDIA_SOURCE_MAX)
+         perform_cb_media_source(cbdata);
++    else if (cbdata->type < MF_DECODE_MAX)
++        perform_cb_mf_decode(cbdata);
+ 
+     pthread_mutex_lock(&cbdata->lock);
+     cbdata->finished = 1;
+@@ -414,5 +416,68 @@ GstFlowReturn stream_new_sample_wrapper(GstElement *appsink, gpointer user)
+ 
+     call_cb(&cbdata);
+ 
++    return cbdata.u.new_sample_data.ret;
++}
++
++gboolean activate_push_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate)
++{
++    struct cb_data cbdata = { ACTIVATE_PUSH_MODE };
++
++    cbdata.u.activate_mode_data.pad = pad;
++    cbdata.u.activate_mode_data.parent = parent;
++    cbdata.u.activate_mode_data.mode = mode;
++    cbdata.u.activate_mode_data.activate = activate;
++
++    call_cb(&cbdata);
++
++    return cbdata.u.query_function_data.ret;
++}
++
++gboolean query_input_src_wrapper(GstPad *pad, GstObject *parent, GstQuery *query)
++{
++    struct cb_data cbdata = { QUERY_INPUT_SRC };
++
++    cbdata.u.query_function_data.pad = pad;
++    cbdata.u.query_function_data.parent = parent;
++    cbdata.u.query_function_data.query = query;
++
++    call_cb(&cbdata);
++
++    return cbdata.u.query_function_data.ret;
++}
++
++GstBusSyncReply watch_decoder_bus_wrapper(GstBus *bus, GstMessage *message, gpointer user)
++{
++    struct cb_data cbdata = { WATCH_DECODER_BUS };
++
++    cbdata.u.watch_bus_data.bus = bus;
++    cbdata.u.watch_bus_data.msg = message;
++    cbdata.u.watch_bus_data.user = user;
++
++    call_cb(&cbdata);
++
++    return cbdata.u.watch_bus_data.ret;
++}
++
++void decoder_pad_added_wrapper(GstElement *element, GstPad *pad, gpointer user)
++{
++    struct cb_data cbdata = { DECODER_PAD_ADDED };
++
++    cbdata.u.pad_added_data.element = element;
++    cbdata.u.pad_added_data.pad = pad;
++    cbdata.u.pad_added_data.user = user;
++
++    call_cb(&cbdata);
++}
++
++GstFlowReturn decoder_new_sample_wrapper(GstElement *appsink, gpointer user)
++{
++    struct cb_data cbdata = {DECODER_NEW_SAMPLE};
++
++    cbdata.u.new_sample_data.appsink = appsink;
++    cbdata.u.new_sample_data.user = user;
++
++    call_cb(&cbdata);
++
+     return cbdata.u.new_sample_data.ret;
+ }
+\ No newline at end of file
+diff --git a/dlls/winegstreamer/gst_cbs.h b/dlls/winegstreamer/gst_cbs.h
+index 106368a064..a35d6d8830 100644
+--- a/dlls/winegstreamer/gst_cbs.h
++++ b/dlls/winegstreamer/gst_cbs.h
+@@ -54,6 +54,12 @@ enum CB_TYPE {
+     SOURCE_ALL_STREAMS,
+     STREAM_NEW_SAMPLE,
+     MEDIA_SOURCE_MAX,
++    ACTIVATE_PUSH_MODE,
++    QUERY_INPUT_SRC,
++    DECODER_NEW_SAMPLE,
++    WATCH_DECODER_BUS,
++    DECODER_PAD_ADDED,
++    MF_DECODE_MAX,
+ };
+ 
+ struct cb_data {
+@@ -143,6 +149,12 @@ struct cb_data {
+             gpointer user;
+             GstFlowReturn ret;
+         } new_sample_data;
++        struct chain_data {
++            GstPad *pad;
++            GstObject *parent;
++            GstBuffer *buffer;
++            GstFlowReturn ret;
++        } chain_data;
+     } u;
+ 
+     int finished;
+@@ -154,6 +166,7 @@ struct cb_data {
+ void mark_wine_thread(void) DECLSPEC_HIDDEN;
+ void perform_cb_gstdemux(struct cb_data *data) DECLSPEC_HIDDEN;
+ void perform_cb_media_source(struct cb_data *data) DECLSPEC_HIDDEN;
++void perform_cb_mf_decode(struct cb_data *data) DECLSPEC_HIDDEN;
+ 
+ GstBusSyncReply watch_bus_wrapper(GstBus *bus, GstMessage *msg, gpointer user) DECLSPEC_HIDDEN;
+ void existing_new_pad_wrapper(GstElement *bin, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
+@@ -179,5 +192,10 @@ void source_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user) DE
+ void source_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
+ void source_all_streams_wrapper(GstElement *element, gpointer user) DECLSPEC_HIDDEN;
+ GstFlowReturn stream_new_sample_wrapper(GstElement *appsink, gpointer user) DECLSPEC_HIDDEN;
++gboolean activate_push_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate) DECLSPEC_HIDDEN;
++gboolean query_input_src_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
++GstBusSyncReply watch_decoder_bus_wrapper(GstBus *bus, GstMessage *message, gpointer user) DECLSPEC_HIDDEN;
++GstFlowReturn decoder_new_sample_wrapper(GstElement *appsink, gpointer user) DECLSPEC_HIDDEN;
++void decoder_pad_added_wrapper(GstElement *element, GstPad *Pad, gpointer user) DECLSPEC_HIDDEN;
+ 
+ #endif
+diff --git a/dlls/winegstreamer/gst_private.h b/dlls/winegstreamer/gst_private.h
+index 258df0d040..6e25b895ff 100644
+--- a/dlls/winegstreamer/gst_private.h
++++ b/dlls/winegstreamer/gst_private.h
+@@ -53,6 +53,7 @@ BOOL init_gstreamer(void) DECLSPEC_HIDDEN;
+ 
+ void start_dispatch_thread(void) DECLSPEC_HIDDEN;
+ 
++extern HRESULT mfplat_DllRegisterServer(void) DECLSPEC_HIDDEN;
+ extern HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj) DECLSPEC_HIDDEN;
+ 
+ GstCaps *make_mf_compatible_caps(GstCaps *caps);
+@@ -61,6 +62,12 @@ GstCaps *caps_from_mf_media_type(IMFMediaType *type);
+ IMFSample *mf_sample_from_gst_buffer(GstBuffer *in);
+ GstBuffer *gst_buffer_from_mf_sample(IMFSample *in);
+ 
++enum decoder_type
++{
++    DECODER_TYPE_H264,
++    DECODER_TYPE_AAC,
++};
++HRESULT generic_decoder_construct(REFIID riid, void **obj, enum decoder_type);
+ enum source_type
+ {
+     SOURCE_TYPE_MPEG_4,
+diff --git a/dlls/winegstreamer/main.c b/dlls/winegstreamer/main.c
+index 2872710b3e..12ca11fa6c 100644
+--- a/dlls/winegstreamer/main.c
++++ b/dlls/winegstreamer/main.c
+@@ -365,7 +365,8 @@ HRESULT WINAPI DllRegisterServer(void)
+     IFilterMapper2_RegisterFilter(mapper, &CLSID_WAVEParser, wave_parserW, NULL, NULL, NULL, &reg_wave_parser);
+ 
+     IFilterMapper2_Release(mapper);
+-    return S_OK;
++
++    return mfplat_DllRegisterServer();
+ }
+ 
+ HRESULT WINAPI DllUnregisterServer(void)
+diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
+index 6499c39a8f..aaef966a5b 100644
+--- a/dlls/winegstreamer/mfplat.c
++++ b/dlls/winegstreamer/mfplat.c
+@@ -404,6 +404,16 @@ failed:
+     return hr;
+ }
+ 
++static HRESULT h264_decoder_create(REFIID riid, void **ret)
++{
++    return generic_decoder_construct(riid, ret, DECODER_TYPE_H264);
++}
++
++static HRESULT aac_decoder_create(REFIID riid, void **ret)
++{
++    return generic_decoder_construct(riid, ret, DECODER_TYPE_AAC);
++}
++
+ static HRESULT mp4_stream_handler_create(REFIID riid, void **ret)
+ {
+     return container_stream_handler_construct(riid, ret, SOURCE_TYPE_MPEG_4);
+@@ -417,6 +427,8 @@ static const struct class_object
+ class_objects[] =
+ {
+     { &CLSID_VideoProcessorMFT, &video_processor_create },
++    { &CLSID_CMSH264DecoderMFT, &h264_decoder_create },
++    { &CLSID_CMSAACDecMFT, &aac_decoder_create },
+     { &CLSID_MPEG4ByteStreamHandler, &mp4_stream_handler_create },
+ };
+ 
+@@ -449,6 +461,111 @@ HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj)
+     return CLASS_E_CLASSNOTAVAILABLE;
+ }
+ 
++
++static WCHAR h264decoderW[] = {'H','.','2','6','4',' ','D','e','c','o','d','e','r',0};
++const GUID *h264_decoder_input_types[] =
++{
++    &MFVideoFormat_H264,
++};
++const GUID *h264_decoder_output_types[] =
++{
++    &MFVideoFormat_I420,
++    &MFVideoFormat_IYUV,
++    &MFVideoFormat_NV12,
++    &MFVideoFormat_YUY2,
++    &MFVideoFormat_YV12,
++};
++
++static WCHAR aacdecoderW[] = {'A','A','C',' ','D','e','c','o','d','e','r',0};
++const GUID *aac_decoder_input_types[] =
++{
++    &MFAudioFormat_AAC,
++};
++
++const GUID *aac_decoder_output_types[] =
++{
++    &MFAudioFormat_Float,
++    &MFAudioFormat_PCM,
++};
++
++static const struct mft
++{
++    const GUID *clsid;
++    const GUID *category;
++    LPWSTR name;
++    const UINT32 flags;
++    const GUID *major_type;
++    const UINT32 input_types_count;
++    const GUID **input_types;
++    const UINT32 output_types_count;
++    const GUID **output_types;
++    IMFAttributes *attributes;
++}
++mfts[] =
++{
++    {
++        &CLSID_CMSH264DecoderMFT,
++        &MFT_CATEGORY_VIDEO_DECODER,
++        h264decoderW,
++        MFT_ENUM_FLAG_SYNCMFT,
++        &MFMediaType_Video,
++        ARRAY_SIZE(h264_decoder_input_types),
++        h264_decoder_input_types,
++        ARRAY_SIZE(h264_decoder_output_types),
++        h264_decoder_output_types,
++        NULL
++    },
++    {
++        &CLSID_CMSAACDecMFT,
++        &MFT_CATEGORY_AUDIO_DECODER,
++        aacdecoderW,
++        MFT_ENUM_FLAG_SYNCMFT,
++        &MFMediaType_Audio,
++        ARRAY_SIZE(aac_decoder_input_types),
++        aac_decoder_input_types,
++        ARRAY_SIZE(aac_decoder_output_types),
++        aac_decoder_output_types,
++        NULL
++    }
++};
++
++HRESULT mfplat_DllRegisterServer(void)
++{
++    HRESULT hr;
++
++    for (unsigned int i = 0; i < ARRAY_SIZE(mfts); i++)
++    {
++        const struct mft *cur = &mfts[i];
++
++        MFT_REGISTER_TYPE_INFO *input_types, *output_types;
++        input_types = heap_alloc(cur->input_types_count * sizeof(input_types[0]));
++        output_types = heap_alloc(cur->output_types_count * sizeof(output_types[0]));
++        for (unsigned int i = 0; i < cur->input_types_count; i++)
++        {
++            input_types[i].guidMajorType = *(cur->major_type);
++            input_types[i].guidSubtype = *(cur->input_types[i]);
++        }
++        for (unsigned int i = 0; i < cur->output_types_count; i++)
++        {
++            output_types[i].guidMajorType = *(cur->major_type);
++            output_types[i].guidSubtype = *(cur->output_types[i]);
++        }
++
++        hr = MFTRegister(*(cur->clsid), *(cur->category), cur->name, cur->flags, cur->input_types_count,
++                    input_types, cur->output_types_count, output_types, cur->attributes);
++
++        heap_free(input_types);
++        heap_free(output_types);
++
++        if (FAILED(hr))
++        {
++            FIXME("Failed to register MFT, hr %#x\n", hr);
++            return hr;
++        }
++    }
++    return S_OK;
++}
++
+ const static struct
+ {
+     const GUID *subtype;
+@@ -467,7 +584,6 @@ struct aac_user_data
+ {
+     WORD payload_type;
+     WORD profile_level_indication;
+-    WORD struct_type;
+     WORD reserved;
+   /* audio-specific-config is stored here */
+ };
+diff --git a/dlls/winegstreamer/winegstreamer_classes.idl b/dlls/winegstreamer/winegstreamer_classes.idl
+index 997a28b052..ee8090cf4a 100644
+--- a/dlls/winegstreamer/winegstreamer_classes.idl
++++ b/dlls/winegstreamer/winegstreamer_classes.idl
+@@ -61,3 +61,15 @@ coclass VideoProcessorMFT {}
+     uuid(271c3902-6095-4c45-a22f-20091816ee9e)
+ ]
+ coclass MPEG4ByteStreamHandler {}
++
++[
++    threading(both),
++    uuid(62ce7e72-4c71-4d20-b15d-452831a87d9d)
++]
++coclass CMSH264DecoderMFT { }
++
++[
++    threading(both),
++    uuid(32d186a7-218f-4c75-8876-dd77273a8999)
++]
++coclass CMSAACDecMFT { }
+diff --git a/include/mfidl.idl b/include/mfidl.idl
+index fc13dfba7a..f7092dfa6c 100644
+--- a/include/mfidl.idl
++++ b/include/mfidl.idl
+@@ -1241,4 +1241,6 @@ cpp_quote("EXTERN_GUID(MF_ACTIVATE_CUSTOM_VIDEO_PRESENTER_ACTIVATE, 0xba491365,
+ cpp_quote("EXTERN_GUID(MF_ACTIVATE_CUSTOM_VIDEO_PRESENTER_FLAGS, 0xba491366, 0xbe50, 0x451e, 0x95, 0xab, 0x6d, 0x4a, 0xcc, 0xc7, 0xda, 0xd8);")
+ 
+ cpp_quote("EXTERN_GUID(CLSID_VideoProcessorMFT, 0x88753b26, 0x5b24, 0x49bd, 0xb2, 0xe7, 0xc, 0x44, 0x5c, 0x78, 0xc9, 0x82);")
+-cpp_quote("EXTERN_GUID(CLSID_MPEG4ByteStreamHandler, 0x271c3902, 0x6095, 0x4c45, 0xa2, 0x2f, 0x20, 0x09, 0x18, 0x16, 0xee, 0x9e);")
+\ No newline at end of file
++cpp_quote("EXTERN_GUID(CLSID_MPEG4ByteStreamHandler, 0x271c3902, 0x6095, 0x4c45, 0xa2, 0x2f, 0x20, 0x09, 0x18, 0x16, 0xee, 0x9e);")
++cpp_quote("EXTERN_GUID(CLSID_CMSH264DecoderMFT, 0x62ce7e72, 0x4c71, 0x4d20, 0xb1, 0x5d, 0x45, 0x28, 0x31, 0xa8, 0x7d, 0x9d);")
++cpp_quote("EXTERN_GUID(CLSID_CMSAACDecMFT, 0x32d186a7, 0x218f, 0x4c75, 0x88, 0x76, 0xdd, 0x77, 0x27, 0x3a, 0x89, 0x99);")
+-- 
+2.28.0
+

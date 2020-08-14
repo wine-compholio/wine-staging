@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "03e9de4920173d3fa955cf28a8d2b60bd3b06261"
+	echo "447bce4117a58910690a0d2610ebcbdd49ae9127"
 }
 
 # Show version information
@@ -5356,29 +5356,18 @@ fi
 # |   *	[#42675] Overwatch: Phantom mouse input / view pulled up to ceiling
 # |
 # | Modified files:
-# |   *	dlls/dinput/device_private.h, dlls/dinput/dinput_main.c, dlls/dinput/dinput_private.h, dlls/dinput/mouse.c,
-# | 	dlls/dinput8/tests/device.c, dlls/user32/input.c, dlls/user32/rawinput.c, dlls/user32/user32.spec,
-# | 	dlls/wineandroid.drv/keyboard.c, dlls/wineandroid.drv/window.c, dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c,
-# | 	dlls/winemac.drv/mouse.c, dlls/winex11.drv/event.c, dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c,
-# | 	dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c, include/winuser.h, server/protocol.def, server/queue.c
+# |   *	dlls/user32/input.c, dlls/user32/user32.spec, dlls/wineandroid.drv/keyboard.c, dlls/wineandroid.drv/window.c,
+# | 	dlls/winemac.drv/ime.c, dlls/winemac.drv/keyboard.c, dlls/winemac.drv/mouse.c, dlls/winex11.drv/event.c,
+# | 	dlls/winex11.drv/keyboard.c, dlls/winex11.drv/mouse.c, dlls/winex11.drv/x11drv.h, dlls/winex11.drv/x11drv_main.c,
+# | 	include/winuser.h, server/protocol.def, server/queue.c
 # |
 if test "$enable_user32_rawinput_mouse" -eq 1; then
-	patch_apply user32-rawinput-mouse/0001-user32-Implement-GetRegisteredRawInputDevices.patch
-	patch_apply user32-rawinput-mouse/0002-dinput8-tests-Add-DISCL_EXCLUSIVE-rawinput-test.patch
-	patch_apply user32-rawinput-mouse/0003-dinput8-Add-support-for-rawinput-based-devices.patch
-	patch_apply user32-rawinput-mouse/0004-dinput8-Use-rawinput-interface-for-mouse-device.patch
-	patch_apply user32-rawinput-mouse/0005-dinput8-Stop-using-LL-hooks-for-mouse-devices.patch
 	patch_apply user32-rawinput-mouse/0006-server-Add-send_hardware_message-flags-for-rawinput-.patch
 	patch_apply user32-rawinput-mouse/0007-user32-Add-__wine_send_input-flags-to-hint-raw-input.patch
 	patch_apply user32-rawinput-mouse/0008-winex11.drv-Advertise-XInput2-version-2.1-support.patch
 	patch_apply user32-rawinput-mouse/0009-winex11.drv-Keep-track-of-pointer-and-device-button-.patch
 	patch_apply user32-rawinput-mouse/0010-winex11.drv-Listen-to-RawMotion-and-RawButton-events.patch
 	(
-		printf '%s\n' '+    { "Rémi Bernon", "user32: Implement GetRegisteredRawInputDevices.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8/tests: Add DISCL_EXCLUSIVE / rawinput test.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Add support for rawinput based devices.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Use rawinput interface for mouse device.", 1 },';
-		printf '%s\n' '+    { "Rémi Bernon", "dinput8: Stop using LL hooks for mouse devices.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "server: Add send_hardware_message flags for rawinput translation.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "user32: Add __wine_send_input flags to hint raw input translation.", 1 },';
 		printf '%s\n' '+    { "Rémi Bernon", "winex11.drv: Advertise XInput2 version 2.1 support.", 1 },';

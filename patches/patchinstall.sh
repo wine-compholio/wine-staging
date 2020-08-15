@@ -205,6 +205,7 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
+	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
@@ -704,6 +705,9 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
+			;;
+		ole32-HGLOBALStream)
+			enable_ole32_HGLOBALStream="$2"
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
@@ -4189,6 +4193,18 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "nvencodeapi: First implementation.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvencodeapi: Add debian specific paths to native library.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "nvencodeapi: Add support for version 6.0.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset ole32-HGLOBALStream
+# |
+# | Modified files:
+# |   *	dlls/ole32/hglobalstream.c, dlls/ole32/tests/hglobalstream.c
+# |
+if test "$enable_ole32_HGLOBALStream" -eq 1; then
+	patch_apply ole32-HGLOBALStream/0002-ole32-Add-a-check-for-hglobal-pointer-to-GetHGlobalF.patch
+	(
+		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Add a check for hglobal pointer to GetHGlobalFromStream.", 1 },';
 	) >> "$patchlist"
 fi
 

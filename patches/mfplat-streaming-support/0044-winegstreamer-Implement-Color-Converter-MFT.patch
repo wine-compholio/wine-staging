@@ -1,16 +1,16 @@
-From e8fa967f34edbe26f323498ad2a2b0ef313a01eb Mon Sep 17 00:00:00 2001
+From 532b311a83c2796e3014c11fe45f9f60e39736ee Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Fri, 1 May 2020 13:20:49 -0500
-Subject: [PATCH 44/54] winegstreamer: Implement Color Converter MFT.
+Subject: [PATCH] winegstreamer: Implement Color Converter MFT.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
  dlls/winegstreamer/Makefile.in               |   1 +
- dlls/winegstreamer/colorconvert.c            | 704 +++++++++++++++++++
+ dlls/winegstreamer/colorconvert.c            | 707 +++++++++++++++++++
  dlls/winegstreamer/gst_private.h             |   2 +
  dlls/winegstreamer/mfplat.c                  |  35 +
  dlls/winegstreamer/winegstreamer_classes.idl |   8 +-
- 5 files changed, 749 insertions(+), 1 deletion(-)
+ 5 files changed, 752 insertions(+), 1 deletion(-)
  create mode 100644 dlls/winegstreamer/colorconvert.c
 
 diff --git a/dlls/winegstreamer/Makefile.in b/dlls/winegstreamer/Makefile.in
@@ -27,10 +27,10 @@ index e2af408582..a266b0a95e 100644
  	gstdemux.c \
 diff --git a/dlls/winegstreamer/colorconvert.c b/dlls/winegstreamer/colorconvert.c
 new file mode 100644
-index 0000000000..f149ab553f
+index 0000000000..502ff52e56
 --- /dev/null
 +++ b/dlls/winegstreamer/colorconvert.c
-@@ -0,0 +1,704 @@
+@@ -0,0 +1,707 @@
 +#include "config.h"
 +#include <gst/gst.h>
 +
@@ -349,6 +349,7 @@ index 0000000000..f149ab553f
 +    {
 +        GUID major_type, subtype;
 +        BOOL found = FALSE;
++        unsigned int i;
 +
 +        if (FAILED(IMFMediaType_GetGUID(type, &MF_MT_MAJOR_TYPE, &major_type)))
 +            return MF_E_INVALIDTYPE;
@@ -358,7 +359,7 @@ index 0000000000..f149ab553f
 +        if (!(IsEqualGUID(&major_type, &MFMediaType_Video)))
 +            return MF_E_INVALIDTYPE;
 +
-+        for (unsigned int i = 0; i < ARRAY_SIZE(raw_types); i++)
++        for (i = 0; i < ARRAY_SIZE(raw_types); i++)
 +        {
 +            UINT64 unused;
 +
@@ -421,6 +422,7 @@ index 0000000000..f149ab553f
 +
 +    if (type)
 +    {
++        unsigned int i;
 +        /* validate the type */
 +
 +        if (FAILED(IMFMediaType_GetGUID(type, &MF_MT_MAJOR_TYPE, &major_type)))
@@ -433,7 +435,7 @@ index 0000000000..f149ab553f
 +        if (!(IsEqualGUID(&major_type, &MFMediaType_Video)))
 +            return MF_E_INVALIDTYPE;
 +
-+        for (unsigned int i = 0; i < ARRAY_SIZE(raw_types); i++)
++        for (i = 0; i < ARRAY_SIZE(raw_types); i++)
 +        {
 +            if (IsEqualGUID(&subtype, raw_types[i]))
 +                break;
@@ -582,13 +584,14 @@ index 0000000000..f149ab553f
 +    MFT_OUTPUT_DATA_BUFFER *relevant_buffer = NULL;
 +    GstSample *sample;
 +    HRESULT hr = S_OK;
++    unsigned int i;
 +
 +    TRACE("%p, %#x, %u, %p, %p.\n", iface, flags, count, samples, status);
 +
 +    if (flags)
 +        WARN("Unsupported flags %#x\n", flags);
 +
-+    for (unsigned int i = 0; i < count; i++)
++    for (i = 0; i < count; i++)
 +    {
 +        MFT_OUTPUT_DATA_BUFFER *out_buffer = &samples[i];
 +
@@ -748,7 +751,7 @@ index 0b61bc9e3c..b855d650dc 100644
 +
  #endif /* __GST_PRIVATE_INCLUDED__ */
 diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
-index 780008face..161c8032a7 100644
+index 68071fccf9..e63b4dcb2f 100644
 --- a/dlls/winegstreamer/mfplat.c
 +++ b/dlls/winegstreamer/mfplat.c
 @@ -429,6 +429,8 @@ static HRESULT asf_stream_handler_create(REFIID riid, void **ret)

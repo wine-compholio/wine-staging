@@ -1,13 +1,13 @@
-From 1771f2861fc08035e0baa768b15fd4b1083573f9 Mon Sep 17 00:00:00 2001
+From 5de8cd0751587ad6efe73f6b8cde6829a14d1203 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Tue, 31 Mar 2020 15:10:03 -0500
-Subject: [PATCH 19/54] winegstreamer: Implement IMFMediaSource::Start.
+Subject: [PATCH] winegstreamer: Implement IMFMediaSource::Start.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
  dlls/mfplat/tests/mfplat.c        |   8 +-
- dlls/winegstreamer/media_source.c | 283 +++++++++++++++++++++++++++++-
- 2 files changed, 284 insertions(+), 7 deletions(-)
+ dlls/winegstreamer/media_source.c | 285 +++++++++++++++++++++++++++++-
+ 2 files changed, 286 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/mfplat/tests/mfplat.c b/dlls/mfplat/tests/mfplat.c
 index 8fef44181c..c26c40d531 100644
@@ -52,7 +52,7 @@ index 8fef44181c..c26c40d531 100644
      IMFPresentationDescriptor_Release(descriptor);
  
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 04b3b9f6c7..abf0cfd56f 100644
+index 33af1a6068..e5bf4d2b5d 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
 @@ -50,12 +50,36 @@ struct media_stream
@@ -92,7 +92,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
      enum source_type type;
      IMFMediaEventQueue *event_queue;
      IMFByteStream *byte_stream;
-@@ -87,6 +111,236 @@ static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *ifac
+@@ -87,6 +111,238 @@ static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *ifac
      return CONTAINING_RECORD(iface, struct media_source, IMFMediaSource_iface);
  }
  
@@ -202,11 +202,12 @@ index 04b3b9f6c7..abf0cfd56f 100644
 +{
 +    ULONG sd_count;
 +    IMFStreamDescriptor *ret;
++    unsigned int i;
 +
 +    if (FAILED(IMFPresentationDescriptor_GetStreamDescriptorCount(pres_desc, &sd_count)))
 +        return NULL;
 +
-+    for (unsigned int i = 0; i < sd_count; i++)
++    for (i = 0; i < sd_count; i++)
 +    {
 +        DWORD stream_id;
 +
@@ -225,6 +226,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
 +{
 +    PROPVARIANT *position = &command->u.start.position;
 +    BOOL seek_message = source->state != SOURCE_STOPPED && position->vt != VT_EMPTY;
++    unsigned int i;
 +
 +    /* we can't seek until the pipeline is in a valid state */
 +    gst_element_set_state(source->container, GST_STATE_PAUSED);
@@ -234,7 +236,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
 +        WaitForSingleObject(source->all_streams_event, INFINITE);
 +    }
 +
-+    for (unsigned int i = 0; i < source->stream_count; i++)
++    for (i = 0; i < source->stream_count; i++)
 +    {
 +        struct media_stream *stream;
 +        IMFStreamDescriptor *sd;
@@ -329,7 +331,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
  /* inactive stream sample discarder */
  static GstFlowReturn stream_new_sample(GstElement *appsink, gpointer user)
  {
-@@ -759,16 +1013,32 @@ static HRESULT WINAPI media_source_CreatePresentationDescriptor(IMFMediaSource *
+@@ -760,16 +1016,32 @@ static HRESULT WINAPI media_source_CreatePresentationDescriptor(IMFMediaSource *
  }
  
  static HRESULT WINAPI media_source_Start(IMFMediaSource *iface, IMFPresentationDescriptor *descriptor,
@@ -365,7 +367,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
  }
  
  static HRESULT WINAPI media_source_Stop(IMFMediaSource *iface)
-@@ -825,6 +1095,9 @@ static HRESULT media_source_teardown(struct media_source *source)
+@@ -828,6 +1100,9 @@ static HRESULT media_source_teardown(struct media_source *source)
      if (source->all_streams_event)
          CloseHandle(source->all_streams_event);
  
@@ -375,7 +377,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
      return S_OK;
  }
  
-@@ -874,6 +1147,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+@@ -878,6 +1153,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
          return E_OUTOFMEMORY;
  
      object->IMFMediaSource_iface.lpVtbl = &IMFMediaSource_vtbl;
@@ -383,7 +385,7 @@ index 04b3b9f6c7..abf0cfd56f 100644
      object->ref = 1;
      object->type = type;
      object->byte_stream = bytestream;
-@@ -883,6 +1157,9 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+@@ -887,6 +1163,9 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
      if (FAILED(hr = MFCreateEventQueue(&object->event_queue)))
          goto fail;
  

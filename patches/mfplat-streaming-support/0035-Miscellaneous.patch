@@ -1,4 +1,4 @@
-From 5bf7f55be7af43c1770d83af0c89c431c1f1064e Mon Sep 17 00:00:00 2001
+From 8d1b452fa4bd1967187eb82e12b95f3289ab514b Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Mon, 16 Mar 2020 15:27:27 -0500
 Subject: [PATCH] Miscellaneous
@@ -6,13 +6,13 @@ Subject: [PATCH] Miscellaneous
 ---
  dlls/mfreadwrite/reader.c         |   12 +-
  dlls/winegstreamer/gst_cbs.c      |    9 +
- dlls/winegstreamer/media_source.c |  115 ++-
- dlls/winegstreamer/mf_decode.c    | 1321 +++++++++++++++++++++++++++++
- 4 files changed, 1454 insertions(+), 3 deletions(-)
+ dlls/winegstreamer/media_source.c |  114 ++-
+ dlls/winegstreamer/mf_decode.c    | 1324 +++++++++++++++++++++++++++++
+ 4 files changed, 1456 insertions(+), 3 deletions(-)
  create mode 100644 dlls/winegstreamer/mf_decode.c
 
 diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/reader.c
-index 3b1dcbb9636..f8c03e62d35 100644
+index 3b1dcbb963..f8c03e62d3 100644
 --- a/dlls/mfreadwrite/reader.c
 +++ b/dlls/mfreadwrite/reader.c
 @@ -1596,6 +1596,7 @@ static HRESULT source_reader_create_decoder_for_stream(struct source_reader *rea
@@ -47,7 +47,7 @@ index 3b1dcbb9636..f8c03e62d35 100644
  
  static HRESULT WINAPI src_reader_SetCurrentMediaType(IMFSourceReader *iface, DWORD index, DWORD *reserved,
 diff --git a/dlls/winegstreamer/gst_cbs.c b/dlls/winegstreamer/gst_cbs.c
-index e392f4526ff..598cd85c1e2 100644
+index e392f4526f..598cd85c1e 100644
 --- a/dlls/winegstreamer/gst_cbs.c
 +++ b/dlls/winegstreamer/gst_cbs.c
 @@ -18,6 +18,9 @@
@@ -74,7 +74,7 @@ index e392f4526ff..598cd85c1e2 100644
      pthread_mutex_lock(&cbdata->lock);
      cbdata->finished = 1;
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 869bcf6fefa..4e46ff10bd0 100644
+index e0a1624951..40f7828e50 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
 @@ -84,6 +84,8 @@ struct source_async_command
@@ -103,7 +103,7 @@ index 869bcf6fefa..4e46ff10bd0 100644
  static inline struct media_source *impl_from_async_commands_callback_IMFAsyncCallback(IMFAsyncCallback *iface)
  {
      return CONTAINING_RECORD(iface, struct media_source, async_commands_callback);
-@@ -1072,6 +1084,10 @@ static HRESULT WINAPI media_source_QueryInterface(IMFMediaSource *iface, REFIID
+@@ -1076,6 +1088,10 @@ static HRESULT WINAPI media_source_QueryInterface(IMFMediaSource *iface, REFIID
      {
          *out = &source->IMFMediaSource_iface;
      }
@@ -114,7 +114,7 @@ index 869bcf6fefa..4e46ff10bd0 100644
      else
      {
          FIXME("(%s, %p)\n", debugstr_guid(riid), out);
-@@ -1166,7 +1182,7 @@ static HRESULT WINAPI media_source_GetCharacteristics(IMFMediaSource *iface, DWO
+@@ -1170,7 +1186,7 @@ static HRESULT WINAPI media_source_GetCharacteristics(IMFMediaSource *iface, DWO
      if (source->state == SOURCE_SHUTDOWN)
          return MF_E_SHUTDOWN;
  
@@ -123,7 +123,7 @@ index 869bcf6fefa..4e46ff10bd0 100644
  
      return S_OK;
  }
-@@ -1306,6 +1322,99 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
+@@ -1312,6 +1328,99 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
      media_source_Shutdown,
  };
  
@@ -222,8 +222,8 @@ index 869bcf6fefa..4e46ff10bd0 100644
 +
  static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_type type, struct media_source **out_media_source)
  {
-     GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE(
-@@ -1325,6 +1434,8 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+     unsigned int i;
+@@ -1332,6 +1441,8 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
          return E_OUTOFMEMORY;
  
      object->IMFMediaSource_iface.lpVtbl = &IMFMediaSource_vtbl;
@@ -232,7 +232,7 @@ index 869bcf6fefa..4e46ff10bd0 100644
      object->async_commands_callback.lpVtbl = &source_async_commands_callback_vtbl;
      object->ref = 1;
      object->type = type;
-@@ -1424,7 +1535,6 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+@@ -1431,7 +1542,6 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
      heap_free(descriptors);
      descriptors = NULL;
  
@@ -240,20 +240,12 @@ index 869bcf6fefa..4e46ff10bd0 100644
      {
          IMFAttributes *byte_stream_attributes;
          gint64 total_pres_time = 0;
-@@ -1441,6 +1551,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
-             IMFAttributes_Release(byte_stream_attributes);
-         }
- 
-+        /* TODO: consider streams which don't start at T=0 */
-         for (unsigned int i = 0; i < object->stream_count; i++)
-         {
-             GstQuery *query = gst_query_new_duration(GST_FORMAT_TIME);
 diff --git a/dlls/winegstreamer/mf_decode.c b/dlls/winegstreamer/mf_decode.c
 new file mode 100644
-index 00000000000..751efe9d663
+index 0000000000..60ec6fc20b
 --- /dev/null
 +++ b/dlls/winegstreamer/mf_decode.c
-@@ -0,0 +1,1321 @@
+@@ -0,0 +1,1324 @@
 +#include "config.h"
 +
 +#include <gst/gst.h>
@@ -905,6 +897,7 @@ index 00000000000..751efe9d663
 +    {
 +        GUID major_type, subtype;
 +        UINT64 unused;
++        unsigned int i;
 +
 +        if (FAILED(hr = IMFMediaType_GetGUID(type, &MF_MT_MAJOR_TYPE, &major_type)))
 +            return hr;
@@ -920,7 +913,7 @@ index 00000000000..751efe9d663
 +                return hr;
 +        }
 +
-+        for (unsigned int i = 0; i < decoder_descs[decoder->type].input_types_count; i++)
++        for (i = 0; i < decoder_descs[decoder->type].input_types_count; i++)
 +        {
 +            if (IsEqualGUID(&subtype, decoder_descs[decoder->type].input_types[i]))
 +                break;
@@ -973,6 +966,7 @@ index 00000000000..751efe9d663
 +    {
 +        GUID major_type, subtype;
 +        UINT64 unused;
++        unsigned int i;
 +
 +        /* validate the type */
 +        if (FAILED(hr = IMFMediaType_GetGUID(type, &MF_MT_MAJOR_TYPE, &major_type)))
@@ -989,7 +983,7 @@ index 00000000000..751efe9d663
 +                return MF_E_INVALIDTYPE;
 +        }
 +
-+        for (unsigned int i = 0; i < decoder_descs[decoder->type].output_types_count; i++)
++        for (i = 0; i < decoder_descs[decoder->type].output_types_count; i++)
 +        {
 +            if (IsEqualGUID(&subtype, decoder_descs[decoder->type].output_types[i]))
 +                break;
@@ -1302,6 +1296,7 @@ index 00000000000..751efe9d663
 +    struct mf_decoder *decoder = impl_mf_decoder_from_IMFTransform(iface);
 +    MFT_OUTPUT_DATA_BUFFER *relevant_buffer = NULL;
 +    GstSample *buffer;
++    unsigned int i;
 +
 +    TRACE("%p, %#x, %u, %p, %p,\n", iface, flags, count, samples, status);
 +
@@ -1311,7 +1306,7 @@ index 00000000000..751efe9d663
 +    if (!decoder->valid_state)
 +        return MF_E_TRANSFORM_TYPE_NOT_SET;
 +
-+    for (unsigned int i = 0; i < count; i++)
++    for (i = 0; i < count; i++)
 +    {
 +        MFT_OUTPUT_DATA_BUFFER *out_buffer = &samples[i];
 +
@@ -1576,5 +1571,5 @@ index 00000000000..751efe9d663
 +    }
 +}
 -- 
-2.27.0
+2.28.0
 

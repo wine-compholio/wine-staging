@@ -1,7 +1,7 @@
-From 0c33d653e5c481bec56a2d1ebd6a0b2ae53774d1 Mon Sep 17 00:00:00 2001
+From 57240613380e0ea13b3adb0d2beada6e6528a0d5 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Mon, 16 Mar 2020 12:09:39 -0500
-Subject: [PATCH 33/54] winegstreamer: Implement decoder MFT on gstreamer.
+Subject: [PATCH] winegstreamer: Implement decoder MFT on gstreamer.
 
 ---
  dlls/winegstreamer/Makefile.in               |   1 +
@@ -9,10 +9,10 @@ Subject: [PATCH 33/54] winegstreamer: Implement decoder MFT on gstreamer.
  dlls/winegstreamer/gst_cbs.h                 |  18 +++
  dlls/winegstreamer/gst_private.h             |   7 ++
  dlls/winegstreamer/main.c                    |   3 +-
- dlls/winegstreamer/mfplat.c                  | 118 ++++++++++++++++++-
+ dlls/winegstreamer/mfplat.c                  | 120 ++++++++++++++++++-
  dlls/winegstreamer/winegstreamer_classes.idl |  12 ++
  include/mfidl.idl                            |   4 +-
- 8 files changed, 225 insertions(+), 3 deletions(-)
+ 8 files changed, 227 insertions(+), 3 deletions(-)
 
 diff --git a/dlls/winegstreamer/Makefile.in b/dlls/winegstreamer/Makefile.in
 index f2e8749445..e2af408582 100644
@@ -198,7 +198,7 @@ index 2872710b3e..12ca11fa6c 100644
  
  HRESULT WINAPI DllUnregisterServer(void)
 diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
-index 6499c39a8f..aaef966a5b 100644
+index fe8ba885e9..31881399a9 100644
 --- a/dlls/winegstreamer/mfplat.c
 +++ b/dlls/winegstreamer/mfplat.c
 @@ -404,6 +404,16 @@ failed:
@@ -227,7 +227,7 @@ index 6499c39a8f..aaef966a5b 100644
      { &CLSID_MPEG4ByteStreamHandler, &mp4_stream_handler_create },
  };
  
-@@ -449,6 +461,111 @@ HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj)
+@@ -449,6 +461,113 @@ HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj)
      return CLASS_E_CLASSNOTAVAILABLE;
  }
  
@@ -302,23 +302,25 @@ index 6499c39a8f..aaef966a5b 100644
 +HRESULT mfplat_DllRegisterServer(void)
 +{
 +    HRESULT hr;
++    unsigned int i;
 +
-+    for (unsigned int i = 0; i < ARRAY_SIZE(mfts); i++)
++    for (i = 0; i < ARRAY_SIZE(mfts); i++)
 +    {
 +        const struct mft *cur = &mfts[i];
++        unsigned int j, k;
 +
 +        MFT_REGISTER_TYPE_INFO *input_types, *output_types;
 +        input_types = heap_alloc(cur->input_types_count * sizeof(input_types[0]));
 +        output_types = heap_alloc(cur->output_types_count * sizeof(output_types[0]));
-+        for (unsigned int i = 0; i < cur->input_types_count; i++)
++        for (j = 0; j < cur->input_types_count; j++)
 +        {
-+            input_types[i].guidMajorType = *(cur->major_type);
-+            input_types[i].guidSubtype = *(cur->input_types[i]);
++            input_types[j].guidMajorType = *(cur->major_type);
++            input_types[j].guidSubtype = *(cur->input_types[i]);
 +        }
-+        for (unsigned int i = 0; i < cur->output_types_count; i++)
++        for (k = 0; k < cur->output_types_count; k++)
 +        {
-+            output_types[i].guidMajorType = *(cur->major_type);
-+            output_types[i].guidSubtype = *(cur->output_types[i]);
++            output_types[k].guidMajorType = *(cur->major_type);
++            output_types[k].guidSubtype = *(cur->output_types[i]);
 +        }
 +
 +        hr = MFTRegister(*(cur->clsid), *(cur->category), cur->name, cur->flags, cur->input_types_count,
@@ -339,7 +341,7 @@ index 6499c39a8f..aaef966a5b 100644
  const static struct
  {
      const GUID *subtype;
-@@ -467,7 +584,6 @@ struct aac_user_data
+@@ -467,7 +586,6 @@ struct aac_user_data
  {
      WORD payload_type;
      WORD profile_level_indication;

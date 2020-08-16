@@ -1,14 +1,14 @@
-From 1357055cc0aeb862a74426b12188236bde82bfd1 Mon Sep 17 00:00:00 2001
+From 9aad2524a0610d3df313e508617831415a0f5f02 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Tue, 31 Mar 2020 11:21:21 -0500
-Subject: [PATCH 18/54] winegstreamer: Implement
+Subject: [PATCH] winegstreamer: Implement
  IMFMediaSource::CreatePresentationDescriptor.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
  dlls/mfplat/tests/mfplat.c        |  8 +++----
- dlls/winegstreamer/media_source.c | 36 +++++++++++++++++++++++++++++--
- 2 files changed, 38 insertions(+), 6 deletions(-)
+ dlls/winegstreamer/media_source.c | 37 +++++++++++++++++++++++++++++--
+ 2 files changed, 39 insertions(+), 6 deletions(-)
 
 diff --git a/dlls/mfplat/tests/mfplat.c b/dlls/mfplat/tests/mfplat.c
 index af7e0d0459..8fef44181c 100644
@@ -49,7 +49,7 @@ index af7e0d0459..8fef44181c 100644
      ok(hr == S_OK, "Unexpected hr %#x.\n", hr);
  
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index a654d555bc..04b3b9f6c7 100644
+index f0acfa2830..33af1a6068 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
 @@ -61,6 +61,7 @@ struct media_source
@@ -60,7 +60,7 @@ index a654d555bc..04b3b9f6c7 100644
      GstBus *bus;
      GstElement *container;
      GstElement *demuxer;
-@@ -742,12 +743,19 @@ static HRESULT WINAPI media_source_CreatePresentationDescriptor(IMFMediaSource *
+@@ -743,12 +744,19 @@ static HRESULT WINAPI media_source_CreatePresentationDescriptor(IMFMediaSource *
  {
      struct media_source *source = impl_from_IMFMediaSource(iface);
  
@@ -82,7 +82,7 @@ index a654d555bc..04b3b9f6c7 100644
  }
  
  static HRESULT WINAPI media_source_Start(IMFMediaSource *iface, IMFPresentationDescriptor *descriptor,
-@@ -798,6 +806,8 @@ static HRESULT media_source_teardown(struct media_source *source)
+@@ -801,6 +809,8 @@ static HRESULT media_source_teardown(struct media_source *source)
          gst_element_set_state(source->container, GST_STATE_NULL);
          gst_object_unref(GST_OBJECT(source->container));
      }
@@ -91,7 +91,15 @@ index a654d555bc..04b3b9f6c7 100644
      if (source->event_queue)
          IMFMediaEventQueue_Release(source->event_queue);
      if (source->byte_stream)
-@@ -856,6 +866,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+@@ -850,6 +860,7 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
+ 
+ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_type type, struct media_source **out_media_source)
+ {
++    unsigned int i;
+     GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE(
+         "mf_src",
+         GST_PAD_SRC,
+@@ -859,6 +870,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
      struct media_source *object = heap_alloc_zero(sizeof(*object));
      GList *demuxer_list_one, *demuxer_list_two;
      GstElementFactory *demuxer_factory = NULL;
@@ -99,14 +107,14 @@ index a654d555bc..04b3b9f6c7 100644
      HRESULT hr;
      int ret;
  
-@@ -939,6 +950,25 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+@@ -942,6 +954,25 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
  
      WaitForSingleObject(object->all_streams_event, INFINITE);
  
 +    /* init presentation descriptor */
 +
 +    descriptors = heap_alloc(object->stream_count * sizeof(IMFStreamDescriptor*));
-+    for (unsigned int i = 0; i < object->stream_count; i++)
++    for (i = 0; i < object->stream_count; i++)
 +    {
 +        IMFMediaStream_GetStreamDescriptor(&object->streams[i]->IMFMediaStream_iface, &descriptors[i]);
 +    }
@@ -114,7 +122,7 @@ index a654d555bc..04b3b9f6c7 100644
 +    if (FAILED(MFCreatePresentationDescriptor(object->stream_count, descriptors, &object->pres_desc)))
 +        goto fail;
 +
-+    for (unsigned int i = 0; i < object->stream_count; i++)
++    for (i = 0; i < object->stream_count; i++)
 +    {
 +        IMFPresentationDescriptor_SelectStream(object->pres_desc, i);
 +        IMFStreamDescriptor_Release(descriptors[i]);
@@ -125,7 +133,7 @@ index a654d555bc..04b3b9f6c7 100644
      gst_element_set_state(object->container, GST_STATE_READY);
  
      object->state = SOURCE_STOPPED;
-@@ -951,6 +981,8 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
+@@ -954,6 +985,8 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, enum source_t
  
      if (demuxer_factory)
          gst_object_unref(demuxer_factory);

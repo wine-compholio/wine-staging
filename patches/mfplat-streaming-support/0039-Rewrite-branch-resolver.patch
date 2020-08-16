@@ -1,18 +1,18 @@
-From 5f7531a377c92c3491b2701108801e7e57f6f475 Mon Sep 17 00:00:00 2001
+From f60e21e99a3cddea383792307c4b8c8278e887b8 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Thu, 2 Apr 2020 15:45:52 -0500
-Subject: [PATCH 39/54] Rewrite branch resolver.
+Subject: [PATCH] Rewrite branch resolver.
 
 and a HACK: Set output type of found decoder, this should probably happen somewhere else.
 ---
- dlls/mf/topology.c | 279 +++++++++++++++++++++++++++------------------
- 1 file changed, 171 insertions(+), 108 deletions(-)
+ dlls/mf/topology.c | 280 ++++++++++++++++++++++++++++-----------------
+ 1 file changed, 172 insertions(+), 108 deletions(-)
 
 diff --git a/dlls/mf/topology.c b/dlls/mf/topology.c
-index 2e84920434..94c9d63094 100644
+index 2e84920434..5a00fe7ea3 100644
 --- a/dlls/mf/topology.c
 +++ b/dlls/mf/topology.c
-@@ -1948,135 +1948,194 @@ static void topology_loader_add_branch(struct topology *topology, IMFTopologyNod
+@@ -1948,135 +1948,195 @@ static void topology_loader_add_branch(struct topology *topology, IMFTopologyNod
      }
  }
  
@@ -29,6 +29,7 @@ index 2e84920434..94c9d63094 100644
 +    IMFActivate **activates;
 +    UINT32 num_activates;
 +    HRESULT hr;
++    unsigned int i;
 +
 +    if (FAILED(hr = IMFMediaType_GetMajorType(input_type, &major_type)))
 +        return hr;
@@ -44,7 +45,7 @@ index 2e84920434..94c9d63094 100644
 +
 +    hr = E_FAIL;
 +
-+    for (unsigned int i = 0; i < num_activates; i++)
++    for (i = 0; i < num_activates; i++)
 +    {
 +        IMFTransform *mft;
 +
@@ -309,7 +310,7 @@ index 2e84920434..94c9d63094 100644
      IMFAttributes *attrs_src;
      IMFStreamSink *strm_sink;
      IMFMediaType *mtype_src;
-@@ -2084,6 +2143,7 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
+@@ -2084,6 +2144,7 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
      HRESULT hr;
      int i;
  
@@ -317,7 +318,7 @@ index 2e84920434..94c9d63094 100644
      attrs_src = src->attributes;
      if (FAILED(hr = IMFAttributes_GetUnknown(attrs_src, &MF_TOPONODE_STREAM_DESCRIPTOR, &IID_IMFStreamDescriptor, (void **)&desc)))
          return hr;
-@@ -2137,12 +2197,15 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
+@@ -2137,12 +2198,15 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
      if (FAILED(IMFTopologyNode_GetUINT32(clone_sink, &MF_TOPONODE_STREAMID, &streamid)))
          IMFTopologyNode_SetUINT32(clone_sink, &MF_TOPONODE_STREAMID, 0);
  
@@ -336,7 +337,7 @@ index 2e84920434..94c9d63094 100644
                  for (i = 0; i < num_media_types; i++)
                      if (SUCCEEDED(topology_loader_resolve_branch(clone_src, src_mediatypes[i], clone_sink, method)))
                      {
-@@ -2154,7 +2217,7 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
+@@ -2154,7 +2218,7 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
          else
          {
              for (i = 0; i < num_media_types; i++)
@@ -345,7 +346,7 @@ index 2e84920434..94c9d63094 100644
                      if (SUCCEEDED(topology_loader_resolve_branch(clone_src, src_mediatypes[i], clone_sink, method)))
                      {
                          topology_loader_add_branch(*full_topology, clone_src, clone_sink);
-@@ -2165,10 +2228,10 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
+@@ -2165,10 +2229,10 @@ static HRESULT topology_loader_resolve_partial_topology(struct topology_node *sr
      }
      else
      {

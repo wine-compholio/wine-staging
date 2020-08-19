@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "019fcaa36410f5b52e9c3fb90a621b56a4f10f35"
+	echo "8f3bd63b52f03ff05e9d2a00a2e129a0b0092969"
 }
 
 # Show version information
@@ -205,7 +205,6 @@ patch_enable_all ()
 	enable_nvcuda_CUDA_Support="$1"
 	enable_nvcuvid_CUDA_Video_Support="$1"
 	enable_nvencodeapi_Video_Encoder="$1"
-	enable_ole32_HGLOBALStream="$1"
 	enable_oleaut32_CreateTypeLib="$1"
 	enable_oleaut32_Load_Save_EMF="$1"
 	enable_oleaut32_OLEPictureImpl_SaveAsFile="$1"
@@ -705,9 +704,6 @@ patch_enable ()
 			;;
 		nvencodeapi-Video_Encoder)
 			enable_nvencodeapi_Video_Encoder="$2"
-			;;
-		ole32-HGLOBALStream)
-			enable_ole32_HGLOBALStream="$2"
 			;;
 		oleaut32-CreateTypeLib)
 			enable_oleaut32_CreateTypeLib="$2"
@@ -4196,18 +4192,6 @@ if test "$enable_nvencodeapi_Video_Encoder" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ole32-HGLOBALStream
-# |
-# | Modified files:
-# |   *	dlls/ole32/hglobalstream.c, dlls/ole32/tests/hglobalstream.c
-# |
-if test "$enable_ole32_HGLOBALStream" -eq 1; then
-	patch_apply ole32-HGLOBALStream/0002-ole32-Add-a-check-for-hglobal-pointer-to-GetHGlobalF.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ole32: Add a check for hglobal pointer to GetHGlobalFromStream.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset oleaut32-CreateTypeLib
 # |
 # | This patchset fixes the following Wine bugs:
@@ -5966,39 +5950,22 @@ fi
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#37042] Implement exclusive mode in PulseAudio backend
-# |   *	[#28282] Sound constantly crackling in a lot of games
 # |
 # | Modified files:
 # |   *	dlls/winepulse.drv/Makefile.in, dlls/winepulse.drv/mmdevdrv.c
 # |
 if test "$enable_winepulse_PulseAudio_Support" -eq 1; then
 	patch_apply winepulse-PulseAudio_Support/0001-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
-	patch_apply winepulse-PulseAudio_Support/0002-winepulse-Don-t-rely-on-pulseaudio-callbacks-for-tim.patch
 	patch_apply winepulse-PulseAudio_Support/0003-winepulse-expose-audio-devices-directly-to-programs.patch
-	patch_apply winepulse-PulseAudio_Support/0004-winepulse-fix-segfault-in-pulse_rd_loop.patch
 	patch_apply winepulse-PulseAudio_Support/0005-winepulse-implement-GetPropValue.patch
 	patch_apply winepulse-PulseAudio_Support/0006-winepulse-fetch-actual-program-name-if-possible.patch
 	patch_apply winepulse-PulseAudio_Support/0007-winepulse-return-PKEY_AudioEndpoint_PhysicalSpeakers.patch
-	patch_apply winepulse-PulseAudio_Support/0008-winepulse-Fix-up-recording.patch
-	patch_apply winepulse-PulseAudio_Support/0009-winepulse.drv-Fix-getting-the-same-timing-info.patch
-	patch_apply winepulse-PulseAudio_Support/0010-winepulse-Update-last-time-on-underrun.patch
-	patch_apply winepulse-PulseAudio_Support/0011-winepulse-account-for-PA-devices-that-fall-way-behin.patch
-	patch_apply winepulse-PulseAudio_Support/0012-winepulse-Fix-local-buffer-offset-wrapping.patch
-	patch_apply winepulse-PulseAudio_Support/0013-winepulse-Don-t-fake-being-one-period-behind-in-GetP.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "winepulse.drv: Use a separate mainloop and ctx for pulse_test_connect.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t rely on pulseaudio callbacks for timing.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Expose audio devices directly to programs.", 1 },';
-		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fix segfault in pulse_rd_loop.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Implement GetPropValue.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Fetch actual program name if possible.", 1 },';
 		printf '%s\n' '+    { "Mark Harmstone", "winepulse: Return PKEY_AudioEndpoint_PhysicalSpeakers device prop.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Fix up recording.", 1 },';
-		printf '%s\n' '+    { "Zhiyi Zhang", "winepulse.drv: Fix getting the same timing info.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Update last time on underrun.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Account for PA devices that fall way behind.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Fix local buffer offset wrapping.", 1 },';
-		printf '%s\n' '+    { "Andrew Eikum", "winepulse: Don'\''t fake being one period behind in GetPosition.", 1 },';
 	) >> "$patchlist"
 fi
 

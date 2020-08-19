@@ -1,7 +1,7 @@
-From 0f1a7d67f08eb916407ed4e8f2eb51e829b8c876 Mon Sep 17 00:00:00 2001
+From 5e002013b359e3278e9c1ef30514e4be274ea032 Mon Sep 17 00:00:00 2001
 From: Mark Harmstone <mark@harmstone.com>
 Date: Mon, 3 Nov 2014 02:06:40 +0000
-Subject: [PATCH 3/7] winepulse: expose audio devices directly to programs
+Subject: [PATCH] winepulse: expose audio devices directly to programs
 
 At present, winepulse only exposes one input device and one output device. This
 patch adds support for individual audio devices, allowing (among other things)
@@ -16,11 +16,11 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 * Some style fixes and better error handling
 * Move initialization code to pulse_test_connect()
 ---
- dlls/winepulse.drv/mmdevdrv.c | 252 +++++++++++++++++++++++++++++++++++++-----
+ dlls/winepulse.drv/mmdevdrv.c | 252 ++++++++++++++++++++++++++++++----
  1 file changed, 224 insertions(+), 28 deletions(-)
 
 diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
-index 0039c34..e521794 100644
+index 7fc7dccb367..59cfa3db4f2 100644
 --- a/dlls/winepulse.drv/mmdevdrv.c
 +++ b/dlls/winepulse.drv/mmdevdrv.c
 @@ -79,12 +79,25 @@ static pthread_mutex_t pulse_lock;
@@ -49,7 +49,7 @@ index 0039c34..e521794 100644
  static GUID pulse_render_guid =
  { 0xfd47d9cc, 0x4218, 0x4135, { 0x9c, 0xe2, 0x0c, 0x19, 0x5c, 0x87, 0x40, 0x5b } };
  static GUID pulse_capture_guid =
-@@ -103,6 +116,13 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, void *reserved)
+@@ -106,6 +119,13 @@ BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, void *reserved)
          if (pthread_mutex_init(&pulse_lock, &attr) != 0)
              pthread_mutex_init(&pulse_lock, NULL);
      } else if (reason == DLL_PROCESS_DETACH) {
@@ -63,7 +63,7 @@ index 0039c34..e521794 100644
          if (pulse_thread)
             SetThreadPriority(pulse_thread, 0);
          if (pulse_ctx) {
-@@ -164,6 +184,7 @@ struct ACImpl {
+@@ -167,6 +187,7 @@ struct ACImpl {
      IMMDevice *parent;
      struct list entry;
      float vol[PA_CHANNELS_MAX];
@@ -71,7 +71,7 @@ index 0039c34..e521794 100644
  
      LONG ref;
      EDataFlow dataflow;
-@@ -193,8 +214,6 @@ struct ACImpl {
+@@ -196,8 +217,6 @@ struct ACImpl {
      struct list packet_filled_head;
  };
  
@@ -80,7 +80,7 @@ index 0039c34..e521794 100644
  static const IAudioClientVtbl AudioClient_Vtbl;
  static const IAudioRenderClientVtbl AudioRenderClient_Vtbl;
  static const IAudioCaptureClientVtbl AudioCaptureClient_Vtbl;
-@@ -517,12 +536,92 @@ fail:
+@@ -605,12 +624,92 @@ fail:
      return E_FAIL;
  }
  
@@ -176,7 +176,7 @@ index 0039c34..e521794 100644
  }
  
  /* some poorly-behaved applications call audio functions during DllMain, so we
-@@ -538,6 +637,10 @@ static HRESULT pulse_test_connect(void)
+@@ -626,6 +725,10 @@ static HRESULT pulse_test_connect(void)
      pa_mainloop *ml;
      pa_context *ctx;
  
@@ -187,7 +187,7 @@ index 0039c34..e521794 100644
      ml = pa_mainloop_new();
  
      pa_mainloop_set_poll_func(ml, pulse_poll_func, NULL);
-@@ -588,6 +691,9 @@ static HRESULT pulse_test_connect(void)
+@@ -676,6 +779,9 @@ static HRESULT pulse_test_connect(void)
      pulse_probe_settings(ml, ctx, 0, &pulse_fmt[1]);
  
      g_phys_speakers_mask = 0;
@@ -197,7 +197,7 @@ index 0039c34..e521794 100644
      o = pa_context_get_sink_info_list(ctx, &pulse_phys_speakers_cb, NULL);
      if (o) {
          while (pa_mainloop_iterate(ml, 1, &ret) >= 0 &&
-@@ -596,6 +702,14 @@ static HRESULT pulse_test_connect(void)
+@@ -684,6 +790,14 @@ static HRESULT pulse_test_connect(void)
          pa_operation_unref(o);
      }
  
@@ -212,7 +212,7 @@ index 0039c34..e521794 100644
      pa_context_unref(ctx);
      pa_mainloop_free(ml);
      return S_OK;
-@@ -883,6 +997,8 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -1111,6 +1225,8 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      char buffer[64];
      static LONG number;
      pa_buffer_attr attr;
@@ -221,7 +221,7 @@ index 0039c34..e521794 100644
      if (This->stream) {
          pa_stream_disconnect(This->stream);
          while (pa_stream_get_state(This->stream) == PA_STREAM_READY)
-@@ -908,12 +1024,18 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -1136,12 +1252,18 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      attr.maxlength = This->bufsize_frames * pa_frame_size(&This->ss);
      attr.prebuf = pa_frame_size(&This->ss);
      dump_attr(&attr);
@@ -233,16 +233,16 @@ index 0039c34..e521794 100644
 +
      if (This->dataflow == eRender)
          ret = pa_stream_connect_playback(This->stream, NULL, &attr,
--        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_AUTO_TIMING_UPDATE|PA_STREAM_INTERPOLATE_TIMING|PA_STREAM_ADJUST_LATENCY, NULL, NULL);
-+        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_AUTO_TIMING_UPDATE|PA_STREAM_INTERPOLATE_TIMING|PA_STREAM_ADJUST_LATENCY|moving, NULL, NULL);
+-        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_ADJUST_LATENCY, NULL, NULL);
++        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_ADJUST_LATENCY|moving, NULL, NULL);
      else
          ret = pa_stream_connect_record(This->stream, NULL, &attr,
--        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_AUTO_TIMING_UPDATE|PA_STREAM_INTERPOLATE_TIMING|PA_STREAM_ADJUST_LATENCY);
-+        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_AUTO_TIMING_UPDATE|PA_STREAM_INTERPOLATE_TIMING|PA_STREAM_ADJUST_LATENCY|moving);
+-        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_ADJUST_LATENCY);
++        PA_STREAM_START_CORKED|PA_STREAM_START_UNMUTED|PA_STREAM_ADJUST_LATENCY|moving);
      if (ret < 0) {
          WARN("Returns %i\n", ret);
          return AUDCLNT_E_ENDPOINT_CREATE_FAILED;
-@@ -930,39 +1052,53 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+@@ -1158,39 +1280,53 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
      return S_OK;
  }
  
@@ -315,7 +315,7 @@ index 0039c34..e521794 100644
  }
  
  int WINAPI AUDDRV_GetPriority(void)
-@@ -974,20 +1110,79 @@ int WINAPI AUDDRV_GetPriority(void)
+@@ -1202,20 +1338,79 @@ int WINAPI AUDDRV_GetPriority(void)
      return SUCCEEDED(hr) ? Priority_Preferred : Priority_Unavailable;
  }
  
@@ -397,7 +397,7 @@ index 0039c34..e521794 100644
  
      *out = NULL;
  
-@@ -1005,6 +1200,7 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
+@@ -1233,6 +1428,7 @@ HRESULT WINAPI AUDDRV_GetAudioEndpoint(GUID *guid, IMMDevice *dev, IAudioClient
      This->parent = dev;
      for (i = 0; i < PA_CHANNELS_MAX; ++i)
          This->vol[i] = 1.f;
@@ -406,5 +406,5 @@ index 0039c34..e521794 100644
      hr = CoCreateFreeThreadedMarshaler((IUnknown*)&This->IAudioClient_iface, &This->marshal);
      if (hr) {
 -- 
-1.9.1
+2.28.0
 

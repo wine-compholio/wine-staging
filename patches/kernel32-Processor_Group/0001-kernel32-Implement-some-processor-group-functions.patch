@@ -1,0 +1,162 @@
+From 95aeebee8fa45177e8b721aca8528d7b89c19054 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 4 Feb 2017 16:20:37 +0100
+Subject: [PATCH] kernel32: Implement some processor group functions.
+
+---
+ ...pi-ms-win-core-kernel32-legacy-l1-1-0.spec |  2 +-
+ ...pi-ms-win-core-kernel32-legacy-l1-1-1.spec |  2 +-
+ dlls/kernel32/kernel32.spec                   |  2 +-
+ dlls/kernel32/process.c                       | 26 ++++++++++++++++---
+ dlls/kernel32/tests/process.c                 | 23 ++++++++++++++++
+ 5 files changed, 48 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec b/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec
+index e653ac6d212..b6af37ab0aa 100644
+--- a/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec
++++ b/dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec
+@@ -21,7 +21,7 @@
+ @ stdcall GetComputerNameW(ptr ptr) kernel32.GetComputerNameW
+ @ stdcall GetConsoleWindow() kernel32.GetConsoleWindow
+ @ stub GetDurationFormatEx
+-@ stub GetMaximumProcessorGroupCount
++@ stdcall GetMaximumProcessorGroupCount() kernel32.GetMaximumProcessorGroupCount
+ @ stdcall GetNamedPipeClientProcessId(long ptr) kernel32.GetNamedPipeClientProcessId
+ @ stdcall GetNamedPipeServerProcessId(long ptr) kernel32.GetNamedPipeServerProcessId
+ @ stdcall GetShortPathNameA(str ptr long) kernel32.GetShortPathNameA
+diff --git a/dlls/api-ms-win-core-kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec b/dlls/api-ms-win-core-kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec
+index 4998af04d9b..5ce8e24713b 100644
+--- a/dlls/api-ms-win-core-kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec
++++ b/dlls/api-ms-win-core-kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec
+@@ -26,7 +26,7 @@
+ @ stub GetDurationFormatEx
+ @ stub GetFileAttributesTransactedW
+ @ stub GetFirmwareType
+-@ stub GetMaximumProcessorGroupCount
++@ stdcall GetMaximumProcessorGroupCount() kernel32.GetMaximumProcessorGroupCount
+ @ stdcall GetNamedPipeClientProcessId(long ptr) kernel32.GetNamedPipeClientProcessId
+ @ stdcall GetNamedPipeServerProcessId(long ptr) kernel32.GetNamedPipeServerProcessId
+ @ stdcall GetNumaAvailableMemoryNodeEx(long ptr) kernel32.GetNumaAvailableMemoryNodeEx
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index 5671ae7e93d..188c62636e6 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -719,7 +719,7 @@
+ @ stdcall -import GetLongPathNameW(wstr ptr long)
+ @ stdcall GetMailslotInfo(long ptr ptr ptr ptr)
+ @ stdcall GetMaximumProcessorCount(long)
+-# @ stub GetMaximumProcessorGroupCount
++@ stdcall GetMaximumProcessorGroupCount()
+ @ stdcall -import GetModuleFileNameA(long ptr long)
+ @ stdcall -import GetModuleFileNameW(long ptr long)
+ @ stdcall -import GetModuleHandleA(str)
+diff --git a/dlls/kernel32/process.c b/dlls/kernel32/process.c
+index 0cf45faf0f3..afed492873c 100644
+--- a/dlls/kernel32/process.c
++++ b/dlls/kernel32/process.c
+@@ -726,7 +726,9 @@ HRESULT WINAPI RegisterApplicationRecoveryCallback(APPLICATION_RECOVERY_CALLBACK
+  */
+ WORD WINAPI GetActiveProcessorGroupCount(void)
+ {
+-    FIXME("semi-stub, always returning 1\n");
++    TRACE("()\n");
++
++    /* systems with less than 64 logical processors only have group 0 */
+     return 1;
+ }
+ 
+@@ -735,10 +737,14 @@ WORD WINAPI GetActiveProcessorGroupCount(void)
+  */
+ DWORD WINAPI GetActiveProcessorCount(WORD group)
+ {
+-    DWORD cpus = system_info.NumberOfProcessors;
++    TRACE("(%u)\n", group);
+ 
+-    FIXME("semi-stub, returning %u\n", cpus);
+-    return cpus;
++    if (group && group != ALL_PROCESSOR_GROUPS)
++    {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return 0;
++    }
++    return system_info.NumberOfProcessors;
+ }
+ 
+ /***********************************************************************
+@@ -752,6 +758,18 @@ DWORD WINAPI GetMaximumProcessorCount(WORD group)
+     return cpus;
+ }
+ 
++/***********************************************************************
++ *           GetMaximumProcessorGroupCount (KERNEL32.@)
++ */
++WORD WINAPI GetMaximumProcessorGroupCount(void)
++{
++    TRACE("()\n");
++
++    /* systems with less than 64 logical processors only have group 0 */
++    return 1;
++}
++
++
+ /***********************************************************************
+  *           GetFirmwareEnvironmentVariableA     (KERNEL32.@)
+  */
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 5bd7b71d63e..58ccbfbdacc 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -93,6 +93,7 @@ static SIZE_T (WINAPI *pGetLargePageMinimum)(void);
+ static BOOL   (WINAPI *pInitializeProcThreadAttributeList)(struct _PROC_THREAD_ATTRIBUTE_LIST*, DWORD, DWORD, SIZE_T*);
+ static BOOL   (WINAPI *pUpdateProcThreadAttribute)(struct _PROC_THREAD_ATTRIBUTE_LIST*, DWORD, DWORD_PTR, void *,SIZE_T,void*,SIZE_T*);
+ static void   (WINAPI *pDeleteProcThreadAttributeList)(struct _PROC_THREAD_ATTRIBUTE_LIST*);
++static DWORD  (WINAPI *pGetActiveProcessorCount)(WORD);
+ 
+ /* ############################### */
+ static char     base[MAX_PATH];
+@@ -276,6 +277,7 @@ static BOOL init(void)
+     pInitializeProcThreadAttributeList = (void *)GetProcAddress(hkernel32, "InitializeProcThreadAttributeList");
+     pUpdateProcThreadAttribute = (void *)GetProcAddress(hkernel32, "UpdateProcThreadAttribute");
+     pDeleteProcThreadAttributeList = (void *)GetProcAddress(hkernel32, "DeleteProcThreadAttributeList");
++    pGetActiveProcessorCount = (void *)GetProcAddress(hkernel32, "GetActiveProcessorCount");
+ 
+     return TRUE;
+ }
+@@ -4185,6 +4187,26 @@ void test_parent_process_attribute(unsigned int level, HANDLE read_pipe)
+     }
+ }
+ 
++static void test_GetActiveProcessorCount(void)
++{
++    DWORD count;
++
++    if (!pGetActiveProcessorCount)
++    {
++        win_skip("GetActiveProcessorCount not available, skipping test\n");
++        return;
++    }
++
++    count = pGetActiveProcessorCount(0);
++    ok(count, "GetActiveProcessorCount failed, error %u\n", GetLastError());
++
++    /* Test would fail on systems with more than 6400 processors */
++    SetLastError(0xdeadbeef);
++    count = pGetActiveProcessorCount(101);
++    ok(count == 0, "Expeced GetActiveProcessorCount to fail\n");
++    ok(GetLastError() == ERROR_INVALID_PARAMETER, "Expected ERROR_INVALID_PARAMETER, got %u\n", GetLastError());
++}
++
+ START_TEST(process)
+ {
+     HANDLE job;
+@@ -4296,6 +4318,7 @@ START_TEST(process)
+     test_GetNumaProcessorNode();
+     test_session_info();
+     test_GetLogicalProcessorInformationEx();
++    test_GetActiveProcessorCount();
+     test_largepages();
+     test_ProcThreadAttributeList();
+     test_SuspendProcessState();
+-- 
+2.28.0
+

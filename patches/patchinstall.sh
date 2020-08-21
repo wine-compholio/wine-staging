@@ -3058,11 +3058,15 @@ fi
 # |   *	api-ms-win-Stub_DLLs
 # |
 # | Modified files:
-# |   *	dlls/kernelbase/thread.c
+# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
+# | 	kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec, dlls/kernel32/kernel32.spec,
+# | 	dlls/kernel32/process.c, dlls/kernel32/tests/process.c, dlls/kernelbase/thread.c
 # |
 if test "$enable_kernel32_Processor_Group" -eq 1; then
+	patch_apply kernel32-Processor_Group/0001-kernel32-Implement-some-processor-group-functions.patch
 	patch_apply kernel32-Processor_Group/0002-kernel32-Add-stub-for-SetThreadIdealProcessorEx.patch
 	(
+		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement some processor group functions.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for SetThreadIdealProcessorEx.", 1 },';
 	) >> "$patchlist"
 fi

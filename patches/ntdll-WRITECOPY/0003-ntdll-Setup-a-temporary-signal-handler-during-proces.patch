@@ -1,4 +1,4 @@
-From 748433a959d7544dc7a2a9205fa75b2ee925d6b8 Mon Sep 17 00:00:00 2001
+From d30ca787e91e5c6140689219ce372d6f0edb6da9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
 Subject: [PATCH] ntdll: Setup a temporary signal handler during process
@@ -15,10 +15,10 @@ Subject: [PATCH] ntdll: Setup a temporary signal handler during process
  7 files changed, 74 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index a343274087a7..d8422bc9fa33 100644
+index e7cc050ba9d..4e9fdfc7040 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -1703,6 +1703,7 @@ void __wine_main( int argc, char *argv[], char *envp[] )
+@@ -1706,6 +1706,7 @@ void __wine_main( int argc, char *argv[], char *envp[] )
  #endif
  
      virtual_init();
@@ -27,10 +27,10 @@ index a343274087a7..d8422bc9fa33 100644
      ntdll_module = load_ntdll();
      fixup_ntdll_imports( &__wine_spec_nt_header );
 diff --git a/dlls/ntdll/unix/signal_arm.c b/dlls/ntdll/unix/signal_arm.c
-index 34463309def5..0810024a34bd 100644
+index 175e86168a4..551d07c0598 100644
 --- a/dlls/ntdll/unix/signal_arm.c
 +++ b/dlls/ntdll/unix/signal_arm.c
-@@ -830,6 +830,12 @@ void signal_init_process(void)
+@@ -921,6 +921,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -44,10 +44,10 @@ index 34463309def5..0810024a34bd 100644
  /***********************************************************************
   *           init_thread_context
 diff --git a/dlls/ntdll/unix/signal_arm64.c b/dlls/ntdll/unix/signal_arm64.c
-index e66952a29b60..4b63de0ea456 100644
+index 52f00323a02..0803d8e5a28 100644
 --- a/dlls/ntdll/unix/signal_arm64.c
 +++ b/dlls/ntdll/unix/signal_arm64.c
-@@ -882,6 +882,13 @@ void signal_init_process(void)
+@@ -1003,6 +1003,13 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -62,10 +62,10 @@ index e66952a29b60..4b63de0ea456 100644
   *           init_thread_context
   */
 diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
-index 162a0b6a7011..6e670923138d 100644
+index bc30dd34df8..06213fb2ebc 100644
 --- a/dlls/ntdll/unix/signal_i386.c
 +++ b/dlls/ntdll/unix/signal_i386.c
-@@ -1590,6 +1590,30 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, vo
+@@ -1657,6 +1657,30 @@ static BOOL handle_interrupt( unsigned int interrupt, ucontext_t *sigcontext, vo
  }
  
  
@@ -96,7 +96,7 @@ index 162a0b6a7011..6e670923138d 100644
  /**********************************************************************
   *		segv_handler
   *
-@@ -2148,6 +2172,34 @@ void signal_init_process(void)
+@@ -2215,6 +2239,34 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -132,10 +132,10 @@ index 162a0b6a7011..6e670923138d 100644
  /***********************************************************************
   *           init_thread_context
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index 01be0eab8146..4342ab023775 100644
+index ef3fe864986..21c819aed3b 100644
 --- a/dlls/ntdll/unix/signal_x86_64.c
 +++ b/dlls/ntdll/unix/signal_x86_64.c
-@@ -2409,6 +2409,12 @@ void signal_init_process(void)
+@@ -2469,6 +2469,12 @@ void signal_init_process(void)
      exit(1);
  }
  
@@ -149,22 +149,22 @@ index 01be0eab8146..4342ab023775 100644
  /***********************************************************************
   *           init_thread_context
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 3cf9ca66736c..76c483cc3f50 100644
+index b020256e36d..c5b2030f4b2 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -218,6 +218,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
+@@ -230,6 +230,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_process(void) DECLSPEC_HIDDEN;
 +extern void signal_init_early(void) DECLSPEC_HIDDEN;
  extern void DECLSPEC_NORETURN signal_start_thread( PRTL_THREAD_START_ROUTINE entry, void *arg,
-                                                    BOOL suspend, void *relay, TEB *teb ) DECLSPEC_HIDDEN;
+                                                    BOOL suspend, void *relay, void *thunk, TEB *teb ) DECLSPEC_HIDDEN;
  extern void DECLSPEC_NORETURN signal_exit_thread( int status, void (*func)(int) ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index b17d8d6b61e1..d4a8d4d38d5b 100644
+index fa46ec09668..65e54821195 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2882,7 +2882,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
+@@ -2884,7 +2884,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
  
      pthread_mutex_lock( &virtual_mutex );  /* no need for signal masking inside signal handler */
      vprot = get_page_vprot( page );
@@ -174,5 +174,5 @@ index b17d8d6b61e1..d4a8d4d38d5b 100644
          if (page < (char *)NtCurrentTeb()->DeallocationStack ||
              page >= (char *)NtCurrentTeb()->Tib.StackBase)
 -- 
-2.20.1
+2.28.0
 

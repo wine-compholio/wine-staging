@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8f3bd63b52f03ff05e9d2a00a2e129a0b0092969"
+	echo "13ea90d80f7275e1ad4f3fc3c1c75b68bdbefbb4"
 }
 
 # Show version information
@@ -1884,11 +1884,10 @@ fi
 # |   *	[#39262] Run explorer.exe as unevaluated process
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/kernelbase/process.c,
-# | 	dlls/ntdll/loader.c, dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/unix/process.c,
-# | 	dlls/ntdll/unix/security.c, dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in,
-# | 	programs/runas/runas.c, programs/runas/runas.h, programs/runas/runas.rc, server/named_pipe.c, server/process.c,
-# | 	server/process.h, server/protocol.def, server/request.c, server/security.h, server/token.c
+# |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/ntdll/loader.c,
+# | 	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/unix/security.c,
+# | 	dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
+# | 	programs/runas/runas.rc, server/process.c, server/process.h, server/protocol.def, server/security.h, server/token.c
 # |
 if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	patch_apply advapi32-Token_Integrity_Level/0001-advapi32-tests-Extend-security-label-token-integrity.patch
@@ -1899,9 +1898,7 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 	patch_apply advapi32-Token_Integrity_Level/0006-ntdll-Add-function-to-create-new-tokens-for-elevatio.patch
 	patch_apply advapi32-Token_Integrity_Level/0007-shell32-Implement-process-elevation-using-runas-verb.patch
 	patch_apply advapi32-Token_Integrity_Level/0008-ntdll-Implement-process-token-elevation-through-mani.patch
-	patch_apply advapi32-Token_Integrity_Level/0010-server-Implement-support-for-creating-processes-usin.patch
 	patch_apply advapi32-Token_Integrity_Level/0012-user32-Start-explorer.exe-using-limited-rights.patch
-	patch_apply advapi32-Token_Integrity_Level/0013-server-Correctly-assign-security-labels-for-tokens.patch
 	patch_apply advapi32-Token_Integrity_Level/0014-programs-runas-Basic-implementation-for-starting-pro.patch
 	patch_apply advapi32-Token_Integrity_Level/0015-ntdll-Add-semi-stub-for-TokenLinkedToken-info-class.patch
 	(
@@ -1913,9 +1910,7 @@ if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Add function to create new tokens for elevation purposes.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "shell32: Implement process elevation using runas verb.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement process token elevation through manifests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement support for creating processes using a token.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "user32: Start explorer.exe using limited rights.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Correctly assign security labels for tokens.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "programs/runas: Basic implementation for starting processes with a different trustlevel.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add semi-stub for TokenLinkedToken info class.", 1 },';
 	) >> "$patchlist"
@@ -3063,15 +3058,11 @@ fi
 # |   *	api-ms-win-Stub_DLLs
 # |
 # | Modified files:
-# |   *	dlls/api-ms-win-core-kernel32-legacy-l1-1-0/api-ms-win-core-kernel32-legacy-l1-1-0.spec, dlls/api-ms-win-core-
-# | 	kernel32-legacy-l1-1-1/api-ms-win-core-kernel32-legacy-l1-1-1.spec, dlls/kernel32/kernel32.spec,
-# | 	dlls/kernel32/process.c, dlls/kernel32/tests/process.c, dlls/kernelbase/thread.c
+# |   *	dlls/kernelbase/thread.c
 # |
 if test "$enable_kernel32_Processor_Group" -eq 1; then
-	patch_apply kernel32-Processor_Group/0001-kernel32-Implement-some-processor-group-functions.patch
 	patch_apply kernel32-Processor_Group/0002-kernel32-Add-stub-for-SetThreadIdealProcessorEx.patch
 	(
-		printf '%s\n' '+    { "Michael Müller", "kernel32: Implement some processor group functions.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "kernel32: Add stub for SetThreadIdealProcessorEx.", 1 },';
 	) >> "$patchlist"
 fi

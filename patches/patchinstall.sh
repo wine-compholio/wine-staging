@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "13ea90d80f7275e1ad4f3fc3c1c75b68bdbefbb4"
+	echo "aaea13a128b76fa0076b8852187c7d10e5eb5d68"
 }
 
 # Show version information
@@ -88,7 +88,6 @@ patch_enable_all ()
 	enable_Staging="$1"
 	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
-	enable_advapi32_Token_Integrity_Level="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
 	enable_bcrypt_ECDHSecretAgreement="$1"
@@ -181,7 +180,6 @@ patch_enable_all ()
 	enable_ntdll_NtDevicePath="$1"
 	enable_ntdll_NtQueryEaFile="$1"
 	enable_ntdll_NtQuerySection="$1"
-	enable_ntdll_NtQueryVirtualMemory="$1"
 	enable_ntdll_NtSetLdtEntries="$1"
 	enable_ntdll_Pipe_SpecialCharacters="$1"
 	enable_ntdll_ProcessQuotaLimits="$1"
@@ -353,9 +351,6 @@ patch_enable ()
 			;;
 		advapi32-LsaLookupPrivilegeName)
 			enable_advapi32_LsaLookupPrivilegeName="$2"
-			;;
-		advapi32-Token_Integrity_Level)
-			enable_advapi32_Token_Integrity_Level="$2"
 			;;
 		api-ms-win-Stub_DLLs)
 			enable_api_ms_win_Stub_DLLs="$2"
@@ -632,9 +627,6 @@ patch_enable ()
 			;;
 		ntdll-NtQuerySection)
 			enable_ntdll_NtQuerySection="$2"
-			;;
-		ntdll-NtQueryVirtualMemory)
-			enable_ntdll_NtQueryVirtualMemory="$2"
 			;;
 		ntdll-NtSetLdtEntries)
 			enable_ntdll_NtSetLdtEntries="$2"
@@ -1451,13 +1443,6 @@ if test "$enable_ws2_32_TransmitFile" -eq 1; then
 	enable_server_Desktop_Refcount=1
 fi
 
-if test "$enable_wow64cpu_Wow64Transition" -eq 1; then
-	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
-		abort "Patchset advapi32-Token_Integrity_Level disabled, but wow64cpu-Wow64Transition depends on that."
-	fi
-	enable_advapi32_Token_Integrity_Level=1
-fi
-
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	if test "$enable_winex11__NET_ACTIVE_WINDOW" -gt 1; then
 		abort "Patchset winex11-_NET_ACTIVE_WINDOW disabled, but winex11-WM_WINDOWPOSCHANGING depends on that."
@@ -1624,21 +1609,6 @@ if test "$enable_ntdll_Syscall_Emulation" -eq 1; then
 	enable_winebuild_pe_syscall_thunks=1
 fi
 
-if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	if test "$enable_ntdll_ForceBottomUpAlloc" -gt 1; then
-		abort "Patchset ntdll-ForceBottomUpAlloc disabled, but ntdll-NtQueryVirtualMemory depends on that."
-	fi
-	if test "$enable_ntdll_Junction_Points" -gt 1; then
-		abort "Patchset ntdll-Junction_Points disabled, but ntdll-NtQueryVirtualMemory depends on that."
-	fi
-	if test "$enable_ntdll_NtDevicePath" -gt 1; then
-		abort "Patchset ntdll-NtDevicePath disabled, but ntdll-NtQueryVirtualMemory depends on that."
-	fi
-	enable_ntdll_ForceBottomUpAlloc=1
-	enable_ntdll_Junction_Points=1
-	enable_ntdll_NtDevicePath=1
-fi
-
 if test "$enable_ntdll_NtDevicePath" -eq 1; then
 	if test "$enable_ntdll_Pipe_SpecialCharacters" -gt 1; then
 		abort "Patchset ntdll-Pipe_SpecialCharacters disabled, but ntdll-NtDevicePath depends on that."
@@ -1655,13 +1625,6 @@ if test "$enable_ntdll_Junction_Points" -eq 1; then
 	fi
 	enable_ntdll_DOS_Attributes=1
 	enable_ntdll_NtQueryEaFile=1
-fi
-
-if test "$enable_ntdll_Hide_Wine_Exports" -eq 1; then
-	if test "$enable_advapi32_Token_Integrity_Level" -gt 1; then
-		abort "Patchset advapi32-Token_Integrity_Level disabled, but ntdll-Hide_Wine_Exports depends on that."
-	fi
-	enable_advapi32_Token_Integrity_Level=1
 fi
 
 if test "$enable_ntdll_Builtin_Prot" -eq 1; then
@@ -1739,17 +1702,6 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 		abort "Patchset nvcuda-CUDA_Support disabled, but nvapi-Stub_DLL depends on that."
 	fi
 	enable_nvcuda_CUDA_Support=1
-fi
-
-if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
-	if test "$enable_Staging" -gt 1; then
-		abort "Patchset Staging disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
-	if test "$enable_advapi32_CreateRestrictedToken" -gt 1; then
-		abort "Patchset advapi32-CreateRestrictedToken disabled, but advapi32-Token_Integrity_Level depends on that."
-	fi
-	enable_Staging=1
-	enable_advapi32_CreateRestrictedToken=1
 fi
 
 
@@ -1871,48 +1823,6 @@ if test "$enable_advapi32_LsaLookupPrivilegeName" -eq 1; then
 	(
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Fix error code when calling LsaOpenPolicy for non existing remote machine.", 1 },';
 		printf '%s\n' '+    { "Michael Müller", "advapi32: Use TRACE for LsaOpenPolicy/LsaClose.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset advapi32-Token_Integrity_Level
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#40613] Basic implementation for token integrity levels and UAC handling
-# |   *	[#39262] Run explorer.exe as unevaluated process
-# |
-# | Modified files:
-# |   *	configure.ac, dlls/advapi32/tests/Makefile.in, dlls/advapi32/tests/security.c, dlls/ntdll/loader.c,
-# | 	dlls/ntdll/ntdll.spec, dlls/ntdll/ntdll_misc.h, dlls/ntdll/process.c, dlls/ntdll/unix/security.c,
-# | 	dlls/shell32/shlexec.c, dlls/user32/win.c, programs/runas/Makefile.in, programs/runas/runas.c, programs/runas/runas.h,
-# | 	programs/runas/runas.rc, server/process.c, server/process.h, server/protocol.def, server/security.h, server/token.c
-# |
-if test "$enable_advapi32_Token_Integrity_Level" -eq 1; then
-	patch_apply advapi32-Token_Integrity_Level/0001-advapi32-tests-Extend-security-label-token-integrity.patch
-	patch_apply advapi32-Token_Integrity_Level/0002-server-Implement-token-elevation-information.patch
-	patch_apply advapi32-Token_Integrity_Level/0003-server-Correctly-treat-zero-access-mask-in-duplicate.patch
-	patch_apply advapi32-Token_Integrity_Level/0004-server-Implement-token-integrity-level.patch
-	patch_apply advapi32-Token_Integrity_Level/0005-server-Use-all-group-attributes-in-create_token.patch
-	patch_apply advapi32-Token_Integrity_Level/0006-ntdll-Add-function-to-create-new-tokens-for-elevatio.patch
-	patch_apply advapi32-Token_Integrity_Level/0007-shell32-Implement-process-elevation-using-runas-verb.patch
-	patch_apply advapi32-Token_Integrity_Level/0008-ntdll-Implement-process-token-elevation-through-mani.patch
-	patch_apply advapi32-Token_Integrity_Level/0012-user32-Start-explorer.exe-using-limited-rights.patch
-	patch_apply advapi32-Token_Integrity_Level/0014-programs-runas-Basic-implementation-for-starting-pro.patch
-	patch_apply advapi32-Token_Integrity_Level/0015-ntdll-Add-semi-stub-for-TokenLinkedToken-info-class.patch
-	(
-		printf '%s\n' '+    { "Michael Müller", "advapi32/tests: Extend security label / token integrity tests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement token elevation information.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Correctly treat zero access mask in duplicate_token wineserver call.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "server: Implement token integrity level.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "server: Use all group attributes in create_token.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Add function to create new tokens for elevation purposes.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "shell32: Implement process elevation using runas verb.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "ntdll: Implement process token elevation through manifests.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "user32: Start explorer.exe using limited rights.", 1 },';
-		printf '%s\n' '+    { "Michael Müller", "programs/runas: Basic implementation for starting processes with a different trustlevel.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Add semi-stub for TokenLinkedToken info class.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3659,9 +3569,6 @@ fi
 
 # Patchset ntdll-Hide_Wine_Exports
 # |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level
-# |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#38656] Add support for hiding wine version information from applications
 # |
@@ -3842,37 +3749,6 @@ if test "$enable_ntdll_NtQuerySection" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset ntdll-NtQueryVirtualMemory
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-ForceBottomUpAlloc, ntdll-DOS_Attributes, ntdll-NtQueryEaFile, ntdll-Junction_Points, ntdll-
-# | 	Pipe_SpecialCharacters, ntdll-NtDevicePath
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#23999] Implement MemorySectionName class in NtQueryVirtualMemory
-# |   *	[#27248] Implement K32GetMappedFileName
-# |
-# | Modified files:
-# |   *	dlls/kernelbase/debug.c, dlls/ntdll/tests/info.c, dlls/ntdll/unix/file.c, dlls/ntdll/unix/unix_private.h,
-# | 	dlls/ntdll/unix/virtual.c, dlls/psapi/tests/psapi_main.c, server/mapping.c, server/protocol.def
-# |
-if test "$enable_ntdll_NtQueryVirtualMemory" -eq 1; then
-	patch_apply ntdll-NtQueryVirtualMemory/0003-ntdll-Implement-NtQueryVirtualMemory-MemorySectionNa.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0004-ntdll-tests-Add-tests-for-NtQueryVirtualMemory-Memor.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0005-ntdll-tests-Add-test-to-ensure-section-name-is-full-.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0006-ntdll-Allow-to-query-section-names-from-other-proces.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0007-kernel32-Implement-K32GetMappedFileName.-v2.patch
-	patch_apply ntdll-NtQueryVirtualMemory/0008-ntdll-Resolve-drive-symlinks-before-returning-sectio.patch
-	(
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll: Implement NtQueryVirtualMemory(MemorySectionName).", 3 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "ntdll/tests: Add tests for NtQueryVirtualMemory(MemorySectionName).", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll/tests: Add test to ensure section name is full path.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Allow to query section names from other processes.", 2 },';
-		printf '%s\n' '+    { "Dmitry Timoshkov", "kernel32: Implement K32GetMappedFileName.", 2 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Resolve drive symlinks before returning section name.", 1 },';
-	) >> "$patchlist"
-fi
-
 # Patchset ntdll-NtSetLdtEntries
 # |
 # | Modified files:
@@ -3969,15 +3845,12 @@ fi
 # |   *	[#45650] chromium 32-bit sandbox expects different syscall thunks depending on Windows version
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/virtual.c, tools/winebuild/import.c,
-# | 	tools/winebuild/spec32.c
+# |   *	dlls/ntdll/unix/virtual.c, tools/winebuild/import.c
 # |
 if test "$enable_winebuild_pe_syscall_thunks" -eq 1; then
 	patch_apply winebuild-pe_syscall_thunks/0002-winebuild-Call-__wine_syscall_dispatcher-through-the.patch
-	patch_apply winebuild-pe_syscall_thunks/0003-ntdll-Also-generate-syscall-thunks-for-Nt-functions-.patch
 	(
 		printf '%s\n' '+    { "Paul Gofman", "winebuild: Call __wine_syscall_dispatcher through the fixed address.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Also generate syscall thunks for Nt functions not yet in the Unix part.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -6258,9 +6131,6 @@ if test "$enable_wintrust_WTHelperGetProvCertFromChain" -eq 1; then
 fi
 
 # Patchset wow64cpu-Wow64Transition
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	Staging, advapi32-CreateRestrictedToken, advapi32-Token_Integrity_Level
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#45567] League of Legends 8.12+ fails to start a game (anticheat engine, validation of WoW64 syscall dispatcher)

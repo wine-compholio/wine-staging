@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "aaea13a128b76fa0076b8852187c7d10e5eb5d68"
+	echo "a53288e8c95d59b03eefe10f4963b555b04426aa"
 }
 
 # Show version information
@@ -4274,9 +4274,8 @@ fi
 # |   *	[#18670] Properly close sockets when WSACleanup is called
 # |
 # | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/server.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
-# | 	dlls/ntdll/unix/unix_private.h, dlls/ntdll/unixlib.h, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c,
-# | 	include/wine/server.h, server/protocol.def, server/sock.c
+# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/unix/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h,
+# | 	server/protocol.def, server/sock.c
 # |
 if test "$enable_ws2_32_WSACleanup" -eq 1; then
 	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch

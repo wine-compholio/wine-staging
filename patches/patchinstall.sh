@@ -157,6 +157,7 @@ patch_enable_all ()
 	enable_mshtml_TranslateAccelerator="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msvcrt_Math_Precision="$1"
+	enable_netutils_dll="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
 	enable_ntdll_ApiSetMap="$1"
@@ -559,6 +560,9 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
+			;;
+		netutils-dll)
+			enable_netutils_dll="$2"
 			;;
 		ntdll-APC_Performance)
 			enable_ntdll_APC_Performance="$2"
@@ -3294,6 +3298,21 @@ if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "msvcrt: Calculate sinh/cosh/exp/pow with higher precision.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset netutils-dll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49739] Add netutils dll
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/netutils/Makefile.in, dlls/netutils/main.c, dlls/netutils/netutils.spec
+# |
+if test "$enable_netutils_dll" -eq 1; then
+	patch_apply netutils-dll/0001-netutils-New-DLL.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "netutils: New DLL.", 1 },';
 	) >> "$patchlist"
 fi
 

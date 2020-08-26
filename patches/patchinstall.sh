@@ -331,6 +331,7 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
+	enable_xactengine3_7_PrepareWave="$1"
 }
 
 # Enable or disable a specific patchset
@@ -1080,6 +1081,9 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
+			;;
+		xactengine3_7-PrepareWave)
+			enable_xactengine3_7_PrepareWave="$2"
 			;;
 		*)
 			return 1
@@ -6239,6 +6243,25 @@ if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "wtsapi32: Partial implementation of WTSEnumerateProcessesW.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset xactengine3_7-PrepareWave
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49689] xactengine3_7: Implement IXACT3Engine PrepareWave
+# |
+# | Modified files:
+# |   *	dlls/xactengine3_7/xact_dll.c
+# |
+if test "$enable_xactengine3_7_PrepareWave" -eq 1; then
+	patch_apply xactengine3_7-PrepareWave/0001-xactengine3_7-Implement-IXACT3Engine-PrepareWave.patch
+	patch_apply xactengine3_7-PrepareWave/0002-xactengine3_7-Implement-IXACT3Engine-PrepareStreamin.patch
+	patch_apply xactengine3_7-PrepareWave/0003-xactengine3_7-Implement-IXACT3Engine-PrepareInMemory.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xactengine3_7: Implement IXACT3Engine PrepareWave.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xactengine3_7: Implement IXACT3Engine PrepareStreamingWave.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "xactengine3_7: Implement IXACT3Engine PrepareInMemoryWave.", 1 },';
 	) >> "$patchlist"
 fi
 

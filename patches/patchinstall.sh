@@ -276,6 +276,7 @@ patch_enable_all ()
 	enable_uxtheme_GTK_Theming="$1"
 	enable_version_VerQueryValue="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
+	enable_windows_gaming_input_dll="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_TIFF_Support="$1"
 	enable_wine_inf_Directory_ContextMenuHandlers="$1"
@@ -918,6 +919,9 @@ patch_enable ()
 			;;
 		widl-SLTG_Typelib_Support)
 			enable_widl_SLTG_Typelib_Support="$2"
+			;;
+		windows.gaming.input-dll)
+			enable_windows_gaming_input_dll="$2"
 			;;
 		windowscodecs-GIF_Encoder)
 			enable_windowscodecs_GIF_Encoder="$2"
@@ -5421,6 +5425,25 @@ if test "$enable_version_VerQueryValue" -eq 1; then
 	patch_apply version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
 	(
 		printf '%s\n' '+    { "Mark Jansen", "version: Test for VerQueryValueA.", 2 },';
+	) >> "$patchlist"
+fi
+
+# Patchset windows.gaming.input-dll
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/windows.gaming.input.dll/Makefile.in, dlls/windows.gaming.input.dll/windows.gaming.input.spec,
+# | 	dlls/windows.gaming.input.dll/windows.gaming.input_main.c, include/objidl.idl, loader/wine.inf.in
+# |
+if test "$enable_windows_gaming_input_dll" -eq 1; then
+	patch_apply windows.gaming.input-dll/0001-windows.gaming.input-Add-stub-dll.patch
+	patch_apply windows.gaming.input-dll/0002-windows.gaming.input-Implement-IActivationFactory-st.patch
+	patch_apply windows.gaming.input-dll/0003-windows.gaming.input-Implement-IGamepadStatics-stubs.patch
+	patch_apply windows.gaming.input-dll/0004-windows.gaming.input-Implement-IRawGameControllerSta.patch
+	(
+		printf '%s\n' '+    { "Rémi Bernon", "windows.gaming.input: Add stub dll.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "windows.gaming.input: Implement IActivationFactory stubs.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "windows.gaming.input: Implement IGamepadStatics stubs.", 1 },';
+		printf '%s\n' '+    { "Rémi Bernon", "windows.gaming.input: Implement IRawGameControllerStatics stubs.", 1 },';
 	) >> "$patchlist"
 fi
 

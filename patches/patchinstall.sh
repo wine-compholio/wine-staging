@@ -245,6 +245,7 @@ patch_enable_all ()
 	enable_shlwapi_SHAddDataBlock="$1"
 	enable_shlwapi_UrlCanonicalize="$1"
 	enable_shlwapi_UrlCombine="$1"
+	enable_srvcli_dll="$1"
 	enable_stdole32_idl_Typelib="$1"
 	enable_stdole32_tlb_SLTG_Typelib="$1"
 	enable_tasklist_basics="$1"
@@ -824,6 +825,9 @@ patch_enable ()
 			;;
 		shlwapi-UrlCombine)
 			enable_shlwapi_UrlCombine="$2"
+			;;
+		srvcli-dll)
+			enable_srvcli_dll="$2"
 			;;
 		stdole32.idl-Typelib)
 			enable_stdole32_idl_Typelib="$2"
@@ -4821,6 +4825,21 @@ if test "$enable_shlwapi_UrlCombine" -eq 1; then
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi/tests: Add additional tests for UrlCombine and UrlCanonicalize.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "shlwapi: UrlCombineW workaround for relative paths.", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset srvcli-dll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49739] Add srvcli dll
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/srvcli/Makefile.in, dlls/srvcli/main.c, dlls/srvcli/srvcli.spec, tools/make_specfiles
+# |
+if test "$enable_srvcli_dll" -eq 1; then
+	patch_apply srvcli-dll/0001-srvcli-New-DLL.patch
+	(
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "srvcli: New DLL.", 1 },';
 	) >> "$patchlist"
 fi
 

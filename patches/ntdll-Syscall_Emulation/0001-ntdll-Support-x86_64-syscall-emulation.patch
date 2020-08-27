@@ -1,4 +1,4 @@
-From b1ab7b26620fc62b2a4848a0efbb6c9e116a5adc Mon Sep 17 00:00:00 2001
+From b91699bc26a89683053a6157f343372d98da2a67 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Tue, 14 Jul 2020 15:00:34 +0300
 Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
@@ -10,10 +10,10 @@ Subject: [PATCH] ntdll: Support x86_64 syscall emulation.
  3 files changed, 122 insertions(+), 1 deletion(-)
 
 diff --git a/configure.ac b/configure.ac
-index 65fa00ff5c6c..4c2c005bca1e 100644
+index f147d3e845d..74a9119d691 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -477,6 +477,7 @@ AC_CHECK_HEADERS(\
+@@ -473,6 +473,7 @@ AC_CHECK_HEADERS(\
  	linux/joystick.h \
  	linux/major.h \
  	linux/param.h \
@@ -22,7 +22,7 @@ index 65fa00ff5c6c..4c2c005bca1e 100644
  	linux/types.h \
  	linux/ucdrom.h \
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index e8e98142a982..1b2d2891ab89 100644
+index a0d3594e6b8..f693fbe6b9f 100644
 --- a/dlls/ntdll/unix/signal_x86_64.c
 +++ b/dlls/ntdll/unix/signal_x86_64.c
 @@ -28,6 +28,7 @@
@@ -47,7 +47,7 @@ index e8e98142a982..1b2d2891ab89 100644
  #define NONAMELESSUNION
  #define NONAMELESSSTRUCT
  #include "ntstatus.h"
-@@ -2089,6 +2097,116 @@ static inline DWORD is_privileged_instr( CONTEXT *context )
+@@ -2157,6 +2165,116 @@ static inline DWORD is_privileged_instr( CONTEXT *context )
      return 0;
  }
  
@@ -164,7 +164,7 @@ index e8e98142a982..1b2d2891ab89 100644
  
  /***********************************************************************
   *           handle_interrupt
-@@ -2538,6 +2656,7 @@ void signal_init_process(void)
+@@ -2644,6 +2762,7 @@ void signal_init_process(void)
      if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
      if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
      if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
@@ -173,18 +173,18 @@ index e8e98142a982..1b2d2891ab89 100644
  
   error:
 diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
-index e8bd141e962b..334278a7e50d 100644
+index b90d93ca5db..e750ae0ad3f 100644
 --- a/tools/winebuild/import.c
 +++ b/tools/winebuild/import.c
-@@ -1501,6 +1501,7 @@ void output_syscalls( DLLSPEC *spec )
+@@ -1524,6 +1524,7 @@ void output_syscalls( DLLSPEC *spec )
              /* Legends of Runeterra hooks the first system call return instruction, and
               * depends on us returning to it. Adjust the return address accordingly. */
              output( "\tsubq $0xb,0x8(%%rbp)\n" );
 +            output( "\tsubq $0xf000,%%rax\n" );
+             output( "\tmovq %%rsp,0x328(%%rcx)\n" );  /* amd64_thread_data()->syscall_frame */
              output( "\tcmpq $%u,%%rax\n", count );
              output( "\tjae 4f\n" );
-             output( "\tleaq .Lsyscall_args(%%rip),%%rcx\n" );
-@@ -1643,7 +1644,7 @@ void output_syscalls( DLLSPEC *spec )
+@@ -1703,7 +1704,7 @@ void output_syscalls( DLLSPEC *spec )
               * validate that instruction, we can just put a jmp there instead. */
              output( "\t.byte 0x4c,0x8b,0xd1\n" ); /* movq %rcx,%r10 */
              output( "\t.byte 0xb8\n" );           /* movl $i,%eax */
@@ -194,5 +194,5 @@ index e8bd141e962b..334278a7e50d 100644
              output( "\t.byte 0x75,0x03\n" );      /* jne 1f */
              output( "\t.byte 0x0f,0x05\n" );      /* syscall */
 -- 
-2.26.2
+2.28.0
 

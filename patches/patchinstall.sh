@@ -3132,6 +3132,7 @@ if test "$enable_mfplat_streaming_support" -eq 1; then
 	patch_apply mfplat-streaming-support/0052-winegstreamer-Fix-unrecognized-format-errors-when-tr.patch
 	patch_apply mfplat-streaming-support/0053-winegstreamer-Translate-WMV3-attributes-to-caps.patch
 	patch_apply mfplat-streaming-support/0054-winegstreamer-expose-NV12-as-the-first-color-space-i.patch
+	patch_apply mfplat-streaming-support/0055-winegstreamer-Support-eAVEncH264VProfile_Constrained.patch
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"mf/topoloader: Add a structure for iterative branch resolution.\".", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"mf/topoloader: Clone source nodes as a first layer of resulting topology.\".", 1 },';
@@ -3187,6 +3188,7 @@ if test "$enable_mfplat_streaming_support" -eq 1; then
 		printf '%s\n' '+    { "Victor Hermann Chiletto", "winegstreamer: Fix unrecognized format errors when transforming caps to media type.", 1 },';
 		printf '%s\n' '+    { "Victor Hermann Chiletto", "winegstreamer: Translate WMV3 attributes to caps.", 1 },';
 		printf '%s\n' '+    { "Victor Hermann Chiletto", "winegstreamer: Expose NV12 as the first color space in IMFTransform::GetOutputAvailableType.", 1 },';
+		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winegstreamer: Support eAVEncH264VProfile_ConstrainedBase media type.", 1 },';
 	) >> "$patchlist"
 fi
 

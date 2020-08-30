@@ -5430,6 +5430,9 @@ fi
 
 # Patchset windows.gaming.input-dll
 # |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49756] windows.gaming.input: New DLL
+# |
 # | Modified files:
 # |   *	configure.ac, dlls/windows.gaming.input.dll/Makefile.in, dlls/windows.gaming.input.dll/windows.gaming.input.spec,
 # | 	dlls/windows.gaming.input.dll/windows.gaming.input_main.c, include/objidl.idl, loader/wine.inf.in

@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "518d06404ad70aa9812a77d019a18fe79c16f831"
+	echo "00a0e2cd8c4df240371ddd22516e4e3544a142ce"
 }
 
 # Show version information
@@ -1731,6 +1731,13 @@ if test "$enable_nvapi_Stub_DLL" -eq 1; then
 	enable_nvcuda_CUDA_Support=1
 fi
 
+if test "$enable_Staging" -eq 1; then
+	if test "$enable_ntdll_FLS_Callbacks" -gt 1; then
+		abort "Patchset ntdll-FLS_Callbacks disabled, but Staging depends on that."
+	fi
+	enable_ntdll_FLS_Callbacks=1
+fi
+
 
 # If autoupdate is enabled then create a tempfile to keep track of all patches
 if test "$enable_patchlist" -eq 1; then
@@ -1804,10 +1811,39 @@ if test "$enable_Pipelight" -eq 1; then
 	) >> "$patchlist"
 fi
 
-# Patchset Staging
+# Patchset ntdll-FLS_Callbacks
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49012] Application build with .NET CoreRT crashes due to FLS callbacks not being called
 # |
 # | Modified files:
-# |   *	dlls/kernel32/process.c, dlls/ntdll/Makefile.in, include/wine/library.h, libs/wine/Makefile.in, libs/wine/config.c,
+# |   *	dlls/kernel32/tests/fiber.c, dlls/kernel32/tests/loader.c, dlls/kernel32/tests/thread.c, dlls/kernelbase/thread.c,
+# | 	dlls/ntdll/loader.c
+# |
+if test "$enable_ntdll_FLS_Callbacks" -eq 1; then
+	patch_apply ntdll-FLS_Callbacks/0001-kernelbase-Maintain-FLS-storage-list-in-PEB.patch
+	patch_apply ntdll-FLS_Callbacks/0002-kernelbase-Don-t-use-PEB-lock-for-FLS-data.patch
+	patch_apply ntdll-FLS_Callbacks/0003-kernelbase-Zero-all-FLS-slots-instances-in-FlsFree.patch
+	patch_apply ntdll-FLS_Callbacks/0004-ntdll-Call-FLS-callbacks-on-thread-shutdown.patch
+	patch_apply ntdll-FLS_Callbacks/0005-kernelbase-Call-FLS-callbacks-from-FlsFree.patch
+	patch_apply ntdll-FLS_Callbacks/0006-kernelbase-Call-FLS-callbacks-from-DeleteFiber.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Maintain FLS storage list in PEB.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Don'\''t use PEB lock for FLS data.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Zero all FLS slots instances in FlsFree().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call FLS callbacks on thread shutdown.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from FlsFree().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from DeleteFiber().", 1 },';
+	) >> "$patchlist"
+fi
+
+# Patchset Staging
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-FLS_Callbacks
+# |
+# | Modified files:
+# |   *	dlls/ntdll/Makefile.in, dlls/ntdll/loader.c, include/wine/library.h, libs/wine/Makefile.in, libs/wine/config.c,
 # | 	libs/wine/wine.map, loader/main.c
 # |
 if test "$enable_Staging" -eq 1; then
@@ -1815,7 +1851,7 @@ if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch
 	patch_apply Staging/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch
 	(
-		printf '%s\n' '+    { "Sebastian Lackner", "kernel32: Add winediag message to show warning, that this isn'\''t vanilla wine.", 1 },';
+		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Print a warning message specifying the wine-staging branch name and version.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 	) >> "$patchlist"
@@ -3358,32 +3394,6 @@ if test "$enable_ntdll_Activation_Context" -eq 1; then
 	patch_apply ntdll-Activation_Context/0001-ntdll-Fix-return-value-for-missing-ACTIVATION_CONTEX.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Fix return value for missing ACTIVATION_CONTEXT_SECTION_ASSEMBLY_INFORMATION key.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-FLS_Callbacks
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49012] Application build with .NET CoreRT crashes due to FLS callbacks not being called
-# |
-# | Modified files:
-# |   *	dlls/kernel32/tests/fiber.c, dlls/kernel32/tests/loader.c, dlls/kernel32/tests/thread.c, dlls/kernelbase/thread.c,
-# | 	dlls/ntdll/loader.c
-# |
-if test "$enable_ntdll_FLS_Callbacks" -eq 1; then
-	patch_apply ntdll-FLS_Callbacks/0001-kernelbase-Maintain-FLS-storage-list-in-PEB.patch
-	patch_apply ntdll-FLS_Callbacks/0002-kernelbase-Don-t-use-PEB-lock-for-FLS-data.patch
-	patch_apply ntdll-FLS_Callbacks/0003-kernelbase-Zero-all-FLS-slots-instances-in-FlsFree.patch
-	patch_apply ntdll-FLS_Callbacks/0004-ntdll-Call-FLS-callbacks-on-thread-shutdown.patch
-	patch_apply ntdll-FLS_Callbacks/0005-kernelbase-Call-FLS-callbacks-from-FlsFree.patch
-	patch_apply ntdll-FLS_Callbacks/0006-kernelbase-Call-FLS-callbacks-from-DeleteFiber.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Maintain FLS storage list in PEB.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Don'\''t use PEB lock for FLS data.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Zero all FLS slots instances in FlsFree().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Call FLS callbacks on thread shutdown.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from FlsFree().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "kernelbase: Call FLS callbacks from DeleteFiber().", 1 },';
 	) >> "$patchlist"
 fi
 

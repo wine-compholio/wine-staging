@@ -1,16 +1,16 @@
-From 443896688d090de7b35a794ae6dad87865312dc8 Mon Sep 17 00:00:00 2001
+From 6db04e49d442610e2d1d3c0ffc70d25a0024e1fe Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Mon, 3 Apr 2017 05:30:27 +0200
 Subject: [PATCH] ntdll: Implement HashLinks field in LDR module data.
 
 ---
  dlls/kernel32/tests/loader.c | 75 ++++++++++++++++++++++++++++++++++++
- dlls/ntdll/loader.c          | 64 ++++++++++++++++++++++++++++++
+ dlls/ntdll/loader.c          | 65 +++++++++++++++++++++++++++++++
  include/winternl.h           |  2 +-
- 3 files changed, 140 insertions(+), 1 deletion(-)
+ 3 files changed, 141 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/kernel32/tests/loader.c b/dlls/kernel32/tests/loader.c
-index 757a230ae15..466e5a444f4 100644
+index 3dee67d5a91..3623d9d99a1 100644
 --- a/dlls/kernel32/tests/loader.c
 +++ b/dlls/kernel32/tests/loader.c
 @@ -30,6 +30,7 @@
@@ -21,7 +21,7 @@ index 757a230ae15..466e5a444f4 100644
  #include "wine/test.h"
  #include "delayloadhandler.h"
  
-@@ -3970,6 +3971,79 @@ static void test_LoadPackagedLibrary(void)
+@@ -3957,6 +3958,79 @@ static void test_LoadPackagedLibrary(void)
              h, GetLastError());
  }
  
@@ -101,7 +101,7 @@ index 757a230ae15..466e5a444f4 100644
  START_TEST(loader)
  {
      int argc;
-@@ -4042,6 +4116,7 @@ START_TEST(loader)
+@@ -4029,6 +4103,7 @@ START_TEST(loader)
      test_InMemoryOrderModuleList();
      test_LoadPackagedLibrary();
      test_wow64_redirection();
@@ -110,10 +110,10 @@ index 757a230ae15..466e5a444f4 100644
      test_dll_file( "kernel32.dll", TRUE );
      test_dll_file( "advapi32.dll", TRUE );
 diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
-index 7370857cfdc..78ae9b26f22 100644
+index 7b301031605..1bb05ebfbac 100644
 --- a/dlls/ntdll/loader.c
 +++ b/dlls/ntdll/loader.c
-@@ -122,6 +122,9 @@ struct file_id
+@@ -124,6 +124,9 @@ struct file_id
      BYTE ObjectId[16];
  };
  
@@ -123,7 +123,7 @@ index 7370857cfdc..78ae9b26f22 100644
  /* internal representation of loaded modules */
  typedef struct _wine_modref
  {
-@@ -461,6 +464,52 @@ static void call_ldr_notifications( ULONG reason, LDR_DATA_TABLE_ENTRY *module )
+@@ -483,6 +486,52 @@ static void call_ldr_notifications( ULONG reason, LDR_DATA_TABLE_ENTRY *module )
      }
  }
  
@@ -176,7 +176,7 @@ index 7370857cfdc..78ae9b26f22 100644
  /*************************************************************************
   *		get_modref
   *
-@@ -1202,7 +1251,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
+@@ -1224,7 +1273,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
                     &wm->ldr.InLoadOrderLinks);
      InsertTailList(&NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList,
                     &wm->ldr.InMemoryOrderLinks);
@@ -189,7 +189,7 @@ index 7370857cfdc..78ae9b26f22 100644
  
      if (!(nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_NX_COMPAT))
      {
-@@ -1909,6 +1963,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
+@@ -1955,6 +2009,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
              /* the module has only be inserted in the load & memory order lists */
              RemoveEntryList(&wm->ldr.InLoadOrderLinks);
              RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
@@ -197,7 +197,7 @@ index 7370857cfdc..78ae9b26f22 100644
  
              /* FIXME: there are several more dangling references
               * left. Including dlls loaded by this dll before the
-@@ -3246,6 +3301,7 @@ static void free_modref( WINE_MODREF *wm )
+@@ -3305,6 +3360,7 @@ static void free_modref( WINE_MODREF *wm )
  {
      RemoveEntryList(&wm->ldr.InLoadOrderLinks);
      RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
@@ -205,7 +205,7 @@ index 7370857cfdc..78ae9b26f22 100644
      if (wm->ldr.InInitializationOrderLinks.Flink)
          RemoveEntryList(&wm->ldr.InInitializationOrderLinks);
  
-@@ -3950,6 +4006,7 @@ static void process_init(void)
+@@ -4066,6 +4122,7 @@ static NTSTATUS process_init(void)
      INITIAL_TEB stack;
      TEB *teb = NtCurrentTeb();
      PEB *peb = teb->Peb;
@@ -213,7 +213,7 @@ index 7370857cfdc..78ae9b26f22 100644
  
      peb->LdrData            = &ldr;
      peb->FastPebLock        = &peb_lock;
-@@ -3988,6 +4045,10 @@ static void process_init(void)
+@@ -4105,6 +4162,10 @@ static NTSTATUS process_init(void)
      load_global_options();
      version_init();
  
@@ -224,21 +224,22 @@ index 7370857cfdc..78ae9b26f22 100644
      /* setup the load callback and create ntdll modref */
      RtlInitUnicodeString( &nt_name, ntdllW );
      NtQueryVirtualMemory( GetCurrentProcess(), process_init, MemoryBasicInformation,
-@@ -4073,6 +4134,9 @@ static void process_init(void)
+@@ -4199,6 +4260,10 @@ static NTSTATUS process_init(void)
      teb->Tib.StackBase = stack.StackBase;
      teb->Tib.StackLimit = stack.StackLimit;
      teb->DeallocationStack = stack.DeallocationStack;
 +
 +    /* the windows version was not set yet when ntdll and kernel32 were loaded */
 +    recompute_hash_map();
++
+     return STATUS_SUCCESS;
  }
  
- /***********************************************************************
 diff --git a/include/winternl.h b/include/winternl.h
-index 6c809193977..2d15f95c110 100644
+index 9a087d2848a..c73ec3828bd 100644
 --- a/include/winternl.h
 +++ b/include/winternl.h
-@@ -2678,8 +2678,8 @@ typedef struct _LDR_DATA_TABLE_ENTRY
+@@ -2679,8 +2679,8 @@ typedef struct _LDR_DATA_TABLE_ENTRY
      ULONG               Flags;
      SHORT               LoadCount;
      SHORT               TlsIndex;

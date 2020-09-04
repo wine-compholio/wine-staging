@@ -1,4 +1,4 @@
-From 232c54eb1b8d4a75ea86d4ca585689e8d5d4b15b Mon Sep 17 00:00:00 2001
+From 8aeef64022bb045cc294dc717c8f6a85cb87623d Mon Sep 17 00:00:00 2001
 From: Sebastian Lackner <sebastian@fds-team.de>
 Date: Fri, 4 Dec 2015 10:36:47 +0100
 Subject: [PATCH] server: Introduce a new alloc_handle object callback. (v2)
@@ -10,7 +10,7 @@ Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
  server/change.c     |  1 +
  server/clipboard.c  |  1 +
  server/completion.c |  1 +
- server/console.c    |  4 ++++
+ server/console.c    |  5 +++++
  server/debugger.c   |  2 ++
  server/device.c     |  4 ++++
  server/directory.c  |  2 ++
@@ -19,7 +19,7 @@ Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
  server/file.c       |  1 +
  server/handle.c     | 13 +++++++++++--
  server/hook.c       |  1 +
- server/mailslot.c   |  3 +++
+ server/mailslot.c   |  4 ++++
  server/mapping.c    |  3 +++
  server/mutex.c      |  1 +
  server/named_pipe.c |  7 ++++++-
@@ -38,7 +38,7 @@ Signed-off-by: Sebastian Lackner <sebastian@fds-team.de>
  server/timer.c      |  1 +
  server/token.c      |  1 +
  server/winstation.c |  2 ++
- 33 files changed, 78 insertions(+), 4 deletions(-)
+ 33 files changed, 80 insertions(+), 4 deletions(-)
 
 diff --git a/server/async.c b/server/async.c
 index 03994e8fac2..9feafd01847 100644
@@ -109,10 +109,10 @@ index db04727b93b..e72a155eeeb 100644
      completion_destroy         /* destroy */
  };
 diff --git a/server/console.c b/server/console.c
-index 53910b3f46e..0290ef425d4 100644
+index 3ea8a0fe531..16e37b4e885 100644
 --- a/server/console.c
 +++ b/server/console.c
-@@ -99,6 +99,7 @@ static const struct object_ops console_input_ops =
+@@ -102,6 +102,7 @@ static const struct object_ops console_input_ops =
      NULL,                             /* unlink_name */
      console_input_open_file,          /* open_file */
      no_kernel_obj_list,               /* get_kernel_obj_list */
@@ -120,7 +120,7 @@ index 53910b3f46e..0290ef425d4 100644
      no_close_handle,                  /* close_handle */
      console_input_destroy             /* destroy */
  };
-@@ -157,6 +158,7 @@ static const struct object_ops console_input_events_ops =
+@@ -160,6 +161,7 @@ static const struct object_ops console_input_events_ops =
      NULL,                             /* unlink_name */
      console_input_events_open_file,   /* open_file */
      no_kernel_obj_list,               /* get_kernel_obj_list */
@@ -128,7 +128,15 @@ index 53910b3f46e..0290ef425d4 100644
      no_close_handle,                  /* close_handle */
      console_input_events_destroy      /* destroy */
  };
-@@ -237,6 +239,7 @@ static const struct object_ops screen_buffer_ops =
+@@ -226,6 +228,7 @@ static const struct object_ops console_server_ops =
+     NULL,                             /* unlink_name */
+     console_server_open_file,         /* open_file */
+     no_kernel_obj_list,               /* get_kernel_obj_list */
++    no_alloc_handle,                  /* alloc_handle */
+     fd_close_handle,                  /* close_handle */
+     console_server_destroy            /* destroy */
+ };
+@@ -308,6 +311,7 @@ static const struct object_ops screen_buffer_ops =
      NULL,                             /* unlink_name */
      screen_buffer_open_file,          /* open_file */
      no_kernel_obj_list,               /* get_kernel_obj_list */
@@ -136,7 +144,7 @@ index 53910b3f46e..0290ef425d4 100644
      no_close_handle,                  /* close_handle */
      screen_buffer_destroy             /* destroy */
  };
-@@ -283,6 +286,7 @@ static const struct object_ops console_device_ops =
+@@ -354,6 +358,7 @@ static const struct object_ops console_device_ops =
      default_unlink_name,              /* unlink_name */
      console_device_open_file,         /* open_file */
      no_kernel_obj_list,               /* get_kernel_obj_list */
@@ -346,7 +354,7 @@ index ec6be582482..c2a26eb4dff 100644
      hook_table_destroy            /* destroy */
  };
 diff --git a/server/mailslot.c b/server/mailslot.c
-index 58d650cbb25..5adae562289 100644
+index 58d650cbb25..0f8d457f1a8 100644
 --- a/server/mailslot.c
 +++ b/server/mailslot.c
 @@ -89,6 +89,7 @@ static const struct object_ops mailslot_ops =
@@ -372,6 +380,14 @@ index 58d650cbb25..5adae562289 100644
 +    no_alloc_handle,                /* alloc_handle */
      no_close_handle,                /* close_handle */
      mailslot_device_destroy         /* destroy */
+ };
+@@ -236,6 +239,7 @@ static const struct object_ops mailslot_device_file_ops =
+     NULL,                                   /* unlink_name */
+     no_open_file,                           /* open_file */
+     no_kernel_obj_list,                     /* get_kernel_obj_list */
++    no_alloc_handle,                        /* alloc_handle */
+     fd_close_handle,                        /* close_handle */
+     mailslot_device_file_destroy            /* destroy */
  };
 diff --git a/server/mapping.c b/server/mapping.c
 index db0debe0af5..952984381cc 100644
@@ -414,7 +430,7 @@ index 8a8f7248eae..3754c35acbb 100644
      mutex_destroy              /* destroy */
  };
 diff --git a/server/named_pipe.c b/server/named_pipe.c
-index b259abb8de4..4ca744441f3 100644
+index e7e5436c0e5..94486bbc332 100644
 --- a/server/named_pipe.c
 +++ b/server/named_pipe.c
 @@ -129,6 +129,7 @@ static const struct object_ops named_pipe_ops =
@@ -499,7 +515,7 @@ index 1f5c4a5f061..d47abbc3e43 100644
  extern void no_destroy( struct object *obj );
  #ifdef DEBUG_OBJECTS
 diff --git a/server/process.c b/server/process.c
-index 5e587b28cbe..7928d0ceb68 100644
+index 9bf5e447d37..85856da885e 100644
 --- a/server/process.c
 +++ b/server/process.c
 @@ -89,6 +89,7 @@ static const struct object_ops process_ops =
@@ -527,7 +543,7 @@ index 5e587b28cbe..7928d0ceb68 100644
      job_destroy                    /* destroy */
  };
 diff --git a/server/queue.c b/server/queue.c
-index a65eab38bdc..d658c48323f 100644
+index c1016016051..5b1a57fe0ab 100644
 --- a/server/queue.c
 +++ b/server/queue.c
 @@ -182,6 +182,7 @@ static const struct object_ops msg_queue_ops =
@@ -711,5 +727,5 @@ index 2962ea0df4a..79a38d4069e 100644
      desktop_destroy               /* destroy */
  };
 -- 
-2.27.0
+2.28.0
 

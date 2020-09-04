@@ -1,21 +1,19 @@
-From b099458217b2855bd8615b8c97bcc2462eb74b25 Mon Sep 17 00:00:00 2001
+From 6bbf7676b4b7887a54f47b43929b8f3f1d7e77ae Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 00:08:52 -0600
 Subject: [PATCH] ntdll: Implement storing DOS attributes in
  NtSetInformationFile.
 
 ---
- dlls/ntdll/tests/file.c |  8 +++---
- dlls/ntdll/unix/file.c  | 54 ++++++++++++++++++++++++++---------------
- include/wine/port.h     |  2 ++
- libs/port/xattr.c       | 20 +++++++++++++++
- 4 files changed, 60 insertions(+), 24 deletions(-)
+ dlls/ntdll/tests/file.c |  8 ++---
+ dlls/ntdll/unix/file.c  | 74 ++++++++++++++++++++++++++++++-----------
+ 2 files changed, 58 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 184b7cdad59..37e5ac5d8a5 100644
+index 8b9ec4f624d..6d2c8d2fc94 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
-@@ -1364,7 +1364,7 @@ static void test_file_basic_information(void)
+@@ -1389,7 +1389,7 @@ static void test_file_basic_information(void)
      memset(&fbi, 0, sizeof(fbi));
      res = pNtQueryInformationFile(h, &io, &fbi, sizeof fbi, FileBasicInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes\n");
@@ -24,7 +22,7 @@ index 184b7cdad59..37e5ac5d8a5 100644
  
      /* Then HIDDEN */
      memset(&fbi, 0, sizeof(fbi));
-@@ -1377,7 +1377,7 @@ static void test_file_basic_information(void)
+@@ -1402,7 +1402,7 @@ static void test_file_basic_information(void)
      memset(&fbi, 0, sizeof(fbi));
      res = pNtQueryInformationFile(h, &io, &fbi, sizeof fbi, FileBasicInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes\n");
@@ -33,7 +31,7 @@ index 184b7cdad59..37e5ac5d8a5 100644
  
      /* Check NORMAL last of all (to make sure we can clear attributes) */
      memset(&fbi, 0, sizeof(fbi));
-@@ -1434,7 +1434,7 @@ static void test_file_all_information(void)
+@@ -1459,7 +1459,7 @@ static void test_file_all_information(void)
      memset(&fai_buf.fai, 0, sizeof(fai_buf.fai));
      res = pNtQueryInformationFile(h, &io, &fai_buf.fai, sizeof fai_buf, FileAllInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes, res %x\n", res);
@@ -42,7 +40,7 @@ index 184b7cdad59..37e5ac5d8a5 100644
  
      /* Then HIDDEN */
      memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
-@@ -1447,7 +1447,7 @@ static void test_file_all_information(void)
+@@ -1472,7 +1472,7 @@ static void test_file_all_information(void)
      memset(&fai_buf.fai, 0, sizeof(fai_buf.fai));
      res = pNtQueryInformationFile(h, &io, &fai_buf.fai, sizeof fai_buf, FileAllInformation);
      ok ( res == STATUS_SUCCESS, "can't get attributes\n");
@@ -52,10 +50,37 @@ index 184b7cdad59..37e5ac5d8a5 100644
      /* Check NORMAL last of all (to make sure we can clear attributes) */
      memset(&fai_buf.fai.BasicInformation, 0, sizeof(fai_buf.fai.BasicInformation));
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 70a76ca81ee..924d06b2caa 100644
+index da8f65af7b3..0a326a7a1bd 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -1497,6 +1497,39 @@ static int fd_get_file_info( int fd, unsigned int options, struct stat *st, ULON
+@@ -376,6 +376,26 @@ NTSTATUS errno_to_status( int err )
+ #define XATTR_USER_PREFIX "user."
+ #endif
+ 
++static int xattr_fremove( int filedes, const char *name )
++{
++#if defined(HAVE_ATTR_XATTR_H)
++    return fremovexattr( filedes, name );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++
++static int xattr_fset( int filedes, const char *name, void *value, size_t size )
++{
++#if defined(HAVE_ATTR_XATTR_H)
++    return fsetxattr( filedes, name, value, size, 0 );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++
+ static int xattr_get( const char *path, const char *name, void *value, size_t size )
+ {
+ #if defined(HAVE_ATTR_XATTR_H)
+@@ -1520,6 +1540,39 @@ static int fd_get_file_info( int fd, unsigned int options, struct stat *st, ULON
  }
  
  
@@ -95,7 +120,7 @@ index 70a76ca81ee..924d06b2caa 100644
  /* get the stat info and file attributes for a file (by name) */
  static int get_file_info( const char *path, struct stat *st, ULONG *attr )
  {
-@@ -4000,7 +4033,6 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
+@@ -4139,7 +4192,6 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
      case FileBasicInformation:
          if (len >= sizeof(FILE_BASIC_INFORMATION))
          {
@@ -103,7 +128,7 @@ index 70a76ca81ee..924d06b2caa 100644
              const FILE_BASIC_INFORMATION *info = ptr;
              LARGE_INTEGER mtime, atime;
  
-@@ -4014,25 +4046,7 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
+@@ -4153,25 +4205,7 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
                  io->u.Status = set_file_times( fd, &mtime, &atime );
  
              if (io->u.Status == STATUS_SUCCESS && info->FileAttributes)
@@ -130,50 +155,6 @@ index 70a76ca81ee..924d06b2caa 100644
  
              if (needs_close) close( fd );
          }
-diff --git a/include/wine/port.h b/include/wine/port.h
-index 4670891ae77..e0249b4c59f 100644
---- a/include/wine/port.h
-+++ b/include/wine/port.h
-@@ -359,6 +359,8 @@ extern int mkstemps(char *template, int suffix_len);
- #endif
- 
- extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
-+extern int xattr_fremove( int filedes, const char *name );
-+extern int xattr_fset( int filedes, const char *name, void *value, size_t size );
- extern int xattr_get( const char *path, const char *name, void *value, size_t size );
- 
- #else /* NO_LIBWINE_PORT */
-diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 88e900dac6d..6918c9956cc 100644
---- a/libs/port/xattr.c
-+++ b/libs/port/xattr.c
-@@ -38,6 +38,26 @@ int xattr_fget( int filedes, const char *name, void *value, size_t size )
- #endif
- }
- 
-+int xattr_fremove( int filedes, const char *name )
-+{
-+#if defined(HAVE_ATTR_XATTR_H)
-+    return fremovexattr( filedes, name );
-+#else
-+    errno = ENOSYS;
-+    return -1;
-+#endif
-+}
-+
-+int xattr_fset( int filedes, const char *name, void *value, size_t size )
-+{
-+#if defined(HAVE_ATTR_XATTR_H)
-+    return fsetxattr( filedes, name, value, size, 0 );
-+#else
-+    errno = ENOSYS;
-+    return -1;
-+#endif
-+}
-+
- int xattr_get( const char *path, const char *name, void *value, size_t size )
- {
- #if defined(HAVE_ATTR_XATTR_H)
 -- 
-2.27.0
+2.28.0
 

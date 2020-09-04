@@ -1,4 +1,4 @@
-From cafaad67d4b5ed7985930e2a13e55d400cbbbbc9 Mon Sep 17 00:00:00 2001
+From 6e22c1cc4c615e07ac3570e152d15f22aab9eead Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -6,22 +6,18 @@ Subject: [PATCH] ntdll: Add support for junction point creation.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  configure.ac            |   2 +
- dlls/ntdll/tests/file.c | 101 +++++++++++++++++++++++++++++++
- dlls/ntdll/unix/file.c  | 129 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 101 ++++++++++++++++++++++++++
+ dlls/ntdll/unix/file.c  | 155 ++++++++++++++++++++++++++++++++++++++++
  include/Makefile.in     |   1 +
- include/ntifs.h         |  42 +++++++++++++
- include/wine/port.h     |   9 +++
- libs/port/Makefile.in   |   1 +
- libs/port/renameat2.c   |  55 +++++++++++++++++
- 8 files changed, 340 insertions(+)
+ include/ntifs.h         |  42 +++++++++++
+ 5 files changed, 301 insertions(+)
  create mode 100644 include/ntifs.h
- create mode 100644 libs/port/renameat2.c
 
 diff --git a/configure.ac b/configure.ac
-index d85f4dee7c..1bc2b5cbe2 100644
+index aef00416461..15c0b7e4c26 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2214,6 +2214,8 @@ AC_CHECK_FUNCS(\
+@@ -2230,6 +2230,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -31,7 +27,7 @@ index d85f4dee7c..1bc2b5cbe2 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 1bb71e711a..84fea2b869 100644
+index 1492797b0c9..10bdef5d810 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -42,7 +38,7 @@ index 1bb71e711a..84fea2b869 100644
  
  #ifndef IO_COMPLETION_ALL_ACCESS
  #define IO_COMPLETION_ALL_ACCESS 0x001F0003
-@@ -5143,6 +5144,105 @@ static void test_mailslot_name(void)
+@@ -5141,6 +5142,105 @@ static void test_mailslot_name(void)
      CloseHandle( device );
  }
  
@@ -148,7 +144,7 @@ index 1bb71e711a..84fea2b869 100644
  START_TEST(file)
  {
      HMODULE hkernel32 = GetModuleHandleA("kernel32.dll");
-@@ -5215,5 +5315,6 @@ START_TEST(file)
+@@ -5213,5 +5313,6 @@ START_TEST(file)
      test_ioctl();
      test_query_ea();
      test_flush_buffers_file();
@@ -156,7 +152,7 @@ index 1bb71e711a..84fea2b869 100644
      test_mailslot_name();
  }
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 7667bd6398..211ebc89df 100644
+index 290e18e54c5..c2243975e4b 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
 @@ -36,6 +36,7 @@
@@ -167,7 +163,7 @@ index 7667bd6398..211ebc89df 100644
  #include <limits.h>
  #ifdef HAVE_MNTENT_H
  #include <mntent.h>
-@@ -126,6 +127,7 @@
+@@ -132,6 +133,7 @@
  #include "wine/list.h"
  #include "wine/debug.h"
  #include "unix_private.h"
@@ -175,7 +171,40 @@ index 7667bd6398..211ebc89df 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(file);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
-@@ -5643,6 +5645,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+@@ -457,6 +459,32 @@ static int xattr_set( const char *path, const char *name, void *value, size_t si
+ #endif
+ }
+ 
++#ifndef HAVE_RENAMEAT
++int renameat( int olddirfd, const char *oldpath, int newdirfd, const char *newpath )
++{
++    errno = ENOSYS;
++    return -1;
++}
++#endif
++
++#ifndef HAVE_RENAMEAT2
++int renameat2( int olddirfd, const char *oldpath, int newdirfd, const char *newpath,
++               unsigned int flags )
++{
++    if (flags == 0)
++        return renameat( olddirfd, oldpath, newdirfd, newpath );
++#if defined(__NR_renameat2)
++    return syscall( __NR_renameat2, olddirfd, oldpath, newdirfd, newpath, flags );
++#elif defined(RENAME_SWAP)
++    return renameatx_np(olddirfd, oldpath, newdirfd, newpath,
++                        (flags & RENAME_EXCHANGE ? RENAME_SWAP : 0));
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++#endif /* HAVE_RENAMEAT2 */
++
+ /* get space from the current directory data buffer, allocating a new one if necessary */
+ static void *get_dir_data_space( struct dir_data *data, unsigned int size )
+ {
+@@ -5731,6 +5759,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
  }
  
  
@@ -292,7 +321,7 @@ index 7667bd6398..211ebc89df 100644
  /******************************************************************************
   *              NtFsControlFile   (NTDLL.@)
   */
-@@ -5725,6 +5837,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
+@@ -5813,6 +5951,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
          break;
      }
  
@@ -317,10 +346,10 @@ index 7667bd6398..211ebc89df 100644
          TRACE("FSCTL_SET_SPARSE: Ignoring request\n");
          io->Information = 0;
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 216adf0d7a..7dc16c230b 100644
+index 49b174ed319..2dbf84e6c36 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
-@@ -520,6 +520,7 @@ SOURCES = \
+@@ -523,6 +523,7 @@ SOURCES = \
  	ntddvdeo.h \
  	ntdef.h \
  	ntdsapi.h \
@@ -330,7 +359,7 @@ index 216adf0d7a..7dc16c230b 100644
  	ntsecapi.h \
 diff --git a/include/ntifs.h b/include/ntifs.h
 new file mode 100644
-index 0000000000..21d42e1732
+index 00000000000..21d42e17325
 --- /dev/null
 +++ b/include/ntifs.h
 @@ -0,0 +1,42 @@
@@ -376,99 +405,6 @@ index 0000000000..21d42e1732
 +} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
 +
 +#endif /* __WINE_NTIFS_H */
-diff --git a/include/wine/port.h b/include/wine/port.h
-index 930efeeea1..7d2c738870 100644
---- a/include/wine/port.h
-+++ b/include/wine/port.h
-@@ -334,6 +334,15 @@ double rint(double x);
- float rintf(float x);
- #endif
- 
-+#ifndef RENAME_EXCHANGE
-+#define RENAME_EXCHANGE (1 << 1)
-+#endif /* RENAME_EXCHANGE */
-+
-+#ifndef HAVE_RENAMEAT2
-+int renameat2( int olddirfd, const char *oldpath, int newdirfd, const char *newpath,
-+               unsigned int flags );
-+#endif /* HAVE_RENAMEAT2 */
-+
- #ifndef HAVE_STATVFS
- int statvfs( const char *path, struct statvfs *buf );
- #endif
-diff --git a/libs/port/Makefile.in b/libs/port/Makefile.in
-index d1de285d52..4b1ecab751 100644
---- a/libs/port/Makefile.in
-+++ b/libs/port/Makefile.in
-@@ -14,6 +14,7 @@ C_SRCS = \
- 	pread.c \
- 	pwrite.c \
- 	readlink.c \
-+	renameat2.c \
- 	rint.c \
- 	spawn.c \
- 	statvfs.c \
-diff --git a/libs/port/renameat2.c b/libs/port/renameat2.c
-new file mode 100644
-index 0000000000..f46f407ec7
---- /dev/null
-+++ b/libs/port/renameat2.c
-@@ -0,0 +1,55 @@
-+/*
-+ * renameat2 function
-+ *
-+ * Copyright 2015-2019 Erich E. Hoover
-+ *
-+ * This library is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * This library is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this library; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-+ */
-+
-+#include "config.h"
-+#include "wine/port.h"
-+
-+#ifdef HAVE_SYS_SYSCALL_H
-+# include <sys/syscall.h>
-+#endif
-+
-+#include <errno.h>
-+#include <stdio.h>
-+
-+#ifndef HAVE_RENAMEAT
-+int renameat( int olddirfd, const char *oldpath, int newdirfd, const char *newpath )
-+{
-+    errno = ENOSYS;
-+    return -1;
-+}
-+#endif
-+
-+#ifndef HAVE_RENAMEAT2
-+int renameat2( int olddirfd, const char *oldpath, int newdirfd, const char *newpath,
-+               unsigned int flags )
-+{
-+    if (flags == 0)
-+        return renameat( olddirfd, oldpath, newdirfd, newpath );
-+#if defined(__NR_renameat2)
-+    return syscall( __NR_renameat2, olddirfd, oldpath, newdirfd, newpath, flags );
-+#elif defined(RENAME_SWAP)
-+    return renameatx_np(olddirfd, oldpath, newdirfd, newpath,
-+                        (flags & RENAME_EXCHANGE ? RENAME_SWAP : 0));
-+#else
-+    errno = ENOSYS;
-+    return -1;
-+#endif
-+}
-+#endif /* HAVE_RENAMEAT2 */
 -- 
-2.27.0
+2.28.0
 

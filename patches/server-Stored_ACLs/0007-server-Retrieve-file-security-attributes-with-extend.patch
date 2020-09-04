@@ -1,19 +1,19 @@
-From 025a3715592c3f4fe8a3300422e6387f82f38792 Mon Sep 17 00:00:00 2001
+From f6264626e3a00195c740cd339043d48372005f17 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Fri, 18 Apr 2014 14:01:35 -0600
 Subject: [PATCH] server: Retrieve file security attributes with extended file
  attributes. (try 7)
 
 ---
- dlls/advapi32/tests/security.c | 19 +++++++++----------
- server/file.c                  | 30 +++++++++++++++++++++++++++---
- 2 files changed, 36 insertions(+), 13 deletions(-)
+ dlls/advapi32/tests/security.c | 19 +++++++-------
+ server/file.c                  | 46 +++++++++++++++++++++++++++++++---
+ 2 files changed, 52 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/advapi32/tests/security.c b/dlls/advapi32/tests/security.c
-index a27cd41cde81..6968c9a3d2ac 100644
+index b79ea481e64..849a6b0b032 100644
 --- a/dlls/advapi32/tests/security.c
 +++ b/dlls/advapi32/tests/security.c
-@@ -3639,7 +3639,7 @@ static void test_CreateDirectoryA(void)
+@@ -3648,7 +3648,7 @@ static void test_CreateDirectoryA(void)
      }
      ok(!error, "GetNamedSecurityInfo failed with error %d\n", error);
      test_inherited_dacl(pDacl, admin_sid, user_sid, OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE,
@@ -22,7 +22,7 @@ index a27cd41cde81..6968c9a3d2ac 100644
      LocalFree(pSD);
  
      /* Test inheritance of ACLs in CreateFile without security descriptor */
-@@ -4093,21 +4093,20 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -4102,21 +4102,20 @@ static void test_GetNamedSecurityInfoA(void)
          bret = GetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get Current User ACE.\n");
          bret = EqualSid(&ace->SidStart, user_sid);
@@ -50,7 +50,7 @@ index a27cd41cde81..6968c9a3d2ac 100644
          ok(((ACE_HEADER *)ace)->AceFlags == 0,
             "Administators Group ACE has unexpected flags (0x%x != 0x0)\n", ((ACE_HEADER *)ace)->AceFlags);
          ok(ace->Mask == 0x1f01ff || broken(ace->Mask == GENERIC_ALL) /* win2k */,
-@@ -4134,8 +4133,8 @@ static void test_GetNamedSecurityInfoA(void)
+@@ -4143,8 +4142,8 @@ static void test_GetNamedSecurityInfoA(void)
      {
          bret = GetAce(pDacl, 0, (VOID **)&ace);
          ok(bret, "Failed to get ACE.\n");
@@ -62,10 +62,33 @@ index a27cd41cde81..6968c9a3d2ac 100644
      LocalFree(pSD);
  
 diff --git a/server/file.c b/server/file.c
-index 818bd42af76a..53d59d3e8e2a 100644
+index a659b1c7872..19d04e050ed 100644
 --- a/server/file.c
 +++ b/server/file.c
-@@ -495,6 +495,29 @@ static void convert_generic_sd( struct security_descriptor *sd )
+@@ -225,6 +225,22 @@ int is_file_executable( const char *name )
+     return len >= 4 && (!strcasecmp( name + len - 4, ".exe") || !strcasecmp( name + len - 4, ".com" ));
+ }
+ 
++static int xattr_fget( int filedes, const char *name, void *value, size_t size )
++{
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return fgetxattr( filedes, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
++    return fgetxattr( filedes, name, value, size );
++#elif defined(HAVE_SYS_EXTATTR_H)
++    if (!xattr_valid_namespace( name )) return -1;
++    return extattr_get_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
++                           value, size );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++
+ static int xattr_fset( int filedes, const char *name, void *value, size_t size )
+ {
+ #if defined(XATTR_ADDITIONAL_OPTIONS)
+@@ -523,6 +539,29 @@ static void convert_generic_sd( struct security_descriptor *sd )
      }
  }
  
@@ -95,7 +118,7 @@ index 818bd42af76a..53d59d3e8e2a 100644
  struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode_t *mode,
                                           uid_t *uid )
  {
-@@ -510,9 +533,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
+@@ -538,9 +577,10 @@ struct security_descriptor *get_file_sd( struct object *obj, struct fd *fd, mode
          (st.st_uid == *uid))
          return obj->sd;
  
@@ -110,5 +133,5 @@ index 818bd42af76a..53d59d3e8e2a 100644
  
      *mode = st.st_mode;
 -- 
-2.26.2
+2.28.0
 

@@ -1,17 +1,15 @@
-From 29333aaab5e4d2b62741a8321382b24f1630eb70 Mon Sep 17 00:00:00 2001
+From 92aeb076183fd7311b5fa05b33af0304d897361d Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Wed, 20 Aug 2014 15:28:00 -0600
 Subject: [PATCH] ntdll: Implement storing DOS attributes in NtCreateFile.
 
 ---
- dlls/ntdll/tests/directory.c | 24 +++++++++++-------------
- dlls/ntdll/unix/file.c       | 31 ++++++++++++++++++++++++++-----
- include/wine/port.h          |  2 ++
- libs/port/xattr.c            | 20 ++++++++++++++++++++
- 4 files changed, 59 insertions(+), 18 deletions(-)
+ dlls/ntdll/tests/directory.c | 24 ++++++++---------
+ dlls/ntdll/unix/file.c       | 51 ++++++++++++++++++++++++++++++++----
+ 2 files changed, 57 insertions(+), 18 deletions(-)
 
 diff --git a/dlls/ntdll/tests/directory.c b/dlls/ntdll/tests/directory.c
-index 248ed99ab20..e0f4debc624 100644
+index d21a2e64f8e..dc4f09729ac 100644
 --- a/dlls/ntdll/tests/directory.c
 +++ b/dlls/ntdll/tests/directory.c
 @@ -55,7 +55,6 @@ static NTSTATUS (WINAPI *pRtlWow64EnableFsRedirectionEx)( ULONG disable, ULONG *
@@ -60,10 +58,37 @@ index 248ed99ab20..e0f4debc624 100644
          }
          testfiles[i].nfound++;
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 7ab1c130bf2..7c737edd22c 100644
+index 0a326a7a1bd..a72d95f8378 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -3549,6 +3549,20 @@ void CDECL set_show_dot_files( BOOL enable )
+@@ -406,6 +406,26 @@ static int xattr_get( const char *path, const char *name, void *value, size_t si
+ #endif
+ }
+ 
++static int xattr_remove( const char *path, const char *name )
++{
++#if defined(HAVE_ATTR_XATTR_H)
++    return removexattr( path, name );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++
++static int xattr_set( const char *path, const char *name, void *value, size_t size )
++{
++#if defined(HAVE_ATTR_XATTR_H)
++    return setxattr( path, name, value, size, 0 );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++
+ /* get space from the current directory data buffer, allocating a new one if necessary */
+ static void *get_dir_data_space( struct dir_data *data, unsigned int size )
+ {
+@@ -3582,6 +3602,20 @@ void CDECL set_show_dot_files( BOOL enable )
      show_dot_files = enable;
  }
  
@@ -84,7 +109,7 @@ index 7ab1c130bf2..7c737edd22c 100644
  
  /******************************************************************************
   *              open_unix_file
-@@ -3636,13 +3650,14 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3669,13 +3703,14 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
          io->u.Status = STATUS_SUCCESS;
      }
  
@@ -104,7 +129,7 @@ index 7ab1c130bf2..7c737edd22c 100644
  
      if (io->u.Status == STATUS_SUCCESS)
      {
-@@ -3664,6 +3679,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3697,6 +3732,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
              io->Information = FILE_OVERWRITTEN;
              break;
          }
@@ -116,7 +141,7 @@ index 7ab1c130bf2..7c737edd22c 100644
      }
      else if (io->u.Status == STATUS_TOO_MANY_OPENED_FILES)
      {
-@@ -3671,6 +3691,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
+@@ -3704,6 +3744,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
          if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
      }
  
@@ -124,47 +149,6 @@ index 7ab1c130bf2..7c737edd22c 100644
      return io->u.Status;
  }
  
-diff --git a/include/wine/port.h b/include/wine/port.h
-index e0249b4c59f..930efeeea1f 100644
---- a/include/wine/port.h
-+++ b/include/wine/port.h
-@@ -362,6 +362,8 @@ extern int xattr_fget( int filedes, const char *name, void *value, size_t size )
- extern int xattr_fremove( int filedes, const char *name );
- extern int xattr_fset( int filedes, const char *name, void *value, size_t size );
- extern int xattr_get( const char *path, const char *name, void *value, size_t size );
-+extern int xattr_remove( const char *path, const char *name );
-+extern int xattr_set( const char *path, const char *name, void *value, size_t size );
- 
- #else /* NO_LIBWINE_PORT */
- 
-diff --git a/libs/port/xattr.c b/libs/port/xattr.c
-index 6918c9956cc..683e7a615e2 100644
---- a/libs/port/xattr.c
-+++ b/libs/port/xattr.c
-@@ -67,3 +67,23 @@ int xattr_get( const char *path, const char *name, void *value, size_t size )
-     return -1;
- #endif
- }
-+
-+int xattr_remove( const char *path, const char *name )
-+{
-+#if defined(HAVE_ATTR_XATTR_H)
-+    return removexattr( path, name );
-+#else
-+    errno = ENOSYS;
-+    return -1;
-+#endif
-+}
-+
-+int xattr_set( const char *path, const char *name, void *value, size_t size )
-+{
-+#if defined(HAVE_ATTR_XATTR_H)
-+    return setxattr( path, name, value, size, 0 );
-+#else
-+    errno = ENOSYS;
-+    return -1;
-+#endif
-+}
 -- 
-2.27.0
+2.28.0
 

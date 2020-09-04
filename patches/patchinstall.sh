@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "87f41e6b408dd01055ff6a378b90d089d61ec370"
+	echo "314368e6c442f043ebfc22b70c1113e4e6232c04"
 }
 
 # Show version information
@@ -1659,6 +1659,13 @@ if test "$enable_ntdll_Builtin_Prot" -eq 1; then
 		abort "Patchset ntdll-WRITECOPY disabled, but ntdll-Builtin_Prot depends on that."
 	fi
 	enable_ntdll_WRITECOPY=1
+fi
+
+if test "$enable_ntdll_WRITECOPY" -eq 1; then
+	if test "$enable_ntdll_ForceBottomUpAlloc" -gt 1; then
+		abort "Patchset ntdll-ForceBottomUpAlloc disabled, but ntdll-WRITECOPY depends on that."
+	fi
+	enable_ntdll_ForceBottomUpAlloc=1
 fi
 
 if test "$enable_ntdll_ApiSetMap" -eq 1; then
@@ -3415,7 +3422,33 @@ if test "$enable_ntdll_ApiSetMap" -eq 1; then
 	) >> "$patchlist"
 fi
 
+# Patchset ntdll-ForceBottomUpAlloc
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#48175] AION (64 bit) - crashes in crysystem.dll.CryFree() due to high memory pointers allocated
+# |   *	[#46568] 64-bit msxml6.dll from Microsoft Core XML Services 6.0 redist package fails to load (Wine doesn't respect
+# | 	44-bit user-mode VA limitation from Windows < 8.1)
+# |
+# | Modified files:
+# |   *	dlls/ntdll/unix/virtual.c
+# |
+if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
+	patch_apply ntdll-ForceBottomUpAlloc/0001-ntdll-Increase-step-after-failed-map-attempt-in-try_.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0002-ntdll-Increase-free-ranges-view-block-size-on-64-bit.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0003-ntdll-Force-virtual-memory-allocation-order.patch
+	patch_apply ntdll-ForceBottomUpAlloc/0004-ntdll-Exclude-natively-mapped-areas-from-free-areas-.patch
+	(
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Increase step after failed map attempt in try_map_free_area().", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Increase free ranges view block size on 64 bit.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Force virtual memory allocation order.", 1 },';
+		printf '%s\n' '+    { "Paul Gofman", "ntdll: Exclude natively mapped areas from free areas list.", 1 },';
+	) >> "$patchlist"
+fi
+
 # Patchset ntdll-WRITECOPY
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	ntdll-ForceBottomUpAlloc
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#29384] Multiple applications expect correct handling of WRITECOPY memory protection (Voobly fails to launch Age of
@@ -3453,7 +3486,7 @@ fi
 # Patchset ntdll-Builtin_Prot
 # |
 # | This patchset has the following (direct or indirect) dependencies:
-# |   *	ntdll-WRITECOPY
+# |   *	ntdll-ForceBottomUpAlloc, ntdll-WRITECOPY
 # |
 # | This patchset fixes the following Wine bugs:
 # |   *	[#44650] Fix holes in ELF mappings
@@ -3491,8 +3524,7 @@ fi
 # |   *	[#15679] cygwin symlinks not working in wine
 # |
 # | Modified files:
-# |   *	configure.ac, dlls/ntdll/tests/directory.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/wine/port.h,
-# | 	libs/port/Makefile.in, libs/port/xattr.c
+# |   *	configure.ac, dlls/ntdll/tests/directory.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c
 # |
 if test "$enable_ntdll_DOS_Attributes" -eq 1; then
 	patch_apply ntdll-DOS_Attributes/0001-ntdll-Implement-retrieving-DOS-attributes-in-fd_-get.patch
@@ -3564,29 +3596,6 @@ if test "$enable_ntdll_Fix_Alignment" -eq 1; then
 	patch_apply ntdll-Fix_Alignment/0001-ntdll-Move-NtProtectVirtualMemory-and-NtCreateSectio.patch
 	(
 		printf '%s\n' '+    { "Michael Müller", "ntdll: Move NtProtectVirtualMemory and NtCreateSection to separate pages on x86.", 2 },';
-	) >> "$patchlist"
-fi
-
-# Patchset ntdll-ForceBottomUpAlloc
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#48175] AION (64 bit) - crashes in crysystem.dll.CryFree() due to high memory pointers allocated
-# |   *	[#46568] 64-bit msxml6.dll from Microsoft Core XML Services 6.0 redist package fails to load (Wine doesn't respect
-# | 	44-bit user-mode VA limitation from Windows < 8.1)
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/virtual.c
-# |
-if test "$enable_ntdll_ForceBottomUpAlloc" -eq 1; then
-	patch_apply ntdll-ForceBottomUpAlloc/0003-ntdll-Force-bottom-up-allocation-order-for-64-bit-ar.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0004-ntdll-Increase-step-after-failed-map-attempt-in-try_.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0005-ntdll-Use-free-area-list-for-virtual-memory-allocati.patch
-	patch_apply ntdll-ForceBottomUpAlloc/0006-ntdll-Permanently-exclude-natively-mapped-areas-from.patch
-	(
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Force bottom up allocation order for 64 bit arch unless top down is requested.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Increase step after failed map attempt in try_map_free_area().", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Use free area list for virtual memory allocation.", 1 },';
-		printf '%s\n' '+    { "Paul Gofman", "ntdll: Permanently exclude natively mapped areas from free areas list.", 1 },';
 	) >> "$patchlist"
 fi
 
@@ -3677,8 +3686,7 @@ fi
 # | Modified files:
 # |   *	configure.ac, dlls/kernel32/tests/path.c, dlls/kernelbase/file.c, dlls/msvcp120/tests/msvcp120.c,
 # | 	dlls/msvcp140/tests/msvcp140.c, dlls/ntdll/tests/file.c, dlls/ntdll/unix/file.c, include/Makefile.in, include/ntifs.h,
-# | 	include/wine/port.h, include/winternl.h, libs/port/Makefile.in, libs/port/renameat2.c, programs/cmd/builtins.c,
-# | 	programs/cmd/directory.c, server/fd.c, server/protocol.def
+# | 	include/winternl.h, programs/cmd/builtins.c, programs/cmd/directory.c, server/fd.c, server/protocol.def
 # |
 if test "$enable_ntdll_Junction_Points" -eq 1; then
 	patch_apply ntdll-Junction_Points/0001-ntdll-Add-support-for-junction-point-creation.patch
@@ -4420,8 +4428,7 @@ fi
 # |   *	[#33576] Support for stored file ACLs
 # |
 # | Modified files:
-# |   *	dlls/advapi32/tests/security.c, include/wine/port.h, server/change.c, server/file.c, server/file.h, server/object.c,
-# | 	server/object.h
+# |   *	dlls/advapi32/tests/security.c, server/change.c, server/file.c, server/file.h, server/object.c, server/object.h
 # |
 if test "$enable_server_Stored_ACLs" -eq 1; then
 	patch_apply server-Stored_ACLs/0001-server-Unify-the-storage-of-security-attributes-for-.patch

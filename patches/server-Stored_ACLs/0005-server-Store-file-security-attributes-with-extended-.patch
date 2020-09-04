@@ -1,30 +1,15 @@
-From f574af9e0d14b048ff0b410831f226cf764c5d05 Mon Sep 17 00:00:00 2001
+From a36fb419f7a4c4023507b985ed54387354596445 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Mon, 30 Mar 2015 13:04:23 +0200
 Subject: [PATCH] server: Store file security attributes with extended file
  attributes. (v8)
 
 ---
- include/wine/port.h |  3 +++
- server/file.c       | 34 ++++++++++++++++++++++++++++++++++
- 2 files changed, 37 insertions(+)
+ server/file.c | 63 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 63 insertions(+)
 
-diff --git a/include/wine/port.h b/include/wine/port.h
-index 7d2c73887073..145f78bebdba 100644
---- a/include/wine/port.h
-+++ b/include/wine/port.h
-@@ -366,6 +366,9 @@ extern int mkstemps(char *template, int suffix_len);
- #ifndef XATTR_USER_PREFIX
- # define XATTR_USER_PREFIX "user."
- #endif
-+#ifndef XATTR_SIZE_MAX
-+# define XATTR_SIZE_MAX    65536
-+#endif
- 
- extern int xattr_fget( int filedes, const char *name, void *value, size_t size );
- extern int xattr_fremove( int filedes, const char *name );
 diff --git a/server/file.c b/server/file.c
-index 9c94f9ba2bba..5e542b62e77e 100644
+index f0253115c5d..5df300a9a73 100644
 --- a/server/file.c
 +++ b/server/file.c
 @@ -32,6 +32,7 @@
@@ -35,10 +20,30 @@ index 9c94f9ba2bba..5e542b62e77e 100644
  #include <unistd.h>
  #ifdef HAVE_UTIME_H
  #include <utime.h>
-@@ -52,6 +53,14 @@
+@@ -39,6 +40,12 @@
+ #ifdef HAVE_POLL_H
+ #include <poll.h>
+ #endif
++#ifdef HAVE_ATTR_XATTR_H
++#undef XATTR_ADDITIONAL_OPTIONS
++#include <attr/xattr.h>
++#elif defined(HAVE_SYS_XATTR_H)
++#include <sys/xattr.h>
++#endif
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+@@ -52,6 +59,21 @@
  #include "process.h"
  #include "security.h"
  
++#ifndef XATTR_USER_PREFIX
++#define XATTR_USER_PREFIX "user."
++#endif
++#ifndef XATTR_SIZE_MAX
++#define XATTR_SIZE_MAX    65536
++#endif
++
 +/* We intentionally do not match the Samba 4 extended attribute for NT security descriptors (SDs):
 + *  1) Samba stores this information using an internal data structure (we use a flat NT SD).
 + *  2) Samba uses the attribute "security.NTACL".  This attribute is within a namespace that only
@@ -50,10 +55,26 @@ index 9c94f9ba2bba..5e542b62e77e 100644
  struct file
  {
      struct object       obj;            /* object header */
-@@ -204,6 +213,28 @@ int is_file_executable( const char *name )
+@@ -203,6 +225,44 @@ int is_file_executable( const char *name )
      return len >= 4 && (!strcasecmp( name + len - 4, ".exe") || !strcasecmp( name + len - 4, ".com" ));
  }
  
++static int xattr_fset( int filedes, const char *name, void *value, size_t size )
++{
++#if defined(XATTR_ADDITIONAL_OPTIONS)
++    return fsetxattr( filedes, name, value, size, 0, 0 );
++#elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
++    return fsetxattr( filedes, name, value, size, 0 );
++#elif defined(HAVE_SYS_EXTATTR_H)
++    if (!xattr_valid_namespace( name )) return -1;
++    return extattr_set_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
++                           value, size );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
++}
++
 +static void set_xattr_sd( int fd, const struct security_descriptor *sd )
 +{
 +    char buffer[XATTR_SIZE_MAX];
@@ -79,7 +100,7 @@ index 9c94f9ba2bba..5e542b62e77e 100644
  static struct object *create_file( struct fd *root, const char *nameptr, data_size_t len,
                                     unsigned int access, unsigned int sharing, int create,
                                     unsigned int options, unsigned int attrs,
-@@ -623,6 +654,9 @@ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
+@@ -622,6 +682,9 @@ int set_file_sd( struct object *obj, struct fd *fd, mode_t *mode, uid_t *uid,
              *mode = (*mode & S_IFMT) | new_mode;
          }
  
@@ -90,5 +111,5 @@ index 9c94f9ba2bba..5e542b62e77e 100644
          obj->sd = new_sd;
          return 1;
 -- 
-2.26.2
+2.28.0
 

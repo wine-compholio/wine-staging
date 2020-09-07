@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "432858b285d2b63eca6f99a162c9a13dd6e6ac71"
+	echo "7ec069d85f5235db98e57291825b9d602ae47ed5"
 }
 
 # Show version information
@@ -148,7 +148,6 @@ patch_enable_all ()
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_loader_KeyboardLayouts="$1"
-	enable_mfplat_streaming_support="$1"
 	enable_mmsystem_dll16_MIDIHDR_Refcount="$1"
 	enable_mountmgr_DosDevices="$1"
 	enable_mscoree_CorValidateImage="$1"
@@ -536,9 +535,6 @@ patch_enable ()
 			;;
 		loader-KeyboardLayouts)
 			enable_loader_KeyboardLayouts="$2"
-			;;
-		mfplat-streaming-support)
-			enable_mfplat_streaming_support="$2"
 			;;
 		mmsystem.dll16-MIDIHDR_Refcount)
 			enable_mmsystem_dll16_MIDIHDR_Refcount="$2"
@@ -3114,135 +3110,6 @@ if test "$enable_loader_KeyboardLayouts" -eq 1; then
 	(
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "loader: Add Keyboard Layouts registry enteries.", 1 },';
 		printf '%s\n' '+    { "Alistair Leslie-Hughes", "user32: Improve GetKeyboardLayoutList.", 1 },';
-	) >> "$patchlist"
-fi
-
-# Patchset mfplat-streaming-support
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49692] mfplat: Improved support for multiple video formats.
-# |
-# | Modified files:
-# |   *	dlls/mf/Makefile.in, dlls/mf/handler.c, dlls/mf/handler.h, dlls/mf/main.c, dlls/mf/session.c, dlls/mf/tests/mf.c,
-# | 	dlls/mf/topology.c, dlls/mfplat/mediatype.c, dlls/mfplat/tests/mfplat.c, dlls/mfreadwrite/reader.c,
-# | 	dlls/winegstreamer/Makefile.in, dlls/winegstreamer/colorconvert.c, dlls/winegstreamer/gst_cbs.c,
-# | 	dlls/winegstreamer/gst_cbs.h, dlls/winegstreamer/gst_private.h, dlls/winegstreamer/main.c,
-# | 	dlls/winegstreamer/media_source.c, dlls/winegstreamer/mf_decode.c, dlls/winegstreamer/mfplat.c,
-# | 	dlls/winegstreamer/winegstreamer.rgs, dlls/winegstreamer/winegstreamer_classes.idl, include/mfidl.idl,
-# | 	tools/make_makefiles, tools/makedep.c
-# |
-if test "$enable_mfplat_streaming_support" -eq 1; then
-	patch_apply mfplat-streaming-support/0001-Revert-mf-topoloader-Add-a-structure-for-iterative-b.patch
-	patch_apply mfplat-streaming-support/0002-Revert-mf-topoloader-Clone-source-nodes-as-a-first-l.patch
-	patch_apply mfplat-streaming-support/0003-Revert-mf-topoloader-Switch-to-public-interface-for-.patch
-	patch_apply mfplat-streaming-support/0004-mf-tests-Sink-objects-are-stream-sinks-not-media-sin.patch
-	patch_apply mfplat-streaming-support/0005-mf-tests-Add-tests-for-the-topology-loader.patch
-	patch_apply mfplat-streaming-support/0006-mf-Partially-implement-the-topology-loader.patch
-	patch_apply mfplat-streaming-support/0007-Implement-stub-bytestream-handler-and-source.patch
-	patch_apply mfplat-streaming-support/0008-winegstreamer-Implement-IMFMediaSource-Shutdown.patch
-	patch_apply mfplat-streaming-support/0009-winegstreamer-Add-a-GstPad-wrapping-the-media-source.patch
-	patch_apply mfplat-streaming-support/0010-winegstreamer-Find-an-appropriate-demuxer-for-the-so.patch
-	patch_apply mfplat-streaming-support/0011-winegstreamer-Use-the-demuxer-to-establish-IMFMediaS.patch
-	patch_apply mfplat-streaming-support/0012-winegstreamer-Implement-IMFMediaStream-GetStreamDesc.patch
-	patch_apply mfplat-streaming-support/0013-winegstreamer-Translate-H.264-caps-to-attributes.patch
-	patch_apply mfplat-streaming-support/0014-winegstreamer-Translate-WMV-caps-to-attributes.patch
-	patch_apply mfplat-streaming-support/0015-winegstreamer-Translate-AAC-caps-to-attributes.patch
-	patch_apply mfplat-streaming-support/0016-winegstreamer-Translate-MPEG-4-Section-2-caps-to-att.patch
-	patch_apply mfplat-streaming-support/0017-winegstreamer-Translate-WMA-caps-to-attributes.patch
-	patch_apply mfplat-streaming-support/0018-winegstreamer-Implement-IMFMediaSource-CreatePresent.patch
-	patch_apply mfplat-streaming-support/0019-winegstreamer-Implement-IMFMediaSource-Start.patch
-	patch_apply mfplat-streaming-support/0020-winegstreamer-Insert-parser-into-pipeline-to-rectify.patch
-	patch_apply mfplat-streaming-support/0021-winegstreamer-Implement-IMFMediaStream-RequestSample.patch
-	patch_apply mfplat-streaming-support/0022-winegstreamer-Implement-IMFMediaSource-GetCharacteri.patch
-	patch_apply mfplat-streaming-support/0023-winegstreamer-Calculate-the-MF_PD_DURATION-of-the-me.patch
-	patch_apply mfplat-streaming-support/0024-tools-Add-support-for-multiple-parent-directories.patch
-	patch_apply mfplat-streaming-support/0025-mf-Introduce-handler-helper.patch
-	patch_apply mfplat-streaming-support/0026-winegstreamer-Introduce-IMFMediaType-GstCaps-convert.patch
-	patch_apply mfplat-streaming-support/0027-winegstreamer-Translate-H.264-attributes-to-caps.patch
-	patch_apply mfplat-streaming-support/0028-winegstreamer-Translate-WMV-attributes-to-caps.patch
-	patch_apply mfplat-streaming-support/0029-winegstreamer-Translate-AAC-attributes-to-caps.patch
-	patch_apply mfplat-streaming-support/0030-winegstreamer-Translate-MPEG-4-Section-2-attributes-.patch
-	patch_apply mfplat-streaming-support/0031-winegstreamer-Translate-WMA-attributes-to-caps.patch
-	patch_apply mfplat-streaming-support/0032-Introduce-IMFSample-GstBuffer-converter.patch
-	patch_apply mfplat-streaming-support/0033-winegstreamer-Implement-decoder-MFT-on-gstreamer.patch
-	patch_apply mfplat-streaming-support/0034-mfreadwrite-Select-all-streams-when-creating-a-sourc.patch
-	patch_apply mfplat-streaming-support/0035-Miscellaneous.patch
-	patch_apply mfplat-streaming-support/0036-WMV.patch
-	patch_apply mfplat-streaming-support/0037-mf-Ask-for-more-samples-from-upstream-node-when-upon.patch
-	patch_apply mfplat-streaming-support/0038-mf-Miscelaneous-fixes-to-topology-resolution.patch
-	patch_apply mfplat-streaming-support/0039-Rewrite-branch-resolver.patch
-	patch_apply mfplat-streaming-support/0040-winegstreamer-Implement-IMFMedisStream-GetMediaSourc.patch
-	patch_apply mfplat-streaming-support/0041-Expose-PCM-output-type-on-AAC-decoder.patch
-	patch_apply mfplat-streaming-support/0042-Set-BPS-on-AAC.patch
-	patch_apply mfplat-streaming-support/0043-mfplat-Add-I420-format-information.patch
-	patch_apply mfplat-streaming-support/0044-winegstreamer-Implement-Color-Converter-MFT.patch
-	patch_apply mfplat-streaming-support/0045-HACK-Set-BPS-to-16-for-output-template.patch
-	patch_apply mfplat-streaming-support/0046-Set-wait-on-eos-to-allow-other-streams-to-continue-w.patch
-	patch_apply mfplat-streaming-support/0047-Report-streams-backwards-and-only-select-one-of-each.patch
-	patch_apply mfplat-streaming-support/0048-winegstreamer-Implement-IMFMediaSource-Stop.patch
-	patch_apply mfplat-streaming-support/0049-winegstreamer-Introduce-MPEG-4-Section-2-video-decod.patch
-	patch_apply mfplat-streaming-support/0050-HACK-Switch-between-all-selection-streams-on-MF_SOUR.patch
-	patch_apply mfplat-streaming-support/0051-winegstreamer-Introduce-WMA-audio-decoder.patch
-	patch_apply mfplat-streaming-support/0052-winegstreamer-Fix-unrecognized-format-errors-when-tr.patch
-	patch_apply mfplat-streaming-support/0053-winegstreamer-Translate-WMV3-attributes-to-caps.patch
-	patch_apply mfplat-streaming-support/0054-winegstreamer-expose-NV12-as-the-first-color-space-i.patch
-	patch_apply mfplat-streaming-support/0055-winegstreamer-Support-eAVEncH264VProfile_Constrained.patch
-	(
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"mf/topoloader: Add a structure for iterative branch resolution.\".", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"mf/topoloader: Clone source nodes as a first layer of resulting topology.\".", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "Revert \"mf/topoloader: Switch to public interface for initial topology validation.\".", 1 },';
-		printf '%s\n' '+    { "Sergio Gómez Del Real", "mf/tests: Sink objects are stream sinks, not media sinks.", 1 },';
-		printf '%s\n' '+    { "Sergio Gómez Del Real", "mf/tests: Add tests for the topology loader.", 1 },';
-		printf '%s\n' '+    { "Sergio Gómez Del Real", "mf: Partially implement the topology loader.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Implement stub bytestream handler and source.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaSource::Shutdown.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Add a GstPad wrapping the media source'\''s bytestream.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Find an appropriate demuxer for the source.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Use the demuxer to establish IMFMediaStreams.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaStream::GetStreamDescriptor.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate H.264 caps to attributes.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate WMV caps to attributes.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate AAC caps to attributes.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate MPEG-4 Section-2 caps to attributes.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate WMA caps to attributes.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaSource::CreatePresentationDescriptor.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaSource::Start.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Insert parser into pipeline to rectify type differences.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaStream::RequestSample.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaSource::GetCharacteristics.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Calculate the MF_PD_DURATION of the media source'\''s PD.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "tools: Add support for multiple parent directories.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "mf: Introduce handler helper.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Introduce IMFMediaType -> GstCaps converter.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate H.264 attributes to caps.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate WMV attributes to caps.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate AAC attributes to caps.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate MPEG-4 Section-2 attributes to caps.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Translate WMA attributes to caps.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Introduce IMFSample -> GstBuffer converter.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement decoder MFT on gstreamer.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "mfreadwrite: Select all streams when creating a source reader.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Miscellaneous.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "WMV.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "mf: Ask for more samples from upstream node when upon MF_E_TRANSFORM_NEED_MORE_INPUT.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "mf: Miscelaneous fixes to topology resolution.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Rewrite branch resolver.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMedisStream::GetMediaSource.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Expose PCM output type on AAC decoder.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Set BPS on AAC.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "mfplat: Add I420 format information.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement Color Converter MFT.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "HACK: Set BPS to 16 for output template.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Set \"wait-on-eos\" to allow other streams to continue while appsink buffers.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "Report streams backwards and only select one of each stream type.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Implement IMFMediaSource::Stop.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Introduce MPEG-4 Section-2 video decoder.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "HACK: Switch between all selection streams on MF_SOURCE_READER_ANY_STREAM.", 1 },';
-		printf '%s\n' '+    { "Derek Lesho", "winegstreamer: Introduce WMA audio decoder.", 1 },';
-		printf '%s\n' '+    { "Victor Hermann Chiletto", "winegstreamer: Fix unrecognized format errors when transforming caps to media type.", 1 },';
-		printf '%s\n' '+    { "Victor Hermann Chiletto", "winegstreamer: Translate WMV3 attributes to caps.", 1 },';
-		printf '%s\n' '+    { "Victor Hermann Chiletto", "winegstreamer: Expose NV12 as the first color space in IMFTransform::GetOutputAvailableType.", 1 },';
-		printf '%s\n' '+    { "Alistair Leslie-Hughes", "winegstreamer: Support eAVEncH264VProfile_ConstrainedBase media type.", 1 },';
 	) >> "$patchlist"
 fi
 

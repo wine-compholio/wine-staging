@@ -728,13 +728,6 @@ def generate_script(all_patches, resolved):
         lines.append("if test \"$%s\" -eq 1; then\n" % patch.variable)
         for f in patch.files:
             lines.append("\tpatch_apply %s\n" % os.path.join(patch.name, f))
-        if len(patch.patches):
-            lines.append("\t(\n")
-            for p in _unique(patch.patches, key=lambda p: (p.patch_author, p.patch_subject, p.patch_revision)):
-                if p.patch_author is None: continue
-                lines.append("\t\tprintf '%%s\\n' '+    { \"%s\", \"%s\", %d },';\n" %
-                             (escape_sh(escape_c(p.patch_author)), escape_sh(escape_c(p.patch_subject)), p.patch_revision))
-            lines.append("\t) >> \"$patchlist\"\n")
         lines.append("fi\n\n")
     lines_apply = lines
 

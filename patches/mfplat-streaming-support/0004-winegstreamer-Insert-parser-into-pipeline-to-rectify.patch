@@ -1,0 +1,169 @@
+From c8effecf2d89b5169b03f4d71243729b68d4c3ba Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Tue, 31 Mar 2020 15:11:31 -0500
+Subject: [PATCH 04/52] winegstreamer: Insert parser into pipeline to rectify
+ type differences.
+
+Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
+---
+ dlls/winegstreamer/media_source.c | 130 +++++++++++++++++++++++++++++-
+ 1 file changed, 127 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
+index 345b1fe4528..f1e8c5799f7 100644
+--- a/dlls/winegstreamer/media_source.c
++++ b/dlls/winegstreamer/media_source.c
+@@ -432,6 +432,122 @@ static const IMFMediaStreamVtbl media_stream_vtbl =
+     media_stream_RequestSample
+ };
+ 
++/* There are two paths this function can take.
++   1) In the first path, we are acting as a real media source, purely demuxing the input data,
++      in whichever format it may be in, and passing it along.  However, there can be different ways
++      to interpret the same streams. Subtypes in MF usually carry an implicit meaning, so we define
++      what caps an IMFMediaType corresponds to in mfplat.c, and insert a parser between decodebin
++      and the appsink, which usually can resolve these differences.  As an example, MFVideoFormat_H264
++      implies stream-format=byte-stream, and inserting h264parse can transform stream-format=avc
++      into stream-format=byte-stream.
++   2) In the second path, we are dealing with x-raw output from decodebin.  In this case, we just
++      have to setup a chain of elements which should hopefully allow transformations to any IMFMediaType
++      the user throws at us through gstreamer's caps negotiation.*/
++static HRESULT media_stream_align_with_mf(struct media_stream *stream)
++{
++    GstCaps *source_caps = NULL;
++    GstCaps *target_caps = NULL;
++    HRESULT hr = E_FAIL;
++
++    if (!(source_caps = gst_pad_query_caps(stream->their_src, NULL)))
++        goto done;
++
++    if (TRACE_ON(mfplat))
++    {
++        gchar *source_caps_str = gst_caps_to_string(source_caps);
++        TRACE("source caps %s\n", debugstr_a(source_caps_str));
++        g_free(source_caps_str);
++    }
++
++    if (!strcmp(gst_structure_get_name(gst_caps_get_structure(source_caps, 0)), "video/x-raw") ||
++        !strcmp(gst_structure_get_name(gst_caps_get_structure(source_caps, 0)), "audio/x-raw"))
++    {
++        stream->my_sink = gst_element_get_static_pad(stream->appsink, "sink");
++        g_object_set(stream->appsink, "caps", source_caps, NULL);
++        assert(gst_pad_link(stream->their_src, stream->my_sink) == GST_PAD_LINK_OK);
++    }
++    else
++    {
++        GstElement *parser = NULL;
++
++        assert(gst_caps_is_fixed(source_caps));
++
++        if (!(target_caps = make_mf_compatible_caps(source_caps)))
++            goto done;
++
++        if (TRACE_ON(mfplat))
++        {
++            gchar *target_caps_str = gst_caps_to_string(target_caps);
++            TRACE("target caps %s\n", debugstr_a(target_caps_str));
++            g_free(target_caps_str);
++        }
++
++        g_object_set(stream->appsink, "caps", target_caps, NULL);
++
++        if (!(gst_caps_is_equal(source_caps, target_caps)))
++        {
++            GList *parser_list_one, *parser_list_two;
++            GstElementFactory *parser_factory;
++
++            parser_list_one = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_PARSER, 1);
++
++            parser_list_two = gst_element_factory_list_filter(parser_list_one, source_caps, GST_PAD_SINK, 0);
++            gst_plugin_feature_list_free(parser_list_one);
++            parser_list_one = parser_list_two;
++
++            parser_list_two = gst_element_factory_list_filter(parser_list_one, target_caps, GST_PAD_SRC, 0);
++            gst_plugin_feature_list_free(parser_list_one);
++            parser_list_one = parser_list_two;
++
++            if (!(g_list_length(parser_list_one)))
++            {
++                gst_plugin_feature_list_free(parser_list_one);
++                ERR("Failed to find parser for stream\n");
++                hr = E_FAIL;
++                goto done;
++            }
++
++            parser_factory = g_list_first(parser_list_one)->data;
++            TRACE("Found parser %s.\n", GST_ELEMENT_NAME(parser_factory));
++
++            parser = gst_element_factory_create(parser_factory, NULL);
++
++            gst_plugin_feature_list_free(parser_list_one);
++
++            if (!parser)
++            {
++                hr = E_FAIL;
++                goto done;
++            }
++
++            gst_bin_add(GST_BIN(stream->parent_source->container), parser);
++
++            assert(gst_pad_link(stream->their_src, gst_element_get_static_pad(parser, "sink")) == GST_PAD_LINK_OK);
++
++            assert(gst_element_link(parser, stream->appsink));
++
++            gst_element_sync_state_with_parent(parser);
++        }
++        else
++        {
++            assert(gst_pad_link(stream->their_src, gst_element_get_static_pad(stream->appsink, "sink")) == GST_PAD_LINK_OK);
++        }
++
++        stream->my_sink = gst_element_get_static_pad(parser ? parser : stream->appsink, "sink");
++    }
++
++    hr = S_OK;
++
++    done:
++    if (source_caps)
++        gst_caps_unref(source_caps);
++    if (target_caps)
++        gst_caps_unref(target_caps);
++
++    return hr;
++}
++
++
+ /* creates a stub stream */
+ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD stream_id, struct media_stream **out_stream)
+ {
+@@ -467,8 +583,7 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD
+     g_object_set(object->appsink, "max-buffers", 5, NULL);
+     g_object_set(object->appsink, "wait-on-eos", FALSE, NULL);
+ 
+-    object->my_sink = gst_element_get_static_pad(object->appsink, "sink");
+-    gst_pad_link(object->their_src, object->my_sink);
++    media_stream_align_with_mf(object);
+ 
+     gst_pad_add_probe(object->my_sink, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, caps_listener_wrapper, object, NULL);
+ 
+@@ -494,7 +609,16 @@ static HRESULT media_stream_init_desc(struct media_stream *stream)
+ 
+     stream->their_caps = gst_caps_fixate(stream->their_caps);
+ 
+-    stream_type = mf_media_type_from_caps(stream->their_caps);
++    if (strcmp(gst_structure_get_name(gst_caps_get_structure(stream->their_caps, 0)), "video/x-raw") &&
++        strcmp(gst_structure_get_name(gst_caps_get_structure(stream->their_caps, 0)), "audio/x-raw"))
++    {
++        GstCaps *compatible_caps = make_mf_compatible_caps(stream->their_caps);
++        stream_type = mf_media_type_from_caps(compatible_caps);
++        gst_caps_unref(compatible_caps);
++    }
++    else
++        stream_type = mf_media_type_from_caps(stream->their_caps);
++
+     gst_caps_unref(stream->their_caps);
+     if (!stream_type)
+     {
+-- 
+2.28.0
+

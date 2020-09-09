@@ -52,7 +52,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "7ec069d85f5235db98e57291825b9d602ae47ed5"
+	echo "8827eb6a83348057293f89be535ccb74607db608"
 }
 
 # Show version information
@@ -1846,17 +1846,14 @@ fi
 # |   *	ntdll-FLS_Callbacks
 # |
 # | Modified files:
-# |   *	dlls/ntdll/Makefile.in, dlls/ntdll/loader.c, include/wine/library.h, libs/wine/Makefile.in, libs/wine/config.c,
-# | 	libs/wine/wine.map, loader/main.c
+# |   *	dlls/ntdll/Makefile.in, dlls/ntdll/loader.c
 # |
 if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch
 	patch_apply Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch
-	patch_apply Staging/0003-loader-Add-commandline-option-patches-to-show-the-pa.patch
 	(
 		printf '%s\n' '+    { "Sebastian Lackner", "ntdll: Print a warning message specifying the wine-staging branch name and version.", 1 },';
 		printf '%s\n' '+    { "Sebastian Lackner", "winelib: Append '\''(Staging)'\'' at the end of the version string.", 1 },';
-		printf '%s\n' '+    { "Sebastian Lackner", "loader: Add commandline option --patches to show the patch list.", 1 },';
 	) >> "$patchlist"
 fi
 

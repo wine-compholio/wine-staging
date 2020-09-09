@@ -1,4 +1,4 @@
-From c5c277e9a6d54ff4b9b22fd9f412401c47a71a4e Mon Sep 17 00:00:00 2001
+From b56857593bfce8f684953cd4c3356e78100a7ef5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 3 Jan 2015 03:39:11 +0100
 Subject: [PATCH] nvcuda: First implementation. (rev 2)
@@ -10,23 +10,23 @@ Changes by Sebastian Lackner <sebastian@fds-team.de>:
 ---
  configure.ac                  |    1 +
  dlls/nvcuda/Makefile.in       |    1 +
- dlls/nvcuda/internal.c        |  515 ++++++++
- dlls/nvcuda/nvcuda.c          | 2097 ++++++++++++++++++++++++++++++++-
+ dlls/nvcuda/internal.c        |  514 ++++++++
+ dlls/nvcuda/nvcuda.c          | 2096 ++++++++++++++++++++++++++++++++-
  dlls/nvcuda/nvcuda.h          |   29 +
  dlls/nvcuda/nvcuda.spec       |  492 ++++----
  dlls/nvcuda/tests/Makefile.in |    4 +
  dlls/nvcuda/tests/nvcuda.c    |  168 +++
- 8 files changed, 3056 insertions(+), 251 deletions(-)
+ 8 files changed, 3054 insertions(+), 251 deletions(-)
  create mode 100644 dlls/nvcuda/internal.c
  create mode 100644 dlls/nvcuda/nvcuda.h
  create mode 100644 dlls/nvcuda/tests/Makefile.in
  create mode 100644 dlls/nvcuda/tests/nvcuda.c
 
 diff --git a/configure.ac b/configure.ac
-index 2bc340b70..d70d21d94 100644
+index 7fd6ce83974..7dd3db6bb9f 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -3544,6 +3544,7 @@ WINE_CONFIG_MAKEFILE(dlls/ntoskrnl.exe/tests)
+@@ -3602,6 +3602,7 @@ WINE_CONFIG_MAKEFILE(dlls/ntoskrnl.exe/tests)
  WINE_CONFIG_MAKEFILE(dlls/ntprint)
  WINE_CONFIG_MAKEFILE(dlls/ntprint/tests)
  WINE_CONFIG_MAKEFILE(dlls/nvcuda)
@@ -35,7 +35,7 @@ index 2bc340b70..d70d21d94 100644
  WINE_CONFIG_MAKEFILE(dlls/odbc32)
  WINE_CONFIG_MAKEFILE(dlls/odbcbcp)
 diff --git a/dlls/nvcuda/Makefile.in b/dlls/nvcuda/Makefile.in
-index 4b33278c1..0921ce64c 100644
+index 4b33278c115..0921ce64cae 100644
 --- a/dlls/nvcuda/Makefile.in
 +++ b/dlls/nvcuda/Makefile.in
 @@ -1,6 +1,7 @@
@@ -48,10 +48,10 @@ index 4b33278c1..0921ce64c 100644
  RC_SRCS = nvcuda.rc
 diff --git a/dlls/nvcuda/internal.c b/dlls/nvcuda/internal.c
 new file mode 100644
-index 000000000..611e3108d
+index 00000000000..664bdf84f51
 --- /dev/null
 +++ b/dlls/nvcuda/internal.c
-@@ -0,0 +1,515 @@
+@@ -0,0 +1,514 @@
 +/*
 + * Copyright (C) 2014-2015 Michael Müller
 + * Copyright (C) 2014-2015 Sebastian Lackner
@@ -79,7 +79,6 @@ index 000000000..611e3108d
 +
 +#include "windef.h"
 +#include "winbase.h"
-+#include "wine/library.h"
 +#include "wine/debug.h"
 +#include "wine/list.h"
 +#include "cuda.h"
@@ -568,7 +567,7 @@ index 000000000..611e3108d
 +    return CUDA_ERROR_UNKNOWN;
 +}
 diff --git a/dlls/nvcuda/nvcuda.c b/dlls/nvcuda/nvcuda.c
-index 8b7eb9c37..3ef7c3505 100644
+index 8b7eb9c37b0..623c9f3c87a 100644
 --- a/dlls/nvcuda/nvcuda.c
 +++ b/dlls/nvcuda/nvcuda.c
 @@ -1,4 +1,5 @@
@@ -577,7 +576,7 @@ index 8b7eb9c37..3ef7c3505 100644
   * Copyright (C) 2014-2015 Sebastian Lackner
   *
   * This library is free software; you can redistribute it and/or
-@@ -17,19 +18,2105 @@
+@@ -17,19 +18,2104 @@
   */
  
  #include "config.h"
@@ -589,7 +588,6 @@ index 8b7eb9c37..3ef7c3505 100644
 -#include "winbase.h"
 +#include "windef.h"
 +#include "winbase.h"
-+#include "wine/library.h"
 +#include "wine/debug.h"
 +#include "wine/wgl.h"
 +#include "cuda.h"
@@ -2690,7 +2688,7 @@ index 8b7eb9c37..3ef7c3505 100644
  
 diff --git a/dlls/nvcuda/nvcuda.h b/dlls/nvcuda/nvcuda.h
 new file mode 100644
-index 000000000..aaffe13af
+index 00000000000..aaffe13af5f
 --- /dev/null
 +++ b/dlls/nvcuda/nvcuda.h
 @@ -0,0 +1,29 @@
@@ -2724,7 +2722,7 @@ index 000000000..aaffe13af
 +
 +#endif
 diff --git a/dlls/nvcuda/nvcuda.spec b/dlls/nvcuda/nvcuda.spec
-index 279f7ab80..621b8d59c 100644
+index 279f7ab803b..621b8d59cf0 100644
 --- a/dlls/nvcuda/nvcuda.spec
 +++ b/dlls/nvcuda/nvcuda.spec
 @@ -1,36 +1,36 @@
@@ -3238,7 +3236,7 @@ index 279f7ab80..621b8d59c 100644
  @ stub cuWGLGetDevice
 diff --git a/dlls/nvcuda/tests/Makefile.in b/dlls/nvcuda/tests/Makefile.in
 new file mode 100644
-index 000000000..81f9290e5
+index 00000000000..81f9290e5aa
 --- /dev/null
 +++ b/dlls/nvcuda/tests/Makefile.in
 @@ -0,0 +1,4 @@
@@ -3248,7 +3246,7 @@ index 000000000..81f9290e5
 +	nvcuda.c
 diff --git a/dlls/nvcuda/tests/nvcuda.c b/dlls/nvcuda/tests/nvcuda.c
 new file mode 100644
-index 000000000..fc8f300a2
+index 00000000000..fc8f300a28b
 --- /dev/null
 +++ b/dlls/nvcuda/tests/nvcuda.c
 @@ -0,0 +1,168 @@
@@ -3421,5 +3419,5 @@ index 000000000..fc8f300a2
 +    test_TlsNotifyInterface();
 +}
 -- 
-2.24.0
+2.28.0
 

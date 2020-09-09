@@ -1,0 +1,1024 @@
+From 02147fc13eefc56391549102082759b85c282510 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 8 Sep 2020 18:43:52 +0200
+Subject: [PATCH 5/5] msxml3: Implement FreeThreadedXMLHTTP60.
+
+---
+ dlls/msxml3/Makefile.in     |   2 +-
+ dlls/msxml3/factory.c       |   5 +
+ dlls/msxml3/httprequest.c   | 493 +++++++++++++++++++++++++++++++++++-
+ dlls/msxml3/msxml_private.h |   1 +
+ dlls/msxml3/tests/httpreq.c | 395 ++++++++++++++++++++++++++++-
+ 5 files changed, 891 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/msxml3/Makefile.in b/dlls/msxml3/Makefile.in
+index 936c745895..f9e629f89b 100644
+--- a/dlls/msxml3/Makefile.in
++++ b/dlls/msxml3/Makefile.in
+@@ -1,5 +1,5 @@
+ MODULE    = msxml3.dll
+-IMPORTS   = uuid urlmon shlwapi oleaut32 ole32 user32 advapi32
++IMPORTS   = uuid urlmon shlwapi oleaut32 ole32 user32 advapi32 rtworkq
+ EXTRALIBS = $(XML2_LIBS)
+ EXTRAINCL = $(XML2_CFLAGS) $(XSLT_CFLAGS)
+ 
+diff --git a/dlls/msxml3/factory.c b/dlls/msxml3/factory.c
+index 3be974c58a..8608e238ee 100644
+--- a/dlls/msxml3/factory.c
++++ b/dlls/msxml3/factory.c
+@@ -280,6 +280,7 @@ static HRESULT DOMClassFactory_Create(const GUID *clsid, REFIID riid, void **ppv
+ 
+ static ClassFactory xmldoccf = { { &ClassFactoryVtbl }, XMLDocument_create };
+ static ClassFactory httpreqcf = { { &ClassFactoryVtbl }, XMLHTTPRequest_create };
++static ClassFactory httpreqcf2 = { { &ClassFactoryVtbl }, XMLHTTPRequest2_create };
+ static ClassFactory serverhttp = { { &ClassFactoryVtbl }, ServerXMLHTTP_create };
+ static ClassFactory xsltemplatecf = { { &ClassFactoryVtbl }, XSLTemplate_create };
+ static ClassFactory mxnsmanagercf = { {&ClassFactoryVtbl }, MXNamespaceManager_create };
+@@ -341,6 +342,10 @@ HRESULT WINAPI DllGetClassObject( REFCLSID rclsid, REFIID riid, void **ppv )
+     {
+         cf = &httpreqcf.IClassFactory_iface;
+     }
++    else if( IsEqualCLSID( rclsid, &CLSID_FreeThreadedXMLHTTP60 ))
++    {
++        cf = &httpreqcf2.IClassFactory_iface;
++    }
+     else if( IsEqualCLSID( rclsid, &CLSID_ServerXMLHTTP ) ||
+              IsEqualCLSID( rclsid, &CLSID_ServerXMLHTTP30 ) ||
+              IsEqualCLSID( rclsid, &CLSID_ServerXMLHTTP40 ) ||
+diff --git a/dlls/msxml3/httprequest.c b/dlls/msxml3/httprequest.c
+index 7286eb97bb..ad74260193 100644
+--- a/dlls/msxml3/httprequest.c
++++ b/dlls/msxml3/httprequest.c
+@@ -44,13 +44,16 @@
+ #include "docobj.h"
+ #include "shlwapi.h"
+ 
++#include "initguid.h"
++#include "rtworkq.h"
++
+ #include "msxml_private.h"
+ 
+ #include "wine/debug.h"
+ 
+ #ifdef HAVE_LIBXML2
+ 
+-WINE_DEFAULT_DEBUG_CHANNEL(msxml);
++WINE_DEFAULT_DEBUG_CHANNEL(xmlhttp);
+ 
+ static const WCHAR colspaceW[] = {':',' ',0};
+ static const WCHAR crlfW[] = {'\r','\n',0};
+@@ -2031,6 +2034,458 @@ static const struct IServerXMLHTTPRequestVtbl ServerXMLHTTPRequestVtbl =
+     ServerXMLHTTPRequest_setOption
+ };
+ 
++static DWORD xhr2_work_queue;
++
++struct xml_http_request_2
++{
++    httprequest req;
++    IXMLHTTPRequest2 IXMLHTTPRequest2_iface;
++    IRtwqAsyncCallback IRtwqAsyncCallback_iface;
++    IDispatch IDispatch_iface;
++
++    IXMLHTTPRequest2Callback *callback;
++    IXMLHTTPRequest3Callback *callback3;
++    ISequentialStream *response_body;
++    ISequentialStream *request_body;
++    ULONGLONG request_body_size;
++};
++
++static inline struct xml_http_request_2 *impl_from_IXMLHTTPRequest2(IXMLHTTPRequest2 *iface)
++{
++    return CONTAINING_RECORD(iface, struct xml_http_request_2, IXMLHTTPRequest2_iface);
++}
++
++static inline struct xml_http_request_2 *xml_http_request_2_from_IRtwqAsyncCallback(IRtwqAsyncCallback *iface)
++{
++    return CONTAINING_RECORD(iface, struct xml_http_request_2, IRtwqAsyncCallback_iface);
++}
++
++static inline struct xml_http_request_2 *xml_http_request_2_from_IDispatch(IDispatch *iface)
++{
++    return CONTAINING_RECORD(iface, struct xml_http_request_2, IDispatch_iface);
++}
++
++static HRESULT WINAPI xml_http_request_2_QueryInterface(IXMLHTTPRequest2 *iface, REFIID riid, void **obj)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), obj);
++
++    if (IsEqualGUID(riid, &IID_IXMLHTTPRequest2) || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        IXMLHTTPRequest2_AddRef(iface);
++        *obj = iface;
++        return S_OK;
++    }
++
++    FIXME("Unsupported interface %s\n", debugstr_guid(riid));
++    *obj = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI xml_http_request_2_AddRef(IXMLHTTPRequest2 *iface)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    ULONG ref = InterlockedIncrement(&This->req.ref);
++    TRACE("(%p)->(%u)\n", This, ref);
++    return ref;
++}
++
++static ULONG WINAPI xml_http_request_2_Release(IXMLHTTPRequest2 *iface)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    ULONG ref = InterlockedDecrement(&This->req.ref);
++
++    TRACE("(%p)->(%u)\n", This, ref);
++
++    if (ref == 0)
++    {
++        /* do not call httprequest_put_onreadystatechange to avoid ref cycle */
++        This->req.sink = NULL;
++        if (This->response_body) ISequentialStream_Release(This->response_body);
++        if (This->request_body) ISequentialStream_Release(This->request_body);
++        if (This->callback3) IXMLHTTPRequest3Callback_Release(This->callback3);
++        if (This->callback) IXMLHTTPRequest2Callback_Release(This->callback);
++        heap_free(This);
++        RtwqShutdown();
++    }
++
++    return ref;
++}
++
++static HRESULT WINAPI xml_http_request_2_Open(IXMLHTTPRequest2 *iface, const WCHAR *method,
++                                              const WCHAR *url, IXMLHTTPRequest2Callback *callback,
++                                              const WCHAR *username, const WCHAR *password,
++                                              const WCHAR *proxy_username, const WCHAR *proxy_password)
++{
++    static const WCHAR accept_encoding[] = {'A','c','c','e','p','t','-','E','n','c','o','d','i','n','g',0};
++    static const WCHAR empty = 0;
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    VARIANT async_v, username_v, password_v;
++    HRESULT hr;
++
++    TRACE("(%p)->(%s %s %p %s %s %s %s)\n", This, debugstr_w(method), debugstr_w(url), callback,
++          debugstr_w(username), debugstr_w(password), debugstr_w(proxy_username), debugstr_w(proxy_password));
++
++    if (This->callback) IXMLHTTPRequest2Callback_Release(This->callback);
++    if (This->callback3) IXMLHTTPRequest3Callback_Release(This->callback3);
++    IXMLHTTPRequest2Callback_AddRef(callback);
++    This->callback = callback;
++    if (FAILED(IXMLHTTPRequest2Callback_QueryInterface(callback, &IID_IXMLHTTPRequest3Callback, (void **)&This->callback3)))
++        This->callback3 = NULL;
++
++    if (proxy_username || proxy_password) FIXME("proxy credentials not implemented\n");
++
++    VariantInit(&async_v);
++    V_VT(&async_v) = VT_BOOL;
++    V_BOOL(&async_v) = FALSE; /* FIXME: TRUE needs a RTWQ_WINDOW_WORKQUEUE */
++
++    VariantInit(&username_v);
++    V_VT(&username_v) = VT_BSTR;
++    if (username) V_BSTR(&username_v) = SysAllocString(username);
++    else V_BSTR(&username_v) = SysAllocString(&empty);
++
++    VariantInit(&password_v);
++    V_VT(&password_v) = VT_BSTR;
++    if (password) V_BSTR(&password_v) = SysAllocString(password);
++    else V_BSTR(&password_v) = SysAllocString(&empty);
++
++    if (FAILED(hr = httprequest_open(&This->req, (BSTR)method, (BSTR)url, async_v, username_v, password_v)))
++        return hr;
++    return httprequest_setRequestHeader(&This->req, (BSTR)accept_encoding, (BSTR)&empty);
++}
++
++static HRESULT WINAPI xml_http_request_2_Send(IXMLHTTPRequest2 *iface, ISequentialStream *body, ULONGLONG body_size)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    IRtwqAsyncResult *result;
++    HRESULT hr;
++
++    TRACE("(%p)->(%p %s)\n", This, body, wine_dbgstr_longlong( body_size ));
++
++    if (body_size)
++    {
++        ISequentialStream_AddRef(body);
++        This->request_body = body;
++        This->request_body_size = body_size;
++    }
++
++    if (FAILED(hr = RtwqCreateAsyncResult(NULL, &This->IRtwqAsyncCallback_iface, NULL, &result)))
++        return hr;
++    // IRtwqAsyncCallback_Invoke(&This->IRtwqAsyncCallback_iface, result);
++    hr = RtwqPutWorkItem(xhr2_work_queue, 0, result);
++    if (result) IRtwqAsyncResult_Release(result);
++
++    return hr;
++}
++
++static HRESULT WINAPI xml_http_request_2_Abort(IXMLHTTPRequest2 *iface)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    TRACE("(%p) stub!\n", This);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI xml_http_request_2_SetCookie(IXMLHTTPRequest2 *iface, const XHR_COOKIE *cookie, DWORD *state)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    FIXME("(%p)->(%p %p) stub!\n", This, cookie, state);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI xml_http_request_2_SetCustomResponseStream(IXMLHTTPRequest2 *iface, ISequentialStream *stream)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    FIXME("(%p)->(%p) stub!\n", This, stream);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI xml_http_request_2_SetProperty(IXMLHTTPRequest2 *iface, XHR_PROPERTY property, ULONGLONG value)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    FIXME("(%p)->(%#x %s) stub!\n", This, property, wine_dbgstr_longlong( value ));
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI xml_http_request_2_SetRequestHeader(IXMLHTTPRequest2 *iface,
++                                                          const WCHAR *header, const WCHAR *value)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    TRACE("(%p)->(%s %s)\n", This, debugstr_w(header), debugstr_w(value));
++    return httprequest_setRequestHeader(&This->req, (BSTR)header, (BSTR)value);
++}
++
++static HRESULT WINAPI xml_http_request_2_GetAllResponseHeaders(IXMLHTTPRequest2 *iface, WCHAR **headers)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    FIXME("(%p)->(%p) stub!\n", This, headers);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI xml_http_request_2_GetCookie(IXMLHTTPRequest2 *iface, const WCHAR *url,
++                                                   const WCHAR *name, DWORD flags,
++                                                   ULONG *cookies_count, XHR_COOKIE **cookies)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    FIXME("(%p)->(%s %s %d %p %p) stub!\n", This, debugstr_w(url), debugstr_w(name), flags, cookies_count, cookies);
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI xml_http_request_2_GetResponseHeader(IXMLHTTPRequest2 *iface,
++                                                           const WCHAR *header, WCHAR **value)
++{
++    struct xml_http_request_2 *This = impl_from_IXMLHTTPRequest2(iface);
++    HRESULT hr;
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_w(header), value);
++
++    if (FAILED(hr = httprequest_getResponseHeader(&This->req, (BSTR)header, value)))
++        return hr;
++
++#define E_FILE_NOT_FOUND                                   _HRESULT_TYPEDEF_(0x80070002)
++
++    if (hr == S_FALSE)
++    {
++        *value = NULL;
++        return E_FILE_NOT_FOUND;
++    }
++
++    return hr;
++}
++
++static const struct IXMLHTTPRequest2Vtbl XMLHTTPRequest2Vtbl = {
++    /* IUnknown methods */
++    xml_http_request_2_QueryInterface,
++    xml_http_request_2_AddRef,
++    xml_http_request_2_Release,
++    /* IXMLHTTPRequest2 methods */
++    xml_http_request_2_Open,
++    xml_http_request_2_Send,
++    xml_http_request_2_Abort,
++    xml_http_request_2_SetCookie,
++    xml_http_request_2_SetCustomResponseStream,
++    xml_http_request_2_SetProperty,
++    xml_http_request_2_SetRequestHeader,
++    xml_http_request_2_GetAllResponseHeaders,
++    xml_http_request_2_GetCookie,
++    xml_http_request_2_GetResponseHeader,
++};
++
++static HRESULT WINAPI xml_http_request_2_IRtwqAsyncCallback_QueryInterface(IRtwqAsyncCallback *iface, REFIID riid, void **obj)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IRtwqAsyncCallback(iface);
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), obj);
++
++    if (IsEqualGUID(riid, &IID_IRtwqAsyncCallback) || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        IRtwqAsyncCallback_AddRef(iface);
++        *obj = iface;
++        return S_OK;
++    }
++
++    FIXME("Unsupported interface %s\n", debugstr_guid(riid));
++    *obj = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI xml_http_request_2_IRtwqAsyncCallback_AddRef(IRtwqAsyncCallback *iface)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IRtwqAsyncCallback(iface);
++    TRACE("(%p)\n", This);
++    return xml_http_request_2_AddRef(&This->IXMLHTTPRequest2_iface);
++}
++
++static ULONG WINAPI xml_http_request_2_IRtwqAsyncCallback_Release(IRtwqAsyncCallback *iface)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IRtwqAsyncCallback(iface);
++    TRACE("(%p)\n", This);
++    return xml_http_request_2_Release(&This->IXMLHTTPRequest2_iface);
++}
++
++static HRESULT WINAPI xml_http_request_2_IRtwqAsyncCallback_GetParameters(IRtwqAsyncCallback *iface,
++        DWORD *flags, DWORD *queue)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IRtwqAsyncCallback(iface);
++
++    TRACE("(%p)->(%p %p)\n", This, flags, queue);
++
++    *flags = 0;
++    *queue = xhr2_work_queue;
++    return S_OK;
++}
++
++static HRESULT WINAPI xml_http_request_2_IRtwqAsyncCallback_Invoke(IRtwqAsyncCallback *iface,
++        IRtwqAsyncResult *result)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IRtwqAsyncCallback(iface);
++    VARIANT body_v;
++    HRESULT hr;
++    ULONG read;
++
++    TRACE("(%p)->(%p)\n", This, result);
++
++    VariantInit(&body_v);
++
++    if (This->request_body)
++    {
++        V_VT(&body_v) = VT_BSTR;
++        V_BSTR(&body_v) = CoTaskMemAlloc(This->request_body_size);
++
++        if (FAILED(hr = ISequentialStream_Read(This->request_body, V_BSTR(&body_v), This->request_body_size, &read)) ||
++            read < This->request_body_size)
++        {
++            ERR("Failed to allocate request body memory, hr %#x\n", hr);
++            CoTaskMemFree(V_BSTR(&body_v));
++            goto done;
++        }
++
++        ISequentialStream_Release(This->request_body);
++        This->request_body = NULL;
++    }
++
++    hr = httprequest_send(&This->req, body_v);
++
++done:
++    return IRtwqAsyncResult_SetStatus(result, hr);
++}
++
++static const struct IRtwqAsyncCallbackVtbl xml_http_request_2_IRtwqAsyncCallbackVtbl = {
++    /* IUnknown methods */
++    xml_http_request_2_IRtwqAsyncCallback_QueryInterface,
++    xml_http_request_2_IRtwqAsyncCallback_AddRef,
++    xml_http_request_2_IRtwqAsyncCallback_Release,
++    /* IRtwqAsyncCallback methods */
++    xml_http_request_2_IRtwqAsyncCallback_GetParameters,
++    xml_http_request_2_IRtwqAsyncCallback_Invoke,
++};
++
++static HRESULT WINAPI xml_http_request_2_IDispatch_QueryInterface(IDispatch *iface, REFIID riid, void **obj)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(riid), obj);
++
++    if (IsEqualGUID(riid, &IID_IDispatch) || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        IDispatch_AddRef(iface);
++        *obj = iface;
++        return S_OK;
++    }
++
++    FIXME("Unsupported interface %s\n", debugstr_guid(riid));
++    *obj = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI xml_http_request_2_IDispatch_AddRef(IDispatch *iface)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    TRACE("(%p)\n", This);
++    return xml_http_request_2_AddRef(&This->IXMLHTTPRequest2_iface);
++}
++
++static ULONG WINAPI xml_http_request_2_IDispatch_Release(IDispatch *iface)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    TRACE("(%p)\n", This);
++    return xml_http_request_2_Release(&This->IXMLHTTPRequest2_iface);
++}
++
++static HRESULT WINAPI xml_http_request_2_IDispatch_GetTypeInfoCount(IDispatch *iface, UINT *value)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    FIXME("(%p)->(%p) stub!\n", This, value);
++    *value = 0;
++    return S_OK;
++}
++
++static HRESULT WINAPI xml_http_request_2_IDispatch_GetTypeInfo(IDispatch *iface, UINT index,
++                                                               LCID lcid, ITypeInfo **value)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    FIXME("(%p)->(%d %u %p) stub!\n", This, index, lcid, value);
++    *value = NULL;
++    return S_OK;
++}
++
++static HRESULT WINAPI xml_http_request_2_IDispatch_GetIDsOfNames(IDispatch *iface, REFIID riid,
++                                                                 OLECHAR **names, UINT names_count,
++                                                                 LCID lcid, DISPID *disp_ids)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    FIXME("(%p)->(%s %p %d %u %p) stub!\n", This, debugstr_guid(riid), names, names_count, lcid, disp_ids);
++    return S_OK;
++}
++
++static HRESULT WINAPI xml_http_request_2_IDispatch_Invoke(IDispatch *iface, DISPID id, REFIID riid,
++                                                          LCID lcid, WORD flags, DISPPARAMS *params,
++                                                          VARIANT *result, EXCEPINFO *exception, UINT *arg_err)
++{
++    struct xml_http_request_2 *This = xml_http_request_2_from_IDispatch(iface);
++    IXMLHTTPRequest2 *xhr2_iface = &This->IXMLHTTPRequest2_iface;
++    HRESULT hr;
++    LONG status;
++    BSTR status_str = NULL;
++
++    TRACE("(%p)->(%d %s %u %d %p %p %p %p) stub!\n", This, id, debugstr_guid(riid), lcid, flags,
++          params, result, exception, arg_err);
++
++    if (This->req.state == READYSTATE_COMPLETE)
++    {
++        VARIANT body_v;
++        VariantInit(&body_v);
++
++        IXMLHTTPRequest2Callback_AddRef(This->callback);
++        if (This->callback3)
++        {
++            IXMLHTTPRequest3Callback_AddRef(This->callback3);
++            IXMLHTTPRequest3Callback_OnServerCertificateReceived(This->callback3, (IXMLHTTPRequest3 *)xhr2_iface, 0, 1, NULL);
++            IXMLHTTPRequest3Callback_Release(This->callback3);
++        }
++
++        if (FAILED(hr = httprequest_get_status(&This->req, &status)) ||
++            FAILED(hr = httprequest_get_statusText(&This->req, &status_str)))
++        {
++            WARN("failed to get response status, error %#x\n", hr);
++            IXMLHTTPRequest2Callback_OnError(This->callback, xhr2_iface, hr);
++            IXMLHTTPRequest2Callback_Release(This->callback);
++            return S_OK;
++        }
++
++        IXMLHTTPRequest2Callback_OnHeadersAvailable(This->callback, xhr2_iface, status, status_str);
++        SysFreeString(status_str);
++
++        if (This->response_body) ISequentialStream_Release(This->response_body);
++        This->response_body = NULL;
++
++        if (FAILED(hr = httprequest_get_responseStream(&This->req, &body_v)) ||
++            FAILED(hr = IUnknown_QueryInterface(V_UNKNOWN(&body_v), &IID_ISequentialStream, (void **)&This->response_body)))
++        {
++            WARN("failed to get response stream, error %#x\n", hr);
++            IXMLHTTPRequest2Callback_OnError(This->callback, xhr2_iface, hr);
++            IXMLHTTPRequest2Callback_Release(This->callback);
++            return S_OK;
++        }
++
++        IXMLHTTPRequest2Callback_OnDataAvailable(This->callback, xhr2_iface, This->response_body);
++        IXMLHTTPRequest2Callback_OnResponseReceived(This->callback, xhr2_iface, This->response_body);
++        IXMLHTTPRequest2Callback_Release(This->callback);
++    }
++
++    return S_OK;
++}
++
++static const struct IDispatchVtbl xml_http_request_2_IDispatchVtbl = {
++    /* IUnknown methods */
++    xml_http_request_2_IDispatch_QueryInterface,
++    xml_http_request_2_IDispatch_AddRef,
++    xml_http_request_2_IDispatch_Release,
++    /* IDispatch methods */
++    xml_http_request_2_IDispatch_GetTypeInfoCount,
++    xml_http_request_2_IDispatch_GetTypeInfo,
++    xml_http_request_2_IDispatch_GetIDsOfNames,
++    xml_http_request_2_IDispatch_Invoke,
++};
++
+ static void init_httprequest(httprequest *req)
+ {
+     req->IXMLHTTPRequest_iface.lpVtbl = &XMLHTTPRequestVtbl;
+@@ -2080,6 +2535,35 @@ HRESULT XMLHTTPRequest_create(void **obj)
+     return S_OK;
+ }
+ 
++HRESULT XMLHTTPRequest2_create(void **obj)
++{
++    struct xml_http_request_2 *xhr2;
++    TRACE("(%p)\n", obj);
++
++    if (!(xhr2 = heap_alloc(sizeof(*xhr2)))) return E_OUTOFMEMORY;
++
++    init_httprequest(&xhr2->req);
++    xhr2->IXMLHTTPRequest2_iface.lpVtbl = &XMLHTTPRequest2Vtbl;
++    xhr2->IRtwqAsyncCallback_iface.lpVtbl = &xml_http_request_2_IRtwqAsyncCallbackVtbl;
++    xhr2->IDispatch_iface.lpVtbl = &xml_http_request_2_IDispatchVtbl;
++
++    /* do not call httprequest_put_onreadystatechange to avoid ref cycle */
++    xhr2->req.sink = &xhr2->IDispatch_iface;
++
++    xhr2->callback = NULL;
++    xhr2->callback3 = NULL;
++    xhr2->request_body = NULL;
++    xhr2->response_body = NULL;
++
++    /* for async http requests we need window message queue */
++    RtwqStartup();
++    if (!xhr2_work_queue) RtwqAllocateWorkQueue(RTWQ_MULTITHREADED_WORKQUEUE, &xhr2_work_queue);
++
++    *obj = &xhr2->IXMLHTTPRequest2_iface;
++    TRACE("returning iface %p\n", *obj);
++    return S_OK;
++}
++
+ HRESULT ServerXMLHTTP_create(void **obj)
+ {
+     serverhttp *req;
+@@ -2109,6 +2593,13 @@ HRESULT XMLHTTPRequest_create(void **ppObj)
+     return E_NOTIMPL;
+ }
+ 
++HRESULT XMLHTTPRequest2_create(void **ppObj)
++{
++    MESSAGE("This program tried to use a XMLHTTPRequest object, but\n"
++            "libxml2 support was not present at compile time.\n");
++    return E_NOTIMPL;
++}
++
+ HRESULT ServerXMLHTTP_create(void **obj)
+ {
+     MESSAGE("This program tried to use a ServerXMLHTTP object, but\n"
+diff --git a/dlls/msxml3/msxml_private.h b/dlls/msxml3/msxml_private.h
+index 5fce060985..f25a4a8268 100644
+--- a/dlls/msxml3/msxml_private.h
++++ b/dlls/msxml3/msxml_private.h
+@@ -498,6 +498,7 @@ extern HRESULT XMLDocument_create(void**) DECLSPEC_HIDDEN;
+ extern HRESULT SAXXMLReader_create(MSXML_VERSION, void**) DECLSPEC_HIDDEN;
+ extern HRESULT SAXAttributes_create(MSXML_VERSION, void**) DECLSPEC_HIDDEN;
+ extern HRESULT XMLHTTPRequest_create(void **) DECLSPEC_HIDDEN;
++extern HRESULT XMLHTTPRequest2_create(void **) DECLSPEC_HIDDEN;
+ extern HRESULT ServerXMLHTTP_create(void **) DECLSPEC_HIDDEN;
+ extern HRESULT XSLTemplate_create(void**) DECLSPEC_HIDDEN;
+ extern HRESULT MXWriter_create(MSXML_VERSION, void**) DECLSPEC_HIDDEN;
+diff --git a/dlls/msxml3/tests/httpreq.c b/dlls/msxml3/tests/httpreq.c
+index 74c302d5eb..f22c9831a1 100644
+--- a/dlls/msxml3/tests/httpreq.c
++++ b/dlls/msxml3/tests/httpreq.c
+@@ -27,8 +27,8 @@
+ 
+ #include "windows.h"
+ 
+-#include "msxml2.h"
+-#include "msxml2did.h"
++#include "msxml6.h"
++#include "msxml6did.h"
+ #include "dispex.h"
+ 
+ #include "initguid.h"
+@@ -1334,6 +1334,17 @@ static IXMLHttpRequest *create_xhr(void)
+     return SUCCEEDED(hr) ? ret : NULL;
+ }
+ 
++static IXMLHTTPRequest2 *create_xhr2(void)
++{
++    IXMLHTTPRequest2 *ret;
++    HRESULT hr;
++
++    hr = CoCreateInstance(&CLSID_FreeThreadedXMLHTTP60, NULL, CLSCTX_INPROC_SERVER,
++        &IID_IXMLHTTPRequest2, (void**)&ret);
++
++    return SUCCEEDED(hr) ? ret : NULL;
++}
++
+ static IServerXMLHTTPRequest *create_server_xhr(void)
+ {
+     IServerXMLHTTPRequest *ret;
+@@ -1893,11 +1904,388 @@ static void test_supporterrorinfo(void)
+     IServerXMLHTTPRequest_Release(server_xhr);
+ }
+ 
++struct xhr3_callback
++{
++    IXMLHTTPRequest3Callback IXMLHTTPRequest3Callback_iface;
++    LONG ref;
++    HANDLE event;
++};
++
++static inline struct xhr3_callback *xhr3_callback_from_IXMLHTTPRequest3Callback(IXMLHTTPRequest3Callback *iface)
++{
++    return CONTAINING_RECORD(iface, struct xhr3_callback, IXMLHTTPRequest3Callback_iface);
++}
++
++static HRESULT WINAPI xhr3_callback_QueryInterface(IXMLHTTPRequest3Callback *iface, REFIID riid, void **obj)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    trace("(%p)->(%s %p)\n", This, debugstr_guid(riid), obj);
++
++    if (IsEqualGUID(riid, &IID_IXMLHTTPRequest3Callback) || IsEqualGUID(riid, &IID_IXMLHTTPRequest2Callback) || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        IXMLHTTPRequest3Callback_AddRef(iface);
++        *obj = iface;
++        return S_OK;
++    }
++
++    ok(0, "unexpected interface %s\n", debugstr_guid(riid));
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI xhr3_callback_AddRef(IXMLHTTPRequest3Callback *iface)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++    trace("(%p)->(%u)\n", This, ref);
++    return ref;
++}
++
++static ULONG WINAPI xhr3_callback_Release(IXMLHTTPRequest3Callback *iface)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++    trace("(%p)->(%u)\n", This, ref);
++    if (ref == 0) HeapFree(GetProcessHeap(), 0, This);
++    return ref;
++}
++
++static HRESULT WINAPI xhr3_callback_OnRedirect(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest2 *request, const WCHAR* redirect_url)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    trace("(%p)->(%p %s)\n", This, request, debugstr_w(redirect_url));
++    return S_OK;
++}
++
++static HRESULT WINAPI xhr3_callback_OnHeadersAvailable(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest2 *request, DWORD status, const WCHAR *status_str)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    WCHAR *header = NULL;
++    HRESULT hr;
++
++    trace("(%p)->(%p %d %s)\n", This, request, status, debugstr_w(status_str));
++
++    header = (void *)0xdeadbeef;
++    hr = IXMLHTTPRequest2_GetResponseHeader(request, L"Content-Length", &header);
++    trace("Content-Length: %p (%s), hr %#x\n", header, debugstr_w(header), hr);
++
++    return S_OK;
++}
++
++static HRESULT WINAPI xhr3_callback_OnDataAvailable(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest2 *request, ISequentialStream *response)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    trace("(%p)->(%p %p)\n", This, request, response);
++    return S_OK;
++}
++
++static HRESULT WINAPI xhr3_callback_OnResponseReceived(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest2 *request, ISequentialStream *response)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    WCHAR *header = NULL;
++    char *buffer = HeapAlloc( GetProcessHeap(), 0, 256 );
++    ULONG read_size = 0;
++    HRESULT hr;
++
++    memset(buffer, '?', 256);
++    buffer[255] = 0;
++
++    trace("(%p)->(%p %p)\n", This, request, response);
++
++    header = (void *)0xdeadbeef;
++    hr = IXMLHTTPRequest2_GetResponseHeader(request, L"Cache-Control", &header);
++    trace("Cache-Control: %p (%s), hr %#x\n", header, debugstr_w(header), hr);
++
++    header = (void *)0xdeadbeef;
++    hr = IXMLHTTPRequest2_GetResponseHeader(request, L"Expires", &header);
++    trace("Expires: %p (%s), hr %#x\n", header, debugstr_w(header), hr);
++
++    header = (void *)0xdeadbeef;
++    hr = IXMLHTTPRequest2_GetResponseHeader(request, L"Content-Type", &header);
++    trace("Content-Type: %p (%s), hr %#x\n", header, debugstr_w(header), hr);
++
++    read_size = 0xdeadbeef;
++    hr = ISequentialStream_Read(response, buffer, 214, &read_size);
++    trace("Response: (%d) %s, hr %#x\n", read_size, debugstr_a(buffer), hr);
++
++    read_size = 0xdeadbeef;
++    hr = ISequentialStream_Read(response, buffer, 1, &read_size);
++    trace("Response: (%d) %s, hr %#x\n", read_size, debugstr_a(buffer), hr);
++
++    HeapFree( GetProcessHeap(), 0, buffer );
++    SetEvent(This->event);
++
++    return S_OK;
++}
++
++static HRESULT WINAPI xhr3_callback_OnError(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest2 *request, HRESULT error)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    trace("(%p)->(%p %#x)\n", This, request, error);
++    SetEvent(This->event);
++    return S_OK;
++}
++
++static HRESULT WINAPI xhr3_callback_OnServerCertificateReceived(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest3 *request, DWORD errors, DWORD chain_size, const XHR_CERT *chain)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    trace("(%p)->(%p %u %u %p)\n", This, request, errors, chain_size, chain);
++    return S_OK;
++}
++
++static HRESULT WINAPI xhr3_callback_OnClientCertificateRequested(IXMLHTTPRequest3Callback *iface,
++        IXMLHTTPRequest3 *request, DWORD issuers_size, const WCHAR **issuers)
++{
++    struct xhr3_callback *This = xhr3_callback_from_IXMLHTTPRequest3Callback(iface);
++    trace("(%p)->(%p %u %p)\n", This, request, issuers_size, issuers);
++    return S_OK;
++}
++
++static const IXMLHTTPRequest3CallbackVtbl xhr3_callback_vtbl =
++{
++    xhr3_callback_QueryInterface,
++    xhr3_callback_AddRef,
++    xhr3_callback_Release,
++    /* IXMLHTTPRequest2Callback methods */
++    xhr3_callback_OnRedirect,
++    xhr3_callback_OnHeadersAvailable,
++    xhr3_callback_OnDataAvailable,
++    xhr3_callback_OnResponseReceived,
++    xhr3_callback_OnError,
++    /* IXMLHTTPRequest3Callback methods */
++    xhr3_callback_OnServerCertificateReceived,
++    xhr3_callback_OnClientCertificateRequested,
++};
++
++static IXMLHTTPRequest2Callback* xhr3_callback_create(HANDLE event)
++{
++    struct xhr3_callback *This = HeapAlloc(GetProcessHeap(), 0, sizeof(*This));
++    ok(This != NULL, "failed to allocate object\n");
++    if (!This) return NULL;
++
++    This->IXMLHTTPRequest3Callback_iface.lpVtbl = &xhr3_callback_vtbl;
++    This->ref = 1;
++    This->event = event;
++
++    return (IXMLHTTPRequest2Callback*)&This->IXMLHTTPRequest3Callback_iface;
++}
++
++struct xhr2_stream
++{
++    IStream IStream_iface;
++    LONG ref;
++    IStream *stream;
++};
++
++static inline struct xhr2_stream *xhr2_stream_from_IStream(IStream *iface)
++{
++    return CONTAINING_RECORD(iface, struct xhr2_stream, IStream_iface);
++}
++
++static HRESULT WINAPI xhr2_stream_QueryInterface(IStream *iface, REFIID riid, void **obj)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%s %p)\n", This, debugstr_guid(riid), obj);
++
++    if (IsEqualGUID(riid, &IID_IStream) || IsEqualGUID(riid, &IID_ISequentialStream) || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        IStream_AddRef(iface);
++        *obj = iface;
++        return S_OK;
++    }
++
++    ok(0, "unexpected interface %s\n", debugstr_guid(riid));
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI xhr2_stream_AddRef(IStream *iface)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++    trace("(%p)->(%u)\n", This, ref);
++    return ref;
++}
++
++static ULONG WINAPI xhr2_stream_Release(IStream *iface)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++    trace("(%p)->(%u)\n", This, ref);
++    if (ref == 0)
++    {
++        IStream_Release(This->stream);
++        HeapFree(GetProcessHeap(), 0, This);
++    }
++    return ref;
++}
++
++static HRESULT WINAPI xhr2_stream_Read(IStream *iface, void *pv, ULONG cb,
++        ULONG *pcbRead)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%p %u %p)\n", This, pv, cb, pcbRead);
++    return IStream_Read(This->stream, pv, cb, pcbRead);
++}
++
++static HRESULT WINAPI xhr2_stream_Write(IStream *iface, const void *pv,
++        ULONG cb, ULONG *pcbWritten)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%p %u %p)\n", This, pv, cb, pcbWritten);
++    return IStream_Write(This->stream, pv, cb, pcbWritten);
++}
++
++static HRESULT WINAPI xhr2_stream_Seek(IStream *iface, LARGE_INTEGER dlibMove,
++        DWORD dwOrigin, ULARGE_INTEGER *plibNewPosition)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%lu, %u %p)\n", This, dlibMove.QuadPart, dwOrigin, plibNewPosition);
++    return IStream_Seek(This->stream, dlibMove, dwOrigin, plibNewPosition);
++}
++
++static HRESULT WINAPI xhr2_stream_SetSize(IStream *iface, ULARGE_INTEGER libNewSize)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%lu)\n", This, libNewSize.QuadPart);
++    return IStream_SetSize(This->stream, libNewSize);
++}
++
++static HRESULT WINAPI xhr2_stream_CopyTo(IStream *iface, IStream *pstm,
++        ULARGE_INTEGER cb, ULARGE_INTEGER *pcbRead, ULARGE_INTEGER *pcbWritten)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%p %lu %p %p)\n", This, pstm, cb.QuadPart, pcbRead, pcbWritten);
++    return IStream_CopyTo(This->stream, pstm, cb, pcbRead, pcbWritten);
++}
++
++static HRESULT WINAPI xhr2_stream_Commit(IStream *iface, DWORD grfCommitFlags)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%#x)\n", This, grfCommitFlags);
++    return IStream_Commit(This->stream, grfCommitFlags);
++}
++
++static HRESULT WINAPI xhr2_stream_Revert(IStream *iface)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->()\n", This);
++    return IStream_Revert(This->stream);
++}
++
++static HRESULT WINAPI xhr2_stream_LockRegion(IStream *iface, ULARGE_INTEGER libOffset,
++        ULARGE_INTEGER cb, DWORD dwLockType)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%lu %lu %u)\n", This, libOffset.QuadPart, cb.QuadPart, dwLockType);
++    return IStream_LockRegion(This->stream, libOffset, cb, dwLockType);
++}
++
++static HRESULT WINAPI xhr2_stream_UnlockRegion(IStream *iface, ULARGE_INTEGER libOffset,
++        ULARGE_INTEGER cb, DWORD dwLockType)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%lu %lu %u)\n", This, libOffset.QuadPart, cb.QuadPart, dwLockType);
++    return IStream_UnlockRegion(This->stream, libOffset, cb, dwLockType);
++}
++
++static HRESULT WINAPI xhr2_stream_Stat(IStream *iface, STATSTG *pstatstg, DWORD grfStatFlag)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%p %#x)\n", This, pstatstg, grfStatFlag);
++    return IStream_Stat(This->stream, pstatstg, grfStatFlag);
++}
++
++static HRESULT WINAPI xhr2_stream_Clone(IStream *iface, IStream **ppstm)
++{
++    struct xhr2_stream *This = xhr2_stream_from_IStream(iface);
++    trace("(%p)->(%p)\n", This, ppstm);
++    return IStream_Clone(This->stream, ppstm);
++}
++
++static const IStreamVtbl xhr2_stream_vtbl =
++{
++    xhr2_stream_QueryInterface,
++    xhr2_stream_AddRef,
++    xhr2_stream_Release,
++    /* IStream methods */
++    xhr2_stream_Read,
++    xhr2_stream_Write,
++    xhr2_stream_Seek,
++    xhr2_stream_SetSize,
++    xhr2_stream_CopyTo,
++    xhr2_stream_Commit,
++    xhr2_stream_Revert,
++    xhr2_stream_LockRegion,
++    xhr2_stream_UnlockRegion,
++    xhr2_stream_Stat,
++    xhr2_stream_Clone
++};
++
++static ISequentialStream *xhr2_stream_create(void)
++{
++    struct xhr2_stream *This = HeapAlloc(GetProcessHeap(), 0, sizeof(*This));
++    ok(This != NULL, "failed to allocate object\n");
++    if (!This) return NULL;
++
++    This->IStream_iface.lpVtbl = &xhr2_stream_vtbl;
++    This->ref = 1;
++    CreateStreamOnHGlobal(NULL, TRUE, &This->stream);
++
++    return (ISequentialStream*)&This->IStream_iface;
++}
++
++static void test_IXMLHTTPRequest2(void)
++{
++    IXMLHTTPRequest2 *xhr2[16];
++    IXMLHTTPRequest2Callback *xhr3_callback;
++    ISequentialStream *stream;
++    HANDLE events[16];
++    HRESULT hr;
++    int i = 0;
++
++    if (!(xhr2[i] = create_xhr2()))
++    {
++        win_skip("IXMLHTTPRequest2 is not available\n");
++        return;
++    }
++
++    events[i] = CreateEventW(NULL, FALSE, FALSE, NULL);
++    if (!(xhr3_callback = xhr3_callback_create(events[i])))
++        return;
++
++    trace("IXMLHTTPRequest2_Open (%p)->(L\"GET\", L\"http://test.winehq.org/\", xhr3_callback, NULL, NULL, NULL, NULL)\n", GetCurrentThreadId(), xhr2[i]);
++    hr = IXMLHTTPRequest2_Open(xhr2[i], L"GET", L"http://test.winehq.org/", xhr3_callback, NULL, NULL, NULL, NULL);
++    ok(SUCCEEDED(hr), "IXMLHTTPRequest2_Send failed %#x\n", hr);
++
++    if ((stream = xhr2_stream_create()))
++    {
++        trace("IXMLHTTPRequest2_Send (%p)->(%p 0)\n", GetCurrentThreadId(), xhr2[i], stream);
++        hr = IXMLHTTPRequest2_Send(xhr2[i], stream, 0);
++        ok(SUCCEEDED(hr), "IXMLHTTPRequest2_Send failed %#x\n", hr);
++
++        ISequentialStream_Release(stream);
++    }
++
++    IXMLHTTPRequest2Callback_Release(xhr3_callback);
++    i++;
++
++    while (i--)
++    {
++        WaitForSingleObject(events[i], INFINITE);
++        IXMLHTTPRequest2_Release(xhr2[i]);
++    }
++}
++
+ START_TEST(httpreq)
+ {
+     IXMLHttpRequest *xhr;
+ 
+-    CoInitialize(NULL);
++    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+ 
+     if (!(xhr = create_xhr()))
+     {
+@@ -1912,6 +2300,7 @@ START_TEST(httpreq)
+     test_server_xhr();
+     test_safe_httpreq();
+     test_supporterrorinfo();
++    test_IXMLHTTPRequest2();
+ 
+     CoUninitialize();
+ }
+-- 
+2.28.0
+

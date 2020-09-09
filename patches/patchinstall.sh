@@ -157,6 +157,7 @@ patch_enable_all ()
 	enable_mshtml_TranslateAccelerator="$1"
 	enable_msi_msi_vcl_get_cost="$1"
 	enable_msvcrt_Math_Precision="$1"
+	enable_msxml3_FreeThreadedXMLHTTP60="$1"
 	enable_netutils_dll="$1"
 	enable_ntdll_APC_Performance="$1"
 	enable_ntdll_Activation_Context="$1"
@@ -566,6 +567,9 @@ patch_enable ()
 			;;
 		msvcrt-Math_Precision)
 			enable_msvcrt_Math_Precision="$2"
+			;;
+		msxml3-FreeThreadedXMLHTTP60)
+			enable_msxml3_FreeThreadedXMLHTTP60="$2"
 			;;
 		netutils-dll)
 			enable_netutils_dll="$2"
@@ -2856,6 +2860,24 @@ fi
 # |
 if test "$enable_msvcrt_Math_Precision" -eq 1; then
 	patch_apply msvcrt-Math_Precision/0001-msvcrt-Calculate-sinh-cosh-exp-pow-with-higher-preci.patch
+fi
+
+# Patchset msxml3-FreeThreadedXMLHTTP60
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49740] msxml3: Implement FreeThreadedXMLHTTP60.
+# |
+# | Modified files:
+# |   *	dlls/msxml3/Makefile.in, dlls/msxml3/factory.c, dlls/msxml3/httprequest.c, dlls/msxml3/msxml_private.h,
+# | 	dlls/msxml3/tests/httpreq.c, dlls/msxml3/tests/saxreader.c, dlls/msxml3/tests/schema.c, dlls/msxml3/uuid.c,
+# | 	include/msxml2.idl, include/msxml6.idl
+# |
+if test "$enable_msxml3_FreeThreadedXMLHTTP60" -eq 1; then
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0001-msxml3-Use-msxml6-header-for-defining-GUIDs.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0002-msxml3-tests-Use-msxml6.h-where-required.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0003-include-Remove-interfaces-already-define-in-msxml6.i.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0004-include-Add-IXMLHTTPRequest2-3-interfaces.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0005-msxml3-Implement-FreeThreadedXMLHTTP60.patch
 fi
 
 # Patchset netutils-dll

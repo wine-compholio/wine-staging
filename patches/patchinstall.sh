@@ -145,6 +145,7 @@ patch_enable_all ()
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
+	enable_kernelbase_CreateFile2="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_loader_KeyboardLayouts="$1"
@@ -529,6 +530,9 @@ patch_enable ()
 			;;
 		kernel32-SetProcessDEPPolicy)
 			enable_kernel32_SetProcessDEPPolicy="$2"
+			;;
+		kernelbase-CreateFile2)
+			enable_kernelbase_CreateFile2="$2"
 			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
@@ -1893,7 +1897,8 @@ fi
 # |   *	[#49740] combase: Implement CoCreateInstanceFromApp semi-stub.
 # |
 # | Modified files:
-# |   *	dlls/combase/combase.c, dlls/combase/combase.spec, dlls/ole32/ole32.spec
+# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
+# | 	com-l1-1-1.spec, dlls/combase/combase.c, dlls/combase/combase.spec, dlls/ole32/ole32.spec
 # |
 if test "$enable_combase_CoCreateInstanceFromApp" -eq 1; then
 	patch_apply combase-CoCreateInstanceFromApp/0001-combase-Implement-CoCreateInstanceFromApp-semi-stub.patch
@@ -2708,6 +2713,18 @@ if test "$enable_kernel32_SetProcessDEPPolicy" -eq 1; then
 	patch_apply kernel32-SetProcessDEPPolicy/0001-kernel32-Implement-SetProcessDEPPolicy.patch
 	patch_apply kernel32-SetProcessDEPPolicy/0002-kernel32-Implement-GetSystemDEPPolicy.patch
 	patch_apply kernel32-SetProcessDEPPolicy/0003-kernel32-Make-system-DEP-policy-affect-GetProcessDEP.patch
+fi
+
+# Patchset kernelbase-CreateFile2
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49740] kernelbase: Also pass CreateFile2 flags to CreateFileW.
+# |
+# | Modified files:
+# |   *	dlls/kernelbase/file.c
+# |
+if test "$enable_kernelbase_CreateFile2" -eq 1; then
+	patch_apply kernelbase-CreateFile2/0001-kernelbase-Also-pass-CreateFile2-flags-to-CreateFile.patch
 fi
 
 # Patchset krnl386.exe16-GDT_LDT_Emulation

@@ -91,6 +91,7 @@ patch_enable_all ()
 	enable_atl_AtlAxDialogBox="$1"
 	enable_bcrypt_ECDHSecretAgreement="$1"
 	enable_cmd_launch_association="$1"
+	enable_combase_CoCreateInstanceFromApp="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_rebar_capture="$1"
 	enable_comctl32_version_6="$1"
@@ -366,6 +367,9 @@ patch_enable ()
 			;;
 		cmd-launch-association)
 			enable_cmd_launch_association="$2"
+			;;
+		combase-CoCreateInstanceFromApp)
+			enable_combase_CoCreateInstanceFromApp="$2"
 			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
@@ -1881,6 +1885,18 @@ fi
 if test "$enable_cmd_launch_association" -eq 1; then
 	patch_apply cmd-launch-association/0001-cmd-Support-for-launching-programs-based-on-file-ass.patch
 	patch_apply cmd-launch-association/0002-cmd-ftype-failed-to-clear-file-associations.patch
+fi
+
+# Patchset combase-CoCreateInstanceFromApp
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49740] combase: Implement CoCreateInstanceFromApp semi-stub.
+# |
+# | Modified files:
+# |   *	dlls/combase/combase.c, dlls/combase/combase.spec, dlls/ole32/ole32.spec
+# |
+if test "$enable_combase_CoCreateInstanceFromApp" -eq 1; then
+	patch_apply combase-CoCreateInstanceFromApp/0001-combase-Implement-CoCreateInstanceFromApp-semi-stub.patch
 fi
 
 # Patchset comctl32-Listview_DrawItem

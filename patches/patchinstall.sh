@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "8827eb6a83348057293f89be535ccb74607db608"
+	echo "0ead40dc9b87ebbd74ad6ebda0182365ab2efde3"
 }
 
 # Show version information
@@ -91,12 +91,10 @@ patch_enable_all ()
 	enable_atl_AtlAxDialogBox="$1"
 	enable_bcrypt_ECDHSecretAgreement="$1"
 	enable_cmd_launch_association="$1"
-	enable_combase_CoCreateInstanceFromApp="$1"
 	enable_comctl32_Listview_DrawItem="$1"
 	enable_comctl32_rebar_capture="$1"
 	enable_comctl32_version_6="$1"
 	enable_comdlg32_lpstrFileTitle="$1"
-	enable_configure_Absolute_RPATH="$1"
 	enable_crypt32_CMS_Certificates="$1"
 	enable_cryptext_CryptExtOpenCER="$1"
 	enable_d3d11_Deferred_Context="$1"
@@ -145,7 +143,6 @@ patch_enable_all ()
 	enable_kernel32_Job_Tests="$1"
 	enable_kernel32_Processor_Group="$1"
 	enable_kernel32_SetProcessDEPPolicy="$1"
-	enable_kernelbase_CreateFile2="$1"
 	enable_krnl386_exe16_GDT_LDT_Emulation="$1"
 	enable_krnl386_exe16_Invalid_Console_Handles="$1"
 	enable_loader_KeyboardLayouts="$1"
@@ -193,7 +190,6 @@ patch_enable_all ()
 	enable_ntdll_Syscall_Emulation="$1"
 	enable_ntdll_SystemCodeIntegrityInformation="$1"
 	enable_ntdll_SystemExtendedProcessInformation="$1"
-	enable_ntdll_SystemInterruptInformation="$1"
 	enable_ntdll_SystemModuleInformation="$1"
 	enable_ntdll_WRITECOPY="$1"
 	enable_ntdll_Zero_mod_name="$1"
@@ -371,9 +367,6 @@ patch_enable ()
 		cmd-launch-association)
 			enable_cmd_launch_association="$2"
 			;;
-		combase-CoCreateInstanceFromApp)
-			enable_combase_CoCreateInstanceFromApp="$2"
-			;;
 		comctl32-Listview_DrawItem)
 			enable_comctl32_Listview_DrawItem="$2"
 			;;
@@ -385,9 +378,6 @@ patch_enable ()
 			;;
 		comdlg32-lpstrFileTitle)
 			enable_comdlg32_lpstrFileTitle="$2"
-			;;
-		configure-Absolute_RPATH)
-			enable_configure_Absolute_RPATH="$2"
 			;;
 		crypt32-CMS_Certificates)
 			enable_crypt32_CMS_Certificates="$2"
@@ -533,9 +523,6 @@ patch_enable ()
 		kernel32-SetProcessDEPPolicy)
 			enable_kernel32_SetProcessDEPPolicy="$2"
 			;;
-		kernelbase-CreateFile2)
-			enable_kernelbase_CreateFile2="$2"
-			;;
 		krnl386.exe16-GDT_LDT_Emulation)
 			enable_krnl386_exe16_GDT_LDT_Emulation="$2"
 			;;
@@ -676,9 +663,6 @@ patch_enable ()
 			;;
 		ntdll-SystemExtendedProcessInformation)
 			enable_ntdll_SystemExtendedProcessInformation="$2"
-			;;
-		ntdll-SystemInterruptInformation)
-			enable_ntdll_SystemInterruptInformation="$2"
 			;;
 		ntdll-SystemModuleInformation)
 			enable_ntdll_SystemModuleInformation="$2"
@@ -1899,19 +1883,6 @@ if test "$enable_cmd_launch_association" -eq 1; then
 	patch_apply cmd-launch-association/0002-cmd-ftype-failed-to-clear-file-associations.patch
 fi
 
-# Patchset combase-CoCreateInstanceFromApp
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49740] combase: Implement CoCreateInstanceFromApp semi-stub.
-# |
-# | Modified files:
-# |   *	dlls/api-ms-win-core-com-l1-1-0/api-ms-win-core-com-l1-1-0.spec, dlls/api-ms-win-core-com-l1-1-1/api-ms-win-core-
-# | 	com-l1-1-1.spec, dlls/combase/combase.c, dlls/combase/combase.spec, dlls/ole32/ole32.spec
-# |
-if test "$enable_combase_CoCreateInstanceFromApp" -eq 1; then
-	patch_apply combase-CoCreateInstanceFromApp/0001-combase-Implement-CoCreateInstanceFromApp-semi-stub.patch
-fi
-
 # Patchset comctl32-Listview_DrawItem
 # |
 # | This patchset fixes the following Wine bugs:
@@ -1956,18 +1927,6 @@ fi
 # |
 if test "$enable_comdlg32_lpstrFileTitle" -eq 1; then
 	patch_apply comdlg32-lpstrFileTitle/0001-comdlg32-Postpone-setting-ofn-lpstrFileTitle-to-work.patch
-fi
-
-# Patchset configure-Absolute_RPATH
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#26256] Support for setcap on wine-preloader
-# |
-# | Modified files:
-# |   *	configure.ac
-# |
-if test "$enable_configure_Absolute_RPATH" -eq 1; then
-	patch_apply configure-Absolute_RPATH/0001-configure-Also-add-the-absolute-RPATH-when-linking-a.patch
 fi
 
 # Patchset crypt32-CMS_Certificates
@@ -2723,18 +2682,6 @@ if test "$enable_kernel32_SetProcessDEPPolicy" -eq 1; then
 	patch_apply kernel32-SetProcessDEPPolicy/0003-kernel32-Make-system-DEP-policy-affect-GetProcessDEP.patch
 fi
 
-# Patchset kernelbase-CreateFile2
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#49740] kernelbase: Also pass CreateFile2 flags to CreateFileW.
-# |
-# | Modified files:
-# |   *	dlls/kernelbase/file.c
-# |
-if test "$enable_kernelbase_CreateFile2" -eq 1; then
-	patch_apply kernelbase-CreateFile2/0001-kernelbase-Also-pass-CreateFile2-flags-to-CreateFile.patch
-fi
-
 # Patchset krnl386.exe16-GDT_LDT_Emulation
 # |
 # | This patchset fixes the following Wine bugs:
@@ -3027,14 +2974,13 @@ fi
 # | 	Empires II, MSYS2)
 # |
 # | Modified files:
-# |   *	dlls/advapi32/crypt.c, dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/unix/loader.c,
-# | 	dlls/ntdll/unix/server.c, dlls/ntdll/unix/signal_arm.c, dlls/ntdll/unix/signal_arm64.c, dlls/ntdll/unix/signal_i386.c,
+# |   *	dlls/advapi32/tests/security.c, dlls/kernel32/tests/virtual.c, dlls/ntdll/unix/loader.c, dlls/ntdll/unix/server.c,
+# | 	dlls/ntdll/unix/signal_arm.c, dlls/ntdll/unix/signal_arm64.c, dlls/ntdll/unix/signal_i386.c,
 # | 	dlls/ntdll/unix/signal_x86_64.c, dlls/ntdll/unix/unix_private.h, dlls/ntdll/unix/virtual.c,
 # | 	dlls/psapi/tests/psapi_main.c
 # |
 if test "$enable_ntdll_WRITECOPY" -eq 1; then
 	patch_apply ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
-	patch_apply ntdll-WRITECOPY/0002-advapi-Trigger-write-watches-before-passing-userdata.patch
 	patch_apply ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch
 	patch_apply ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch
 	patch_apply ntdll-WRITECOPY/0005-ntdll-Track-if-a-WRITECOPY-page-has-been-modified.patch
@@ -3410,18 +3356,6 @@ fi
 # |
 if test "$enable_ntdll_SystemCodeIntegrityInformation" -eq 1; then
 	patch_apply ntdll-SystemCodeIntegrityInformation/0001-ntdll-NtQuerySystemInformation-support-SystemCodeInt.patch
-fi
-
-# Patchset ntdll-SystemInterruptInformation
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39123] Return buffer filled with random values from SystemInterruptInformation
-# |
-# | Modified files:
-# |   *	dlls/ntdll/unix/system.c
-# |
-if test "$enable_ntdll_SystemInterruptInformation" -eq 1; then
-	patch_apply ntdll-SystemInterruptInformation/0001-ntdll-Return-buffer-filled-with-random-values-from-S.patch
 fi
 
 # Patchset ntdll-SystemModuleInformation

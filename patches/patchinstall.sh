@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "1a0470443d12f6fc4c241a93af5bc34aa03b34b3"
+	echo "01bacebba418bf6f58a644b1aab41be215bd200a"
 }
 
 # Show version information
@@ -215,7 +215,6 @@ patch_enable_all ()
 	enable_quartz_MediaSeeking_Positions="$1"
 	enable_riched20_Class_Tests="$1"
 	enable_riched20_IText_Interface="$1"
-	enable_server_Desktop_Refcount="$1"
 	enable_server_FileEndOfFileInformation="$1"
 	enable_server_File_Permissions="$1"
 	enable_server_Inherited_ACLs="$1"
@@ -263,7 +262,6 @@ patch_enable_all ()
 	enable_user32_QueryDisplayConfig="$1"
 	enable_user32_Refresh_MDI_Menus="$1"
 	enable_user32_ScrollWindowEx="$1"
-	enable_user32_ShowWindow="$1"
 	enable_user32_msgbox_Support_WM_COPY_mesg="$1"
 	enable_user32_rawinput_hid="$1"
 	enable_user32_rawinput_mouse="$1"
@@ -329,7 +327,6 @@ patch_enable_all ()
 	enable_ws2_32_APC_Performance="$1"
 	enable_ws2_32_Connect_Time="$1"
 	enable_ws2_32_TransmitFile="$1"
-	enable_ws2_32_WSACleanup="$1"
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
@@ -739,9 +736,6 @@ patch_enable ()
 		riched20-IText_Interface)
 			enable_riched20_IText_Interface="$2"
 			;;
-		server-Desktop_Refcount)
-			enable_server_Desktop_Refcount="$2"
-			;;
 		server-FileEndOfFileInformation)
 			enable_server_FileEndOfFileInformation="$2"
 			;;
@@ -882,9 +876,6 @@ patch_enable ()
 			;;
 		user32-ScrollWindowEx)
 			enable_user32_ScrollWindowEx="$2"
-			;;
-		user32-ShowWindow)
-			enable_user32_ShowWindow="$2"
 			;;
 		user32-msgbox-Support-WM_COPY-mesg)
 			enable_user32_msgbox_Support_WM_COPY_mesg="$2"
@@ -1080,9 +1071,6 @@ patch_enable ()
 			;;
 		ws2_32-TransmitFile)
 			enable_ws2_32_TransmitFile="$2"
-			;;
-		ws2_32-WSACleanup)
-			enable_ws2_32_WSACleanup="$2"
 			;;
 		ws2_32-getaddrinfo)
 			enable_ws2_32_getaddrinfo="$2"
@@ -1443,13 +1431,6 @@ patch_apply()
 }
 
 
-if test "$enable_ws2_32_TransmitFile" -eq 1; then
-	if test "$enable_server_Desktop_Refcount" -gt 1; then
-		abort "Patchset server-Desktop_Refcount disabled, but ws2_32-TransmitFile depends on that."
-	fi
-	enable_server_Desktop_Refcount=1
-fi
-
 if test "$enable_winex11_WM_WINDOWPOSCHANGING" -eq 1; then
 	if test "$enable_winex11__NET_ACTIVE_WINDOW" -gt 1; then
 		abort "Patchset winex11-_NET_ACTIVE_WINDOW disabled, but winex11-WM_WINDOWPOSCHANGING depends on that."
@@ -1579,13 +1560,6 @@ if test "$enable_server_File_Permissions" -eq 1; then
 		abort "Patchset ntdll-Junction_Points disabled, but server-File_Permissions depends on that."
 	fi
 	enable_ntdll_Junction_Points=1
-fi
-
-if test "$enable_server_Desktop_Refcount" -eq 1; then
-	if test "$enable_ws2_32_WSACleanup" -gt 1; then
-		abort "Patchset ws2_32-WSACleanup disabled, but server-Desktop_Refcount depends on that."
-	fi
-	enable_ws2_32_WSACleanup=1
 fi
 
 if test "$enable_oleaut32_OLEPictureImpl_SaveAsFile" -eq 1; then
@@ -2234,6 +2208,7 @@ fi
 # Patchset ddraw-Device_Caps
 # |
 # | This patchset fixes the following Wine bugs:
+# |   *	[#37019] Don't set HWTRANSFORMANDLIGHT flag on d3d7 RGB device
 # |   *	[#27002] Properly initialize caps->dwZBufferBitDepths in ddraw7_GetCaps
 # |
 # | Modified files:
@@ -3624,41 +3599,6 @@ if test "$enable_riched20_IText_Interface" -eq 1; then
 	patch_apply riched20-IText_Interface/0010-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
 fi
 
-# Patchset ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#18670] Properly close sockets when WSACleanup is called
-# |
-# | Modified files:
-# |   *	dlls/ntdll/ntdll.spec, dlls/ntdll/unix/server.c, dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/wine/server.h,
-# | 	server/protocol.def, server/sock.c
-# |
-if test "$enable_ws2_32_WSACleanup" -eq 1; then
-	patch_apply ws2_32-WSACleanup/0001-ws2_32-Proper-WSACleanup-implementation-using-winese.patch
-	patch_apply ws2_32-WSACleanup/0002-ws2_32-Invalidate-client-side-file-descriptor-cache-.patch
-fi
-
-# Patchset server-Desktop_Refcount
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WSACleanup
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#46967] GOG Galaxy doesn't run in virtual desktop.
-# |
-# | Modified files:
-# |   *	programs/explorer/desktop.c, server/async.c, server/atom.c, server/change.c, server/clipboard.c, server/completion.c,
-# | 	server/console.c, server/debugger.c, server/device.c, server/directory.c, server/event.c, server/fd.c, server/file.c,
-# | 	server/handle.c, server/handle.h, server/hook.c, server/mailslot.c, server/mapping.c, server/mutex.c,
-# | 	server/named_pipe.c, server/object.c, server/object.h, server/process.c, server/queue.c, server/registry.c,
-# | 	server/request.c, server/semaphore.c, server/serial.c, server/signal.c, server/sock.c, server/symlink.c,
-# | 	server/thread.c, server/timer.c, server/token.c, server/winstation.c
-# |
-if test "$enable_server_Desktop_Refcount" -eq 1; then
-	patch_apply server-Desktop_Refcount/0001-server-Introduce-a-new-alloc_handle-object-callback..patch
-	patch_apply server-Desktop_Refcount/0002-server-Track-desktop-handle-count-more-correctly.patch
-fi
-
 # Patchset server-FileEndOfFileInformation
 # |
 # | Modified files:
@@ -4304,18 +4244,6 @@ fi
 # |
 if test "$enable_user32_ScrollWindowEx" -eq 1; then
 	patch_apply user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
-fi
-
-# Patchset user32-ShowWindow
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#39731] Fix handling of ShowWindow when window is already visible
-# |
-# | Modified files:
-# |   *	dlls/user32/winpos.c
-# |
-if test "$enable_user32_ShowWindow" -eq 1; then
-	patch_apply user32-ShowWindow/0001-user32-ShowWindow-should-not-send-message-when-windo.patch
 fi
 
 # Patchset user32-msgbox-Support-WM_COPY-mesg
@@ -5122,9 +5050,6 @@ if test "$enable_ws2_32_Connect_Time" -eq 1; then
 fi
 
 # Patchset ws2_32-TransmitFile
-# |
-# | This patchset has the following (direct or indirect) dependencies:
-# |   *	ws2_32-WSACleanup, server-Desktop_Refcount
 # |
 # | Modified files:
 # |   *	dlls/ws2_32/socket.c, dlls/ws2_32/tests/sock.c, include/winsock.h, server/protocol.def, server/sock.c

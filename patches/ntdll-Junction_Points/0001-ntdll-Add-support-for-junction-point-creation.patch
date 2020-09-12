@@ -1,4 +1,4 @@
-From 6e22c1cc4c615e07ac3570e152d15f22aab9eead Mon Sep 17 00:00:00 2001
+From d81e8108c6c13eb865b9588eca19a777b6e22986 Mon Sep 17 00:00:00 2001
 From: "Erich E. Hoover" <erich.e.hoover@gmail.com>
 Date: Thu, 16 Jan 2014 20:56:49 -0700
 Subject: [PATCH] ntdll: Add support for junction point creation.
@@ -6,18 +6,18 @@ Subject: [PATCH] ntdll: Add support for junction point creation.
 Signed-off-by: Erich E. Hoover <erich.e.hoover@gmail.com>
 ---
  configure.ac            |   2 +
- dlls/ntdll/tests/file.c | 101 ++++++++++++++++++++++++++
- dlls/ntdll/unix/file.c  | 155 ++++++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/tests/file.c | 101 +++++++++++++++++++++++++
+ dlls/ntdll/unix/file.c  | 159 ++++++++++++++++++++++++++++++++++++++++
  include/Makefile.in     |   1 +
  include/ntifs.h         |  42 +++++++++++
- 5 files changed, 301 insertions(+)
+ 5 files changed, 305 insertions(+)
  create mode 100644 include/ntifs.h
 
 diff --git a/configure.ac b/configure.ac
-index aef00416461..15c0b7e4c26 100644
+index cf3df03cc9..ed2ebcd653 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2230,6 +2230,8 @@ AC_CHECK_FUNCS(\
+@@ -2210,6 +2210,8 @@ AC_CHECK_FUNCS(\
  	pwrite \
  	readdir \
  	readlink \
@@ -27,7 +27,7 @@ index aef00416461..15c0b7e4c26 100644
  	select \
  	setproctitle \
 diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
-index 1492797b0c9..10bdef5d810 100644
+index 1492797b0c..10bdef5d81 100644
 --- a/dlls/ntdll/tests/file.c
 +++ b/dlls/ntdll/tests/file.c
 @@ -38,6 +38,7 @@
@@ -152,7 +152,7 @@ index 1492797b0c9..10bdef5d810 100644
      test_mailslot_name();
  }
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 290e18e54c5..c2243975e4b 100644
+index 290e18e54c..c0a3dee181 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
 @@ -36,6 +36,7 @@
@@ -171,7 +171,18 @@ index 290e18e54c5..c2243975e4b 100644
  
  WINE_DEFAULT_DEBUG_CHANNEL(file);
  WINE_DECLARE_DEBUG_CHANNEL(winediag);
-@@ -457,6 +459,32 @@ static int xattr_set( const char *path, const char *name, void *value, size_t si
+@@ -146,6 +148,10 @@ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ #undef EXT2_IOC_GETFLAGS
+ #undef EXT4_CASEFOLD_FL
+ 
++#ifndef RENAME_EXCHANGE
++#define RENAME_EXCHANGE		(1 << 1)
++#endif
++
+ #ifdef linux
+ 
+ /* We want the real kernel dirent structure, not the libc one */
+@@ -457,6 +463,32 @@ static int xattr_set( const char *path, const char *name, void *value, size_t si
  #endif
  }
  
@@ -204,7 +215,7 @@ index 290e18e54c5..c2243975e4b 100644
  /* get space from the current directory data buffer, allocating a new one if necessary */
  static void *get_dir_data_space( struct dir_data *data, unsigned int size )
  {
-@@ -5731,6 +5759,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
+@@ -5731,6 +5763,116 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
  }
  
  
@@ -321,7 +332,7 @@ index 290e18e54c5..c2243975e4b 100644
  /******************************************************************************
   *              NtFsControlFile   (NTDLL.@)
   */
-@@ -5813,6 +5951,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
+@@ -5813,6 +5955,23 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
          break;
      }
  
@@ -346,7 +357,7 @@ index 290e18e54c5..c2243975e4b 100644
          TRACE("FSCTL_SET_SPARSE: Ignoring request\n");
          io->Information = 0;
 diff --git a/include/Makefile.in b/include/Makefile.in
-index 49b174ed319..2dbf84e6c36 100644
+index 91a02645c3..9345b75c00 100644
 --- a/include/Makefile.in
 +++ b/include/Makefile.in
 @@ -523,6 +523,7 @@ SOURCES = \
@@ -359,7 +370,7 @@ index 49b174ed319..2dbf84e6c36 100644
  	ntsecapi.h \
 diff --git a/include/ntifs.h b/include/ntifs.h
 new file mode 100644
-index 00000000000..21d42e17325
+index 0000000000..21d42e1732
 --- /dev/null
 +++ b/include/ntifs.h
 @@ -0,0 +1,42 @@

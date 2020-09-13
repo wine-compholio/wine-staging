@@ -57,7 +57,7 @@ upstream_commit()
 # Show version information
 version()
 {
-	echo "Wine Staging 5.17.1"
+	echo "Wine Staging 5.17.2"
 	echo "Copyright (C) 2014-2019 the Wine Staging project authors."
 	echo "Copyright (C) 2018-2020 Alistair Leslie-Hughes"
 	echo ""
@@ -2707,8 +2707,7 @@ fi
 # | 	dlls/winegstreamer/audioconvert.c, dlls/winegstreamer/colorconvert.c, dlls/winegstreamer/gst_cbs.c,
 # | 	dlls/winegstreamer/gst_cbs.h, dlls/winegstreamer/gst_private.h, dlls/winegstreamer/main.c,
 # | 	dlls/winegstreamer/media_source.c, dlls/winegstreamer/mf_decode.c, dlls/winegstreamer/mfplat.c,
-# | 	dlls/winegstreamer/winegstreamer_classes.idl, include/config.h.in, include/mfidl.idl, tools/make_makefiles,
-# | 	tools/makedep.c
+# | 	dlls/winegstreamer/winegstreamer_classes.idl, include/mfidl.idl, tools/make_makefiles, tools/makedep.c
 # |
 if test "$enable_mfplat_streaming_support" -eq 1; then
 	patch_apply mfplat-streaming-support/0001-winegstreamer-Add-a-GstPad-wrapping-the-media-source.patch

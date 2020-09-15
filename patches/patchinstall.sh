@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "01bacebba418bf6f58a644b1aab41be215bd200a"
+	echo "666c5b6e20e3b9e1e34d10b88372406f494699f2"
 }
 
 # Show version information
@@ -1768,7 +1768,7 @@ fi
 # |   *	ntdll-FLS_Callbacks
 # |
 # | Modified files:
-# |   *	dlls/ntdll/Makefile.in, dlls/ntdll/loader.c
+# |   *	Makefile.in, dlls/ntdll/Makefile.in, dlls/ntdll/loader.c
 # |
 if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch
@@ -2871,11 +2871,9 @@ fi
 # | 	include/msxml2.idl, include/msxml6.idl
 # |
 if test "$enable_msxml3_FreeThreadedXMLHTTP60" -eq 1; then
-	patch_apply msxml3-FreeThreadedXMLHTTP60/0001-msxml3-Use-msxml6-header-for-defining-GUIDs.patch
-	patch_apply msxml3-FreeThreadedXMLHTTP60/0002-msxml3-tests-Use-msxml6.h-where-required.patch
-	patch_apply msxml3-FreeThreadedXMLHTTP60/0003-include-Remove-interfaces-already-define-in-msxml6.i.patch
-	patch_apply msxml3-FreeThreadedXMLHTTP60/0004-include-Add-IXMLHTTPRequest2-3-interfaces.patch
-	patch_apply msxml3-FreeThreadedXMLHTTP60/0005-msxml3-Implement-FreeThreadedXMLHTTP60.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0001-include-Remove-interfaces-already-define-in-msxml6.i.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0002-include-Add-IXMLHTTPRequest2-3-interfaces.patch
+	patch_apply msxml3-FreeThreadedXMLHTTP60/0003-msxml3-Implement-FreeThreadedXMLHTTP60.patch
 fi
 
 # Patchset netutils-dll

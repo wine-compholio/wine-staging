@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "26eedec78e50a5f264ea045a37558c41eceba653"
+	echo "2cf69bb5a5b43951abb251f415ccb81e809bd32e"
 }
 
 # Show version information
@@ -274,6 +274,7 @@ patch_enable_all ()
 	enable_version_VerQueryValue="$1"
 	enable_widl_SLTG_Typelib_Support="$1"
 	enable_windows_gaming_input_dll="$1"
+	enable_windows_globalization_dll="$1"
 	enable_windows_media_speech_dll="$1"
 	enable_windowscodecs_GIF_Encoder="$1"
 	enable_windowscodecs_TIFF_Support="$1"
@@ -914,6 +915,9 @@ patch_enable ()
 		windows.gaming.input-dll)
 			enable_windows_gaming_input_dll="$2"
 			;;
+		windows.globalization-dll)
+			enable_windows_globalization_dll="$2"
+			;;
 		windows.media.speech.dll)
 			enable_windows_media_speech_dll="$2"
 			;;
@@ -1465,6 +1469,13 @@ if test "$enable_wineboot_ProxySettings" -eq 1; then
 	fi
 	enable_wineboot_DriveSerial=1
 	enable_wineboot_drivers_etc_Stubs=1
+fi
+
+if test "$enable_windows_globalization_dll" -eq 1; then
+	if test "$enable_windows_media_speech_dll" -gt 1; then
+		abort "Patchset windows.media.speech.dll disabled, but windows.globalization-dll depends on that."
+	fi
+	enable_windows_media_speech_dll=1
 fi
 
 if test "$enable_windows_media_speech_dll" -eq 1; then
@@ -4446,6 +4457,23 @@ fi
 # |
 if test "$enable_windows_media_speech_dll" -eq 1; then
 	patch_apply windows.media.speech.dll/0001-windows.media.speech-Add-stub-dll.patch
+fi
+
+# Patchset windows.globalization-dll
+# |
+# | This patchset has the following (direct or indirect) dependencies:
+# |   *	windows.gaming.input-dll, windows.media.speech.dll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#49740] windows.globalization: New DLL
+# |
+# | Modified files:
+# |   *	configure.ac, dlls/windows.globalization.dll/Makefile.in, dlls/windows.globalization.dll/windows.globalization.spec,
+# | 	dlls/windows.globalization.dll/windows.globalization_main.c, include/Makefile.in, include/windows.globalization.idl,
+# | 	loader/wine.inf.in
+# |
+if test "$enable_windows_globalization_dll" -eq 1; then
+	patch_apply windows.globalization-dll/0001-windows.globalization-Add-stub-dll.patch
 fi
 
 # Patchset windowscodecs-GIF_Encoder

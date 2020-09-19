@@ -51,7 +51,7 @@ usage()
 # Get the upstream commit sha
 upstream_commit()
 {
-	echo "2cf69bb5a5b43951abb251f415ccb81e809bd32e"
+	echo "36e6ea9767473204b0e1635a1d54af3868fa0188"
 }
 
 # Show version information
@@ -332,6 +332,7 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
+	enable_xactengine2_dll="$1"
 	enable_xactengine3_7_PrepareWave="$1"
 }
 
@@ -1088,6 +1089,9 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
+			;;
+		xactengine2-dll)
+			enable_xactengine2_dll="$2"
 			;;
 		xactengine3_7-PrepareWave)
 			enable_xactengine3_7_PrepareWave="$2"
@@ -5133,6 +5137,50 @@ fi
 # |
 if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
+fi
+
+# Patchset xactengine2-dll
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#41048] xactengine2_0: Roller Coaster Rampage
+# |   *	[#49671] xactengine2_4: Supreme Commander demo
+# |   *	[#49668] xactengine2_7: Two Worlds Epic Edition
+# |   *	[#41468] xactengine2_9: Supreme Commander Forged Alliance
+# |
+# | Modified files:
+# |   *	configure, configure.ac, dlls/xactengine2_0/Makefile.in, dlls/xactengine2_0/xactengine2_0.spec,
+# | 	dlls/xactengine2_1/Makefile.in, dlls/xactengine2_1/xactengine2_1.spec, dlls/xactengine2_10/Makefile.in,
+# | 	dlls/xactengine2_10/xact2_classes.idl, dlls/xactengine2_10/xact2_dll.c, dlls/xactengine2_10/xactengine2_10.spec,
+# | 	dlls/xactengine2_2/Makefile.in, dlls/xactengine2_2/xactengine2_2.spec, dlls/xactengine2_3/Makefile.in,
+# | 	dlls/xactengine2_3/xactengine2_3.spec, dlls/xactengine2_4/Makefile.in, dlls/xactengine2_4/xactengine2_4.spec,
+# | 	dlls/xactengine2_5/Makefile.in, dlls/xactengine2_5/xactengine2_5.spec, dlls/xactengine2_6/Makefile.in,
+# | 	dlls/xactengine2_6/xactengine2_6.spec, dlls/xactengine2_7/Makefile.in, dlls/xactengine2_7/xactengine2_7.spec,
+# | 	dlls/xactengine2_8/Makefile.in, dlls/xactengine2_8/xactengine2_8.spec, dlls/xactengine2_9/Makefile.in,
+# | 	dlls/xactengine2_9/xactengine2_9.spec, include/Makefile.in, include/xact.h, include/xact2wb.h
+# |
+if test "$enable_xactengine2_dll" -eq 1; then
+	patch_apply xactengine2-dll/0001-include-Add-xact2wb.h.patch
+	patch_apply xactengine2-dll/0002-include-Add-xact.h.patch
+	patch_apply xactengine2-dll/0003-xactengine2_10-Add-new-dll.patch
+	patch_apply xactengine2-dll/0004-xactengine2_10-Implement-IXACTEngine-interface.patch
+	patch_apply xactengine2-dll/0005-xactengine2_10-Implement-IXACTSoundBank-interface.patch
+	patch_apply xactengine2-dll/0006-xactengine2_10-Implement-IXACTCue-Interface.patch
+	patch_apply xactengine2-dll/0007-xactengine2_10-Implement-IXACTWaveBank-interface.patch
+	patch_apply xactengine2-dll/0008-xactengine2_10-Implement-IXACTEngine-CreateStreaming.patch
+	patch_apply xactengine2-dll/0009-xactengine2_10-Implement-IXACTWave-interface.patch
+	patch_apply xactengine2-dll/0010-xactengine2_10-Implement-IXACTSoundBank-Play-functio.patch
+	patch_apply xactengine2-dll/0011-xactengine2_10-Implement-IXACTWaveBank-Play-function.patch
+	patch_apply xactengine2-dll/0012-xactengine2_10-Implement-IXACTEngine-Un-RegisterNoti.patch
+	patch_apply xactengine2-dll/0013-xactengine2_9-New-Dll.patch
+	patch_apply xactengine2-dll/0014-xactengine2_8-New-Dll.patch
+	patch_apply xactengine2-dll/0015-xactengine2_7-New-Dll.patch
+	patch_apply xactengine2-dll/0016-xactengine2_6-New-Dll.patch
+	patch_apply xactengine2-dll/0017-xactengine2_5-New-Dll.patch
+	patch_apply xactengine2-dll/0018-xactengine2_4-New-Dll.patch
+	patch_apply xactengine2-dll/0019-xactengine2_3-New-Dll.patch
+	patch_apply xactengine2-dll/0020-xactengine2_2-New-Dll.patch
+	patch_apply xactengine2-dll/0021-xactengine2_1-New-Dll.patch
+	patch_apply xactengine2-dll/0022-xactengine2_0-New-Dll.patch
 fi
 
 # Patchset xactengine3_7-PrepareWave

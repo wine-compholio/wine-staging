@@ -1,4 +1,4 @@
-From 65b7fe29b00024cfe5d7d9277927b76f8c4c98d4 Mon Sep 17 00:00:00 2001
+From 31de811f968861971bb6e014286cd34fb6c2f4c8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Wed, 8 Mar 2017 19:39:29 +0100
 Subject: [PATCH] ntdll: Mimic object type behavior for different windows
@@ -11,7 +11,7 @@ Subject: [PATCH] ntdll: Mimic object type behavior for different windows
  3 files changed, 82 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/ntdll/tests/om.c b/dlls/ntdll/tests/om.c
-index abc8a8eef1c..1aa69393c9d 100644
+index 58fd9482720..7deb0b156d8 100644
 --- a/dlls/ntdll/tests/om.c
 +++ b/dlls/ntdll/tests/om.c
 @@ -73,6 +73,7 @@ static NTSTATUS (WINAPI *pNtQuerySystemTime)( LARGE_INTEGER * );
@@ -22,7 +22,7 @@ index abc8a8eef1c..1aa69393c9d 100644
  
  #define KEYEDEVENT_WAIT       0x0001
  #define KEYEDEVENT_WAKE       0x0002
-@@ -1510,13 +1511,31 @@ static void test_query_object(void)
+@@ -1508,13 +1509,31 @@ static void test_query_object(void)
      pNtClose(handle);
  }
  
@@ -55,7 +55,7 @@ index abc8a8eef1c..1aa69393c9d 100644
  
      buffer = HeapAlloc( GetProcessHeap(), 0, sizeof(OBJECT_TYPES_INFORMATION) );
      ok( buffer != NULL, "Failed to allocate memory\n" );
-@@ -1544,11 +1563,54 @@ static void test_query_object_types(void)
+@@ -1542,11 +1561,54 @@ static void test_query_object_types(void)
              ok( type->TypeName.Length == sizeof(typeW) && !strncmpW(typeW, type->TypeName.Buffer, 4),
                  "Expected 'Type' as first type, got %s\n", wine_dbgstr_us(&type->TypeName) );
          }
@@ -110,7 +110,7 @@ index abc8a8eef1c..1aa69393c9d 100644
  }
  
  static void test_type_mismatch(void)
-@@ -2140,6 +2202,7 @@ START_TEST(om)
+@@ -2138,6 +2200,7 @@ START_TEST(om)
      pRtlWaitOnAddress       =  (void *)GetProcAddress(hntdll, "RtlWaitOnAddress");
      pRtlWakeAddressAll      =  (void *)GetProcAddress(hntdll, "RtlWakeAddressAll");
      pRtlWakeAddressSingle   =  (void *)GetProcAddress(hntdll, "RtlWakeAddressSingle");
@@ -119,10 +119,10 @@ index abc8a8eef1c..1aa69393c9d 100644
      test_case_sensitive();
      test_namespace_pipe();
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
-index 10aafef6b58..bd3e8e41267 100644
+index ece09c12f77..9a1659d2f66 100644
 --- a/dlls/ntdll/unix/file.c
 +++ b/dlls/ntdll/unix/file.c
-@@ -7436,7 +7436,10 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
+@@ -6591,7 +6591,10 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
                  }
                  if (status == STATUS_SUCCESS)
                  {
@@ -135,11 +135,11 @@ index 10aafef6b58..bd3e8e41267 100644
              }
          }
 diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
-index 552752b15d0..70c1661f9bb 100644
+index 6c8e50fb88f..201e66d1759 100644
 --- a/dlls/ntdll/unix/system.c
 +++ b/dlls/ntdll/unix/system.c
-@@ -1984,6 +1984,18 @@ static void get_timezone_info( RTL_DYNAMIC_TIME_ZONE_INFORMATION *tzi )
-     pthread_mutex_unlock( &tz_mutex );
+@@ -2035,6 +2035,18 @@ static void get_timezone_info( RTL_DYNAMIC_TIME_ZONE_INFORMATION *tzi )
+     mutex_unlock( &tz_mutex );
  }
  
 +static DWORD translate_object_index(DWORD index)
@@ -157,7 +157,7 @@ index 552752b15d0..70c1661f9bb 100644
  
  /******************************************************************************
   *              NtQuerySystemInformation  (NTDLL.@)
-@@ -2384,7 +2396,7 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+@@ -2435,7 +2447,7 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
                      shi->Handle[i].OwnerPid     = handle_info[i].owner;
                      shi->Handle[i].HandleValue  = handle_info[i].handle;
                      shi->Handle[i].AccessMask   = handle_info[i].access;
@@ -166,7 +166,7 @@ index 552752b15d0..70c1661f9bb 100644
                      /* FIXME: Fill out HandleFlags, ObjectPointer */
                  }
              }
-@@ -2437,7 +2449,7 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+@@ -2488,7 +2500,7 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
                      shi->Handle[i].UniqueProcessId = handle_info[i].owner;
                      shi->Handle[i].HandleValue     = handle_info[i].handle;
                      shi->Handle[i].GrantedAccess   = handle_info[i].access;
@@ -175,7 +175,7 @@ index 552752b15d0..70c1661f9bb 100644
                      /* FIXME: Fill out remaining fields */
                  }
              }
-@@ -2693,7 +2705,6 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+@@ -2724,7 +2736,6 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
      return ret;
  }
  
@@ -184,5 +184,5 @@ index 552752b15d0..70c1661f9bb 100644
   *              NtQuerySystemInformationEx  (NTDLL.@)
   */
 -- 
-2.27.0
+2.28.0
 

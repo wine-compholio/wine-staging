@@ -85,7 +85,6 @@ patch_enable_all ()
 	enable_Compiler_Warnings="$1"
 	enable_Pipelight="$1"
 	enable_Staging="$1"
-	enable_advapi32_CreateRestrictedToken="$1"
 	enable_advapi32_LsaLookupPrivilegeName="$1"
 	enable_api_ms_win_Stub_DLLs="$1"
 	enable_atl_AtlAxDialogBox="$1"
@@ -346,9 +345,6 @@ patch_enable ()
 			;;
 		Staging)
 			enable_Staging="$2"
-			;;
-		advapi32-CreateRestrictedToken)
-			enable_advapi32_CreateRestrictedToken="$2"
 			;;
 		advapi32-LsaLookupPrivilegeName)
 			enable_advapi32_LsaLookupPrivilegeName="$2"
@@ -1784,20 +1780,6 @@ fi
 if test "$enable_Staging" -eq 1; then
 	patch_apply Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch
 	patch_apply Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch
-fi
-
-# Patchset advapi32-CreateRestrictedToken
-# |
-# | This patchset fixes the following Wine bugs:
-# |   *	[#25834] Implement advapi32.CreateRestrictedToken
-# |
-# | Modified files:
-# |   *	dlls/kernelbase/security.c, dlls/ntdll/ntdll.spec, dlls/ntdll/unix/security.c, include/winnt.h, include/winternl.h,
-# | 	server/named_pipe.c, server/process.c, server/protocol.def, server/security.h, server/token.c
-# |
-if test "$enable_advapi32_CreateRestrictedToken" -eq 1; then
-	patch_apply advapi32-CreateRestrictedToken/0001-ntdll-Implement-NtFilterToken.patch
-	patch_apply advapi32-CreateRestrictedToken/0002-advapi32-Implement-CreateRestrictedToken.patch
 fi
 
 # Patchset advapi32-LsaLookupPrivilegeName

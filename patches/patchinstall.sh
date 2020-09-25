@@ -329,6 +329,7 @@ patch_enable_all ()
 	enable_ws2_32_getaddrinfo="$1"
 	enable_ws2_32_getsockopt="$1"
 	enable_wtsapi32_EnumerateProcesses="$1"
+	enable_xactengine_initial="$1"
 	enable_xactengine2_dll="$1"
 	enable_xactengine3_7_PrepareWave="$1"
 }
@@ -1077,6 +1078,9 @@ patch_enable ()
 			;;
 		wtsapi32-EnumerateProcesses)
 			enable_wtsapi32_EnumerateProcesses="$2"
+			;;
+		xactengine-initial)
+			enable_xactengine_initial="$2"
 			;;
 		xactengine2-dll)
 			enable_xactengine2_dll="$2"
@@ -5029,6 +5033,24 @@ fi
 # |
 if test "$enable_wtsapi32_EnumerateProcesses" -eq 1; then
 	patch_apply wtsapi32-EnumerateProcesses/0001-wtsapi32-Partial-implementation-of-WTSEnumerateProce.patch
+fi
+
+# Patchset xactengine-initial
+# |
+# | This patchset fixes the following Wine bugs:
+# |   *	[#31476] Support Bully Scholarship Edition xactengine3_1.dll.
+# |   *	[#38615] DSA: Drakensang Demo fails on IXACTEngine::Initialize
+# |   *	[#41030] Pac-Man Museum requires xactengine3_7
+# |   *	[#41045] Captain Morgane requires xactengine3_4
+# |   *	[#48684] BlazBlue: Calamity Trigger requires for xactengine 3.3 interface.
+# |
+# | Modified files:
+# |   *	dlls/x3daudio1_7/Makefile.in, dlls/xaudio2_7/tests/Makefile.in, dlls/xaudio2_7/tests/globals.xgs,
+# | 	dlls/xaudio2_7/tests/rsrc.rc, dlls/xaudio2_7/tests/xact.c, dlls/xaudio2_7/tests/xaudio2.c
+# |
+if test "$enable_xactengine_initial" -eq 1; then
+	patch_apply xactengine-initial/0011-xaudio2_7-Initial-IXACT3Engine-tests.patch
+	patch_apply xactengine-initial/0016-xaudio2_7-tests-Add-more-tests.patch
 fi
 
 # Patchset xactengine2-dll

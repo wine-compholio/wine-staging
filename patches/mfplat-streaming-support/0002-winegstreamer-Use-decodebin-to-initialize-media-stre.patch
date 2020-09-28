@@ -1,28 +1,27 @@
-From 27ea26494dfa10570c1d2c838660e2169ac9add3 Mon Sep 17 00:00:00 2001
+From 49b2e0568ffe3e5e2ea7e9c3572ec09ef2cf8ad7 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Tue, 31 Mar 2020 13:34:57 -0500
-Subject: [PATCH 02/52] winegstreamer: Use decodebin to initialize media
- streams.
+Subject: [PATCH] winegstreamer: Use decodebin to initialize media streams.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
  dlls/winegstreamer/gst_cbs.c      |  45 ++++
  dlls/winegstreamer/gst_cbs.h      |   8 +
- dlls/winegstreamer/media_source.c | 416 +++++++++++++++++++++++++++++-
- 3 files changed, 468 insertions(+), 1 deletion(-)
+ dlls/winegstreamer/media_source.c | 405 +++++++++++++++++++++++++++++-
+ 3 files changed, 457 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/winegstreamer/gst_cbs.c b/dlls/winegstreamer/gst_cbs.c
-index 8f48368c96a..4755f5b42f1 100644
+index 12b53bc5d68..51aaefa911d 100644
 --- a/dlls/winegstreamer/gst_cbs.c
 +++ b/dlls/winegstreamer/gst_cbs.c
-@@ -359,3 +359,48 @@ gboolean process_bytestream_pad_event_wrapper(GstPad *pad, GstObject *parent, Gs
+@@ -359,3 +359,48 @@ gboolean bytestream_pad_event_process_wrapper(GstPad *pad, GstObject *parent, Gs
  
      return cbdata.u.event_src_data.ret;
  }
 +
-+GstBusSyncReply watch_source_bus_wrapper(GstBus *bus, GstMessage *message, gpointer user)
++GstBusSyncReply mf_src_bus_watch_wrapper(GstBus *bus, GstMessage *message, gpointer user)
 +{
-+    struct cb_data cbdata = { WATCH_SOURCE_BUS };
++    struct cb_data cbdata = { MF_SRC_BUS_WATCH };
 +
 +    cbdata.u.watch_bus_data.bus = bus;
 +    cbdata.u.watch_bus_data.msg = message;
@@ -33,9 +32,9 @@ index 8f48368c96a..4755f5b42f1 100644
 +    return cbdata.u.watch_bus_data.ret;
 +}
 +
-+void source_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user)
++void mf_src_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user)
 +{
-+    struct cb_data cbdata = { SOURCE_STREAM_ADDED };
++    struct cb_data cbdata = { MF_SRC_STREAM_ADDED };
 +
 +    cbdata.u.pad_added_data.element = bin;
 +    cbdata.u.pad_added_data.pad = pad;
@@ -44,9 +43,9 @@ index 8f48368c96a..4755f5b42f1 100644
 +    call_cb(&cbdata);
 +}
 +
-+void source_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user)
++void mf_src_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user)
 +{
-+    struct cb_data cbdata = { SOURCE_STREAM_REMOVED };
++    struct cb_data cbdata = { MF_SRC_STREAM_REMOVED };
 +
 +    cbdata.u.pad_removed_data.element = element;
 +    cbdata.u.pad_removed_data.pad = pad;
@@ -55,9 +54,9 @@ index 8f48368c96a..4755f5b42f1 100644
 +    call_cb(&cbdata);
 +}
 +
-+void source_all_streams_wrapper(GstElement *element, gpointer user)
++void mf_src_no_more_pads_wrapper(GstElement *element, gpointer user)
 +{
-+    struct cb_data cbdata = { SOURCE_ALL_STREAMS };
++    struct cb_data cbdata = { MF_SRC_NO_MORE_PADS };
 +
 +    cbdata.u.no_more_pads_data.element = element;
 +    cbdata.u.no_more_pads_data.user = user;
@@ -65,32 +64,32 @@ index 8f48368c96a..4755f5b42f1 100644
 +    call_cb(&cbdata);
 +}
 diff --git a/dlls/winegstreamer/gst_cbs.h b/dlls/winegstreamer/gst_cbs.h
-index 10e999feea7..d87cc8c21e9 100644
+index 3459a9ef8ee..a48999bbf71 100644
 --- a/dlls/winegstreamer/gst_cbs.h
 +++ b/dlls/winegstreamer/gst_cbs.h
 @@ -48,6 +48,10 @@ enum CB_TYPE {
-     QUERY_BYTESTREAM,
-     ACTIVATE_BYTESTREAM_PAD_MODE,
-     PROCESS_BYTESTREAM_PAD_EVENT,
-+    WATCH_SOURCE_BUS,
-+    SOURCE_STREAM_ADDED,
-+    SOURCE_STREAM_REMOVED,
-+    SOURCE_ALL_STREAMS,
+     BYTESTREAM_QUERY,
+     BYTESTREAM_PAD_MODE_ACTIVATE,
+     BYTESTREAM_PAD_EVENT_PROCESS,
++    MF_SRC_BUS_WATCH,
++    MF_SRC_STREAM_ADDED,
++    MF_SRC_STREAM_REMOVED,
++    MF_SRC_NO_MORE_PADS,
      MEDIA_SOURCE_MAX,
  };
  
-@@ -164,5 +168,9 @@ GstFlowReturn pull_from_bytestream_wrapper(GstPad *pad, GstObject *parent, guint
- gboolean query_bytestream_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
- gboolean activate_bytestream_pad_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate) DECLSPEC_HIDDEN;
- gboolean process_bytestream_pad_event_wrapper(GstPad *pad, GstObject *parent, GstEvent *event) DECLSPEC_HIDDEN;
-+GstBusSyncReply watch_source_bus_wrapper(GstBus *bus, GstMessage *message, gpointer user) DECLSPEC_HIDDEN;
-+void source_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
-+void source_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
-+void source_all_streams_wrapper(GstElement *element, gpointer user) DECLSPEC_HIDDEN;
+@@ -164,5 +168,9 @@ GstFlowReturn bytestream_wrapper_pull_wrapper(GstPad *pad, GstObject *parent, gu
+ gboolean bytestream_query_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
+ gboolean bytestream_pad_mode_activate_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate) DECLSPEC_HIDDEN;
+ gboolean bytestream_pad_event_process_wrapper(GstPad *pad, GstObject *parent, GstEvent *event) DECLSPEC_HIDDEN;
++GstBusSyncReply mf_src_bus_watch_wrapper(GstBus *bus, GstMessage *message, gpointer user) DECLSPEC_HIDDEN;
++void mf_src_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
++void mf_src_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
++void mf_src_no_more_pads_wrapper(GstElement *element, gpointer user) DECLSPEC_HIDDEN;
  
  #endif
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 6b3bd4a7869..29af2b72def 100644
+index 1accf55c6a2..f61f84359d5 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
 @@ -24,6 +24,7 @@
@@ -99,9 +98,9 @@ index 6b3bd4a7869..29af2b72def 100644
  
 +#include <assert.h>
  #include <stdarg.h>
+ #include <assert.h>
  
- #define COBJMACROS
-@@ -40,21 +41,48 @@
+@@ -41,21 +42,47 @@
  
  WINE_DEFAULT_DEBUG_CHANNEL(mfplat);
  
@@ -116,7 +115,6 @@ index 6b3bd4a7869..29af2b72def 100644
 +    enum
 +    {
 +        STREAM_STUB,
-+        STREAM_INACTIVE,
 +        STREAM_SHUTDOWN,
 +    } state;
 +};
@@ -151,13 +149,13 @@ index 6b3bd4a7869..29af2b72def 100644
  static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *iface)
  {
      return CONTAINING_RECORD(iface, struct media_source, IMFMediaSource_iface);
-@@ -208,6 +236,243 @@ static gboolean process_bytestream_pad_event(GstPad *pad, GstObject *parent, Gst
+@@ -182,6 +209,242 @@ static gboolean bytestream_pad_event_process(GstPad *pad, GstObject *parent, Gst
      return TRUE;
  }
  
-+GstBusSyncReply watch_source_bus(GstBus *bus, GstMessage *message, gpointer user)
++GstBusSyncReply bus_watch(GstBus *bus, GstMessage *message, gpointer user)
 +{
-+    struct media_source *source = (struct media_source *) user;
++    struct media_source *source = user;
 +    gchar *dbg_info = NULL;
 +    GError *err = NULL;
 +
@@ -183,7 +181,8 @@ index 6b3bd4a7869..29af2b72def 100644
 +            break;
 +    }
 +
-+    return GST_BUS_PASS;
++    gst_message_unref(message);
++    return GST_BUS_DROP;
 +}
 +
 +static HRESULT WINAPI media_stream_QueryInterface(IMFMediaStream *iface, REFIID riid, void **out)
@@ -342,7 +341,7 @@ index 6b3bd4a7869..29af2b72def 100644
 +};
 +
 +/* creates a stub stream */
-+static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD stream_id, struct media_stream **out_stream)
++static HRESULT new_media_stream(struct media_source *source, GstPad *pad, struct media_stream **out_stream)
 +{
 +    struct media_stream *object = heap_alloc_zero(sizeof(*object));
 +    HRESULT hr;
@@ -368,10 +367,8 @@ index 6b3bd4a7869..29af2b72def 100644
 +    }
 +    gst_bin_add(GST_BIN(object->parent_source->container), object->appsink);
 +
-+    g_object_set(object->appsink, "emit-signals", TRUE, NULL);
 +    g_object_set(object->appsink, "sync", FALSE, NULL);
 +    g_object_set(object->appsink, "max-buffers", 5, NULL);
-+    g_object_set(object->appsink, "wait-on-eos", FALSE, NULL);
 +
 +    object->my_sink = gst_element_get_static_pad(object->appsink, "sink");
 +    gst_pad_set_element_private(object->my_sink, object);
@@ -385,7 +382,7 @@ index 6b3bd4a7869..29af2b72def 100644
 +
 +    return S_OK;
 +
-+    fail:
++fail:
 +    WARN("Failed to construct media stream, hr %#x.\n", hr);
 +
 +    IMFMediaStream_Release(&object->IMFMediaStream_iface);
@@ -395,7 +392,15 @@ index 6b3bd4a7869..29af2b72def 100644
  static HRESULT WINAPI media_source_QueryInterface(IMFMediaSource *iface, REFIID riid, void **out)
  {
      struct media_source *source = impl_from_IMFMediaSource(iface);
-@@ -367,13 +632,34 @@ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
+@@ -333,6 +596,7 @@ static HRESULT WINAPI media_source_Pause(IMFMediaSource *iface)
+ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
+ {
+     struct media_source *source = impl_from_IMFMediaSource(iface);
++    unsigned int i;
+ 
+     TRACE("(%p)\n", source);
+ 
+@@ -341,13 +605,34 @@ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
  
      source->state = SOURCE_SHUTDOWN;
  
@@ -415,7 +420,7 @@ index 6b3bd4a7869..29af2b72def 100644
      if (source->byte_stream)
          IMFByteStream_Release(source->byte_stream);
  
-+    for (unsigned int i = 0; i < source->stream_count; i++)
++    for (i = 0; i < source->stream_count; i++)
 +    {
 +        source->streams[i]->state = STREAM_SHUTDOWN;
 +        IMFMediaStream_Release(&source->streams[i]->IMFMediaStream_iface);
@@ -430,71 +435,58 @@ index 6b3bd4a7869..29af2b72def 100644
      return S_OK;
  }
  
-@@ -394,6 +680,63 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
+@@ -368,6 +653,50 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
      media_source_Shutdown,
  };
  
-+static void source_stream_added(GstElement *element, GstPad *pad, gpointer user)
++static void stream_added(GstElement *element, GstPad *pad, gpointer user)
 +{
-+    struct media_source *source = (struct media_source *) user;
++    struct media_source *source = user;
 +    struct media_stream **new_stream_array;
 +    struct media_stream *stream;
-+    gchar *g_stream_id;
-+    DWORD stream_id;
 +
 +    if (gst_pad_get_direction(pad) != GST_PAD_SRC)
 +        return;
 +
-+    /* Most/All seen randomly calculate the initial part of the stream id, the last three digits are the only deterministic part */
-+    g_stream_id = GST_PAD_NAME(pad);
-+    sscanf(strstr(g_stream_id, "_"), "_%u", &stream_id);
-+
-+    TRACE("stream-id: %u\n", stream_id);
-+
-+    if (FAILED(new_media_stream(source, pad, stream_id, &stream)))
-+    {
-+        goto leave;
-+    }
++    if (FAILED(new_media_stream(source, pad, &stream)))
++        return;
 +
 +    if (!(new_stream_array = heap_realloc(source->streams, (source->stream_count + 1) * (sizeof(*new_stream_array)))))
 +    {
 +        ERR("Failed to add stream to source\n");
-+        goto leave;
++        IMFMediaStream_Release(&stream->IMFMediaStream_iface);
++        return;
 +    }
 +
 +    source->streams = new_stream_array;
 +    source->streams[source->stream_count++] = stream;
-+
-+    leave:
-+    return;
 +}
 +
-+static void source_stream_removed(GstElement *element, GstPad *pad, gpointer user)
++static void stream_removed(GstElement *element, GstPad *pad, gpointer user)
 +{
-+    struct media_source *source = (struct media_source *)user;
++    struct media_source *source = user;
++    unsigned int i;
 +
-+    for (unsigned int i = 0; i < source->stream_count; i++)
++    for (i = 0; i < source->stream_count; i++)
 +    {
 +        struct media_stream *stream = source->streams[i];
 +        if (stream->their_src != pad)
 +            continue;
 +        stream->their_src = NULL;
-+        if (stream->state != STREAM_INACTIVE)
-+            stream->state = STREAM_INACTIVE;
 +    }
 +}
 +
-+static void source_all_streams(GstElement *element, gpointer user)
++static void no_more_pads(GstElement *element, gpointer user)
 +{
-+    struct media_source *source = (struct media_source *) user;
++    struct media_source *source = user;
 +
 +    SetEvent(source->all_streams_event);
 +}
 +
  static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_source **out_media_source)
  {
-     GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE(
-@@ -404,6 +747,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+     GstStaticPadTemplate src_template =
+@@ -375,6 +704,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
  
      struct media_source *object = heap_alloc_zero(sizeof(*object));
      HRESULT hr;
@@ -502,7 +494,7 @@ index 6b3bd4a7869..29af2b72def 100644
  
      if (!object)
          return E_OUTOFMEMORY;
-@@ -412,10 +756,16 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+@@ -383,10 +713,16 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
      object->ref = 1;
      object->byte_stream = bytestream;
      IMFByteStream_AddRef(bytestream);
@@ -513,33 +505,36 @@ index 6b3bd4a7869..29af2b72def 100644
  
 +    object->container = gst_bin_new(NULL);
 +    object->bus = gst_bus_new();
-+    gst_bus_set_sync_handler(object->bus, watch_source_bus_wrapper, object, NULL);
++    gst_bus_set_sync_handler(object->bus, mf_src_bus_watch_wrapper, object, NULL);
 +    gst_element_set_bus(object->container, object->bus);
 +
      object->my_src = gst_pad_new_from_static_template(&src_template, "mf-src");
      gst_pad_set_element_private(object->my_src, object);
-     gst_pad_set_getrange_function(object->my_src, pull_from_bytestream_wrapper);
-@@ -423,6 +773,46 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
-     gst_pad_set_activatemode_function(object->my_src, activate_bytestream_pad_mode_wrapper);
-     gst_pad_set_event_function(object->my_src, process_bytestream_pad_event_wrapper);
+     gst_pad_set_getrange_function(object->my_src, bytestream_wrapper_pull_wrapper);
+@@ -394,6 +730,49 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+     gst_pad_set_activatemode_function(object->my_src, bytestream_pad_mode_activate_wrapper);
+     gst_pad_set_event_function(object->my_src, bytestream_pad_event_process_wrapper);
  
-+    object->decodebin = gst_element_factory_make("decodebin", NULL);
-+    if (!(object->decodebin))
++    if (!(object->decodebin = gst_element_factory_make("decodebin", NULL)))
 +    {
 +        WARN("Failed to create decodebin for source\n");
 +        hr = E_OUTOFMEMORY;
 +        goto fail;
 +    }
-+    /* the appsinks determine the maximum amount of buffering instead, this means that if one stream isn't read, a leak will happen, like on windows */
++
++    /* In Media Foundation, sources will infinitely leak buffers, when a subset of the selected
++       streams are read from.  This behavior is relied upon in the Unity3D engine game, Trailmakers,
++       where Unity selects both the video and audio streams, yet only reads from the video stream.
++       Removing these buffering limits reflects that behavior. */
 +    g_object_set(object->decodebin, "max-size-buffers", 0, NULL);
 +    g_object_set(object->decodebin, "max-size-time", G_GUINT64_CONSTANT(0), NULL);
 +    g_object_set(object->decodebin, "max-size-bytes", 0, NULL);
 +
 +    gst_bin_add(GST_BIN(object->container), object->decodebin);
 +
-+    g_signal_connect(object->decodebin, "pad-added", G_CALLBACK(source_stream_added_wrapper), object);
-+    g_signal_connect(object->decodebin, "pad-removed", G_CALLBACK(source_stream_removed_wrapper), object);
-+    g_signal_connect(object->decodebin, "no-more-pads", G_CALLBACK(source_all_streams_wrapper), object);
++    g_signal_connect(object->decodebin, "pad-added", G_CALLBACK(mf_src_stream_added_wrapper), object);
++    g_signal_connect(object->decodebin, "pad-removed", G_CALLBACK(mf_src_stream_removed_wrapper), object);
++    g_signal_connect(object->decodebin, "no-more-pads", G_CALLBACK(mf_src_no_more_pads_wrapper), object);
 +
 +    object->their_sink = gst_element_get_static_pad(object->decodebin, "sink");
 +
@@ -566,37 +561,37 @@ index 6b3bd4a7869..29af2b72def 100644
      object->state = SOURCE_STOPPED;
  
      *out_media_source = object;
-@@ -923,6 +1313,30 @@ void perform_cb_media_source(struct cb_data *cbdata)
-             cbdata->u.event_src_data.ret = process_bytestream_pad_event(data->pad, data->parent, data->event);
+@@ -893,6 +1272,30 @@ void perform_cb_media_source(struct cb_data *cbdata)
+             cbdata->u.event_src_data.ret = bytestream_pad_event_process(data->pad, data->parent, data->event);
              break;
          }
-+    case WATCH_SOURCE_BUS:
++    case MF_SRC_BUS_WATCH:
 +        {
 +            struct watch_bus_data *data = &cbdata->u.watch_bus_data;
-+            cbdata->u.watch_bus_data.ret = watch_source_bus(data->bus, data->msg, data->user);
++            cbdata->u.watch_bus_data.ret = bus_watch(data->bus, data->msg, data->user);
 +            break;
 +        }
-+    case SOURCE_STREAM_ADDED:
++    case MF_SRC_STREAM_ADDED:
 +        {
 +            struct pad_added_data *data = &cbdata->u.pad_added_data;
-+            source_stream_added(data->element, data->pad, data->user);
++            stream_added(data->element, data->pad, data->user);
 +            break;
 +        }
-+    case SOURCE_STREAM_REMOVED:
++    case MF_SRC_STREAM_REMOVED:
 +        {
 +            struct pad_removed_data *data = &cbdata->u.pad_removed_data;
-+            source_stream_removed(data->element, data->pad, data->user);
++            stream_removed(data->element, data->pad, data->user);
 +            break;
 +        }
-+    case SOURCE_ALL_STREAMS:
++    case MF_SRC_NO_MORE_PADS:
 +        {
 +            struct no_more_pads_data *data = &cbdata->u.no_more_pads_data;
-+            source_all_streams(data->element, data->user);
++            no_more_pads(data->element, data->user);
 +            break;
 +        }
      default:
          {
-             ERR("Wrong callback forwarder called\n");
+             assert(0);
 -- 
 2.28.0
 

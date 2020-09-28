@@ -1,15 +1,15 @@
-From 0cb401346e8c106fad5cf1cd4d9364e7508d282b Mon Sep 17 00:00:00 2001
+From d5ea67443337ece97b9bd3243224afae2ca15df0 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Tue, 24 Mar 2020 16:00:26 -0500
-Subject: [PATCH 07/52] winegstreamer: Translate H.264 caps to attributes.
+Subject: [PATCH] winegstreamer: Translate H.264 caps to attributes.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
- dlls/winegstreamer/mfplat.c | 67 +++++++++++++++++++++++++++++++++++++
- 1 file changed, 67 insertions(+)
+ dlls/winegstreamer/mfplat.c | 80 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 80 insertions(+)
 
 diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
-index 3667bc3cc38..77a2dad093a 100644
+index 4d868c616f2..d1554c86a1d 100644
 --- a/dlls/winegstreamer/mfplat.c
 +++ b/dlls/winegstreamer/mfplat.c
 @@ -26,6 +26,7 @@
@@ -20,14 +20,23 @@ index 3667bc3cc38..77a2dad093a 100644
  
  #include "wine/debug.h"
  #include "wine/heap.h"
-@@ -519,6 +520,72 @@ static IMFMediaType* transform_to_media_type(GstCaps *caps)
-                     FIXME("Unrecognized format.\n");
+@@ -521,6 +522,74 @@ IMFMediaType *mf_media_type_from_caps(const GstCaps *caps)
+                 }
              }
          }
 +        else if (!(strcmp(mime_type, "video/x-h264")))
 +        {
 +            const char *profile, *level;
 +
++            /* validation */
++            if (strcmp(gst_structure_get_string(info, "stream-format"), "byte-stream"))
++                return NULL;
++            if (strcmp(gst_structure_get_string(info, "alignment"), "au"))
++                return NULL;
++            if (gst_structure_get_value(info, "codec-data"))
++                return NULL;
++
++            /* conversion */
 +            IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, &MFVideoFormat_H264);
 +            IMFMediaType_SetUINT32(media_type, &MF_MT_COMPRESSED, TRUE);
 +
@@ -82,17 +91,33 @@ index 3667bc3cc38..77a2dad093a 100644
 +                    FIXME("Unrecognized level %s", level);
 +                }
 +            }
-+            gst_caps_set_simple(caps, "stream-format", G_TYPE_STRING, "byte-stream", NULL);
-+            gst_caps_set_simple(caps, "alignment", G_TYPE_STRING, "au", NULL);
-+            for (unsigned int i = 0; i < gst_caps_get_size(caps); i++)
-+            {
-+                GstStructure *structure = gst_caps_get_structure (caps, i);
-+                gst_structure_remove_field(structure, "codec_data");
-+            }
 +        }
          else
          {
              FIXME("Unrecognized video format %s\n", mime_type);
+@@ -607,11 +676,22 @@ GstCaps *make_mf_compatible_caps(GstCaps *caps)
+ {
+     GstCaps *ret;
+     IMFMediaType *media_type;
++    GstStructure *structure;
++    const char *mime_type;
+ 
+     if (gst_caps_get_size(caps) != 1)
+         return NULL;
+ 
+     ret = gst_caps_copy(caps);
++    structure = gst_caps_get_structure(ret, 0);
++    mime_type = gst_structure_get_name(structure);
++
++    if (!strcmp(mime_type, "video/x-h264"))
++    {
++        gst_caps_set_simple(ret, "stream-format", G_TYPE_STRING, "byte-stream", NULL);
++        gst_caps_set_simple(ret, "alignment", G_TYPE_STRING, "au", NULL);
++        gst_structure_remove_field(structure, "codec_data");
++    }
+ 
+     if ((media_type = mf_media_type_from_caps(ret)))
+         IMFMediaType_Release(media_type);
 -- 
 2.28.0
 

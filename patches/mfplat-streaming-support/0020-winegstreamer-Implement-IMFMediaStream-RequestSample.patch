@@ -1,7 +1,7 @@
-From 366946876d7a53f80d91749f290f511294415cf5 Mon Sep 17 00:00:00 2001
+From b72b32c437bb27a46320d8a143b503a6cd7ee600 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Wed, 25 Mar 2020 10:43:03 -0500
-Subject: [PATCH 20/52] winegstreamer: Implement IMFMediaStream::RequestSample.
+Subject: [PATCH] winegstreamer: Implement IMFMediaStream::RequestSample.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
@@ -38,22 +38,22 @@ index e6a1694a11f..6dd2c3cbe96 100644
      IMFMediaTypeHandler_Release(handler);
      IMFPresentationDescriptor_Release(descriptor);
 diff --git a/dlls/winegstreamer/gst_private.h b/dlls/winegstreamer/gst_private.h
-index d0628cc8df3..664733c74cd 100644
+index 00e28f1d092..df1e643c3f6 100644
 --- a/dlls/winegstreamer/gst_private.h
 +++ b/dlls/winegstreamer/gst_private.h
 @@ -59,6 +59,7 @@ HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj) DECLSPEC_HI
- GstCaps *make_mf_compatible_caps(GstCaps *caps);
- IMFMediaType *mf_media_type_from_caps(GstCaps *caps);
- GstCaps *caps_from_mf_media_type(IMFMediaType *type);
-+IMFSample *mf_sample_from_gst_buffer(GstBuffer *in);
+ GstCaps *make_mf_compatible_caps(GstCaps *caps) DECLSPEC_HIDDEN;
+ IMFMediaType *mf_media_type_from_caps(const GstCaps *caps) DECLSPEC_HIDDEN;
+ GstCaps *caps_from_mf_media_type(IMFMediaType *type) DECLSPEC_HIDDEN;
++IMFSample *mf_sample_from_gst_buffer(GstBuffer *in) DECLSPEC_HIDDEN;
  
  HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj) DECLSPEC_HIDDEN;
  
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index c893664fbec..15ad1796563 100644
+index b35c8bf48d2..90347f365cb 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
-@@ -67,6 +67,7 @@ struct media_stream
+@@ -66,6 +66,7 @@ struct media_stream
  enum source_async_op
  {
      SOURCE_ASYNC_START,
@@ -61,7 +61,7 @@ index c893664fbec..15ad1796563 100644
  };
  
  struct source_async_command
-@@ -82,6 +83,11 @@ struct source_async_command
+@@ -81,6 +82,11 @@ struct source_async_command
              GUID format;
              PROPVARIANT position;
          } start;
@@ -73,7 +73,7 @@ index c893664fbec..15ad1796563 100644
      } u;
  };
  
-@@ -341,6 +347,78 @@ static HRESULT start_pipeline(struct media_source *source, struct source_async_c
+@@ -340,6 +346,78 @@ static HRESULT start_pipeline(struct media_source *source, struct source_async_c
      return S_OK;
  }
  
@@ -152,7 +152,7 @@ index c893664fbec..15ad1796563 100644
  static HRESULT WINAPI source_async_commands_Invoke(IMFAsyncCallback *iface, IMFAsyncResult *result)
  {
      struct media_source *source = impl_from_async_commands_callback_IMFAsyncCallback(iface);
-@@ -360,6 +438,9 @@ static HRESULT WINAPI source_async_commands_Invoke(IMFAsyncCallback *iface, IMFA
+@@ -359,6 +437,9 @@ static HRESULT WINAPI source_async_commands_Invoke(IMFAsyncCallback *iface, IMFA
          case SOURCE_ASYNC_START:
              start_pipeline(source, command);
              break;
@@ -162,7 +162,7 @@ index c893664fbec..15ad1796563 100644
          default:
              ;
      }
-@@ -694,13 +775,37 @@ static HRESULT WINAPI media_stream_GetStreamDescriptor(IMFMediaStream* iface, IM
+@@ -667,13 +748,37 @@ static HRESULT WINAPI media_stream_GetStreamDescriptor(IMFMediaStream* iface, IM
  static HRESULT WINAPI media_stream_RequestSample(IMFMediaStream *iface, IUnknown *token)
  {
      struct media_stream *stream = impl_from_IMFMediaStream(iface);
@@ -201,19 +201,19 @@ index c893664fbec..15ad1796563 100644
  }
  
  static const IMFMediaStreamVtbl media_stream_vtbl =
-@@ -873,6 +978,7 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD
+@@ -846,6 +951,7 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD
      object->stream_id = stream_id;
  
      object->state = STREAM_STUB;
 +    object->eos = FALSE;
  
-     object->caps_event = CreateEventA(NULL, TRUE, FALSE, NULL);
- 
+     if (FAILED(hr = MFCreateEventQueue(&object->event_queue)))
+         goto fail;
 diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
-index b291b21e8b5..839f337538d 100644
+index 015f23dd2dc..6f88048cece 100644
 --- a/dlls/winegstreamer/mfplat.c
 +++ b/dlls/winegstreamer/mfplat.c
-@@ -1247,3 +1247,93 @@ GstCaps *caps_from_mf_media_type(IMFMediaType *type)
+@@ -1240,3 +1240,93 @@ GstCaps *caps_from_mf_media_type(IMFMediaType *type)
      FIXME("Unrecognized major type %s\n", debugstr_guid(&major_type));
      return NULL;
  }

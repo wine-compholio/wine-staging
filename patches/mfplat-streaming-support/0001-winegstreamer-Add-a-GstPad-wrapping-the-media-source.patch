@@ -1,19 +1,19 @@
-From 139b483754aee0188f68109dc593df6eb9e083c4 Mon Sep 17 00:00:00 2001
+From 76ebf639f8c353cba828c0dfb26fdc0e01318098 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Mon, 30 Mar 2020 14:19:35 -0500
-Subject: [PATCH 01/52] winegstreamer: Add a GstPad wrapping the media source's
+Subject: [PATCH] winegstreamer: Add a GstPad wrapping the media source's
  bytestream.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
- dlls/winegstreamer/gst_cbs.c      |  58 ++++++++
+ dlls/winegstreamer/gst_cbs.c      |  58 +++++++++
  dlls/winegstreamer/gst_cbs.h      |  12 +-
  dlls/winegstreamer/main.c         |   3 +
- dlls/winegstreamer/media_source.c | 219 +++++++++++++++++++++++++++++-
- 4 files changed, 288 insertions(+), 4 deletions(-)
+ dlls/winegstreamer/media_source.c | 189 +++++++++++++++++++++++++++++-
+ 4 files changed, 258 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/winegstreamer/gst_cbs.c b/dlls/winegstreamer/gst_cbs.c
-index bf7103b1606..8f48368c96a 100644
+index bf7103b1606..12b53bc5d68 100644
 --- a/dlls/winegstreamer/gst_cbs.c
 +++ b/dlls/winegstreamer/gst_cbs.c
 @@ -49,6 +49,8 @@ static void CALLBACK perform_cb(TP_CALLBACK_INSTANCE *instance, void *user)
@@ -30,10 +30,10 @@ index bf7103b1606..8f48368c96a 100644
      return cbdata.u.query_sink_data.ret;
  }
 +
-+GstFlowReturn pull_from_bytestream_wrapper(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
++GstFlowReturn bytestream_wrapper_pull_wrapper(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
 +        GstBuffer **buf)
 +{
-+    struct cb_data cbdata = { PULL_FROM_BYTESTREAM };
++    struct cb_data cbdata = { BYTESTREAM_WRAPPER_PULL };
 +
 +    cbdata.u.getrange_data.pad = pad;
 +    cbdata.u.getrange_data.parent = parent;
@@ -46,9 +46,9 @@ index bf7103b1606..8f48368c96a 100644
 +    return cbdata.u.getrange_data.ret;
 +}
 +
-+gboolean query_bytestream_wrapper(GstPad *pad, GstObject *parent, GstQuery *query)
++gboolean bytestream_query_wrapper(GstPad *pad, GstObject *parent, GstQuery *query)
 +{
-+    struct cb_data cbdata = { QUERY_BYTESTREAM };
++    struct cb_data cbdata = { BYTESTREAM_QUERY };
 +
 +    cbdata.u.query_function_data.pad = pad;
 +    cbdata.u.query_function_data.parent = parent;
@@ -59,9 +59,9 @@ index bf7103b1606..8f48368c96a 100644
 +    return cbdata.u.query_function_data.ret;
 +}
 +
-+gboolean activate_bytestream_pad_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate)
++gboolean bytestream_pad_mode_activate_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate)
 +{
-+    struct cb_data cbdata = { ACTIVATE_BYTESTREAM_PAD_MODE };
++    struct cb_data cbdata = { BYTESTREAM_PAD_MODE_ACTIVATE };
 +
 +    cbdata.u.activate_mode_data.pad = pad;
 +    cbdata.u.activate_mode_data.parent = parent;
@@ -73,9 +73,9 @@ index bf7103b1606..8f48368c96a 100644
 +    return cbdata.u.activate_mode_data.ret;
 +}
 +
-+gboolean process_bytestream_pad_event_wrapper(GstPad *pad, GstObject *parent, GstEvent *event)
++gboolean bytestream_pad_event_process_wrapper(GstPad *pad, GstObject *parent, GstEvent *event)
 +{
-+    struct cb_data cbdata = { PROCESS_BYTESTREAM_PAD_EVENT };
++    struct cb_data cbdata = { BYTESTREAM_PAD_EVENT_PROCESS };
 +
 +    cbdata.u.event_src_data.pad = pad;
 +    cbdata.u.event_src_data.parent = parent;
@@ -86,7 +86,7 @@ index bf7103b1606..8f48368c96a 100644
 +    return cbdata.u.event_src_data.ret;
 +}
 diff --git a/dlls/winegstreamer/gst_cbs.h b/dlls/winegstreamer/gst_cbs.h
-index 4725f23ad1a..10e999feea7 100644
+index 4725f23ad1a..3459a9ef8ee 100644
 --- a/dlls/winegstreamer/gst_cbs.h
 +++ b/dlls/winegstreamer/gst_cbs.h
 @@ -43,7 +43,12 @@ enum CB_TYPE {
@@ -95,10 +95,10 @@ index 4725f23ad1a..10e999feea7 100644
      QUERY_SINK,
 -    GSTDEMUX_MAX
 +    GSTDEMUX_MAX,
-+    PULL_FROM_BYTESTREAM,
-+    QUERY_BYTESTREAM,
-+    ACTIVATE_BYTESTREAM_PAD_MODE,
-+    PROCESS_BYTESTREAM_PAD_EVENT,
++    BYTESTREAM_WRAPPER_PULL,
++    BYTESTREAM_QUERY,
++    BYTESTREAM_PAD_MODE_ACTIVATE,
++    BYTESTREAM_PAD_EVENT_PROCESS,
 +    MEDIA_SOURCE_MAX,
  };
  
@@ -115,10 +115,10 @@ index 4725f23ad1a..10e999feea7 100644
  void unknown_type_wrapper(GstElement *bin, GstPad *pad, GstCaps *caps, gpointer user) DECLSPEC_HIDDEN;
  void Gstreamer_transform_pad_added_wrapper(GstElement *filter, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
  gboolean query_sink_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
-+GstFlowReturn pull_from_bytestream_wrapper(GstPad *pad, GstObject *parent, guint64 ofs, guint len, GstBuffer **buf) DECLSPEC_HIDDEN;
-+gboolean query_bytestream_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
-+gboolean activate_bytestream_pad_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate) DECLSPEC_HIDDEN;
-+gboolean process_bytestream_pad_event_wrapper(GstPad *pad, GstObject *parent, GstEvent *event) DECLSPEC_HIDDEN;
++GstFlowReturn bytestream_wrapper_pull_wrapper(GstPad *pad, GstObject *parent, guint64 ofs, guint len, GstBuffer **buf) DECLSPEC_HIDDEN;
++gboolean bytestream_query_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
++gboolean bytestream_pad_mode_activate_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate) DECLSPEC_HIDDEN;
++gboolean bytestream_pad_event_process_wrapper(GstPad *pad, GstObject *parent, GstEvent *event) DECLSPEC_HIDDEN;
  
  #endif
 diff --git a/dlls/winegstreamer/main.c b/dlls/winegstreamer/main.c
@@ -136,10 +136,10 @@ index 2872710b3e2..4ca371d58bd 100644
          return hr;
  
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 84ecf305d4c..6b3bd4a7869 100644
+index f365c8a1827..1accf55c6a2 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
-@@ -17,7 +17,12 @@
+@@ -17,9 +17,15 @@
   * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
   */
  
@@ -151,8 +151,11 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +#include "gst_cbs.h"
  
  #include <stdarg.h>
++#include <assert.h>
  
-@@ -27,6 +32,7 @@
+ #define COBJMACROS
+ #define NONAMELESSUNION
+@@ -27,6 +33,7 @@
  #include "mfapi.h"
  #include "mferror.h"
  #include "mfidl.h"
@@ -160,7 +163,7 @@ index 84ecf305d4c..6b3bd4a7869 100644
  
  #include "wine/debug.h"
  #include "wine/heap.h"
-@@ -39,6 +45,8 @@ struct media_source
+@@ -39,6 +46,8 @@ struct media_source
      IMFMediaSource IMFMediaSource_iface;
      LONG ref;
      IMFMediaEventQueue *event_queue;
@@ -169,11 +172,11 @@ index 84ecf305d4c..6b3bd4a7869 100644
      enum
      {
          SOURCE_OPENING,
-@@ -52,6 +60,154 @@ static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *ifac
+@@ -52,6 +61,127 @@ static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *ifac
      return CONTAINING_RECORD(iface, struct media_source, IMFMediaSource_iface);
  }
  
-+GstFlowReturn pull_from_bytestream(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
++static GstFlowReturn bytestream_wrapper_pull(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
 +        GstBuffer **buf)
 +{
 +    struct media_source *source = gst_pad_get_element_private(pad);
@@ -183,7 +186,7 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +    BOOL is_eof;
 +    HRESULT hr;
 +
-+    TRACE("gstreamer requesting %u bytes at %s from source %p into buffer %p\n", len, wine_dbgstr_longlong(ofs), source, buf);
++    TRACE("requesting %u bytes at %s from source %p into buffer %p\n", len, wine_dbgstr_longlong(ofs), source, *buf);
 +
 +    if (ofs != GST_BUFFER_OFFSET_NONE)
 +    {
@@ -205,14 +208,11 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +    gst_buffer_set_size(*buf, bytes_read);
 +
 +    if (FAILED(hr))
-+    {
 +        return GST_FLOW_ERROR;
-+    }
-+    GST_BUFFER_OFFSET(*buf) = ofs;
 +    return GST_FLOW_OK;
 +}
 +
-+static gboolean query_bytestream(GstPad *pad, GstObject *parent, GstQuery *query)
++static gboolean bytestream_query(GstPad *pad, GstObject *parent, GstQuery *query)
 +{
 +    struct media_source *source = gst_pad_get_element_private(pad);
 +    GstFormat format;
@@ -227,16 +227,17 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +    {
 +        case GST_QUERY_DURATION:
 +        {
-+            gst_query_parse_duration (query, &format, NULL);
-+            if (format == GST_FORMAT_PERCENT) {
-+                gst_query_set_duration (query, GST_FORMAT_PERCENT, GST_FORMAT_PERCENT_MAX);
++            gst_query_parse_duration(query, &format, NULL);
++            if (format == GST_FORMAT_PERCENT)
++            {
++                gst_query_set_duration(query, GST_FORMAT_PERCENT, GST_FORMAT_PERCENT_MAX);
 +                return TRUE;
 +            }
 +            else if (format == GST_FORMAT_BYTES)
 +            {
 +                QWORD length;
 +                IMFByteStream_GetLength(source->byte_stream, &length);
-+                gst_query_set_duration (query, GST_FORMAT_BYTES, length);
++                gst_query_set_duration(query, GST_FORMAT_BYTES, length);
 +                return TRUE;
 +            }
 +            return FALSE;
@@ -258,25 +259,6 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +            gst_query_add_scheduling_mode(query, GST_PAD_MODE_PULL);
 +            return TRUE;
 +        }
-+        case GST_QUERY_CAPS:
-+        {
-+            GstStaticCaps any = GST_STATIC_CAPS_ANY;
-+            GstCaps *caps, *filter;
-+
-+            caps = gst_static_caps_get(&any);
-+            gst_query_parse_caps(query, &filter);
-+
-+            if (filter) {
-+                GstCaps* filtered;
-+                filtered = gst_caps_intersect_full(
-+                        filter, caps, GST_CAPS_INTERSECT_FIRST);
-+                gst_caps_unref(caps);
-+                caps = filtered;
-+            }
-+            gst_query_set_caps_result(query, caps);
-+            gst_caps_unref(caps);
-+            return TRUE;
-+        }
 +        default:
 +        {
 +            WARN("Unhandled query type %s\n", GST_QUERY_TYPE_NAME(query));
@@ -285,23 +267,17 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +    }
 +}
 +
-+static gboolean activate_bytestream_pad_mode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate)
++static gboolean bytestream_pad_mode_activate(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate)
 +{
 +    struct media_source *source = gst_pad_get_element_private(pad);
 +
 +    TRACE("%s source pad for mediasource %p in %s mode.\n",
 +            activate ? "Activating" : "Deactivating", source, gst_pad_mode_get_name(mode));
 +
-+    switch (mode) {
-+      case GST_PAD_MODE_PULL:
-+        return TRUE;
-+      default:
-+        return FALSE;
-+    }
-+    return FALSE;
++    return mode == GST_PAD_MODE_PULL;
 +}
 +
-+static gboolean process_bytestream_pad_event(GstPad *pad, GstObject *parent, GstEvent *event)
++static gboolean bytestream_pad_event_process(GstPad *pad, GstObject *parent, GstEvent *event)
 +{
 +    struct media_source *source = gst_pad_get_element_private(pad);
 +
@@ -324,7 +300,7 @@ index 84ecf305d4c..6b3bd4a7869 100644
  static HRESULT WINAPI media_source_QueryInterface(IMFMediaSource *iface, REFIID riid, void **out)
  {
      struct media_source *source = impl_from_IMFMediaSource(iface);
-@@ -211,8 +367,12 @@ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
+@@ -211,8 +341,12 @@ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
  
      source->state = SOURCE_SHUTDOWN;
  
@@ -337,15 +313,12 @@ index 84ecf305d4c..6b3bd4a7869 100644
  
      return S_OK;
  }
-@@ -236,19 +396,34 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
+@@ -236,19 +370,31 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
  
  static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_source **out_media_source)
  {
-+    GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE(
-+        "mf_src",
-+        GST_PAD_SRC,
-+        GST_PAD_ALWAYS,
-+        GST_STATIC_CAPS_ANY);
++    GstStaticPadTemplate src_template =
++        GST_STATIC_PAD_TEMPLATE("mf_src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
 +
      struct media_source *object = heap_alloc_zero(sizeof(*object));
      HRESULT hr;
@@ -364,10 +337,10 @@ index 84ecf305d4c..6b3bd4a7869 100644
 -    object->state = SOURCE_STOPPED;
 +    object->my_src = gst_pad_new_from_static_template(&src_template, "mf-src");
 +    gst_pad_set_element_private(object->my_src, object);
-+    gst_pad_set_getrange_function(object->my_src, pull_from_bytestream_wrapper);
-+    gst_pad_set_query_function(object->my_src, query_bytestream_wrapper);
-+    gst_pad_set_activatemode_function(object->my_src, activate_bytestream_pad_mode_wrapper);
-+    gst_pad_set_event_function(object->my_src, process_bytestream_pad_event_wrapper);
++    gst_pad_set_getrange_function(object->my_src, bytestream_wrapper_pull_wrapper);
++    gst_pad_set_query_function(object->my_src, bytestream_query_wrapper);
++    gst_pad_set_activatemode_function(object->my_src, bytestream_pad_mode_activate_wrapper);
++    gst_pad_set_event_function(object->my_src, bytestream_pad_event_process_wrapper);
  
 -    object->IMFMediaSource_iface.lpVtbl = &IMFMediaSource_vtbl;
 -    object->ref = 1;
@@ -375,7 +348,7 @@ index 84ecf305d4c..6b3bd4a7869 100644
  
      *out_media_source = object;
      return S_OK;
-@@ -717,3 +892,41 @@ HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj)
+@@ -716,3 +862,40 @@ HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj)
  
      return hr;
  }
@@ -385,35 +358,34 @@ index 84ecf305d4c..6b3bd4a7869 100644
 +{
 +    switch(cbdata->type)
 +    {
-+    case PULL_FROM_BYTESTREAM:
++    case BYTESTREAM_WRAPPER_PULL:
 +        {
 +            struct getrange_data *data = &cbdata->u.getrange_data;
-+            cbdata->u.getrange_data.ret = pull_from_bytestream(data->pad, data->parent,
++            cbdata->u.getrange_data.ret = bytestream_wrapper_pull(data->pad, data->parent,
 +                    data->ofs, data->len, data->buf);
 +            break;
 +        }
-+    case QUERY_BYTESTREAM:
++    case BYTESTREAM_QUERY:
 +        {
 +            struct query_function_data *data = &cbdata->u.query_function_data;
-+            cbdata->u.query_function_data.ret = query_bytestream(data->pad, data->parent, data->query);
++            cbdata->u.query_function_data.ret = bytestream_query(data->pad, data->parent, data->query);
 +            break;
 +        }
-+    case ACTIVATE_BYTESTREAM_PAD_MODE:
++    case BYTESTREAM_PAD_MODE_ACTIVATE:
 +        {
 +            struct activate_mode_data *data = &cbdata->u.activate_mode_data;
-+            cbdata->u.activate_mode_data.ret = activate_bytestream_pad_mode(data->pad, data->parent, data->mode, data->activate);
++            cbdata->u.activate_mode_data.ret = bytestream_pad_mode_activate(data->pad, data->parent, data->mode, data->activate);
 +            break;
 +        }
-+    case PROCESS_BYTESTREAM_PAD_EVENT:
++    case BYTESTREAM_PAD_EVENT_PROCESS:
 +        {
 +            struct event_src_data *data = &cbdata->u.event_src_data;
-+            cbdata->u.event_src_data.ret = process_bytestream_pad_event(data->pad, data->parent, data->event);
++            cbdata->u.event_src_data.ret = bytestream_pad_event_process(data->pad, data->parent, data->event);
 +            break;
 +        }
 +    default:
 +        {
-+            ERR("Wrong callback forwarder called\n");
-+            return;
++            assert(0);
 +        }
 +    }
 +}

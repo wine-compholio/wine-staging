@@ -1,7 +1,7 @@
-From 8b0d448ce8e7c3698f7b77dd687fea0676c392c7 Mon Sep 17 00:00:00 2001
+From 8497d396d1fbad6bed91ff7986b7b63cabed2517 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Wed, 29 Jan 2020 15:30:49 -0600
-Subject: [PATCH 24/52] mf: Introduce handler helper.
+Subject: [PATCH] mf: Introduce handler helper.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
@@ -10,8 +10,8 @@ Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
  dlls/mf/handler.h                 |  30 +++
  dlls/mf/main.c                    | 373 ++++--------------------------
  dlls/winegstreamer/Makefile.in    |   3 +-
- dlls/winegstreamer/media_source.c | 335 ++-------------------------
- 6 files changed, 447 insertions(+), 655 deletions(-)
+ dlls/winegstreamer/media_source.c | 331 ++------------------------
+ 6 files changed, 447 insertions(+), 651 deletions(-)
  create mode 100644 dlls/mf/handler.c
  create mode 100644 dlls/mf/handler.h
 
@@ -932,7 +932,7 @@ index e578d194f7f..f2e87494459 100644
  	media_source.c \
  	mediatype.c \
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 9c546bc4ac5..ca799446ad8 100644
+index 86100d7ff2a..e47c4b5a4e1 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
 @@ -23,6 +23,7 @@
@@ -943,7 +943,7 @@ index 9c546bc4ac5..ca799446ad8 100644
  
  #include <assert.h>
  #include <stdarg.h>
-@@ -1648,21 +1649,11 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+@@ -1562,21 +1563,11 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
      return hr;
  }
  
@@ -966,7 +966,7 @@ index 9c546bc4ac5..ca799446ad8 100644
  };
  
  static struct winegstreamer_stream_handler *impl_from_IMFByteStreamHandler(IMFByteStreamHandler *iface)
-@@ -1670,11 +1661,6 @@ static struct winegstreamer_stream_handler *impl_from_IMFByteStreamHandler(IMFBy
+@@ -1584,11 +1575,6 @@ static struct winegstreamer_stream_handler *impl_from_IMFByteStreamHandler(IMFBy
      return CONTAINING_RECORD(iface, struct winegstreamer_stream_handler, IMFByteStreamHandler_iface);
  }
  
@@ -978,7 +978,7 @@ index 9c546bc4ac5..ca799446ad8 100644
  static HRESULT WINAPI winegstreamer_stream_handler_QueryInterface(IMFByteStreamHandler *iface, REFIID riid, void **obj)
  {
      TRACE("%p, %s, %p.\n", iface, debugstr_guid(riid), obj);
-@@ -1704,248 +1690,44 @@ static ULONG WINAPI winegstreamer_stream_handler_AddRef(IMFByteStreamHandler *if
+@@ -1618,247 +1604,47 @@ static ULONG WINAPI winegstreamer_stream_handler_AddRef(IMFByteStreamHandler *if
  
  static ULONG WINAPI winegstreamer_stream_handler_Release(IMFByteStreamHandler *iface)
  {
@@ -1062,8 +1062,7 @@ index 9c546bc4ac5..ca799446ad8 100644
 -            IPropertyStore_Release(context->props);
 -        if (context->stream)
 -            IMFByteStream_Release(context->stream);
--        if (context->url)
--            heap_free(context->url);
+-        heap_free(context->url);
 -        heap_free(context);
 +        handler_destruct(&this->handler);
 +        heap_free(this);
@@ -1105,7 +1104,7 @@ index 9c546bc4ac5..ca799446ad8 100644
 -    HRESULT hr;
  
      TRACE("%p, %s, %#x, %p, %p, %p, %p.\n", iface, debugstr_w(url), flags, props, cancel_cookie, callback, state);
--
+ 
 -    if (cancel_cookie)
 -        *cancel_cookie = NULL;
 -
@@ -1166,7 +1165,7 @@ index 9c546bc4ac5..ca799446ad8 100644
 -    HRESULT hr;
  
      TRACE("%p, %p, %p, %p.\n", iface, result, obj_type, object);
--
+ 
 -    EnterCriticalSection(&this->cs);
 -
 -    LIST_FOR_EACH_ENTRY(cur, &this->results, struct winegstreamer_stream_handler_result, entry)
@@ -1206,7 +1205,7 @@ index 9c546bc4ac5..ca799446ad8 100644
 -    struct winegstreamer_stream_handler_result *found = NULL, *cur;
  
      TRACE("%p, %p.\n", iface, cancel_cookie);
--
+ 
 -    EnterCriticalSection(&this->cs);
 -
 -    LIST_FOR_EACH_ENTRY(cur, &this->results, struct winegstreamer_stream_handler_result, entry)
@@ -1234,7 +1233,7 @@ index 9c546bc4ac5..ca799446ad8 100644
  }
  
  static HRESULT WINAPI winegstreamer_stream_handler_GetMaxNumberOfBytesRequiredForResolution(IMFByteStreamHandler *iface, QWORD *bytes)
-@@ -1965,47 +1747,16 @@ static const IMFByteStreamHandlerVtbl winegstreamer_stream_handler_vtbl =
+@@ -1878,47 +1664,16 @@ static const IMFByteStreamHandlerVtbl winegstreamer_stream_handler_vtbl =
      winegstreamer_stream_handler_GetMaxNumberOfBytesRequiredForResolution,
  };
  
@@ -1285,7 +1284,7 @@ index 9c546bc4ac5..ca799446ad8 100644
  
          if (FAILED(hr = media_source_constructor(stream, &new_source)))
              return hr;
-@@ -2024,64 +1775,6 @@ static HRESULT winegstreamer_stream_handler_create_object(struct winegstreamer_s
+@@ -1937,64 +1692,6 @@ static HRESULT winegstreamer_stream_handler_create_object(struct winegstreamer_s
      }
  }
  
@@ -1350,7 +1349,7 @@ index 9c546bc4ac5..ca799446ad8 100644
  HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj)
  {
      struct winegstreamer_stream_handler *this;
-@@ -2093,11 +1786,9 @@ HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj)
+@@ -2006,11 +1703,9 @@ HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj)
      if (!this)
          return E_OUTOFMEMORY;
  

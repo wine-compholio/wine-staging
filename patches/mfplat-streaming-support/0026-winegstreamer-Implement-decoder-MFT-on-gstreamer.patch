@@ -1,7 +1,7 @@
-From f01c8a6745cefd98198e0401a359302aba45ba57 Mon Sep 17 00:00:00 2001
+From af76d7664da7eddadf0eec19c3fa6c70333f63e8 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Mon, 16 Mar 2020 12:09:39 -0500
-Subject: [PATCH 26/52] winegstreamer: Implement decoder MFT on gstreamer.
+Subject: [PATCH] winegstreamer: Implement decoder MFT on gstreamer.
 
 ---
  dlls/winegstreamer/Makefile.in               |    1 +
@@ -29,7 +29,7 @@ index f2e87494459..e2af4085827 100644
  	pin.c \
  	qualitycontrol.c \
 diff --git a/dlls/winegstreamer/gst_cbs.c b/dlls/winegstreamer/gst_cbs.c
-index e56c987eb38..0c0d0a26100 100644
+index 51aaefa911d..261a5b9f4ce 100644
 --- a/dlls/winegstreamer/gst_cbs.c
 +++ b/dlls/winegstreamer/gst_cbs.c
 @@ -51,6 +51,8 @@ static void CALLBACK perform_cb(TP_CALLBACK_INSTANCE *instance, void *user)
@@ -41,9 +41,9 @@ index e56c987eb38..0c0d0a26100 100644
  
      pthread_mutex_lock(&cbdata->lock);
      cbdata->finished = 1;
-@@ -417,3 +419,66 @@ GstPadProbeReturn caps_listener_wrapper(GstPad *pad, GstPadProbeInfo *info, gpoi
+@@ -404,3 +406,66 @@ void mf_src_no_more_pads_wrapper(GstElement *element, gpointer user)
  
-     return cbdata.u.pad_probe_data.ret;
+     call_cb(&cbdata);
  }
 +
 +gboolean activate_push_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate)
@@ -109,12 +109,12 @@ index e56c987eb38..0c0d0a26100 100644
 +    return cbdata.u.new_sample_data.ret;
 +}
 diff --git a/dlls/winegstreamer/gst_cbs.h b/dlls/winegstreamer/gst_cbs.h
-index 7173c09746e..7dc60f961ba 100644
+index a48999bbf71..6659aedefa5 100644
 --- a/dlls/winegstreamer/gst_cbs.h
 +++ b/dlls/winegstreamer/gst_cbs.h
-@@ -54,6 +54,12 @@ enum CB_TYPE {
-     SOURCE_ALL_STREAMS,
-     STREAM_PAD_EVENT,
+@@ -53,6 +53,12 @@ enum CB_TYPE {
+     MF_SRC_STREAM_REMOVED,
+     MF_SRC_NO_MORE_PADS,
      MEDIA_SOURCE_MAX,
 +    ACTIVATE_PUSH_MODE,
 +    QUERY_INPUT_SRC,
@@ -125,10 +125,10 @@ index 7173c09746e..7dc60f961ba 100644
  };
  
  struct cb_data {
-@@ -144,6 +150,17 @@ struct cb_data {
-             gpointer user;
-             GstPadProbeReturn ret;
-         } pad_probe_data;
+@@ -137,6 +143,17 @@ struct cb_data {
+             GstQuery *query;
+             gboolean ret;
+         } query_sink_data;
 +        struct chain_data {
 +            GstPad *pad;
 +            GstObject *parent;
@@ -143,7 +143,7 @@ index 7173c09746e..7dc60f961ba 100644
      } u;
  
      int finished;
-@@ -155,6 +172,7 @@ struct cb_data {
+@@ -148,6 +165,7 @@ struct cb_data {
  void mark_wine_thread(void) DECLSPEC_HIDDEN;
  void perform_cb_gstdemux(struct cb_data *data) DECLSPEC_HIDDEN;
  void perform_cb_media_source(struct cb_data *data) DECLSPEC_HIDDEN;
@@ -151,10 +151,10 @@ index 7173c09746e..7dc60f961ba 100644
  
  GstBusSyncReply watch_bus_wrapper(GstBus *bus, GstMessage *msg, gpointer user) DECLSPEC_HIDDEN;
  void existing_new_pad_wrapper(GstElement *bin, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
-@@ -180,5 +198,10 @@ void source_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user) DE
- void source_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
- void source_all_streams_wrapper(GstElement *element, gpointer user) DECLSPEC_HIDDEN;
- GstPadProbeReturn caps_listener_wrapper(GstPad *pad, GstPadProbeInfo *info, gpointer user);
+@@ -172,5 +190,10 @@ GstBusSyncReply mf_src_bus_watch_wrapper(GstBus *bus, GstMessage *message, gpoin
+ void mf_src_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
+ void mf_src_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
+ void mf_src_no_more_pads_wrapper(GstElement *element, gpointer user) DECLSPEC_HIDDEN;
 +gboolean activate_push_mode_wrapper(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean activate) DECLSPEC_HIDDEN;
 +gboolean query_input_src_wrapper(GstPad *pad, GstObject *parent, GstQuery *query) DECLSPEC_HIDDEN;
 +GstBusSyncReply watch_decoder_bus_wrapper(GstBus *bus, GstMessage *message, gpointer user) DECLSPEC_HIDDEN;
@@ -163,7 +163,7 @@ index 7173c09746e..7dc60f961ba 100644
  
  #endif
 diff --git a/dlls/winegstreamer/gst_private.h b/dlls/winegstreamer/gst_private.h
-index d0737442cc3..5ff412c8e47 100644
+index db0ea881a83..707fc286a69 100644
 --- a/dlls/winegstreamer/gst_private.h
 +++ b/dlls/winegstreamer/gst_private.h
 @@ -53,6 +53,7 @@ BOOL init_gstreamer(void) DECLSPEC_HIDDEN;
@@ -174,9 +174,9 @@ index d0737442cc3..5ff412c8e47 100644
  extern HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj) DECLSPEC_HIDDEN;
  
  HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj) DECLSPEC_HIDDEN;
-@@ -62,6 +63,12 @@ GstCaps *caps_from_mf_media_type(IMFMediaType *type);
- IMFSample *mf_sample_from_gst_buffer(GstBuffer *in);
- GstBuffer *gst_buffer_from_mf_sample(IMFSample *in);
+@@ -62,6 +63,12 @@ GstCaps *caps_from_mf_media_type(IMFMediaType *type) DECLSPEC_HIDDEN;
+ IMFSample *mf_sample_from_gst_buffer(GstBuffer *in) DECLSPEC_HIDDEN;
+ GstBuffer *gst_buffer_from_mf_sample(IMFSample *in) DECLSPEC_HIDDEN;
  
 +enum decoder_type
 +{
@@ -1529,7 +1529,7 @@ index 00000000000..025af7b91ae
 +    }
 +}
 diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
-index ae5dcc31825..167f2a185be 100644
+index 805cb1d2393..1d45ba00503 100644
 --- a/dlls/winegstreamer/mfplat.c
 +++ b/dlls/winegstreamer/mfplat.c
 @@ -406,6 +406,16 @@ failed:
@@ -1667,7 +1667,7 @@ index ae5dcc31825..167f2a185be 100644
 +    return S_OK;
 +}
 +
- const static struct
+ static const struct
  {
      const GUID *subtype;
 @@ -461,7 +578,6 @@ struct aac_user_data

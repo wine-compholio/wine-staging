@@ -1,19 +1,19 @@
-From 862d76c09ef0005d40e63b271a03c98874f78828 Mon Sep 17 00:00:00 2001
+From d9ecc0265c676aa3eb954d8247b64bcccd12c34b Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Tue, 25 Aug 2020 17:35:49 -0500
-Subject: [PATCH 05/52] winegstreamer: Insert videoconvert into decoded-video
+Subject: [PATCH] winegstreamer: Insert videoconvert into decoded-video
  streams.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
- dlls/winegstreamer/media_source.c | 104 ++++++++++++++++++++++++++----
- 1 file changed, 91 insertions(+), 13 deletions(-)
+ dlls/winegstreamer/media_source.c | 99 +++++++++++++++++++++++++++----
+ 1 file changed, 86 insertions(+), 13 deletions(-)
 
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index f1e8c5799f7..209753608b6 100644
+index 075bba3d551..a4ad51bb6f5 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
-@@ -459,8 +459,22 @@ static HRESULT media_stream_align_with_mf(struct media_stream *stream)
+@@ -432,8 +432,22 @@ static HRESULT media_stream_align_with_mf(struct media_stream *stream)
          g_free(source_caps_str);
      }
  
@@ -38,22 +38,26 @@ index f1e8c5799f7..209753608b6 100644
      {
          stream->my_sink = gst_element_get_static_pad(stream->appsink, "sink");
          g_object_set(stream->appsink, "caps", source_caps, NULL);
-@@ -605,45 +619,109 @@ static HRESULT media_stream_init_desc(struct media_stream *stream)
+@@ -572,7 +586,10 @@ static HRESULT media_stream_init_desc(struct media_stream *stream)
  {
-     HRESULT hr;
+     GstCaps *current_caps = gst_pad_get_current_caps(stream->their_src);
      IMFMediaTypeHandler *type_handler;
 +    IMFMediaType **stream_types = NULL;
      IMFMediaType *stream_type = NULL;
 +    DWORD type_count = 0;
 +    unsigned int i;
+     HRESULT hr;
  
-     stream->their_caps = gst_caps_fixate(stream->their_caps);
+     if (!current_caps)
+@@ -581,40 +598,96 @@ static HRESULT media_stream_init_desc(struct media_stream *stream)
+         goto fail;
+     }
  
--    if (strcmp(gst_structure_get_name(gst_caps_get_structure(stream->their_caps, 0)), "video/x-raw") &&
--        strcmp(gst_structure_get_name(gst_caps_get_structure(stream->their_caps, 0)), "audio/x-raw"))
-+    if (!strcmp(gst_structure_get_name(gst_caps_get_structure(stream->their_caps, 0)), "video/x-raw"))
+-    if (strcmp(gst_structure_get_name(gst_caps_get_structure(current_caps, 0)), "video/x-raw") &&
+-        strcmp(gst_structure_get_name(gst_caps_get_structure(current_caps, 0)), "audio/x-raw"))
++    if (!strcmp(gst_structure_get_name(gst_caps_get_structure(current_caps, 0)), "video/x-raw"))
      {
--        GstCaps *compatible_caps = make_mf_compatible_caps(stream->their_caps);
+-        GstCaps *compatible_caps = make_mf_compatible_caps(current_caps);
 -        stream_type = mf_media_type_from_caps(compatible_caps);
 -        gst_caps_unref(compatible_caps);
 +        GstElementFactory *videoconvert_factory = gst_element_factory_find("videoconvert");
@@ -68,20 +72,16 @@ index f1e8c5799f7..209753608b6 100644
 +                continue;
 +            src_caps = gst_static_pad_template_get_caps(template);
 +            gst_structure_get_list(gst_caps_get_structure(src_caps, 0), "format", &formats);
-+            type_count = formats->n_values;
-+            stream_types = heap_alloc( sizeof(IMFMediaType*) * type_count );
++            stream_types = heap_alloc( sizeof(IMFMediaType*) * formats->n_values );
 +            for (i = 0; i < formats->n_values; i++)
 +            {
 +                GValue *format = g_value_array_get_nth(formats, i);
-+                GstCaps *modified_caps = gst_caps_copy(stream->their_caps);
++                GstCaps *modified_caps = gst_caps_copy(current_caps);
 +                gst_caps_set_value(modified_caps, "format", format);
-+                stream_types[i] = mf_media_type_from_caps(modified_caps);
++                stream_types[type_count] = mf_media_type_from_caps(modified_caps);
 +                gst_caps_unref(modified_caps);
-+                if (!stream_types[i])
-+                {
-+                    i--;
-+                    type_count--;
-+                }
++                if (stream_types[type_count])
++                    type_count++;
 +            }
 +            g_value_array_free(formats);
 +            gst_caps_unref(src_caps);
@@ -89,9 +89,9 @@ index f1e8c5799f7..209753608b6 100644
 +        }
      }
 -    else
-+    else if (!strcmp(gst_structure_get_name(gst_caps_get_structure(stream->their_caps, 0)), "audio/x-raw"))
++    else if (!strcmp(gst_structure_get_name(gst_caps_get_structure(current_caps, 0)), "audio/x-raw"))
 +    {
-         stream_type = mf_media_type_from_caps(stream->their_caps);
+         stream_type = mf_media_type_from_caps(current_caps);
 +        if (stream_type)
 +        {
 +            stream_types = &stream_type;
@@ -100,7 +100,7 @@ index f1e8c5799f7..209753608b6 100644
 +    }
 +    else
 +    {
-+        GstCaps *compatible_caps = make_mf_compatible_caps(stream->their_caps);
++        GstCaps *compatible_caps = make_mf_compatible_caps(current_caps);
 +        if (compatible_caps)
 +        {
 +            stream_type = mf_media_type_from_caps(compatible_caps);
@@ -113,9 +113,8 @@ index f1e8c5799f7..209753608b6 100644
 +        }
 +    }
  
-     gst_caps_unref(stream->their_caps);
+     gst_caps_unref(current_caps);
 -    if (!stream_type)
-+
 +    if (!type_count)
      {
 +        ERR("Failed to establish an IMFMediaType from any of the possible stream caps!\n");
@@ -146,7 +145,6 @@ index f1e8c5799f7..209753608b6 100644
 +
      return S_OK;
      fail:
-     ERR("media stream initialization failed with %x\n", hr);
      if (type_handler)
          IMFMediaTypeHandler_Release(type_handler);
 +    if (stream_types)

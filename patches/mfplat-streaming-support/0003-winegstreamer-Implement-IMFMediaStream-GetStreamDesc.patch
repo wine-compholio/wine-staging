@@ -1,73 +1,17 @@
-From 2bbf345d820cfb52620bfbde10ce5d920854baf1 Mon Sep 17 00:00:00 2001
+From 5119cb0704635fb1b4e30f4b67f86826b28e6015 Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
-Date: Tue, 31 Mar 2020 11:11:05 -0500
-Subject: [PATCH 03/52] winegstreamer: Implement
- IMFMediaStream::GetStreamDescriptor.
+Date: Fri, 11 Sep 2020 13:51:20 -0500
+Subject: [PATCH] winegstreamer: Implement IMFMediaStream::GetStreamDescriptor.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
- dlls/winegstreamer/gst_cbs.c      |  13 ++
- dlls/winegstreamer/gst_cbs.h      |   8 ++
- dlls/winegstreamer/gst_private.h  |   5 +
- dlls/winegstreamer/media_source.c | 137 +++++++++++++++++++-
- dlls/winegstreamer/mfplat.c       | 208 ++++++++++++++++++++++++++++++
- 5 files changed, 368 insertions(+), 3 deletions(-)
+ dlls/winegstreamer/gst_private.h  |   4 +
+ dlls/winegstreamer/media_source.c |  75 +++++++++++++-
+ dlls/winegstreamer/mfplat.c       | 166 ++++++++++++++++++++++++++++++
+ 3 files changed, 240 insertions(+), 5 deletions(-)
 
-diff --git a/dlls/winegstreamer/gst_cbs.c b/dlls/winegstreamer/gst_cbs.c
-index 4755f5b42f1..e56c987eb38 100644
---- a/dlls/winegstreamer/gst_cbs.c
-+++ b/dlls/winegstreamer/gst_cbs.c
-@@ -404,3 +404,16 @@ void source_all_streams_wrapper(GstElement *element, gpointer user)
- 
-     call_cb(&cbdata);
- }
-+
-+GstPadProbeReturn caps_listener_wrapper(GstPad *pad, GstPadProbeInfo *info, gpointer user)
-+{
-+    struct cb_data cbdata = { STREAM_PAD_EVENT };
-+
-+    cbdata.u.pad_probe_data.pad = pad;
-+    cbdata.u.pad_probe_data.info = info;
-+    cbdata.u.pad_probe_data.user = user;
-+
-+    call_cb(&cbdata);
-+
-+    return cbdata.u.pad_probe_data.ret;
-+}
-diff --git a/dlls/winegstreamer/gst_cbs.h b/dlls/winegstreamer/gst_cbs.h
-index d87cc8c21e9..7173c09746e 100644
---- a/dlls/winegstreamer/gst_cbs.h
-+++ b/dlls/winegstreamer/gst_cbs.h
-@@ -52,6 +52,7 @@ enum CB_TYPE {
-     SOURCE_STREAM_ADDED,
-     SOURCE_STREAM_REMOVED,
-     SOURCE_ALL_STREAMS,
-+    STREAM_PAD_EVENT,
-     MEDIA_SOURCE_MAX,
- };
- 
-@@ -137,6 +138,12 @@ struct cb_data {
-             GstQuery *query;
-             gboolean ret;
-         } query_sink_data;
-+        struct pad_probe_data {
-+            GstPad *pad;
-+            GstPadProbeInfo *info;
-+            gpointer user;
-+            GstPadProbeReturn ret;
-+        } pad_probe_data;
-     } u;
- 
-     int finished;
-@@ -172,5 +179,6 @@ GstBusSyncReply watch_source_bus_wrapper(GstBus *bus, GstMessage *message, gpoin
- void source_stream_added_wrapper(GstElement *bin, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
- void source_stream_removed_wrapper(GstElement *element, GstPad *pad, gpointer user) DECLSPEC_HIDDEN;
- void source_all_streams_wrapper(GstElement *element, gpointer user) DECLSPEC_HIDDEN;
-+GstPadProbeReturn caps_listener_wrapper(GstPad *pad, GstPadProbeInfo *info, gpointer user);
- 
- #endif
 diff --git a/dlls/winegstreamer/gst_private.h b/dlls/winegstreamer/gst_private.h
-index ef07d3591e7..86392eea4e3 100644
+index ef07d3591e7..60b38a48f5a 100644
 --- a/dlls/winegstreamer/gst_private.h
 +++ b/dlls/winegstreamer/gst_private.h
 @@ -36,6 +36,7 @@
@@ -78,42 +22,39 @@ index ef07d3591e7..86392eea4e3 100644
  #include "wine/heap.h"
  #include "wine/strmbase.h"
  
-@@ -54,6 +55,10 @@ void start_dispatch_thread(void) DECLSPEC_HIDDEN;
+@@ -54,6 +55,9 @@ void start_dispatch_thread(void) DECLSPEC_HIDDEN;
  
  extern HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj) DECLSPEC_HIDDEN;
  
 +HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj) DECLSPEC_HIDDEN;
-+GstCaps *make_mf_compatible_caps(GstCaps *caps);
-+IMFMediaType *mf_media_type_from_caps(GstCaps *caps);
++IMFMediaType *mf_media_type_from_caps(const GstCaps *caps) DECLSPEC_HIDDEN;
 +
  HRESULT winegstreamer_stream_handler_create(REFIID riid, void **obj) DECLSPEC_HIDDEN;
  
  #endif /* __GST_PRIVATE_INCLUDED__ */
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 29af2b72def..345b1fe4528 100644
+index f61f84359d5..723f052c10d 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
-@@ -47,14 +47,19 @@ struct media_stream
+@@ -48,13 +48,17 @@ struct media_stream
      LONG ref;
      struct media_source *parent_source;
      IMFMediaEventQueue *event_queue;
 +    IMFStreamDescriptor *descriptor;
      GstElement *appsink;
      GstPad *their_src, *my_sink;
-+    GstCaps *their_caps;
      enum
      {
          STREAM_STUB,
-         STREAM_INACTIVE,
++        STREAM_INACTIVE,
          STREAM_SHUTDOWN,
      } state;
 +    /* used when in STUB state: */
 +    DWORD stream_id;
-+    HANDLE caps_event;
  };
  
  struct media_source
-@@ -312,6 +317,8 @@ static ULONG WINAPI media_stream_Release(IMFMediaStream *iface)
+@@ -286,6 +290,8 @@ static ULONG WINAPI media_stream_Release(IMFMediaStream *iface)
      {
          if (stream->my_sink)
              gst_object_unref(GST_OBJECT(stream->my_sink));
@@ -122,7 +63,7 @@ index 29af2b72def..345b1fe4528 100644
          if (stream->event_queue)
              IMFMediaEventQueue_Release(stream->event_queue);
          if (stream->parent_source)
-@@ -393,7 +400,10 @@ static HRESULT WINAPI media_stream_GetStreamDescriptor(IMFMediaStream* iface, IM
+@@ -367,7 +373,10 @@ static HRESULT WINAPI media_stream_GetStreamDescriptor(IMFMediaStream* iface, IM
      if (stream->state == STREAM_SHUTDOWN)
          return MF_E_SHUTDOWN;
  
@@ -134,7 +75,16 @@ index 29af2b72def..345b1fe4528 100644
  }
  
  static HRESULT WINAPI media_stream_RequestSample(IMFMediaStream *iface, IUnknown *token)
-@@ -436,9 +446,12 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD
+@@ -397,7 +406,7 @@ static const IMFMediaStreamVtbl media_stream_vtbl =
+ };
+ 
+ /* creates a stub stream */
+-static HRESULT new_media_stream(struct media_source *source, GstPad *pad, struct media_stream **out_stream)
++static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD stream_id, struct media_stream **out_stream)
+ {
+     struct media_stream *object = heap_alloc_zero(sizeof(*object));
+     HRESULT hr;
+@@ -410,6 +419,7 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, struct
      IMFMediaSource_AddRef(&source->IMFMediaSource_iface);
      object->parent_source = source;
      object->their_src = pad;
@@ -142,38 +92,34 @@ index 29af2b72def..345b1fe4528 100644
  
      object->state = STREAM_STUB;
  
-+    object->caps_event = CreateEventA(NULL, TRUE, FALSE, NULL);
-+
-     if (FAILED(hr = MFCreateEventQueue(&object->event_queue)))
-         goto fail;
- 
-@@ -455,10 +468,10 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD
-     g_object_set(object->appsink, "wait-on-eos", FALSE, NULL);
+@@ -427,8 +437,6 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, struct
+     g_object_set(object->appsink, "max-buffers", 5, NULL);
  
      object->my_sink = gst_element_get_static_pad(object->appsink, "sink");
 -    gst_pad_set_element_private(object->my_sink, object);
 -
      gst_pad_link(object->their_src, object->my_sink);
  
-+    gst_pad_add_probe(object->my_sink, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, caps_listener_wrapper, object, NULL);
-+
      gst_element_sync_state_with_parent(object->appsink);
- 
-     TRACE("->(%p)\n", object);
-@@ -473,6 +486,43 @@ static HRESULT new_media_stream(struct media_source *source, GstPad *pad, DWORD
+@@ -445,6 +453,47 @@ fail:
      return hr;
  }
  
 +static HRESULT media_stream_init_desc(struct media_stream *stream)
 +{
-+    HRESULT hr;
++    GstCaps *current_caps = gst_pad_get_current_caps(stream->their_src);
 +    IMFMediaTypeHandler *type_handler;
 +    IMFMediaType *stream_type = NULL;
++    HRESULT hr;
 +
-+    stream->their_caps = gst_caps_fixate(stream->their_caps);
++    if (!current_caps)
++    {
++        hr = E_FAIL;
++        goto fail;
++    }
 +
-+    stream_type = mf_media_type_from_caps(stream->their_caps);
-+    gst_caps_unref(stream->their_caps);
++    stream_type = mf_media_type_from_caps(current_caps);
++    gst_caps_unref(current_caps);
 +    if (!stream_type)
 +    {
 +        hr = E_FAIL;
@@ -195,7 +141,6 @@ index 29af2b72def..345b1fe4528 100644
 +
 +    return S_OK;
 +    fail:
-+    ERR("media stream initialization failed with %x\n", hr);
 +    if (type_handler)
 +        IMFMediaTypeHandler_Release(type_handler);
 +    return hr;
@@ -204,131 +149,54 @@ index 29af2b72def..345b1fe4528 100644
  static HRESULT WINAPI media_source_QueryInterface(IMFMediaSource *iface, REFIID riid, void **out)
  {
      struct media_source *source = impl_from_IMFMediaSource(iface);
-@@ -680,6 +730,23 @@ static const IMFMediaSourceVtbl IMFMediaSource_vtbl =
-     media_source_Shutdown,
- };
+@@ -662,7 +711,7 @@ static void stream_added(GstElement *element, GstPad *pad, gpointer user)
+     if (gst_pad_get_direction(pad) != GST_PAD_SRC)
+         return;
  
-+/* If this callback is extended to use any significant win32 APIs, a wrapper function
-+   should be added */
-+gboolean stream_found(GstElement *bin, GstPad *pad, GstCaps *caps, gpointer user)
-+{
-+    GstCaps *target_caps;
-+
-+    /* if the stream can be converted into an MF compatible type, we'll go that route
-+       otherwise, we'll rely on decodebin for the whole process */
-+
-+    if ((target_caps = make_mf_compatible_caps(caps)))
-+    {
-+        gst_caps_unref(target_caps);
-+        return FALSE;
-+    }
-+    return TRUE;
-+}
-+
- static void source_stream_added(GstElement *element, GstPad *pad, gpointer user)
- {
-     struct media_source *source = (struct media_source *) user;
-@@ -697,6 +764,36 @@ static void source_stream_added(GstElement *element, GstPad *pad, gpointer user)
+-    if (FAILED(new_media_stream(source, pad, &stream)))
++    if (FAILED(new_media_stream(source, pad, source->stream_count, &stream)))
+         return;
  
-     TRACE("stream-id: %u\n", stream_id);
- 
-+    /* This codepath is currently never triggered, as we don't need to ever restart the gstreamer pipeline.  It is retained in
-+       case this becomes necessary in the future, for example in a case where different media types require different
-+       post-processing elements. */
-+    for (unsigned int i = 0; i < source->stream_count; i++)
-+    {
-+        DWORD existing_stream_id;
-+        IMFStreamDescriptor *descriptor = source->streams[i]->descriptor;
-+
-+        if (source->streams[i]->state == STREAM_STUB)
-+            continue;
-+
-+        if (FAILED(IMFStreamDescriptor_GetStreamIdentifier(descriptor, &existing_stream_id)))
-+            goto leave;
-+
-+        if (existing_stream_id == stream_id)
-+        {
-+            struct media_stream *existing_stream = source->streams[i];
-+            GstPadLinkReturn ret;
-+
-+            TRACE("Found existing stream %p\n", existing_stream);
-+
-+            existing_stream->their_src = pad;
-+
-+            if ((ret = gst_pad_link(existing_stream->their_src, existing_stream->my_sink)) != GST_PAD_LINK_OK)
-+                ERR("Error linking decodebin pad to stream %p, err = %d\n", existing_stream, ret);
-+
-+            goto leave;
-+        }
-+    }
-+
-     if (FAILED(new_media_stream(source, pad, stream_id, &stream)))
-     {
-         goto leave;
-@@ -737,6 +834,26 @@ static void source_all_streams(GstElement *element, gpointer user)
-     SetEvent(source->all_streams_event);
+     if (!(new_stream_array = heap_realloc(source->streams, (source->stream_count + 1) * (sizeof(*new_stream_array)))))
+@@ -687,6 +736,8 @@ static void stream_removed(GstElement *element, GstPad *pad, gpointer user)
+         if (stream->their_src != pad)
+             continue;
+         stream->their_src = NULL;
++        if (stream->state != STREAM_INACTIVE)
++            stream->state = STREAM_INACTIVE;
+     }
  }
  
-+static GstPadProbeReturn caps_listener(GstPad *pad, GstPadProbeInfo *info, gpointer user)
-+{
-+    struct media_stream *stream = (struct media_stream *) user;
-+    GstEvent *event = gst_pad_probe_info_get_event(info);
-+
-+    if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS)
-+    {
-+        GstCaps *caps;
-+        TRACE("got caps for stream %p\n", stream);
-+
-+        gst_event_parse_caps(event, &caps);
-+        stream->their_caps = gst_caps_copy(caps);
-+        SetEvent(stream->caps_event);
-+
-+        return GST_PAD_PROBE_REMOVE;
-+    }
-+
-+    return GST_PAD_PROBE_OK;
-+}
-+
- static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_source **out_media_source)
- {
-     GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE(
-@@ -787,6 +904,8 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+@@ -703,6 +754,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+         GST_STATIC_PAD_TEMPLATE("mf_src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
  
-     gst_bin_add(GST_BIN(object->container), object->decodebin);
+     struct media_source *object = heap_alloc_zero(sizeof(*object));
++    unsigned int i;
+     HRESULT hr;
+     int ret;
  
-+    if(!GetEnvironmentVariableA("MF_DECODE_IN_SOURCE", NULL, 0))
-+        g_signal_connect(object->decodebin, "autoplug-continue", G_CALLBACK(stream_found), object);
-     g_signal_connect(object->decodebin, "pad-added", G_CALLBACK(source_stream_added_wrapper), object);
-     g_signal_connect(object->decodebin, "pad-removed", G_CALLBACK(source_stream_removed_wrapper), object);
-     g_signal_connect(object->decodebin, "no-more-pads", G_CALLBACK(source_all_streams_wrapper), object);
-@@ -812,6 +931,12 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+@@ -772,6 +824,19 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
      }
  
      WaitForSingleObject(object->all_streams_event, INFINITE);
-+    for (unsigned int i = 0; i < object->stream_count; i++)
++    for (i = 0; i < object->stream_count; i++)
 +    {
-+        WaitForSingleObject(object->streams[i]->caps_event, INFINITE);
-+        if (FAILED(hr = media_stream_init_desc(object->streams[i])))
++        GstSample *preroll;
++        g_signal_emit_by_name(object->streams[i]->appsink, "pull-preroll", &preroll);
++        hr = E_FAIL;
++        if (!preroll || FAILED(hr = media_stream_init_desc(object->streams[i])))
++        {
++            ERR("Failed to finish initialization of media stream %p, hr %x.\n", object->streams[i], hr);
++            IMFMediaStream_Release(&object->streams[i]->IMFMediaStream_iface);
 +            goto fail;
++        }
++        gst_sample_unref(preroll);
 +    }
  
      object->state = SOURCE_STOPPED;
  
-@@ -1337,6 +1462,12 @@ void perform_cb_media_source(struct cb_data *cbdata)
-             source_all_streams(data->element, data->user);
-             break;
-         }
-+    case STREAM_PAD_EVENT:
-+        {
-+            struct pad_probe_data *data = &cbdata->u.pad_probe_data;
-+            cbdata->u.pad_probe_data.ret = caps_listener(data->pad, data->info, data->user);
-+            break;
-+        }
-     default:
-         {
-             ERR("Wrong callback forwarder called\n");
 diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
-index c996f06211e..3667bc3cc38 100644
+index c996f06211e..2c2216f94b6 100644
 --- a/dlls/winegstreamer/mfplat.c
 +++ b/dlls/winegstreamer/mfplat.c
 @@ -16,6 +16,11 @@
@@ -343,17 +211,17 @@ index c996f06211e..3667bc3cc38 100644
  #include <stdarg.h>
  
  #include "gst_private.h"
-@@ -436,3 +441,206 @@ HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj)
+@@ -436,3 +441,164 @@ HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj)
  
      return CLASS_E_CLASSNOTAVAILABLE;
  }
 +
-+const static struct
++static const struct
 +{
 +    const GUID *subtype;
 +    GstVideoFormat format;
 +}
-+uncompressed_formats[] =
++uncompressed_video_formats[] =
 +{
 +    {&MFVideoFormat_ARGB32,  GST_VIDEO_FORMAT_BGRA},
 +    {&MFVideoFormat_RGB32,   GST_VIDEO_FORMAT_BGRx},
@@ -362,8 +230,8 @@ index c996f06211e..3667bc3cc38 100644
 +    {&MFVideoFormat_RGB555,  GST_VIDEO_FORMAT_BGR15},
 +};
 +
-+/* caps will be modified to represent the exact type needed for the format */
-+static IMFMediaType* transform_to_media_type(GstCaps *caps)
++/* returns NULL if doesn't match exactly */
++IMFMediaType *mf_media_type_from_caps(const GstCaps *caps)
 +{
 +    IMFMediaType *media_type;
 +    GstStructure *info;
@@ -377,18 +245,16 @@ index c996f06211e..3667bc3cc38 100644
 +    }
 +
 +    if (FAILED(MFCreateMediaType(&media_type)))
-+    {
 +        return NULL;
-+    }
 +
 +    info = gst_caps_get_structure(caps, 0);
 +    mime_type = gst_structure_get_name(info);
 +
-+    if (!(strncmp(mime_type, "video", 5)))
++    if (!strncmp(mime_type, "video", 5))
 +    {
 +        GstVideoInfo video_info;
 +
-+        if (!(gst_video_info_from_caps(&video_info, caps)))
++        if (!gst_video_info_from_caps(&video_info, caps))
 +        {
 +            return NULL;
 +        }
@@ -399,7 +265,7 @@ index c996f06211e..3667bc3cc38 100644
 +
 +        IMFMediaType_SetUINT64(media_type, &MF_MT_FRAME_RATE, ((UINT64)video_info.fps_n << 32) | video_info.fps_d);
 +
-+        if (!(strcmp(mime_type, "video/x-raw")))
++        if (!strcmp(mime_type, "video/x-raw"))
 +        {
 +            GUID fourcc_subtype = MFVideoFormat_Base;
 +            unsigned int i;
@@ -413,26 +279,29 @@ index c996f06211e..3667bc3cc38 100644
 +            }
 +            else
 +            {
-+                for (i = 0; i < ARRAY_SIZE(uncompressed_formats); i++)
++                for (i = 0; i < ARRAY_SIZE(uncompressed_video_formats); i++)
 +                {
-+                    if (uncompressed_formats[i].format == video_info.finfo->format)
++                    if (uncompressed_video_formats[i].format == video_info.finfo->format)
 +                    {
-+                        IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, uncompressed_formats[i].subtype);
++                        IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, uncompressed_video_formats[i].subtype);
 +                        break;
 +                    }
 +                }
-+                if (i == ARRAY_SIZE(uncompressed_formats))
-+                    FIXME("Unrecognized format.\n");
++                if (i == ARRAY_SIZE(uncompressed_video_formats))
++                {
++                    FIXME("Unrecognized uncompressed video format %x\n", video_info.finfo->format);
++                    IMFMediaType_Release(media_type);
++                    return NULL;
++                }
 +            }
 +        }
 +        else
 +        {
 +            FIXME("Unrecognized video format %s\n", mime_type);
-+            IMFMediaType_Release(media_type);
 +            return NULL;
 +        }
 +    }
-+    else if (!(strncmp(mime_type, "audio", 5)))
++    else if (!strncmp(mime_type, "audio", 5))
 +    {
 +        gint rate, channels, bitrate;
 +        guint64 channel_mask;
@@ -445,57 +314,51 @@ index c996f06211e..3667bc3cc38 100644
 +            IMFMediaType_SetUINT32(media_type, &MF_MT_AUDIO_NUM_CHANNELS, channels);
 +
 +        if (gst_structure_get(info, "channel-mask", GST_TYPE_BITMASK, &channel_mask, NULL))
-+            IMFMediaType_SetUINT32(media_type, &MF_MT_AUDIO_CHANNEL_MASK, (DWORD)channel_mask);
++            IMFMediaType_SetUINT32(media_type, &MF_MT_AUDIO_CHANNEL_MASK, channel_mask);
 +
 +        if (gst_structure_get_int(info, "bitrate", &bitrate))
 +            IMFMediaType_SetUINT32(media_type, &MF_MT_AVG_BITRATE, bitrate);
 +
-+        if (!(strcmp(mime_type, "audio/x-raw")))
++        if (!strcmp(mime_type, "audio/x-raw"))
 +        {
-+            const char *format;
-+            if ((format = gst_structure_get_string(info, "format")))
++            GstAudioInfo audio_info;
++
++            if (gst_audio_info_from_caps(&audio_info, caps))
 +            {
-+                char type;
-+                unsigned int bits_per_sample;
-+                char endian[2];
-+                char new_format[6];
-+                if ((strlen(format) > 5) || (sscanf(format, "%c%u%2c", &type, &bits_per_sample, endian) < 2))
++                DWORD depth = GST_AUDIO_INFO_DEPTH(&audio_info);
++
++                /* validation */
++                if ((audio_info.finfo->flags & GST_AUDIO_FORMAT_FLAG_INTEGER && depth > 8) ||
++                    (audio_info.finfo->flags & GST_AUDIO_FORMAT_FLAG_SIGNED && depth <= 8) ||
++                    (audio_info.finfo->endianness != G_LITTLE_ENDIAN && depth > 8))
 +                {
-+                    FIXME("Unhandled audio format %s\n", format);
 +                    IMFMediaType_Release(media_type);
 +                    return NULL;
 +                }
 +
-+                if (type == 'F')
++                /* conversion */
++                switch (audio_info.finfo->flags)
 +                {
-+                    IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, &MFAudioFormat_Float);
-+                }
-+                else if (type == 'U' || type == 'S')
-+                {
-+                    IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM);
-+                    if (bits_per_sample == 8)
-+                        type = 'U';
-+                    else
-+                        type = 'S';
-+                }
-+                else
-+                {
-+                    FIXME("Unrecognized audio format: %s\n", format);
-+                    IMFMediaType_Release(media_type);
-+                    return NULL;
++                    case GST_AUDIO_FORMAT_FLAG_FLOAT:
++                        IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, &MFAudioFormat_Float);
++                        break;
++                    case GST_AUDIO_FORMAT_FLAG_INTEGER:
++                    case GST_AUDIO_FORMAT_FLAG_SIGNED:
++                        IMFMediaType_SetGUID(media_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM);
++                        break;
++                    default:
++                        FIXME("Unrecognized audio format %x\n", audio_info.finfo->format);
++                        IMFMediaType_Release(media_type);
++                        return NULL;
 +                }
 +
-+                IMFMediaType_SetUINT32(media_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, bits_per_sample);
-+
-+                if (endian[0] == 'B')
-+                    endian[0] = 'L';
-+
-+                sprintf(new_format, "%c%u%.2s", type, bits_per_sample, bits_per_sample > 8 ? endian : 0);
-+                gst_caps_set_simple(caps, "format", G_TYPE_STRING, new_format, NULL);
++                IMFMediaType_SetUINT32(media_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, depth);
 +            }
 +            else
 +            {
-+                ERR("Failed to get audio format\n");
++                ERR("Failed to get caps audio info\n");
++                IMFMediaType_Release(media_type);
++                return NULL;
 +            }
 +        }
 +        else
@@ -512,43 +375,6 @@ index c996f06211e..3667bc3cc38 100644
 +    }
 +
 +    return media_type;
-+}
-+
-+/* returns NULL if doesn't match exactly */
-+IMFMediaType *mf_media_type_from_caps(GstCaps *caps)
-+{
-+    GstCaps *writeable_caps;
-+    IMFMediaType *ret;
-+
-+    writeable_caps = gst_caps_copy(caps);
-+    ret = transform_to_media_type(writeable_caps);
-+
-+    if (!(gst_caps_is_equal(caps, writeable_caps)))
-+    {
-+        IMFMediaType_Release(ret);
-+        ret = NULL;
-+    }
-+    gst_caps_unref(writeable_caps);
-+    return ret;
-+}
-+
-+GstCaps *make_mf_compatible_caps(GstCaps *caps)
-+{
-+    GstCaps *ret;
-+    IMFMediaType *media_type;
-+
-+    ret = gst_caps_copy(caps);
-+
-+    if ((media_type = transform_to_media_type(ret)))
-+        IMFMediaType_Release(media_type);
-+
-+    if (!media_type)
-+    {
-+        gst_caps_unref(ret);
-+        return NULL;
-+    }
-+
-+    return ret;
 +}
 -- 
 2.28.0

@@ -1,13 +1,13 @@
-From d883eb8c94f0778d4ef955480a3862d575f7130a Mon Sep 17 00:00:00 2001
+From e6c2b857eb4715a114a1613f6b9324b68dd3ec1b Mon Sep 17 00:00:00 2001
 From: Derek Lesho <dlesho@codeweavers.com>
 Date: Tue, 31 Mar 2020 15:10:03 -0500
-Subject: [PATCH 19/52] winegstreamer: Implement IMFMediaSource::Start.
+Subject: [PATCH] winegstreamer: Implement IMFMediaSource::Start.
 
 Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
 ---
  dlls/mfplat/tests/mfplat.c        |   8 +-
- dlls/winegstreamer/media_source.c | 313 +++++++++++++++++++++++++++++-
- 2 files changed, 314 insertions(+), 7 deletions(-)
+ dlls/winegstreamer/media_source.c | 319 +++++++++++++++++++++++++++++-
+ 2 files changed, 317 insertions(+), 10 deletions(-)
 
 diff --git a/dlls/mfplat/tests/mfplat.c b/dlls/mfplat/tests/mfplat.c
 index 72d06e31880..e6a1694a11f 100644
@@ -52,10 +52,10 @@ index 72d06e31880..e6a1694a11f 100644
      IMFPresentationDescriptor_Release(descriptor);
  
 diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
-index 6c0c212a100..c893664fbec 100644
+index bbf784090f1..b35c8bf48d2 100644
 --- a/dlls/winegstreamer/media_source.c
 +++ b/dlls/winegstreamer/media_source.c
-@@ -56,16 +56,41 @@ struct media_stream
+@@ -56,15 +56,40 @@ struct media_stream
          STREAM_STUB,
          STREAM_INACTIVE,
          STREAM_SHUTDOWN,
@@ -63,7 +63,6 @@ index 6c0c212a100..c893664fbec 100644
      } state;
      /* used when in STUB state: */
      DWORD stream_id;
-     HANDLE caps_event;
 +    BOOL eos;
 +};
 +
@@ -97,7 +96,7 @@ index 6c0c212a100..c893664fbec 100644
      IMFMediaEventQueue *event_queue;
      IMFByteStream *byte_stream;
      struct media_stream **streams;
-@@ -79,6 +104,7 @@ struct media_source
+@@ -78,6 +103,7 @@ struct media_source
      {
          SOURCE_OPENING,
          SOURCE_STOPPED,
@@ -105,10 +104,11 @@ index 6c0c212a100..c893664fbec 100644
          SOURCE_SHUTDOWN,
      } state;
      HANDLE all_streams_event;
-@@ -94,6 +120,264 @@ static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *ifac
+@@ -93,7 +119,265 @@ static inline struct media_source *impl_from_IMFMediaSource(IMFMediaSource *ifac
      return CONTAINING_RECORD(iface, struct media_source, IMFMediaSource_iface);
  }
  
+-static GstFlowReturn bytestream_wrapper_pull(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
 +static inline struct media_source *impl_from_async_commands_callback_IMFAsyncCallback(IMFAsyncCallback *iface)
 +{
 +    return CONTAINING_RECORD(iface, struct media_source, async_commands_callback);
@@ -367,10 +367,22 @@ index 6c0c212a100..c893664fbec 100644
 +    source_async_commands_Invoke,
 +};
 +
- GstFlowReturn pull_from_bytestream(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
++GstFlowReturn bytestream_wrapper_pull(GstPad *pad, GstObject *parent, guint64 ofs, guint len,
          GstBuffer **buf)
  {
-@@ -854,16 +1138,32 @@ static HRESULT WINAPI media_source_CreatePresentationDescriptor(IMFMediaSource *
+     struct media_source *source = gst_pad_get_element_private(pad);
+@@ -242,8 +526,8 @@ GstBusSyncReply bus_watch(GstBus *bus, GstMessage *message, gpointer user)
+             break;
+     }
+ 
+-    gst_message_unref(message);
+-    return GST_BUS_DROP;
++    /* FIXME: drop messages and find a substitute for gst_bus_poll */
++    return GST_BUS_PASS;
+ }
+ 
+ static HRESULT WINAPI media_stream_QueryInterface(IMFMediaStream *iface, REFIID riid, void **out)
+@@ -820,16 +1104,32 @@ static HRESULT WINAPI media_source_CreatePresentationDescriptor(IMFMediaSource *
  }
  
  static HRESULT WINAPI media_source_Start(IMFMediaSource *iface, IMFPresentationDescriptor *descriptor,
@@ -406,7 +418,7 @@ index 6c0c212a100..c893664fbec 100644
  }
  
  static HRESULT WINAPI media_source_Stop(IMFMediaSource *iface)
-@@ -931,6 +1231,9 @@ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
+@@ -898,6 +1198,9 @@ static HRESULT WINAPI media_source_Shutdown(IMFMediaSource *iface)
      if (source->all_streams_event)
          CloseHandle(source->all_streams_event);
  
@@ -416,7 +428,7 @@ index 6c0c212a100..c893664fbec 100644
      return S_OK;
  }
  
-@@ -1092,6 +1395,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+@@ -996,6 +1299,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
          return E_OUTOFMEMORY;
  
      object->IMFMediaSource_iface.lpVtbl = &IMFMediaSource_vtbl;
@@ -424,7 +436,7 @@ index 6c0c212a100..c893664fbec 100644
      object->ref = 1;
      object->byte_stream = bytestream;
      IMFByteStream_AddRef(bytestream);
-@@ -1100,6 +1404,9 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
+@@ -1004,6 +1308,9 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
      if (FAILED(hr = MFCreateEventQueue(&object->event_queue)))
          goto fail;
  
@@ -433,7 +445,7 @@ index 6c0c212a100..c893664fbec 100644
 +
      object->container = gst_bin_new(NULL);
      object->bus = gst_bus_new();
-     gst_bus_set_sync_handler(object->bus, watch_source_bus_wrapper, object, NULL);
+     gst_bus_set_sync_handler(object->bus, mf_src_bus_watch_wrapper, object, NULL);
 -- 
 2.28.0
 

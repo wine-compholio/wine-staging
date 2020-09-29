@@ -1,31 +1,32 @@
-From 3ed31bd914d853f6e4b550db7ff0c68ab8918dad Mon Sep 17 00:00:00 2001
+From a65d5445eea1a5aa1108d5b214a37b37a8c82888 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
 Date: Sat, 4 Oct 2014 02:53:22 +0200
 Subject: [PATCH] ntdll: Setup a temporary signal handler during process
  startup to handle page faults. (v2)
 
 ---
- dlls/ntdll/unix/loader.c        |  1 +
+ dlls/ntdll/unix/loader.c        |  2 ++
  dlls/ntdll/unix/signal_arm.c    |  6 ++++
  dlls/ntdll/unix/signal_arm64.c  |  7 +++++
  dlls/ntdll/unix/signal_i386.c   | 52 +++++++++++++++++++++++++++++++++
  dlls/ntdll/unix/signal_x86_64.c |  6 ++++
  dlls/ntdll/unix/unix_private.h  |  1 +
  dlls/ntdll/unix/virtual.c       |  2 +-
- 7 files changed, 74 insertions(+), 1 deletion(-)
+ 7 files changed, 75 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index e7a7c96a974..0ffbab757a3 100644
+index 6890a08428b..557d7254190 100644
 --- a/dlls/ntdll/unix/loader.c
 +++ b/dlls/ntdll/unix/loader.c
-@@ -1785,6 +1785,7 @@ void __wine_main( int argc, char *argv[], char *envp[] )
+@@ -1775,6 +1775,8 @@ void __wine_main( int argc, char *argv[], char *envp[] )
  #endif
  
      virtual_init();
 +    signal_init_early();
-     load_ntdll();
- 
++
      init_environment( argc, argv, envp );
+ 
+ #ifdef __APPLE__
 diff --git a/dlls/ntdll/unix/signal_arm.c b/dlls/ntdll/unix/signal_arm.c
 index e8971d22dbd..ca291456284 100644
 --- a/dlls/ntdll/unix/signal_arm.c
@@ -149,10 +150,10 @@ index e11b2c70b59..1b45ca246d3 100644
  /***********************************************************************
   *           init_thread_context
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 3d9dca3c51d..7b541dc6a31 100644
+index f99c13fe2ad..26f251b889a 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -215,6 +215,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
+@@ -210,6 +210,7 @@ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_thread( TEB *teb ) DECLSPEC_HIDDEN;
  extern void signal_init_process(void) DECLSPEC_HIDDEN;
@@ -161,10 +162,10 @@ index 3d9dca3c51d..7b541dc6a31 100644
                                                     BOOL suspend, void *thunk, TEB *teb ) DECLSPEC_HIDDEN;
  extern void DECLSPEC_NORETURN signal_exit_thread( int status, void (*func)(int) ) DECLSPEC_HIDDEN;
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 94b3975a964..cf0c1598720 100644
+index f18e75c0842..0649b30e8b3 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -2967,7 +2967,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
+@@ -2917,7 +2917,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
  
      mutex_lock( &virtual_mutex );  /* no need for signal masking inside signal handler */
      vprot = get_page_vprot( page );

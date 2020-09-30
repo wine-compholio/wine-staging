@@ -8,7 +8,7 @@ at his own [GitHub repository](https://github.com/wine-staging/wine-staging).
 What is Wine Staging?
 ---------------------
 
-**Wine Staging** is the testing area of winehq.org. It contains bug fixes and
+***Wine Staging*** is the testing area of winehq.org. It contains bug fixes and
 features, which have not been integrated into the development branch yet. The
 idea of Wine Staging is to provide experimental features faster to end users and
 to give developers the possibility to discuss and improve their patches before

@@ -1,5 +1,5 @@
-Deprecation Notice
-------------------
+  Deprecation Notice
+  ------------------
 
 As of February 2018, the Wine Staging project has been discontinued by the original
 maintainers. Alistair Leslie-Hughes has volunteered to continue the project

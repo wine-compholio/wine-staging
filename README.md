@@ -2,7 +2,7 @@ Deprecation Notice
 ------------------
 
 As of February 2018, the Wine Staging project has been discontinued by the original
-maintainers. Alistair Leslie-Hughes has volunteered to continue the project
+maintainers, as Alistair Leslie-Hughes has volunteered to continue the project
 at his own [GitHub repository](https://github.com/wine-staging/wine-staging).
 
 What is Wine Staging?

@@ -82,8 +82,8 @@ interested in (check output of `./configure`). More information about building
 Wine Staging, optional build dependencies, and hints for packagers are collected
 in our [Wiki](https://github.com/wine-compholio/wine-staging/wiki/Packaging).
 
-Contributing
-------------
+Contributing and explaination
+-----------------------------
 
 Please see CONTRIBUTING.md for more information about contributing to Wine
 Staging.
